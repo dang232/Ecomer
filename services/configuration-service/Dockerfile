@@ -7,7 +7,7 @@ COPY src ./src
 RUN npm run build
 
 FROM node:24-alpine AS runner
-RUN apk add --no-cache curl && addgroup -S vnshop && adduser -S -G vnshop vnshop
+RUN apk upgrade --no-cache && apk add --no-cache curl && addgroup -S vnshop && adduser -S -G vnshop vnshop
 WORKDIR /app
 COPY --from=builder /workspace/dist ./dist
 COPY --from=builder /workspace/package*.json ./
