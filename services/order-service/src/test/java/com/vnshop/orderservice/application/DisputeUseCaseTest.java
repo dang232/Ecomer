@@ -104,5 +104,10 @@ class DisputeUseCaseTest {
         public List<Dispute> findByStatus(String status) {
             return List.of();
         }
+
+        @Override
+        public Optional<Dispute> findByReturnId(String returnId) {
+            return Optional.empty();
+        }
     }
 }

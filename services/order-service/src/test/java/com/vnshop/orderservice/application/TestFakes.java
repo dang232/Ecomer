@@ -63,5 +63,10 @@ final class TestFakes {
         public List<Return> findByBuyerId(String buyerId) {
             return List.of();
         }
+
+        @Override
+        public Optional<Return> findBySubOrderId(Long subOrderId) {
+            return Optional.empty();
+        }
     }
 }
