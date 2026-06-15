@@ -1216,5 +1216,16 @@
     "nameLabel": "Name:",
     "referenceLabel": "Reference:",
     "autoUpdate": "Once transferred, the order will automatically update within 1 minute."
+  },
+  "video": {
+    "pipeline": {
+      "processingTitle": "Processing your video…",
+      "doneTitle": "Your video is live.",
+      "errorTitle": "Video processing failed.",
+      "stuckTitle": "Taking longer than expected.",
+      "stuckMessage": "Your video has been in processing for over 15 minutes. If this doesn't resolve soon, please contact support — your video is safe and will not be lost.",
+      "rejectionReason": "Reason: {{reason}}",
+      "stepsAria": "Video processing steps"
+    }
   }
 }

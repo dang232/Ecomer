@@ -29,6 +29,15 @@ interface UserEventPayload {
   [key: string]: unknown;
 }
 
+interface VideoEventPayload {
+  videoId?: string;
+  uploaderId?: string;
+  ownerType?: string; // 'PRODUCT' | 'REVIEW'
+  ownerId?: string;
+  reason?: string;
+  [key: string]: unknown;
+}
+
 @Controller()
 export class KafkaEventConsumer {
   private readonly logger = new Logger(KafkaEventConsumer.name);
@@ -284,6 +293,50 @@ export class KafkaEventConsumer {
         recipientEmail: p.email,
       });
     }
+  }
+
+  @MessagePattern('video.published')
+  async handleVideoPublished(@Payload() p: VideoEventPayload): Promise<void> {
+    if (!p.uploaderId) {
+      this.logger.warn('video.published missing uploaderId');
+      return;
+    }
+    await this.send({
+      userId: p.uploaderId,
+      type: NotificationType.VIDEO_PUBLISHED,
+      title: 'Video đã được duyệt',
+      body: 'Video của bạn đã được duyệt và đang hiển thị.',
+      deepLink: p.videoId ? `/videos/${p.videoId}` : '/seller/videos',
+      priority: Priority.MEDIUM,
+      threadId: p.videoId ? `video:${p.videoId}` : undefined,
+      threadTitle: p.videoId ? `Video #${p.videoId.slice(0, 8)}` : undefined,
+      metadata: this.sanitizeMetadata(p),
+      idempotencyKey: p.videoId
+        ? `video.published:${p.videoId}:VIDEO_PUBLISHED`
+        : undefined,
+    });
+  }
+
+  @MessagePattern('video.rejected')
+  async handleVideoRejected(@Payload() p: VideoEventPayload): Promise<void> {
+    if (!p.uploaderId) {
+      this.logger.warn('video.rejected missing uploaderId');
+      return;
+    }
+    await this.send({
+      userId: p.uploaderId,
+      type: NotificationType.VIDEO_REJECTED,
+      title: 'Video bị từ chối',
+      body: `Video của bạn đã bị từ chối. Lý do: ${p.reason ?? 'Không có lý do được cung cấp'}.`,
+      deepLink: p.videoId ? `/videos/${p.videoId}/appeal` : '/seller/videos',
+      priority: Priority.HIGH,
+      threadId: p.videoId ? `video:${p.videoId}` : undefined,
+      threadTitle: p.videoId ? `Video #${p.videoId.slice(0, 8)}` : undefined,
+      metadata: this.sanitizeMetadata(p),
+      idempotencyKey: p.videoId
+        ? `video.rejected:${p.videoId}:VIDEO_REJECTED`
+        : undefined,
+    });
   }
 
   private sanitizeMetadata(p: OrderEventPayload): Record<string, unknown> {

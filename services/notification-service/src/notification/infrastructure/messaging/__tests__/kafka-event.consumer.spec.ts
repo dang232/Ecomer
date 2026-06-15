@@ -355,4 +355,82 @@ describe('KafkaEventConsumer', () => {
     await consumer.handleOrderShipped({ orderId: 'ORD-31' });
     expect(mockSendNotification.execute).not.toHaveBeenCalled();
   });
+
+  // --- Video event handlers ---
+
+  it('handleVideoPublished sends notification to uploader', async () => {
+    await consumer.handleVideoPublished({
+      videoId: 'VID-1',
+      uploaderId: 'user-100',
+    });
+    expect(mockSendNotification.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user-100',
+        type: NotificationType.VIDEO_PUBLISHED,
+      }),
+    );
+  });
+
+  it('handleVideoPublished skips when uploaderId missing', async () => {
+    await consumer.handleVideoPublished({ videoId: 'VID-1' });
+    expect(mockSendNotification.execute).not.toHaveBeenCalled();
+  });
+
+  it('handleVideoRejected sends notification with reason', async () => {
+    await consumer.handleVideoRejected({
+      videoId: 'VID-2',
+      uploaderId: 'user-200',
+      reason: 'NSFW content',
+    });
+    expect(mockSendNotification.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.stringContaining('NSFW content'),
+        type: NotificationType.VIDEO_REJECTED,
+      }),
+    );
+  });
+
+  it('handleVideoRejected skips when uploaderId missing', async () => {
+    await consumer.handleVideoRejected({ videoId: 'VID-2', reason: 'test' });
+    expect(mockSendNotification.execute).not.toHaveBeenCalled();
+  });
+
+  it('handleVideoPublished without videoId uses fallback deepLink and no threadId', async () => {
+    await consumer.handleVideoPublished({ uploaderId: 'user-300' });
+    expect(mockSendNotification.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user-300',
+        deepLink: '/seller/videos',
+        threadId: undefined,
+        threadTitle: undefined,
+        idempotencyKey: undefined,
+      }),
+    );
+  });
+
+  it('handleVideoRejected without videoId uses fallback deepLink', async () => {
+    await consumer.handleVideoRejected({
+      uploaderId: 'user-400',
+      reason: 'Spam',
+    });
+    expect(mockSendNotification.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user-400',
+        deepLink: '/seller/videos',
+        threadId: undefined,
+      }),
+    );
+  });
+
+  it('handleVideoRejected without reason uses default Vietnamese message', async () => {
+    await consumer.handleVideoRejected({
+      videoId: 'VID-3',
+      uploaderId: 'user-500',
+    });
+    expect(mockSendNotification.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.stringContaining('Không có lý do được cung cấp'),
+      }),
+    );
+  });
 });

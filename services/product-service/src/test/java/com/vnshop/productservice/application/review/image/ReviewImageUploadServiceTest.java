@@ -133,6 +133,8 @@ class ReviewImageUploadServiceTest {
         @Override public URI getSignedUploadUrl(String key, ObjectMetadata metadata) { return URI.create("https://storage.test/" + key); }
         @Override public URI getSignedDownloadUrl(String key, ObjectStorageClass storageClass) { return URI.create("https://storage.test/" + key); }
         @Override public void deleteObject(String key) {}
+        @Override public URI publicUrl(String key) { return URI.create("https://cdn.test/" + key); }
         @Override public Optional<ObjectMetadata> headObject(String key) { return Optional.empty(); }
+        @Override public void copyObject(String sourceKey, String destinationKey) {}
     }
 }

@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-interface ProductJpaSpringDataRepository extends JpaRepository<ProductJpaEntity, UUID> {
+public interface ProductJpaSpringDataRepository extends JpaRepository<ProductJpaEntity, UUID> {
     List<ProductJpaEntity> findBySellerId(String sellerId);
 
     List<ProductJpaEntity> findByCategoryId(String categoryId);

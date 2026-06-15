@@ -4,6 +4,10 @@ import {
   adminOrderSummarySchema,
   adminPayoutSchema,
   adminUserSchema,
+  adminVideoAppealItemSchema,
+  adminVideoModerationQueuePageSchema,
+  adminVideoModerationResponseSchema,
+  adminVideoPreviewSchema,
   couponSchema,
   dashboardRevenuePointSchema,
   dashboardSummarySchema,
@@ -12,6 +16,7 @@ import {
   disputeSchema,
   reviewSchema,
   sellerSummarySchema,
+  type AdminVideoModerationQueueItem,
   type DashboardSummary,
 } from "../../../types/api";
 import type { COUPON_TYPES } from "../../domain-enums";
@@ -109,3 +114,53 @@ export const dashboardTopSellers = (params: { limit?: number } = {}) =>
   api.get("/admin/dashboard/top-sellers", z.array(dashboardTopSellerSchema), {
     limit: params.limit ?? 10,
   });
+
+// ─── Video admin ───────────────────────────────────────────────────────────────
+
+/** Query params for the moderation queue — all fields are optional. */
+export type AdminVideoModerationQueueParams = Record<
+  string,
+  string | number | boolean | null | undefined
+>;
+
+/** GET /admin/videos/moderation-queue — paginated PENDING_REVIEW videos. */
+export const adminVideoModerationQueue = (params: AdminVideoModerationQueueParams = {}) =>
+  api.get("/admin/videos/moderation-queue", adminVideoModerationQueuePageSchema, params);
+
+/** GET /admin/videos/{videoId}/preview — presigned staging URL for admin preview. */
+export const adminVideoPreview = (videoId: string) =>
+  api.get(`/admin/videos/${encodeURIComponent(videoId)}/preview`, adminVideoPreviewSchema);
+
+/** POST /admin/videos/{videoId}/approve — publish video. */
+export const adminApproveVideo = (videoId: string) =>
+  api.post(
+    `/admin/videos/${encodeURIComponent(videoId)}/approve`,
+    adminVideoModerationResponseSchema,
+  );
+
+/** POST /admin/videos/{videoId}/reject — reject with reason. */
+export const adminRejectVideo = (videoId: string, body: { reason: string }) =>
+  api.post(
+    `/admin/videos/${encodeURIComponent(videoId)}/reject`,
+    adminVideoModerationResponseSchema,
+    body,
+  );
+
+/** GET /admin/videos/appeal-queue — list of APPEAL_PENDING videos (flat array). */
+export const adminVideoAppealsQueue = () =>
+  api.get("/admin/videos/appeal-queue", z.array(adminVideoAppealItemSchema));
+
+/** POST /admin/videos/{videoId}/appeal/approve — re-publish after appeal. */
+export const adminApproveAppeal = (videoId: string) =>
+  api.post(
+    `/admin/videos/${encodeURIComponent(videoId)}/appeal/approve`,
+    adminVideoModerationResponseSchema,
+  );
+
+/** POST /admin/videos/{videoId}/appeal/reject — final rejection after appeal. */
+export const adminRejectAppeal = (videoId: string, body: { reason: string }) =>
+  api.post(
+    `/admin/videos/${encodeURIComponent(videoId)}/appeal/reject`,
+    adminVideoModerationResponseSchema,
+    body,
+  );

@@ -1216,5 +1216,16 @@
     "nameLabel": "Tên:",
     "referenceLabel": "Nội dung CK:",
     "autoUpdate": "Sau khi chuyển xong, đơn hàng sẽ tự động cập nhật trong vòng 1 phút."
+  },
+  "video": {
+    "pipeline": {
+      "processingTitle": "Đang xử lý video của bạn…",
+      "doneTitle": "Video của bạn đã sẵn sàng.",
+      "errorTitle": "Xử lý video thất bại.",
+      "stuckTitle": "Đang lâu hơn dự kiến.",
+      "stuckMessage": "Video đã được xử lý hơn 15 phút. Nếu trạng thái không sớm cập nhật, vui lòng liên hệ hỗ trợ — video của bạn được an toàn và sẽ không bị mất.",
+      "rejectionReason": "Lý do: {{reason}}",
+      "stepsAria": "Các bước xử lý video"
+    }
   }
 }
