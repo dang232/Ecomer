@@ -13,6 +13,7 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
@@ -60,14 +61,36 @@ public class S3ObjectStorageAdapter implements ObjectStoragePort {
     }
 
     @Override
+    public URI publicUrl(String key) {
+        String base = properties.getEndpoint().replaceAll("/$", "");
+        if (properties.isPathStyleAccess()) {
+            return URI.create(base + "/" + properties.getBucket() + "/" + key);
+        }
+        return URI.create(base + "/" + key);
+    }
+
+    @Override
     public void deleteObject(String key) {
         s3Client.deleteObject(DeleteObjectRequest.builder().bucket(properties.getBucket()).key(key).build());
     }
 
     @Override
+    public void copyObject(String sourceKey, String destinationKey) {
+        BucketKey src = BucketKey.parse(sourceKey, properties.getBucket());
+        BucketKey dst = BucketKey.parse(destinationKey, properties.getBucket());
+        s3Client.copyObject(CopyObjectRequest.builder()
+                .sourceBucket(src.bucket())
+                .sourceKey(src.key())
+                .destinationBucket(dst.bucket())
+                .destinationKey(dst.key())
+                .build());
+    }
+
+    @Override
     public Optional<ObjectMetadata> headObject(String key) {
         try {
-            HeadObjectResponse response = s3Client.headObject(HeadObjectRequest.builder().bucket(properties.getBucket()).key(key).build());
+            HeadObjectResponse response = s3Client.headObject(
+                    HeadObjectRequest.builder().bucket(properties.getBucket()).key(key).build());
             Map<String, String> metadata = response.metadata();
             return Optional.of(ObjectMetadata.builder()
                     .key(key)
@@ -110,5 +133,15 @@ public class S3ObjectStorageAdapter implements ObjectStoragePort {
 
     private Integer parseInteger(String value) {
         return value == null ? null : Integer.valueOf(value);
+    }
+
+    private record BucketKey(String bucket, String key) {
+        static BucketKey parse(String raw, String defaultBucket) {
+            int slash = raw.indexOf("/");
+            if (slash > 0) {
+                return new BucketKey(raw.substring(0, slash), raw.substring(slash + 1));
+            }
+            return new BucketKey(defaultBucket, raw);
+        }
     }
 }

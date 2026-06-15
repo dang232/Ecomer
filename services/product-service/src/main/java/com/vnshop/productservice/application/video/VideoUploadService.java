@@ -10,8 +10,6 @@ import com.vnshop.productservice.infrastructure.persistence.video.VideoJpaReposi
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -32,6 +30,9 @@ import java.util.UUID;
  *   <li>User DELETE — owner soft-delete of PUBLISHED video</li>
  *   <li>Appeal — owner submits appeal for REJECTED video</li>
  * </ul>
+ *
+ * <p>The stuck-video reaper has been extracted to {@link VideoReaper} (H3).
+ * Redis state has been extracted to {@link VideoRedisPort} (H5).
  */
 @RequiredArgsConstructor
 public class VideoUploadService {
@@ -50,42 +51,25 @@ public class VideoUploadService {
     static final int  MAX_VIDEOS_PER_PRODUCT = 3;
     static final int  MAX_VIDEOS_PER_REVIEW = 1;
     static final int  MAX_CONCURRENT_SESSIONS = 2;
-    static final Duration STUCK_VIDEO_THRESHOLD = Duration.ofMinutes(10);
 
-    // Redis key patterns
-    private static final String RATE_LIMIT_KEY_PREFIX = "video:ratelimit:post:";
-    private static final String CONCURRENT_KEY_PREFIX  = "video:concurrent:";
-    private static final String SHA256_STATE_KEY_PREFIX = "video:sha256:";
-    private static final String OFFSET_KEY_PREFIX       = "video:offset:";
-    private static final String TOTAL_SIZE_KEY_PREFIX   = "video:total-size:";
-    private static final String IDEMPOTENCY_KEY_PREFIX  = "video:idempotency:";
-    private static final Duration IDEMPOTENCY_TTL       = Duration.ofHours(24);
+    private static final Duration IDEMPOTENCY_TTL = Duration.ofHours(24);
+    private static final Duration UPLOAD_STATE_TTL = Duration.ofHours(2);
+    private static final Duration CONCURRENT_SESSION_TTL = Duration.ofHours(1);
 
     private final VideoJpaRepository videoJpaRepository;
     private final LocalStagingStore localStagingStore;
     private final VideoEventPublisherPort videoEventPublisherPort;
-    private final StringRedisTemplate redisTemplate;
+    private final VideoRedisPort videoRedis;
 
     // -------------------------------------------------------------------------
     // POST — tus Creation
     // -------------------------------------------------------------------------
 
-    /**
-     * Creates a new upload session.
-     *
-     * @param uploaderId     JWT subject of the requesting user
-     * @param ownerType      {@link VideoOwnerType#PRODUCT} or {@link VideoOwnerType#REVIEW}
-     * @param ownerId        UUID of the product or review
-     * @param idempotencyKey client-supplied idempotency key (from Upload-Metadata)
-     * @param contentLength  declared total file size
-     * @return the created Video in UPLOADING status
-     */
     public Video createUploadSession(String uploaderId, VideoOwnerType ownerType, UUID ownerId,
             String idempotencyKey, long contentLength) {
         // Spec MED-5: idempotency-key dedup — duplicate POSTs within 24h return existing upload URL.
         if (idempotencyKey != null && !idempotencyKey.isBlank()) {
-            String existingVideoId = redisTemplate.opsForValue()
-                    .get(IDEMPOTENCY_KEY_PREFIX + idempotencyKey);
+            String existingVideoId = videoRedis.getIdempotencyKey(idempotencyKey);
             if (existingVideoId != null) {
                 Video existing = videoJpaRepository.findById(UUID.fromString(existingVideoId))
                         .orElseThrow(() -> new IllegalStateException(
@@ -118,21 +102,15 @@ public class VideoUploadService {
         videoJpaRepository.saveHistory(
                 VideoStatusHistory.record(videoId, null, VideoStatus.UPLOADING, uploaderId, "upload created"));
 
-        // Record idempotency key (24h TTL) so duplicate POSTs return the same upload.
         if (idempotencyKey != null && !idempotencyKey.isBlank()) {
-            redisTemplate.opsForValue().set(
-                    IDEMPOTENCY_KEY_PREFIX + idempotencyKey, videoId.toString(), IDEMPOTENCY_TTL);
+            videoRedis.setIdempotencyKey(idempotencyKey, videoId.toString(), IDEMPOTENCY_TTL);
         }
 
-        // Track concurrent session in Redis (TTL = 1 hour)
-        String concurrentKey = CONCURRENT_KEY_PREFIX + uploaderId;
-        redisTemplate.opsForValue().increment(concurrentKey);
-        redisTemplate.expire(concurrentKey, Duration.ofHours(1));
+        videoRedis.incrementConcurrentSessions(uploaderId);
+        videoRedis.setConcurrentSessionsTtl(uploaderId, CONCURRENT_SESSION_TTL);
 
-        // Initialise upload offset in Redis; SHA-256 is now computed on finalise from the local staging file.
-        redisTemplate.opsForValue().set(OFFSET_KEY_PREFIX + videoId, "0", Duration.ofHours(2));
-        // Store declared total size so appendChunk can detect the final chunk on its own (H4 fix).
-        redisTemplate.opsForValue().set(TOTAL_SIZE_KEY_PREFIX + videoId, String.valueOf(contentLength), Duration.ofHours(2));
+        videoRedis.setOffset(videoId, 0L, UPLOAD_STATE_TTL);
+        videoRedis.setTotalSize(videoId, contentLength, UPLOAD_STATE_TTL);
 
         LOGGER.info("Created upload session videoId={} uploader={} stagingKey={}", videoId, uploaderId, stagingKey);
         return saved;
@@ -142,18 +120,6 @@ public class VideoUploadService {
     // PATCH — chunk upload
     // -------------------------------------------------------------------------
 
-    /**
-     * Receives a chunk and appends it to the staging object.
-     * On the first chunk, validates magic bytes.
-     * On the final chunk, emits video.upload.completed.
-     *
-     * @param videoId      upload session ID
-     * @param uploaderId   must match the session owner
-     * @param chunkOffset  tus Upload-Offset header value
-     * @param chunkLength  Content-Length of this chunk
-     * @param chunkData    raw chunk bytes
-     * @return updated Video
-     */
     public Video appendChunk(UUID videoId, String uploaderId, long chunkOffset,
             long chunkLength, byte[] chunkData) {
         Video video = findAndAuthorise(videoId, uploaderId);
@@ -163,9 +129,6 @@ public class VideoUploadService {
             validateMagicBytes(chunkData);
         }
 
-        // CRITICAL-1 fix: write chunks to local staging file (RandomAccessFile supports resume
-        // from a non-zero offset). On finaliseUpload, the assembled file is PUT to S3 as a
-        // single object — the transcoder can then download it from the staging bucket.
         long newOffset;
         try {
             newOffset = localStagingStore.writeChunk(videoId, chunkOffset, chunkData, (int) chunkLength);
@@ -174,19 +137,14 @@ public class VideoUploadService {
                     "Could not write chunk to local staging: " + ex.getMessage());
         }
 
-        // Persist current offset in Redis so HEAD requests can return it for resume.
-        redisTemplate.opsForValue().set(OFFSET_KEY_PREFIX + videoId, String.valueOf(newOffset), Duration.ofHours(2));
+        videoRedis.setOffset(videoId, newOffset, UPLOAD_STATE_TTL);
 
         // H4 fix: detect final chunk inside the service using the declared total size
-        // (set on session creation). This eliminates the controller's responsibility
-        // for knowing completion semantics, and means a client crash between PATCH
-        // and the next PATCH is fine — the reaper catches truly stuck sessions.
-        String totalSizeRaw = redisTemplate.opsForValue().get(TOTAL_SIZE_KEY_PREFIX + videoId);
-        if (totalSizeRaw != null) {
-            long totalSize = Long.parseLong(totalSizeRaw);
-            if (newOffset >= totalSize) {
-                finaliseUpload(videoId, uploaderId);
-            }
+        // so a client crash between PATCH and the next PATCH is fine — the reaper
+        // catches truly stuck sessions.
+        long declaredTotal = videoRedis.getTotalSize(videoId);
+        if (declaredTotal > 0 && newOffset >= declaredTotal) {
+            finaliseUpload(videoId, uploaderId);
         }
 
         return video;
@@ -198,17 +156,10 @@ public class VideoUploadService {
         return chunkOffset == FIRST_CHUNK_OFFSET;
     }
 
-    /**
-     * Called by the controller when the final chunk has been fully received.
-     * Finalises the incremental SHA-256 accumulated across all chunks,
-     * transitions to UPLOADED, emits event, and decrements concurrency.
-     */
     public Video finaliseUpload(UUID videoId, String uploaderId) {
         Video video = findAndAuthorise(videoId, uploaderId);
         requireStatus(video, VideoStatus.UPLOADING);
 
-        // CRITICAL-1 fix: PUT the locally-staged assembled file to S3 in a single object.
-        // SHA-256 is computed in a single pass during the PUT (DigestComputingInputStream).
         String computedSha256Hex;
         try {
             computedSha256Hex = localStagingStore.putObject(videoId, video.stagingKey());
@@ -222,17 +173,21 @@ public class VideoUploadService {
         videoJpaRepository.saveHistory(
                 VideoStatusHistory.record(videoId, VideoStatus.UPLOADING, VideoStatus.UPLOADED, uploaderId, null));
 
-        // Decrement concurrent session counter
-        decrementConcurrentSessions(uploaderId);
-        redisTemplate.delete(OFFSET_KEY_PREFIX + videoId);
-        redisTemplate.delete(TOTAL_SIZE_KEY_PREFIX + videoId);
+        videoRedis.decrementConcurrentSessions(uploaderId);
+        videoRedis.deleteOffset(videoId);
+        videoRedis.deleteTotalSize(videoId);
 
         videoEventPublisherPort.publish(new VideoEvent(
                 videoId.toString(),
                 VideoEvent.EventType.VIDEO_UPLOAD_COMPLETED,
                 null,
                 Map.of("stagingKey", video.stagingKey(), "sha256Hex", computedSha256Hex,
-                        "ownerId", video.ownerId())));
+                        "ownerId", video.ownerId(),
+                        // M18 fix: include ownerType + productId/reviewId in the payload
+                        // so the transcoder can route staging keys per spec section 5.
+                        "ownerType", video.productId() != null ? "PRODUCT" : "REVIEW",
+                        "productId", video.productId() == null ? "" : video.productId(),
+                        "reviewId",  video.reviewId()  == null ? "" : video.reviewId())));
 
         LOGGER.info("Finalised upload videoId={} sha256={}", videoId, computedSha256Hex);
         return saved;
@@ -242,36 +197,27 @@ public class VideoUploadService {
     // HEAD — offset query
     // -------------------------------------------------------------------------
 
-    /**
-     * Returns the current byte offset for an in-progress upload session.
-     */
     public long getUploadOffset(UUID videoId, String uploaderId) {
         findAndAuthorise(videoId, uploaderId);
-        String raw = redisTemplate.opsForValue().get(OFFSET_KEY_PREFIX + videoId);
-        return raw != null ? Long.parseLong(raw) : 0L;
+        return videoRedis.getOffset(videoId);
     }
 
     // -------------------------------------------------------------------------
     // DELETE (cancel upload)
     // -------------------------------------------------------------------------
 
-    /**
-     * Cancels an in-progress upload: deletes the staging object and marks DELETED.
-     */
     public void cancelUpload(UUID videoId, String uploaderId) {
         Video video = findAndAuthorise(videoId, uploaderId);
         requireStatus(video, VideoStatus.UPLOADING);
 
-        // Clean up the local staging file (the file in S3 hasn't been created yet
-        // because finaliseUpload is the only thing that writes to S3).
         localStagingStore.delete(videoId);
 
         videoJpaRepository.save(video.withStatus(VideoStatus.DELETED));
         videoJpaRepository.saveHistory(
                 VideoStatusHistory.record(videoId, VideoStatus.UPLOADING, VideoStatus.DELETED, uploaderId, "cancelled by uploader"));
 
-        decrementConcurrentSessions(uploaderId);
-        redisTemplate.delete(OFFSET_KEY_PREFIX + videoId);
+        videoRedis.decrementConcurrentSessions(uploaderId);
+        videoRedis.deleteOffset(videoId);
 
         LOGGER.info("Cancelled upload videoId={} uploader={}", videoId, uploaderId);
     }
@@ -280,9 +226,6 @@ public class VideoUploadService {
     // User DELETE (soft-delete PUBLISHED video)
     // -------------------------------------------------------------------------
 
-    /**
-     * Soft-deletes a PUBLISHED video. Only the original uploader may call this.
-     */
     public Video deleteVideo(UUID videoId, String uploaderId) {
         Video video = findAndAuthorise(videoId, uploaderId);
         if (video.status() != VideoStatus.PUBLISHED) {
@@ -303,9 +246,6 @@ public class VideoUploadService {
     // Appeal
     // -------------------------------------------------------------------------
 
-    /**
-     * Submits an appeal for a REJECTED video. Only the original uploader may call this.
-     */
     public Video submitAppeal(UUID videoId, String uploaderId, String appealReason) {
         if (appealReason == null || appealReason.isBlank()) {
             throw new IllegalArgumentException("appeal reason must not be blank");
@@ -339,29 +279,6 @@ public class VideoUploadService {
     }
 
     // -------------------------------------------------------------------------
-    // Stuck-video reaper
-    // -------------------------------------------------------------------------
-
-    /**
-     * Scheduled every 1 minute. Marks videos stuck in UPLOADING/TRANSCODING/MODERATING
-     * for longer than {@link #STUCK_VIDEO_THRESHOLD} as FAILED.
-     * DELETED is reserved for user-initiated deletions only.
-     */
-    @Scheduled(fixedDelay = 60_000)
-    public void reaperSweep() {
-        Instant cutoff = Instant.now().minus(STUCK_VIDEO_THRESHOLD);
-        var stuckVideos = videoJpaRepository.findStuckVideos(cutoff);
-        for (Video stuck : stuckVideos) {
-            LOGGER.warn("Reaper: marking stuck video {} (status={}) as FAILED", stuck.videoId(), stuck.status());
-            videoJpaRepository.save(stuck.withStatus(VideoStatus.FAILED));
-            videoJpaRepository.saveHistory(VideoStatusHistory.record(
-                    stuck.videoId(), stuck.status(), VideoStatus.FAILED, "reaper", "stuck > 10 min"));
-            decrementConcurrentSessions(stuck.ownerId());
-            localStagingStore.delete(stuck.videoId());
-        }
-    }
-
-    // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
 
@@ -382,20 +299,17 @@ public class VideoUploadService {
     }
 
     private void enforceRateLimit(String uploaderId) {
-        String key = RATE_LIMIT_KEY_PREFIX + uploaderId;
-        Long count = redisTemplate.opsForValue().increment(key);
-        if (count != null && count == 1) {
-            redisTemplate.expire(key, Duration.ofSeconds(1));
+        long count = videoRedis.incrementPostRateLimit(uploaderId);
+        if (count == 1) {
+            videoRedis.setPostRateLimitTtl(uploaderId, Duration.ofSeconds(1));
         }
-        if (count != null && count > 3) {
+        if (count > 3) {
             throw new VideoUploadRateLimitException("Upload rate limit exceeded. Max 3 POST per second.");
         }
     }
 
     private void enforceConcurrentSessionLimit(String uploaderId) {
-        String key = CONCURRENT_KEY_PREFIX + uploaderId;
-        String raw = redisTemplate.opsForValue().get(key);
-        long active = raw != null ? Long.parseLong(raw) : 0L;
+        long active = videoRedis.getConcurrentSessions(uploaderId);
         if (active >= MAX_CONCURRENT_SESSIONS) {
             throw new VideoUploadRateLimitException(
                     "Max " + MAX_CONCURRENT_SESSIONS + " concurrent upload sessions exceeded.");
@@ -423,7 +337,7 @@ public class VideoUploadService {
                 throw new VideoQuotaExceededException(
                         "Product video quota of " + MAX_VIDEOS_PER_PRODUCT + " videos exceeded.");
             }
-        } else { // REVIEW
+        } else {
             long reviewCount = videoJpaRepository.countActiveVideosForReview(ownerId);
             if (reviewCount >= MAX_VIDEOS_PER_REVIEW) {
                 throw new VideoQuotaExceededException(
@@ -436,30 +350,19 @@ public class VideoUploadService {
         if (chunkData == null || chunkData.length < 12) {
             throw new VideoValidationException("First chunk too small to validate magic bytes.");
         }
-        // MP4/MOV: bytes 4-7 == "ftyp"
         byte[] ftyp = Arrays.copyOfRange(chunkData, 4, 8);
         if (Arrays.equals(ftyp, MAGIC_MP4_MOV)) {
             return;
         }
-        // MKV/WebM: bytes 0-3 == 0x1A 0x45 0xDF 0xA3
         byte[] ebml = Arrays.copyOfRange(chunkData, 0, 4);
         if (Arrays.equals(ebml, MAGIC_MKV)) {
             return;
         }
-        // RIFF/WebM container
         byte[] riff = Arrays.copyOfRange(chunkData, 0, 4);
         if (Arrays.equals(riff, MAGIC_RIFF)) {
             return;
         }
         throw new VideoValidationException(
                 "File format not allowed. Supported: MP4, MOV, MKV, WebM.");
-    }
-
-    private void decrementConcurrentSessions(String uploaderId) {
-        String key = CONCURRENT_KEY_PREFIX + uploaderId;
-        Long remaining = redisTemplate.opsForValue().decrement(key);
-        if (remaining != null && remaining <= 0) {
-            redisTemplate.delete(key);
-        }
     }
 }

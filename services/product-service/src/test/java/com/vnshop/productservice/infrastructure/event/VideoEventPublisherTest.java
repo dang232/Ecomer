@@ -9,6 +9,8 @@ import static org.mockito.Mockito.when;
 
 import com.vnshop.productservice.domain.video.VideoEvent;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.kafka.core.KafkaTemplate;
 
@@ -18,7 +20,8 @@ import java.util.Map;
 class VideoEventPublisherTest {
 
     private final KafkaTemplate<String, VideoEvent> kafkaTemplate = mock(KafkaTemplate.class);
-    private final VideoEventPublisher publisher = new VideoEventPublisher(kafkaTemplate);
+    private final MeterRegistry meterRegistry = new SimpleMeterRegistry();
+    private final VideoEventPublisher publisher = new VideoEventPublisher(kafkaTemplate, meterRegistry);
 
     @Test
     void publish_sendsEventToVideoEventsTopic() {
@@ -58,6 +61,26 @@ class VideoEventPublisherTest {
                 Map.of());
 
         assertThatCode(() -> publisher.publish(event)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void publish_incrementsFailureCounterOnKafkaError() {
+        when(kafkaTemplate.send(any(), any(), any()))
+                .thenThrow(new RuntimeException("Broker down"));
+
+        VideoEvent event = new VideoEvent(
+                "vid-counter",
+                VideoEvent.EventType.VIDEO_PUBLISHED,
+                null,
+                Map.of());
+
+        publisher.publish(event);
+
+        double count = meterRegistry.counter("video.event.publish.failed").count();
+        assertThatCode(() -> { double c = count; })
+                .doesNotThrowAnyException();
+        // Assert: counter incremented at least once
+        org.assertj.core.api.Assertions.assertThat(count).isGreaterThanOrEqualTo(1.0);
     }
 
     @Test

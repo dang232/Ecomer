@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Fallback {@link ObjectStoragePort} for environments where S3/MinIO isn't
+ * Fallback {@link ObjectStoragePort} for environments where S3/MinIO is not
  * configured (local dev, CI). Returns deterministic placeholder URIs so use
  * cases that depend on the port still wire, but nothing actually leaves the
  * process. The real {@code S3ObjectStorageAdapter} bean takes precedence when
@@ -31,7 +31,6 @@ public class ObjectStorageNoopConfig {
 
         @Override
         public void putObject(String key, InputStream content, ObjectMetadata metadata) {
-            // no-op
         }
 
         @Override
@@ -45,8 +44,16 @@ public class ObjectStorageNoopConfig {
         }
 
         @Override
+        public URI publicUrl(String key) {
+            return PLACEHOLDER;
+        }
+
+        @Override
         public void deleteObject(String key) {
-            // no-op
+        }
+
+        @Override
+        public void copyObject(String sourceKey, String destinationKey) {
         }
 
         @Override

@@ -2,11 +2,6 @@ package com.vnshop.productservice.application.video;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import com.vnshop.productservice.domain.port.out.ObjectStoragePort;
 import com.vnshop.productservice.domain.storage.ObjectMetadata;
@@ -22,8 +17,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -44,10 +37,7 @@ class VideoUploadServiceTest {
     private final FakeLocalStagingStore localStaging = new FakeLocalStagingStore();
     private final FakeVideoEventPublisher eventPublisher = new FakeVideoEventPublisher();
     private final Map<String, String> redisStore = new HashMap<>();
-
-    @SuppressWarnings("unchecked")
-    private final ValueOperations<String, String> valueOps = mock(ValueOperations.class);
-    private final StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
+    private final FakeVideoRedisPort videoRedis = new FakeVideoRedisPort(redisStore);
 
     private VideoUploadService service;
 
@@ -66,33 +56,11 @@ class VideoUploadServiceTest {
 
     @BeforeEach
     void setUp() {
-        when(redisTemplate.opsForValue()).thenReturn(valueOps);
-        when(redisTemplate.expire(anyString(), any())).thenReturn(true);
-        when(redisTemplate.delete(anyString())).thenReturn(true);
-
-        when(valueOps.increment(anyString())).thenAnswer(inv -> {
-            String key = inv.getArgument(0);
-            long v = redisStore.containsKey(key) ? Long.parseLong(redisStore.get(key)) + 1 : 1L;
-            redisStore.put(key, String.valueOf(v));
-            return v;
-        });
-
-        when(valueOps.decrement(anyString())).thenAnswer(inv -> {
-            String key = inv.getArgument(0);
-            long v = redisStore.containsKey(key) ? Long.parseLong(redisStore.get(key)) - 1 : -1L;
-            redisStore.put(key, String.valueOf(v));
-            return v;
-        });
-
-        when(valueOps.get(anyString())).thenAnswer(inv -> redisStore.get(inv.getArgument(0)));
-
-        doAnswer(inv -> { redisStore.put(inv.getArgument(0), inv.getArgument(1)); return null; })
-                .when(valueOps).set(anyString(), anyString(), any(java.time.Duration.class));
-
-        doAnswer(inv -> { redisStore.put(inv.getArgument(0), inv.getArgument(1)); return null; })
-                .when(valueOps).set(anyString(), anyString());
-
-        service = new VideoUploadService(videoRepository, localStaging, eventPublisher, redisTemplate);
+        // H5: VideoUploadService now depends on VideoRedisPort (not StringRedisTemplate).
+        // The FakeVideoRedisPort at the bottom of this file backs onto the same
+        // redisStore map so existing tests that pre-populate keys like
+        // "video:concurrent:user-123" continue to assert against the same state.
+        service = new VideoUploadService(videoRepository, localStaging, eventPublisher, videoRedis);
     }
 
     @Test
@@ -443,6 +411,104 @@ class VideoUploadServiceTest {
         public long currentSize(UUID videoId) {
             var buf = buffers.get(videoId);
             return buf == null ? 0L : buf.size();
+        }
+    }
+
+    /**
+     * H5 fix: in-memory fake of the new {@link VideoRedisPort}. Backed onto the
+     * same {@code redisStore} map that the old Mockito-based setup used, so
+     * existing tests that pre-seed keys (e.g. for concurrent-session limits)
+     * continue to assert against the same observable state.
+     */
+    private static final class FakeVideoRedisPort implements VideoRedisPort {
+        private static final String RATE_LIMIT_KEY_PREFIX = "video:ratelimit:post:";
+        private static final String CONCURRENT_KEY_PREFIX  = "video:concurrent:";
+        private static final String OFFSET_KEY_PREFIX       = "video:offset:";
+        private static final String TOTAL_SIZE_KEY_PREFIX   = "video:total-size:";
+        private static final String IDEMPOTENCY_KEY_PREFIX  = "video:idempotency:";
+
+        private final Map<String, String> store;
+
+        FakeVideoRedisPort(Map<String, String> store) {
+            this.store = store;
+        }
+
+        @Override
+        public long incrementPostRateLimit(String uploaderId) {
+            String key = RATE_LIMIT_KEY_PREFIX + uploaderId;
+            long v = store.containsKey(key) ? Long.parseLong(store.get(key)) + 1 : 1L;
+            store.put(key, String.valueOf(v));
+            return v;
+        }
+
+        @Override
+        public void setPostRateLimitTtl(String uploaderId, Duration ttl) { /* no-op for tests */ }
+
+        @Override
+        public long getConcurrentSessions(String uploaderId) {
+            String raw = store.get(CONCURRENT_KEY_PREFIX + uploaderId);
+            return raw == null ? 0L : Long.parseLong(raw);
+        }
+
+        @Override
+        public long incrementConcurrentSessions(String uploaderId) {
+            String key = CONCURRENT_KEY_PREFIX + uploaderId;
+            long v = store.containsKey(key) ? Long.parseLong(store.get(key)) + 1 : 1L;
+            store.put(key, String.valueOf(v));
+            return v;
+        }
+
+        @Override
+        public void decrementConcurrentSessions(String uploaderId) {
+            String key = CONCURRENT_KEY_PREFIX + uploaderId;
+            long v = store.containsKey(key) ? Long.parseLong(store.get(key)) - 1 : -1L;
+            store.put(key, String.valueOf(v));
+            if (v <= 0) store.remove(key);
+        }
+
+        @Override
+        public void setConcurrentSessionsTtl(String uploaderId, Duration ttl) { /* no-op */ }
+
+        @Override
+        public void setOffset(UUID videoId, long offset, Duration ttl) {
+            store.put(OFFSET_KEY_PREFIX + videoId, String.valueOf(offset));
+        }
+
+        @Override
+        public long getOffset(UUID videoId) {
+            String raw = store.get(OFFSET_KEY_PREFIX + videoId);
+            return raw == null ? 0L : Long.parseLong(raw);
+        }
+
+        @Override
+        public void deleteOffset(UUID videoId) {
+            store.remove(OFFSET_KEY_PREFIX + videoId);
+        }
+
+        @Override
+        public void setTotalSize(UUID videoId, long totalSize, Duration ttl) {
+            store.put(TOTAL_SIZE_KEY_PREFIX + videoId, String.valueOf(totalSize));
+        }
+
+        @Override
+        public long getTotalSize(UUID videoId) {
+            String raw = store.get(TOTAL_SIZE_KEY_PREFIX + videoId);
+            return raw == null ? 0L : Long.parseLong(raw);
+        }
+
+        @Override
+        public void deleteTotalSize(UUID videoId) {
+            store.remove(TOTAL_SIZE_KEY_PREFIX + videoId);
+        }
+
+        @Override
+        public void setIdempotencyKey(String idempotencyKey, String videoId, Duration ttl) {
+            store.put(IDEMPOTENCY_KEY_PREFIX + idempotencyKey, videoId);
+        }
+
+        @Override
+        public String getIdempotencyKey(String idempotencyKey) {
+            return store.get(IDEMPOTENCY_KEY_PREFIX + idempotencyKey);
         }
     }
 }

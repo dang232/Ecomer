@@ -94,6 +94,7 @@ class TranscodeServiceTest {
 
         TranscodeJob job = TranscodeJob.builder()
                 .videoId(videoId)
+                .ownerType("PRODUCT")
                 .productId(productId)
                 .sellerId(sellerId)
                 .rawKey("uploads/" + videoId + ".mp4")
@@ -123,6 +124,7 @@ class TranscodeServiceTest {
 
         TranscodeJob job = TranscodeJob.builder()
                 .videoId(videoId)
+                .ownerType("PRODUCT")
                 .productId(productId)
                 .sellerId(sellerId)
                 .rawKey("uploads/" + videoId + ".mp4")
@@ -137,6 +139,89 @@ class TranscodeServiceTest {
 
         // Raw file must NOT be deleted when verification fails
         verify(s3Client, never()).deleteObject(any(DeleteObjectRequest.class));
+    }
+
+    // --- M18 fix: ownerType drives staging key prefix ---
+
+    @Test
+    void transcode_productOwner_writesToProductsPrefix() throws Exception {
+        UUID videoId   = UUID.randomUUID();
+        UUID productId = UUID.randomUUID();
+        UUID sellerId  = UUID.randomUUID();
+
+        // Succeeds: S3 getObject + putObject both no-op via Mockito default
+        TranscodeJob job = TranscodeJob.builder()
+                .videoId(videoId)
+                .ownerType("PRODUCT")
+                .productId(productId)
+                .sellerId(sellerId)
+                .rawKey("uploads/" + videoId + ".mp4")
+                .extension("mp4")
+                .sha256("doesntmatter")
+                .fileSizeBytes(0L)
+                .build();
+
+        // Run just the key-building step via reflection so we don't need to
+        // mock the full FFmpeg pipeline.
+        String key = (String) ReflectionTestUtils.invokeMethod(transcodeService,
+                "stagingKeyFor", job);
+
+        assertThat(key).isEqualTo("products/" + productId + "/videos/" + videoId + "_720p.mp4");
+    }
+
+    @Test
+    void transcode_reviewOwner_writesToReviewsPrefix() throws Exception {
+        UUID videoId  = UUID.randomUUID();
+        UUID reviewId = UUID.randomUUID();
+        UUID sellerId = UUID.randomUUID();
+
+        TranscodeJob job = TranscodeJob.builder()
+                .videoId(videoId)
+                .ownerType("REVIEW")
+                .reviewId(reviewId)
+                .sellerId(sellerId)
+                .rawKey("uploads/" + videoId + ".mp4")
+                .extension("mp4")
+                .sha256("doesntmatter")
+                .fileSizeBytes(0L)
+                .build();
+
+        String key = (String) ReflectionTestUtils.invokeMethod(transcodeService,
+                "stagingKeyFor", job);
+
+        assertThat(key).isEqualTo("reviews/" + reviewId + "/videos/" + videoId + "_720p.mp4");
+    }
+
+    @Test
+    void transcodeJob_rejectsProductOwnerWithoutProductId() {
+        UUID videoId = UUID.randomUUID();
+        assertThatThrownBy(() -> TranscodeJob.builder()
+                .videoId(videoId)
+                .ownerType("PRODUCT")
+                .sellerId(UUID.randomUUID())
+                .rawKey("uploads/x.mp4")
+                .extension("mp4")
+                .sha256("x")
+                .fileSizeBytes(0L)
+                .build())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("productId is required");
+    }
+
+    @Test
+    void transcodeJob_rejectsReviewOwnerWithoutReviewId() {
+        UUID videoId = UUID.randomUUID();
+        assertThatThrownBy(() -> TranscodeJob.builder()
+                .videoId(videoId)
+                .ownerType("REVIEW")
+                .sellerId(UUID.randomUUID())
+                .rawKey("uploads/x.mp4")
+                .extension("mp4")
+                .sha256("x")
+                .fileSizeBytes(0L)
+                .build())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("reviewId is required");
     }
 
     // --- cleanWorkDir (regression: was emitting N warn lines per cleanup) ---

@@ -75,12 +75,16 @@ public class TranscodeService {
             runProcess(ffmpegCommandBuilder.buildPosterCommand(outputFile, posterFile, seekSecs),
                     "poster", job.videoId().toString());
 
-            // 6. Upload transcoded + poster to staging bucket
-            String transcodedKey = "videos/" + job.productId() + "/" + job.videoId() + "/720p.mp4";
-            String posterKey     = "videos/" + job.productId() + "/" + job.videoId() + "/poster.jpg";
+            // 6. Upload transcoded + poster to staging bucket.
+            //    M18 fix: bucket key prefix is driven by ownerType per spec section 5
+            //    (products/{id}/videos/... vs reviews/{id}/videos/...). Previously this
+            //    was hardcoded to products/, which silently mis-routed review videos
+            //    and stored wrong URLs in the database.
+            String transcodedKey = stagingKeyFor(job);
+            String posterKey     = transcodedKey.replace("_720p.mp4", "_poster.jpg");
             uploadToStaging(outputFile, transcodedKey);
             uploadToStaging(posterFile, posterKey);
-            log.info("Uploaded transcoded videoId={} key={}", job.videoId(), transcodedKey);
+            log.info("Uploaded transcoded videoId={} ownerType={} key={}", job.videoId(), job.ownerType(), transcodedKey);
 
             // 7. Delete raw file from uploads bucket
             deleteRaw(job.rawKey());
@@ -107,6 +111,18 @@ public class TranscodeService {
     }
 
     // --- private helpers ---
+
+    /**
+     * Returns the staging bucket key for the transcoded 720p MP4.
+     * M18 fix: the prefix is driven by ownerType, not hardcoded to products/.
+     * Visible for unit testing.
+     */
+    String stagingKeyFor(TranscodeJob job) {
+        String ownerSegment = "PRODUCT".equals(job.ownerType())
+                ? "products/" + job.productId()
+                : "reviews/" + job.reviewId();
+        return ownerSegment + "/videos/" + job.videoId() + "_720p.mp4";
+    }
 
     private void downloadRaw(String key, Path destination) {
         s3Client.getObject(

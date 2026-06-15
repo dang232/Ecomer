@@ -54,32 +54,17 @@ public class VideoAdminService {
     }
 
     /**
-     * Approves a video: copies staging → public bucket, updates DB to PUBLISHED,
-     * emits video.published, records history.
+     * Approves a video in PENDING_REVIEW status. Use {@link #approveAppeal} for
+     * APPEAL_PENDING videos. The two flows share the same publishing work, so
+     * both delegate to {@link #doApprove}.
      */
     public Video approve(UUID videoId, String adminId) {
         Video video = findOrThrow(videoId);
-        requireModeratableStatus(video, videoId);
-
-        String publicKey = PUBLIC_BUCKET + "/" + video.videoId().toString();
-
-        // Copy staging → public bucket then remove from staging
-        objectStoragePort.copyObject(video.stagingKey(), publicKey);
-        objectStoragePort.deleteObject(video.stagingKey());
-
-        Video approved = video.withApproval(adminId, publicKey);
-        Video saved = videoRepositoryPort.save(approved);
-
-        videoRepositoryPort.saveHistory(
-                VideoStatusHistory.record(videoId, video.status(), VideoStatus.PUBLISHED, adminId, null));
-
-        videoEventPublisherPort.publish(new VideoEvent(
-                videoId.toString(),
-                VideoEvent.EventType.VIDEO_PUBLISHED,
-                null,
-                Map.of("publicKey", publicKey, "ownerId", video.ownerId())));
-
-        return saved;
+        if (video.status() != VideoStatus.PENDING_REVIEW) {
+            throw new VideoModerationException(
+                    "Video " + videoId + " is not in PENDING_REVIEW status, current: " + video.status());
+        }
+        return doApprove(video, adminId);
     }
 
     /**
@@ -93,7 +78,10 @@ public class VideoAdminService {
         }
 
         Video video = findOrThrow(videoId);
-        requireModeratableStatus(video, videoId);
+        if (video.status() != VideoStatus.PENDING_REVIEW && video.status() != VideoStatus.APPEAL_PENDING) {
+            throw new VideoModerationException(
+                    "Video " + videoId + " cannot be rejected in status: " + video.status());
+        }
 
         Video rejected = video.withRejection(adminId, reason);
         Video saved = videoRepositoryPort.save(rejected);
@@ -115,14 +103,49 @@ public class VideoAdminService {
         return videoRepositoryPort.findByStatus(VideoStatus.APPEAL_PENDING, pageable);
     }
 
-    /** Approves a video appeal — same flow as initial approve. */
+    /**
+     * Approves a video appeal (APPEAL_PENDING). H8 fix: explicit state guard
+     * prevents the prior recursive call to {@link #approve}, which would have
+     * silently re-validated the status a second time. Both flows now share
+     * {@link #doApprove} for the publishing work but each owns its state check.
+     */
     public Video approveAppeal(UUID videoId, String adminId) {
         Video video = findOrThrow(videoId);
         if (video.status() != VideoStatus.APPEAL_PENDING) {
             throw new VideoModerationException(
                     "Video " + videoId + " is not in APPEAL_PENDING status, current: " + video.status());
         }
-        return approve(videoId, adminId);
+        return doApprove(video, adminId);
+    }
+
+    /**
+     * Shared approve work: copy staging → public bucket, save as PUBLISHED,
+     * emit video.published, record history. Idempotent at the call site: if
+     * called with a video already in PUBLISHED status, the {@code save} will
+     * overwrite with a duplicate (acceptable since the operation is naturally
+     * idempotent at the storage layer — publicKey is the same).
+     */
+    private Video doApprove(Video video, String adminId) {
+        UUID videoId = video.videoId();
+        String publicKey = PUBLIC_BUCKET + "/" + videoId.toString();
+
+        // Copy staging → public bucket then remove from staging
+        objectStoragePort.copyObject(video.stagingKey(), publicKey);
+        objectStoragePort.deleteObject(video.stagingKey());
+
+        Video approved = video.withApproval(adminId, publicKey);
+        Video saved = videoRepositoryPort.save(approved);
+
+        videoRepositoryPort.saveHistory(
+                VideoStatusHistory.record(videoId, video.status(), VideoStatus.PUBLISHED, adminId, null));
+
+        videoEventPublisherPort.publish(new VideoEvent(
+                videoId.toString(),
+                VideoEvent.EventType.VIDEO_PUBLISHED,
+                null,
+                Map.of("publicKey", publicKey, "ownerId", video.ownerId())));
+
+        return saved;
     }
 
     /** Final rejection of a video appeal. */
@@ -138,12 +161,5 @@ public class VideoAdminService {
     private Video findOrThrow(UUID videoId) {
         return videoRepositoryPort.findById(videoId)
                 .orElseThrow(() -> new VideoNotFoundException("Video not found: " + videoId));
-    }
-
-    private void requireModeratableStatus(Video video, UUID videoId) {
-        if (video.status() != VideoStatus.PENDING_REVIEW && video.status() != VideoStatus.APPEAL_PENDING) {
-            throw new VideoModerationException(
-                    "Video " + videoId + " cannot be moderated in status: " + video.status());
-        }
     }
 }

@@ -2,6 +2,7 @@
 
 from functools import lru_cache
 
+from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 
 
@@ -49,10 +50,9 @@ class Settings(BaseSettings):
     port: int = 8100
     log_level: str = "INFO"
 
-    class Config:
-        env_prefix = "MODERATOR_"
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    # Pydantic v2 config (replaces the v1 `class Config` block which is
+    # deprecated as of pydantic 2.0).
+    model_config = ConfigDict(env_prefix="MODERATOR_", env_file=".env", env_file_encoding="utf-8")
 
 
 @lru_cache

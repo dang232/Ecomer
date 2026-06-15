@@ -241,5 +241,14 @@ class ProductImageUploadServiceTest {
         public Optional<ObjectMetadata> headObject(String key) {
             return Optional.empty();
         }
+
+        @Override
+        public URI publicUrl(String key) {
+            return URI.create("https://cdn.test/" + key);
+        }
+
+        @Override
+        public void copyObject(String sourceKey, String destinationKey) {
+        }
     }
 }

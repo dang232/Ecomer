@@ -181,6 +181,29 @@ class VideoAdminServiceTest {
                 .hasMessageContaining("APPEAL_PENDING");
     }
 
+    // --- H8 regression: prior approveAppeal() recursively called approve() which
+    //     re-validated status. After the refactor, both flows own their state
+    //     check and share doApprove(). A retry of approveAppeal on a video that
+    //     was already moved to PUBLISHED by a prior successful call must fail
+    //     with VideoModerationException, not silently re-enter.
+
+    @Test
+    void approveAppeal_afterAlreadyPublished_throwsInsteadOfRecursing() {
+        // Simulate a retry hitting a video that's already PUBLISHED.
+        Video alreadyPublished = new Video(videoId, "owner-1", "product-1", null,
+                "vnshop-videos-staging/abc.mp4", "vnshop-videos/" + videoId,
+                VideoStatus.PUBLISHED, null, "admin-0", Instant.now(), Instant.now(), Instant.now());
+        when(videoRepositoryPort.findById(videoId)).thenReturn(Optional.of(alreadyPublished));
+
+        assertThatThrownBy(() -> service.approveAppeal(videoId, "admin-1"))
+                .isInstanceOf(VideoModerationException.class)
+                .hasMessageContaining("APPEAL_PENDING");
+
+        // Critical: no copyObject call (i.e. no work was done).
+        verify(objectStoragePort, never()).copyObject(any(), any());
+        verify(videoEventPublisherPort, never()).publish(any());
+    }
+
     @Test
     void constructor_rejectsNullRepository() {
         assertThatThrownBy(() -> new VideoAdminService(null, objectStoragePort, videoEventPublisherPort))

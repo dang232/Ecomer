@@ -1,5 +1,16 @@
 ﻿name: vnshop
 
+# Dev-only secrets warning
+# -----------------------------------------------------------------
+# The `:-vnshop123` fallbacks on MINIO_ROOT_PASSWORD, KAFKA_SVC_*_PASSWORD,
+# KAFKA_VIDEO_*_PASSWORD, and POSTGRES_PASSWORD are LOCAL DEV DEFAULTS.
+# They must be overridden via .env in any non-local environment. The
+# `${VAR:?must be set}` syntax on KAFKA_VIDEO_TRANSCODER_PASSWORD /
+# KAFKA_VIDEO_MODERATOR_PASSWORD forces an explicit value (no default) for
+# the most-privileged video pipeline credentials. Search for "vnshop123"
+# in the env files of your staging/prod environments to confirm.
+# -----------------------------------------------------------------
+
 services:
   postgres-legacy:
     profiles: ["apps", "legacy"]
@@ -564,7 +575,7 @@ services:
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_SASL_USERNAME: ${KAFKA_VIDEO_USERNAME:-svc-video-transcoder}
-      KAFKA_SASL_PASSWORD: ${KAFKA_VIDEO_PASSWORD}
+      KAFKA_SASL_PASSWORD: ${KAFKA_VIDEO_TRANSCODER_PASSWORD:?KAFKA_VIDEO_TRANSCODER_PASSWORD must be set}
       S3_ENDPOINT: http://minio:9000
       S3_ACCESS_KEY: ${MINIO_ROOT_USER:-vnshop}
       S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-vnshop123}
@@ -599,7 +610,7 @@ services:
     environment:
       MODERATOR_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       MODERATOR_KAFKA_SASL_USERNAME: ${KAFKA_VIDEO_USERNAME:-svc-video-moderator}
-      MODERATOR_KAFKA_SASL_PASSWORD: ${KAFKA_VIDEO_PASSWORD}
+      MODERATOR_KAFKA_SASL_PASSWORD: ${KAFKA_VIDEO_MODERATOR_PASSWORD:?KAFKA_VIDEO_MODERATOR_PASSWORD must be set}
       MODERATOR_STORAGE_ENDPOINT: http://minio:9000
       MODERATOR_STORAGE_ACCESS_KEY: ${MINIO_ROOT_USER:-vnshop}
       MODERATOR_STORAGE_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-vnshop123}
@@ -611,6 +622,16 @@ services:
         condition: service_healthy
       postgres-product:
         condition: service_healthy
+    # Security hardening: matches the transcoder. The moderator talks to
+    # Postgres (broader attack surface than MinIO-only), so defence-in-depth
+    # matters. Model weights and frame extracts land in /tmp via tmpfs.
+    tmpfs:
+      - /tmp/video-moderator:size=2G,noexec
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    cap_drop:
+      - ALL
 
   jaeger:
     image: jaegertracing/all-in-one:1.71.0

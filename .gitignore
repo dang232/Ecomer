@@ -50,3 +50,10 @@ infra/kafka/certs/*.srl
 *.tfplan
 .terraform.lock.hcl
 /services/configuration-service/node_modules
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/

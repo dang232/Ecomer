@@ -57,8 +57,7 @@ interface VideoUploadProgressProps {
 
 export function VideoUploadProgress({ videoId, enabled = true }: VideoUploadProgressProps) {
   const { t } = useTranslation();
-  const { data, isLoading } = useVideoStatus(videoId, { enabled });
-  const status = data?.status;
+  const { status, isStuck, isLoading } = useVideoStatus(videoId, { enabled });
 
   const isRejected = status === "REJECTED";
   const isFailed = status === "FAILED";
@@ -72,8 +71,20 @@ export function VideoUploadProgress({ videoId, enabled = true }: VideoUploadProg
           ? t("video.pipeline.doneTitle")
           : isTerminalError
             ? t("video.pipeline.errorTitle")
-            : t("video.pipeline.processingTitle")}
+            : isStuck
+              ? t("video.pipeline.stuckTitle")
+              : t("video.pipeline.processingTitle")}
       </p>
+
+      {/* Stuck in pipeline for too long — suggest user contact support */}
+      {isStuck && (
+        <div className="flex items-start gap-2 p-3 rounded-[var(--radius-md)] bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900">
+          <XCircle size={15} className="text-amber-500 shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-700 dark:text-amber-300">
+            {t("video.pipeline.stuckMessage")}
+          </p>
+        </div>
+      )}
 
       {/* Rejection reason */}
       {isRejected && data?.rejectionReason && (

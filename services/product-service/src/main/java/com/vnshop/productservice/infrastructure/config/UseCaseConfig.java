@@ -19,6 +19,7 @@ import com.vnshop.productservice.application.storage.ObjectValidationPolicy;
 import com.vnshop.productservice.application.storage.ObjectValidationService;
 import com.vnshop.productservice.application.video.LocalStagingStore;
 import com.vnshop.productservice.application.video.VideoAdminService;
+import com.vnshop.productservice.application.video.VideoRedisPort;
 import com.vnshop.productservice.application.video.VideoUploadService;
 import com.vnshop.productservice.domain.port.out.ObjectMetadataRepositoryPort;
 import com.vnshop.productservice.domain.port.out.ObjectStoragePort;
@@ -157,7 +158,7 @@ public class UseCaseConfig {
     VideoUploadService videoUploadService(VideoJpaRepository videoJpaRepository,
             LocalStagingStore localStagingStore,
             VideoEventPublisherPort videoEventPublisherPort,
-            StringRedisTemplate stringRedisTemplate) {
-        return new VideoUploadService(videoJpaRepository, localStagingStore, videoEventPublisherPort, stringRedisTemplate);
+            VideoRedisPort videoRedis) {
+        return new VideoUploadService(videoJpaRepository, localStagingStore, videoEventPublisherPort, videoRedis);
     }
 }
