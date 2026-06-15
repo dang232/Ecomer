@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useParams, useNavigate, Link } from "react-router";
 import { toast } from "sonner";
 
-import { useProductVideos, VideoPlayer } from "../../features/videos";
+import { useProductVideos, VideoPlayer, ReviewVideoDisplay } from "../../features/videos";
 import { usePageMeta } from "../../utils/meta-tags";
 import { ImageWithFallback } from "../components/image-with-fallback";
 import { useVNShop } from "../components/vnshop-context";
@@ -831,8 +831,11 @@ export function ProductPage() {
                               loading="lazy"
                             />
                           ))}
+                          <ReviewVideoDisplay reviewId={review.id} />
                         </div>
-                      ) : null}
+                      ) : (
+                        <ReviewVideoDisplay reviewId={review.id} />
+                      )}
                       <button
                         onClick={() => voteHelpful.mutate(review.id)}
                         disabled={voteHelpful.isPending}
