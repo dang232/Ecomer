@@ -617,6 +617,23 @@ export function ProductPage() {
                     : t("product.tabs.qa")}
             </button>
           ))}
+          {productVideos.length > 0 && (
+            <button
+              id="product-tab-videos"
+              role="tab"
+              aria-selected={activeTab === "videos"}
+              aria-label={`${t("video.tab.title")}, ${productVideos.length} ${t("video.gallery.videoCount", { count: productVideos.length })}`}
+              onClick={() => setActiveTab("videos")}
+              className={[
+                "px-4 py-2 text-sm font-medium rounded-full transition-colors",
+                activeTab === "videos"
+                  ? "bg-primary text-white"
+                  : "text-text-secondary hover:bg-surface-elevated",
+              ].join(" ")}
+            >
+              {t("video.tab.title")} ({productVideos.length})
+            </button>
+          )}
         </div>
 
         <div role="tabpanel" aria-labelledby={`product-tab-${activeTab}`}>
@@ -905,6 +922,25 @@ export function ProductPage() {
               )}
             </div>
           ) : null}
+
+          {activeTab === "videos" && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {productVideos.length > 0 ? (
+                productVideos.map((video) => (
+                  <VideoPlayer
+                    key={video.id}
+                    src={video.playbackUrl ?? ""}
+                    poster={video.thumbnailUrl ?? ""}
+                    className="w-full aspect-video rounded-[var(--radius-lg)]"
+                  />
+                ))
+              ) : (
+                <p className="col-span-full text-center text-muted-foreground py-8">
+                  {t("video.tab.empty")}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
