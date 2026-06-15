@@ -1,4 +1,4 @@
-import { IconPhoto, IconLoader2, IconPlus, IconTrash } from "@tabler/icons-react";
+import { IconPhoto, IconLoader2, IconPlus, IconTrash, IconVideo, IconX as IconXClose } from "@tabler/icons-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -11,7 +11,12 @@ import {
   sellerProductImageUploadUrl,
   sellerProductUpdate,
 } from "../lib/api/endpoints/products";
+import { videoDelete } from "../lib/api/endpoints/videos";
 import type { Product } from "../types/ui";
+import { VideoUploadDropzone } from "../../features/videos/components/VideoUploadDropzone";
+import { VideoUploadProgress } from "../../features/videos/components/VideoUploadProgress";
+import { useProductVideos } from "../../features/videos/hooks/useProductVideos";
+import { useVideoUpload } from "../../features/videos/hooks/useVideoUpload";
 
 import { ImageWithFallback } from "./image-with-fallback";
 import { Modal } from "./ui/modal";
@@ -103,6 +108,28 @@ function SellerProductModalBody({
   const [staged, setStaged] = useState<StagedFile[]>([]);
   const [phase, setPhase] = useState<"idle" | "creating" | "uploading" | "finalising">("idle");
 
+  // Video state
+  const productId = product?.id ?? null;
+  const { videos: existingVideos } = useProductVideos(productId ?? "");
+  const videoSlotsFree = 3 - (existingVideos?.length ?? 0);
+
+  const {
+    state: videoUploadState,
+    upload: startVideoUpload,
+    cancel: cancelVideoUpload,
+    reset: resetVideoUpload,
+  } = useVideoUpload({
+    entityId: productId ?? "",
+    context: "PRODUCT",
+    onComplete: () => {
+      toast.success(t("video.pipeline.doneTitle"));
+      void qc.invalidateQueries({ queryKey: ["videos", "product", productId] });
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const videoUploading = videoUploadState.phase !== "idle" && videoUploadState.phase !== "error";
+
   // Revoke object URLs on unmount to avoid leaks. Because the wrapper only
   // mounts the body while open, this fires on every close.
   useEffect(() => {
@@ -117,6 +144,10 @@ function SellerProductModalBody({
 
   const handleClose = () => {
     if (isBusy) return;
+    if (videoUploading) {
+      if (!window.confirm(t("video.upload.cancelConfirm"))) return;
+      cancelVideoUpload();
+    }
     onClose();
   };
 
@@ -426,6 +457,94 @@ function SellerProductModalBody({
               maxCount: MAX_IMAGES,
             })}
           </p>
+        </div>
+
+        {/* ── Video Upload Section ──────────────────────────────────────── */}
+        <div>
+          <label className="block text-sm font-semibold text-foreground mb-2">
+            <span className="inline-flex items-center gap-1.5">
+              <IconVideo size={15} />
+              {t("seller.productModal.videosLabel")}{" "}
+              <span className="text-muted-foreground font-normal">
+                ({existingVideos.length}/3)
+              </span>
+            </span>
+          </label>
+
+          {/* Existing videos list */}
+          {existingVideos.length > 0 && (
+            <ul className="space-y-2 mb-3">
+              {existingVideos.map((video) => (
+                <li
+                  key={video.id}
+                  className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2"
+                >
+                  <IconVideo size={16} className="text-muted-foreground shrink-0" />
+                  <span className="flex-1 text-xs text-foreground truncate">
+                    {video.originalFilename ?? video.id}
+                  </span>
+                  {/* Status badge */}
+                  <span
+                    className={[
+                      "text-[10px] font-semibold px-2 py-0.5 rounded-full",
+                      video.status === "PUBLISHED"
+                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                        : video.status === "REJECTED" || video.status === "FAILED"
+                          ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                          : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+                    ].join(" ")}
+                  >
+                    {video.status}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={isBusy}
+                    onClick={async () => {
+                      try {
+                        await videoDelete(video.id);
+                        void qc.invalidateQueries({ queryKey: ["videos", "product", productId] });
+                        toast.success(t("seller.productModal.videoDeleted"));
+                      } catch {
+                        toast.error(t("seller.productModal.videoDeleteErr"));
+                      }
+                    }}
+                    aria-label={t("seller.productModal.removeVideo")}
+                    className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-surface-elevated text-muted-foreground hover:text-foreground disabled:opacity-50 transition-colors shrink-0"
+                  >
+                    <IconXClose size={13} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* Active upload progress */}
+          {videoUploadState.videoId && videoUploading && (
+            <div className="mb-3 space-y-2">
+              <VideoUploadProgress videoId={videoUploadState.videoId} enabled={videoUploading} />
+              <button
+                type="button"
+                onClick={cancelVideoUpload}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {t("video.upload.dropzone.cancelAria")}
+              </button>
+            </div>
+          )}
+
+          {/* Dropzone — only shown in edit mode when slots are free and not uploading */}
+          {isEdit && videoSlotsFree > 0 && !videoUploading ? (
+            <VideoUploadDropzone
+              uploadState={videoUploadState}
+              onFileSelected={startVideoUpload}
+              onCancel={resetVideoUpload}
+              disabled={isBusy}
+            />
+          ) : !isEdit ? (
+            <p className="text-[11px] text-muted-foreground">
+              {t("seller.productModal.videoCreateHint")}
+            </p>
+          ) : null}
         </div>
 
         <div>
