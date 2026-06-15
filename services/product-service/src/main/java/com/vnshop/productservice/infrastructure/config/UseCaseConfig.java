@@ -17,6 +17,9 @@ import com.vnshop.productservice.application.review.VoteHelpfulUseCase;
 import com.vnshop.productservice.application.review.image.ReviewImageUploadService;
 import com.vnshop.productservice.application.storage.ObjectValidationPolicy;
 import com.vnshop.productservice.application.storage.ObjectValidationService;
+import com.vnshop.productservice.application.video.LocalStagingStore;
+import com.vnshop.productservice.application.video.VideoAdminService;
+import com.vnshop.productservice.application.video.VideoUploadService;
 import com.vnshop.productservice.domain.port.out.ObjectMetadataRepositoryPort;
 import com.vnshop.productservice.domain.port.out.ObjectStoragePort;
 import com.vnshop.productservice.domain.port.out.ProductEventPublisherPort;
@@ -24,10 +27,14 @@ import com.vnshop.productservice.domain.port.out.ProductRepositoryPort;
 import com.vnshop.productservice.domain.review.port.out.BuyerProfileLookupPort;
 import com.vnshop.productservice.domain.review.port.out.ReviewRepositoryPort;
 import com.vnshop.productservice.domain.storage.ObjectStorageClass;
+import com.vnshop.productservice.domain.video.port.out.VideoEventPublisherPort;
+import com.vnshop.productservice.domain.video.port.out.VideoRepositoryPort;
+import com.vnshop.productservice.infrastructure.persistence.video.VideoJpaRepository;
 import com.vnshop.productservice.infrastructure.sanitization.HtmlSanitizer;
 import java.util.Set;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 @Configuration
 public class UseCaseConfig {
@@ -137,5 +144,20 @@ public class UseCaseConfig {
             ObjectValidationService reviewImageObjectValidationService) {
         return new ReviewImageUploadService(reviewRepositoryPort, objectStoragePort, objectMetadataRepositoryPort,
                 reviewImageObjectValidationService);
+    }
+
+    @Bean
+    VideoAdminService videoAdminService(VideoRepositoryPort videoRepositoryPort,
+            ObjectStoragePort objectStoragePort,
+            VideoEventPublisherPort videoEventPublisherPort) {
+        return new VideoAdminService(videoRepositoryPort, objectStoragePort, videoEventPublisherPort);
+    }
+
+    @Bean
+    VideoUploadService videoUploadService(VideoJpaRepository videoJpaRepository,
+            LocalStagingStore localStagingStore,
+            VideoEventPublisherPort videoEventPublisherPort,
+            StringRedisTemplate stringRedisTemplate) {
+        return new VideoUploadService(videoJpaRepository, localStagingStore, videoEventPublisherPort, stringRedisTemplate);
     }
 }

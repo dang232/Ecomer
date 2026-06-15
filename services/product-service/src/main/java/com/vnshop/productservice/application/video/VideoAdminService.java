@@ -1,0 +1,149 @@
+package com.vnshop.productservice.application.video;
+
+import com.vnshop.productservice.domain.video.Video;
+import com.vnshop.productservice.domain.video.VideoEvent;
+import com.vnshop.productservice.domain.video.VideoStatus;
+import com.vnshop.productservice.domain.video.VideoStatusHistory;
+import com.vnshop.productservice.domain.video.port.out.VideoEventPublisherPort;
+import com.vnshop.productservice.domain.video.port.out.VideoRepositoryPort;
+import com.vnshop.productservice.domain.port.out.ObjectStoragePort;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+import java.net.URI;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+
+/**
+ * Application service for admin video moderation.
+ * Handles the moderation queue, preview URLs, approve/reject, and appeal flows.
+ */
+public class VideoAdminService {
+
+    private static final String STAGING_BUCKET = "vnshop-videos-staging";
+    private static final String PUBLIC_BUCKET = "vnshop-videos";
+
+    private final VideoRepositoryPort videoRepositoryPort;
+    private final ObjectStoragePort objectStoragePort;
+    private final VideoEventPublisherPort videoEventPublisherPort;
+
+    public VideoAdminService(VideoRepositoryPort videoRepositoryPort,
+            ObjectStoragePort objectStoragePort,
+            VideoEventPublisherPort videoEventPublisherPort) {
+        this.videoRepositoryPort = Objects.requireNonNull(videoRepositoryPort, "videoRepositoryPort is required");
+        this.objectStoragePort = Objects.requireNonNull(objectStoragePort, "objectStoragePort is required");
+        this.videoEventPublisherPort = Objects.requireNonNull(videoEventPublisherPort, "videoEventPublisherPort is required");
+    }
+
+    /** Returns paginated videos with status PENDING_REVIEW, sorted by createdAt ascending. */
+    public Page<Video> getModerationQueue(Pageable pageable) {
+        return videoRepositoryPort.findByStatus(VideoStatus.PENDING_REVIEW, pageable);
+    }
+
+    /** Returns a short-lived presigned URL for the admin to preview the staged video. */
+    public URI getPreviewUrl(UUID videoId) {
+        Video video = findOrThrow(videoId);
+        if (video.stagingKey() == null) {
+            throw new VideoNotFoundException("Video " + videoId + " has no staging file");
+        }
+        return objectStoragePort.getSignedDownloadUrl(
+                video.stagingKey(),
+                com.vnshop.productservice.domain.storage.ObjectStorageClass.VIDEO_STAGING);
+    }
+
+    /**
+     * Approves a video: copies staging → public bucket, updates DB to PUBLISHED,
+     * emits video.published, records history.
+     */
+    public Video approve(UUID videoId, String adminId) {
+        Video video = findOrThrow(videoId);
+        requireModeratableStatus(video, videoId);
+
+        String publicKey = PUBLIC_BUCKET + "/" + video.videoId().toString();
+
+        // Copy staging → public bucket then remove from staging
+        objectStoragePort.copyObject(video.stagingKey(), publicKey);
+        objectStoragePort.deleteObject(video.stagingKey());
+
+        Video approved = video.withApproval(adminId, publicKey);
+        Video saved = videoRepositoryPort.save(approved);
+
+        videoRepositoryPort.saveHistory(
+                VideoStatusHistory.record(videoId, video.status(), VideoStatus.PUBLISHED, adminId, null));
+
+        videoEventPublisherPort.publish(new VideoEvent(
+                videoId.toString(),
+                VideoEvent.EventType.VIDEO_PUBLISHED,
+                null,
+                Map.of("publicKey", publicKey, "ownerId", video.ownerId())));
+
+        return saved;
+    }
+
+    /**
+     * Rejects a video: updates DB to REJECTED with reason, emits video.rejected,
+     * records history. The staging file is retained for 7 days (cleaned up by scheduler).
+     */
+    public Video reject(UUID videoId, String adminId, String reason) {
+        Objects.requireNonNull(reason, "rejection reason is required");
+        if (reason.isBlank()) {
+            throw new IllegalArgumentException("rejection reason must not be blank");
+        }
+
+        Video video = findOrThrow(videoId);
+        requireModeratableStatus(video, videoId);
+
+        Video rejected = video.withRejection(adminId, reason);
+        Video saved = videoRepositoryPort.save(rejected);
+
+        videoRepositoryPort.saveHistory(
+                VideoStatusHistory.record(videoId, video.status(), VideoStatus.REJECTED, adminId, reason));
+
+        videoEventPublisherPort.publish(new VideoEvent(
+                videoId.toString(),
+                VideoEvent.EventType.VIDEO_REJECTED,
+                null,
+                Map.of("reason", reason, "ownerId", video.ownerId())));
+
+        return saved;
+    }
+
+    /** Returns paginated videos with status APPEAL_PENDING. */
+    public Page<Video> getAppealsQueue(Pageable pageable) {
+        return videoRepositoryPort.findByStatus(VideoStatus.APPEAL_PENDING, pageable);
+    }
+
+    /** Approves a video appeal — same flow as initial approve. */
+    public Video approveAppeal(UUID videoId, String adminId) {
+        Video video = findOrThrow(videoId);
+        if (video.status() != VideoStatus.APPEAL_PENDING) {
+            throw new VideoModerationException(
+                    "Video " + videoId + " is not in APPEAL_PENDING status, current: " + video.status());
+        }
+        return approve(videoId, adminId);
+    }
+
+    /** Final rejection of a video appeal. */
+    public Video rejectAppeal(UUID videoId, String adminId, String reason) {
+        Video video = findOrThrow(videoId);
+        if (video.status() != VideoStatus.APPEAL_PENDING) {
+            throw new VideoModerationException(
+                    "Video " + videoId + " is not in APPEAL_PENDING status, current: " + video.status());
+        }
+        return reject(videoId, adminId, reason);
+    }
+
+    private Video findOrThrow(UUID videoId) {
+        return videoRepositoryPort.findById(videoId)
+                .orElseThrow(() -> new VideoNotFoundException("Video not found: " + videoId));
+    }
+
+    private void requireModeratableStatus(Video video, UUID videoId) {
+        if (video.status() != VideoStatus.PENDING_REVIEW && video.status() != VideoStatus.APPEAL_PENDING) {
+            throw new VideoModerationException(
+                    "Video " + videoId + " cannot be moderated in status: " + video.status());
+        }
+    }
+}
