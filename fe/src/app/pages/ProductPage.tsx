@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { ShoppingCart, Zap, Heart, Star, Truck, Shield, RefreshCw, ChevronRight, ChevronLeft, MessageCircle, ThumbsUp, Share2 } from "lucide-react";
+import { ShoppingCart, Zap, Heart, Star, Truck, Shield, RefreshCw, ChevronRight, ChevronLeft, MessageCircle, ThumbsUp, Share2, Play, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams, useNavigate, Link } from "react-router";
 import { toast } from "sonner";
 
+import { useProductVideos, VideoPlayer } from "../../features/videos";
 import { usePageMeta } from "../../utils/meta-tags";
 import { ImageWithFallback } from "../components/image-with-fallback";
 import { useVNShop } from "../components/vnshop-context";
@@ -175,10 +176,11 @@ export function ProductPage() {
   const [questionDraft, setQuestionDraft] = useState("");
 
   const [imageIdx, setImageIdx] = useState(0);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [selectedColor, setSelectedColor] = useState(product.colors?.[0] ?? "");
   const [selectedSize, setSelectedSize] = useState(product.sizes?.[0] ?? "");
   const [quantity, setQuantity] = useState(1);
-  const [activeTab, setActiveTab] = useState<"desc" | "specs" | "reviews" | "qa">("desc");
+  const [activeTab, setActiveTab] = useState<"desc" | "specs" | "reviews" | "qa" | "videos">("desc");
   const loved = isWishlisted(product.id);
 
   usePageMeta({
@@ -197,61 +199,119 @@ export function ProductPage() {
   const images = product.images && product.images.length > 0 ? product.images : [product.image];
   const savings = product.originalPrice ? product.originalPrice - product.price : 0;
 
+  // ── Video-first gallery with discriminated union ──
+  type GalleryItem =
+    | { type: "image"; url: string }
+    | { type: "video"; playbackUrl: string; thumbnailUrl: string };
+
+  const { videos: productVideos } = useProductVideos(product.id);
+
+  const galleryItems: GalleryItem[] = [
+    ...productVideos.map((v) => ({
+      type: "video" as const,
+      playbackUrl: v.playbackUrl ?? "",
+      thumbnailUrl: v.thumbnailUrl ?? "",
+    })),
+    ...images.map((url) => ({ type: "image" as const, url })),
+  ];
+
+  const currentItem = galleryItems[imageIdx] ?? galleryItems[0];
+
   return (
     <div className="max-w-[1200px] mx-auto py-8 px-[var(--content-padding)]">
       {/* Two-column grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
         {/* ── A. Left Column — Gallery ── */}
         <div className="lg:sticky lg:top-[80px] self-start space-y-3">
-          {/* Main image */}
+          {/* Main gallery area */}
           <div
             className="relative aspect-square bg-surface-elevated rounded-[var(--radius-xl)] border border-border overflow-hidden group"
-            aria-label="Product image gallery"
+            aria-label="Product media gallery"
             role="region"
-            tabIndex={images.length > 1 ? 0 : undefined}
+            tabIndex={galleryItems.length > 1 ? 0 : undefined}
             onKeyDown={
-              images.length > 1
+              galleryItems.length > 1
                 ? (e) => {
+                    if (e.key === "Escape" && isVideoPlaying) {
+                      setIsVideoPlaying(false);
+                      return;
+                    }
                     if (e.key === "ArrowLeft") {
                       e.preventDefault();
-                      setImageIdx((i) => (i - 1 + images.length) % images.length);
+                      setImageIdx((i) => (i - 1 + galleryItems.length) % galleryItems.length);
+                      setIsVideoPlaying(false);
                     } else if (e.key === "ArrowRight") {
                       e.preventDefault();
-                      setImageIdx((i) => (i + 1) % images.length);
+                      setImageIdx((i) => (i + 1) % galleryItems.length);
+                      setIsVideoPlaying(false);
                     }
                   }
                 : undefined
             }
           >
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={imageIdx}
-                className="w-full h-full transition-transform duration-300 group-hover:scale-105"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.25 }}
+            {isVideoPlaying && currentItem?.type === "video" ? (
+              <div className="relative w-full h-full flex items-center justify-center" aria-live="polite">
+                <VideoPlayer
+                  src={currentItem.playbackUrl}
+                  poster={currentItem.thumbnailUrl}
+                  className="w-full h-full object-contain"
+                />
+                <button
+                  className="absolute top-3 right-3 p-1.5 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
+                  onClick={() => setIsVideoPlaying(false)}
+                  aria-label={t("video.gallery.closePlayer")}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ) : currentItem?.type === "video" ? (
+              <button
+                className="relative w-full h-full"
+                onClick={() => setIsVideoPlaying(true)}
+                aria-label={t("video.gallery.playOverlay")}
               >
                 <ImageWithFallback
-                  src={images[imageIdx]}
-                  alt={product.name}
+                  src={currentItem.thumbnailUrl}
+                  alt="Video thumbnail"
                   className="w-full h-full object-cover"
                 />
-              </motion.div>
-            </AnimatePresence>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-full bg-black/50 flex items-center justify-center">
+                    <Play size={32} className="text-white ml-1" />
+                  </div>
+                </div>
+              </button>
+            ) : currentItem?.type === "image" ? (
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={imageIdx}
+                  className="w-full h-full transition-transform duration-300 group-hover:scale-105"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.25 }}
+                >
+                  <ImageWithFallback
+                    src={currentItem.url}
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                  />
+                </motion.div>
+              </AnimatePresence>
+            ) : null}
 
-            {images.length > 1 ? (
+            {galleryItems.length > 1 ? (
               <>
                 <button
-                  onClick={() => setImageIdx((i) => (i - 1 + images.length) % images.length)}
-                  aria-label="Previous image"
+                  onClick={() => { setImageIdx((i) => (i - 1 + galleryItems.length) % galleryItems.length); setIsVideoPlaying(false); }}
+                  aria-label="Previous"
                   className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 shadow-md flex items-center justify-center hover:bg-card transition-colors"
                 >
                   <ChevronLeft size={18} className="text-foreground" />
                 </button>
                 <button
-                  onClick={() => setImageIdx((i) => (i + 1) % images.length)}
-                  aria-label="Next image"
+                  onClick={() => { setImageIdx((i) => (i + 1) % galleryItems.length); setIsVideoPlaying(false); }}
+                  aria-label="Next"
                   className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 shadow-md flex items-center justify-center hover:bg-card transition-colors"
                 >
                   <ChevronRight size={18} className="text-foreground" />
@@ -284,19 +344,28 @@ export function ProductPage() {
 
           {/* Thumbnail strip */}
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-            {images.map((img, i) => (
+            {galleryItems.map((item, i) => (
               <button
-                key={img}
-                onClick={() => setImageIdx(i)}
-                aria-label={`View image ${i + 1}`}
+                key={i}
+                onClick={() => { setImageIdx(i); setIsVideoPlaying(false); }}
+                aria-label={item.type === "video" ? t("video.gallery.playOverlay") : `View image ${i + 1}`}
                 className={[
-                  "shrink-0 w-[72px] h-[72px] rounded-[var(--radius-md)] bg-surface-elevated border-2 overflow-hidden transition-all duration-150",
+                  "relative shrink-0 w-[72px] h-[72px] rounded-[var(--radius-md)] bg-surface-elevated border-2 overflow-hidden transition-all duration-150",
                   i === imageIdx
                     ? "border-primary shadow-[0_0_0_3px_var(--primary-light)]"
                     : "border-border hover:border-border-hover hover:-translate-y-0.5",
                 ].join(" ")}
               >
-                <ImageWithFallback src={img} alt="" className="w-full h-full object-cover" />
+                <ImageWithFallback
+                  src={item.type === "video" ? item.thumbnailUrl : item.url}
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
+                {item.type === "video" && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                    <Play size={14} className="text-white" />
+                  </div>
+                )}
               </button>
             ))}
           </div>
