@@ -5,11 +5,17 @@ import { z } from "zod";
 export const videoStatusSchema = z.enum([
   "PENDING",
   "UPLOADING",
+  "UPLOADED",
   "TRANSCODING",
+  "TRANSCODED",
   "MODERATING",
+  "PENDING_REVIEW",
+  "APPROVED",
   "PUBLISHED",
   "REJECTED",
+  "APPEAL_PENDING",
   "FAILED",
+  "DELETED",
 ]);
 export type VideoStatus = z.infer<typeof videoStatusSchema>;
 

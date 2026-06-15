@@ -57,7 +57,7 @@ interface VideoUploadProgressProps {
 
 export function VideoUploadProgress({ videoId, enabled = true }: VideoUploadProgressProps) {
   const { t } = useTranslation();
-  const { status, isStuck, isLoading } = useVideoStatus(videoId, { enabled });
+  const { status, data, isStuck, isLoading } = useVideoStatus(videoId, { enabled });
 
   const isRejected = status === "REJECTED";
   const isFailed = status === "FAILED";
