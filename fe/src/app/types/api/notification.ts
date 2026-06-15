@@ -15,6 +15,8 @@ export const notificationTypeSchema = z.enum([
   "REVIEW_REPLIED",
   "RETURN_REQUESTED",
   "PAYOUT_COMPLETED",
+  "VIDEO_PUBLISHED",
+  "VIDEO_REJECTED",
 ]);
 export type NotificationType = z.infer<typeof notificationTypeSchema>;
 

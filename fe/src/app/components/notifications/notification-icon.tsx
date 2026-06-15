@@ -7,6 +7,8 @@ import {
   IconCreditCard,
   IconMessage,
   IconPackage,
+  IconPlayerPlay,
+  IconPlayerStop,
   IconReceiptRefund,
   IconShoppingCart,
   IconTruck,
@@ -32,6 +34,8 @@ const ICON_MAP: Record<NotificationType, TablerIcon> = {
   REVIEW_REPLIED: IconMessage,
   RETURN_REQUESTED: IconArrowBack,
   PAYOUT_COMPLETED: IconWallet,
+  VIDEO_PUBLISHED: IconPlayerPlay,
+  VIDEO_REJECTED: IconPlayerStop,
 };
 
 const COLOR_MAP: Record<NotificationType, string> = {
@@ -47,6 +51,8 @@ const COLOR_MAP: Record<NotificationType, string> = {
   REVIEW_REPLIED: "text-purple-500",
   RETURN_REQUESTED: "text-orange-500",
   PAYOUT_COMPLETED: "text-emerald-500",
+  VIDEO_PUBLISHED: "text-green-500",
+  VIDEO_REJECTED: "text-red-500",
 };
 
 interface NotificationIconProps {
