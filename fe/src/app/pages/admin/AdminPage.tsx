@@ -1,4 +1,4 @@
-﻿import { IconAlertCircle, IconActivity, IconLayoutDashboard, IconPackage, IconStar, IconTag, IconUserSearch, IconUsers, IconWallet } from "@tabler/icons-react";
+﻿import { IconAlertCircle, IconActivity, IconLayoutDashboard, IconPackage, IconStar, IconTag, IconUserSearch, IconUsers, IconVideo, IconWallet } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "motion/react";
 import { useMemo, useState } from "react";
@@ -20,6 +20,7 @@ import { ReviewsModeration } from "./ReviewsModeration";
 import { SellersApproval } from "./SellersApproval";
 import { SystemHealth } from "./SystemHealth";
 import { UserManagement } from "./UserManagement";
+import { VideoModerationPanel } from "./VideoModerationPanel";
 
 type AdminTab =
   | "dashboard"
@@ -30,12 +31,14 @@ type AdminTab =
   | "payouts"
   | "users"
   | "orders"
-  | "health";
+  | "health"
+  | "videoModeration";
 
 const NAV_ITEMS: { id: AdminTab; labelKey: string; icon: typeof IconLayoutDashboard }[] = [
   { id: "dashboard", labelKey: "admin.nav.dashboard", icon: IconLayoutDashboard },
   { id: "sellers", labelKey: "admin.nav.sellers", icon: IconUsers },
   { id: "reviews", labelKey: "admin.nav.reviews", icon: IconStar },
+  { id: "videoModeration", labelKey: "admin.nav.videoModeration", icon: IconVideo },
   { id: "coupons", labelKey: "admin.nav.coupons", icon: IconTag },
   { id: "disputes", labelKey: "admin.nav.disputes", icon: IconAlertCircle },
   { id: "payouts", labelKey: "admin.nav.payouts", icon: IconWallet },
@@ -167,6 +170,7 @@ export function AdminPage() {
               {activeTab === "users" ? <UserManagement /> : null}
               {activeTab === "orders" ? <OrderManagement /> : null}
               {activeTab === "health" ? <SystemHealth /> : null}
+              {activeTab === "videoModeration" ? <VideoModerationPanel /> : null}
             </motion.div>
           </div>
         </div>
