@@ -17,4 +17,6 @@ public interface VideoJpaSpringDataRepository extends JpaRepository<VideoJpaEnti
     long countByUploaderIdAndCreatedAtAfter(String uploaderId, Instant since);
 
     long countByOwnerTypeAndOwnerIdAndCreatedAtAfter(String ownerType, UUID ownerId, Instant since);
+
+    List<VideoJpaEntity> findByOwnerTypeAndOwnerIdAndStatusOrderByCreatedAtDesc(String ownerType, UUID ownerId, String status);
 }

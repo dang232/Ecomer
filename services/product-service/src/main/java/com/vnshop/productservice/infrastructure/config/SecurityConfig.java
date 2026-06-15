@@ -28,7 +28,7 @@ public class SecurityConfig {
         return http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.GET, "/products/**", "/categories/**", "/reviews/**", "/questions/**", "/sellers/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/products/**", "/categories/**", "/reviews/**", "/questions/**", "/sellers/**", "/api/v1/videos").permitAll()
                         .requestMatchers(HttpMethod.POST, "/reviews/seller-summaries").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/prometheus", "/actuator/info").permitAll()
                         .anyRequest().authenticated()
