@@ -529,7 +529,9 @@
       "ariaLabelWithBadge": "{{label}}, còn {{count}} chờ xử lý",
       "users": "Người dùng",
       "orders": "Đơn hàng",
-      "health": "Tình trạng hệ thống"
+      "health": "Tình trạng hệ thống",
+      "videoModeration": "Kiểm duyệt Video",
+      "videoAppeals": "Kháng cáo Video"
     },
     "dashboard": {
       "title": "Admin Dashboard",
@@ -1226,6 +1228,28 @@
       "stuckMessage": "Video đã được xử lý hơn 15 phút. Nếu trạng thái không sớm cập nhật, vui lòng liên hệ hỗ trợ — video của bạn được an toàn và sẽ không bị mất.",
       "rejectionReason": "Lý do: {{reason}}",
       "stepsAria": "Các bước xử lý video"
+    },
+    "gallery": {
+      "playOverlay": "Phát video",
+      "videoCount": "{{count}} video",
+      "closePlayer": "Đóng trình phát video"
+    },
+    "tab": {
+      "title": "Video",
+      "empty": "Chưa có video nào"
+    },
+    "seller": {
+      "sectionTitle": "Video ({{count}}/{{max}})",
+      "createFirst": "Video sẽ được tải lên sau khi bạn lưu sản phẩm",
+      "deleteConfirm": "Xóa video này? Hành động này không thể hoàn tác.",
+      "cancelUpload": "Hủy tải lên?",
+      "durationLimit": "Tối đa {{seconds}} giây"
+    },
+    "review": {
+      "addButton": "Thêm video",
+      "processing": "Đang xử lý...",
+      "maxSize": "Tối đa 200 MB",
+      "durationLimit": "Tối đa 60 giây"
     }
   }
 }

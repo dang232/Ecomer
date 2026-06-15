@@ -529,7 +529,9 @@
       "ariaLabelWithBadge": "{{label}}, {{count}} pending",
       "users": "Users",
       "orders": "Orders",
-      "health": "System Health"
+      "health": "System Health",
+      "videoModeration": "Video Moderation",
+      "videoAppeals": "Video Appeals"
     },
     "dashboard": {
       "title": "Admin Dashboard",
@@ -1226,6 +1228,28 @@
       "stuckMessage": "Your video has been in processing for over 15 minutes. If this doesn't resolve soon, please contact support — your video is safe and will not be lost.",
       "rejectionReason": "Reason: {{reason}}",
       "stepsAria": "Video processing steps"
+    },
+    "gallery": {
+      "playOverlay": "Play video",
+      "videoCount": "{{count}} video(s)",
+      "closePlayer": "Close video player"
+    },
+    "tab": {
+      "title": "Videos",
+      "empty": "No videos available"
+    },
+    "seller": {
+      "sectionTitle": "Videos ({{count}}/{{max}})",
+      "createFirst": "Videos will upload after you save the product",
+      "deleteConfirm": "Remove this video? This cannot be undone.",
+      "cancelUpload": "Cancel upload?",
+      "durationLimit": "Max {{seconds}} seconds"
+    },
+    "review": {
+      "addButton": "Add video",
+      "processing": "Processing...",
+      "maxSize": "Max 200 MB",
+      "durationLimit": "Max 60 seconds"
     }
   }
 }
