@@ -311,7 +311,9 @@ export class KafkaEventConsumer {
       threadId: p.videoId ? `video:${p.videoId}` : undefined,
       threadTitle: p.videoId ? `Video #${p.videoId.slice(0, 8)}` : undefined,
       metadata: this.sanitizeMetadata(p),
-      idempotencyKey: p.videoId ? `video.published:${p.videoId}:VIDEO_PUBLISHED` : undefined,
+      idempotencyKey: p.videoId
+        ? `video.published:${p.videoId}:VIDEO_PUBLISHED`
+        : undefined,
     });
   }
 
@@ -331,7 +333,9 @@ export class KafkaEventConsumer {
       threadId: p.videoId ? `video:${p.videoId}` : undefined,
       threadTitle: p.videoId ? `Video #${p.videoId.slice(0, 8)}` : undefined,
       metadata: this.sanitizeMetadata(p),
-      idempotencyKey: p.videoId ? `video.rejected:${p.videoId}:VIDEO_REJECTED` : undefined,
+      idempotencyKey: p.videoId
+        ? `video.rejected:${p.videoId}:VIDEO_REJECTED`
+        : undefined,
     });
   }
 
