@@ -240,3 +240,70 @@ export const dashboardTopSellerSchema = z
   .object({ sellerId: sellerIdSchema, shopName: z.string().optional(), revenue: z.number() })
   .passthrough();
 export type DashboardTopSeller = z.infer<typeof dashboardTopSellerSchema>;
+
+/**
+ * Video admin — moderation queue & appeals.
+ *
+ * The appeals queue response maps the Spring Page<VideoModerationResponse> shape.
+ * `uploaderName` is not present in the BE response; UI falls back to the i18n
+ * "unknownUploader" key when it is absent. `posterUrl` is not returned by the
+ * appeals endpoint — it is loaded on-demand via the /preview endpoint.
+ */
+export const adminVideoModerationQueueItemSchema = z.object({
+  videoId: z.string(),
+  ownerId: z.string().nullable(),
+  productId: z.string().nullable(),
+  reviewId: z.string().nullable(),
+  stagingKey: z.string().nullable(),
+  publicKey: z.string().nullable(),
+  status: z.string(),
+  rejectionReason: z.string().nullable(),
+  moderatedBy: z.string().nullable(),
+  moderatedAt: z.string().nullable(),
+  publishedAt: z.string().nullable(),
+  createdAt: z.string().nullable(),
+  nsfwScore: z.number().nullable().optional(),
+  posterUrl: z.string().nullable().optional(),
+  durationSeconds: z.number().nullable().optional(),
+  uploaderName: z.string().nullable().optional(),
+});
+export type AdminVideoModerationQueueItem = z.infer<typeof adminVideoModerationQueueItemSchema>;
+
+export const adminVideoModerationQueuePageSchema = z.object({
+  content: z.array(adminVideoModerationQueueItemSchema).default([]),
+  totalElements: z.number().default(0),
+  totalPages: z.number().default(0),
+  page: z.number().default(0),
+  size: z.number().default(20),
+});
+export type AdminVideoModerationQueuePage = z.infer<typeof adminVideoModerationQueuePageSchema>;
+
+/** GET /admin/videos/{videoId}/preview — returns the presigned URL string directly. */
+export const adminVideoPreviewSchema = z.object({ url: z.string() });
+export type AdminVideoPreview = z.infer<typeof adminVideoPreviewSchema>;
+
+export const adminVideoAppealItemSchema = z.object({
+  videoId: z.string(),
+  status: z.string(),
+  rejectionReason: z.string().nullable(),
+  appealReason: z.string().nullable(),
+  uploaderName: z.string().nullable().optional(),
+  createdAt: z.string().nullable(),
+  // posterUrl is not in the appeals endpoint response; load via /preview on demand
+  posterUrl: z.string().nullable().optional(),
+  presignedUrl: z.string().nullable().optional(),
+  nsfwScore: z.number().nullable().optional(),
+  durationSeconds: z.number().nullable().optional(),
+});
+export type AdminVideoAppealItem = z.infer<typeof adminVideoAppealItemSchema>;
+
+export const adminVideoModerationResponseSchema = z.object({
+  videoId: z.string(),
+  status: z.string(),
+  rejectionReason: z.string().nullable(),
+  moderatedBy: z.string().nullable(),
+  moderatedAt: z.string().nullable(),
+  publishedAt: z.string().nullable(),
+  createdAt: z.string().nullable(),
+});
+export type AdminVideoModerationResponse = z.infer<typeof adminVideoModerationResponseSchema>;

@@ -44,6 +44,15 @@ TOPICS=(
   "payout.completed:3"
   "user.registered:3"
   "user.password-reset:3"
+  # video pipeline topics (per spec section 6 — moderator consumes video.transcode.completed directly, no relay)
+  "video.upload.completed:3"
+  "video.transcode.completed:3"
+  "video.transcode.failed:3"
+  "video.moderation.completed:3"
+  "video.published:3"
+  "video.rejected:3"
+  "video.upload.completed.DLT:3"
+  "video.transcode.completed.DLT:3"
   # GDPR topics
   "gdpr.export-requested:1"
   "gdpr.export-fragment:3"
@@ -148,6 +157,19 @@ $ACL --add --allow-principal User:svc-shipping --operation Read --topic gdpr.del
 $ACL --add --allow-principal User:svc-shipping --operation Write --topic gdpr.export-fragment
 $ACL --add --allow-principal User:svc-shipping --operation Write --topic gdpr.deletion-completed
 $ACL --add --allow-principal User:svc-shipping --operation Read --group shipping-service-gdpr
+
+# video-transcoder (svc-video-transcoder): consumes video.upload.completed; produces video.transcode.completed, video.transcode.failed
+$ACL --add --allow-principal User:svc-video-transcoder --operation Read --topic video.upload.completed
+$ACL --add --allow-principal User:svc-video-transcoder --operation Write --topic video.transcode.completed
+$ACL --add --allow-principal User:svc-video-transcoder --operation Write --topic video.transcode.failed
+$ACL --add --allow-principal User:svc-video-transcoder --operation Read --topic video.transcode.completed.DLT
+$ACL --add --allow-principal User:svc-video-transcoder --operation Write --topic video.transcode.completed.DLT
+
+# video-moderator (svc-video-moderator): consumes video.transcode.completed directly (no relay topic); produces video.moderation.completed, video.published, video.rejected
+$ACL --add --allow-principal User:svc-video-moderator --operation Read --topic video.transcode.completed
+$ACL --add --allow-principal User:svc-video-moderator --operation Write --topic video.moderation.completed
+$ACL --add --allow-principal User:svc-video-moderator --operation Write --topic video.published
+$ACL --add --allow-principal User:svc-video-moderator --operation Write --topic video.rejected
 
 echo "All ACLs configured."
 rm -f $ADMIN_CONFIG

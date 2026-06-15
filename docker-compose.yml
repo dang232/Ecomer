@@ -538,10 +538,79 @@ services:
       - |
         mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-vnshop} ${MINIO_ROOT_PASSWORD:-vnshop123} &&
         mc mb --ignore-existing local/vnshop-products local/vnshop-reviews local/vnshop-invoices local/vnshop-avatars &&
+        mc mb --ignore-existing local/vnshop-video-uploads-tmp local/vnshop-videos-staging local/vnshop-videos &&
         mc anonymous set download local/vnshop-products &&
         mc anonymous set download local/vnshop-reviews &&
         mc anonymous set download local/vnshop-avatars &&
+        mc anonymous set download local/vnshop-videos &&
+        # Auto-expire raw uploads after 24 h
+        mc ilm rule add --days 1 --delete local/vnshop-video-uploads-tmp &&
         echo "minio buckets ready"
+
+  video-transcoder:
+    profiles: ["apps"]
+    build:
+      context: ./services/video-transcoder
+    image: vnshop/video-transcoder:latest
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          cpus: '3.0'
+          memory: 2048M
+        reservations:
+          cpus: '2.0'
+          memory: 1024M
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_SASL_USERNAME: ${KAFKA_VIDEO_USERNAME:-svc-video-transcoder}
+      KAFKA_SASL_PASSWORD: ${KAFKA_VIDEO_PASSWORD}
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER:-vnshop}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-vnshop123}
+      S3_BUCKET_INPUT: vnshop-video-uploads-tmp
+      S3_BUCKET_STAGING: vnshop-videos-staging
+      SPRING_PROFILES_ACTIVE: docker
+    tmpfs:
+      - /tmp/transcode:size=4G,noexec
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    cap_drop:
+      - ALL
+    depends_on:
+      kafka:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  video-moderator:
+    profiles: ["apps"]
+    build:
+      context: ./services/video-moderator
+    image: vnshop/video-moderator:latest
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 3072M
+        reservations:
+          memory: 2048M
+    environment:
+      MODERATOR_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      MODERATOR_KAFKA_SASL_USERNAME: ${KAFKA_VIDEO_USERNAME:-svc-video-moderator}
+      MODERATOR_KAFKA_SASL_PASSWORD: ${KAFKA_VIDEO_PASSWORD}
+      MODERATOR_STORAGE_ENDPOINT: http://minio:9000
+      MODERATOR_STORAGE_ACCESS_KEY: ${MINIO_ROOT_USER:-vnshop}
+      MODERATOR_STORAGE_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-vnshop123}
+      MODERATOR_DATABASE_URL: postgresql://vnshop:${POSTGRES_PASSWORD:-vnshop}@postgres-product:5432/vnshop_product
+    depends_on:
+      kafka:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      postgres-product:
+        condition: service_healthy
 
   jaeger:
     image: jaegertracing/all-in-one:1.71.0
@@ -792,8 +861,14 @@ services:
       VNSHOP_OBJECT_STORAGE_ACCESS_KEY: ${OBJECT_STORAGE_ACCESS_KEY:-vnshop}
       VNSHOP_OBJECT_STORAGE_SECRET_KEY: ${OBJECT_STORAGE_SECRET_KEY:-vnshop123}
       VNSHOP_OBJECT_STORAGE_PATH_STYLE_ACCESS: ${OBJECT_STORAGE_PATH_STYLE:-true}
+      # Local staging dir for resumable video uploads (C1 fix — chunks buffer here
+      # until finalise, then PUT to S3 in a single object).
+      VIDEO_UPLOAD_LOCAL_STAGING_DIR: /tmp/video-uploads
     volumes:
       - ./infra/kafka/certs/kafka.truststore.jks:/etc/kafka/secrets/kafka.truststore.jks:ro
+    tmpfs:
+      # 6 GB tmpfs holds 1 × 500 MB upload in progress + ~5 GB headroom for concurrent sessions
+      - /tmp/video-uploads:size=6G,noexec
     deploy:
       resources:
         limits:
