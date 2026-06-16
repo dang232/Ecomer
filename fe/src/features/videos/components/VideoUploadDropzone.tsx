@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Upload, X, FileVideo, AlertCircle } from "lucide-react";
+import { Upload, X, FileVideo, AlertCircle, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import type { VideoUploadState } from "../hooks/useVideoUpload";
@@ -34,6 +34,7 @@ export function VideoUploadDropzone({
   const isError = phase === "error";
   const isComplete = phase === "complete";
   const isBusy = isActive && phase !== "complete";
+  const isPreUpload = phase === "initiating" || phase === "validating";
 
   function handleFiles(files: FileList | null) {
     if (!files || files.length === 0 || disabled || isBusy) return;
@@ -75,8 +76,9 @@ export function VideoUploadDropzone({
           onDragLeave={handleDragLeave}
           className={[
             "relative flex flex-col items-center justify-center gap-3 rounded-[var(--radius-xl)] border-2 border-dashed p-8 transition-colors cursor-pointer",
+            "focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2",
             dragging
-              ? "border-primary bg-primary/5"
+              ? "border-primary bg-surface-elevated"
               : isError
                 ? "border-red-400 bg-red-50 dark:bg-red-950/20"
                 : "border-border hover:border-primary hover:bg-surface-elevated",
@@ -117,7 +119,7 @@ export function VideoUploadDropzone({
                 e.stopPropagation();
                 onCancel();
               }}
-              className="mt-1 px-4 py-1.5 rounded-[var(--radius-md)] border border-border text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="mt-1 px-4 py-2 min-h-[44px] rounded-[var(--radius-md)] border border-border text-xs font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
             >
               {t("video.upload.dropzone.tryAgain")}
             </button>
@@ -151,7 +153,10 @@ export function VideoUploadDropzone({
           <p className="text-sm font-medium text-foreground truncate">
             {filename ?? t("video.upload.dropzone.unknownFile")}
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p
+            className="text-xs text-muted-foreground"
+            aria-live="polite"
+          >
             {isComplete
               ? t("video.upload.dropzone.complete")
               : phase === "initiating"
@@ -161,34 +166,47 @@ export function VideoUploadDropzone({
                   : t("video.upload.dropzone.uploading", { progress })}
           </p>
         </div>
-        {/* Cancel button — only while actively uploading */}
+        {/* Cancel button — only while actively uploading. P1-10: 44px touch target. */}
         {isBusy && (
           <button
             type="button"
             onClick={onCancel}
             aria-label={t("video.upload.dropzone.cancelAria")}
-            className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-surface-elevated transition-colors shrink-0"
+            className="min-h-[44px] min-w-[44px] rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-surface-elevated transition-colors shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
           >
-            <X size={15} />
+            <X size={18} />
           </button>
         )}
       </div>
 
-      {/* Progress bar */}
+      {/* Progress — P1-11: at 0% the bar would be invisible, so during
+          initiating/validating show a spinner instead. Otherwise the bar
+          still has min-width: 4px so it's never invisible. */}
       {!isComplete && (
-        <div
-          role="progressbar"
-          aria-valuenow={progress}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label={t("video.upload.dropzone.progressAria")}
-          className="h-1.5 w-full rounded-full bg-surface-elevated overflow-hidden"
-        >
+        isPreUpload ? (
           <div
-            className="h-full rounded-full bg-primary transition-all duration-300"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
+            className="h-1.5 w-full rounded-full bg-surface-elevated flex items-center justify-center"
+            role="status"
+            aria-live="polite"
+            aria-label={t("video.upload.dropzone.initiating")}
+          >
+            <Loader2 size={14} className="text-primary animate-spin" aria-hidden="true" />
+          </div>
+        ) : (
+          <div
+            role="progressbar"
+            aria-valuenow={progress}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={t("video.upload.dropzone.progressAria")}
+            className="h-1.5 w-full rounded-full bg-surface-elevated overflow-hidden"
+          >
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-300 min-w-[4px]"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        )
       )}
 
       {/* Thumbnail preview once processing starts */}

@@ -258,11 +258,11 @@ export function ProductPage() {
                   className="w-full h-full object-contain"
                 />
                 <button
-                  className="absolute top-3 right-3 p-1.5 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
+                  className="absolute top-3 right-3 min-h-[44px] min-w-[44px] p-2.5 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors flex items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
                   onClick={() => setIsVideoPlaying(false)}
                   aria-label={t("video.gallery.closePlayer")}
                 >
-                  <X size={16} />
+                  <X size={18} />
                 </button>
               </div>
             ) : currentItem?.type === "video" ? (
@@ -349,7 +349,7 @@ export function ProductPage() {
               <button
                 key={i}
                 onClick={() => { setImageIdx(i); setIsVideoPlaying(false); }}
-                aria-label={item.type === "video" ? t("video.gallery.playOverlay") : `View image ${i + 1}`}
+                aria-label={item.type === "video" ? `${t("video.gallery.playOverlay")} ${i + 1}` : `View image ${i + 1}`}
                 className={[
                   "relative shrink-0 w-[72px] h-[72px] rounded-[var(--radius-md)] bg-surface-elevated border-2 overflow-hidden transition-all duration-150",
                   i === imageIdx
@@ -363,9 +363,14 @@ export function ProductPage() {
                   className="w-full h-full object-cover"
                 />
                 {item.type === "video" && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                    <Play size={14} className="text-white" />
-                  </div>
+                  <>
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                      <Play size={18} className="text-white" aria-hidden="true" />
+                    </div>
+                    <span className="absolute top-1 right-1 px-1.5 py-0.5 rounded bg-black/70 text-[9px] font-bold uppercase tracking-wider text-white">
+                      Video
+                    </span>
+                  </>
                 )}
               </button>
             ))}
@@ -637,7 +642,7 @@ export function ProductPage() {
           )}
         </div>
 
-        <div role="tabpanel" aria-labelledby={`product-tab-${activeTab}`}>
+        <div role="tabpanel" aria-labelledby={`product-tab-${activeTab}`} aria-live="polite">
           {/* Description tab */}
           {activeTab === "desc" ? (
             <div className="space-y-4 bg-card rounded-[var(--radius-xl)] border border-border p-6">

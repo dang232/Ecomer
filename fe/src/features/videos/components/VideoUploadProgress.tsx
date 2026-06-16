@@ -96,8 +96,12 @@ export function VideoUploadProgress({ videoId, enabled = true }: VideoUploadProg
         </div>
       )}
 
-      {/* Pipeline steps */}
-      <ol className="space-y-2" aria-label={t("video.pipeline.stepsAria")}>
+      {/* Pipeline steps — aria-live=polite so screen readers announce step transitions */}
+      <ol
+        className="space-y-2"
+        aria-label={t("video.pipeline.stepsAria")}
+        aria-live="polite"
+      >
         {PIPELINE_STEPS.map((step) => {
           const state = stepState(step.key, status);
           const Icon = step.icon;

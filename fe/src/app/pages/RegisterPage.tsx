@@ -1,13 +1,18 @@
-import { Sparkles, AlertCircle, Eye, EyeOff, ChevronRight } from "lucide-react";
+import { Sparkles, Eye, EyeOff, ChevronRight } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useNavigate, useSearchParams } from "react-router";
 
+import { FormField } from "../components/form/FormField";
+import { PhoneInput } from "../components/form/PhoneInput";
 import { useAuth } from "../hooks/use-auth";
 import { sanitizeRedirect } from "../lib/auth/sanitize-redirect";
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MIN_PASSWORD_LENGTH = 8;
+import { isValidEmail } from "../lib/validation/email";
+import {
+  isValidPhone,
+  parseOptionalPhone,
+} from "../lib/validation/phone";
+import { MIN_PASSWORD_LENGTH } from "../lib/validation/password";
 
 export function RegisterPage() {
   const [params] = useSearchParams();
@@ -41,13 +46,20 @@ export function RegisterPage() {
     const validationErrors: Record<string, string> = {};
 
     if (!firstName.trim()) {
-      validationErrors.firstName = t("register.form.errorFirstNameRequired", { defaultValue: "First name is required" });
+      validationErrors.firstName = t("register.form.errorFirstNameRequired");
     }
     if (!lastName.trim()) {
-      validationErrors.lastName = t("register.form.errorLastNameRequired", { defaultValue: "Last name is required" });
+      validationErrors.lastName = t("register.form.errorLastNameRequired");
     }
-    if (!EMAIL_RE.test(email.trim())) {
+    if (!isValidEmail(email)) {
       validationErrors.email = t("register.form.errorEmailInvalid");
+    }
+    // Optional field — only validate when the user actually typed something.
+    // Empty/blank means "no phone", which the BE accepts.
+    if (phone.trim() !== "" && !isValidPhone(phone)) {
+      // PhoneInput already shows a live error while typing; the form-level
+      // error only fires if the user bypasses the input (e.g. devtools).
+      validationErrors.phone = t("register.form.errorPhoneInvalid");
     }
     if (password.length < MIN_PASSWORD_LENGTH) {
       validationErrors.password = t("register.form.errorPasswordShort");
@@ -69,7 +81,9 @@ export function RegisterPage() {
           password,
           firstName: firstName.trim(),
           lastName: lastName.trim(),
-          phone: phone.trim() || undefined,
+          // parseOptionalPhone centralises the null/blank/invalid → null rule
+          // so the BE never receives a non-E.164 string.
+          phone: parseOptionalPhone(phone) ?? undefined,
         });
         void navigate(next, { replace: true });
       } catch (err) {
@@ -85,6 +99,13 @@ export function RegisterPage() {
           setServerError(t("register.form.errorEmailTaken"));
         } else if (errorCode === "weak_password") {
           setServerError(t("register.form.errorWeakPassword"));
+        } else if (
+          errorCode === "validation_error" &&
+          typeof message === "string" &&
+          /phone/i.test(message)
+        ) {
+          // BE rejected the phone — surface as a field error, not a banner.
+          setErrors({ phone: t("register.form.errorPhoneInvalid") });
         } else if (typeof message === "string" && message) {
           setServerError(message);
         } else {
@@ -95,12 +116,6 @@ export function RegisterPage() {
       }
     })();
   };
-
-  const inputClass =
-    "w-full py-3 px-3.5 border-[1.5px] border-border rounded-[var(--radius-lg)] text-sm bg-card text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-light)] transition-all";
-
-  const inputErrorClass =
-    "w-full py-3 px-3.5 border-[1.5px] border-red-400 rounded-[var(--radius-lg)] text-sm bg-card text-foreground placeholder:text-muted-foreground outline-none focus:border-red-500 focus:shadow-[0_0_0_3px_rgba(248,113,113,0.2)] transition-all";
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center p-6 bg-background">
@@ -124,102 +139,53 @@ export function RegisterPage() {
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           {/* First name + Last name side by side */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="mb-4">
-              <label
-                htmlFor="firstName"
-                className="block text-[13px] font-medium text-foreground mb-1.5"
-              >
-                {t("register.form.firstNameLabel", { defaultValue: "First Name" })}
-              </label>
-              <input
-                id="firstName"
-                type="text"
-                autoComplete="given-name"
-                required
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                aria-describedby={errors.firstName ? "register-error-firstName" : undefined}
-                className={errors.firstName ? inputErrorClass : inputClass}
-              />
-              {errors.firstName ? (
-                <p id="register-error-firstName" role="alert" className="flex items-center gap-1 mt-1.5 text-xs text-red-600">
-                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span>{errors.firstName}</span>
-                </p>
-              ) : null}
-            </div>
-            <div className="mb-4">
-              <label
-                htmlFor="lastName"
-                className="block text-[13px] font-medium text-foreground mb-1.5"
-              >
-                {t("register.form.lastNameLabel", { defaultValue: "Last Name" })}
-              </label>
-              <input
-                id="lastName"
-                type="text"
-                autoComplete="family-name"
-                required
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                aria-describedby={errors.lastName ? "register-error-lastName" : undefined}
-                className={errors.lastName ? inputErrorClass : inputClass}
-              />
-              {errors.lastName ? (
-                <p id="register-error-lastName" role="alert" className="flex items-center gap-1 mt-1.5 text-xs text-red-600">
-                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span>{errors.lastName}</span>
-                </p>
-              ) : null}
-            </div>
-          </div>
-
-          {/* Email */}
-          <div className="mb-4">
-            <label
-              htmlFor="email"
-              className="block text-[13px] font-medium text-foreground mb-1.5"
-            >
-              {t("register.form.emailLabel", { defaultValue: "Email" })}
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
+            <FormField
+              id="firstName"
+              type="text"
+              autoComplete="given-name"
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              aria-describedby={errors.email ? "register-error-email" : undefined}
-              className={errors.email ? inputErrorClass : inputClass}
+              label={t("register.form.firstNameLabel", { defaultValue: "First Name" })}
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              error={errors.firstName}
             />
-            {errors.email ? (
-              <p id="register-error-email" role="alert" className="flex items-center gap-1 mt-1.5 text-xs text-red-600">
-                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                <span>{errors.email}</span>
-              </p>
-            ) : null}
-          </div>
-
-          {/* Phone */}
-          <div className="mb-4">
-            <label
-              htmlFor="phone"
-              className="block text-[13px] font-medium text-foreground mb-1.5"
-            >
-              {t("register.form.phoneLabel", { defaultValue: "Phone Number" })}
-            </label>
-            <input
-              id="phone"
-              type="tel"
-              autoComplete="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+84..."
-              className={inputClass}
+            <FormField
+              id="lastName"
+              type="text"
+              autoComplete="family-name"
+              required
+              label={t("register.form.lastNameLabel", { defaultValue: "Last Name" })}
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              error={errors.lastName}
             />
           </div>
 
-          {/* Password */}
+          <FormField
+            id="email"
+            type="email"
+            autoComplete="email"
+            required
+            label={t("register.form.emailLabel", { defaultValue: "Email" })}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            error={errors.email}
+          />
+
+          <PhoneInput
+            value={phone}
+            onChange={setPhone}
+            label={t("register.form.phoneLabel", { defaultValue: "Phone Number" })}
+            helperText={t("register.form.phoneHelper", {
+              defaultValue: "9 or 10 digits, numbers only",
+            })}
+            error={errors.phone}
+            id="phone"
+          />
+
+          {/* Password has a focus-driven hint and an eye toggle, so it
+              doesn't fit the plain FormField API — but it reuses the same
+              label/input/error pattern. */}
           <div className="mb-4">
             <label
               htmlFor="password"
@@ -239,7 +205,11 @@ export function RegisterPage() {
                 onBlur={() => setPwFocused(false)}
                 placeholder={t("register.form.passwordHint", { defaultValue: "At least 8 characters" })}
                 aria-describedby={errors.password ? "register-error-password" : undefined}
-                className={`${errors.password ? inputErrorClass : inputClass} pr-11`}
+                className={`w-full py-3 px-3.5 pr-11 border-[1.5px] rounded-[var(--radius-lg)] text-sm bg-card text-foreground placeholder:text-muted-foreground outline-none transition-all ${
+                  errors.password
+                    ? "border-red-400 focus:border-red-500 focus:shadow-[0_0_0_3px_rgba(248,113,113,0.2)]"
+                    : "border-border focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-light)]"
+                }`}
               />
               <button
                 type="button"
@@ -251,8 +221,11 @@ export function RegisterPage() {
               </button>
             </div>
             {errors.password ? (
-              <p id="register-error-password" role="alert" className="flex items-center gap-1 mt-1.5 text-xs text-red-600">
-                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+              <p
+                id="register-error-password"
+                role="alert"
+                className="flex items-center gap-1 mt-1.5 text-xs text-red-600"
+              >
                 <span>{errors.password}</span>
               </p>
             ) : pwFocused ? (
@@ -262,31 +235,16 @@ export function RegisterPage() {
             ) : null}
           </div>
 
-          {/* Confirm password */}
-          <div className="mb-4">
-            <label
-              htmlFor="confirm"
-              className="block text-[13px] font-medium text-foreground mb-1.5"
-            >
-              {t("register.form.confirmLabel", { defaultValue: "Confirm Password" })}
-            </label>
-            <input
-              id="confirm"
-              type={showPassword ? "text" : "password"}
-              autoComplete="new-password"
-              required
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              aria-describedby={errors.confirm ? "register-error-confirm" : undefined}
-              className={errors.confirm ? inputErrorClass : inputClass}
-            />
-            {errors.confirm ? (
-              <p id="register-error-confirm" role="alert" className="flex items-center gap-1 mt-1.5 text-xs text-red-600">
-                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                <span>{errors.confirm}</span>
-              </p>
-            ) : null}
-          </div>
+          <FormField
+            id="confirm"
+            type={showPassword ? "text" : "password"}
+            autoComplete="new-password"
+            required
+            label={t("register.form.confirmLabel", { defaultValue: "Confirm Password" })}
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            error={errors.confirm}
+          />
 
           {/* Server Error */}
           {serverError ? (
@@ -295,7 +253,6 @@ export function RegisterPage() {
               role="alert"
               className="flex items-start gap-2 p-3 rounded-[var(--radius-lg)] bg-red-50 border border-red-100 text-sm text-red-700"
             >
-              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
               <span>{serverError}</span>
             </div>
           ) : null}

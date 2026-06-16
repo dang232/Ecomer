@@ -170,7 +170,7 @@ describe("VideoUploadDropzone", () => {
     fireEvent.dragOver(dropzoneBtn, { preventDefault: () => {} });
 
     expect(dropzoneBtn.className).toContain("border-primary");
-    expect(dropzoneBtn.className).toContain("bg-primary/5");
+    expect(dropzoneBtn.className).toContain("bg-surface-elevated");
   });
 
   it("removes drag-over style when drag leaves the dropzone", () => {
@@ -180,7 +180,8 @@ describe("VideoUploadDropzone", () => {
     fireEvent.dragOver(dropzoneBtn, { preventDefault: () => {} });
     fireEvent.dragLeave(dropzoneBtn);
 
-    expect(dropzoneBtn.className).not.toContain("bg-primary/5");
+    // Word-boundary regex so we don't false-positive on the hover variant "hover:border-primary"
+    expect(dropzoneBtn.className).not.toMatch(/(^|\s)border-primary(\s|$)/);
   });
 
   it("does not apply drag-over style when disabled", () => {
@@ -189,7 +190,8 @@ describe("VideoUploadDropzone", () => {
 
     fireEvent.dragOver(dropzoneBtn, { preventDefault: () => {} });
 
-    expect(dropzoneBtn.className).not.toContain("bg-primary/5");
+    // Word-boundary regex so we don't false-positive on the hover variant "hover:border-primary"
+    expect(dropzoneBtn.className).not.toMatch(/(^|\s)border-primary(\s|$)/);
   });
 
   // ── Drag-and-drop file handling ────────────────────────────────────────────

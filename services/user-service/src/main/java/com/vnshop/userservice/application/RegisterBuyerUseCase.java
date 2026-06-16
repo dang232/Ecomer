@@ -1,7 +1,6 @@
 package com.vnshop.userservice.application;
 
 import com.vnshop.userservice.domain.BuyerProfile;
-import com.vnshop.userservice.domain.PhoneNumber;
 import com.vnshop.userservice.domain.port.out.UserRepositoryPort;
 
 import java.util.List;
@@ -15,13 +14,12 @@ public class RegisterBuyerUseCase {
     }
 
     public BuyerProfile register(RegisterBuyerCommand command) {
-        PhoneNumber phone = (command.phone() == null || command.phone().isBlank())
-                ? null
-                : new PhoneNumber(command.phone());
+        // No null/blank handling here: PhoneNumber.parseOrNull was called by the
+        // controller, so `command.phone()` is either a valid PhoneNumber or null.
         BuyerProfile buyerProfile = new BuyerProfile(
                 command.keycloakId(),
-                command.name(),
-                phone,
+                command.name().value(),
+                command.phone(),
                 command.avatarUrl(),
                 List.of()
         );

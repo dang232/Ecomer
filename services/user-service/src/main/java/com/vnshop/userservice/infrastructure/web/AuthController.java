@@ -2,6 +2,8 @@ package com.vnshop.userservice.infrastructure.web;
 
 import com.vnshop.userservice.application.RegisterBuyerCommand;
 import com.vnshop.userservice.application.RegisterBuyerUseCase;
+import com.vnshop.userservice.domain.FullName;
+import com.vnshop.userservice.domain.PhoneNumber;
 import com.vnshop.userservice.infrastructure.keycloak.KeycloakAdminClient;
 import com.vnshop.userservice.infrastructure.keycloak.KeycloakAdminException;
 import jakarta.validation.Valid;
@@ -53,20 +55,15 @@ public class AuthController {
             // happy path. Login + profile work without it.
         }
         // Always materialise the buyer profile so subsequent calls (address add,
-        // profile view) don't 400 with "buyer profile not found". Phone is
-        // optional — RegisterBuyerUseCase tolerates null/blank and skips the
-        // E.164 +84 validation in that case. Bad phone formats are dropped on
-        // the floor (keep the Keycloak account, surface the error on the next
-        // PUT /users/me) so a typo'd phone never wedges registration.
+        // profile view) don't 400 with "buyer profile not found". FullName and
+        // PhoneNumber.parseOrNull do the type-level validation; the shape of
+        // `phone` is also enforced upstream by the @Pattern on RegisterRequest,
+        // so non-numeric junk 400s at validation time and never reaches here.
         try {
-            String fullName = (request.firstName() + " " + request.lastName()).trim();
-            String phone = (request.phone() != null && !request.phone().isBlank())
-                    ? request.phone()
-                    : null;
             registerBuyerUseCase.register(new RegisterBuyerCommand(
                     userId,
-                    fullName,
-                    phone,
+                    FullName.of(request.firstName(), request.lastName()),
+                    PhoneNumber.parseOrNull(request.phone()),
                     null));
         } catch (IllegalArgumentException ex) {
             log.warn("buyer profile materialisation deferred for keycloakId={}: {}", userId, ex.getMessage());

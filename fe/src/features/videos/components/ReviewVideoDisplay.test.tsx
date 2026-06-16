@@ -45,37 +45,41 @@ describe("ReviewVideoDisplay", () => {
     );
   });
 
-  it("renders Processing label when status is TRANSCODING", () => {
+  it("renders Processing status with role=status when status is TRANSCODING", () => {
     mockUseReviewVideo.mockReturnValue({
       video: { status: "TRANSCODING", playbackUrl: null, thumbnailUrl: null },
     });
     render(<ReviewVideoDisplay reviewId="r1" />);
-    expect(screen.getByText("video.review.processing")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveAttribute("aria-label", "video.review.processing");
     expect(screen.queryByTestId("video-player")).toBeNull();
   });
 
-  it("renders Processing label when status is MODERATING", () => {
+  it("renders Processing status with role=status when status is MODERATING", () => {
     mockUseReviewVideo.mockReturnValue({
       video: { status: "MODERATING", playbackUrl: null, thumbnailUrl: null },
     });
     render(<ReviewVideoDisplay reviewId="r1" />);
-    expect(screen.getByText("video.review.processing")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveAttribute("aria-label", "video.review.processing");
     expect(screen.queryByTestId("video-player")).toBeNull();
   });
 
-  it("renders nothing when status is REJECTED", () => {
+  it("renders unavailable badge with role=img when status is REJECTED", () => {
     mockUseReviewVideo.mockReturnValue({
       video: { status: "REJECTED", playbackUrl: null, thumbnailUrl: null },
     });
-    const { container } = render(<ReviewVideoDisplay reviewId="r1" />);
-    expect(container.firstChild).toBeNull();
+    render(<ReviewVideoDisplay reviewId="r1" />);
+    const badge = screen.getByRole("img");
+    expect(badge).toHaveAttribute("aria-label", "video.review.unavailable");
+    expect(screen.queryByTestId("video-player")).toBeNull();
   });
 
-  it("renders nothing when status is FAILED", () => {
+  it("renders unavailable badge with role=img when status is FAILED", () => {
     mockUseReviewVideo.mockReturnValue({
       video: { status: "FAILED", playbackUrl: null, thumbnailUrl: null },
     });
-    const { container } = render(<ReviewVideoDisplay reviewId="r1" />);
-    expect(container.firstChild).toBeNull();
+    render(<ReviewVideoDisplay reviewId="r1" />);
+    const badge = screen.getByRole("img");
+    expect(badge).toHaveAttribute("aria-label", "video.review.unavailable");
+    expect(screen.queryByTestId("video-player")).toBeNull();
   });
 });
