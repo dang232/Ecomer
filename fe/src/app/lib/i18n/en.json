@@ -399,7 +399,10 @@
       "errorEmailTaken": "An account with that email already exists.",
       "errorWeakPassword": "Password is too weak. Use at least 8 characters.",
       "errorMismatch": "Passwords don't match.",
+      "errorFirstNameRequired": "First name is required",
+      "errorLastNameRequired": "Last name is required",
       "errorEmailInvalid": "Enter a valid email address.",
+      "errorPhoneInvalid": "Phone must be a Vietnamese number in +84 format, e.g. +84912345678.",
       "errorPasswordShort": "Password must be at least 8 characters.",
       "errorGeneric": "Couldn't create account. Try again in a moment."
     }
@@ -703,6 +706,70 @@
         "subtitle": "{{amount}} will be marked as paid to seller {{sellerId}}…. This action cannot be undone.",
         "submit": "Yes, mark complete"
       }
+    },
+    "videoModeration": {
+      "title": "Video Moderation",
+      "loading": "Loading moderation queue...",
+      "empty": "No videos pending review",
+      "loadErr": "Failed to load queue",
+      "approve": "Approve",
+      "reject": "Reject",
+      "approveOk": "Video approved",
+      "approveErr": "Couldn't approve video",
+      "rejectOk": "Video rejected",
+      "rejectErr": "Couldn't reject video",
+      "filter": "Filter",
+      "fromDate": "From date",
+      "toDate": "To date",
+      "minScore": "Min NSFW score",
+      "maxScore": "Max NSFW score",
+      "ownerType": "Owner type",
+      "ownerTypeAll": "All",
+      "totalCount": "{{count}} video(s) pending",
+      "pageOf": "Page {{current}} of {{total}}",
+      "prevPage": "Previous page",
+      "nextPage": "Next page",
+      "preview": "Preview",
+      "previewTitle": "Video Preview",
+      "closePreview": "Close preview",
+      "loadingPreview": "Loading preview...",
+      "noPreview": "Preview not available",
+      "previewAria": "Preview video {{id}}",
+      "unknownUploader": "Unknown uploader",
+      "rejectDialog": {
+        "title": "Reject Video",
+        "submit": "Reject",
+        "description": "This action is permanent and cannot be undone.",
+        "reasonLabel": "Rejection reason",
+        "reasonPlaceholder": "Describe why this video is being rejected..."
+      }
+    },
+    "videoAppeals": {
+      "title": "Video Appeals",
+      "loading": "Loading appeals...",
+      "empty": "No appeals pending",
+      "loadErr": "Failed to load appeals",
+      "approve": "Approve",
+      "rejectFinal": "Reject",
+      "approveOk": "Appeal approved",
+      "approveErr": "Couldn't approve appeal",
+      "rejectOk": "Appeal rejected",
+      "rejectErr": "Couldn't reject appeal",
+      "preview": "Preview",
+      "previewTitle": "Appeal Video Preview",
+      "closePreview": "Close preview",
+      "noPreview": "Preview not available",
+      "previewAria": "Preview appeal video {{id}}",
+      "unknownUploader": "Unknown uploader",
+      "originalRejection": "Original rejection",
+      "userAppealReason": "Appeal reason",
+      "rejectDialog": {
+        "title": "Reject Appeal",
+        "submit": "Reject",
+        "description": "This action is permanent and cannot be undone.",
+        "reasonLabel": "Rejection reason",
+        "reasonPlaceholder": "Describe why this appeal is being rejected..."
+      }
     }
   },
   "seller": {
@@ -873,7 +940,12 @@
       "validationName": "Please enter a product name",
       "validationPrice": "Sale price must be greater than 0",
       "validationOriginalPrice": "Original price must be greater than or equal to the sale price",
-      "validationStock": "Invalid stock value"
+      "validationStock": "Invalid stock value",
+      "videosLabel": "Videos",
+      "videoDeleted": "Video removed",
+      "videoDeleteErr": "Couldn't remove video",
+      "removeVideo": "Remove video",
+      "videoCreateHint": "Save the product first, then add videos from the edit screen."
     }
   },
   "profile": {
@@ -1193,7 +1265,9 @@
         "PRODUCT_REJECTED": { "label": "Product rejected", "description": "When a product is rejected" },
         "REVIEW_REPLIED": { "label": "Review reply", "description": "When someone replies to your review" },
         "RETURN_REQUESTED": { "label": "Return request", "description": "When a return is requested" },
-        "PAYOUT_COMPLETED": { "label": "Payout completed", "description": "When a withdrawal completes" }
+        "PAYOUT_COMPLETED": { "label": "Payout completed", "description": "When a withdrawal completes" },
+        "VIDEO_PUBLISHED": { "label": "Video published", "description": "When your video is approved and goes live" },
+        "VIDEO_REJECTED": { "label": "Video rejected", "description": "When your video is rejected by moderation" }
       }
     }
   },
@@ -1220,6 +1294,9 @@
     "autoUpdate": "Once transferred, the order will automatically update within 1 minute."
   },
   "video": {
+    "player": {
+      "error": "Video unavailable. Please try again later."
+    },
     "pipeline": {
       "processingTitle": "Processing your video…",
       "doneTitle": "Your video is live.",
@@ -1227,16 +1304,27 @@
       "stuckTitle": "Taking longer than expected.",
       "stuckMessage": "Your video has been in processing for over 15 minutes. If this doesn't resolve soon, please contact support — your video is safe and will not be lost.",
       "rejectionReason": "Reason: {{reason}}",
-      "stepsAria": "Video processing steps"
+      "stepsAria": "Video processing steps",
+      "uploading": "Uploading",
+      "transcoding": "Converting",
+      "moderating": "Under review",
+      "published": "Live",
+      "inProgress": "In progress",
+      "rejected": "Rejected",
+      "failed": "Failed",
+      "pending": "Pending"
     },
     "gallery": {
-      "playOverlay": "Play video",
+      "playOverlay": "Watch product video",
       "videoCount": "{{count}} video(s)",
       "closePlayer": "Close video player"
     },
     "tab": {
       "title": "Videos",
-      "empty": "No videos available"
+      "empty": "No videos available",
+      "loading": "Loading videos...",
+      "loadErr": "Couldn't load videos. Tap to retry.",
+      "videoLabel": "Video {{index}} of {{total}}"
     },
     "seller": {
       "sectionTitle": "Videos ({{count}}/{{max}})",
@@ -1249,7 +1337,36 @@
       "addButton": "Add video",
       "processing": "Processing...",
       "maxSize": "Max 200 MB",
-      "durationLimit": "Max 60 seconds"
+      "durationLimit": "Max 60 seconds",
+      "unavailable": "Video unavailable",
+      "containerLabel": "Customer video review"
+    },
+    "upload": {
+      "cancelConfirm": "A video is still uploading. Cancel and close?",
+      "dropzone": {
+        "ariaLabel": "Upload a product video",
+        "title": "Drag and drop a video here",
+        "hint": "{{formats}}. Max {{maxSize}}.",
+        "errorTitle": "Upload failed",
+        "tryAgain": "Try again",
+        "unknownFile": "Video file",
+        "complete": "Upload complete — processing…",
+        "initiating": "Starting upload…",
+        "validating": "Checking file…",
+        "uploading": "Uploading {{progress}}%",
+        "cancelAria": "Cancel upload",
+        "progressAria": "Video upload progress",
+        "processingNote": "Your video is being processed and will be live shortly."
+      },
+      "errors": {
+        "generic": "Upload failed. Please try again.",
+        "empty": "The file is empty.",
+        "wrongType": "Only MP4, MOV, WebM, or MKV videos are accepted.",
+        "wrongExtension": "File extension must be .mp4, .mov, .webm, or .mkv.",
+        "tooLarge": "File exceeds the {{maxMb}} MB limit.",
+        "initFailed": "Could not start upload. Check your connection.",
+        "uploadFailed": "Upload failed. Check your connection and try again."
+      }
     }
   }
 }

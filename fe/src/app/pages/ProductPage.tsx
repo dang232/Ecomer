@@ -7,6 +7,7 @@ import { useParams, useNavigate, Link } from "react-router";
 import { toast } from "sonner";
 
 import { useProductVideos, VideoPlayer, ReviewVideoDisplay } from "../../features/videos";
+import { VideoPlayerSkeleton } from "../../features/videos/components/VideoPlayer";
 import { usePageMeta } from "../../utils/meta-tags";
 import { ImageWithFallback } from "../components/image-with-fallback";
 import { useVNShop } from "../components/vnshop-context";
@@ -204,7 +205,7 @@ export function ProductPage() {
     | { type: "image"; url: string }
     | { type: "video"; playbackUrl: string; thumbnailUrl: string };
 
-  const { videos: productVideos } = useProductVideos(product.id);
+  const { videos: productVideos, isLoading: isProductVideosLoading, isError: isProductVideosError, refetch: refetchProductVideos } = useProductVideos(product.id);
 
   const galleryItems: GalleryItem[] = [
     ...productVideos.map((v) => ({
@@ -927,15 +928,40 @@ export function ProductPage() {
           ) : null}
 
           {activeTab === "videos" && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {productVideos.length > 0 ? (
-                productVideos.map((video) => (
-                  <VideoPlayer
-                    key={video.id}
-                    src={video.playbackUrl ?? ""}
-                    poster={video.thumbnailUrl ?? ""}
-                    className="w-full aspect-video rounded-[var(--radius-lg)]"
-                  />
+            <div
+              className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+              aria-busy={isProductVideosLoading}
+              aria-live="polite"
+            >
+              {isProductVideosLoading ? (
+                <>
+                  <VideoPlayerSkeleton className="rounded-[var(--radius-lg)]" />
+                  <VideoPlayerSkeleton className="rounded-[var(--radius-lg)]" />
+                </>
+              ) : isProductVideosError ? (
+                <div className="col-span-full flex flex-col items-center gap-3 py-8 text-center">
+                  <p className="text-muted-foreground">{t("video.tab.loadErr")}</p>
+                  <button
+                    type="button"
+                    onClick={() => void refetchProductVideos()}
+                    className="text-sm text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary rounded px-3 py-1.5 min-h-[44px]"
+                  >
+                    {t("common.retry", { defaultValue: "Retry" })}
+                  </button>
+                </div>
+              ) : productVideos.length > 0 ? (
+                productVideos.map((video, i) => (
+                  <div key={video.id} className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      {t("video.tab.videoLabel", { index: i + 1, total: productVideos.length })}
+                    </p>
+                    <VideoPlayer
+                      src={video.playbackUrl ?? ""}
+                      poster={video.thumbnailUrl ?? ""}
+                      title={t("video.tab.videoLabel", { index: i + 1, total: productVideos.length })}
+                      className="w-full aspect-video rounded-[var(--radius-lg)]"
+                    />
+                  </div>
                 ))
               ) : (
                 <p className="col-span-full text-center text-muted-foreground py-8">

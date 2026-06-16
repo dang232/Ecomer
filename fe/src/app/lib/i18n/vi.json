@@ -399,7 +399,10 @@
       "errorEmailTaken": "Email này đã được sử dụng.",
       "errorWeakPassword": "Mật khẩu quá yếu. Cần ít nhất 8 ký tự.",
       "errorMismatch": "Mật khẩu xác nhận không khớp.",
+      "errorFirstNameRequired": "Vui lòng nhập tên",
+      "errorLastNameRequired": "Vui lòng nhập họ",
       "errorEmailInvalid": "Vui lòng nhập email hợp lệ.",
+      "errorPhoneInvalid": "Số điện thoại phải theo định dạng +84 Việt Nam, ví dụ +84912345678.",
       "errorPasswordShort": "Mật khẩu phải có ít nhất 8 ký tự.",
       "errorGeneric": "Không thể tạo tài khoản. Vui lòng thử lại."
     }
@@ -703,6 +706,70 @@
         "subtitle": "{{amount}} sẽ được đánh dấu đã chi trả cho seller {{sellerId}}…. Hành động này không thể hoàn tác.",
         "submit": "Xác nhận hoàn tất"
       }
+    },
+    "videoModeration": {
+      "title": "Kiểm duyệt Video",
+      "loading": "Đang tải hàng chờ kiểm duyệt...",
+      "empty": "Không có video nào đang chờ duyệt",
+      "loadErr": "Không tải được hàng chờ",
+      "approve": "Duyệt",
+      "reject": "Từ chối",
+      "approveOk": "Đã duyệt video",
+      "approveErr": "Không thể duyệt video",
+      "rejectOk": "Đã từ chối video",
+      "rejectErr": "Không thể từ chối video",
+      "filter": "Bộ lọc",
+      "fromDate": "Từ ngày",
+      "toDate": "Đến ngày",
+      "minScore": "Điểm NSFW tối thiểu",
+      "maxScore": "Điểm NSFW tối đa",
+      "ownerType": "Loại người đăng",
+      "ownerTypeAll": "Tất cả",
+      "totalCount": "{{count}} video đang chờ",
+      "pageOf": "Trang {{current}} / {{total}}",
+      "prevPage": "Trang trước",
+      "nextPage": "Trang sau",
+      "preview": "Xem trước",
+      "previewTitle": "Xem trước Video",
+      "closePreview": "Đóng xem trước",
+      "loadingPreview": "Đang tải bản xem trước...",
+      "noPreview": "Không có bản xem trước",
+      "previewAria": "Xem trước video {{id}}",
+      "unknownUploader": "Người đăng không xác định",
+      "rejectDialog": {
+        "title": "Từ chối Video",
+        "submit": "Từ chối",
+        "description": "Hành động này không thể hoàn tác.",
+        "reasonLabel": "Lý do từ chối",
+        "reasonPlaceholder": "Mô tả lý do từ chối video này..."
+      }
+    },
+    "videoAppeals": {
+      "title": "Kháng cáo Video",
+      "loading": "Đang tải kháng cáo...",
+      "empty": "Không có kháng cáo nào đang chờ",
+      "loadErr": "Không tải được kháng cáo",
+      "approve": "Duyệt",
+      "rejectFinal": "Từ chối",
+      "approveOk": "Đã duyệt kháng cáo",
+      "approveErr": "Không thể duyệt kháng cáo",
+      "rejectOk": "Đã từ chối kháng cáo",
+      "rejectErr": "Không thể từ chối kháng cáo",
+      "preview": "Xem trước",
+      "previewTitle": "Xem trước Video kháng cáo",
+      "closePreview": "Đóng xem trước",
+      "noPreview": "Không có bản xem trước",
+      "previewAria": "Xem trước video kháng cáo {{id}}",
+      "unknownUploader": "Người đăng không xác định",
+      "originalRejection": "Lý do từ chối ban đầu",
+      "userAppealReason": "Lý do kháng cáo",
+      "rejectDialog": {
+        "title": "Từ chối Kháng cáo",
+        "submit": "Từ chối",
+        "description": "Hành động này không thể hoàn tác.",
+        "reasonLabel": "Lý do từ chối",
+        "reasonPlaceholder": "Mô tả lý do từ chối kháng cáo này..."
+      }
     }
   },
   "seller": {
@@ -873,7 +940,12 @@
       "validationName": "Vui lòng nhập tên sản phẩm",
       "validationPrice": "Giá sản phẩm phải lớn hơn 0",
       "validationOriginalPrice": "Giá gốc phải lớn hơn hoặc bằng giá bán",
-      "validationStock": "Tồn kho không hợp lệ"
+      "validationStock": "Tồn kho không hợp lệ",
+      "videosLabel": "Video",
+      "videoDeleted": "Đã xoá video",
+      "videoDeleteErr": "Không thể xoá video",
+      "removeVideo": "Xoá video",
+      "videoCreateHint": "Lưu sản phẩm trước, sau đó thêm video từ màn hình chỉnh sửa."
     }
   },
   "profile": {
@@ -1193,7 +1265,9 @@
         "PRODUCT_REJECTED": { "label": "Sản phẩm bị từ chối", "description": "Khi sản phẩm bị từ chối" },
         "REVIEW_REPLIED": { "label": "Phản hồi đánh giá", "description": "Khi có phản hồi cho đánh giá của bạn" },
         "RETURN_REQUESTED": { "label": "Yêu cầu trả hàng", "description": "Khi có yêu cầu trả hàng" },
-        "PAYOUT_COMPLETED": { "label": "Rút tiền thành công", "description": "Khi lệnh rút tiền hoàn tất" }
+        "PAYOUT_COMPLETED": { "label": "Rút tiền thành công", "description": "Khi lệnh rút tiền hoàn tất" },
+        "VIDEO_PUBLISHED": { "label": "Video đã đăng", "description": "Khi video của bạn được duyệt và xuất bản" },
+        "VIDEO_REJECTED": { "label": "Video bị từ chối", "description": "Khi video của bạn bị kiểm duyệt từ chối" }
       }
     }
   },
@@ -1220,6 +1294,9 @@
     "autoUpdate": "Sau khi chuyển xong, đơn hàng sẽ tự động cập nhật trong vòng 1 phút."
   },
   "video": {
+    "player": {
+      "error": "Video không khả dụng. Vui lòng thử lại sau."
+    },
     "pipeline": {
       "processingTitle": "Đang xử lý video của bạn…",
       "doneTitle": "Video của bạn đã sẵn sàng.",
@@ -1227,16 +1304,27 @@
       "stuckTitle": "Đang lâu hơn dự kiến.",
       "stuckMessage": "Video đã được xử lý hơn 15 phút. Nếu trạng thái không sớm cập nhật, vui lòng liên hệ hỗ trợ — video của bạn được an toàn và sẽ không bị mất.",
       "rejectionReason": "Lý do: {{reason}}",
-      "stepsAria": "Các bước xử lý video"
+      "stepsAria": "Các bước xử lý video",
+      "uploading": "Đang tải lên",
+      "transcoding": "Đang chuyển đổi",
+      "moderating": "Đang duyệt",
+      "published": "Đã đăng",
+      "inProgress": "Đang xử lý",
+      "rejected": "Bị từ chối",
+      "failed": "Thất bại",
+      "pending": "Đang chờ"
     },
     "gallery": {
-      "playOverlay": "Phát video",
+      "playOverlay": "Xem video sản phẩm",
       "videoCount": "{{count}} video",
       "closePlayer": "Đóng trình phát video"
     },
     "tab": {
       "title": "Video",
-      "empty": "Chưa có video nào"
+      "empty": "Chưa có video nào",
+      "loading": "Đang tải video...",
+      "loadErr": "Không tải được video. Nhấn để thử lại.",
+      "videoLabel": "Video {{index}} / {{total}}"
     },
     "seller": {
       "sectionTitle": "Video ({{count}}/{{max}})",
@@ -1249,7 +1337,36 @@
       "addButton": "Thêm video",
       "processing": "Đang xử lý...",
       "maxSize": "Tối đa 200 MB",
-      "durationLimit": "Tối đa 60 giây"
+      "durationLimit": "Tối đa 60 giây",
+      "unavailable": "Video không khả dụng",
+      "containerLabel": "Video đánh giá từ khách hàng"
+    },
+    "upload": {
+      "cancelConfirm": "Một video đang được tải lên. Huỷ và đóng?",
+      "dropzone": {
+        "ariaLabel": "Tải lên video sản phẩm",
+        "title": "Kéo và thả video vào đây",
+        "hint": "{{formats}}. Tối đa {{maxSize}}.",
+        "errorTitle": "Tải lên thất bại",
+        "tryAgain": "Thử lại",
+        "unknownFile": "Tệp video",
+        "complete": "Tải lên hoàn tất — đang xử lý…",
+        "initiating": "Đang bắt đầu tải lên…",
+        "validating": "Đang kiểm tra tệp…",
+        "uploading": "Đang tải lên {{progress}}%",
+        "cancelAria": "Huỷ tải lên",
+        "progressAria": "Tiến trình tải video lên",
+        "processingNote": "Video của bạn đang được xử lý và sẽ sớm xuất hiện."
+      },
+      "errors": {
+        "generic": "Tải lên thất bại. Vui lòng thử lại.",
+        "empty": "Tệp trống.",
+        "wrongType": "Chỉ chấp nhận video MP4, MOV, WebM hoặc MKV.",
+        "wrongExtension": "Phần mở rộng tệp phải là .mp4, .mov, .webm hoặc .mkv.",
+        "tooLarge": "Tệp vượt quá giới hạn {{maxMb}} MB.",
+        "initFailed": "Không thể bắt đầu tải lên. Kiểm tra kết nối.",
+        "uploadFailed": "Tải lên thất bại. Kiểm tra kết nối và thử lại."
+      }
     }
   }
 }
