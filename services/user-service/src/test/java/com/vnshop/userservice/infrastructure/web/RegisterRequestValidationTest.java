@@ -14,10 +14,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Bean Validation tests for {@link RegisterRequest}. The phone field is
- * optional, but if supplied it must be a valid Vietnamese E.164 number
- * (+84 followed by 9-10 digits). Bad shapes used to slip through to the
- * buyer profile and crash downstream consumers that tried to parse them,
- * so the constraint now lives at the request boundary.
+ * optional, but if supplied it must be a valid E.164 international number
+ * ({@code +} followed by 5-19 digits). The BE's only job at this boundary
+ * is shape validation — country-aware "is this a real number in this
+ * country?" lives on the FE (libphonenumber-js). The DTO rejects bad
+ * shapes so they don't slip through to the buyer profile and crash
+ * downstream consumers.
  */
 class RegisterRequestValidationTest {
 
@@ -61,8 +63,19 @@ class RegisterRequestValidationTest {
     }
 
     @Test
-    void validE164Phone_isAllowed() {
+    void validVietnamesePhone_isAllowed() {
         assertThat(validator.validate(withPhone("+84912345678"))).isEmpty();
+    }
+
+    @Test
+    void validUsPhone_isAllowed() {
+        // The BE accepts any E.164 shape; country-aware validation is the FE's.
+        assertThat(validator.validate(withPhone("+12025551234"))).isEmpty();
+    }
+
+    @Test
+    void validUkPhone_isAllowed() {
+        assertThat(validator.validate(withPhone("+442071838750"))).isEmpty();
     }
 
     @Test
@@ -75,18 +88,25 @@ class RegisterRequestValidationTest {
     }
 
     @Test
-    void missingCountryCode_isRejected() {
+    void missingPlusSign_isRejected() {
         assertPhoneViolation(validator.validate(withPhone("0912345678")));
     }
 
     @Test
-    void wrongCountryCode_isRejected() {
-        assertPhoneViolation(validator.validate(withPhone("+12025551234")));
+    void leadingZeroCountryCode_isRejected() {
+        // E.164 country codes cannot start with 0.
+        assertPhoneViolation(validator.validate(withPhone("+0123456789")));
     }
 
     @Test
     void lettersInsideNumber_isRejected() {
         assertPhoneViolation(validator.validate(withPhone("+84912abc678")));
+    }
+
+    @Test
+    void tooShort_isRejected() {
+        // E.164 requires at least 5 digits after the +.
+        assertPhoneViolation(validator.validate(withPhone("+123")));
     }
 
     private static void assertPhoneViolation(Set<ConstraintViolation<RegisterRequest>> violations) {

@@ -10,6 +10,7 @@
  */
 import {
   AsYouType,
+  getCountryCallingCode,
   parsePhoneNumber,
   type CountryCode,
 } from "libphonenumber-js";
@@ -17,34 +18,7 @@ import {
 /** The default country when the user hasn't picked one. */
 export const DEFAULT_COUNTRY: CountryCode = "VN";
 
-/** Convert a dial code string like "+84" to a CountryCode ("VN"). */
-export const countryFromDialCode = (dialCode: string): CountryCode | undefined => {
-  // libphonenumber-js's getCountries() doesn't expose this reverse lookup
-  // cheaply, so we delegate to the metadata via parsePhoneNumber (which
-  // accepts a default country) and pull the country out. For the picker
-  // we use a small helper.
-  const dial = dialCode.replace(/^\+/, "");
-  for (const code of import_CountryCode_HELPER()) {
-    if (dialCodeForCountry(code) === dial) return code;
-  }
-  return undefined;
-};
-
-// Helper that delays the import to avoid a circular dep with countries.ts.
-const COUNTRY_CACHE: CountryCode[] = [
-  // Top 20 by population / signal in the VNShop market. libphonenumber-js
-  // doesn't expose a fast reverse lookup so we cache a short list for the
-  // dial-code → country conversion in this module. The full country list
-  // is still available via listAllCountries() in countries.ts.
-  "VN", "US", "GB", "AU", "CA", "DE", "FR", "JP", "KR", "CN", "IN", "ID",
-  "TH", "MY", "SG", "PH", "BR", "MX", "IT", "ES",
-] as CountryCode[];
-
-const import_CountryCode_HELPER = (): CountryCode[] => COUNTRY_CACHE;
-
-import { getCountryCallingCode } from "libphonenumber-js";
-
-/** "VN" -> "+84". Wrapped so callers can mock in tests. */
+/** "VN" -> "+84". */
 export const dialCodeForCountry = (code: CountryCode): string =>
   `+${getCountryCallingCode(code)}`;
 

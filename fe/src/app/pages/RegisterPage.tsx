@@ -2,16 +2,13 @@ import { Sparkles, Eye, EyeOff, ChevronRight } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useNavigate, useSearchParams } from "react-router";
+import type { CountryCode } from "libphonenumber-js";
 
 import { FormField } from "../components/form/FormField";
-import { PhoneInput } from "../components/form/PhoneInput";
+import { CountryPhoneInput, DEFAULT_COUNTRY, parseOptionalPhone } from "../components/form/CountryPhoneInput";
 import { useAuth } from "../hooks/use-auth";
 import { sanitizeRedirect } from "../lib/auth/sanitize-redirect";
 import { isValidEmail } from "../lib/validation/email";
-import {
-  isValidPhone,
-  parseOptionalPhone,
-} from "../lib/validation/phone";
 import { MIN_PASSWORD_LENGTH } from "../lib/validation/password";
 
 export function RegisterPage() {
@@ -25,6 +22,7 @@ export function RegisterPage() {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [phoneCountry, setPhoneCountry] = useState<CountryCode>(DEFAULT_COUNTRY);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -55,10 +53,10 @@ export function RegisterPage() {
       validationErrors.email = t("register.form.errorEmailInvalid");
     }
     // Optional field — only validate when the user actually typed something.
-    // Empty/blank means "no phone", which the BE accepts.
-    if (phone.trim() !== "" && !isValidPhone(phone)) {
-      // PhoneInput already shows a live error while typing; the form-level
-      // error only fires if the user bypasses the input (e.g. devtools).
+    // Empty/blank means "no phone", which the BE accepts. CountryPhoneInput
+    // already shows a live error while typing; this branch only fires if the
+    // user bypasses the input (e.g. devtools).
+    if (phone.trim() !== "" && parseOptionalPhone(phone, phoneCountry) === null) {
       validationErrors.phone = t("register.form.errorPhoneInvalid");
     }
     if (password.length < MIN_PASSWORD_LENGTH) {
@@ -82,8 +80,9 @@ export function RegisterPage() {
           firstName: firstName.trim(),
           lastName: lastName.trim(),
           // parseOptionalPhone centralises the null/blank/invalid → null rule
-          // so the BE never receives a non-E.164 string.
-          phone: parseOptionalPhone(phone) ?? undefined,
+          // and formats to E.164 with the active country's dial code, so the
+          // BE never receives a non-E.164 string.
+          phone: parseOptionalPhone(phone, phoneCountry) ?? undefined,
         });
         void navigate(next, { replace: true });
       } catch (err) {
@@ -172,12 +171,14 @@ export function RegisterPage() {
             error={errors.email}
           />
 
-          <PhoneInput
+          <CountryPhoneInput
             value={phone}
+            country={phoneCountry}
             onChange={setPhone}
+            onCountryChange={setPhoneCountry}
             label={t("register.form.phoneLabel", { defaultValue: "Phone Number" })}
             helperText={t("register.form.phoneHelper", {
-              defaultValue: "9 or 10 digits, numbers only",
+              defaultValue: "Select your country and enter your number",
             })}
             error={errors.phone}
             id="phone"

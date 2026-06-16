@@ -393,6 +393,7 @@ export function VideoModeration() {
       <FormDialog
         open={!!rejectFor}
         title={t("admin.videoModeration.rejectDialog.title")}
+        description={t("admin.videoModeration.rejectDialog.description")}
         submitLabel={t("admin.videoModeration.rejectDialog.submit")}
         submitColor="#EF4444"
         fields={[

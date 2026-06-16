@@ -6,6 +6,8 @@ import {
   CreditCard,
   MessageCircle,
   Settings,
+  PlayCircle,
+  XCircle,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 
@@ -45,6 +47,9 @@ const TYPE_ICON: Partial<Record<NotificationType, IconConfig>> & { default: Icon
   PRODUCT_REJECTED: { icon: Bell, bg: "bg-red-100", color: "text-red-600" },
   RETURN_REQUESTED: { icon: Tag, bg: "bg-amber-100", color: "text-amber-600" },
   PAYOUT_COMPLETED: { icon: CreditCard, bg: "bg-green-100", color: "text-green-600" },
+  // BA audit 2026-06-16 P2-9: distinct icons for video notifications
+  VIDEO_PUBLISHED: { icon: PlayCircle, bg: "bg-green-100", color: "text-green-600" },
+  VIDEO_REJECTED: { icon: XCircle, bg: "bg-red-100", color: "text-red-600" },
   default: { icon: Bell, bg: "bg-blue-100", color: "text-blue-600" },
 };
 

@@ -90,6 +90,9 @@ export function useVideoAppeals() {
     queryKey: videoModerationKeys.appeals(),
     queryFn: adminVideoAppealsQueue,
     retry: false,
+    // BA audit 2026-06-16 P1-14: cache for 5 minutes so switching tabs
+    // doesn't re-fetch every time (Linh's documented #1 complaint).
+    staleTime: 1000 * 60 * 5,
   });
 }
 

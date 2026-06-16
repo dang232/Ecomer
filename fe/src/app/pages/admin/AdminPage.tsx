@@ -9,6 +9,8 @@ import {
   adminOpenDisputes,
   adminPendingPayouts,
   adminPendingReviews,
+  adminVideoAppealsQueue,
+  adminVideoModerationQueue,
 } from "../../lib/api/endpoints/admin";
 
 import { AdminDashboard } from "./AdminDashboard";
@@ -72,6 +74,19 @@ export function AdminPage() {
     queryFn: adminPendingPayouts,
     retry: false,
   });
+  // BA audit 2026-06-16 P1-13: pending counts for video moderation Queue + Appeals
+  const videoModerationQuery = useQuery({
+    queryKey: ["admin", "videos", "moderation-queue", "count"],
+    queryFn: () => adminVideoModerationQueue({ page: 0, size: 1 }),
+    retry: false,
+    staleTime: 1000 * 60 * 5,
+  });
+  const videoAppealsQuery = useQuery({
+    queryKey: ["admin", "videos", "appeal-queue", "count"],
+    queryFn: adminVideoAppealsQueue,
+    retry: false,
+    staleTime: 1000 * 60 * 5,
+  });
 
   const badges = useMemo(
     () => ({
@@ -79,8 +94,17 @@ export function AdminPage() {
       reviews: reviewsQuery.data?.length ?? 0,
       disputes: disputesQuery.data?.length ?? 0,
       payouts: payoutsQuery.data?.length ?? 0,
+      videoModeration: videoModerationQuery.data?.totalElements ?? 0,
+      videoAppeals: videoAppealsQuery.data?.length ?? 0,
     }),
-    [sellersQuery.data, reviewsQuery.data, disputesQuery.data, payoutsQuery.data],
+    [
+      sellersQuery.data,
+      reviewsQuery.data,
+      disputesQuery.data,
+      payoutsQuery.data,
+      videoModerationQuery.data,
+      videoAppealsQuery.data,
+    ],
   );
 
   return (
@@ -99,7 +123,9 @@ export function AdminPage() {
                         ? badges.disputes
                         : item.id === "payouts"
                           ? badges.payouts
-                          : 0;
+                          : item.id === "videoModeration"
+                            ? badges.videoModeration + badges.videoAppeals
+                            : 0;
                 return (
                   <button
                     key={item.id}

@@ -254,6 +254,7 @@ export function VideoAppeals() {
       <FormDialog
         open={!!rejectFor}
         title={t("admin.videoAppeals.rejectDialog.title")}
+        description={t("admin.videoAppeals.rejectDialog.description")}
         submitLabel={t("admin.videoAppeals.rejectDialog.submit")}
         submitColor="#EF4444"
         fields={[
@@ -276,10 +277,32 @@ export function VideoAppeals() {
         <AppealVideoModal item={previewItem} onClose={() => setPreviewItem(null)} />
       ) : null}
 
-      <h2 className="text-xl font-bold text-foreground">{t("admin.videoAppeals.title")}</h2>
+      <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+        {t("admin.videoAppeals.title")}
+        {!appealsQuery.isLoading && (appealsQuery.data?.length ?? 0) > 0 ? (
+          <span className="text-xs font-medium text-muted-foreground bg-muted rounded-full px-2 py-0.5">
+            {appealsQuery.data?.length}
+          </span>
+        ) : null}
+      </h2>
 
       {appealsQuery.isLoading ? (
-        <p className="text-sm text-muted-foreground">{t("admin.videoAppeals.loading")}</p>
+        // P2-10: 3-row skeleton (matches the count the user is waiting for)
+        <div className="space-y-2" role="status" aria-live="polite" aria-label={t("admin.videoAppeals.loading")}>
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-card rounded-2xl p-4 shadow-sm animate-pulse flex items-center gap-3">
+              <div className="w-20 h-12 rounded-md bg-surface-elevated" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3 bg-surface-elevated rounded w-1/3" />
+                <div className="h-3 bg-surface-elevated rounded w-1/2" />
+              </div>
+              <div className="flex gap-2">
+                <div className="h-8 w-16 bg-surface-elevated rounded" />
+                <div className="h-8 w-16 bg-surface-elevated rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : null}
 
       {appealsQuery.error ? (
