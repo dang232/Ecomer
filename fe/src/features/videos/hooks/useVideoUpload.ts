@@ -149,6 +149,9 @@ export function useVideoUpload(options: VideoUploadOptions) {
   const uploadRef = useRef<tus.Upload | null>(null);
   // Stable idempotency key per file — regenerated when a new upload begins.
   const idempotencyKeyRef = useRef<string>("");
+  // BA audit 2026-06-16 P2-4: keep a ref to the last file so retry() can
+  // re-upload without the user re-selecting from disk.
+  const lastFileRef = useRef<File | null>(null);
 
   const reset = useCallback(() => {
     uploadRef.current?.abort(true).catch(() => undefined);
@@ -169,6 +172,7 @@ export function useVideoUpload(options: VideoUploadOptions) {
 
   const upload = useCallback(
     async (file: File) => {
+      lastFileRef.current = file;
       // 1. Validate
       setState({ ...INITIAL_STATE, phase: "validating", filename: file.name });
       try {
@@ -270,7 +274,13 @@ export function useVideoUpload(options: VideoUploadOptions) {
     [options],
   );
 
-  return { state, upload, cancel, reset };
+  // P2-4: retry the last file without requiring the user to re-select it
+  const retry = useCallback(() => {
+    const last = lastFileRef.current;
+    if (last) void upload(last);
+  }, [upload]);
+
+  return { state, upload, cancel, reset, retry };
 }
 
 // ─── Error message helper ────────────────────────────────────────────────────

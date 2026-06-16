@@ -94,10 +94,12 @@ export const livePhoneStatus = (
   if (digits.length === 0) return "empty";
   try {
     const parsed = parsePhoneNumber(raw, country);
+    const len = parsed.nationalNumber.length;
     if (!parsed.isPossible()) {
-      // The library tells us whether the length is too short or too long.
-      const len = parsed.nationalNumber.length;
-      if (len < 4) return "short";
+      // Heuristic: anything under 5 digits is unambiguously too short
+      // (no country accepts a 4-digit national number); anything over
+      // the country's upper bound is too long.
+      if (len <= 4) return "short";
       return "long";
     }
     return parsed.isValid() ? "valid" : "invalid";

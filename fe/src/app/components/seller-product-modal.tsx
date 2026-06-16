@@ -118,6 +118,7 @@ function SellerProductModalBody({
     upload: startVideoUpload,
     cancel: cancelVideoUpload,
     reset: resetVideoUpload,
+    retry: retryVideoUpload,
   } = useVideoUpload({
     entityId: productId ?? "",
     context: "PRODUCT",
@@ -483,7 +484,7 @@ function SellerProductModalBody({
                   <span className="flex-1 text-xs text-foreground truncate">
                     {video.originalFilename ?? video.id}
                   </span>
-                  {/* Status badge */}
+                  {/* Status badge — P2-7: map enum to translated label */}
                   <span
                     className={[
                       "text-[10px] font-semibold px-2 py-0.5 rounded-full",
@@ -494,7 +495,9 @@ function SellerProductModalBody({
                           : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
                     ].join(" ")}
                   >
-                    {video.status}
+                    {t(`video.pipeline.${video.status.toLowerCase()}`, {
+                      defaultValue: video.status,
+                    })}
                   </span>
                   <button
                     type="button"
@@ -525,7 +528,7 @@ function SellerProductModalBody({
               <button
                 type="button"
                 onClick={cancelVideoUpload}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors min-h-[44px] min-w-[44px] px-2 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
               >
                 {t("video.upload.dropzone.cancelAria")}
               </button>
