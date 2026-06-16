@@ -1,6 +1,7 @@
 import { useId, useMemo } from "react";
 import type { CountryCode } from "libphonenumber-js";
 
+import { CountryDropdown } from "./CountryDropdown";
 import { FormField } from "./FormField";
 import {
   DEFAULT_COUNTRY,
@@ -12,7 +13,6 @@ import {
   parseOptionalPhone,
   type LivePhoneStatus,
 } from "../../lib/validation/phone";
-import { sortedCountriesForPicker, type CountryOption } from "../../lib/validation/countries";
 
 export interface CountryPhoneInputProps {
   /** Full E.164 value (e.g. "+84912345678") or empty string. */
@@ -73,12 +73,6 @@ export function CountryPhoneInput({
   const autoId = useId();
   const inputId = id ?? `phone-${autoId}`;
 
-  // Sorted, with VN pinned first. Memoized to avoid re-sorting on each keystroke.
-  const countries: CountryOption[] = useMemo(
-    () => sortedCountriesForPicker(locale),
-    [locale],
-  );
-
   // Convert the full E.164 value to a national-numbers-only display string.
   // We strip the active dial code from the front; if the user typed a
   // different country code, the picker would have to change first.
@@ -106,8 +100,7 @@ export function CountryPhoneInput({
     onChange(newDigits === "" ? "" : `${dialCode}${newDigits}`);
   };
 
-  const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newCountry = e.target.value as CountryCode;
+  const handleCountryChange = (newCountry: CountryCode) => {
     onCountryChange(newCountry);
     // Re-emit the current digits under the new country code so the value
     // always reflects the active country.
@@ -115,29 +108,6 @@ export function CountryPhoneInput({
       onChange(`${dialCodeForCountry(newCountry)}${nationalDigits}`);
     }
   };
-
-  // The country picker is rendered as a FormField `addon`. The `addon` slot
-  // is a non-editable visual element, so we wrap the native <select> in a
-  // <div> with the chevron as a separate visual cue.
-  const countryPicker = (
-    <div className="flex items-center gap-1 px-3 text-sm font-medium text-foreground border-r border-border bg-transparent">
-      <select
-        value={country}
-        onChange={handleCountryChange}
-        disabled={disabled}
-        aria-label="Country code"
-        className="bg-transparent text-sm font-medium text-foreground outline-none cursor-pointer appearance-none pr-1"
-        style={{ minWidth: "4.5rem" }}
-      >
-        {countries.map((c) => (
-          <option key={c.code} value={c.code}>
-            {c.code} {c.dialCode}
-          </option>
-        ))}
-      </select>
-      <span aria-hidden="true" className="text-muted-foreground">▾</span>
-    </div>
-  );
 
   return (
     <div data-valid={isValid ? "true" : "false"} data-country={country}>
@@ -153,7 +123,14 @@ export function CountryPhoneInput({
         value={displayed}
         onChange={(e) => handleInputChange(e.target.value)}
         error={error}
-        addon={countryPicker}
+        addon={
+          <CountryDropdown
+            value={country}
+            onChange={handleCountryChange}
+            locale={locale}
+            disabled={disabled}
+          />
+        }
       />
     </div>
   );

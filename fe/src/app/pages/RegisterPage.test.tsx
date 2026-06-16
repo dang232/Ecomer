@@ -73,6 +73,30 @@ const setInputValue = (input: HTMLInputElement, value: string) => {
   input.dispatchEvent(new Event("input", { bubbles: true }));
 };
 
+/**
+ * Open the country dropdown and click the option whose visible label
+ * contains the given substring (e.g. "United States" or "VN"). Then close
+ * the popover by pressing Escape.
+ */
+const pickCountry = async (matcher: RegExp) => {
+  // The CountryDropdown's trigger has aria-haspopup="listbox".
+  const trigger = document.querySelector<HTMLButtonElement>(
+    'button[aria-haspopup="listbox"]',
+  );
+  if (!trigger) throw new Error("country trigger not found");
+  fireEvent.click(trigger);
+  // Wait for the dialog to appear.
+  await waitFor(() => {
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+  });
+  const options = document.querySelectorAll<HTMLElement>('[role="option"]');
+  const target = Array.from(options).find((o) => matcher.test(o.textContent ?? ""));
+  if (!target) throw new Error(`no country option matches ${matcher}`);
+  fireEvent.click(target);
+  // Press Escape to close.
+  fireEvent.keyDown(document, { key: "Escape" });
+};
+
 const fillRequiredFields = (overrides: { phone?: string } = {}) => {
   fireEvent.change(screen.getByLabelText(/first name/i), {
     target: { value: "Alice" },
@@ -109,10 +133,19 @@ describe("RegisterPage phone field (CountryPhoneInput)", () => {
     vi.clearAllMocks();
   });
 
-  it("shows the country picker pre-set to Vietnam", () => {
+  it("shows the country picker pre-set to Vietnam (with a flag and dial code)", () => {
     renderPage();
-    const select = screen.getByLabelText(/country code/i) as HTMLSelectElement;
-    expect(select.value).toBe("VN");
+    const trigger = document.querySelector<HTMLButtonElement>(
+      'button[aria-haspopup="listbox"]',
+    );
+    expect(trigger).not.toBeNull();
+    // The trigger should show the Vietnam flag, the +84 dial code, and be
+    // labelled with "Country code" for screen readers.
+    expect(trigger?.getAttribute("aria-haspopup")).toBe("listbox");
+    expect(trigger?.getAttribute("aria-label")).toBe("Country code");
+    expect(trigger?.textContent).toMatch(/\+84/);
+    // The Vietnam flag emoji is two regional-indicator code points.
+    expect(trigger?.textContent).toMatch(/[\u{1F1E6}-\u{1F1FF}]{2}/u);
   });
 
   it("shows a permanent helper hint above the input", () => {
@@ -169,32 +202,26 @@ describe("RegisterPage phone field (CountryPhoneInput)", () => {
     });
   });
 
-  it("re-formats the value with the new country code when the country is changed", async () => {
+  it("opens the country dropdown and re-formats the value with the new country", async () => {
     renderPage();
     const input = screen.getByLabelText(/phone/i) as HTMLInputElement;
     setInputValue(input, "912345678"); // 9 valid VN digits
 
-    // Switch to US — those 9 digits don't fit US (needs 10). The component
-    // re-emits the value with the new dial code, but the new combination
-    // is "invalid" for US. The point of this test is the dial code swap.
-    const select = screen.getByLabelText(/country code/i) as HTMLSelectElement;
-    fireEvent.change(select, { target: { value: "US" } });
-
-    // The input still has 9 digits, the country is now US.
-    expect(select.value).toBe("US");
-    // The stored value should be re-emitted under +1.
+    // Switch to US via the dropdown.
+    await pickCountry(/United States/);
     await waitFor(() => {
-      const dataValid = document.querySelector("[data-country='US']");
-      expect(dataValid).not.toBeNull();
+      const dataCountry = document.querySelector("[data-country='US']");
+      expect(dataCountry).not.toBeNull();
     });
+    // The input should now show the US-formatted version of the digits
+    // (parens + dash per AsYouType).
+    expect(input.value).toMatch(/[()]/);
   });
 
   it("submits a valid US number with +1 prefix", async () => {
     renderPage();
     fillRequiredFields({ phone: "2025551234" }); // 10 digits, valid US
-    // Switch country to US.
-    const select = screen.getByLabelText(/country code/i) as HTMLSelectElement;
-    fireEvent.change(select, { target: { value: "US" } });
+    await pickCountry(/United States/);
     fireEvent.click(screen.getByRole("button", { name: /create account/i }));
     await waitFor(() => {
       expect(registerMock).toHaveBeenCalledWith(
