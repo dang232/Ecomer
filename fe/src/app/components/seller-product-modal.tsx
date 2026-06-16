@@ -434,7 +434,7 @@ function SellerProductModalBody({
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isBusy}
-                className="aspect-square rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-1.5 text-muted-foreground hover:border-[#00BFB3] hover:text-[#00BFB3] transition-colors disabled:opacity-50"
+                className="aspect-square rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-1.5 text-muted-foreground hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors disabled:opacity-50"
               >
                 <IconPhoto size={20} />
                 <span className="text-[11px] font-medium">{t("seller.productModal.addImage")}</span>
@@ -562,7 +562,7 @@ function SellerProductModalBody({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t("seller.productModal.namePlaceholder")}
-            className="w-full px-4 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[#00BFB3]"
+            className="w-full px-4 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--primary)]"
             disabled={isBusy}
           />
         </div>
@@ -580,7 +580,7 @@ function SellerProductModalBody({
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
             placeholder={t("seller.productModal.descriptionPlaceholder")}
-            className="w-full px-4 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[#00BFB3] resize-none"
+            className="w-full px-4 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--primary)] resize-none"
             disabled={isBusy}
           />
         </div>
@@ -599,7 +599,7 @@ function SellerProductModalBody({
               onChange={(e) => setPrice(e.target.value)}
               placeholder="990000"
               inputMode="numeric"
-              className="w-full px-4 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[#00BFB3]"
+              className="w-full px-4 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--primary)]"
               disabled={isBusy}
             />
           </div>
@@ -616,7 +616,7 @@ function SellerProductModalBody({
               onChange={(e) => setOriginalPrice(e.target.value)}
               placeholder="1290000"
               inputMode="numeric"
-              className="w-full px-4 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[#00BFB3]"
+              className="w-full px-4 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--primary)]"
               disabled={isBusy}
             />
           </div>
@@ -636,7 +636,7 @@ function SellerProductModalBody({
               onChange={(e) => setStock(e.target.value)}
               placeholder="100"
               inputMode="numeric"
-              className="w-full px-4 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[#00BFB3]"
+              className="w-full px-4 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--primary)]"
               disabled={isBusy}
             />
           </div>
@@ -652,7 +652,7 @@ function SellerProductModalBody({
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               placeholder="electronics"
-              className="w-full px-4 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[#00BFB3]"
+              className="w-full px-4 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--primary)]"
               disabled={isBusy}
             />
           </div>

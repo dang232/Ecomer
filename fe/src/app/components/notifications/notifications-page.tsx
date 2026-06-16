@@ -22,7 +22,7 @@ export function NotificationsPage() {
             <button
               onClick={() => markAllRead()}
               className="text-sm font-medium hover:underline"
-              style={{ color: "#00BFB3" }}
+              style={{ color: "var(--primary)" }}
             >
               Đánh dấu tất cả đã đọc
             </button>

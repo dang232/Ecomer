@@ -127,7 +127,7 @@ function StripeForm({ orderId, onCompleted }: { orderId: string; onCompleted: ()
         type="submit"
         disabled={!stripe || submitting || polling}
         className="w-full px-6 py-3 rounded-xl text-white font-semibold disabled:opacity-50"
-        style={{ background: "#00BFB3" }}
+        style={{ background: "var(--primary)" }}
         data-testid="stripe-submit"
       >
         {polling ? "Đang xác nhận thanh toán…" : submitting ? "Đang xử lý…" : "Thanh toán"}

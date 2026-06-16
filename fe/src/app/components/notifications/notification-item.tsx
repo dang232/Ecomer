@@ -37,7 +37,7 @@ export function NotificationItem({ notification, onMarkRead }: NotificationItemP
     <button
       onClick={handleClick}
       className={`flex w-full gap-3 rounded-lg p-3 text-left transition-colors hover:bg-muted ${
-        !notification.read ? "bg-[#00BFB3]/5" : ""
+        !notification.read ? "bg-[var(--primary)]/5" : ""
       }`}
     >
       <div className="mt-0.5 shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-muted">

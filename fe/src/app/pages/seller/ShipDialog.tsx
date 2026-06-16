@@ -79,7 +79,7 @@ function ShipDialogBody({
                 className="px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors"
                 style={
                   carrier === c
-                    ? { background: "#00BFB3", color: "white", borderColor: "#00BFB3" }
+                    ? { background: "var(--primary)", color: "white", borderColor: "var(--primary)" }
                     : { background: "white", color: "#6b7280", borderColor: "#e5e7eb" }
                 }
               >
@@ -92,7 +92,7 @@ function ShipDialogBody({
               value={carrier === otherLabel ? "" : carrier}
               onChange={(e) => setCarrier(e.target.value)}
               placeholder={t("seller.shipDialog.carrierOtherPlaceholder")}
-              className="mt-2 w-full px-3 py-2 border border-border rounded-lg text-sm outline-none focus:border-[#00BFB3]"
+              className="mt-2 w-full px-3 py-2 border border-border rounded-lg text-sm outline-none focus:border-[var(--primary)]"
             />
           ) : null}
         </div>
@@ -109,7 +109,7 @@ function ShipDialogBody({
             value={trackingNumber}
             onChange={(e) => setTrackingNumber(e.target.value)}
             placeholder={t("seller.shipDialog.trackingNumberPlaceholder")}
-            className="w-full px-3 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[#00BFB3]"
+            className="w-full px-3 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--primary)]"
             // eslint-disable-next-line jsx-a11y/no-autofocus -- inside a modal opened by explicit user click; focusing the first input is expected UX
             autoFocus
           />

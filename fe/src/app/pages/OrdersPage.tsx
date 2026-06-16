@@ -36,7 +36,7 @@ const STATUS_CONFIG: Record<
   shipping: {
     labelKey: "orders.status.shipping",
     icon: IconTruck,
-    color: "#00BFB3",
+    color: "var(--primary)",
     bg: "rgba(0,191,179,0.08)",
   },
   delivered: {
@@ -140,7 +140,7 @@ function TrackingModal({ order, onClose }: { order: UIOrder; onClose: () => void
               <div className="flex flex-col items-center">
                 <div
                   className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: i === 0 ? "#00BFB3" : "#9ca3af" }}
+                  style={{ background: i === 0 ? "var(--primary)" : "#9ca3af" }}
                 >
                   <IconCircleCheck size={14} color="white" />
                 </div>
@@ -166,7 +166,7 @@ function TrackingModal({ order, onClose }: { order: UIOrder; onClose: () => void
                 <div className="flex flex-col items-center">
                   <div
                     className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
-                    style={{ background: done ? "#00BFB3" : "#e5e7eb" }}
+                    style={{ background: done ? "var(--primary)" : "#e5e7eb" }}
                   >
                     {done ? (
                       <IconCircleCheck size={14} color="white" />
@@ -177,7 +177,7 @@ function TrackingModal({ order, onClose }: { order: UIOrder; onClose: () => void
                   {i < TRACKING_STEPS_FALLBACK.length - 1 ? (
                     <div
                       className="w-0.5 h-8 mt-1"
-                      style={{ background: done ? "#00BFB3" : "#e5e7eb" }}
+                      style={{ background: done ? "var(--primary)" : "#e5e7eb" }}
                     />
                   ) : null}
                 </div>
@@ -197,7 +197,7 @@ function TrackingModal({ order, onClose }: { order: UIOrder; onClose: () => void
           className="mt-2 p-3 rounded-xl flex items-center gap-2 text-sm"
           style={{ background: "rgba(0,191,179,0.08)" }}
         >
-          <IconMapPin size={15} style={{ color: "#00BFB3" }} />
+          <IconMapPin size={15} style={{ color: "var(--primary)" }} />
           <span className="text-muted-foreground">
             {t("orders.tracking.estimated")}{" "}
             <strong>
@@ -286,7 +286,7 @@ function ReturnModal({
             id="orders-return-suborder"
             value={subOrderId}
             onChange={(e) => setSubOrderId(e.target.value)}
-            className="w-full px-3 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[#00BFB3] bg-card"
+            className="w-full px-3 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--primary)] bg-card"
           >
             {subOrders.map((s) => (
               <option key={s.id} value={s.id}>
@@ -309,7 +309,7 @@ function ReturnModal({
         onChange={(e) => setReason(e.target.value)}
         rows={4}
         placeholder={t("orders.return.reasonPlaceholder")}
-        className="w-full px-3 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[#00BFB3] resize-none bg-card"
+        className="w-full px-3 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--primary)] resize-none bg-card"
       />
 
       <div className="mt-4 rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800 flex items-start gap-2">
@@ -573,7 +573,7 @@ export function OrdersPage() {
         <button
           onClick={() => login("/orders")}
           className="px-8 py-3 rounded-xl text-white font-semibold inline-flex items-center gap-2"
-          style={{ background: "linear-gradient(135deg, #00BFB3, #009990)" }}
+          style={{ background: "linear-gradient(135deg, var(--primary), #009990)" }}
         >
           <IconLogin size={16} /> {t("auth.login")}
         </button>

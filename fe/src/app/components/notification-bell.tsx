@@ -152,7 +152,7 @@ export function NotificationBell() {
                 <button
                   onClick={() => markAllRead()}
                   className="text-[11px] font-medium hover:underline"
-                  style={{ color: "#00BFB3" }}
+                  style={{ color: "var(--primary)" }}
                 >
                   {t("notificationBell.markAllRead")}
                 </button>
@@ -231,7 +231,7 @@ export function NotificationBell() {
                   void navigate("/notifications");
                 }}
                 className="text-xs font-medium"
-                style={{ color: "#00BFB3" }}
+                style={{ color: "var(--primary)" }}
               >
                 {t("notificationBell.viewAll")}
               </button>

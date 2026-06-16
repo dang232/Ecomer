@@ -92,7 +92,7 @@ export function AdminDashboard() {
           icon={IconTrendingUp}
           label={t("admin.dashboard.kpi.totalRevenue")}
           value={totalRevenue !== null ? formatPrice(totalRevenue) : "—"}
-          color="#00BFB3"
+          color="var(--primary)"
         />
         <KPICard
           icon={IconUsers}
@@ -124,8 +124,8 @@ export function AdminDashboard() {
             <AreaChart data={revenueQuery.data}>
               <defs>
                 <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#00BFB3" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#00BFB3" stopOpacity={0} />
+                  <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
@@ -152,7 +152,7 @@ export function AdminDashboard() {
               <Area
                 type="monotone"
                 dataKey="amount"
-                color="#00BFB3"
+                color="var(--primary)"
                 strokeWidth={2.5}
                 fill="url(#revGrad)"
               />

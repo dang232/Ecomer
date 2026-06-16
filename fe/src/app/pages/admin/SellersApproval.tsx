@@ -157,7 +157,7 @@ export function SellersApproval() {
                         onClick={() => approve.mutate(s.id)}
                         disabled={approve.isPending}
                         className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
-                        style={{ background: "#00BFB3" }}
+                        style={{ background: "var(--primary)" }}
                       >
                         <IconCircleCheck size={13} /> {t("admin.sellers.approve")}
                       </button>

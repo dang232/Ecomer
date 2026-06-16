@@ -122,7 +122,7 @@ export function PaymentReturnPage() {
             className="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center animate-pulse"
             style={{ background: "rgba(0,191,179,0.12)" }}
           >
-            <IconClock size={36} style={{ color: "#00BFB3" }} />
+            <IconClock size={36} style={{ color: "var(--primary)" }} />
           </div>
           <h1
             className="text-2xl font-bold text-foreground mb-3"
@@ -165,14 +165,14 @@ export function PaymentReturnPage() {
             <button
               onClick={() => navigate("/orders")}
               className="flex-1 py-3 rounded-xl border-2 font-semibold text-sm"
-              style={{ borderColor: "#00BFB3", color: "#00BFB3" }}
+              style={{ borderColor: "var(--primary)", color: "var(--primary)" }}
             >
               Xem đơn hàng
             </button>
             <button
               onClick={() => navigate("/")}
               className="flex-1 py-3 rounded-xl text-white font-semibold text-sm"
-              style={{ background: "linear-gradient(135deg, #00BFB3, #009990)" }}
+              style={{ background: "linear-gradient(135deg, var(--primary), #009990)" }}
             >
               Tiếp tục mua sắm
             </button>
@@ -225,7 +225,7 @@ export function PaymentReturnPage() {
           <button
             onClick={() => navigate("/orders")}
             className="px-6 py-3 rounded-xl text-white font-semibold text-sm"
-            style={{ background: "#00BFB3" }}
+            style={{ background: "var(--primary)" }}
           >
             Đến đơn hàng
           </button>

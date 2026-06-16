@@ -45,7 +45,7 @@ export function DisputesQueue() {
           resolveFor ? t("admin.disputes.resolveDialog.subtitle", { id: resolveFor }) : undefined
         }
         submitLabel={t("admin.disputes.resolveDialog.submit")}
-        submitColor="#00BFB3"
+        submitColor="var(--primary)"
         fields={[
           {
             key: "resolution",
@@ -110,7 +110,7 @@ export function DisputesQueue() {
               onClick={() => setResolveFor(d.id)}
               disabled={resolve.isPending}
               className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
-              style={{ background: "#00BFB3" }}
+              style={{ background: "var(--primary)" }}
             >
               {t("admin.disputes.resolve")}
             </button>

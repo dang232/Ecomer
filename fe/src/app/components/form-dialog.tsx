@@ -126,7 +126,7 @@ export function FormDialog({
                   onChange={(e) => setValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
                   rows={3}
                   placeholder={field.placeholder}
-                  className="w-full px-3 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[#00BFB3] resize-none"
+                  className="w-full px-3 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--primary)] resize-none"
                   // eslint-disable-next-line jsx-a11y/no-autofocus -- form-dialog only mounts when the user opens it; first-field focus is expected dialog UX
                   autoFocus={fields.indexOf(field) === 0}
                 />
@@ -137,7 +137,7 @@ export function FormDialog({
                   value={values[field.key] ?? ""}
                   onChange={(e) => setValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
                   placeholder={field.placeholder}
-                  className="w-full px-3 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[#00BFB3]"
+                  className="w-full px-3 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--primary)]"
                   // eslint-disable-next-line jsx-a11y/no-autofocus -- form-dialog only mounts when the user opens it; first-field focus is expected dialog UX
                   autoFocus={fields.indexOf(field) === 0}
                 />

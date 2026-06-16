@@ -1,12 +1,12 @@
 /**
  * Brand tokens — single source of truth for colors, gradients, and the brand font.
  *
- * Inline `style={{ background: "#00BFB3" }}` is scattered across the AI-generated UI.
+ * Inline `style={{ background: "var(--primary)" }}` is scattered across the AI-generated UI.
  * Use these constants instead so re-skinning is a one-file change.
  */
 
 export const colors = {
-  primary: "#00BFB3",
+  primary: "var(--primary)",
   primaryDeep: "#009990",
   primaryDark: "#006b65",
   accent: "#FF6200",

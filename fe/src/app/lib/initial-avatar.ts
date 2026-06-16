@@ -1,7 +1,7 @@
 /**
  * Generate a deterministic background color for an initial-letter avatar.
  *
- * The brand palette is teal (#00BFB3) + orange (#FF6200), so the avatars
+ * The brand palette is teal (var(--primary)) + orange (#FF6200), so the avatars
  * stay in the same hue family but vary saturation/lightness slightly off
  * the seed string. Result: a row of empty-logo shops looks like a row of
  * different shops, not six identical default icons (pt32 walkthrough
@@ -19,7 +19,7 @@ export function initialAvatarColor(seed: string): string {
   // drifting outside the brand. Lightness varies in a narrow band so text
   // contrast stays predictable.
   const palette = [
-    "#00BFB3",
+    "var(--primary)",
     "#0D9488",
     "#0F766E",
     "#F97316",

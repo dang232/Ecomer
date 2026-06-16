@@ -48,7 +48,7 @@ export function ConsoleChrome({ persona }: { persona: "admin" | "seller" }) {
           className="flex items-center gap-2 shrink-0"
           aria-label={t("consoleChrome.backToStorefront")}
         >
-          <IconSparkles size={20} style={{ color: "#00BFB3" }} />
+          <IconSparkles size={20} style={{ color: "var(--primary)" }} />
           <span
             className="font-bold text-base text-foreground"
             style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}
@@ -87,7 +87,7 @@ export function ConsoleChrome({ persona }: { persona: "admin" | "seller" }) {
                 placeholder={
                   <div
                     className="w-full h-full rounded-full flex items-center justify-center text-xs font-bold text-white"
-                    style={{ background: "#00BFB3" }}
+                    style={{ background: "var(--primary)" }}
                   >
                     {user.name?.charAt(0)?.toUpperCase() ?? "?"}
                   </div>
@@ -118,7 +118,7 @@ export function ConsoleChrome({ persona }: { persona: "admin" | "seller" }) {
                     }}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-muted transition-colors text-left text-foreground"
                   >
-                    <IconUser size={16} style={{ color: "#00BFB3" }} />
+                    <IconUser size={16} style={{ color: "var(--primary)" }} />
                     {t("consoleChrome.backToStorefront")}
                   </button>
                   <button
@@ -128,7 +128,7 @@ export function ConsoleChrome({ persona }: { persona: "admin" | "seller" }) {
                     }}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-muted transition-colors text-left text-foreground"
                   >
-                    <IconSettings size={16} style={{ color: "#00BFB3" }} />
+                    <IconSettings size={16} style={{ color: "var(--primary)" }} />
                     {t("auth.myAccount")}
                   </button>
                   <div className="border-t border-border">

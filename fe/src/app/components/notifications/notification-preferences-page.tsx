@@ -98,7 +98,7 @@ export function NotificationPreferencesPage() {
             onClick={handleSave}
             disabled={isUpdating}
             className="rounded-md px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-            style={{ backgroundColor: "#00BFB3" }}
+            style={{ backgroundColor: "var(--primary)" }}
           >
             {isUpdating ? "Đang lưu..." : "Lưu thay đổi"}
           </button>
@@ -128,7 +128,7 @@ export function NotificationPreferencesPage() {
           <button
             onClick={handleToggleMute}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              !muted ? "bg-[#00BFB3]" : "bg-muted"
+              !muted ? "bg-[var(--primary)]" : "bg-muted"
             }`}
             role="switch"
             aria-checked={!muted}
@@ -171,7 +171,7 @@ export function NotificationPreferencesPage() {
                   <button
                     onClick={() => toggleChannel(type, ch.key)}
                     className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                      isChannelEnabled(type, ch.key) ? "bg-[#00BFB3]" : "bg-muted"
+                      isChannelEnabled(type, ch.key) ? "bg-[var(--primary)]" : "bg-muted"
                     }`}
                     role="switch"
                     aria-checked={isChannelEnabled(type, ch.key)}

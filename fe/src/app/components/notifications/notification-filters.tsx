@@ -31,7 +31,7 @@ export function NotificationFilters() {
           onClick={() => select(tab.value)}
           className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
             current === tab.value
-              ? "bg-[#00BFB3] text-white"
+              ? "bg-[var(--primary)] text-white"
               : "bg-muted text-muted-foreground hover:bg-muted/80"
           }`}
         >

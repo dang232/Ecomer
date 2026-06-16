@@ -85,7 +85,7 @@ export class ErrorBoundary extends Component<Props, State> {
               onClick={this.handleRetry}
               disabled={isRetrying}
               className="px-4 py-2 rounded-xl text-white text-sm font-semibold disabled:opacity-60"
-              style={{ background: "#00BFB3" }}
+              style={{ background: "var(--primary)" }}
             >
               {isRetrying ? "Đang thử lại…" : "Thử lại"}
             </button>

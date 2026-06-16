@@ -91,7 +91,7 @@ export function SellerDetailPage() {
         style={
           seller.bannerUrl
             ? undefined
-            : { background: "linear-gradient(135deg, #006B65 0%, #009990 50%, #00BFB3 100%)" }
+            : { background: "linear-gradient(135deg, #006B65 0%, #009990 50%, var(--primary) 100%)" }
         }
       >
         {seller.bannerUrl ? (
@@ -113,7 +113,7 @@ export function SellerDetailPage() {
             ) : (
               <span
                 className="text-3xl font-black text-white"
-                style={{ background: "#00BFB3", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}
+                style={{ background: "var(--primary)", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}
               >
                 {initial}
               </span>
@@ -131,7 +131,7 @@ export function SellerDetailPage() {
               </h1>
               <span
                 className="px-2 py-0.5 rounded-full text-xs font-semibold text-white shrink-0"
-                style={{ background: seller.tier === "PREMIUM" ? "#F59E0B" : "#00BFB3" }}
+                style={{ background: seller.tier === "PREMIUM" ? "#F59E0B" : "var(--primary)" }}
               >
                 {seller.tier}
               </span>

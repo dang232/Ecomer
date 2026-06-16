@@ -17,7 +17,7 @@ const TEAL_PALETTE: ColorSwatch[] = [
   { name: "Teal 200", hex: "#80E6E2", textDark: true },
   { name: "Teal 300", hex: "#4DDBD6", textDark: true },
   { name: "Teal 400", hex: "#1AD1CA", textDark: true },
-  { name: "Teal 500", hex: "#00BFB3" },
+  { name: "Teal 500", hex: "var(--primary)" },
   { name: "Teal 600", hex: "#00A89D" },
   { name: "Teal 700", hex: "#009990" },
   { name: "Teal 800", hex: "#007A73" },
@@ -145,33 +145,33 @@ function ButtonShowcase() {
           <div className="flex flex-wrap gap-3 items-center">
             <button
               className="px-4 py-2 rounded-xl text-white font-semibold text-sm transition-all hover:opacity-90 active:scale-95"
-              style={{ background: "#00BFB3" }}
+              style={{ background: "var(--primary)" }}
             >
               Mua ngay
             </button>
             <button
               className="px-5 py-2.5 rounded-xl text-white font-semibold transition-all hover:opacity-90 active:scale-95"
-              style={{ background: "#00BFB3" }}
+              style={{ background: "var(--primary)" }}
             >
               Thêm vào giỏ
             </button>
             <button
               className="px-6 py-3 rounded-xl text-white font-semibold text-lg transition-all hover:opacity-90 active:scale-95"
-              style={{ background: "#00BFB3" }}
+              style={{ background: "var(--primary)" }}
             >
               Thanh toán
             </button>
             <button
               disabled
               className="px-5 py-2.5 rounded-xl text-white font-semibold opacity-40 cursor-not-allowed"
-              style={{ background: "#00BFB3" }}
+              style={{ background: "var(--primary)" }}
             >
               Disabled
             </button>
             <button
               onClick={triggerLoad}
               className="px-5 py-2.5 rounded-xl text-white font-semibold flex items-center gap-2 transition-all hover:opacity-90"
-              style={{ background: "#00BFB3" }}
+              style={{ background: "var(--primary)" }}
             >
               {loading ? (
                 <>
@@ -224,7 +224,7 @@ function ButtonShowcase() {
           <div className="flex flex-wrap gap-3 items-center">
             <button
               className="px-5 py-2.5 rounded-xl font-semibold border-2 transition-all hover:bg-teal-50"
-              style={{ color: "#00BFB3", borderColor: "#00BFB3" }}
+              style={{ color: "var(--primary)", borderColor: "var(--primary)" }}
             >
               Xem thêm
             </button>
@@ -248,7 +248,7 @@ function ButtonShowcase() {
           <div className="flex flex-wrap gap-3 items-center">
             <button
               className="w-10 h-10 rounded-xl flex items-center justify-center text-white transition-all hover:opacity-90"
-              style={{ background: "#00BFB3" }}
+              style={{ background: "var(--primary)" }}
             >
               <IconHeart size={18} />
             </button>
@@ -380,7 +380,7 @@ function BadgesShowcase() {
             </span>
             <span
               className="px-2.5 py-1 rounded-full text-white text-xs font-bold"
-              style={{ background: "#00BFB3" }}
+              style={{ background: "var(--primary)" }}
             >
               Mall
             </span>
@@ -392,7 +392,7 @@ function BadgesShowcase() {
             </span>
             <span
               className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold"
-              style={{ background: "#E6FAF9", color: "#00BFB3" }}
+              style={{ background: "#E6FAF9", color: "var(--primary)" }}
             >
               <IconShield size={10} /> Chính hãng
             </span>
@@ -442,7 +442,7 @@ function BadgesShowcase() {
             </span>
             <span
               className="px-2 py-0.5 rounded-full text-white text-xs font-bold"
-              style={{ background: "#00BFB3" }}
+              style={{ background: "var(--primary)" }}
             >
               99+
             </span>
@@ -511,7 +511,7 @@ function InputsShowcase() {
               type="email"
               defaultValue="nguyen@email.com"
               className="w-full px-4 py-2.5 rounded-xl border-2 bg-white text-gray-800"
-              style={{ borderColor: "#00BFB3", boxShadow: "0 0 0 3px rgba(0,191,179,0.12)" }}
+              style={{ borderColor: "var(--primary)", boxShadow: "0 0 0 3px rgba(0,191,179,0.12)" }}
             />
           </div>
           {/* Error */}
@@ -678,9 +678,9 @@ function CardsShowcase() {
           >
             <div
               className="w-14 h-14 rounded-xl bg-white shadow-md flex items-center justify-center mb-1"
-              style={{ border: "2px solid #00BFB3" }}
+              style={{ border: "2px solid var(--primary)" }}
             >
-              <IconBuildingStore size={24} style={{ color: "#00BFB3" }} />
+              <IconBuildingStore size={24} style={{ color: "var(--primary)" }} />
             </div>
           </div>
           <div className="px-4 pt-2 pb-4">
@@ -688,7 +688,7 @@ function CardsShowcase() {
               <h4 className="font-bold text-gray-900">TechStore Việt Nam</h4>
               <span
                 className="px-1.5 py-0.5 rounded-md text-xs font-bold text-white"
-                style={{ background: "#00BFB3" }}
+                style={{ background: "var(--primary)" }}
               >
                 Mall
               </span>
@@ -702,7 +702,7 @@ function CardsShowcase() {
             </div>
             <button
               className="w-full py-2 rounded-xl text-sm font-semibold border-2 transition-all hover:bg-teal-50"
-              style={{ color: "#00BFB3", borderColor: "#00BFB3" }}
+              style={{ color: "var(--primary)", borderColor: "var(--primary)" }}
             >
               Xem Shop
             </button>
@@ -717,7 +717,7 @@ function CardsShowcase() {
           <div className="flex items-start gap-3">
             <div
               className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
-              style={{ background: "linear-gradient(135deg, #00BFB3, #009990)" }}
+              style={{ background: "linear-gradient(135deg, var(--primary), #009990)" }}
             >
               N
             </div>
@@ -834,7 +834,7 @@ function SpacingShowcase() {
                 height: s * 4,
                 minWidth: 4,
                 minHeight: 4,
-                background: "#00BFB3",
+                background: "var(--primary)",
                 opacity: 0.6 + s * 0.015,
               }}
             />
@@ -960,7 +960,7 @@ function NavigationDemo() {
                 style={{ background: active === id ? "rgba(0,191,179,0.1)" : "transparent" }}
               >
                 <div className="relative">
-                  <Icon size={20} style={{ color: active === id ? "#00BFB3" : "#9CA3AF" }} />
+                  <Icon size={20} style={{ color: active === id ? "var(--primary)" : "#9CA3AF" }} />
                   {badge ? (
                     <span
                       className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full text-white text-xs flex items-center justify-center font-bold"
@@ -973,7 +973,7 @@ function NavigationDemo() {
                 <span
                   className="text-xs"
                   style={{
-                    color: active === id ? "#00BFB3" : "#9CA3AF",
+                    color: active === id ? "var(--primary)" : "#9CA3AF",
                     fontWeight: active === id ? 600 : 400,
                   }}
                 >
@@ -991,10 +991,10 @@ function NavigationDemo() {
 // ─── Gradient & Glass ─────────────────────────────────────────────────────────
 function GradientsShowcase() {
   const gradients = [
-    { name: "Brand Teal", css: "linear-gradient(135deg, #00BFB3, #009990)" },
+    { name: "Brand Teal", css: "linear-gradient(135deg, var(--primary), #009990)" },
     { name: "Brand Orange", css: "linear-gradient(135deg, #FF6200, #FF8C00)" },
     { name: "Hero Dark", css: "linear-gradient(135deg, #0F172A, #1E293B)" },
-    { name: "Sunset", css: "linear-gradient(135deg, #FF6200, #00BFB3)" },
+    { name: "Sunset", css: "linear-gradient(135deg, #FF6200, var(--primary))" },
     { name: "Teal Soft", css: "linear-gradient(135deg, #E6FAF9, #B3F0ED)" },
     { name: "Orange Soft", css: "linear-gradient(135deg, #FFF2EA, #FFD9BF)" },
   ];
@@ -1025,7 +1025,7 @@ function GradientsShowcase() {
                 backdropFilter: "blur(12px)",
                 border: "1px solid rgba(255,255,255,0.25)",
                 boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
-                backgroundImage: "linear-gradient(135deg, #00BFB3, #009990)",
+                backgroundImage: "linear-gradient(135deg, var(--primary), #009990)",
               }}
             >
               <span className="text-white/70 text-xs">Ví VNShop</span>
@@ -1082,7 +1082,7 @@ export function DesignSystemPage() {
           <div className="flex items-center gap-3 mb-3">
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg, #00BFB3, #009990)" }}
+              style={{ background: "linear-gradient(135deg, var(--primary), #009990)" }}
             >
               <Sparkles size={16} className="text-white" />
             </div>
@@ -1103,7 +1103,7 @@ export function DesignSystemPage() {
                 onClick={() => setActive(s)}
                 className="px-3.5 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all"
                 style={{
-                  background: active === s ? "#00BFB3" : "transparent",
+                  background: active === s ? "var(--primary)" : "transparent",
                   color: active === s ? "#fff" : "#6B7280",
                 }}
               >
@@ -1124,7 +1124,7 @@ export function DesignSystemPage() {
           {active === "Màu sắc" ? (
             <Section
               title="Hệ thống màu sắc"
-              subtitle="Bảng màu thương hiệu VNShop dựa trên màu chủ đạo Teal #00BFB3 và cam #FF6200"
+              subtitle="Bảng màu thương hiệu VNShop dựa trên màu chủ đạo Teal var(--primary) và cam #FF6200"
             >
               <div className="space-y-6">
                 <Card>
@@ -1221,7 +1221,7 @@ export function DesignSystemPage() {
           <Label>Design Tokens Reference</Label>
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
             {[
-              { token: "--primary", value: "#00BFB3", desc: "Brand primary" },
+              { token: "--primary", value: "var(--primary)", desc: "Brand primary" },
               { token: "--vn-orange", value: "#FF6200", desc: "Brand accent" },
               { token: "--vn-teal-dark", value: "#009990", desc: "Hover/active" },
               { token: "--vn-orange-dark", value: "#E05500", desc: "Orange hover" },

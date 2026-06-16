@@ -277,7 +277,7 @@ function FilterBar({
               type="date"
               value={filters.fromDate}
               onChange={(e) => onChange({ ...filters, fromDate: e.target.value })}
-              className="w-full px-2 py-1.5 border border-border rounded-lg text-xs outline-none focus:border-[#00BFB3] bg-background"
+              className="w-full px-2 py-1.5 border border-border rounded-lg text-xs outline-none focus:border-[var(--primary)] bg-background"
             />
           </div>
           <div>
@@ -288,7 +288,7 @@ function FilterBar({
               type="date"
               value={filters.toDate}
               onChange={(e) => onChange({ ...filters, toDate: e.target.value })}
-              className="w-full px-2 py-1.5 border border-border rounded-lg text-xs outline-none focus:border-[#00BFB3] bg-background"
+              className="w-full px-2 py-1.5 border border-border rounded-lg text-xs outline-none focus:border-[var(--primary)] bg-background"
             />
           </div>
           <div>
@@ -301,7 +301,7 @@ function FilterBar({
               max={100}
               value={filters.minScore}
               onChange={(e) => onChange({ ...filters, minScore: e.target.value })}
-              className="w-full px-2 py-1.5 border border-border rounded-lg text-xs outline-none focus:border-[#00BFB3] bg-background"
+              className="w-full px-2 py-1.5 border border-border rounded-lg text-xs outline-none focus:border-[var(--primary)] bg-background"
             />
           </div>
           <div>
@@ -314,7 +314,7 @@ function FilterBar({
               max={100}
               value={filters.maxScore}
               onChange={(e) => onChange({ ...filters, maxScore: e.target.value })}
-              className="w-full px-2 py-1.5 border border-border rounded-lg text-xs outline-none focus:border-[#00BFB3] bg-background"
+              className="w-full px-2 py-1.5 border border-border rounded-lg text-xs outline-none focus:border-[var(--primary)] bg-background"
             />
           </div>
           <div>
@@ -324,7 +324,7 @@ function FilterBar({
             <select
               value={filters.ownerType}
               onChange={(e) => onChange({ ...filters, ownerType: e.target.value })}
-              className="w-full px-2 py-1.5 border border-border rounded-lg text-xs outline-none focus:border-[#00BFB3] bg-background"
+              className="w-full px-2 py-1.5 border border-border rounded-lg text-xs outline-none focus:border-[var(--primary)] bg-background"
             >
               <option value="">{t("admin.videoModeration.ownerTypeAll")}</option>
               <option value="SELLER">SELLER</option>

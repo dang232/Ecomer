@@ -118,7 +118,7 @@ export function SellerApplicationDetail({ seller, onClose, onApprove, isApprovin
               onClick={() => onApprove(seller.id)}
               disabled={isApproving}
               className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
-              style={{ background: "#00BFB3" }}
+              style={{ background: "var(--primary)" }}
             >
               <IconCircleCheck size={15} />
               {t("admin.sellers.applicationDialog.approve")}
