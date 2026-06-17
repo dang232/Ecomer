@@ -26,33 +26,6 @@ async function screenshot(page: Page, slug: string) {
   await page.screenshot({ path: path.join(screenshotDir, filename), fullPage: false });
 }
 
-// The user-service CsrfProtectionFilter requires an X-CSRF-Token header on
-// /auth/refresh and /auth/logout. The SPA's native-auth.ts does not currently
-// set it. The CSRF cookie is issued with Path=/auth, so document.cookie on
-// the document at "/" cannot read it — we get the value from Playwright's
-// context.cookies() and inject it into every new page via addInitScript.
-async function installCsrfPatch(page: Page): Promise<void> {
-  const csrfCookie = (await page.context().cookies()).find((c) => c.name === "vnshop_csrf");
-  const csrfValue = csrfCookie?.value ?? "";
-  const script = `
-    (() => {
-      const HEADER = "X-CSRF-Token";
-      const CSRF = ${JSON.stringify(csrfValue)};
-      const origFetch = window.fetch.bind(window);
-      window.fetch = (input, init) => {
-        const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
-        if (url && (url.includes("/auth/refresh") || url.includes("/auth/logout")) && CSRF) {
-          init = Object.assign({}, init ?? {}, {
-            headers: Object.assign({}, (init && init.headers) || {}, { [HEADER]: CSRF }),
-          });
-        }
-        return origFetch(input, init);
-      };
-    })();
-  `;
-  await page.addInitScript({ content: script });
-}
-
 async function loginViaUI(page: Page, username: string) {
   await page.goto("/login");
   await expect(page.locator("#identifier")).toBeVisible({ timeout: 15_000 });
@@ -60,9 +33,9 @@ async function loginViaUI(page: Page, username: string) {
   await page.locator("#password").fill("test");
   await page.locator("button[type='submit']").first().click();
   await page.waitForURL((url) => !url.pathname.includes("/login"), { timeout: 15_000 });
-  // Install the CSRF patch BEFORE the next page.goto so the new page
-  // has the patch installed on its first fetch
-  await installCsrfPatch(page);
+  // The SPA's native-auth.ts reads the non-httpOnly vnshop_csrf cookie and
+  // attaches the X-CSRF-Token header on /auth/refresh and /auth/logout.
+  // No monkey-patch required — verify the real header is being sent.
 }
 
 async function expectNoGlobalError(page: Page): Promise<void> {
