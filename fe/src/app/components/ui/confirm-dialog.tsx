@@ -11,6 +11,7 @@ interface ConfirmDialogProps {
   title: string;
   description: string;
   confirmLabel?: string;
+  cancelLabel?: string;
   variant?: "warning" | "danger";
   icon?: ReactNode;
 }
@@ -22,6 +23,7 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
   variant = "warning",
   icon,
 }: ConfirmDialogProps) {
@@ -75,7 +77,7 @@ export function ConfirmDialog({
                 onClick={onClose}
                 className="px-5 py-2.5 rounded-[var(--radius-lg)] text-sm font-medium border border-border bg-transparent text-foreground hover:bg-background transition-colors"
               >
-                Cancel
+                {cancelLabel}
               </button>
               <button
                 type="button"

@@ -19,6 +19,7 @@ import { useProductVideos } from "../../features/videos/hooks/useProductVideos";
 import { useVideoUpload } from "../../features/videos/hooks/useVideoUpload";
 
 import { ImageWithFallback } from "./image-with-fallback";
+import { ConfirmDialog } from "./ui/confirm-dialog";
 import { Modal } from "./ui/modal";
 
 interface SellerProductModalProps {
@@ -143,13 +144,37 @@ function SellerProductModalBody({
   const totalImageCount = existingImages.length + staged.length;
   const isBusy = phase !== "idle";
 
+  // P2-5: Confirm dialog state — replace native window.confirm() prompts.
+  const [cancelUploadConfirmOpen, setCancelUploadConfirmOpen] = useState(false);
+  const [removeVideoId, setRemoveVideoId] = useState<string | null>(null);
+
   const handleClose = () => {
     if (isBusy) return;
     if (videoUploading) {
-      if (!window.confirm(t("video.upload.cancelConfirm"))) return;
-      cancelVideoUpload();
+      setCancelUploadConfirmOpen(true);
+      return;
     }
     onClose();
+  };
+
+  const confirmCancelUpload = () => {
+    cancelVideoUpload();
+    setCancelUploadConfirmOpen(false);
+    onClose();
+  };
+
+  /**
+   * Single-responsibility delete handler — called from the ConfirmDialog.
+   * Kept stable so it can be wired directly to the dialog's onConfirm.
+   */
+  const handleRemoveVideo = async (videoId: string) => {
+    try {
+      await videoDelete(videoId);
+      void qc.invalidateQueries({ queryKey: ["videos", "product", productId] });
+      toast.success(t("seller.productModal.videoDeleted"));
+    } catch {
+      toast.error(t("seller.productModal.videoDeleteErr"));
+    }
   };
 
   // Modal handles escape + backdrop dismissal; respect dismissDisabled while busy.
@@ -344,6 +369,7 @@ function SellerProductModalBody({
   })();
 
   return (
+    <>
     <Modal
       open
       onClose={handleClose}
@@ -502,15 +528,7 @@ function SellerProductModalBody({
                   <button
                     type="button"
                     disabled={isBusy}
-                    onClick={async () => {
-                      try {
-                        await videoDelete(video.id);
-                        void qc.invalidateQueries({ queryKey: ["videos", "product", productId] });
-                        toast.success(t("seller.productModal.videoDeleted"));
-                      } catch {
-                        toast.error(t("seller.productModal.videoDeleteErr"));
-                      }
-                    }}
+                    onClick={() => setRemoveVideoId(video.id)}
                     aria-label={t("seller.productModal.removeVideo")}
                     className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-surface-elevated text-muted-foreground hover:text-foreground disabled:opacity-50 transition-colors shrink-0"
                   >
@@ -658,7 +676,34 @@ function SellerProductModalBody({
           </div>
         </div>
       </div>
+
+      {/* P2-5: replaces window.confirm() at the upload-cancel exit path. */}
+      <ConfirmDialog
+        open={cancelUploadConfirmOpen}
+        onClose={() => setCancelUploadConfirmOpen(false)}
+        onConfirm={confirmCancelUpload}
+        title={t("video.seller.cancelUpload")}
+        description={t("video.upload.cancelConfirm")}
+        confirmLabel={t("common.confirm")}
+        cancelLabel={t("common.cancel")}
+      />
+
+      {/* P2-5: destructive confirm for the per-row "Remove video" action. */}
+      <ConfirmDialog
+        open={removeVideoId !== null}
+        onClose={() => setRemoveVideoId(null)}
+        onConfirm={() => {
+          if (removeVideoId) void handleRemoveVideo(removeVideoId);
+          setRemoveVideoId(null);
+        }}
+        title={t("seller.productModal.removeVideoTitle")}
+        description={t("seller.productModal.removeVideoDescription")}
+        confirmLabel={t("seller.productModal.removeVideo")}
+        cancelLabel={t("common.cancel")}
+        variant="danger"
+      />
     </Modal>
+    </>
   );
 }
 

@@ -946,6 +946,8 @@
       "videoDeleted": "Đã xoá video",
       "videoDeleteErr": "Không thể xoá video",
       "removeVideo": "Xoá video",
+      "removeVideoTitle": "Xoá video này?",
+      "removeVideoDescription": "Video này sẽ bị xoá vĩnh viễn. Hành động này không thể hoàn tác.",
       "videoCreateHint": "Lưu sản phẩm trước, sau đó thêm video từ màn hình chỉnh sửa."
     }
   },
@@ -1170,7 +1172,9 @@
   },
   "common": {
     "loading": "Đang tải...",
-    "comingSoon": "{{feature}} sắp ra mắt!"
+    "comingSoon": "{{feature}} sắp ra mắt!",
+    "cancel": "Huỷ",
+    "confirm": "Xác nhận"
   },
   "sellerDetail": {
     "notFound": "Không tìm thấy shop",

@@ -946,6 +946,8 @@
       "videoDeleted": "Video removed",
       "videoDeleteErr": "Couldn't remove video",
       "removeVideo": "Remove video",
+      "removeVideoTitle": "Remove this video?",
+      "removeVideoDescription": "This video will be permanently deleted. This action cannot be undone.",
       "videoCreateHint": "Save the product first, then add videos from the edit screen."
     }
   },
@@ -1170,7 +1172,9 @@
   },
   "common": {
     "loading": "Loading...",
-    "comingSoon": "{{feature}} is coming soon!"
+    "comingSoon": "{{feature}} is coming soon!",
+    "cancel": "Cancel",
+    "confirm": "Confirm"
   },
   "sellerDetail": {
     "notFound": "Shop not found",
