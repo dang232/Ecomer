@@ -159,34 +159,14 @@ const T_CALL_RE =
 
 function extractCalls(src) {
   const stripped = stripComments(src);
-  // Build a line index so we can report 1-based line numbers.
-  const lineStarts = [0];
-  for (let i = 0; i < stripped.length; i++) {
-    if (stripped.charCodeAt(i) === 10) lineStarts.push(i + 1);
-  }
-  function lineOf(offset) {
-    // binary search
-    let lo = 0,
-      hi = lineStarts.length - 1;
-    while (lo < hi) {
-      const mid = (lo + hi + 1) >> 1;
-      if (lineStarts[mid] <= offset) lo = mid;
-      else hi = mid - 1;
-    }
-    return lo + 1;
-  }
   const calls = [];
   // Walk line-by-line so we can skip comment lines cheaply.
   const lines = stripped.split(/\r?\n/);
-  let abs = 0;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     // Skip pure line comments and JSDoc-ish lines.
     const trimmed = line.trim();
-    if (trimmed.startsWith("//")) {
-      abs += line.length + 1;
-      continue;
-    }
+    if (trimmed.startsWith("//")) continue;
     T_CALL_RE.lastIndex = 0;
     let m;
     while ((m = T_CALL_RE.exec(line)) !== null) {
@@ -194,10 +174,8 @@ function extractCalls(src) {
       // for a template literal. Only one pair will be truthy per match.
       const quote = m[1] || m[3];
       const body = m[2] !== undefined ? m[2] : m[4];
-      const lineNo = i + 1;
-      calls.push({ line: lineNo, quote, body });
+      calls.push({ line: i + 1, quote, body });
     }
-    abs += line.length + 1;
   }
   return calls;
 }
