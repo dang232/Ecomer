@@ -13,6 +13,17 @@
  * shape for "refresh-token theft via XSS is impossible." Access-token theft
  * via XSS still works in principle, but the window is short (15min) and
  * the access token alone can't bootstrap a new session.
+ *
+ * <h2>CSRF double-submit</h2>
+ * user-service's {@code CsrfProtectionFilter} requires the SPA to echo the
+ * {@code vnshop_csrf} cookie value back in the {@code X-CSRF-Token} header
+ * on {@code POST /auth/refresh} and {@code POST /auth/logout} (login is
+ * excluded because it is not cookie-authenticated). The cookie is issued as
+ * <strong>non-httpOnly</strong> on purpose: the SPA must be able to read it
+ * via {@code document.cookie} and add it as a header. The browser still sends
+ * the cookie automatically on the request, so the server compares the two
+ * values and rejects mismatches — a cross-origin attacker cannot read the
+ * cookie (same-origin policy) and therefore cannot forge the header.
  */
 
 const env = import.meta.env as Record<string, string | undefined>;
@@ -21,6 +32,11 @@ const API_URL = env.VITE_API_URL ?? "http://localhost:8080";
 const LOGIN_ENDPOINT = `${API_URL}/auth/login`;
 const REFRESH_ENDPOINT = `${API_URL}/auth/refresh`;
 const LOGOUT_ENDPOINT = `${API_URL}/auth/logout`;
+
+/** Name of the non-httpOnly CSRF cookie set by user-service. */
+export const CSRF_COOKIE_NAME = "vnshop_csrf";
+/** Header that must echo the CSRF cookie value on /auth/refresh and /auth/logout. */
+export const CSRF_HEADER_NAME = "X-CSRF-Token";
 
 export interface TokenSet {
   accessToken: string;
@@ -80,10 +96,39 @@ function tokenSetFrom(payload: AuthSessionResponse): TokenSet {
   };
 }
 
-async function postAuth(url: string, body?: unknown): Promise<Response> {
+/**
+ * Reads the value of a single cookie from {@code document.cookie}.
+ *
+ * <p>Used to retrieve the {@code vnshop_csrf} token the SPA must echo in the
+ * {@code X-CSRF-Token} header. Exported for testability — production callers
+ * should use {@link csrfAuthHeader} instead.
+ */
+export function readCookieValue(cookieName: string): string {
+  if (typeof document === "undefined") return "";
+  const cookieString = document.cookie ?? "";
+  if (!cookieString) return "";
+  const escaped = cookieName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = new RegExp("(?:^|;\\s*)" + escaped + "=([^;]*)").exec(cookieString);
+  return match ? decodeURIComponent(match[1]) : "";
+}
+
+/**
+ * Returns the {@code X-CSRF-Token} header value the SPA should send on
+ * state-changing auth requests, or {@code undefined} if the cookie is not
+ * present. Exported for testability.
+ */
+export function csrfAuthHeader(): Record<string, string> | undefined {
+  const token = readCookieValue(CSRF_COOKIE_NAME);
+  return token ? { [CSRF_HEADER_NAME]: token } : undefined;
+}
+
+async function postAuth(url: string, body?: unknown, extraHeaders?: Record<string, string>): Promise<Response> {
+  const headers: Record<string, string> = {};
+  if (body != null) headers["Content-Type"] = "application/json";
+  if (extraHeaders) Object.assign(headers, extraHeaders);
   return fetch(url, {
     method: "POST",
-    headers: body != null ? { "Content-Type": "application/json" } : {},
+    headers,
     // CRITICAL: send + receive the vnshop_rt cookie. Without this, the
     // browser strips the cookie on cross-origin requests and refresh
     // returns 401 forever.
@@ -113,6 +158,8 @@ async function readEnvelope(res: Response, fallbackErrorCode: string): Promise<T
 }
 
 export async function passwordLogin(username: string, password: string): Promise<TokenSet> {
+  // /auth/login is excluded from the CSRF filter (it is not cookie-authenticated),
+  // so do not attach the X-CSRF-Token header here.
   const res = await postAuth(LOGIN_ENDPOINT, { username, password });
   return readEnvelope(res, "auth_failed");
 }
@@ -120,7 +167,7 @@ export async function passwordLogin(username: string, password: string): Promise
 export async function refreshTokens(): Promise<TokenSet> {
   if (inFlightRefresh) return inFlightRefresh;
   inFlightRefresh = (async () => {
-    const res = await postAuth(REFRESH_ENDPOINT);
+    const res = await postAuth(REFRESH_ENDPOINT, undefined, csrfAuthHeader());
     return readEnvelope(res, "refresh_failed");
   })().finally(() => {
     inFlightRefresh = null;
@@ -130,7 +177,7 @@ export async function refreshTokens(): Promise<TokenSet> {
 
 export async function revokeTokens(): Promise<void> {
   try {
-    await postAuth(LOGOUT_ENDPOINT);
+    await postAuth(LOGOUT_ENDPOINT, undefined, csrfAuthHeader());
   } catch {
     // Best-effort. Local state is cleared regardless.
   }
