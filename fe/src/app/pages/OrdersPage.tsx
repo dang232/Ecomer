@@ -55,8 +55,8 @@ const STATUS_CONFIG: Record<
   returned: {
     labelKey: "orders.status.returned",
     icon: IconRotate,
-    color: "#8B5CF6",
-    bg: "#F5F3FF",
+    color: "var(--returned)",
+    bg: "var(--returned-light)",
   },
 };
 

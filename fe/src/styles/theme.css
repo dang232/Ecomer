@@ -51,10 +51,15 @@
   --accent-foreground: oklch(15% 0.02 260);
   --accent-light: oklch(96% 0.04 70);
   --accent-dark: #e55c00;
+  --returned: #8B5CF6;
+  --returned-light: #F5F3FF;
   --success: oklch(62% 0.18 155);
   --success-light: oklch(95% 0.04 155);
+  --success-rgb: 16, 185, 129;
   --error: oklch(58% 0.22 25);
   --error-light: oklch(95% 0.04 25);
+  --error-rgb: 239, 68, 68;
+  --warning-rgb: 245, 158, 11;
   --info: oklch(58% 0.16 255);
   --info-light: oklch(95% 0.04 255);
   --warning: oklch(72% 0.17 70);
@@ -186,10 +191,15 @@
   --accent: oklch(78% 0.15 70);
   --accent-foreground: oklch(95% 0.005 260);
   --accent-light: oklch(25% 0.06 70);
+  --returned: #8B5CF6;
+  --returned-light: #F5F3FF;
   --success: oklch(72% 0.16 155);
   --success-light: oklch(25% 0.06 155);
+  --success-rgb: 16, 185, 129;
   --error: oklch(68% 0.2 25);
   --error-light: oklch(25% 0.06 25);
+  --error-rgb: 239, 68, 68;
+  --warning-rgb: 245, 158, 11;
   --info: oklch(68% 0.14 255);
   --info-light: oklch(25% 0.04 255);
   --warning: oklch(78% 0.15 70);
@@ -280,6 +290,7 @@ html.dark { color-scheme: dark; }
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent-light: var(--accent-light);
+  --color-accent-dark: var(--accent-dark);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
@@ -292,12 +303,17 @@ html.dark { color-scheme: dark; }
   /* Status colors */
   --color-success: var(--success);
   --color-success-light: var(--success-light);
+  --color-success-rgb: var(--success-rgb);
   --color-error: var(--error);
   --color-error-light: var(--error-light);
+  --color-error-rgb: var(--error-rgb);
+  --color-warning-rgb: var(--warning-rgb);
   --color-info: var(--info);
   --color-info-light: var(--info-light);
   --color-warning: var(--warning);
   --color-warning-light: var(--warning-light);
+  --color-returned: var(--returned);
+  --color-returned-light: var(--returned-light);
 
   /* Surface tokens */
   --color-surface-primary: var(--surface-primary);
