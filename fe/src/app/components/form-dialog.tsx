@@ -1,7 +1,6 @@
 import { IconX } from "@tabler/icons-react";
 import { motion } from "motion/react";
 import { useState } from "react";
-import { toast } from "sonner";
 
 import { useEscapeKey } from "../hooks/use-escape-key";
 
@@ -12,6 +11,14 @@ export interface FormField {
   type?: "text" | "number" | "textarea";
   required?: boolean;
   helper?: string;
+  /** Optional synchronous validator. Return a non-empty string as an error message, or undefined/null for valid. */
+  validate?: (value: string) => string | undefined;
+  /** HTML input min attribute (passed through to the <input> element). */
+  min?: number;
+  /** HTML input max attribute (passed through to the <input> element). */
+  max?: number;
+  /** Overrides the default inputMode for type="number" ("numeric"). Use to set inputMode on text fields. */
+  inputMode?: "numeric" | "decimal" | "text";
 }
 
 interface FormDialogProps {
@@ -50,26 +57,34 @@ export function FormDialog({
   isSubmitting = false,
 }: FormDialogProps) {
   const [values, setValues] = useState<Record<string, string>>(() => emptyValues(fields));
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEscapeKey(open && !isSubmitting, onClose);
 
   if (!open) return null;
 
+  const handleFieldChange = (key: string, raw: string) => {
+    setValues((prev) => ({ ...prev, [key]: raw }));
+    // Clear the field's error as soon as the user starts correcting it.
+    if (fieldErrors[key]) setFieldErrors((prev) => { const n = { ...prev }; delete n[key]; return n; });
+  };
+
   const handleSubmit = () => {
+    // Run all validators and collect errors before deciding to submit.
+    const errors: Record<string, string> = {};
     for (const field of fields) {
       const required = field.required ?? true;
       const v = (values[field.key] ?? "").trim();
       if (required && !v) {
-        toast.error(`Vui lòng nhập ${field.label.toLowerCase()}`);
-        return;
+        errors[field.key] = `Vui lòng nhập ${field.label.toLowerCase()}`;
+      } else if (field.validate) {
+        const msg = field.validate(v || "");
+        if (msg) errors[field.key] = msg;
       }
-      if (field.type === "number" && v) {
-        const n = Number(v.replace(/\D/g, ""));
-        if (!Number.isFinite(n) || n < 0) {
-          toast.error(`${field.label} không hợp lệ`);
-          return;
-        }
-      }
+    }
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
     }
     const trimmed: Record<string, string> = {};
     Object.entries(values).forEach(([k, v]) => {
@@ -112,41 +127,64 @@ export function FormDialog({
 
         <div className="p-6 space-y-4">
           {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
-          {fields.map((field) => (
-            <div key={field.key}>
-              <label className="block text-sm font-semibold text-foreground mb-1.5">
-                {field.label}
-                {field.required === false ? (
-                  <span className="text-muted-foreground font-normal"> (tuỳ chọn)</span>
+          {fields.map((field) => {
+            const fieldError = fieldErrors[field.key];
+            const errorId = `fd-error-${field.key}`;
+            const describedBy = fieldError ? errorId : undefined;
+            return (
+              <div key={field.key}>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">
+                  {field.label}
+                  {field.required === false ? (
+                    <span className="text-muted-foreground font-normal"> (tuỳ chọn)</span>
+                  ) : null}
+                </label>
+                {field.type === "textarea" ? (
+                  <textarea
+                    value={values[field.key] ?? ""}
+                    onChange={(e) => handleFieldChange(field.key, e.target.value)}
+                    rows={3}
+                    placeholder={field.placeholder}
+                    aria-describedby={describedBy}
+                    aria-invalid={fieldError ? true : undefined}
+                    className={`w-full px-3 py-2.5 rounded-xl text-sm outline-none resize-none ${
+                      fieldError
+                        ? "border border-red-400 focus:border-red-500"
+                        : "border border-border focus:border-[var(--primary)]"
+                    }`}
+                    // eslint-disable-next-line jsx-a11y/no-autofocus -- form-dialog only mounts when the user opens it; first-field focus is expected dialog UX
+                    autoFocus={fields.indexOf(field) === 0}
+                  />
+                ) : (
+                  <input
+                    type={field.type === "number" ? "text" : "text"}
+                    inputMode={field.inputMode ?? (field.type === "number" ? "numeric" : undefined)}
+                    min={field.min}
+                    max={field.max}
+                    value={values[field.key] ?? ""}
+                    onChange={(e) => handleFieldChange(field.key, e.target.value)}
+                    placeholder={field.placeholder}
+                    aria-describedby={describedBy}
+                    aria-invalid={fieldError ? true : undefined}
+                    className={`w-full px-3 py-2.5 rounded-xl text-sm outline-none ${
+                      fieldError
+                        ? "border border-red-400 focus:border-red-500"
+                        : "border border-border focus:border-[var(--primary)]"
+                    }`}
+                    // eslint-disable-next-line jsx-a11y/no-autofocus -- form-dialog only mounts when the user opens it; first-field focus is expected dialog UX
+                    autoFocus={fields.indexOf(field) === 0}
+                  />
+                )}
+                {fieldError ? (
+                  <p id={errorId} role="alert" className="mt-1.5 text-xs text-red-500">
+                    {fieldError}
+                  </p>
+                ) : field.helper ? (
+                  <p className="text-[11px] text-muted-foreground mt-1">{field.helper}</p>
                 ) : null}
-              </label>
-              {field.type === "textarea" ? (
-                <textarea
-                  value={values[field.key] ?? ""}
-                  onChange={(e) => setValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
-                  rows={3}
-                  placeholder={field.placeholder}
-                  className="w-full px-3 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--primary)] resize-none"
-                  // eslint-disable-next-line jsx-a11y/no-autofocus -- form-dialog only mounts when the user opens it; first-field focus is expected dialog UX
-                  autoFocus={fields.indexOf(field) === 0}
-                />
-              ) : (
-                <input
-                  type={field.type === "number" ? "text" : "text"}
-                  inputMode={field.type === "number" ? "numeric" : undefined}
-                  value={values[field.key] ?? ""}
-                  onChange={(e) => setValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
-                  placeholder={field.placeholder}
-                  className="w-full px-3 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--primary)]"
-                  // eslint-disable-next-line jsx-a11y/no-autofocus -- form-dialog only mounts when the user opens it; first-field focus is expected dialog UX
-                  autoFocus={fields.indexOf(field) === 0}
-                />
-              )}
-              {field.helper ? (
-                <p className="text-[11px] text-muted-foreground mt-1">{field.helper}</p>
-              ) : null}
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
 
         <div className="px-6 py-4 border-t border-border flex gap-3">
