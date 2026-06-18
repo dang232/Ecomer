@@ -704,7 +704,8 @@
       },
       "completeDialog": {
         "title": "Hoàn tất yêu cầu rút tiền này?",
-        "subtitle": "{{amount}} sẽ được đánh dấu đã chi trả cho seller {{sellerId}}…. Hành động này không thể hoàn tác.",
+        "subtitle": "{{amount}} sẽ được đánh dấu đã chi trả cho seller {{sellerId}}….",
+        "irreversibleWarning": "Hành động này không thể hoàn tác.",
         "submit": "Xác nhận hoàn tất"
       }
     },
@@ -1176,7 +1177,8 @@
     "loading": "Đang tải...",
     "comingSoon": "{{feature}} sắp ra mắt!",
     "cancel": "Huỷ",
-    "confirm": "Xác nhận"
+    "confirm": "Xác nhận",
+    "unavailable": "—"
   },
   "sellerDetail": {
     "notFound": "Không tìm thấy shop",

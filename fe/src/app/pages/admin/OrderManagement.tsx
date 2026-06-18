@@ -22,6 +22,18 @@ const STATUS_OPTIONS = [
   { value: "CANCELLED", labelKey: "admin.orders.filterCancelled" },
 ];
 
+/** Maps raw BE status strings to human-readable i18n keys (P3-5). */
+const STATUS_LABEL_KEY: Record<string, string> = {
+  PENDING_ACCEPTANCE: "admin.orders.status.pendingAcceptance",
+  ACCEPTED: "admin.orders.status.accepted",
+  PACKED: "admin.orders.status.packed",
+  SHIPPED: "admin.orders.status.shipped",
+  DELIVERED: "admin.orders.status.delivered",
+  CANCELLED: "admin.orders.status.cancelled",
+  REJECTED: "admin.orders.status.rejected",
+  REFUNDED: "admin.orders.status.refunded",
+};
+
 function statusColor(status: string): string {
   switch (status) {
     case "PENDING_ACCEPTANCE":
@@ -124,7 +136,10 @@ export function OrderManagement() {
             {orders.map((o: AdminOrderSummary) => (
               <div key={o.orderId} className="px-5 py-4 flex items-center justify-between gap-4">
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-foreground truncate">{o.orderId}</p>
+                  {/* P2-10: title attr for hover-tooltip on truncated id */}
+                  <p className="text-sm font-semibold text-foreground truncate" title={o.orderId}>
+                    {o.orderId}
+                  </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {t("admin.orders.buyer")}: {o.buyerId || "—"} ·{" "}
                     {o.totalAmount?.toLocaleString("vi-VN") ?? "—"} ₫ · {o.itemCount ?? 0}{" "}
@@ -137,17 +152,21 @@ export function OrderManagement() {
                   ) : null}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
+                  {/* P3-5: translated status badge */}
                   <span
                     className={`px-2 py-0.5 rounded text-[10px] font-bold ${statusColor(o.status)}`}
                   >
-                    {o.status}
+                    {t(STATUS_LABEL_KEY[o.status] ?? "admin.orders.status.unknown", {
+                      defaultValue: o.status,
+                    })}
                   </span>
+                  {/* P1-10: WCAG 2.5.5 minimum target size — p-2.5 ≈ 40px */}
                   <button
                     onClick={() => refund.mutate(o.orderId)}
                     disabled={isMutating}
                     title={t("admin.orders.refund")}
                     aria-label={t("admin.orders.refund")}
-                    className="p-1.5 rounded-lg border border-border text-muted-foreground hover:bg-muted disabled:opacity-50"
+                    className="p-2.5 rounded-lg border border-border text-muted-foreground hover:bg-muted disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
                   >
                     <IconRefresh size={14} aria-hidden="true" />
                   </button>
@@ -156,7 +175,7 @@ export function OrderManagement() {
                     disabled={isMutating}
                     title={t("admin.orders.cancel")}
                     aria-label={t("admin.orders.cancel")}
-                    className="p-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 disabled:opacity-50"
+                    className="p-2.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
                   >
                     <IconBan size={14} aria-hidden="true" />
                   </button>
@@ -165,7 +184,7 @@ export function OrderManagement() {
                     disabled={isMutating}
                     title={t("admin.orders.accept")}
                     aria-label={t("admin.orders.accept")}
-                    className="p-1.5 rounded-lg border border-green-200 text-green-600 hover:bg-green-50 disabled:opacity-50"
+                    className="p-2.5 rounded-lg border border-green-200 text-green-600 hover:bg-green-50 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
                   >
                     <IconCheck size={14} aria-hidden="true" />
                   </button>

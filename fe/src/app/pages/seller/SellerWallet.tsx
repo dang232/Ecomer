@@ -1,3 +1,4 @@
+import { IconWalletOff } from "@tabler/icons-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -9,6 +10,17 @@ import { ApiError } from "../../lib/api";
 import { requestPayout, type Payout } from "../../lib/api/endpoints/seller-finance";
 import { formatDate, formatPrice } from "../../lib/format";
 import { groupByDate } from "../../lib/group-by-date";
+
+/** Known withdrawal statuses the BE may return. Maps the `filter` chip
+ *  ("all" | "completed" | "pending" | "failed") to the corresponding
+ *  status substrings so the filter works reliably regardless of how the
+ *  BE capitalises or prefixes the enum values. */
+const WITHDRAWAL_STATUS_FILTER: Record<"all" | "completed" | "pending" | "failed", Set<string>> = {
+  all: new Set(),
+  completed: new Set(["COMPLETED", "PAID"]),
+  pending: new Set(["PENDING"]),
+  failed: new Set(["FAILED", "REJECTED"]),
+};
 
 export function SellerWallet({
   balance,
@@ -38,9 +50,12 @@ export function SellerWallet({
   });
 
   const filteredPayouts = useMemo(() => {
-    if (filter === "all") return payouts;
-    const target = filter.toUpperCase();
-    return payouts.filter((p) => p.status.toUpperCase().includes(target));
+    const matchSet = WITHDRAWAL_STATUS_FILTER[filter];
+    if (matchSet.size === 0) return payouts;
+    return payouts.filter((p) => {
+      const upper = p.status.toUpperCase();
+      return [...matchSet].some((s) => upper.includes(s));
+    });
   }, [payouts, filter]);
 
   const sections = useMemo(
@@ -103,7 +118,11 @@ export function SellerWallet({
       >
         <p className="text-white/70 text-sm mb-2">{t("seller.wallet.balanceLabel")}</p>
         <p className="text-4xl font-black mb-4">
-          {balance !== null ? formatPrice(balance) : isLoading ? t("seller.wallet.loading") : "—"}
+          {balance !== null
+            ? formatPrice(balance)
+            : isLoading
+              ? t("seller.wallet.loading")
+              : t("common.unavailable", { defaultValue: "—" })}
         </p>
         <div className="flex gap-3">
           <button
@@ -147,9 +166,10 @@ export function SellerWallet({
           </div>
         </div>
         {filteredPayouts.length === 0 ? (
-          <p className="px-5 py-8 text-sm text-muted-foreground text-center">
-            {t("seller.wallet.historyEmpty")}
-          </p>
+          <div className="py-10 text-center">
+            <IconWalletOff size={40} className="mx-auto mb-3 text-gray-200" aria-hidden="true" />
+            <p className="text-sm text-muted-foreground">{t("seller.wallet.historyEmpty")}</p>
+          </div>
         ) : null}
         <div className="divide-y divide-gray-50">
           {sections.map((section) => (
@@ -167,7 +187,7 @@ export function SellerWallet({
                       {formatPrice(p.amount)}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {p.requestedAt ? formatDate(p.requestedAt) : "—"}
+                      {p.requestedAt ? formatDate(p.requestedAt) : t("common.unavailable", { defaultValue: "—" })}
                     </p>
                   </div>
                   <StatusPill status={p.status} />
