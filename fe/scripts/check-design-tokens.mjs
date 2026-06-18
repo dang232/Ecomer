@@ -64,6 +64,9 @@ const EXTRA_ALLOWLIST = new Map([
   ['src/app/pages/LoginPage.tsx', 'auth gradient indigo/violet (non-brand)'],
   ['src/app/pages/RegisterPage.tsx', 'auth gradient indigo/violet (non-brand)'],
   ['src/app/pages/PasswordResetPage.tsx', 'auth gradient indigo/violet (non-brand)'],
+  // WHY: SystemHealth uses health-status colors (green/amber/red) that are not
+  // brand palette tokens — they represent uptime status indicators.
+  ['src/app/pages/admin/SystemHealth.tsx', 'system health status indicator colors (green/amber/red)'],
   // WHY: tests may exercise hex parsing or contain fixture data; not shipped
   // to production. Covers both .test.ts and .test.tsx under src/.
   // (Matched by suffix glob — see isAllowlisted below.)

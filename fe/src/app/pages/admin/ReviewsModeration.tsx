@@ -48,7 +48,7 @@ export function ReviewsModeration() {
         open={!!rejectFor}
         title={t("admin.reviewsModeration.rejectDialog.title")}
         submitLabel={t("admin.reviewsModeration.rejectDialog.submit")}
-        submitColor="#EF4444"
+        submitColor="var(--error)"
         fields={[
           {
             key: "reason",
@@ -95,7 +95,7 @@ export function ReviewsModeration() {
                   <IconStar
                     key={i} // eslint-disable-line react/no-array-index-key -- decorative star rating, no stable id
                     size={14}
-                    fill={i < r.rating ? "#F59E0B" : "#e5e7eb"}
+                    fill={i < r.rating ? "var(--warning)" : "var(--border)"}
                     className={i < r.rating ? "text-amber-400" : "text-gray-200"}
                   />
                 ))}
@@ -109,7 +109,7 @@ export function ReviewsModeration() {
                 onClick={() => approve.mutate(r.id)}
                 disabled={approve.isPending}
                 className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
-                style={{ background: "#10B981" }}
+                style={{ background: "var(--success)" }}
               >
                 <IconCircleCheck size={13} /> {t("admin.reviewsModeration.approve")}
               </button>

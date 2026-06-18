@@ -218,7 +218,7 @@ function AppealRow({
           onClick={onApprove}
           disabled={isApproving || isRejecting}
           className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white disabled:opacity-50 transition-colors"
-          style={{ background: "#10B981" }}
+          style={{ background: "var(--success)" }}
         >
           <IconCircleCheck size={13} />
           {t("admin.videoAppeals.approve")}
@@ -256,7 +256,7 @@ export function VideoAppeals() {
         title={t("admin.videoAppeals.rejectDialog.title")}
         description={t("admin.videoAppeals.rejectDialog.description")}
         submitLabel={t("admin.videoAppeals.rejectDialog.submit")}
-        submitColor="#EF4444"
+        submitColor="var(--error)"
         fields={[
           {
             key: "reason",
