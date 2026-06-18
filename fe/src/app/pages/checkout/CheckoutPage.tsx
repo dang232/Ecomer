@@ -87,15 +87,18 @@ export function CheckoutPage() {
     };
     return data
       .filter((p) => p.enabled !== false)
-      .map(
-        (p) =>
-          codeToFallback[p.code] ?? {
-            id: p.code as PaymentOption["id"],
-            name: p.name,
-            Icon: CreditCard,
-            desc: p.description ?? "",
-          },
-      );
+      .map((p) => {
+        const mapped = codeToFallback[p.code];
+        if (!mapped) {
+          console.warn(`[CheckoutPage] Unknown payment code "${p.code}" — using generic CreditCard icon. Consider adding it to codeToFallback.`);
+        }
+        return mapped ?? {
+          id: p.code as PaymentOption["id"],
+          name: p.name,
+          Icon: CreditCard,
+          desc: p.description ?? "",
+        };
+      });
   }, [paymentQuery.data, t]);
 
   const [step, setStep] = useState<Step>(() => {
