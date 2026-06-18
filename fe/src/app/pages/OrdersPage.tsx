@@ -507,6 +507,21 @@ function OrderCard({
           </div>
         </div>
       </motion.div>
+      <ConfirmDialog
+        open={cancelId !== null}
+        onClose={() => setCancelId(null)}
+        onConfirm={() => {
+          if (cancelId) onCancel(cancelId);
+        }}
+        title={t("orders.cancelDialog.title", { defaultValue: "Cancel order?" })}
+        description={t("orders.cancelDialog.description", {
+          defaultValue: "This will cancel your order. You won't be able to undo this.",
+        })}
+        confirmLabel={t("orders.actions.cancel")}
+        cancelLabel={t("common.cancel")}
+        variant="danger"
+        icon={<IconCircleX size={24} />}
+      />
     </>
   );
 }
