@@ -22,19 +22,28 @@ export function CheckoutPaymentStep({
       <div role="radiogroup" aria-label="Payment method" className="space-y-3">
         {paymentOptions.map((method) => {
           const isSelected = selectedPaymentId === method.id;
+          const inputId = `checkout-payment-${method.id}`;
           return (
-            <button
+            <label
               key={method.id}
-              role="radio"
-              aria-checked={isSelected}
-              onClick={() => setSelectedPaymentId(method.id)}
+              htmlFor={inputId}
               className={[
                 "w-full flex items-center gap-3.5 px-4 py-3.5 border-[1.5px] rounded-[var(--radius-lg)] cursor-pointer transition-all text-left",
+                "peer-focus-within:ring-2 peer-focus-within:ring-primary peer-focus-within:ring-offset-2",
                 isSelected
                   ? "border-primary bg-[var(--primary-subtle)] shadow-[0_0_0_3px_oklch(from_var(--primary)_l_c_h_/_0.08)]"
                   : "border-border hover:border-border-hover hover:shadow-sm",
               ].join(" ")}
             >
+              <input
+                id={inputId}
+                type="radio"
+                name="checkout-payment"
+                value={method.id}
+                checked={isSelected}
+                onChange={() => setSelectedPaymentId(method.id)}
+                className="peer sr-only"
+              />
               {/* Icon box */}
               <span className="w-9 h-9 rounded-md bg-surface-elevated flex items-center justify-center shrink-0">
                 <method.Icon
@@ -60,7 +69,7 @@ export function CheckoutPaymentStep({
                   <div className="w-2.5 h-2.5 rounded-full bg-primary" />
                 ) : null}
               </div>
-            </button>
+            </label>
           );
         })}
       </div>
