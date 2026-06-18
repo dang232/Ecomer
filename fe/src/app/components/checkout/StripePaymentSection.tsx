@@ -24,6 +24,7 @@ export function StripePaymentSection({
   idempotencyKey,
   onCompleted,
 }: Props) {
+  const { t } = useTranslation();
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +60,7 @@ export function StripePaymentSection({
   if (!clientSecret || !stripePromise || !options) {
     return (
       <div className="rounded-2xl border-2 border-border p-4 text-sm text-muted-foreground" data-testid="stripe-loading">
-        Đang khởi tạo Stripe…
+        {t("stripe.initializing")}
       </div>
     );
   }
@@ -100,7 +101,7 @@ function StripeForm({ orderId, onCompleted }: { orderId: string; onCompleted: ()
     const tick = async () => {
       if (Date.now() > deadline) {
         setPolling(false);
-        toast.message("Đang xử lý — bạn sẽ nhận email khi hoàn tất.");
+        toast.message(t("stripe.processingEmail"));
         return;
       }
       try {
@@ -130,7 +131,7 @@ function StripeForm({ orderId, onCompleted }: { orderId: string; onCompleted: ()
         style={{ background: "var(--primary)" }}
         data-testid="stripe-submit"
       >
-        {polling ? "Đang xác nhận thanh toán…" : submitting ? "Đang xử lý…" : "Thanh toán"}
+        {polling ? t("stripe.confirming") : submitting ? t("stripe.processing") : t("stripe.pay")}
       </button>
     </form>
   );

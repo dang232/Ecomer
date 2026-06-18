@@ -511,7 +511,7 @@ export function CheckoutPage() {
           selectedPaymentId === "VIETQR") ? (
           <div className="mb-6 rounded-[var(--radius-xl)] border-2 border-border bg-card p-6">
             <h2 className="text-lg font-bold text-foreground mb-4">
-              Hoàn tất thanh toán cho đơn {placedOrderId}
+              {t("checkout.payment.complete", { id: placedOrderId })}
             </h2>
             {selectedPaymentId === "STRIPE" ? (
               <StripePaymentSection

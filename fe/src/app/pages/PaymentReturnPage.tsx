@@ -1,5 +1,6 @@
 import { IconCircleCheck, IconAlertCircle, IconClock } from "@tabler/icons-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 
 import { ApiError } from "../lib/api";
@@ -19,6 +20,7 @@ const TERMINAL_STATUSES = new Set([
 ]);
 
 export function PaymentReturnPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const params = useParams<{ provider: string }>();
   const [search] = useSearchParams();
@@ -49,7 +51,7 @@ export function PaymentReturnPage() {
   useEffect(() => {
     if (!orderId) {
       setPhase("error");
-      setErrorMessage("Không tìm thấy mã đơn hàng trong tham số URL.");
+      setErrorMessage(t("paymentReturn.error.noOrderId"));
       return;
     }
 
@@ -91,7 +93,7 @@ export function PaymentReturnPage() {
           return;
         }
         setPhase("error");
-        setErrorMessage("Không thể kiểm tra trạng thái thanh toán.");
+        setErrorMessage(t("paymentReturn.error.checkFailed"));
       }
     };
 
@@ -128,11 +130,10 @@ export function PaymentReturnPage() {
             className="text-2xl font-bold text-foreground mb-3"
             style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}
           >
-            Đang xác nhận thanh toán...
+            {t("paymentReturn.pending.title")}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Vui lòng giữ trang này mở. Hệ thống đang kiểm tra trạng thái thanh toán với{" "}
-            {provider === "vnpay" ? "VNPay" : "MoMo"}.
+            {t("paymentReturn.pending.body", { provider: provider === "vnpay" ? "VNPay" : "MoMo" })}
           </p>
         </>
       ) : null}
@@ -149,16 +150,16 @@ export function PaymentReturnPage() {
             className="text-3xl font-black text-foreground mb-3"
             style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}
           >
-            Thanh toán thành công 🎉
+            {t("paymentReturn.completed.title")}
           </h1>
           {amount !== null ? (
             <p className="text-sm text-muted-foreground mb-2">
-              Số tiền đã thanh toán: <strong>{formatPrice(amount)}</strong>
+              {t("paymentReturn.completed.amountPaid")} <strong>{formatPrice(amount)}</strong>
             </p>
           ) : null}
           {orderId ? (
             <p className="text-sm text-muted-foreground mb-8">
-              Mã đơn hàng: <span className="font-mono font-semibold">{orderId}</span>
+              {t("paymentReturn.completed.orderIdLabel")} <span className="font-mono font-semibold">{orderId}</span>
             </p>
           ) : null}
           <div className="flex gap-3">
@@ -167,14 +168,14 @@ export function PaymentReturnPage() {
               className="flex-1 py-3 rounded-xl border-2 font-semibold text-sm"
               style={{ borderColor: "var(--primary)", color: "var(--primary)" }}
             >
-              Xem đơn hàng
+              {t("paymentReturn.completed.viewOrders")}
             </button>
             <button
               onClick={() => navigate("/")}
               className="flex-1 py-3 rounded-xl text-white font-semibold text-sm"
               style={{ background: "linear-gradient(135deg, var(--primary), #009990)" }}
             >
-              Tiếp tục mua sắm
+              {t("paymentReturn.completed.continueShopping")}
             </button>
           </div>
         </>
@@ -188,9 +189,9 @@ export function PaymentReturnPage() {
           >
             <IconAlertCircle size={40} style={{ color: "#EF4444" }} />
           </div>
-          <h1 className="text-2xl font-bold text-foreground mb-3">Thanh toán không thành công</h1>
+          <h1 className="text-2xl font-bold text-foreground mb-3">{t("paymentReturn.failed.title")}</h1>
           <p className="text-sm text-muted-foreground mb-6">
-            Đơn hàng của bạn vẫn được giữ. Bạn có thể thử thanh toán lại từ trang Đơn hàng.
+            {t("paymentReturn.failed.body")}
           </p>
           <div className="flex gap-3">
             <button
@@ -198,13 +199,13 @@ export function PaymentReturnPage() {
               className="flex-1 py-3 rounded-xl text-white font-semibold text-sm"
               style={{ background: "#FF6200" }}
             >
-              Đến đơn hàng
+              {t("paymentReturn.failed.goOrders")}
             </button>
             <button
               onClick={() => navigate("/")}
               className="flex-1 py-3 rounded-xl border border-border text-muted-foreground font-semibold text-sm"
             >
-              Trang chủ
+              {t("paymentReturn.failed.goHome")}
             </button>
           </div>
         </>
@@ -218,16 +219,16 @@ export function PaymentReturnPage() {
           >
             <IconAlertCircle size={40} style={{ color: "#F59E0B" }} />
           </div>
-          <h1 className="text-2xl font-bold text-foreground mb-3">Không xác định được trạng thái</h1>
+          <h1 className="text-2xl font-bold text-foreground mb-3">{t("paymentReturn.error.title")}</h1>
           <p className="text-sm text-muted-foreground mb-6">
-            {errorMessage || "Vui lòng kiểm tra trang đơn hàng để xem trạng thái mới nhất."}
+            {errorMessage || t("paymentReturn.error.fallback")}
           </p>
           <button
             onClick={() => navigate("/orders")}
             className="px-6 py-3 rounded-xl text-white font-semibold text-sm"
             style={{ background: "var(--primary)" }}
           >
-            Đến đơn hàng
+            {t("paymentReturn.error.goOrders")}
           </button>
         </>
       ) : null}

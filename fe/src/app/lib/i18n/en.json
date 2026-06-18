@@ -472,7 +472,8 @@
       "paypalDesc": "Pay via PayPal account",
       "bankName": "Bank card",
       "codName": "Cash on delivery",
-      "codDesc": "Pay cash when the parcel arrives"
+      "codDesc": "Pay cash when the parcel arrives",
+      "complete": "Complete payment for order {{id}}"
     },
     "review": {
       "header": "Review your order",
@@ -514,6 +515,7 @@
     },
     "success": {
       "title": "Order placed! 🎉",
+      "gatewayTitle": "Redirecting to payment gateway...",
       "orderIdLabel": "Your order ID:",
       "codNotice": "You'll pay <1>{{amount}}</1> on delivery.",
       "viewOrders": "View orders",

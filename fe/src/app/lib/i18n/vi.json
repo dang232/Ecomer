@@ -472,7 +472,8 @@
       "paypalDesc": "Thanh toán qua tài khoản PayPal",
       "bankName": "Thẻ ngân hàng",
       "codName": "Thanh toán khi nhận hàng",
-      "codDesc": "Trả tiền mặt khi nhận hàng"
+      "codDesc": "Trả tiền mặt khi nhận hàng",
+      "complete": "Hoàn tất thanh toán cho đơn {{id}}"
     },
     "review": {
       "header": "Xác nhận đơn hàng",
@@ -514,6 +515,7 @@
     },
     "success": {
       "title": "Đặt hàng thành công! 🎉",
+      "gatewayTitle": "Đang chuyển đến cổng thanh toán...",
       "orderIdLabel": "Mã đơn hàng của bạn:",
       "codNotice": "Bạn sẽ thanh toán <1>{{amount}}</1> khi nhận hàng.",
       "viewOrders": "Xem đơn hàng",
