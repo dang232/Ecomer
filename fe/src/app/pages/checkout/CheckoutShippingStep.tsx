@@ -59,19 +59,28 @@ export function CheckoutShippingStep({
           {shippingOptions.map((method) => {
             const isSelected = selectedShippingId === method.id;
             const ShipIcon = getShippingIcon(method.id);
+            const inputId = `checkout-shipping-${method.id}`;
             return (
-              <button
+              <label
                 key={method.id}
-                role="radio"
-                aria-checked={isSelected}
-                onClick={() => setShippingChoice(method.id)}
+                htmlFor={inputId}
                 className={[
                   "w-full flex items-center gap-4 p-4 border-[1.5px] rounded-[var(--radius-lg)] cursor-pointer transition-all text-left",
+                  "peer-focus-within:ring-2 peer-focus-within:ring-primary peer-focus-within:ring-offset-2",
                   isSelected
                     ? "border-primary bg-[var(--primary-subtle)] shadow-[0_0_0_3px_oklch(from_var(--primary)_l_c_h_/_0.08)]"
                     : "border-border hover:border-border-hover hover:shadow-sm",
                 ].join(" ")}
               >
+                <input
+                  id={inputId}
+                  type="radio"
+                  name="checkout-shipping"
+                  value={method.id}
+                  checked={isSelected}
+                  onChange={() => setShippingChoice(method.id)}
+                  className="peer sr-only"
+                />
                 {/* Icon box */}
                 <span className="w-10 h-10 rounded-md bg-surface-elevated flex items-center justify-center shrink-0">
                   <ShipIcon
@@ -96,7 +105,7 @@ export function CheckoutShippingStep({
                     {method.fee === 0 ? t("checkout.shipping.free") : formatPrice(method.fee)}
                   </p>
                 </div>
-              </button>
+              </label>
             );
           })}
         </div>
