@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ArrowLeft, CheckCircle, CreditCard, LogIn, Package } from "lucide-react";
+import { ArrowLeft, CreditCard, LogIn, Package } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -29,12 +29,12 @@ import { CheckoutAddressStep } from "./CheckoutAddressStep";
 import { CheckoutPaymentStep } from "./CheckoutPaymentStep";
 import { CheckoutReviewStep } from "./CheckoutReviewStep";
 import { CheckoutShippingStep } from "./CheckoutShippingStep";
+import { CheckoutStepper } from "./CheckoutStepper";
 import { CheckoutSuccess } from "./CheckoutSuccess";
 import { CheckoutSummary } from "./CheckoutSummary";
 import {
   makeFallbackPayment,
   makeFallbackShipping,
-  STEPS,
   type PaymentOption,
   type Step,
 } from "./types";
@@ -558,52 +558,7 @@ export function CheckoutPage() {
       </div>
 
       {/* Stepper */}
-      <div className="flex items-center justify-center mb-10">
-        {STEPS.map((s, i) => {
-          const isActive = s.id === step;
-          const isDone = stepOrder.indexOf(s.id) < stepIdx;
-          const StepIcon = s.icon;
-          return (
-            <div key={s.id} className="flex items-center">
-              <div className="flex flex-col items-center">
-                <button
-                  type="button"
-                  onClick={() => { if (isDone) setStep(s.id); }}
-                  disabled={!isDone}
-                  aria-label={t(s.labelKey)}
-                  className={[
-                    "w-[34px] h-[34px] rounded-full border-2 flex items-center justify-center transition-all duration-300",
-                    isDone
-                      ? "bg-primary border-primary text-white cursor-pointer hover:opacity-80"
-                      : isActive
-                        ? "border-primary text-primary bg-primary-light scale-110"
-                        : "border-border text-muted-foreground bg-card",
-                    !isDone ? "cursor-default" : "",
-                  ].join(" ")}
-                >
-                  {isDone ? <CheckCircle size={16} /> : <StepIcon size={16} />}
-                </button>
-                <span
-                  className={[
-                    "text-xs mt-1 font-medium",
-                    isActive ? "text-foreground" : isDone ? "text-primary" : "text-muted-foreground",
-                  ].join(" ")}
-                >
-                  {t(s.labelKey)}
-                </span>
-              </div>
-              {i < STEPS.length - 1 ? (
-                <div
-                  className={[
-                    "w-12 h-0.5 mb-5 mx-1 transition-colors",
-                    isDone ? "bg-primary" : "bg-border",
-                  ].join(" ")}
-                />
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
+      <CheckoutStepper step={step} onStepChange={setStep} />
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
         <AnimatePresence mode="wait">
