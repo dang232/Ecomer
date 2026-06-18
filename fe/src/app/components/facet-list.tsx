@@ -42,13 +42,13 @@ export function FacetList({
               key={entry.key}
               onClick={() => onToggle(entry.key)}
               className="w-full flex items-center justify-between text-sm py-1"
-              style={{ color: isSelected ? "var(--primary)" : "#4b5563" }}
+              style={{ color: isSelected ? "var(--primary)" : "var(--muted-foreground)" }}
             >
               <span className="flex items-center gap-2">
                 <div
                   className="w-4 h-4 rounded border-2 flex items-center justify-center shrink-0"
                   style={{
-                    borderColor: isSelected ? "var(--primary)" : "#d1d5db",
+                    borderColor: isSelected ? "var(--primary)" : "var(--border)",
                     background: isSelected ? "var(--primary)" : "transparent",
                   }}
                 >
