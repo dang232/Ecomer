@@ -1,6 +1,6 @@
 import { IconArrowsSort, IconSearch } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -17,6 +17,7 @@ import { groupByDate } from "../../lib/group-by-date";
 import type { AdminPayout } from "../../types/api";
 
 type Tab = "pending" | "completed";
+const TABS: Tab[] = ["pending", "completed"];
 
 export function PayoutsQueue() {
   const qc = useQueryClient();
@@ -28,6 +29,9 @@ export function PayoutsQueue() {
   const [failProcessingId, setFailProcessingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "amount">("date");
+  const pendingBtnRef = useRef<HTMLButtonElement>(null);
+  const completedBtnRef = useRef<HTMLButtonElement>(null);
+  const tabRefs = { pending: pendingBtnRef, completed: completedBtnRef };
 
   const pendingQuery = useQuery({
     queryKey: ["admin", "payouts", "pending"],
@@ -118,6 +122,21 @@ export function PayoutsQueue() {
     [sorted, sortBy, tab, i18n.language],
   );
 
+  const focusTab = (next: Tab) => {
+    setTab(next);
+    tabRefs[next].current?.focus();
+  };
+
+  function handleTabKeyDown(e: React.KeyboardEvent<HTMLButtonElement>, current: Tab) {
+    if (e.key === "ArrowRight") {
+      e.preventDefault();
+      focusTab(TABS[(TABS.indexOf(current) + 1) % TABS.length]);
+    } else if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      focusTab(TABS[(TABS.indexOf(current) - 1 + TABS.length) % TABS.length]);
+    }
+  }
+
   const isEmptyForTab =
     !activeQuery.isLoading && activeList.length === 0;
   const emptyKey = tab === "pending" ? "admin.payouts.empty" : "admin.payouts.emptyCompleted";
@@ -129,10 +148,13 @@ export function PayoutsQueue() {
         title={t("admin.payouts.completeDialog.title")}
         description={
           completeTarget
-            ? t("admin.payouts.completeDialog.subtitle", {
-                amount: formatPrice(completeTarget.amount),
-                sellerId: completeTarget.sellerId.slice(0, 8),
-              })
+            ? [
+                t("admin.payouts.completeDialog.subtitle", {
+                  amount: formatPrice(completeTarget.amount),
+                  sellerId: completeTarget.sellerId.slice(0, 8),
+                }),
+                t("admin.payouts.completeDialog.irreversibleWarning"),
+              ]
             : undefined
         }
         submitLabel={t("admin.payouts.completeDialog.submit")}
@@ -167,25 +189,48 @@ export function PayoutsQueue() {
       />
       <h2 className="text-xl font-bold text-foreground">{t("admin.payouts.title")}</h2>
 
-      <div role="tablist" className="flex items-center gap-2">
-        {(["pending", "completed"] as const).map((value) => (
-          <button
-            key={value}
-            role="tab"
-            aria-selected={tab === value}
-            onClick={() => {
-              setTab(value);
-              setSearch("");
-            }}
-            className={
-              tab === value
-                ? "px-3 py-1.5 rounded-xl text-xs font-semibold bg-foreground text-background"
-                : "px-3 py-1.5 rounded-xl text-xs font-semibold border border-border bg-card text-muted-foreground hover:bg-muted"
-            }
-          >
-            {t(`admin.payouts.tab.${value}`)}
-          </button>
-        ))}
+      {/* P1-11: roving tabindex + ArrowLeft/ArrowRight keyboard navigation */}
+      <div role="tablist" aria-label="Payout tabs" className="flex items-center gap-2">
+        <button
+          ref={pendingBtnRef}
+          role="tab"
+          id="payouts-pending-tab"
+          aria-selected={tab === "pending"}
+          aria-controls="payouts-pending-panel"
+          tabIndex={tab === "pending" ? 0 : -1}
+          onClick={() => {
+            setTab("pending");
+            setSearch("");
+          }}
+          onKeyDown={(e) => handleTabKeyDown(e, "pending")}
+          className={
+            tab === "pending"
+              ? "px-3 py-1.5 rounded-xl text-xs font-semibold bg-foreground text-background focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+              : "px-3 py-1.5 rounded-xl text-xs font-semibold border border-border bg-card text-muted-foreground hover:bg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+          }
+        >
+          {t("admin.payouts.tab.pending")}
+        </button>
+        <button
+          ref={completedBtnRef}
+          role="tab"
+          id="payouts-completed-tab"
+          aria-selected={tab === "completed"}
+          aria-controls="payouts-completed-panel"
+          tabIndex={tab === "completed" ? 0 : -1}
+          onClick={() => {
+            setTab("completed");
+            setSearch("");
+          }}
+          onKeyDown={(e) => handleTabKeyDown(e, "completed")}
+          className={
+            tab === "completed"
+              ? "px-3 py-1.5 rounded-xl text-xs font-semibold bg-foreground text-background focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+              : "px-3 py-1.5 rounded-xl text-xs font-semibold border border-border bg-card text-muted-foreground hover:bg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+          }
+        >
+          {t("admin.payouts.tab.completed")}
+        </button>
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
@@ -223,7 +268,12 @@ export function PayoutsQueue() {
 
       {filtered.length > 0 ? (
         <div className="bg-card rounded-2xl shadow-sm overflow-hidden">
-          <div className="divide-y divide-gray-50">
+          <div
+            id={tab === "pending" ? "payouts-pending-panel" : "payouts-completed-panel"}
+            role="tabpanel"
+            aria-labelledby={tab === "pending" ? "payouts-pending-tab" : "payouts-completed-tab"}
+            className="divide-y divide-gray-50"
+          >
             {sections
               ? sections.map((section) => (
                   <div key={section.key}>
@@ -285,8 +335,9 @@ function PendingPayoutRow({
     <div className="px-5 py-4 flex items-center justify-between gap-4">
       <div>
         <p className="text-xs font-mono text-muted-foreground">{p.id}</p>
+        {/* P1-8 / P3-6: render sellerName if available, otherwise sellerId */}
         <p className="text-sm font-semibold text-foreground">
-          {t("admin.payouts.sellerLabel", { id: p.sellerId })}
+          {p.sellerName ?? t("admin.payouts.sellerLabel", { id: p.sellerId })}
         </p>
         <p className="text-xs text-muted-foreground">
           {p.requestedAt ? formatDate(p.requestedAt) : ""}
@@ -328,16 +379,18 @@ function CompletedPayoutRow({ p }: { p: AdminPayout }) {
     <div className="px-5 py-4 flex items-center justify-between gap-4">
       <div>
         <p className="text-xs font-mono text-muted-foreground">{p.id}</p>
+        {/* P1-8 / P3-6: render sellerName if available, otherwise sellerId */}
         <p className="text-sm font-semibold text-foreground">
-          {t("admin.payouts.sellerLabel", { id: p.sellerId })}
+          {p.sellerName ?? t("admin.payouts.sellerLabel", { id: p.sellerId })}
         </p>
         <p className="text-xs text-muted-foreground">
           {p.completedAt ? formatDate(p.completedAt) : p.requestedAt ? formatDate(p.requestedAt) : ""}
         </p>
         <p className="text-xs text-emerald-600 font-medium mt-0.5">{completedLabel}</p>
       </div>
+      {/* P2-8: settled/passed amount — positive tone, no line-through */}
       <div className="flex items-center gap-3 shrink-0">
-        <span className="font-bold text-base text-muted-foreground line-through">
+        <span className="font-bold text-base text-emerald-600">
           {formatPrice(p.amount)}
         </span>
       </div>

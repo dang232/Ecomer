@@ -160,6 +160,7 @@ export type Dispute = z.infer<typeof disputeSchema>;
 // BE seller-finance-service PayoutResponse(payoutId, sellerId, amount, status,
 // createdAt, completedBy, createdAt). Same shape as the order-service finance
 // projection. Legacy callers expect id + requestedAt; keep accepting both.
+// sellerName is joined from the seller-service when the BE supports it (P1-8).
 export const adminPayoutSchema = z
   .object({
     // Legacy
@@ -169,6 +170,7 @@ export const adminPayoutSchema = z
     payoutId: z.string().optional(),
     createdAt: z.string().optional(),
     sellerId: sellerIdSchema,
+    sellerName: z.string().optional(),
     amount: z.number(),
     status: z.string(),
     // Audit trail (pt35) — populated only on COMPLETED rows. Both nullable
@@ -181,6 +183,7 @@ export const adminPayoutSchema = z
   .transform((raw) => ({
     id: raw.id ?? raw.payoutId ?? "",
     sellerId: raw.sellerId,
+    sellerName: raw.sellerName,
     amount: raw.amount,
     status: raw.status,
     requestedAt: raw.requestedAt ?? raw.createdAt,
