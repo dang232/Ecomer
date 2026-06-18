@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { paymentStatus, vietqrCreate } from "../../lib/api/endpoints/payment";
 
@@ -13,6 +14,7 @@ export function VietQrPaymentSection({
   idempotencyKey,
   onCompleted,
 }: Props) {
+  const { t } = useTranslation();
   const [qr, setQr] = useState<{
     qrImageUrl: string;
     accountNo: string;
@@ -68,7 +70,7 @@ export function VietQrPaymentSection({
   if (!qr) {
     return (
       <div className="rounded-2xl border-2 border-border p-4 text-sm text-muted-foreground">
-        Đang tạo QR…
+        {t("vietqr.creating")}
       </div>
     );
   }
@@ -77,23 +79,23 @@ export function VietQrPaymentSection({
     <div className="rounded-2xl border-2 border-border p-6 space-y-4 text-center" data-testid="vietqr-section">
       <img
         src={qr.qrImageUrl}
-        alt="VietQR mã thanh toán"
+        alt={t("vietqr.altText")}
         className="mx-auto w-64 h-64 object-contain"
         data-testid="vietqr-image"
       />
       <div className="text-sm text-foreground space-y-1">
         <p>
-          <strong>Tài khoản:</strong> {qr.accountNo}
+          <strong>{t("vietqr.accountLabel")}</strong> {qr.accountNo}
         </p>
         <p>
-          <strong>Tên:</strong> {qr.accountName}
+          <strong>{t("vietqr.nameLabel")}</strong> {qr.accountName}
         </p>
         <p>
-          <strong>Nội dung CK:</strong> <code>{qr.reference}</code>
+          <strong>{t("vietqr.referenceLabel")}</strong> <code>{qr.reference}</code>
         </p>
       </div>
       <p className="text-xs text-muted-foreground">
-        Sau khi chuyển xong, đơn hàng sẽ tự động cập nhật trong vòng 1 phút.
+        {t("vietqr.autoUpdate")}
       </p>
     </div>
   );

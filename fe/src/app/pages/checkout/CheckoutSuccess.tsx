@@ -72,7 +72,9 @@ export function CheckoutSuccess({ placedOrderId, selectedPaymentId, finalTotal }
         </div>
 
         <h1 className="text-2xl font-bold text-foreground mb-3">
-          {t("checkout.success.title")}
+          {["STRIPE", "PAYPAL", "VIETQR"].includes(selectedPaymentId)
+            ? t("checkout.success.gatewayTitle")
+            : t("checkout.success.title")}
         </h1>
 
         {placedOrderId ? (
