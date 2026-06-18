@@ -67,7 +67,7 @@ export function SellersApproval() {
         title={t("admin.sellers.rejectDialog.title")}
         description={rejectFor ? t("admin.sellers.rejectDialog.subtitle", { id: rejectFor }) : undefined}
         submitLabel={t("admin.sellers.rejectDialog.submitLabel")}
-        submitColor="#EF4444"
+        submitColor="var(--error)"
         fields={[
           {
             key: "reason",
@@ -130,8 +130,8 @@ export function SellersApproval() {
                     <span
                       className="px-2 py-0.5 rounded-full text-[10px] font-bold"
                       style={{
-                        background: s.approved ? "#ECFDF5" : "#FEF3C7",
-                        color: s.approved ? "#10B981" : "#F59E0B",
+                        background: s.approved ? "var(--success-light)" : "var(--warning-light)",
+                        color: s.approved ? "var(--success)" : "var(--warning)",
                       }}
                     >
                       {s.status}

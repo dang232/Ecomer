@@ -98,19 +98,19 @@ export function AdminDashboard() {
           icon={IconUsers}
           label={t("admin.dashboard.kpi.totalUsers")}
           value={totalUsers !== null ? totalUsers.toLocaleString() : "—"}
-          color="#3B82F6"
+          color="var(--info)"
         />
         <KPICard
           icon={IconPackage}
           label={t("admin.dashboard.kpi.totalOrders")}
           value={totalOrders !== null ? totalOrders.toLocaleString() : "—"}
-          color="#FF6200"
+          color="var(--accent)"
         />
         <KPICard
           icon={IconWallet}
           label={t("admin.dashboard.kpi.totalSellers")}
           value={totalSellers !== null ? totalSellers.toLocaleString() : "—"}
-          color="#F59E0B"
+          color="var(--warning)"
         />
       </div>
 
@@ -128,17 +128,17 @@ export function AdminDashboard() {
                   <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis
                 dataKey="date"
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "#9ca3af", fontSize: 11 }}
+                tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
               />
               <YAxis
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "#9ca3af", fontSize: 11 }}
+                tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
                 tickFormatter={(v) => `${(v / 1_000_000).toFixed(0)}tr`}
               />
               <Tooltip
@@ -173,12 +173,12 @@ export function AdminDashboard() {
           {topProductsQuery.data && topProductsQuery.data.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={topProductsQuery.data} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
                 <XAxis
                   type="number"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: "#9ca3af", fontSize: 10 }}
+                  tick={{ fill: "var(--muted-foreground)", fontSize: 10 }}
                   tickFormatter={(v) => `${(v / 1_000_000).toFixed(0)}tr`}
                 />
                 <YAxis
@@ -186,11 +186,11 @@ export function AdminDashboard() {
                   dataKey="name"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: "#6b7280", fontSize: 11 }}
+                  tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
                   width={120}
                 />
                 <Tooltip formatter={(v: number) => formatPrice(v)} />
-                <Bar dataKey="revenue" fill="#FF6200" radius={[0, 6, 6, 0]} />
+                <Bar dataKey="revenue" fill="var(--accent)" radius={[0, 6, 6, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -206,7 +206,7 @@ export function AdminDashboard() {
                 <div key={s.sellerId} className="flex items-center gap-3">
                   <span
                     className="w-6 text-center text-sm font-black"
-                    style={{ color: i < 3 ? "#FF6200" : "#9ca3af" }}
+                    style={{ color: i < 3 ? "var(--accent)" : "var(--muted-foreground)" }}
                   >
                     {i + 1}
                   </span>
@@ -215,7 +215,7 @@ export function AdminDashboard() {
                       {s.shopName ?? s.sellerId}
                     </p>
                   </div>
-                  <span className="font-bold text-sm shrink-0" style={{ color: "#FF6200" }}>
+                  <span className="font-bold text-sm shrink-0" style={{ color: "var(--accent)" }}>
                     {formatPrice(s.revenue)}
                   </span>
                 </div>

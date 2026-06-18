@@ -137,7 +137,7 @@ function VideoPreviewModal({
             onClick={onApprove}
             disabled={isApproving || isRejecting}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-50 transition-colors"
-            style={{ background: "#10B981" }}
+            style={{ background: "var(--success)" }}
           >
             <IconCircleCheck size={15} />
             {t("admin.videoModeration.approve")}
@@ -217,7 +217,7 @@ function VideoRow({
           onClick={onApprove}
           disabled={isApproving || isRejecting}
           className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white disabled:opacity-50 transition-colors"
-          style={{ background: "#10B981" }}
+          style={{ background: "var(--success)" }}
         >
           <IconCircleCheck size={13} />
           {t("admin.videoModeration.approve")}
@@ -395,7 +395,7 @@ export function VideoModeration() {
         title={t("admin.videoModeration.rejectDialog.title")}
         description={t("admin.videoModeration.rejectDialog.description")}
         submitLabel={t("admin.videoModeration.rejectDialog.submit")}
-        submitColor="#EF4444"
+        submitColor="var(--error)"
         fields={[
           {
             key: "reason",

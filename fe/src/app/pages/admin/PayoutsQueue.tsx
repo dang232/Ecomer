@@ -158,7 +158,7 @@ export function PayoutsQueue() {
             : undefined
         }
         submitLabel={t("admin.payouts.completeDialog.submit")}
-        submitColor="#10B981"
+        submitColor="var(--success)"
         fields={[]}
         onClose={() => setCompleteFor(null)}
         onSubmit={() => {
@@ -171,7 +171,7 @@ export function PayoutsQueue() {
         title={t("admin.payouts.failDialog.title")}
         description={failFor ? t("admin.payouts.failDialog.subtitle", { id: failFor }) : undefined}
         submitLabel={t("admin.payouts.failDialog.submit")}
-        submitColor="#EF4444"
+        submitColor="var(--error)"
         fields={[
           {
             key: "reason",
@@ -344,14 +344,14 @@ function PendingPayoutRow({
         </p>
       </div>
       <div className="flex items-center gap-3 shrink-0">
-        <span className="font-bold text-base" style={{ color: "#FF6200" }}>
+        <span className="font-bold text-base" style={{ color: "var(--accent)" }}>
           {formatPrice(p.amount)}
         </span>
         <button
           onClick={onComplete}
           disabled={activeCompleteId === p.id}
           className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
-          style={{ background: "#10B981" }}
+          style={{ background: "var(--success)" }}
         >
           {t("admin.payouts.complete")}
         </button>

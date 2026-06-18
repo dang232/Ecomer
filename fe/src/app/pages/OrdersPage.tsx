@@ -27,36 +27,36 @@ const STATUS_CONFIG: Record<
   UIOrder["status"],
   { labelKey: string; icon: typeof IconPackage; color: string; bg: string }
 > = {
-  pending: { labelKey: "orders.status.pending", icon: IconClock, color: "#F59E0B", bg: "#FEF3C7" },
+  pending: { labelKey: "orders.status.pending", icon: IconClock, color: "var(--warning)", bg: "var(--warning-light)" },
   confirmed: {
     labelKey: "orders.status.confirmed",
     icon: IconCircleCheck,
-    color: "#3B82F6",
-    bg: "#EFF6FF",
+    color: "var(--info)",
+    bg: "var(--info-light)",
   },
   shipping: {
     labelKey: "orders.status.shipping",
     icon: IconTruck,
     color: "var(--primary)",
-    bg: "rgba(0,191,179,0.08)",
+    bg: "var(--primary-light)",
   },
   delivered: {
     labelKey: "orders.status.delivered",
     icon: IconCircleCheck,
-    color: "#10B981",
-    bg: "#ECFDF5",
+    color: "var(--success)",
+    bg: "var(--success-light)",
   },
   cancelled: {
     labelKey: "orders.status.cancelled",
     icon: IconCircleX,
-    color: "#EF4444",
-    bg: "#FEF2F2",
+    color: "var(--error)",
+    bg: "var(--error-light)",
   },
   returned: {
     labelKey: "orders.status.returned",
     icon: IconRotate,
-    color: "#8B5CF6",
-    bg: "#F5F3FF",
+    color: "var(--returned)",
+    bg: "var(--returned-light)",
   },
 };
 
@@ -146,7 +146,7 @@ function TrackingModal({ order, onClose, triggerRef }: {
               <div className="flex flex-col items-center">
                 <div
                   className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: i === 0 ? "var(--primary)" : "#9ca3af" }}
+                  style={{ background: i === 0 ? "var(--primary)" : "var(--muted-foreground)" }}
                 >
                   <IconCircleCheck size={14} color="white" />
                 </div>
@@ -172,7 +172,7 @@ function TrackingModal({ order, onClose, triggerRef }: {
                 <div className="flex flex-col items-center">
                   <div
                     className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
-                    style={{ background: done ? "var(--primary)" : "#e5e7eb" }}
+                    style={{ background: done ? "var(--primary)" : "var(--border)" }}
                   >
                     {done ? (
                       <IconCircleCheck size={14} color="white" />
@@ -183,7 +183,7 @@ function TrackingModal({ order, onClose, triggerRef }: {
                   {i < TRACKING_STEPS_FALLBACK.length - 1 ? (
                     <div
                       className="w-0.5 h-8 mt-1"
-                      style={{ background: done ? "var(--primary)" : "#e5e7eb" }}
+                      style={{ background: done ? "var(--primary)" : "var(--border)" }}
                     />
                   ) : null}
                 </div>
@@ -276,7 +276,7 @@ function ReturnModal({
             onClick={handleSubmit}
             disabled={isSubmitting}
             className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold disabled:opacity-50"
-            style={{ background: "#FF6200" }}
+            style={{ background: "var(--primary)" }}
           >
             {isSubmitting ? t("orders.return.submitting") : t("orders.return.submit")}
           </button>
@@ -635,7 +635,7 @@ export function OrdersPage() {
         <button
           onClick={() => login("/orders")}
           className="px-8 py-3 rounded-xl text-white font-semibold inline-flex items-center gap-2"
-          style={{ background: "linear-gradient(135deg, var(--primary), #009990)" }}
+          style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-deep))" }}
         >
           <IconLogin size={16} /> {t("auth.login")}
         </button>

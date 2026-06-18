@@ -179,7 +179,7 @@ export function WishlistPage() {
                         className="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center shadow-md bg-card opacity-100"
                         aria-label={t("wishlist.removeAria", { name: p.name })}
                       >
-                        <Heart size={14} fill="#ef4444" className="text-red-500" />
+                        <Heart size={14} fill="var(--error)" className="text-red-500" />
                       </button>
                     </div>
                     <div className="p-3">
@@ -191,7 +191,7 @@ export function WishlistPage() {
                       </button>
                       {p.rating !== undefined || p.reviewCount !== undefined ? (
                         <div className="flex items-center gap-1 mt-1 mb-2">
-                          <Star size={11} fill="#F59E0B" className="text-amber-400" />
+                          <Star size={11} fill="var(--rating)" className="text-amber-400" />
                           <span className="text-xs text-muted-foreground">{p.rating ?? 0}</span>
                           <span className="text-xs text-muted-foreground">
                             ({(p.reviewCount ?? 0).toLocaleString()})

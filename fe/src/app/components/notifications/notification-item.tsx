@@ -54,7 +54,7 @@ export function NotificationItem({ notification, onMarkRead }: NotificationItemP
         <p className="text-[11px] text-muted-foreground mt-1">{relativeTime(notification.createdAt)}</p>
       </div>
       {!notification.read ? (
-        <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[#FF6200]" />
+        <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[var(--primary)]" />
       ) : null}
     </button>
   );

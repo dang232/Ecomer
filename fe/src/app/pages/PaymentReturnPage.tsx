@@ -142,9 +142,9 @@ export function PaymentReturnPage() {
         <>
           <div
             className="w-24 h-24 rounded-full mx-auto mb-6 flex items-center justify-center"
-            style={{ background: "rgba(16,185,129,0.12)" }}
+            style={{ background: "rgb(var(--success-rgb) / 0.12)" }}
           >
-            <IconCircleCheck size={48} style={{ color: "#10B981" }} />
+            <IconCircleCheck size={48} style={{ color: "var(--success)" }} />
           </div>
           <h1
             className="text-3xl font-black text-foreground mb-3"
@@ -173,7 +173,7 @@ export function PaymentReturnPage() {
             <button
               onClick={() => navigate("/")}
               className="flex-1 py-3 rounded-xl text-white font-semibold text-sm"
-              style={{ background: "linear-gradient(135deg, var(--primary), #009990)" }}
+              style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-deep))" }}
             >
               {t("paymentReturn.completed.continueShopping")}
             </button>
@@ -185,9 +185,9 @@ export function PaymentReturnPage() {
         <>
           <div
             className="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center"
-            style={{ background: "rgba(239,68,68,0.12)" }}
+            style={{ background: "rgb(var(--error-rgb) / 0.12)" }}
           >
-            <IconAlertCircle size={40} style={{ color: "#EF4444" }} />
+            <IconAlertCircle size={40} style={{ color: "var(--error)" }} />
           </div>
           <h1 className="text-2xl font-bold text-foreground mb-3">{t("paymentReturn.failed.title")}</h1>
           <p className="text-sm text-muted-foreground mb-6">
@@ -197,7 +197,7 @@ export function PaymentReturnPage() {
             <button
               onClick={() => navigate("/orders")}
               className="flex-1 py-3 rounded-xl text-white font-semibold text-sm"
-              style={{ background: "#FF6200" }}
+              style={{ background: "var(--primary)" }}
             >
               {t("paymentReturn.failed.goOrders")}
             </button>
@@ -215,9 +215,9 @@ export function PaymentReturnPage() {
         <>
           <div
             className="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center"
-            style={{ background: "rgba(245,158,11,0.12)" }}
+            style={{ background: "rgb(var(--warning-rgb) / 0.12)" }}
           >
-            <IconAlertCircle size={40} style={{ color: "#F59E0B" }} />
+            <IconAlertCircle size={40} style={{ color: "var(--warning)" }} />
           </div>
           <h1 className="text-2xl font-bold text-foreground mb-3">{t("paymentReturn.error.title")}</h1>
           <p className="text-sm text-muted-foreground mb-6">

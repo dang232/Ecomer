@@ -75,7 +75,7 @@ export class ErrorBoundary extends Component<Props, State> {
               type="button"
               onClick={() => window.location.reload()}
               className="px-4 py-2 rounded-xl text-white text-sm font-semibold"
-              style={{ background: "#FF6200" }}
+              style={{ background: "var(--primary)" }}
             >
               Tải lại trang
             </button>

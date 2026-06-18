@@ -114,7 +114,7 @@ export function SellerWallet({
 
       <div
         className="rounded-2xl p-6 text-white"
-        style={{ background: "linear-gradient(135deg, var(--primary), #006b65)" }}
+        style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
       >
         <p className="text-white/70 text-sm mb-2">{t("seller.wallet.balanceLabel")}</p>
         <p className="text-4xl font-black mb-4">
@@ -155,8 +155,8 @@ export function SellerWallet({
                 onClick={() => setFilter(f)}
                 className="px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors"
                 style={{
-                  background: filter === f ? "rgba(0,191,179,0.12)" : "transparent",
-                  color: filter === f ? "var(--primary)" : "#6b7280",
+                  background: filter === f ? "rgb(var(--primary-light-rgb) / 0.12)" : "transparent",
+                  color: filter === f ? "var(--primary)" : "var(--muted-foreground)",
                   border: filter === f ? "1px solid var(--primary)" : "1px solid transparent",
                 }}
               >

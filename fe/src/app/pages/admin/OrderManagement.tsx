@@ -108,8 +108,8 @@ export function OrderManagement() {
               className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
               style={
                 statusFilter === opt.value
-                  ? { background: "#6366F1", color: "white" }
-                  : { background: "white", color: "#6b7280", border: "1px solid #e5e7eb" }
+                  ? { background: "var(--admin-primary)", color: "white" }
+                  : { background: "white", color: "var(--admin-muted)", border: "1px solid var(--admin-border)" }
               }
             >
               {t(opt.labelKey)}

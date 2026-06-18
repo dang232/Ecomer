@@ -19,11 +19,11 @@ import type { ReactNode } from "react";
 export type StatusTone = "success" | "warning" | "danger" | "info" | "neutral";
 
 const TONE_PALETTE: Record<StatusTone, { bg: string; fg: string }> = {
-  success: { bg: "#ECFDF5", fg: "#10B981" },
-  warning: { bg: "#FEF3C7", fg: "#F59E0B" },
-  danger: { bg: "#FEE2E2", fg: "#DC2626" },
-  info: { bg: "#E0F2FE", fg: "#0891B2" },
-  neutral: { bg: "#F3F4F6", fg: "#6B7280" },
+  success: { bg: "var(--success-light)", fg: "var(--success)" },
+  warning: { bg: "var(--warning-light)", fg: "var(--warning)" },
+  danger: { bg: "var(--error-light)", fg: "var(--error)" },
+  info: { bg: "var(--info-light)", fg: "var(--info)" },
+  neutral: { bg: "var(--muted)", fg: "var(--muted-foreground)" },
 };
 
 function inferTone(status: string): StatusTone {

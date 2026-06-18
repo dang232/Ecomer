@@ -51,7 +51,7 @@ export function FormDialog({
   title,
   description,
   submitLabel,
-  submitColor = "#FF6200",
+  submitColor = "var(--primary)",
   fields,
   onClose,
   onSubmit,

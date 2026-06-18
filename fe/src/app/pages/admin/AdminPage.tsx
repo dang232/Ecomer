@@ -140,10 +140,10 @@ export function AdminPage() {
                     }
                     className="w-full flex items-center gap-3 px-4 py-3.5 text-sm font-medium transition-all text-left border-b border-gray-50 last:border-0"
                     style={{
-                      background: activeTab === item.id ? "rgba(99,102,241,0.08)" : "transparent",
-                      color: activeTab === item.id ? "#6366F1" : "#6b7280",
+                      background: activeTab === item.id ? "rgb(var(--admin-primary-rgb) / 0.08)" : "transparent",
+                      color: activeTab === item.id ? "var(--admin-primary)" : "var(--admin-muted)",
                       borderLeft:
-                        activeTab === item.id ? "3px solid #6366F1" : "3px solid transparent",
+                        activeTab === item.id ? "3px solid var(--admin-primary)" : "3px solid transparent",
                     }}
                   >
                     <item.icon size={18} aria-hidden="true" />
@@ -152,7 +152,7 @@ export function AdminPage() {
                       <span
                         aria-hidden="true"
                         className="px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white"
-                        style={{ background: "oklch(52% 0.2 270)" }}
+                        style={{ background: "var(--admin-primary)" }}
                       >
                         {badge}
                       </span>
@@ -171,8 +171,8 @@ export function AdminPage() {
                 className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all"
                 style={
                   activeTab === item.id
-                    ? { background: "#6366F1", color: "white" }
-                    : { background: "white", color: "#6b7280", border: "1px solid #e5e7eb" }
+                    ? { background: "var(--admin-primary)", color: "white" }
+                    : { background: "white", color: "var(--admin-muted)", border: "1px solid var(--admin-border)" }
                 }
               >
                 <item.icon size={14} /> {t(item.labelKey)}

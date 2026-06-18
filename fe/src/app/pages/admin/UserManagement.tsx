@@ -100,7 +100,7 @@ export function UserManagement() {
             onClick={() => void handleSearch()}
             disabled={searching}
             className="px-4 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-50"
-            style={{ background: "#6366F1" }}
+            style={{ background: "var(--admin-primary)" }}
           >
             {searching ? t("admin.users.searching") : t("admin.users.search")}
           </button>
@@ -142,7 +142,7 @@ export function UserManagement() {
                         onClick={() => unban.mutate(u.keycloakId)}
                         disabled={unban.isPending}
                         className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
-                        style={{ background: "#10B981" }}
+                        style={{ background: "var(--success)" }}
                       >
                         <IconUserCheck size={13} aria-hidden="true" /> {t("admin.users.unban")}
                       </button>

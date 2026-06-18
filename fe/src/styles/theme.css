@@ -42,18 +42,29 @@
   --primary-light: oklch(95% 0.04 270);
   --primary-hover: oklch(45% 0.22 270);
   --primary-subtle: oklch(97% 0.02 270);
+  --primary-dark: #006b65;
+  --primary-deep: #009990;
+  --primary-light-rgb: 0, 191, 179;
 
   /* ── Accent & Status ──────────────────────────────────────────────────── */
+  --rating: oklch(76% 0.17 85);
   --accent: oklch(72% 0.17 70);
   --accent-foreground: oklch(15% 0.02 260);
   --accent-light: oklch(96% 0.04 70);
+  --accent-dark: #e55c00;
+  --returned: #8B5CF6;
+  --returned-light: #F5F3FF;
   --success: oklch(62% 0.18 155);
   --success-light: oklch(95% 0.04 155);
+  --success-rgb: 16, 185, 129;
   --error: oklch(58% 0.22 25);
   --error-light: oklch(95% 0.04 25);
+  --error-rgb: 239, 68, 68;
+  --warning-rgb: 245, 158, 11;
   --info: oklch(58% 0.16 255);
   --info-light: oklch(95% 0.04 255);
   --warning: oklch(72% 0.17 70);
+  --warning-light: oklch(96% 0.04 70);
 
   /* ── Surface tokens ───────────────────────────────────────────────────── */
   --surface-primary: oklch(100% 0 0);
@@ -140,6 +151,14 @@
   --chart-4: oklch(72% 0.17 70);
   --chart-5: oklch(58% 0.22 25);
 
+  /* ── Admin tokens ─────────────────────────────────────────────────────── */
+  --admin-primary: #6366F1;
+  --admin-primary-light: oklch(95% 0.04 255);
+  --admin-muted: #6b7280;
+  --admin-border: #e5e7eb;
+  --admin-foreground: #111827;
+  --admin-primary-rgb: 99, 102, 241;
+
   /* ── Sidebar tokens ───────────────────────────────────────────────────── */
   --sidebar: oklch(100% 0 0);
   --sidebar-foreground: oklch(15% 0.02 260);
@@ -166,17 +185,27 @@
   --primary-light: oklch(25% 0.06 270);
   --primary-hover: oklch(78% 0.16 270);
   --primary-subtle: oklch(20% 0.04 270);
+  --primary-dark: #006b65;
+  --primary-deep: #009990;
+  --primary-light-rgb: 0, 191, 179;
 
   --accent: oklch(78% 0.15 70);
   --accent-foreground: oklch(95% 0.005 260);
   --accent-light: oklch(25% 0.06 70);
+  --rating: oklch(78% 0.15 85);
+  --returned: #8B5CF6;
+  --returned-light: #F5F3FF;
   --success: oklch(72% 0.16 155);
   --success-light: oklch(25% 0.06 155);
+  --success-rgb: 16, 185, 129;
   --error: oklch(68% 0.2 25);
   --error-light: oklch(25% 0.06 25);
+  --error-rgb: 239, 68, 68;
+  --warning-rgb: 245, 158, 11;
   --info: oklch(68% 0.14 255);
   --info-light: oklch(25% 0.04 255);
   --warning: oklch(78% 0.15 70);
+  --warning-light: oklch(25% 0.06 70);
 
   --surface-primary: oklch(16% 0.02 260);
   --surface-secondary: oklch(20% 0.02 260);
@@ -215,6 +244,13 @@
   --chart-4: oklch(68% 0.2 25);
   --chart-5: oklch(68% 0.14 255);
 
+  --admin-primary: #6366F1;
+  --admin-primary-light: oklch(25% 0.06 255);
+  --admin-muted: #9ca3af;
+  --admin-border: oklch(28% 0.02 260);
+  --admin-foreground: oklch(95% 0.005 260);
+  --admin-primary-rgb: 99, 102, 241;
+
   --sidebar: oklch(16% 0.02 260);
   --sidebar-foreground: oklch(95% 0.005 260);
   --sidebar-primary: oklch(70% 0.18 270);
@@ -246,13 +282,18 @@ html.dark { color-scheme: dark; }
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-light: var(--primary-light);
   --color-primary-hover: var(--primary-hover);
+  --color-primary-dark: var(--primary-dark);
+  --color-primary-deep: var(--primary-deep);
+  --color-primary-light-rgb: var(--primary-light-rgb);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-rating: var(--rating);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent-light: var(--accent-light);
+  --color-accent-dark: var(--accent-dark);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
@@ -265,11 +306,17 @@ html.dark { color-scheme: dark; }
   /* Status colors */
   --color-success: var(--success);
   --color-success-light: var(--success-light);
+  --color-success-rgb: var(--success-rgb);
   --color-error: var(--error);
   --color-error-light: var(--error-light);
+  --color-error-rgb: var(--error-rgb);
+  --color-warning-rgb: var(--warning-rgb);
   --color-info: var(--info);
   --color-info-light: var(--info-light);
   --color-warning: var(--warning);
+  --color-warning-light: var(--warning-light);
+  --color-returned: var(--returned);
+  --color-returned-light: var(--returned-light);
 
   /* Surface tokens */
   --color-surface-primary: var(--surface-primary);
@@ -302,6 +349,14 @@ html.dark { color-scheme: dark; }
 
   /* Sidebar */
   --color-sidebar: var(--sidebar);
+
+  /* Admin */
+  --color-admin-primary: var(--admin-primary);
+  --color-admin-primary-light: var(--admin-primary-light);
+  --color-admin-muted: var(--admin-muted);
+  --color-admin-border: var(--admin-border);
+  --color-admin-foreground: var(--admin-foreground);
+  --color-admin-primary-rgb: var(--admin-primary-rgb);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);

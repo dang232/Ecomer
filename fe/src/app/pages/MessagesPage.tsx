@@ -349,7 +349,7 @@ export function MessagesPage() {
         <button
           onClick={() => login("/messages")}
           className="px-4 py-2 rounded-xl text-white text-sm font-medium"
-          style={{ background: "#FF6200" }}
+          style={{ background: "var(--primary)" }}
         >
           {t("auth.login")}
         </button>

@@ -56,6 +56,19 @@ const EXTRA_ALLOWLIST = new Map([
   // WHY: the design-system showcase page literally renders the color swatch
   // catalog (Teal 50, Orange 400, etc.) as documentation.
   ['src/app/pages/DesignSystemPage.tsx', 'design-system showcase (color swatch catalog)'],
+  // WHY: Sonner toaster className overrides use a navy+Meituan-red palette for
+  // the dark-mode action-button and cancel-button — not brand tokens.
+  ['src/app/App.tsx', 'Sonner toaster dark-mode className overrides (navy + Meituan red)'],
+  // WHY: Auth pages (Login, Register, PasswordReset) use an indigo/violet gradient
+  // scheme (#4f46e5 / #7c3aed) distinct from the teal/orange brand palette.
+  ['src/app/pages/LoginPage.tsx', 'auth gradient indigo/violet (non-brand)'],
+  ['src/app/pages/RegisterPage.tsx', 'auth gradient indigo/violet (non-brand)'],
+  ['src/app/pages/PasswordResetPage.tsx', 'auth gradient indigo/violet (non-brand)'],
+  // WHY: SystemHealth uses health-status colors (green/amber/red) that are not
+  // brand palette tokens — they represent uptime status indicators.
+  ['src/app/pages/admin/SystemHealth.tsx', 'system health status indicator colors (green/amber/red)'],
+  // WHY: Lazada/Meituan brand red (#EE4D2D) used for shop badges on product page.
+  ['src/app/pages/ProductPage.tsx', 'Meituan/Lazada brand red for shop badges (non-brand)'],
   // WHY: tests may exercise hex parsing or contain fixture data; not shipped
   // to production. Covers both .test.ts and .test.tsx under src/.
   // (Matched by suffix glob — see isAllowlisted below.)
@@ -106,11 +119,14 @@ function* walk(dir) {
 
 function isAllowlisted(absPath) {
   // Normalize to forward slashes for cross-platform string checks.
-  const rel = relative(SRC_ROOT, absPath).split(sep).join(posix.sep);
-  if (rel.startsWith('styles/') || rel.startsWith('styles' + posix.sep)) return true;
-  if (EXTRA_ALLOWLIST.has(rel)) return true;
+  const relFromSrc = relative(SRC_ROOT, absPath).split(sep).join(posix.sep);
+  const relFromRoot = relative(REPO_ROOT, absPath).split(sep).join(posix.sep);
+  if (relFromSrc.startsWith('styles/') || relFromSrc.startsWith('styles' + posix.sep)) return true;
+  if (relFromRoot.startsWith('src/styles/')) return true;
+  if (EXTRA_ALLOWLIST.has(relFromSrc)) return true;
+  if (EXTRA_ALLOWLIST.has(relFromRoot)) return true;
   // Test files under src/ may contain fixture hex values; not shipped.
-  if (rel.endsWith('.test.ts') || rel.endsWith('.test.tsx')) return true;
+  if (relFromSrc.endsWith('.test.ts') || relFromSrc.endsWith('.test.tsx')) return true;
   return false;
 }
 
