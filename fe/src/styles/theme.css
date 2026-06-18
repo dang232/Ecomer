@@ -151,6 +151,7 @@
   --admin-muted: #6b7280;
   --admin-border: #e5e7eb;
   --admin-foreground: #111827;
+  --admin-primary-rgb: 99, 102, 241;
 
   /* ── Sidebar tokens ───────────────────────────────────────────────────── */
   --sidebar: oklch(100% 0 0);
@@ -236,6 +237,7 @@
   --admin-muted: #9ca3af;
   --admin-border: oklch(28% 0.02 260);
   --admin-foreground: oklch(95% 0.005 260);
+  --admin-primary-rgb: 99, 102, 241;
 
   --sidebar: oklch(16% 0.02 260);
   --sidebar-foreground: oklch(95% 0.005 260);
@@ -335,6 +337,7 @@ html.dark { color-scheme: dark; }
   --color-admin-muted: var(--admin-muted);
   --color-admin-border: var(--admin-border);
   --color-admin-foreground: var(--admin-foreground);
+  --color-admin-primary-rgb: var(--admin-primary-rgb);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
