@@ -145,6 +145,13 @@
   --chart-4: oklch(72% 0.17 70);
   --chart-5: oklch(58% 0.22 25);
 
+  /* ── Admin tokens ─────────────────────────────────────────────────────── */
+  --admin-primary: #6366F1;
+  --admin-primary-light: oklch(95% 0.04 255);
+  --admin-muted: #6b7280;
+  --admin-border: #e5e7eb;
+  --admin-foreground: #111827;
+
   /* ── Sidebar tokens ───────────────────────────────────────────────────── */
   --sidebar: oklch(100% 0 0);
   --sidebar-foreground: oklch(15% 0.02 260);
@@ -223,6 +230,12 @@
   --chart-3: oklch(78% 0.15 70);
   --chart-4: oklch(68% 0.2 25);
   --chart-5: oklch(68% 0.14 255);
+
+  --admin-primary: #6366F1;
+  --admin-primary-light: oklch(25% 0.06 255);
+  --admin-muted: #9ca3af;
+  --admin-border: oklch(28% 0.02 260);
+  --admin-foreground: oklch(95% 0.005 260);
 
   --sidebar: oklch(16% 0.02 260);
   --sidebar-foreground: oklch(95% 0.005 260);
@@ -315,6 +328,13 @@ html.dark { color-scheme: dark; }
 
   /* Sidebar */
   --color-sidebar: var(--sidebar);
+
+  /* Admin */
+  --color-admin-primary: var(--admin-primary);
+  --color-admin-primary-light: var(--admin-primary-light);
+  --color-admin-muted: var(--admin-muted);
+  --color-admin-border: var(--admin-border);
+  --color-admin-foreground: var(--admin-foreground);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
