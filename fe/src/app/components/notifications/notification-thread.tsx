@@ -31,7 +31,7 @@ export function NotificationThread({ thread, onMarkRead }: NotificationThreadPro
           {expanded ? <IconChevronDown size={16} /> : <IconChevronRight size={16} />}
           <span className="text-sm font-medium text-foreground">{thread.threadTitle}</span>
           {thread.unreadCount > 0 ? (
-            <span className="rounded-full bg-[#EF4444] px-1.5 py-0.5 text-[10px] font-bold text-white">
+            <span className="rounded-full bg-error text-white px-1.5 py-0.5 text-[10px] font-bold text-white">
               {thread.unreadCount}
             </span>
           ) : null}
