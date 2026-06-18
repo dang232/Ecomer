@@ -24,7 +24,8 @@ export interface FormField {
 interface FormDialogProps {
   open: boolean;
   title: string;
-  description?: string;
+  /** Single string or array of strings rendered as separate <p> tags. */
+  description?: string | string[];
   submitLabel: string;
   submitColor?: string;
   fields: FormField[];
@@ -126,7 +127,13 @@ export function FormDialog({
         </div>
 
         <div className="p-6 space-y-4">
-          {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+          {description
+            ? (Array.isArray(description) ? description : [description]).map((line, i) => (
+                <p key={i} className="text-sm text-muted-foreground">
+                  {line}
+                </p>
+              ))
+            : null}
           {fields.map((field) => {
             const fieldError = fieldErrors[field.key];
             const errorId = `fd-error-${field.key}`;
