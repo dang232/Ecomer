@@ -392,7 +392,7 @@ function SellerProductModalBody({
             onClick={handleSubmit}
             disabled={isBusy}
             className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
-            style={{ background: "linear-gradient(135deg, #FF6200, #ff8a40)" }}
+            style={{ background: "var(--accent)" }}
           >
             {isBusy ? (
               <>

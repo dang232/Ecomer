@@ -50,6 +50,7 @@
   --accent: oklch(72% 0.17 70);
   --accent-foreground: oklch(15% 0.02 260);
   --accent-light: oklch(96% 0.04 70);
+  --accent-dark: #e55c00;
   --success: oklch(62% 0.18 155);
   --success-light: oklch(95% 0.04 155);
   --error: oklch(58% 0.22 25);
