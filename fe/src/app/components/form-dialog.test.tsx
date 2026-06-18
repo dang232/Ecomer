@@ -125,4 +125,87 @@ describe("FormDialog", () => {
     });
     expect(screen.getByText("Để trống nếu không hoàn tiền.")).toBeInTheDocument();
   });
+
+  // --- Withdraw-form live-validation tests (WS-4: P0-11, P1-6, P1-9) ---
+
+  it("shows field error and aria-invalid when amount field validate fails", () => {
+    renderDialog({
+      fields: [
+        {
+          key: "amount",
+          label: "Amount",
+          type: "number",
+          required: true,
+          validate: (v) => {
+            const n = Number(v.replace(/\D/g, ""));
+            if (!n || n <= 0) return "Invalid amount";
+            if (n > 500000) return "Exceeds balance";
+            return undefined;
+          },
+        },
+      ],
+    });
+    const input = screen.getByRole("textbox");
+    fireEvent.change(input, { target: { value: "1000000" } });
+    fireEvent.click(screen.getByRole("button", { name: "Gửi" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Exceeds balance");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+  });
+
+  it("shows field error and aria-invalid when bank account fails regex validation", () => {
+    renderDialog({
+      fields: [
+        {
+          key: "bankAccount",
+          label: "Bank account",
+          type: "text",
+          required: true,
+          validate: (v) => {
+            if (!/^\d{6,19}$/.test(v.trim())) return "Bank account must be 6-19 digits";
+            return undefined;
+          },
+        },
+      ],
+    });
+    const input = screen.getByRole("textbox");
+    fireEvent.change(input, { target: { value: "abc123" } });
+    fireEvent.click(screen.getByRole("button", { name: "Gửi" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Bank account must be 6-19 digits");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+  });
+
+  it("calls onSubmit with trimmed values when all fields pass validation", () => {
+    const { onSubmit } = renderDialog({
+      fields: [
+        {
+          key: "amount",
+          label: "Amount",
+          type: "number",
+          required: true,
+          validate: (v) => {
+            const n = Number(v.replace(/\D/g, ""));
+            if (!n || n <= 0) return "Invalid amount";
+            if (n > 500000) return "Exceeds balance";
+            return undefined;
+          },
+        },
+        {
+          key: "bankAccount",
+          label: "Bank account",
+          type: "text",
+          required: true,
+          validate: (v) => {
+            if (!/^\d{6,19}$/.test(v.trim())) return "Bank account must be 6-19 digits";
+            return undefined;
+          },
+        },
+      ],
+    });
+    const inputs = screen.getAllByRole("textbox");
+    fireEvent.change(inputs[0], { target: { value: "100000" } });
+    fireEvent.change(inputs[1], { target: { value: "1234567890123" } });
+    fireEvent.click(screen.getByRole("button", { name: "Gửi" }));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit).toHaveBeenCalledWith({ amount: "100000", bankAccount: "1234567890123" });
+  });
 });
