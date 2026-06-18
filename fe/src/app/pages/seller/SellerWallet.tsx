@@ -67,25 +67,30 @@ export function SellerWallet({
             placeholder: t("seller.wallet.payoutDialog.amountPlaceholder"),
             type: "number",
             required: true,
+            min: 1000,
+            max: balance ?? undefined,
+            inputMode: "numeric",
+            validate: (v) => {
+              const n = Number(v.replace(/\D/g, ""));
+              if (!n || n <= 0) return t("seller.wallet.payoutDialog.invalidAmount");
+              if (balance !== null && n > balance) return t("seller.wallet.payoutDialog.exceedsBalance");
+              return undefined;
+            },
           },
           {
             key: "bankAccount",
             label: t("seller.wallet.payoutDialog.bankLabel"),
             placeholder: t("seller.wallet.payoutDialog.bankPlaceholder"),
             required: true,
+            validate: (v) => {
+              if (!/^\d{6,19}$/.test(v.trim())) return "Bank account must be 6-19 digits";
+              return undefined;
+            },
           },
         ]}
         onClose={() => setShowPayoutDialog(false)}
         onSubmit={({ amount, bankAccount }) => {
           const parsed = Number(amount.replace(/\D/g, ""));
-          if (!parsed || parsed <= 0) {
-            toast.error(t("seller.wallet.payoutDialog.invalidAmount"));
-            return;
-          }
-          if (balance !== null && parsed > balance) {
-            toast.error(t("seller.wallet.payoutDialog.exceedsBalance"));
-            return;
-          }
           requestPayoutMutation.mutate({ amount: parsed, bankAccount });
         }}
         isSubmitting={requestPayoutMutation.isPending}

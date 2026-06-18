@@ -1149,7 +1149,9 @@
     "reorder": {
       "noItems": "Đơn hàng này không có sản phẩm để thêm lại.",
       "addError": "Không thể thêm sản phẩm vào giỏ. Có thể sản phẩm đã hết hàng.",
-      "added": "Đã thêm {{count}} sản phẩm vào giỏ"
+      "added": "Đã thêm {{count}} sản phẩm vào giỏ",
+      "partialSuccess": "Đã thêm {{added}} trong {{total}} sản phẩm — {{failed}} không có sẵn.",
+      "viewCart": "Xem giỏ hàng"
     },
     "cancelOk": "Đã huỷ đơn hàng",
     "cancelErr": "Không thể huỷ đơn hàng",
@@ -1259,20 +1261,62 @@
       "channelInApp": "Trong ứng dụng",
       "channelEmail": "Email",
       "types": {
-        "ORDER_CREATED": { "label": "Đơn hàng mới", "description": "Khi đơn hàng được tạo thành công" },
-        "ORDER_CANCELLED": { "label": "Đơn hàng bị hủy", "description": "Khi đơn hàng bị hủy" },
-        "ORDER_SHIPPED": { "label": "Đã giao cho vận chuyển", "description": "Khi đơn hàng được gửi đi" },
-        "ORDER_DELIVERED": { "label": "Đã giao hàng", "description": "Khi đơn hàng giao thành công" },
-        "PAYMENT_COMPLETED": { "label": "Thanh toán thành công", "description": "Khi thanh toán được xác nhận" },
-        "PAYMENT_REFUNDED": { "label": "Hoàn tiền", "description": "Khi đơn hàng được hoàn tiền" },
-        "SELLER_NEW_ORDER": { "label": "Đơn hàng mới (Seller)", "description": "Khi có đơn hàng mới cần xử lý" },
-        "PRODUCT_APPROVED": { "label": "Sản phẩm được duyệt", "description": "Khi sản phẩm được admin duyệt" },
-        "PRODUCT_REJECTED": { "label": "Sản phẩm bị từ chối", "description": "Khi sản phẩm bị từ chối" },
-        "REVIEW_REPLIED": { "label": "Phản hồi đánh giá", "description": "Khi có phản hồi cho đánh giá của bạn" },
-        "RETURN_REQUESTED": { "label": "Yêu cầu trả hàng", "description": "Khi có yêu cầu trả hàng" },
-        "PAYOUT_COMPLETED": { "label": "Rút tiền thành công", "description": "Khi lệnh rút tiền hoàn tất" },
-        "VIDEO_PUBLISHED": { "label": "Video đã đăng", "description": "Khi video của bạn được duyệt và xuất bản" },
-        "VIDEO_REJECTED": { "label": "Video bị từ chối", "description": "Khi video của bạn bị kiểm duyệt từ chối" }
+        "ORDER_CREATED": {
+          "label": "Đơn hàng mới",
+          "description": "Khi đơn hàng được tạo thành công"
+        },
+        "ORDER_CANCELLED": {
+          "label": "Đơn hàng bị hủy",
+          "description": "Khi đơn hàng bị hủy"
+        },
+        "ORDER_SHIPPED": {
+          "label": "Đã giao cho vận chuyển",
+          "description": "Khi đơn hàng được gửi đi"
+        },
+        "ORDER_DELIVERED": {
+          "label": "Đã giao hàng",
+          "description": "Khi đơn hàng giao thành công"
+        },
+        "PAYMENT_COMPLETED": {
+          "label": "Thanh toán thành công",
+          "description": "Khi thanh toán được xác nhận"
+        },
+        "PAYMENT_REFUNDED": {
+          "label": "Hoàn tiền",
+          "description": "Khi đơn hàng được hoàn tiền"
+        },
+        "SELLER_NEW_ORDER": {
+          "label": "Đơn hàng mới (Seller)",
+          "description": "Khi có đơn hàng mới cần xử lý"
+        },
+        "PRODUCT_APPROVED": {
+          "label": "Sản phẩm được duyệt",
+          "description": "Khi sản phẩm được admin duyệt"
+        },
+        "PRODUCT_REJECTED": {
+          "label": "Sản phẩm bị từ chối",
+          "description": "Khi sản phẩm bị từ chối"
+        },
+        "REVIEW_REPLIED": {
+          "label": "Phản hồi đánh giá",
+          "description": "Khi có phản hồi cho đánh giá của bạn"
+        },
+        "RETURN_REQUESTED": {
+          "label": "Yêu cầu trả hàng",
+          "description": "Khi có yêu cầu trả hàng"
+        },
+        "PAYOUT_COMPLETED": {
+          "label": "Rút tiền thành công",
+          "description": "Khi lệnh rút tiền hoàn tất"
+        },
+        "VIDEO_PUBLISHED": {
+          "label": "Video đã đăng",
+          "description": "Khi video của bạn được duyệt và xuất bản"
+        },
+        "VIDEO_REJECTED": {
+          "label": "Video bị từ chối",
+          "description": "Khi video của bạn bị kiểm duyệt từ chối"
+        }
       }
     }
   },
