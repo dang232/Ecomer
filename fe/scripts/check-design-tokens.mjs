@@ -56,6 +56,9 @@ const EXTRA_ALLOWLIST = new Map([
   // WHY: the design-system showcase page literally renders the color swatch
   // catalog (Teal 50, Orange 400, etc.) as documentation.
   ['src/app/pages/DesignSystemPage.tsx', 'design-system showcase (color swatch catalog)'],
+  // WHY: Sonner toaster className overrides use a navy+Meituan-red palette for
+  // the dark-mode action-button and cancel-button — not brand tokens.
+  ['src/app/App.tsx', 'Sonner toaster dark-mode className overrides (navy + Meituan red)'],
   // WHY: tests may exercise hex parsing or contain fixture data; not shipped
   // to production. Covers both .test.ts and .test.tsx under src/.
   // (Matched by suffix glob — see isAllowlisted below.)
