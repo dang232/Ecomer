@@ -1,19 +1,22 @@
 import { AnimatePresence, motion } from "motion/react";
 import type { ReactNode } from "react";
-import { useId } from "react";
+import { useId, useState } from "react";
 
 import { useEscapeKey } from "../../hooks/use-escape-key";
 
 interface ConfirmDialogProps {
   open: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  /** Called with the reason string when reasonField is enabled; undefined otherwise. */
+  onConfirm: (reason?: string) => void;
   title: string;
   description: string;
   confirmLabel?: string;
   cancelLabel?: string;
   variant?: "warning" | "danger";
   icon?: ReactNode;
+  /** When true, renders a required textarea. onConfirm receives the trimmed value. */
+  reasonField?: boolean;
 }
 
 export function ConfirmDialog({
@@ -26,9 +29,11 @@ export function ConfirmDialog({
   cancelLabel = "Cancel",
   variant = "warning",
   icon,
+  reasonField = false,
 }: ConfirmDialogProps) {
   useEscapeKey(open, onClose);
   const titleId = useId();
+  const [reason, setReason] = useState("");
 
   const iconWrapperClass =
     variant === "danger"
@@ -71,6 +76,21 @@ export function ConfirmDialog({
 
             <p className="text-sm text-text-secondary mb-6">{description}</p>
 
+            {reasonField ? (
+              <div className="mb-6">
+                <textarea
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="Enter reason"
+                  required
+                  minLength={5}
+                  rows={3}
+                  className="w-full rounded-[var(--radius-md)] border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                  aria-label="Reason"
+                />
+              </div>
+            ) : null}
+
             <div className="flex gap-3 justify-center">
               <button
                 type="button"
@@ -81,11 +101,13 @@ export function ConfirmDialog({
               </button>
               <button
                 type="button"
+                disabled={reasonField && reason.trim().length < 5}
                 onClick={() => {
-                  onConfirm();
+                  onConfirm(reason.trim() || undefined);
+                  setReason("");
                   onClose();
                 }}
-                className={confirmClass}
+                className={`${confirmClass} disabled:opacity-40 disabled:cursor-not-allowed`}
               >
                 {confirmLabel}
               </button>
