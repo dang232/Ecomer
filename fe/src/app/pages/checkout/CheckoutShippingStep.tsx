@@ -47,7 +47,13 @@ export function CheckoutShippingStep({
           <Truck size={16} />
           {t("checkout.shipping.freeShippingBanner")}
         </div>
-      ) : null}
+      ) : (
+        <p className="mb-4 text-xs text-muted-foreground">
+          {t("checkout.shipping.remainingForFreeShipping", {
+            amount: formatPrice(Math.max(FREE_SHIPPING_THRESHOLD - subtotal, 0)),
+          })}
+        </p>
+      )}
 
       {isLoadingRates ? (
         <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">

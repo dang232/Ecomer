@@ -447,6 +447,7 @@
       "expressName": "Giao Hàng Nhanh",
       "loadingRates": "Đang tải phí vận chuyển...",
       "freeShippingBanner": "Đơn hàng của bạn được miễn phí vận chuyển tiêu chuẩn!",
+      "remainingForFreeShipping": "Thêm {{amount}} để được miễn phí vận chuyển",
       "fallbackStandard": {
         "name": "Giao Hàng Tiêu Chuẩn",
         "desc": "Giao trong 1-2 ngày",
@@ -482,7 +483,9 @@
       "noAddress": "Chưa có địa chỉ giao hàng",
       "shippingMethod": "Vận chuyển",
       "paymentMethod": "Thanh toán",
-      "productsCount": "Sản phẩm ({{count}})"
+      "productsCount": "Sản phẩm ({{count}})",
+      "lowStock": "Còn ít hàng — chỉ còn {{count}} sản phẩm",
+      "sellerFallback": "Người bán không xác định"
     },
     "summary": {
       "title": "Đơn hàng của bạn",

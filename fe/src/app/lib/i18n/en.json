@@ -447,6 +447,7 @@
       "expressName": "Express Delivery",
       "loadingRates": "Loading shipping rates...",
       "freeShippingBanner": "Your order qualifies for free standard shipping!",
+      "remainingForFreeShipping": "{{amount}} more for free shipping",
       "fallbackStandard": {
         "name": "Standard Delivery",
         "desc": "Delivers in 1-2 days",
@@ -482,7 +483,9 @@
       "noAddress": "No shipping address",
       "shippingMethod": "Shipping",
       "paymentMethod": "Payment",
-      "productsCount": "Items ({{count}})"
+      "productsCount": "Items ({{count}})",
+      "lowStock": "Low stock — only {{count}} left",
+      "sellerFallback": "Unknown seller"
     },
     "summary": {
       "title": "Your order",
