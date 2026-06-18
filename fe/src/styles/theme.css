@@ -47,6 +47,7 @@
   --primary-light-rgb: 0, 191, 179;
 
   /* ── Accent & Status ──────────────────────────────────────────────────── */
+  --rating: oklch(76% 0.17 85);
   --accent: oklch(72% 0.17 70);
   --accent-foreground: oklch(15% 0.02 260);
   --accent-light: oklch(96% 0.04 70);
@@ -191,6 +192,7 @@
   --accent: oklch(78% 0.15 70);
   --accent-foreground: oklch(95% 0.005 260);
   --accent-light: oklch(25% 0.06 70);
+  --rating: oklch(78% 0.15 85);
   --returned: #8B5CF6;
   --returned-light: #F5F3FF;
   --success: oklch(72% 0.16 155);
@@ -287,6 +289,7 @@ html.dark { color-scheme: dark; }
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-rating: var(--rating);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent-light: var(--accent-light);

@@ -41,7 +41,7 @@ function SellerProductCard({ product }: { product: ProductSummary }) {
           {product.name}
         </h3>
         <div className="flex items-baseline gap-2">
-          <span className="font-bold text-sm" style={{ color: "#FF6200" }}>
+          <span className="font-bold text-sm" style={{ color: "var(--accent)" }}>
             {product.price !== undefined ? formatPrice(product.price) : "—"}
           </span>
           {product.originalPrice ? (
@@ -52,7 +52,7 @@ function SellerProductCard({ product }: { product: ProductSummary }) {
         </div>
         {product.rating !== undefined ? (
           <div className="flex items-center gap-1 mt-1.5">
-            <IconStar size={11} fill="#FF6200" color="#FF6200" />
+            <IconStar size={11} fill="var(--accent)" color="var(--accent)" />
             <span className="text-xs font-semibold text-foreground">{product.rating}</span>
           </div>
         ) : null}
@@ -91,7 +91,7 @@ export function SellerDetailPage() {
         style={
           seller.bannerUrl
             ? undefined
-            : { background: "linear-gradient(135deg, #006B65 0%, #009990 50%, var(--primary) 100%)" }
+            : { background: "linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-deep) 50%, var(--primary) 100%)" }
         }
       >
         {seller.bannerUrl ? (
@@ -131,7 +131,7 @@ export function SellerDetailPage() {
               </h1>
               <span
                 className="px-2 py-0.5 rounded-full text-xs font-semibold text-white shrink-0"
-                style={{ background: seller.tier === "PREMIUM" ? "#F59E0B" : "var(--primary)" }}
+                style={{ background: seller.tier === "PREMIUM" ? "var(--warning)" : "var(--primary)" }}
               >
                 {seller.tier}
               </span>
@@ -139,7 +139,7 @@ export function SellerDetailPage() {
             <div className="flex items-center gap-4 mt-1.5 flex-wrap text-sm text-muted-foreground">
               {seller.ratingAvg !== null && seller.ratingAvg !== undefined ? (
                 <span className="flex items-center gap-1">
-                  <IconStar size={13} fill="#FF6200" color="#FF6200" />
+                  <IconStar size={13} fill="var(--accent)" color="var(--accent)" />
                   <span className="font-semibold text-foreground">{seller.ratingAvg.toFixed(1)}</span>
                   <span>({t("sellerDetail.ratingsLabel", { count: seller.ratingCount })})</span>
                 </span>

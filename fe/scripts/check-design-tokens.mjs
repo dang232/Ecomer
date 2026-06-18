@@ -67,6 +67,8 @@ const EXTRA_ALLOWLIST = new Map([
   // WHY: SystemHealth uses health-status colors (green/amber/red) that are not
   // brand palette tokens — they represent uptime status indicators.
   ['src/app/pages/admin/SystemHealth.tsx', 'system health status indicator colors (green/amber/red)'],
+  // WHY: Lazada/Meituan brand red (#EE4D2D) used for shop badges on product page.
+  ['src/app/pages/ProductPage.tsx', 'Meituan/Lazada brand red for shop badges (non-brand)'],
   // WHY: tests may exercise hex parsing or contain fixture data; not shipped
   // to production. Covers both .test.ts and .test.tsx under src/.
   // (Matched by suffix glob — see isAllowlisted below.)

@@ -95,7 +95,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
       <div className="p-3">
         <h3 className="text-sm font-medium text-foreground line-clamp-2 mb-1.5">{product.name}</h3>
         <div className="flex items-center gap-1 mb-1.5">
-          <Star size={11} fill="#F59E0B" className="text-amber-400 shrink-0" />
+          <Star size={11} fill="var(--warning)" className="text-amber-400 shrink-0" />
           <span className="text-xs text-foreground">{product.rating}</span>
           <span className="text-xs text-muted-foreground">·</span>
           <span className="text-xs text-muted-foreground">
@@ -457,7 +457,7 @@ export function SearchPage() {
                           <Star
                             key={i} // eslint-disable-line react/no-array-index-key
                             size={12}
-                            fill={i < r ? "#F59E0B" : "transparent"}
+                            fill={i < r ? "var(--rating)" : "transparent"}
                             className={i < r ? "text-amber-400" : "text-muted-foreground"}
                           />
                         ))}

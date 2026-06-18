@@ -34,13 +34,13 @@ function StarRating({ value, max = 5, size = 16 }: { value: number; max?: number
           <svg key={i} width={size} height={size} viewBox="0 0 24 24">
             <defs>
               <linearGradient id={`half-${i}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="50%" stopColor="#F59E0B" />
-                <stop offset="50%" stopColor="#E5E7EB" />
+                <stop offset="50%" stopColor="var(--rating)" />
+                <stop offset="50%" stopColor="var(--border)" />
               </linearGradient>
             </defs>
             <path
               d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-              fill={filled ? "#F59E0B" : half ? `url(#half-${i})` : "#E5E7EB"}
+              fill={filled ? "var(--rating)" : half ? `url(#half-${i})` : "var(--border)"}
             />
           </svg>
         );

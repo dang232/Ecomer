@@ -80,7 +80,7 @@ function ShipDialogBody({
                 style={
                   carrier === c
                     ? { background: "var(--primary)", color: "white", borderColor: "var(--primary)" }
-                    : { background: "white", color: "#6b7280", borderColor: "#e5e7eb" }
+                    : { background: "white", color: "var(--muted-foreground)", borderColor: "var(--border)" }
                 }
               >
                 {c}
