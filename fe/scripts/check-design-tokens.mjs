@@ -109,11 +109,14 @@ function* walk(dir) {
 
 function isAllowlisted(absPath) {
   // Normalize to forward slashes for cross-platform string checks.
-  const rel = relative(SRC_ROOT, absPath).split(sep).join(posix.sep);
-  if (rel.startsWith('styles/') || rel.startsWith('styles' + posix.sep)) return true;
-  if (EXTRA_ALLOWLIST.has(rel)) return true;
+  const relFromSrc = relative(SRC_ROOT, absPath).split(sep).join(posix.sep);
+  const relFromRoot = relative(REPO_ROOT, absPath).split(sep).join(posix.sep);
+  if (relFromSrc.startsWith('styles/') || relFromSrc.startsWith('styles' + posix.sep)) return true;
+  if (relFromRoot.startsWith('src/styles/')) return true;
+  if (EXTRA_ALLOWLIST.has(relFromSrc)) return true;
+  if (EXTRA_ALLOWLIST.has(relFromRoot)) return true;
   // Test files under src/ may contain fixture hex values; not shipped.
-  if (rel.endsWith('.test.ts') || rel.endsWith('.test.tsx')) return true;
+  if (relFromSrc.endsWith('.test.ts') || relFromSrc.endsWith('.test.tsx')) return true;
   return false;
 }
 
