@@ -107,8 +107,8 @@ export function CouponsManagement() {
                   <span
                     className="px-2.5 py-1 rounded-full text-xs font-semibold"
                     style={{
-                      background: c.active ? "#ECFDF5" : "#FEF2F2",
-                      color: c.active ? "#10B981" : "#EF4444",
+                      background: c.active ? "var(--success-light)" : "var(--error-light)",
+                      color: c.active ? "var(--success)" : "var(--error)",
                     }}
                   >
                     {c.active ? t("admin.coupons.active") : t("admin.coupons.inactive")}

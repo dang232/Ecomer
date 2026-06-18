@@ -1,6 +1,7 @@
 import { IconX } from "@tabler/icons-react";
 import { motion } from "motion/react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { useEscapeKey } from "../hooks/use-escape-key";
 
@@ -59,6 +60,7 @@ export function FormDialog({
 }: FormDialogProps) {
   const [values, setValues] = useState<Record<string, string>>(() => emptyValues(fields));
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const { t } = useTranslation();
 
   useEscapeKey(open && !isSubmitting, onClose);
 
@@ -77,7 +79,7 @@ export function FormDialog({
       const required = field.required ?? true;
       const v = (values[field.key] ?? "").trim();
       if (required && !v) {
-        errors[field.key] = `Vui lòng nhập ${field.label.toLowerCase()}`;
+        errors[field.key] = t("formDialog.fieldRequired", { label: field.label });
       } else if (field.validate) {
         const msg = field.validate(v || "");
         if (msg) errors[field.key] = msg;

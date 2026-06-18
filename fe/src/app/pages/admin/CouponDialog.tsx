@@ -103,7 +103,7 @@ function CouponDialogBodyView({
             onClick={handleSubmit}
             disabled={isSubmitting}
             className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold disabled:opacity-50"
-            style={{ background: "#6366F1" }}
+            style={{ background: "var(--admin-primary)" }}
           >
             {isSubmitting ? t("admin.coupons.dialog.submitting") : t("admin.coupons.dialog.submit")}
           </button>
@@ -123,7 +123,7 @@ function CouponDialogBodyView({
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             placeholder={t("admin.coupons.dialog.codePlaceholder")}
-            className="w-full px-3 py-2.5 border border-border rounded-xl text-sm font-mono uppercase tracking-wider outline-none focus:border-[#6366F1]"
+            className="w-full px-3 py-2.5 border border-border rounded-xl text-sm font-mono uppercase tracking-wider outline-none focus:border-[var(--admin-primary)]"
             // eslint-disable-next-line jsx-a11y/no-autofocus -- inside a modal opened by explicit user click; focusing the first input is expected UX
             autoFocus
           />
@@ -142,8 +142,8 @@ function CouponDialogBodyView({
                 className="py-2 rounded-xl text-sm font-medium border transition-colors"
                 style={
                   type === opt
-                    ? { background: "#6366F1", color: "white", borderColor: "#6366F1" }
-                    : { background: "white", color: "#6b7280", borderColor: "#e5e7eb" }
+                    ? { background: "var(--admin-primary)", color: "white", borderColor: "var(--admin-primary)" }
+                    : { background: "white", color: "var(--admin-muted)", borderColor: "var(--admin-border)" }
                 }
               >
                 {opt === "PERCENT"
@@ -172,7 +172,7 @@ function CouponDialogBodyView({
                 ? t("admin.coupons.dialog.valuePlaceholderPercent")
                 : t("admin.coupons.dialog.valuePlaceholderFixed")
             }
-            className="w-full px-3 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[#6366F1]"
+            className="w-full px-3 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--admin-primary)]"
           />
         </div>
 
@@ -189,7 +189,7 @@ function CouponDialogBodyView({
               value={minOrderValue}
               onChange={(e) => setMinOrderValue(e.target.value)}
               placeholder={t("admin.coupons.dialog.minOrderPlaceholder")}
-              className="w-full px-3 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[#6366F1]"
+              className="w-full px-3 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--admin-primary)]"
             />
           </div>
           {type === "PERCENT" ? (
@@ -205,7 +205,7 @@ function CouponDialogBodyView({
                 value={maxDiscount}
                 onChange={(e) => setMaxDiscount(e.target.value)}
                 placeholder={t("admin.coupons.dialog.maxDiscountPlaceholder")}
-                className="w-full px-3 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[#6366F1]"
+                className="w-full px-3 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--admin-primary)]"
               />
             </div>
           ) : null}
