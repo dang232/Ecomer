@@ -116,29 +116,49 @@ export function CheckoutReviewStep({
           {t("checkout.review.productsCount", { count: cartItems.length })}
         </h3>
         <div className="space-y-3">
-          {cartItems.map((item) => (
-            <div key={item.productId} className="flex items-center gap-3">
-              {item.image ? (
-                <img
-                  src={item.image}
-                  alt={item.name ?? ""}
-                  className="w-14 h-14 rounded-lg object-cover shrink-0"
-                  loading="lazy"
-                />
-              ) : (
-                <div className="w-14 h-14 rounded-lg bg-muted shrink-0" />
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">
-                  {item.name ?? item.productId}
-                </p>
-                <p className="text-xs text-muted-foreground">x{item.quantity}</p>
+          {cartItems.map((item) => {
+            // These fields may arrive from the cart API (P2-3 audit)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const extra = item as any;
+            const variant = extra.variant as string | undefined;
+            const sellerName = extra.sellerName as string | undefined;
+            const stock = extra.stock as number | undefined;
+            const isLowStock = stock !== undefined && stock < item.quantity;
+            return (
+              <div key={item.productId} className="flex items-center gap-3">
+                {item.image ? (
+                  <img
+                    src={item.image}
+                    alt={item.name ?? ""}
+                    className="w-14 h-14 rounded-lg object-cover shrink-0"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded-lg bg-muted shrink-0" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {item.name ?? item.productId}
+                  </p>
+                  {variant ? (
+                    <p className="text-xs text-muted-foreground truncate">{variant}</p>
+                  ) : null}
+                  <p className="text-xs text-muted-foreground">
+                    {sellerName ?? t("checkout.review.sellerFallback", { defaultValue: "Unknown seller" })}
+                  </p>
+                  {isLowStock ? (
+                    <p className="text-xs text-orange-600 dark:text-orange-400 mt-0.5">
+                      {t("checkout.review.lowStock", { count: stock, defaultValue: `Low stock — only ${stock} left` })}
+                    </p>
+                  ) : null}
+                  <p className="text-xs text-muted-foreground">x{item.quantity}</p>
+                </div>
+                <span className="text-sm font-bold text-primary shrink-0">
+                  {formatPrice(item.price * item.quantity)}
+                </span>
               </div>
-              <span className="text-sm font-bold text-primary shrink-0">
-                {formatPrice(item.price * item.quantity)}
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
