@@ -12,7 +12,23 @@
     "freePhone": "1800 6789 (Miễn phí)",
     "nationwide": "Giao hàng toàn quốc",
     "dark": "Tối",
-    "light": "Sáng"
+    "light": "Sáng",
+    "lightMode": "Chế độ sáng",
+    "darkMode": "Chế độ tối",
+    "announcement": "Miễn phí vận chuyển cho đơn từ 150k!",
+    "announcementSuffix": "Mua ngay →"
+  },
+  "categories": {
+    "electronics": "Điện Tử",
+    "fashion": "Thời Trang",
+    "home": "Nhà & Đời Sống",
+    "software": "Phần Mềm & Số",
+    "beauty": "Làm Đẹp",
+    "sports": "Thể Thao",
+    "books": "Sách",
+    "automotive": "Ô Tô & Xe Máy",
+    "digital": "Hàng Số",
+    "food": "Thực Phẩm & Đồ Uống"
   },
   "auth": {
     "login": "Đăng nhập",
@@ -24,7 +40,8 @@
     "notifications": "Thông báo",
     "settings": "Cài đặt",
     "loginRequired": "Vui lòng đăng nhập để tiếp tục",
-    "noAccess": "Bạn không có quyền truy cập trang này"
+    "noAccess": "Bạn không có quyền truy cập trang này",
+    "accessDenied": "Truy cập bị từ chối"
   },
   "cart": {
     "title": "Giỏ hàng",
@@ -66,6 +83,15 @@
       "cantRemove": "Không thể xoá sản phẩm",
       "cantUpdate": "Không thể cập nhật",
       "maxQty": "Số lượng tối đa là {{max}} sản phẩm"
+    },
+    "empty": "Giỏ hàng trống",
+    "itemCount": "{{count}} sản phẩm trong giỏ",
+    "itemCountLabel": "{{count}} sản phẩm",
+    "viewProduct": "Xem sản phẩm",
+    "guarantee": {
+      "buyerProtection": "Bảo vệ quyền lợi",
+      "returns": "Đổi trả miễn phí",
+      "securePayment": "Thanh toán bảo mật"
     }
   },
   "search": {
@@ -119,7 +145,8 @@
     "officialStores": "Shop chính hãng",
     "shippingHeader": "Vận chuyển",
     "freeShippingTag": "Miễn phí vận chuyển",
-    "sameDayDelivery": "Giao trong ngày"
+    "sameDayDelivery": "Giao trong ngày",
+    "priceApply": "Áp dụng"
   },
   "flashSale": {
     "title": "⚡ FLASH SALE",
@@ -186,7 +213,8 @@
     "tabs": {
       "desc": "Mô tả sản phẩm",
       "reviews": "Đánh giá ({{count}})",
-      "qa": "Hỏi & Đáp"
+      "qa": "Hỏi & Đáp",
+      "specs": "Thông số"
     },
     "info": {
       "category": "Danh mục",
@@ -274,6 +302,7 @@
     "hero": {
       "eyebrow": "Chào mừng đến VNShop",
       "title": "Mua hàng chính hãng. Giao nhanh. Sống dễ.",
+      "titleLine2": "Mua hàng chính hãng. Giao nhanh. Sống dễ.",
       "subtitle": "Sàn đa người bán với shop được xác minh, giao hàng nhanh, đổi trả 30 ngày.",
       "ctaShop": "Khám phá sản phẩm",
       "ctaSignIn": "Đăng nhập để nhận ưu đãi"
@@ -292,6 +321,10 @@
       "emptyTitle": "Thêm shop tham gia VNShop mỗi tuần",
       "emptyBody": "Trong lúc chờ shop mới được duyệt, hãy ghé danh mục để khám phá sản phẩm.",
       "emptyCta": "Xem danh mục"
+    },
+    "productsError": {
+      "title": "Không tải được sản phẩm",
+      "body": "Kiểm tra kết nối và thử lại."
     },
     "bestsellersEmpty": {
       "title": "Best seller được làm mới mỗi tuần",
@@ -325,7 +358,23 @@
     "privacy": "Chính sách bảo mật",
     "blog": "Blog & Tin tức",
     "paymentShipping": "Thanh toán & Giao hàng",
-    "copyright": "© 2026 VNShop. Được vận hành bởi VNShop JSC. ĐKKD số: 0123456789"
+    "copyright": "© 2026 VNShop. Được vận hành bởi VNShop JSC. ĐKKD số: 0123456789",
+    "description": "VNShop — Mua hàng chính hãng. Giao nhanh. Sống dễ.",
+    "shop": "Mua sắm",
+    "allCategories": "Tất cả danh mục",
+    "flashDeals": "Flash Deals",
+    "newArrivals": "Sản phẩm mới",
+    "topSellers": "Bán chạy nhất",
+    "sell": "Bán hàng",
+    "startSelling": "Bắt đầu bán",
+    "sellerCenter": "Trung tâm người bán",
+    "sellerTools": "Công cụ người bán",
+    "fees": "Phí & Hoa hồng",
+    "help": "Trợ giúp & Hỗ trợ",
+    "returns": "Đổi trả & Hoàn tiền",
+    "contactUs": "Liên hệ",
+    "company": "Công ty",
+    "press": "Báo chí"
   },
   "trust": {
     "freeShipping": "Miễn phí vận chuyển",
@@ -343,6 +392,7 @@
   },
   "login": {
     "tagline": "Nền tảng mua sắm trực tuyến hàng đầu Việt Nam",
+    "brandDescription": "Nền tảng mua sắm trực tuyến hàng đầu Việt Nam",
     "trust5m": "Tin dùng bởi hơn <1>5 triệu</1> khách hàng",
     "trustItems": {
       "fastDelivery": "Giao hàng siêu tốc",
@@ -366,7 +416,8 @@
       "errorGeneric": "Không thể đăng nhập. Vui lòng thử lại.",
       "noAccount": "Chưa có tài khoản?",
       "signUp": "Đăng ký ngay",
-      "forgot": "Quên mật khẩu?"
+      "forgot": "Quên mật khẩu?",
+      "orContinueWith": "hoặc tiếp tục với"
     }
   },
   "passwordReset": {
@@ -430,7 +481,20 @@
       "goToProfile": "Đến trang Hồ sơ →",
       "isDefaultBadge": "Mặc định",
       "addNew": "Thêm địa chỉ mới",
-      "missingValidation": "Vui lòng thêm ít nhất một địa chỉ trong trang Hồ sơ trước khi thanh toán."
+      "missingValidation": "Vui lòng thêm ít nhất một địa chỉ trong trang Hồ sơ trước khi thanh toán.",
+      "addError": "Không thể thêm địa chỉ",
+      "addAddressHint": "Vui lòng thêm địa chỉ giao hàng trước.",
+      "openProfile": "Mở trang Hồ sơ",
+      "form": {
+        "street": "Địa chỉ đường",
+        "streetPlaceholder": "VD: 123 Nguyễn Huệ",
+        "ward": "Phường / Xã",
+        "wardPlaceholder": "VD: Phường 1",
+        "district": "Quận / Huyện",
+        "districtPlaceholder": "VD: Quận 1",
+        "city": "Tỉnh / Thành phố",
+        "cityPlaceholder": "VD: TP Hồ Chí Minh"
+      }
     },
     "shipping": {
       "header": "Chọn phương thức vận chuyển",
@@ -474,7 +538,8 @@
       "bankName": "Thẻ ngân hàng",
       "codName": "Thanh toán khi nhận hàng",
       "codDesc": "Trả tiền mặt khi nhận hàng",
-      "complete": "Hoàn tất thanh toán cho đơn {{id}}"
+      "complete": "Hoàn tất thanh toán cho đơn {{id}}",
+      "retryHint": "Đơn hàng đã được đặt. Quay lại trang Đơn hàng để thử thanh toán lại."
     },
     "review": {
       "header": "Xác nhận đơn hàng",
@@ -547,6 +612,8 @@
       "subtitle": "Dữ liệu thời gian thực từ máy chủ",
       "exportReport": "Xuất báo cáo",
       "kpiLoadFail": "Không tải được KPI: {{message}}",
+      "kpiLoadFailFriendly": "Không tải được dashboard. Kiểm tra kết nối và thử lại.",
+      "retry": "Thử lại",
       "kpi": {
         "totalRevenue": "Tổng doanh thu",
         "totalUsers": "Người dùng",
@@ -679,6 +746,56 @@
         "refundHelper": "Để trống nếu không hoàn tiền."
       }
     },
+    "orders": {
+      "title": "Hàng chờ đơn hàng",
+      "loading": "Đang tải đơn hàng...",
+      "loadErr": "Không tải được đơn hàng: {{message}}",
+      "empty": "Không có đơn hàng nào cần quản lý",
+      "cancelOk": "Đã huỷ đơn hàng",
+      "cancelErr": "Không thể huỷ đơn hàng",
+      "refundOk": "Đã khởi tạo hoàn tiền",
+      "refundErr": "Không thể khởi tạo hoàn tiền",
+      "statusOk": "Đã cập nhật trạng thái đơn hàng",
+      "statusErr": "Không thể cập nhật trạng thái",
+      "buyer": "Người mua",
+      "items": "Sản phẩm",
+      "cancel": "Huỷ",
+      "refund": "Hoàn tiền",
+      "accept": "Duyệt"
+    },
+    "health": {
+      "title": "Tình trạng hệ thống",
+      "refresh": "Làm mới",
+      "checking": "Đang kiểm tra...",
+      "allUp": "Tất cả hệ thống hoạt động tốt",
+      "someDown": "Một số dịch vụ đang gặp sự cố",
+      "up": "Bình thường",
+      "down": "Sự cố",
+      "lastChecked": "Kiểm tra lần cuối: {{time}}"
+    },
+    "users": {
+      "title": "Quản lý người dùng",
+      "loading": "Đang tải người dùng...",
+      "searching": "Đang tìm...",
+      "search": "Tìm kiếm",
+      "searchErr": "Không tìm kiếm được: {{message}}",
+      "ordersErr": "Không tải được đơn hàng: {{message}}",
+      "empty": "Không tìm thấy người dùng",
+      "noOrders": "Người dùng này chưa có đơn hàng nào.",
+      "noPhone": "Chưa có số điện thoại",
+      "banned": "Bị khoá",
+      "ban": "Khoá",
+      "unban": "Mở khoá",
+      "banOk": "Đã khoá người dùng",
+      "banErr": "Không thể khoá người dùng",
+      "unbanOk": "Đã mở khoá người dùng",
+      "unbanErr": "Không thể mở khoá người dùng",
+      "viewOrders": "Xem đơn hàng",
+      "orderHistoryFor": "Lịch sử đơn của {{name}}",
+      "close": "Đóng",
+      "emailPlaceholder": "Tìm theo email...",
+      "phonePlaceholder": "Tìm theo số điện thoại..."
+    },
     "payouts": {
       "title": "Yêu cầu rút tiền",
       "loading": "Đang tải...",
@@ -789,7 +906,12 @@
       "orders": "Đơn hàng",
       "reviews": "Đánh giá",
       "wallet": "Ví tiền",
-      "settings": "Cài đặt"
+      "settings": "Cài đặt",
+      "sidebarLabel": "Thanh điều hướng người bán",
+      "sectionMain": "Chính",
+      "sectionFinance": "Tài chính",
+      "sectionAccount": "Tài khoản",
+      "mobileLabel": "Kênh Người Bán"
     },
     "dashboard": {
       "title": "Tổng quan",
@@ -807,7 +929,8 @@
       "revenue30dEmpty": "Chưa có dữ liệu doanh thu trong 30 ngày qua.",
       "orders30dTitle": "Số đơn 30 ngày",
       "orders30dLoading": "Đang tải...",
-      "orders30dEmpty": "Chưa có đơn nào trong 30 ngày qua."
+      "orders30dEmpty": "Chưa có đơn nào trong 30 ngày qua.",
+      "revenue30dRetry": "Thử lại"
     },
     "products": {
       "title": "Quản lý sản phẩm",
@@ -822,12 +945,17 @@
         "stock": "Kho",
         "sold": "Đã bán"
       },
-      "editTooltip": "Sửa sản phẩm"
+      "editTooltip": "Sửa sản phẩm",
+      "prev": "Trang trước",
+      "pageIndicator": "Trang {{current}} / {{total}}",
+      "next": "Trang sau"
     },
     "orders": {
       "title": "Quản lý đơn hàng",
       "loading": "Đang tải đơn hàng...",
       "loadError": "Không tải được đơn hàng: {{message}}",
+      "loadErrorHint": "Không tải được đơn hàng. Kiểm tra kết nối và thử lại.",
+      "retry": "Thử lại",
       "empty": "Không có đơn hàng nào cần xử lý",
       "filterEmpty": "Không có đơn nào khớp với bộ lọc.",
       "searchPlaceholder": "Tìm theo mã đơn...",
@@ -839,6 +967,8 @@
         "shipped": "Đã giao",
         "cancelled": "Đã huỷ"
       },
+      "colOrder": "Đơn hàng",
+      "colActions": "Hành động",
       "parentOrder": "Mã đơn cha: {{id}}",
       "accept": "Xác nhận",
       "reject": "Từ chối",
@@ -1087,7 +1217,8 @@
     "addedOne": "Đã thêm vào giỏ",
     "addedMany": "Đã thêm {{count}} sản phẩm vào giỏ",
     "addError": "Không thể thêm vào giỏ",
-    "viewAria": "Xem {{name}}"
+    "viewAria": "Xem {{name}}",
+    "removeAria": "Xoá {{name}} khỏi yêu thích"
   },
   "orders": {
     "pageTitle": "Đơn mua của tôi",
@@ -1098,6 +1229,8 @@
     "backToHome": "Về trang chủ",
     "empty": "Không có đơn hàng nào",
     "orderId": "Mã đơn:",
+    "orderNumber": "Đơn {{id}}",
+    "itemCountSummary": "{{count}} sản phẩm",
     "loadingItems": "Đang tải chi tiết sản phẩm...",
     "totalLabel": "Tổng:",
     "actions": {
@@ -1162,7 +1295,16 @@
     "cancelOk": "Đã huỷ đơn hàng",
     "cancelErr": "Không thể huỷ đơn hàng",
     "noReviewableProduct": "Không tìm thấy sản phẩm để đánh giá",
-    "noSellerForChat": "Đơn hàng này không gắn với người bán cụ thể."
+    "noSellerForChat": "Đơn hàng này không gắn với người bán cụ thể.",
+    "cancelDialog": {
+      "title": "Huỷ đơn #{{id}}?",
+      "description": "Hành động này không thể hoàn tác."
+    }
+  },
+  "notFound": {
+    "title": "Không tìm thấy trang",
+    "goHome": "Về trang chủ",
+    "search": "Tìm sản phẩm"
   },
   "notificationBell": {
     "title": "Thông báo",
@@ -1183,7 +1325,13 @@
     "comingSoon": "{{feature}} sắp ra mắt!",
     "cancel": "Huỷ",
     "confirm": "Xác nhận",
-    "unavailable": "—"
+    "unavailable": "—",
+    "cancel": "Huỷ",
+    "save": "Lưu",
+    "saving": "Đang lưu...",
+    "next": "Tiếp",
+    "prev": "Trước",
+    "retry": "Thử lại"
   },
   "sellerDetail": {
     "notFound": "Không tìm thấy shop",
@@ -1351,7 +1499,10 @@
   },
   "video": {
     "player": {
-      "error": "Video không khả dụng. Vui lòng thử lại sau."
+      "error": "Video không khả dụng. Vui lòng thử lại sau.",
+      "ariaLabel": "Trình phát video",
+      "playAria": "Phát video",
+      "buffering": "Đang tải..."
     },
     "pipeline": {
       "processingTitle": "Đang xử lý video của bạn…",

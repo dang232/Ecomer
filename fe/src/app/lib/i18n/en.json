@@ -12,7 +12,23 @@
     "freePhone": "1800 6789 (Free)",
     "nationwide": "Nationwide delivery",
     "dark": "Dark",
-    "light": "Light"
+    "light": "Light",
+    "lightMode": "Light mode",
+    "darkMode": "Dark mode",
+    "announcement": "Free shipping on orders over 150k!",
+    "announcementSuffix": "Shop now →"
+  },
+  "categories": {
+    "electronics": "Electronics",
+    "fashion": "Fashion",
+    "home": "Home & Living",
+    "software": "Software & Digital",
+    "beauty": "Beauty",
+    "sports": "Sports",
+    "books": "Books",
+    "automotive": "Automotive",
+    "digital": "Digital Goods",
+    "food": "Food & Beverages"
   },
   "auth": {
     "login": "Log in",
@@ -24,7 +40,8 @@
     "notifications": "Notifications",
     "settings": "Settings",
     "loginRequired": "Please sign in to continue",
-    "noAccess": "You don't have access to this page"
+    "noAccess": "You don't have access to this page",
+    "accessDenied": "Access denied"
   },
   "cart": {
     "title": "Cart",
@@ -66,6 +83,15 @@
       "cantRemove": "Couldn't remove item",
       "cantUpdate": "Couldn't update item",
       "maxQty": "Maximum quantity is {{max}} per item"
+    },
+    "empty": "Your cart is empty",
+    "itemCount": "{{count}} items in cart",
+    "itemCountLabel": "{{count}} items",
+    "viewProduct": "View product",
+    "guarantee": {
+      "buyerProtection": "Buyer Protection",
+      "returns": "Free Returns",
+      "securePayment": "Secure Payment"
     }
   },
   "search": {
@@ -119,7 +145,8 @@
     "officialStores": "Official stores",
     "shippingHeader": "Shipping",
     "freeShippingTag": "Free shipping",
-    "sameDayDelivery": "Same-day delivery"
+    "sameDayDelivery": "Same-day delivery",
+    "priceApply": "Apply"
   },
   "flashSale": {
     "title": "⚡ FLASH SALE",
@@ -186,7 +213,8 @@
     "tabs": {
       "desc": "Description",
       "reviews": "Reviews ({{count}})",
-      "qa": "Q & A"
+      "qa": "Q & A",
+      "specs": "Specifications"
     },
     "info": {
       "category": "Category",
@@ -274,6 +302,7 @@
     "hero": {
       "eyebrow": "Welcome to VNShop",
       "title": "Shop authentic. Ship fast. Live easy.",
+      "titleLine2": "Shop authentic. Ship fast. Live easy.",
       "subtitle": "Multi-seller marketplace with verified sellers, fast delivery, and a 30-day return policy.",
       "ctaShop": "Browse catalog",
       "ctaSignIn": "Sign in for personalised deals"
@@ -292,6 +321,10 @@
       "emptyTitle": "More shops joining VNShop weekly",
       "emptyBody": "Browse the full catalog while we onboard new verified sellers.",
       "emptyCta": "Browse catalog"
+    },
+    "productsError": {
+      "title": "Couldn't load products",
+      "body": "Check your connection and try again."
     },
     "bestsellersEmpty": {
       "title": "Best sellers refresh weekly",
@@ -325,7 +358,23 @@
     "privacy": "Privacy Policy",
     "blog": "Blog & News",
     "paymentShipping": "Payment & Delivery",
-    "copyright": "© 2026 VNShop. Operated by VNShop JSC. Business Reg: 0123456789"
+    "copyright": "© 2026 VNShop. Operated by VNShop JSC. Business Reg: 0123456789",
+    "description": "VNShop — Shop authentic. Ship fast. Live easy.",
+    "shop": "Shop",
+    "allCategories": "All Categories",
+    "flashDeals": "Flash Deals",
+    "newArrivals": "New Arrivals",
+    "topSellers": "Top Sellers",
+    "sell": "Sell",
+    "startSelling": "Start Selling",
+    "sellerCenter": "Seller Centre",
+    "sellerTools": "Seller Tools",
+    "fees": "Fees & Commission",
+    "help": "Help & Support",
+    "returns": "Returns & Refunds",
+    "contactUs": "Contact Us",
+    "company": "Company",
+    "press": "Press"
   },
   "trust": {
     "freeShipping": "Free shipping",
@@ -343,6 +392,7 @@
   },
   "login": {
     "tagline": "Vietnam's leading online shopping platform",
+    "brandDescription": "Vietnam's leading online shopping platform",
     "trust5m": "Trusted by over <1>5 million</1> customers",
     "trustItems": {
       "fastDelivery": "Lightning-fast delivery",
@@ -366,7 +416,8 @@
       "errorGeneric": "Couldn't sign in. Try again in a moment.",
       "noAccount": "Don't have an account?",
       "signUp": "Create one",
-      "forgot": "Forgot password?"
+      "forgot": "Forgot password?",
+      "orContinueWith": "or continue with"
     }
   },
   "passwordReset": {
@@ -430,7 +481,20 @@
       "goToProfile": "Go to profile →",
       "isDefaultBadge": "Default",
       "addNew": "Add a new address",
-      "missingValidation": "Please add at least one address in Profile before checking out."
+      "missingValidation": "Please add at least one address in Profile before checking out.",
+      "addError": "Couldn't add address",
+      "addAddressHint": "Please add a delivery address first.",
+      "openProfile": "Open profile",
+      "form": {
+        "street": "Street address",
+        "streetPlaceholder": "e.g. 123 Nguyen Hue St",
+        "ward": "Ward / Commune",
+        "wardPlaceholder": "e.g. Ward 1",
+        "district": "District",
+        "districtPlaceholder": "e.g. District 1",
+        "city": "City / Province",
+        "cityPlaceholder": "e.g. Ho Chi Minh City"
+      }
     },
     "shipping": {
       "header": "Choose a shipping method",
@@ -474,7 +538,8 @@
       "bankName": "Bank card",
       "codName": "Cash on delivery",
       "codDesc": "Pay cash when the parcel arrives",
-      "complete": "Complete payment for order {{id}}"
+      "complete": "Complete payment for order {{id}}",
+      "retryHint": "Your order was placed. Return to the Orders page to retry payment."
     },
     "review": {
       "header": "Review your order",
@@ -547,6 +612,8 @@
       "subtitle": "Live data from the platform",
       "exportReport": "Export report",
       "kpiLoadFail": "Couldn't load KPIs: {{message}}",
+      "kpiLoadFailFriendly": "Couldn't load the dashboard. Check your connection and try again.",
+      "retry": "Retry",
       "kpi": {
         "totalRevenue": "Total revenue",
         "totalUsers": "Users",
@@ -679,6 +746,56 @@
         "refundHelper": "Leave blank for no refund."
       }
     },
+    "orders": {
+      "title": "Order Queue",
+      "loading": "Loading orders...",
+      "loadErr": "Couldn't load orders: {{message}}",
+      "empty": "No orders to manage",
+      "cancelOk": "Order cancelled",
+      "cancelErr": "Couldn't cancel order",
+      "refundOk": "Refund initiated",
+      "refundErr": "Couldn't initiate refund",
+      "statusOk": "Order status updated",
+      "statusErr": "Couldn't update status",
+      "buyer": "Buyer",
+      "items": "Items",
+      "cancel": "Cancel",
+      "refund": "Refund",
+      "accept": "Accept"
+    },
+    "health": {
+      "title": "System Health",
+      "refresh": "Refresh",
+      "checking": "Checking...",
+      "allUp": "All systems operational",
+      "someDown": "Some services are down",
+      "up": "Up",
+      "down": "Down",
+      "lastChecked": "Last checked: {{time}}"
+    },
+    "users": {
+      "title": "User Management",
+      "loading": "Loading users...",
+      "searching": "Searching...",
+      "search": "Search",
+      "searchErr": "Couldn't search: {{message}}",
+      "ordersErr": "Couldn't load user orders: {{message}}",
+      "empty": "No users found",
+      "noOrders": "This user has no orders yet.",
+      "noPhone": "No phone on record",
+      "banned": "Banned",
+      "ban": "Ban",
+      "unban": "Unban",
+      "banOk": "User banned",
+      "banErr": "Couldn't ban user",
+      "unbanOk": "User unbanned",
+      "unbanErr": "Couldn't unban user",
+      "viewOrders": "View orders",
+      "orderHistoryFor": "Order history for {{name}}",
+      "close": "Close",
+      "emailPlaceholder": "Search by email...",
+      "phonePlaceholder": "Search by phone..."
+    },
     "payouts": {
       "title": "Payout requests",
       "loading": "Loading...",
@@ -789,7 +906,12 @@
       "orders": "Orders",
       "reviews": "Reviews",
       "wallet": "Wallet",
-      "settings": "Settings"
+      "settings": "Settings",
+      "sidebarLabel": "Seller navigation",
+      "sectionMain": "Main",
+      "sectionFinance": "Finance",
+      "sectionAccount": "Account",
+      "mobileLabel": "Seller Hub"
     },
     "dashboard": {
       "title": "Dashboard",
@@ -807,7 +929,8 @@
       "revenue30dEmpty": "No revenue in the last 30 days yet.",
       "orders30dTitle": "Orders (30 days)",
       "orders30dLoading": "Loading...",
-      "orders30dEmpty": "No orders in the last 30 days yet."
+      "orders30dEmpty": "No orders in the last 30 days yet.",
+      "revenue30dRetry": "Retry"
     },
     "products": {
       "title": "Product management",
@@ -822,12 +945,17 @@
         "stock": "Stock",
         "sold": "Sold"
       },
-      "editTooltip": "Edit product"
+      "editTooltip": "Edit product",
+      "prev": "Previous page",
+      "pageIndicator": "Page {{current}} of {{total}}",
+      "next": "Next page"
     },
     "orders": {
       "title": "Order management",
       "loading": "Loading orders...",
       "loadError": "Couldn't load orders: {{message}}",
+      "loadErrorHint": "Couldn't load orders. Check your connection and try again.",
+      "retry": "Retry",
       "empty": "No orders to handle",
       "filterEmpty": "No orders match the current filter.",
       "searchPlaceholder": "Search by order id...",
@@ -839,6 +967,8 @@
         "shipped": "Shipped",
         "cancelled": "Cancelled"
       },
+      "colOrder": "Order",
+      "colActions": "Actions",
       "parentOrder": "Parent order: {{id}}",
       "accept": "Accept",
       "reject": "Reject",
@@ -1087,7 +1217,8 @@
     "addedOne": "Added to cart",
     "addedMany": "Added {{count}} items to your cart",
     "addError": "Couldn't add to cart",
-    "viewAria": "View {{name}}"
+    "viewAria": "View {{name}}",
+    "removeAria": "Remove {{name}} from wishlist"
   },
   "orders": {
     "pageTitle": "My Orders",
@@ -1098,6 +1229,8 @@
     "backToHome": "Back to home",
     "empty": "No orders to show",
     "orderId": "Order ID:",
+    "orderNumber": "Order {{id}}",
+    "itemCountSummary": "{{count}} items",
     "loadingItems": "Loading product details...",
     "totalLabel": "Total:",
     "actions": {
@@ -1162,7 +1295,16 @@
     "cancelOk": "Order cancelled",
     "cancelErr": "Couldn't cancel order",
     "noReviewableProduct": "No reviewable product found",
-    "noSellerForChat": "This order has no specific seller."
+    "noSellerForChat": "This order has no specific seller.",
+    "cancelDialog": {
+      "title": "Cancel order #{{id}}?",
+      "description": "This action cannot be undone."
+    }
+  },
+  "notFound": {
+    "title": "Page not found",
+    "goHome": "Go to home",
+    "search": "Search products"
   },
   "notificationBell": {
     "title": "Notifications",
@@ -1183,7 +1325,13 @@
     "comingSoon": "{{feature}} is coming soon!",
     "cancel": "Cancel",
     "confirm": "Confirm",
-    "unavailable": "—"
+    "unavailable": "—",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving...",
+    "next": "Next",
+    "prev": "Previous",
+    "retry": "Retry"
   },
   "sellerDetail": {
     "notFound": "Shop not found",
@@ -1351,7 +1499,10 @@
   },
   "video": {
     "player": {
-      "error": "Video unavailable. Please try again later."
+      "error": "Video unavailable. Please try again later.",
+      "ariaLabel": "Video player",
+      "playAria": "Play video",
+      "buffering": "Buffering..."
     },
     "pipeline": {
       "processingTitle": "Processing your video…",
