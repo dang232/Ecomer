@@ -704,7 +704,8 @@
       },
       "completeDialog": {
         "title": "Complete this payout?",
-        "subtitle": "{{amount}} will be marked as paid to seller {{sellerId}}…. This action cannot be undone.",
+        "subtitle": "{{amount}} will be marked as paid to seller {{sellerId}}….",
+        "irreversibleWarning": "This action cannot be undone.",
         "submit": "Yes, mark complete"
       }
     },
@@ -1176,7 +1177,8 @@
     "loading": "Loading...",
     "comingSoon": "{{feature}} is coming soon!",
     "cancel": "Cancel",
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "unavailable": "—"
   },
   "sellerDetail": {
     "notFound": "Shop not found",
