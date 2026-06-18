@@ -89,19 +89,28 @@ export function CheckoutAddressStep({
       <div role="radiogroup" aria-label="Delivery address" className="space-y-3">
         {addresses.map((addr, i) => {
           const isSelected = selectedAddressIndex === i;
+          const inputId = `checkout-address-${i}`;
           return (
-            <button
+            <label
               key={addressKey(addr)}
-              role="radio"
-              aria-checked={isSelected}
-              onClick={() => setSelectedAddressIndex(i)}
+              htmlFor={inputId}
               className={[
                 "w-full flex gap-3 p-4 border-[1.5px] rounded-[var(--radius-lg)] cursor-pointer transition-all text-left",
+                "peer-focus-within:ring-2 peer-focus-within:ring-primary peer-focus-within:ring-offset-2",
                 isSelected
                   ? "border-primary bg-[var(--primary-subtle)] shadow-[0_0_0_3px_oklch(from_var(--primary)_l_c_h_/_0.08)]"
                   : "border-border hover:border-border-hover hover:shadow-sm",
               ].join(" ")}
             >
+              <input
+                id={inputId}
+                type="radio"
+                name="checkout-address"
+                value={i}
+                checked={isSelected}
+                onChange={() => setSelectedAddressIndex(i)}
+                className="peer sr-only"
+              />
               {/* Radio dot */}
               <div
                 className={[
@@ -132,7 +141,7 @@ export function CheckoutAddressStep({
                 </div>
                 <p className="text-xs text-muted-foreground">{formatAddressLine(addr)}</p>
               </div>
-            </button>
+            </label>
           );
         })}
       </div>
