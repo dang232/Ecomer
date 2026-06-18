@@ -1149,7 +1149,9 @@
     "reorder": {
       "noItems": "This order has no items to re-add.",
       "addError": "Couldn't add item to cart — might be out of stock.",
-      "added": "Added {{count}} items to your cart"
+      "added": "Added {{count}} items to your cart",
+      "partialSuccess": "Added {{added}} of {{total}} items — {{failed}} unavailable.",
+      "viewCart": "View cart"
     },
     "cancelOk": "Order cancelled",
     "cancelErr": "Couldn't cancel order",
@@ -1259,20 +1261,62 @@
       "channelInApp": "In-app",
       "channelEmail": "Email",
       "types": {
-        "ORDER_CREATED": { "label": "New order", "description": "When an order is placed successfully" },
-        "ORDER_CANCELLED": { "label": "Order cancelled", "description": "When an order is cancelled" },
-        "ORDER_SHIPPED": { "label": "Shipped", "description": "When the order is handed to the carrier" },
-        "ORDER_DELIVERED": { "label": "Delivered", "description": "When the order is delivered" },
-        "PAYMENT_COMPLETED": { "label": "Payment confirmed", "description": "When a payment is confirmed" },
-        "PAYMENT_REFUNDED": { "label": "Refund", "description": "When an order is refunded" },
-        "SELLER_NEW_ORDER": { "label": "New order (Seller)", "description": "When a new order needs handling" },
-        "PRODUCT_APPROVED": { "label": "Product approved", "description": "When admin approves your product" },
-        "PRODUCT_REJECTED": { "label": "Product rejected", "description": "When a product is rejected" },
-        "REVIEW_REPLIED": { "label": "Review reply", "description": "When someone replies to your review" },
-        "RETURN_REQUESTED": { "label": "Return request", "description": "When a return is requested" },
-        "PAYOUT_COMPLETED": { "label": "Payout completed", "description": "When a withdrawal completes" },
-        "VIDEO_PUBLISHED": { "label": "Video published", "description": "When your video is approved and goes live" },
-        "VIDEO_REJECTED": { "label": "Video rejected", "description": "When your video is rejected by moderation" }
+        "ORDER_CREATED": {
+          "label": "New order",
+          "description": "When an order is placed successfully"
+        },
+        "ORDER_CANCELLED": {
+          "label": "Order cancelled",
+          "description": "When an order is cancelled"
+        },
+        "ORDER_SHIPPED": {
+          "label": "Shipped",
+          "description": "When the order is handed to the carrier"
+        },
+        "ORDER_DELIVERED": {
+          "label": "Delivered",
+          "description": "When the order is delivered"
+        },
+        "PAYMENT_COMPLETED": {
+          "label": "Payment confirmed",
+          "description": "When a payment is confirmed"
+        },
+        "PAYMENT_REFUNDED": {
+          "label": "Refund",
+          "description": "When an order is refunded"
+        },
+        "SELLER_NEW_ORDER": {
+          "label": "New order (Seller)",
+          "description": "When a new order needs handling"
+        },
+        "PRODUCT_APPROVED": {
+          "label": "Product approved",
+          "description": "When admin approves your product"
+        },
+        "PRODUCT_REJECTED": {
+          "label": "Product rejected",
+          "description": "When a product is rejected"
+        },
+        "REVIEW_REPLIED": {
+          "label": "Review reply",
+          "description": "When someone replies to your review"
+        },
+        "RETURN_REQUESTED": {
+          "label": "Return request",
+          "description": "When a return is requested"
+        },
+        "PAYOUT_COMPLETED": {
+          "label": "Payout completed",
+          "description": "When a withdrawal completes"
+        },
+        "VIDEO_PUBLISHED": {
+          "label": "Video published",
+          "description": "When your video is approved and goes live"
+        },
+        "VIDEO_REJECTED": {
+          "label": "Video rejected",
+          "description": "When your video is rejected by moderation"
+        }
       }
     }
   },

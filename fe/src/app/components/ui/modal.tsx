@@ -10,6 +10,12 @@ interface ModalProps {
   onClose: () => void;
   /** Disable the escape-key + backdrop click handlers (e.g. while submitting). */
   dismissDisabled?: boolean;
+  /**
+   * Reference to the element that triggered the modal.
+   * When provided, focus will be restored to this element when the modal closes.
+   * Falls back to `document.activeElement` at open time.
+   */
+  triggerRef?: React.RefObject<Element | null>;
   /** Optional title rendered in the modal header; pass `null` to omit the header entirely. */
   title?: ReactNode;
   /** Optional subtitle / metadata under the title. */
@@ -50,6 +56,7 @@ export function Modal({
   open,
   onClose,
   dismissDisabled = false,
+  triggerRef: externalTriggerRef,
   title,
   subtitle,
   hideCloseButton = false,
@@ -62,12 +69,18 @@ export function Modal({
   useEscapeKey(open && !dismissDisabled, onClose);
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<Element | null>(null);
+  const fallbackTriggerRef = useRef<Element | null>(null);
 
   // Save the element that opened the modal so we can return focus on close.
+  // When an external ref is provided we track via it; otherwise fall back to internal ref.
   useEffect(() => {
     if (open) {
-      triggerRef.current = document.activeElement;
+      if (externalTriggerRef) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- external React ref may be MutableRefObject or RefObject
+        (externalTriggerRef as React.MutableRefObject<Element | null>).current = document.activeElement;
+      } else {
+        fallbackTriggerRef.current = document.activeElement;
+      }
       // Move focus into the panel on the next frame after animation starts.
       requestAnimationFrame(() => {
         const first = panelRef.current?.querySelector<HTMLElement>(
@@ -76,7 +89,8 @@ export function Modal({
         first?.focus();
       });
     } else {
-      (triggerRef.current as HTMLElement | null)?.focus();
+      const ref = externalTriggerRef ?? fallbackTriggerRef;
+      (ref.current as HTMLElement | null)?.focus();
     }
   }, [open]);
 
