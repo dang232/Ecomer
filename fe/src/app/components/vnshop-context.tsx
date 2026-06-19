@@ -72,10 +72,6 @@ export function VNShopProvider({ children }: { children: ReactNode }) {
 
   const addToCart = useCallback(
     (product: Product, quantity = 1, variant?: { color?: string; size?: string }) => {
-      if (!auth.authenticated) {
-        toast.info("Vui lòng đăng nhập để thêm vào giỏ hàng");
-        return;
-      }
       const variantDesc = [variant?.color, variant?.size].filter(Boolean).join(", ");
       cart.addItem(
         { productId: product.id, quantity },
@@ -88,7 +84,7 @@ export function VNShopProvider({ children }: { children: ReactNode }) {
         },
       );
     },
-    [auth.authenticated, cart],
+    [cart],
   );
 
   const toggleWishlist = useCallback(

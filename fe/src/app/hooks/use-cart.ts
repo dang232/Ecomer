@@ -156,8 +156,11 @@ export function useCart() {
     writeGuestCart([]);
     setGuestItems([]);
 
+    const aborted = { current: false };
+
     void (async () => {
       for (const item of pending) {
+        if (aborted.current) break;
         // Deduplication guard: if the server cart already has this item with
         // at least the guest quantity, a previous merge attempt already added
         // it — skip to avoid doubling on flaky connections.
@@ -170,8 +173,12 @@ export function useCart() {
           console.warn("cart merge: failed to add", item.productId, err);
         }
       }
-      void qc.invalidateQueries({ queryKey: CART_KEY });
+      if (!aborted.current) {
+        void qc.invalidateQueries({ queryKey: CART_KEY });
+      }
     })();
+
+    return () => { aborted.current = true; };
   }, [ready, authenticated, qc]);
 
   const addItem = useMutation<

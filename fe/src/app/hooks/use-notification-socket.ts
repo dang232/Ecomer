@@ -14,6 +14,7 @@ const BASE_URL = (
 const RECONNECT_BASE_MS = 2000;
 const RECONNECT_CAP_MS = 30_000;
 const MAX_RECONNECT_ATTEMPTS = 5;
+const FALLBACK_RETRY_MS = 60_000;
 
 const NOTIFICATIONS_KEY = ["notifications", "list"] as const;
 const UNREAD_KEY = ["notifications", "unread-count"] as const;
@@ -34,6 +35,7 @@ interface CachedUnreadCount {
  * On new notification: updates query cache + fires toast.
  * On catch-up (reconnect): merges missed notifications into cache.
  * Reconnects with exponential backoff capped at 30s.
+ * After 5 fast retries, falls back to 60s interval indefinitely.
  */
 export function useNotificationSocket(): void {
   const { ready, authenticated, token } = useAuth();
@@ -130,7 +132,12 @@ export function useNotificationSocket(): void {
       const scheduleReconnect = () => {
         if (stoppedRef.current) return;
         const attempt = attemptRef.current++;
-        if (attempt >= MAX_RECONNECT_ATTEMPTS) return; // Stop retrying after max attempts
+        if (attempt >= MAX_RECONNECT_ATTEMPTS) {
+          // Exhausted fast retries — schedule a fallback retry that resets the cycle
+          attemptRef.current = 0;
+          window.setTimeout(connect, FALLBACK_RETRY_MS);
+          return;
+        }
         const delay = Math.min(RECONNECT_BASE_MS * 2 ** attempt, RECONNECT_CAP_MS);
         window.setTimeout(connect, delay);
       };
