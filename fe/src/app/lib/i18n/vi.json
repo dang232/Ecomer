@@ -1578,5 +1578,13 @@
         "uploadFailed": "Tải lên thất bại. Kiểm tra kết nối và thử lại."
       }
     }
+  },
+  "errorBoundary": {
+    "title": "Có lỗi xảy ra",
+    "description": "Đã xảy ra lỗi không xác định.",
+    "supportCode": "Mã hỗ trợ",
+    "reload": "Tải lại trang",
+    "retry": "Thử lại",
+    "retrying": "Đang thử lại…"
   }
 }

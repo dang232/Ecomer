@@ -101,14 +101,14 @@ export const router = createBrowserRouter([
     Component: Root,
     children: [
       { index: true, element: lazyRoute(createElement(HomePage)) },
-      { path: "search", element: lazyRoute(createElement(SearchPage)) },
+      { path: "search", element: suspenseWithBoundary(createElement(SearchPage)) },
       { path: "product/:id", element: suspenseWithDetailBoundary(createElement(ProductPage)), loader: ({ params }) => {
         const id = params.id ?? "";
         // Prefetch in parallel — loader doesn't block render, just primes the cache.
         void queryClient.prefetchQuery(productDetailOptions(id));
         return null;
       }},
-      { path: "cart", element: lazyRoute(createElement(CartPage)) },
+      { path: "cart", element: suspenseWithBoundary(createElement(CartPage)) },
       { path: "checkout", element: guarded(createElement(CheckoutPage)) },
       { path: "orders", element: guardedWithBoundary(createElement(OrdersPage)), loader: () => {
         void queryClient.prefetchQuery(myOrdersOptions());
@@ -118,7 +118,7 @@ export const router = createBrowserRouter([
         void queryClient.prefetchQuery(profileOptions());
         return null;
       }},
-      { path: "wishlist", element: guarded(createElement(WishlistPage)) },
+      { path: "wishlist", element: guardedWithBoundary(createElement(WishlistPage)) },
       { path: "login", element: lazyRoute(createElement(LoginPage)) },
       { path: "register", element: lazyRoute(createElement(RegisterPage)) },
       { path: "password-reset", element: lazyRoute(createElement(PasswordResetPage)) },
@@ -126,7 +126,7 @@ export const router = createBrowserRouter([
       { path: "admin/*", element: adminOnly(createElement(AdminPage)) },
       { path: "design-system", element: lazyRoute(createElement(DesignSystemPage)) },
       { path: "payment/return/:provider", element: lazyRoute(createElement(PaymentReturnPage)) },
-      { path: "messages", element: guarded(createElement(MessagesPage)) },
+      { path: "messages", element: guardedWithBoundary(createElement(MessagesPage)) },
       { path: "notifications", element: guarded(createElement(NotificationsPage)) },
       { path: "notifications/preferences", element: guarded(createElement(NotificationPreferencesPage)) },
       { path: "sellers/:id", element: suspenseWithDetailBoundary(createElement(SellerDetailPage)), loader: ({ params }) => {

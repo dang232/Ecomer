@@ -38,6 +38,7 @@ vi.mock("react-i18next", () => ({
     },
     i18n: { resolvedLanguage: "en" },
   }),
+  initReactI18next: { type: "3rdParty", init: () => {} },
 }));
 
 import { ErrorBoundary } from "../components/error-boundary";

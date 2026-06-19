@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
 import { ApiError } from "../lib/api";
+import i18n from "../lib/i18n";
 
 interface Props {
   children: ReactNode;
@@ -56,18 +57,18 @@ export class ErrorBoundary extends Component<Props, State> {
       apiError?.message ??
       (this.state.error instanceof Error
         ? this.state.error.message
-        : "Đã xảy ra lỗi không xác định.");
+        : i18n.t("errorBoundary.description", { defaultValue: "An unknown error occurred." }));
 
     const isPermanent = retryCount >= 3;
 
     return (
       <div role="alert" className="min-h-[60vh] flex items-center justify-center px-4">
         <div className="max-w-md w-full bg-card border border-border rounded-2xl shadow-sm p-6 text-center">
-          <h2 className="text-lg font-bold text-foreground mb-2">Có lỗi xảy ra</h2>
+          <h2 className="text-lg font-bold text-foreground mb-2">{i18n.t("errorBoundary.title", { defaultValue: "Something went wrong" })}</h2>
           <p className="text-sm text-muted-foreground mb-4">{message}</p>
           {apiError?.correlationId ? (
             <p className="text-xs text-muted-foreground mb-4">
-              Mã hỗ trợ: <span className="font-mono">{apiError.correlationId}</span>
+              {i18n.t("errorBoundary.supportCode", { defaultValue: "Support code" })}: <span className="font-mono">{apiError.correlationId}</span>
             </p>
           ) : null}
           {isPermanent ? (
@@ -77,7 +78,7 @@ export class ErrorBoundary extends Component<Props, State> {
               className="px-4 py-2 rounded-xl text-white text-sm font-semibold"
               style={{ background: "var(--primary)" }}
             >
-              Tải lại trang
+              {i18n.t("errorBoundary.reload", { defaultValue: "Reload page" })}
             </button>
           ) : (
             <button
@@ -87,7 +88,7 @@ export class ErrorBoundary extends Component<Props, State> {
               className="px-4 py-2 rounded-xl text-white text-sm font-semibold disabled:opacity-60"
               style={{ background: "var(--primary)" }}
             >
-              {isRetrying ? "Đang thử lại…" : "Thử lại"}
+              {isRetrying ? i18n.t("errorBoundary.retrying", { defaultValue: "Retrying…" }) : i18n.t("errorBoundary.retry", { defaultValue: "Try again" })}
             </button>
           )}
         </div>

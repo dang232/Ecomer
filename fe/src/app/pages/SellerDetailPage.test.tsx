@@ -103,7 +103,7 @@ describe("SellerDetailPage", () => {
 
     await waitFor(() => expect(screen.getByText("TechZone")).toBeInTheDocument());
     await waitFor(() =>
-      expect(screen.getByText("sellerDetail.noProducts")).toBeInTheDocument(),
+      expect(screen.getByText("This shop has no products yet.")).toBeInTheDocument(),
     );
   });
 });

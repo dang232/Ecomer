@@ -1578,5 +1578,13 @@
         "uploadFailed": "Upload failed. Check your connection and try again."
       }
     }
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "description": "An unknown error occurred.",
+    "supportCode": "Support code",
+    "reload": "Reload page",
+    "retry": "Try again",
+    "retrying": "Retrying…"
   }
 }
