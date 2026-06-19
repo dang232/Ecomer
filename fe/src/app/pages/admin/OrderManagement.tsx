@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { ConfirmDialog } from "../../components/ui/confirm-dialog";
 import { ApiError } from "../../lib/api";
 import {
   adminCancelOrder,
@@ -55,6 +56,8 @@ export function OrderManagement() {
   const qc = useQueryClient();
   const { t } = useTranslation();
   const [statusFilter, setStatusFilter] = useState("");
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+  const [refundOrderId, setRefundOrderId] = useState<string | null>(null);
 
   const { data: orders = [], isLoading, isError } = useQuery({
     queryKey: ["admin", "orders", statusFilter],
@@ -162,7 +165,7 @@ export function OrderManagement() {
                   </span>
                   {/* P1-10: WCAG 2.5.5 minimum target size — p-2.5 ≈ 40px */}
                   <button
-                    onClick={() => refund.mutate(o.orderId)}
+                    onClick={() => { setRefundOrderId(o.orderId); setRefundDialogOpen(true); }}
                     disabled={isMutating}
                     title={t("admin.orders.refund")}
                     aria-label={t("admin.orders.refund")}
@@ -194,6 +197,18 @@ export function OrderManagement() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={refundDialogOpen}
+        onClose={() => { setRefundDialogOpen(false); setRefundOrderId(null); }}
+        onConfirm={(reason) => { if (refundOrderId) refund.mutate(refundOrderId); }}
+        variant="danger"
+        reasonField
+        title={t("admin.orders.refundConfirmTitle")}
+        description={t("admin.orders.refundConfirmDescription")}
+        confirmLabel={t("admin.orders.refundConfirmBtn")}
+        cancelLabel={t("common.cancel")}
+      />
     </div>
   );
 }

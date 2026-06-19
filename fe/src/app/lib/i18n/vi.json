@@ -761,6 +761,9 @@
       "items": "Sản phẩm",
       "cancel": "Huỷ",
       "refund": "Hoàn tiền",
+      "refundConfirmTitle": "Hoàn tiền?",
+      "refundConfirmDescription": "Thao tác này sẽ hoàn trả toàn bộ số tiền cho người mua. Vui lòng cung cấp lý do.",
+      "refundConfirmBtn": "Hoàn tiền",
       "accept": "Duyệt"
     },
     "health": {

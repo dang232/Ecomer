@@ -761,6 +761,9 @@
       "items": "Items",
       "cancel": "Cancel",
       "refund": "Refund",
+      "refundConfirmTitle": "Issue refund?",
+      "refundConfirmDescription": "This will return the full amount to the buyer. Please provide a reason.",
+      "refundConfirmBtn": "Refund",
       "accept": "Accept"
     },
     "health": {
