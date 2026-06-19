@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ArrowLeft, CreditCard, LogIn, Package } from "lucide-react";
+import { ArrowLeft, LogIn, Package } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -33,8 +33,8 @@ import { CheckoutStepper } from "./CheckoutStepper";
 import { CheckoutSuccess } from "./CheckoutSuccess";
 import { CheckoutSummary } from "./CheckoutSummary";
 import {
-  makeFallbackPayment,
   makeFallbackShipping,
+  mapPaymentOptions,
   type PaymentOption,
   type Step,
 } from "./types";
@@ -72,34 +72,10 @@ export function CheckoutPage() {
 
   // shippingOptions moved after ratesQuery declaration below
 
-  const paymentOptions: PaymentOption[] = useMemo(() => {
-    const data = paymentQuery.data;
-    const fallback = makeFallbackPayment(t);
-    if (!data || data.length === 0) return fallback;
-    const codeToFallback: Record<string, PaymentOption> = {
-      VNPAY: fallback[0],
-      MOMO: fallback[1],
-      VIETQR: fallback[2],
-      STRIPE: fallback[3],
-      PAYPAL: fallback[4],
-      BANK: fallback[5],
-      COD: fallback[6],
-    };
-    return data
-      .filter((p) => p.enabled !== false)
-      .map((p) => {
-        const mapped = codeToFallback[p.code];
-        if (!mapped) {
-          console.warn(`[CheckoutPage] Unknown payment code "${p.code}" — using generic CreditCard icon. Consider adding it to codeToFallback.`);
-        }
-        return mapped ?? {
-          id: p.code as PaymentOption["id"],
-          name: p.name,
-          Icon: CreditCard,
-          desc: p.description ?? "",
-        };
-      });
-  }, [paymentQuery.data, t]);
+  const paymentOptions: PaymentOption[] = useMemo(
+    () => mapPaymentOptions(paymentQuery.data, t),
+    [paymentQuery.data, t],
+  );
 
   const [step, setStep] = useState<Step>(() => {
     try {

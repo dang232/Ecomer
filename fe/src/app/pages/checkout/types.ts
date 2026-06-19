@@ -58,6 +58,52 @@ export function makeFallbackShipping(t: TFunction): ShippingOption[] {
   ];
 }
 
+/** Raw shape returned by the payment-methods API endpoint. */
+export interface RawPaymentMethod {
+  code: string;
+  name: string;
+  description?: string;
+  enabled?: boolean;
+}
+
+/**
+ * Map raw API payment methods to PaymentOption[].
+ * Warns on unknown codes and falls back to a generic CreditCard icon.
+ * Extracted for testability (was inline useMemo in CheckoutPage).
+ */
+export function mapPaymentOptions(
+  data: RawPaymentMethod[] | undefined,
+  t: TFunction,
+): PaymentOption[] {
+  const fallback = makeFallbackPayment(t);
+  if (!data || data.length === 0) return fallback;
+  const codeToFallback: Record<string, PaymentOption> = {
+    VNPAY: fallback[0],
+    MOMO: fallback[1],
+    VIETQR: fallback[2],
+    STRIPE: fallback[3],
+    PAYPAL: fallback[4],
+    BANK: fallback[5],
+    COD: fallback[6],
+  };
+  return data
+    .filter((p) => p.enabled !== false)
+    .map((p) => {
+      const mapped = codeToFallback[p.code];
+      if (!mapped) {
+        console.warn(
+          `[CheckoutPage] Unknown payment code "${p.code}" — using generic CreditCard icon. Consider adding it to codeToFallback.`,
+        );
+      }
+      return mapped ?? {
+        id: p.code as PaymentOption["id"],
+        name: p.name,
+        Icon: CreditCard,
+        desc: p.description ?? "",
+      };
+    });
+}
+
 export function makeFallbackPayment(t: TFunction): PaymentOption[] {
   return [
     { id: "VNPAY", name: "VNPay", Icon: Wallet, desc: t("checkout.payment.vnpayDesc") },

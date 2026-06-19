@@ -174,23 +174,65 @@ describe("OrderManagement — P0-10 refund reason dialog (ConfirmDialog isolatio
 
 // ── P2-10: truncated cell title attribute ─────────────────────────────────────
 
+// Mock tanstack/react-query hooks
+vi.mock("@tanstack/react-query", () => ({
+  useQuery: vi.fn(),
+  useMutation: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+  useQueryClient: vi.fn(() => ({ invalidateQueries: vi.fn() })),
+}));
+
+// Mock i18n — return the key itself
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
+}));
+
+// Mock API endpoints (unused but imported by component)
+vi.mock("../../lib/api/endpoints/admin", () => ({
+  adminListOrders: vi.fn(),
+  adminCancelOrder: vi.fn(),
+  adminChangeOrderStatus: vi.fn(),
+  adminRefundOrder: vi.fn(),
+}));
+
+// Mock tabler icons to simple spans
+vi.mock("@tabler/icons-react", () => ({
+  IconBan: () => createElement("span", null, "ban"),
+  IconCheck: () => createElement("span", null, "check"),
+  IconRefresh: () => createElement("span", null, "refresh"),
+}));
+
+// Mock sonner toast
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+
+import { useQuery } from "@tanstack/react-query";
+import { OrderManagement } from "./OrderManagement";
+
 describe("OrderManagement — P2-10 truncated orderId title tooltip", () => {
-  it("renders the orderId cell with a title attribute equal to the order id", () => {
-    // Render a minimal OrderManagement with a single mock order.
-    // We test the title prop directly on the <p> element rather than
-    // re-mounting the full component (which requires full API mocking).
-    const orderId = "ORD-2024-ABCDEFGHIJKLMNOP";
-    const el = document.createElement("p");
-    el.textContent = "ORD-2024-ABC…";
-    el.setAttribute("class", "text-sm font-semibold text-foreground truncate");
-    el.setAttribute("title", orderId); // P2-10 fix
+  it("renders orderId paragraph with title attribute for tooltip on hover", () => {
+    const orderId = "ORD-2024-ABCDEFGHIJKLMNOP-LONG";
 
-    document.body.appendChild(el);
+    // Configure useQuery to return a single order
+    vi.mocked(useQuery).mockReturnValue({
+      data: [
+        {
+          orderId,
+          buyerId: "buyer-1",
+          totalAmount: 100000,
+          itemCount: 2,
+          status: "PENDING_ACCEPTANCE",
+          createdAt: "2024-06-01T00:00:00Z",
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    } as ReturnType<typeof useQuery>);
 
-    expect(el).toHaveAttribute("title", orderId);
-    expect(el.textContent).not.toBe(orderId); // confirms truncation intent
+    const { container } = render(<OrderManagement />);
 
-    document.body.removeChild(el);
+    const truncatedP = container.querySelector("p.truncate");
+    expect(truncatedP).not.toBeNull();
+    expect(truncatedP).toHaveAttribute("title", orderId);
+    expect(truncatedP).toHaveTextContent(orderId);
   });
 });
 

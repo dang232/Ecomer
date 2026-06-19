@@ -1,58 +1,72 @@
 import { describe, expect, it, vi } from "vitest";
 
-/**
- * P2-4 smoke-test: verifies that an unknown payment code in the
- * CheckoutPage paymentOptions mapping triggers exactly one console.warn.
- *
- * The actual CheckoutPage component is integration-tested in the E2E suite;
- * this unit test confirms the warn-logic pattern in isolation.
- */
-describe("CheckoutPage paymentOptions unknown-code warning (P2-4)", () => {
+import { mapPaymentOptions, type RawPaymentMethod } from "./types";
+
+/** Stub i18next TFunction — returns the key as-is. */
+const t = ((key: string) => key) as unknown as Parameters<typeof mapPaymentOptions>[1];
+
+describe("mapPaymentOptions (extracted from CheckoutPage)", () => {
   it("console.warn fires once per unknown payment code", () => {
     const warnSpy = vi.spyOn(console, "warn").mockReturnValue(undefined);
 
-    // Mirrors the logic in CheckoutPage.tsx lines 88-101:
-    // codeToFallback holds the 7 known codes; anything else gets a warn.
-    const knownCodes = new Set(["VNPAY", "MOMO", "VIETQR", "STRIPE", "PAYPAL", "BANK", "COD"]);
-    const rawCodes = [
-      { code: "VNPAY", enabled: true },
-      { code: "STRIPE", enabled: true },
-      { code: "UNKNOWN_GATEWAY_XYZ", enabled: true }, // intentionally unknown
-      { code: "ANOTHER_UNKNOWN", enabled: true },     // intentionally unknown
+    const rawMethods: RawPaymentMethod[] = [
+      { code: "VNPAY", name: "VNPay", enabled: true },
+      { code: "STRIPE", name: "Stripe", enabled: true },
+      { code: "UNKNOWN_GATEWAY_XYZ", name: "Unknown GW", enabled: true },
+      { code: "ANOTHER_UNKNOWN", name: "Another", enabled: true },
     ];
 
-    for (const p of rawCodes.filter((p) => p.enabled !== false)) {
-      if (!knownCodes.has(p.code)) {
-        console.warn(
-          `[CheckoutPage] Unknown payment code "${p.code}" — using generic CreditCard icon. Consider adding it to codeToFallback.`,
-        );
-      }
-    }
+    const result = mapPaymentOptions(rawMethods, t);
 
+    // Two unknown codes -> two warnings
     expect(warnSpy).toHaveBeenCalledTimes(2);
-    const messages = warnSpy.mock.calls.map((c) => c[0] as string);
-    expect(messages.some((m) => m.includes("UNKNOWN_GATEWAY_XYZ"))).toBe(true);
-    expect(messages.some((m) => m.includes("ANOTHER_UNKNOWN"))).toBe(true);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("UNKNOWN_GATEWAY_XYZ"),
+    );
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("ANOTHER_UNKNOWN"),
+    );
+
+    // Unknown codes still produce a PaymentOption with generic fallback
+    const unknownOption = result.find((o) => o.id === ("UNKNOWN_GATEWAY_XYZ" as string));
+    expect(unknownOption).toBeDefined();
+    expect(unknownOption!.name).toBe("Unknown GW");
 
     warnSpy.mockRestore();
   });
 
-  it("no warn is emitted for all-known payment codes", () => {
+  it("no warn for all-known payment codes", () => {
     const warnSpy = vi.spyOn(console, "warn").mockReturnValue(undefined);
 
-    const knownCodes = new Set(["VNPAY", "MOMO", "VIETQR", "STRIPE", "PAYPAL", "BANK", "COD"]);
-    const rawCodes = [
-      { code: "VNPAY", enabled: true },
-      { code: "STRIPE", enabled: true },
-      { code: "COD", enabled: true },
+    const rawMethods: RawPaymentMethod[] = [
+      { code: "VNPAY", name: "VNPay", enabled: true },
+      { code: "STRIPE", name: "Stripe", enabled: true },
+      { code: "COD", name: "COD", enabled: true },
     ];
 
-    for (const p of rawCodes.filter((p) => p.enabled !== false)) {
-      if (!knownCodes.has(p.code)) {
-        console.warn(`[CheckoutPage] Unknown payment code "${p.code}"...`);
-      }
-    }
+    mapPaymentOptions(rawMethods, t);
 
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it("returns full fallback list when data is undefined", () => {
+    const result = mapPaymentOptions(undefined, t);
+    expect(result).toHaveLength(7);
+    expect(result[0].id).toBe("VNPAY");
+  });
+
+  it("filters out disabled payment methods", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockReturnValue(undefined);
+
+    const rawMethods: RawPaymentMethod[] = [
+      { code: "VNPAY", name: "VNPay", enabled: true },
+      { code: "UNKNOWN_DISABLED", name: "Disabled", enabled: false },
+    ];
+
+    mapPaymentOptions(rawMethods, t);
+
+    // Disabled unknown code should NOT trigger a warn
     expect(warnSpy).not.toHaveBeenCalled();
     warnSpy.mockRestore();
   });
