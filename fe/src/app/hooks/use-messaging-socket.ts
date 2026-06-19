@@ -47,6 +47,7 @@ export function useMessagingSocket(): void {
   const socketRef = useRef<WebSocket | null>(null);
   const attemptRef = useRef(0);
   const stoppedRef = useRef(false);
+  const lastSeenRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!ready || !authenticated || !token) return;
@@ -60,12 +61,34 @@ export function useMessagingSocket(): void {
 
       socket.addEventListener("open", () => {
         attemptRef.current = 0;
+        // Request catch-up for messages missed during reconnect/token refresh
+        if (lastSeenRef.current) {
+          socket.send(
+            JSON.stringify({ type: "message:catch-up", payload: { since: lastSeenRef.current } }),
+          );
+        }
       });
 
       socket.addEventListener("message", (event) => {
         try {
           const raw: unknown = JSON.parse(typeof event.data === "string" ? event.data : "");
           const envelope = raw as ServerEnvelope;
+
+          // Handle batch catch-up response from server
+          if (envelope.type === "message:catch-up") {
+            const batch = (raw as { payload?: unknown[] }).payload;
+            if (!Array.isArray(batch)) return;
+            for (const item of batch) {
+              const parsed = messageSchema.safeParse(item);
+              if (!parsed.success) continue;
+              appendIfNew(qc, parsed.data);
+              if (parsed.data.sentAt) {
+                lastSeenRef.current = parsed.data.sentAt;
+              }
+            }
+            return;
+          }
+
           if (envelope.type !== "message" || !envelope.payload) return;
           const incoming = messageSchema.safeParse({
             id: envelope.payload.messageId,
@@ -75,6 +98,9 @@ export function useMessagingSocket(): void {
             sentAt: envelope.payload.sentAt,
           });
           if (!incoming.success) return;
+          if (incoming.data.sentAt) {
+            lastSeenRef.current = incoming.data.sentAt;
+          }
           appendIfNew(qc, incoming.data);
         } catch {
           // Malformed frame — ignore. Server is authoritative on what's saved.

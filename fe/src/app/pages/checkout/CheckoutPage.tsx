@@ -245,10 +245,16 @@ export function CheckoutPage() {
   const idempotencyKeyRef = useRef<string>("");
   if (!idempotencyKeyRef.current) idempotencyKeyRef.current = uuidv4();
 
+  // Track whether a payment flow is active — suppress key regeneration during it.
+  const paymentInFlightRef = useRef(false);
+
   // Regenerate idempotency key when cart contents change so a fresh order
   // attempt after a cart edit does not reuse a stale key.
+  // Never regenerate while a payment flow is in progress (prevents race with refetchCart).
   useEffect(() => {
-    idempotencyKeyRef.current = uuidv4();
+    if (!paymentInFlightRef.current) {
+      idempotencyKeyRef.current = uuidv4();
+    }
   }, [cartItems]);
 
   // Server-side preview of totals — best effort. UI falls back to local sum if unavailable.
@@ -372,10 +378,14 @@ export function CheckoutPage() {
 
   const handlePlaceOrder = async () => {
     setIsProcessing(true);
+    paymentInFlightRef.current = true;
+    // Freeze the key — all calls in this payment flow use exactly this value.
+    const frozenKey = idempotencyKeyRef.current;
     try {
       if (!selectedAddress) {
         toast.error(t("checkout.address.missingValidation"));
         setIsProcessing(false);
+        paymentInFlightRef.current = false;
         return;
       }
       const order = await placeOrder(
@@ -392,7 +402,7 @@ export function CheckoutPage() {
           shippingChoices: shipping ? [{ sellerId: "_", code: shipping.id }] : undefined,
           couponCode: appliedCoupon ?? undefined,
         },
-        idempotencyKeyRef.current,
+        frozenKey,
       );
 
       setPlacedOrderId(order.id);
@@ -409,14 +419,14 @@ export function CheckoutPage() {
                     orderId: order.id,
                     returnUrl: `${window.location.origin}/payment/return/vnpay`,
                   },
-                  idempotencyKeyRef.current,
+                  frozenKey,
                 )
               : await momoCreate(
                   {
                     orderId: order.id,
                     returnUrl: `${window.location.origin}/payment/return/momo`,
                   },
-                  idempotencyKeyRef.current,
+                  frozenKey,
                 );
           if (init.redirectUrl) {
             window.location.href = init.redirectUrl;
@@ -443,7 +453,7 @@ export function CheckoutPage() {
         }
       } else if (selectedPaymentId === "COD") {
         try {
-          await codConfirm({ orderId: order.id }, idempotencyKeyRef.current);
+          await codConfirm({ orderId: order.id }, frozenKey);
         } catch {
           // COD confirmation is best-effort; buyer will see status update later.
         }
@@ -470,6 +480,9 @@ export function CheckoutPage() {
       });
     } finally {
       setIsProcessing(false);
+      paymentInFlightRef.current = false;
+      // Regenerate key for the NEXT attempt (if user retries after failure).
+      idempotencyKeyRef.current = uuidv4();
     }
   };
 

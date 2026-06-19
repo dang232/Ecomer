@@ -3,7 +3,7 @@ import { ShoppingCart, Zap, Heart, Star, Truck, Shield, RefreshCw, ChevronRight,
 import { motion, AnimatePresence } from "motion/react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useParams, useNavigate, Link } from "react-router";
+import { useParams, useNavigate, Navigate, Link } from "react-router";
 import { toast } from "sonner";
 
 import { useProductVideos, VideoPlayer, ReviewVideoDisplay } from "../../features/videos";
@@ -128,24 +128,29 @@ export function ProductPage() {
   const { addToCart, toggleWishlist, isWishlisted } = useVNShop();
   const { t } = useTranslation();
 
-  const { data: product } = useSuspenseQuery(productDetailOptions(id ?? ""));
+  // Guard: product ID is required — redirect to home if missing
+  if (!id) {
+    return <Navigate to="/" replace />;
+  }
+
+  const { data: product } = useSuspenseQuery(productDetailOptions(id));
   const fbtQuery = useFrequentlyBoughtTogether(id);
   const ymalQuery = useYouMayAlsoLike(id);
   const { authenticated, login } = useAuth();
   const qc = useQueryClient();
 
-  const liveReviewsQuery = useProductReviews(id ?? "");
+  const liveReviewsQuery = useProductReviews(id);
 
   const liveQuestionsQuery = useQuery({
     queryKey: ["questions", "product", id],
-    queryFn: () => questionsByProduct(id!),
+    queryFn: () => questionsByProduct(id),
     enabled: !!id,
     retry: false,
   });
 
   const submitReview = useMutation({
     mutationFn: (input: { rating: number; comment: string }) =>
-      createReview({ productId: id!, ...input }),
+      createReview({ productId: id, ...input }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["catalog", "reviews", "product", id] });
       toast.success(t("product.reviews.submitOk"));
@@ -163,7 +168,7 @@ export function ProductPage() {
   });
 
   const submitQuestion = useMutation({
-    mutationFn: (question: string) => askQuestion({ productId: id!, question }),
+    mutationFn: (question: string) => askQuestion({ productId: id, question }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["questions", "product", id] });
       toast.success(t("product.qa.submitOk"));
