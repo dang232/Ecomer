@@ -1,16 +1,14 @@
 import { QueryClient } from "@tanstack/react-query";
 
-import { ApiError } from "./api/envelope";
-
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 30_000,
       gcTime: 5 * 60_000,
-      retry: (failureCount, error) => {
-        if (error instanceof ApiError && error.status < 500) return false;
-        return failureCount < 2;
-      },
+      // ponytail: fetch-layer retry interceptor owns the 5xx retry budget.
+      // Without `retry: false` here, a single useQuery could fan out to
+      // 5 (fetch) × 2 (query) = 10 attempts on transient 5xx.
+      retry: false,
       refetchOnWindowFocus: false,
     },
     mutations: {

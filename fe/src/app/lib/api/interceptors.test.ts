@@ -22,9 +22,13 @@ import {
   errorStatusInterceptor,
   idempotencyInterceptor,
   jsonParseInterceptor,
+  retryInterceptor,
+  telemetryInterceptor,
+  UnauthorizedError,
   type RequestContext,
   type ResponseContext,
 } from "./interceptors";
+import { clearTelemetry, getTelemetry } from "./telemetry-store";
 
 const fetchSpy = vi.spyOn(global, "fetch");
 
@@ -50,6 +54,7 @@ beforeEach(() => {
   fetchSpy.mockReset();
   refreshTokensMock.mockReset();
   liveToken = null;
+  clearTelemetry();
 });
 
 afterEach(() => {
@@ -292,5 +297,204 @@ describe("401 retry path", () => {
     expect(err).toBeInstanceOf(ApiError);
     expect((err as ApiError).status).toBe(401);
     expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("retryInterceptor", () => {
+  function errCtx(overrides: Partial<RequestContext> = {}): RequestContext {
+    return makeRequestCtx({
+      url: "http://localhost:8080/x",
+      init: { method: "GET", headers: {} },
+      correlationId: "cid-retry",
+      meta: {
+        auth: true,
+        hasBody: false,
+        attempts: 1,
+        startedAt: Date.now(),
+        method: "GET",
+        path: "/x",
+      },
+      ...overrides,
+    });
+  }
+
+  function apiErr(status: number): ApiError {
+    return new ApiError(status, "BOOM", `HTTP ${status}`, "cid-retry");
+  }
+
+  it("returns undefined for non-ApiError", async () => {
+    expect(await retryInterceptor(new Error("net"), errCtx())).toBeUndefined();
+  });
+
+  it("returns undefined for 4xx (not retryable)", async () => {
+    expect(await retryInterceptor(apiErr(404), errCtx())).toBeUndefined();
+    expect(await retryInterceptor(apiErr(409), errCtx())).toBeUndefined();
+  });
+
+  it("returns undefined for 401 (owned by unauthorizedInterceptor)", async () => {
+    expect(await retryInterceptor(apiErr(401), errCtx())).toBeUndefined();
+  });
+
+  it("retries 5xx up to 5 attempts and rethrows on final", async () => {
+    fetchSpy.mockResolvedValue(new Response("oops", { status: 503 }));
+    const ctx = errCtx();
+    let result: Response | undefined;
+    // Walk the chain manually: each call increments attempts and refetches.
+    // After MAX_ATTEMPTS (5), retryInterceptor returns undefined.
+    for (let i = 0; i < 5; i++) {
+      result = (await retryInterceptor(apiErr(503), ctx)) ?? undefined;
+      if (!result) break;
+    }
+    expect(result).toBeUndefined();
+    expect(ctx.meta.attempts).toBe(5);
+    expect(fetchSpy).toHaveBeenCalledTimes(4); // attempts 2..5 each fire one fetch
+  }, 15000);
+
+  it("does NOT retry POST without an idempotency key", async () => {
+    const ctx = errCtx({
+      init: { method: "POST", headers: {} },
+      meta: {
+        auth: true,
+        hasBody: true,
+        attempts: 1,
+        startedAt: Date.now(),
+        method: "POST",
+        path: "/x",
+      },
+    });
+    expect(await retryInterceptor(apiErr(500), ctx)).toBeUndefined();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("DOES retry POST when an idempotency key is supplied", async () => {
+    fetchSpy.mockResolvedValue(new Response("oops", { status: 500 }));
+    const ctx = errCtx({
+      init: { method: "POST", headers: {} },
+      meta: {
+        auth: true,
+        hasBody: true,
+        idempotencyKey: "k1",
+        attempts: 1,
+        startedAt: Date.now(),
+        method: "POST",
+        path: "/x",
+      },
+    });
+    await retryInterceptor(apiErr(500), ctx);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(ctx.meta.attempts).toBe(2);
+  });
+
+  it("throws UnauthorizedError when a retry fetch returns 401 mid-sequence", async () => {
+    fetchSpy.mockResolvedValueOnce(new Response("expired", { status: 401 }));
+    const ctx = errCtx();
+    await expect(retryInterceptor(apiErr(503), ctx)).rejects.toBeInstanceOf(
+      UnauthorizedError,
+    );
+  });
+
+  it("does not throw UnauthorizedError for a 401 retry on an auth:false request", async () => {
+    fetchSpy.mockResolvedValueOnce(new Response("expired", { status: 401 }));
+    const ctx = errCtx({
+      meta: {
+        auth: false,
+        hasBody: false,
+        attempts: 1,
+        startedAt: Date.now(),
+        method: "GET",
+        path: "/x",
+      },
+    });
+    // Should return the Response, not throw UnauthorizedError.
+    const result = await retryInterceptor(apiErr(503), ctx);
+    expect(result).toBeInstanceOf(Response);
+    expect((result as Response).status).toBe(401);
+  });
+
+  it("strips the base URL when meta.path is missing on cap-hit telemetry", async () => {
+    fetchSpy.mockResolvedValue(new Response("oops", { status: 504 }));
+    // Override ctx to omit meta.path; rely on ctx.url fallback.
+    const ctx = errCtx({
+      url: "https://api.example.internal/v1/orders",
+      meta: {
+        auth: true,
+        hasBody: false,
+        attempts: 1,
+        startedAt: Date.now(),
+        method: "GET",
+        // no `path` here
+      },
+    });
+    for (let i = 0; i < 5; i++) {
+      const r = await retryInterceptor(apiErr(504), ctx);
+      if (!r) break;
+    }
+    const records = getTelemetry();
+    expect(records[0].path).toBe("/v1/orders");
+    expect(records[0].path).not.toContain("api.example.internal");
+  }, 15000);
+
+  it("records telemetry with the final status after MAX_ATTEMPTS", async () => {
+    fetchSpy.mockResolvedValue(new Response("oops", { status: 502 }));
+    const ctx = errCtx();
+    for (let i = 0; i < 5; i++) {
+      const r = await retryInterceptor(apiErr(502), ctx);
+      if (!r) break;
+    }
+    const records = getTelemetry();
+    expect(records).toHaveLength(1);
+    expect(records[0].status).toBe(502);
+    expect(records[0].attempts).toBe(5);
+    expect(records[0].path).toBe("/x");
+  }, 15000);
+});
+
+describe("telemetryInterceptor", () => {
+  it("records a record with status, attempts, duration on 2xx", () => {
+    const ctx: ResponseContext = {
+      request: makeRequestCtx({
+        meta: {
+          auth: true,
+          hasBody: false,
+          attempts: 1,
+          startedAt: Date.now() - 50,
+          method: "GET",
+          path: "/orders",
+        },
+      }),
+      response: new Response(null, { status: 200 }),
+      parsed: null,
+    };
+    telemetryInterceptor(ctx);
+    const records = getTelemetry();
+    expect(records).toHaveLength(1);
+    expect(records[0].status).toBe(200);
+    expect(records[0].attempts).toBe(1);
+    expect(records[0].path).toBe("/orders");
+    expect(records[0].method).toBe("GET");
+    expect(records[0].errorCode).toBeNull();
+    expect(records[0].durationMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it("extracts errorCode from parsed body on non-2xx", () => {
+    const ctx: ResponseContext = {
+      request: makeRequestCtx({
+        meta: {
+          auth: true,
+          hasBody: false,
+          attempts: 3,
+          startedAt: Date.now(),
+          method: "GET",
+          path: "/orders",
+        },
+      }),
+      response: new Response(null, { status: 503 }),
+      parsed: { errorCode: "SVC_DOWN", message: "down" },
+    };
+    telemetryInterceptor(ctx);
+    const records = getTelemetry();
+    expect(records[0].status).toBe(503);
+    expect(records[0].attempts).toBe(3);
+    expect(records[0].errorCode).toBe("SVC_DOWN");
   });
 });

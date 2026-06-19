@@ -10,6 +10,8 @@ import {
   errorStatusInterceptor,
   idempotencyInterceptor,
   jsonParseInterceptor,
+  retryInterceptor,
+  telemetryInterceptor,
   unauthorizedInterceptor,
   UnauthorizedError,
   type ErrorInterceptor,
@@ -85,6 +87,12 @@ export interface RequestOptions<TSchema extends z.ZodType> {
   auth?: boolean;
   /** Adds Idempotency-Key header (used by POST /orders). */
   idempotencyKey?: string;
+  /**
+   * Cookie credentials mode. Defaults to "omit". Use "include" for auth
+   * bootstrap endpoints (login, register, password-reset) that need the
+   * browser to attach / receive httpOnly cookies on cross-origin responses.
+   */
+  credentials?: RequestCredentials;
 }
 
 function buildUrl(path: string, query?: RequestOptions<z.ZodType>["query"]): string {
@@ -110,8 +118,8 @@ const REQUEST_CHAIN: readonly RequestInterceptor[] = [
   authInterceptor,
 ];
 
-/** Error interceptor chain. Currently only handles 401-with-refresh. */
-const ERROR_CHAIN: readonly ErrorInterceptor[] = [unauthorizedInterceptor];
+/** Error interceptor chain. 401-refresh runs first; retry picks up after. */
+const ERROR_CHAIN: readonly ErrorInterceptor[] = [unauthorizedInterceptor, retryInterceptor];
 
 async function runRequestChain(ctx: RequestContext): Promise<RequestContext> {
   let current = ctx;
@@ -171,7 +179,7 @@ export async function request<TSchema extends z.ZodType>(
     headers: {},
     body: hasBody ? JSON.stringify(opts.body) : undefined,
     signal: composedSignal,
-    credentials: "omit",
+    credentials: opts.credentials ?? "omit",
   };
 
   try {
@@ -179,7 +187,15 @@ export async function request<TSchema extends z.ZodType>(
     url,
     init,
     correlationId,
-    meta: { auth, idempotencyKey: opts.idempotencyKey, hasBody },
+    meta: {
+      auth,
+      idempotencyKey: opts.idempotencyKey,
+      hasBody,
+      attempts: 1,
+      startedAt: Date.now(),
+      method,
+      path: opts.path,
+    },
   });
 
   let response = await fetch(requestCtx.url, requestCtx.init);
@@ -200,12 +216,17 @@ export async function request<TSchema extends z.ZodType>(
         window.dispatchEvent(new Event("auth:unauthorized"));
         throw new ApiError(401, "UNAUTHORIZED", "Authentication required", correlationId);
       }
-      // Retry the original request with the new token.
+      // Retry the original request with the new token. Preserve telemetry meta.
       const retryCtx = await runRequestChain({
         url,
         init: { ...init, headers: {} },
         correlationId,
-        meta: { auth, idempotencyKey: opts.idempotencyKey, hasBody },
+        meta: {
+          ...requestCtx.meta,
+          auth,
+          idempotencyKey: opts.idempotencyKey,
+          hasBody,
+        },
       });
       response = await fetch(retryCtx.url, retryCtx.init);
     } else if (!thisTabRefreshing) {
@@ -231,6 +252,18 @@ export async function request<TSchema extends z.ZodType>(
         window.dispatchEvent(new Event("auth:unauthorized"));
         throw new ApiError(401, "UNAUTHORIZED", "Authentication required", correlationId);
       }
+      // refreshSucceeded === true means runErrorChain returned a Response
+      // whose status was not 401. But unauthorizedInterceptor's refresh path
+      // could have been triggered by an EARLIER 401 mid-retry — if so, we
+      // may have already done a refresh + replay earlier and the replay's
+      // response is still in `response`. Belt-and-suspenders check: if the
+      // post-refresh response is STILL 401, surface it as an unrecoverable
+      // auth failure so the caller sees a clean 401 rather than a 503 (which
+      // would happen if retryInterceptor skipped this 401 mid-retry).
+      if (response.status === 401) {
+        window.dispatchEvent(new Event("auth:unauthorized"));
+        throw new ApiError(401, "UNAUTHORIZED", "Authentication required", correlationId);
+      }
     } else {
       // thisTabRefreshing is already true — a concurrent request hit 401 while
       // this tab's refresh is in-flight. The token will be updated once the
@@ -243,6 +276,7 @@ export async function request<TSchema extends z.ZodType>(
 
   const responseChain: readonly ResponseInterceptor[] = [
     jsonParseInterceptor,
+    telemetryInterceptor,
     errorStatusInterceptor,
     envelopeInterceptor(opts.schema),
   ];
@@ -262,29 +296,29 @@ export const api = {
     path: string,
     schema: T,
     query?: RequestOptions<T>["query"],
-    opts?: Pick<RequestOptions<T>, "auth" | "signal">,
+    opts?: Pick<RequestOptions<T>, "auth" | "signal" | "credentials">,
   ) => request({ method: "GET", path, schema, query, ...opts }),
   post: <T extends z.ZodType>(
     path: string,
     schema: T,
     body?: unknown,
-    opts?: Pick<RequestOptions<T>, "auth" | "signal" | "idempotencyKey">,
+    opts?: Pick<RequestOptions<T>, "auth" | "signal" | "idempotencyKey" | "credentials">,
   ) => request({ method: "POST", path, schema, body, ...opts }),
   put: <T extends z.ZodType>(
     path: string,
     schema: T,
     body?: unknown,
-    opts?: Pick<RequestOptions<T>, "auth" | "signal">,
+    opts?: Pick<RequestOptions<T>, "auth" | "signal" | "credentials">,
   ) => request({ method: "PUT", path, schema, body, ...opts }),
   patch: <T extends z.ZodType>(
     path: string,
     schema: T,
     body?: unknown,
-    opts?: Pick<RequestOptions<T>, "auth" | "signal">,
+    opts?: Pick<RequestOptions<T>, "auth" | "signal" | "credentials">,
   ) => request({ method: "PATCH", path, schema, body, ...opts }),
   delete: <T extends z.ZodType>(
     path: string,
     schema: T,
-    opts?: Pick<RequestOptions<T>, "auth" | "signal">,
+    opts?: Pick<RequestOptions<T>, "auth" | "signal" | "credentials">,
   ) => request({ method: "DELETE", path, schema, ...opts }),
 };

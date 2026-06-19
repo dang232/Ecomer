@@ -13,6 +13,8 @@ import {
   type ReactNode,
 } from "react";
 
+import { registerUser, type RegisterInput } from "../lib/api/endpoints/auth";
+import { ApiError } from "../lib/api/envelope";
 import {
   AuthError,
   decodeJwt,
@@ -26,13 +28,7 @@ import {
 
 export type Role = "BUYER" | "SELLER" | "ADMIN";
 
-export interface RegisterInput {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  phone?: string;
-}
+export type { RegisterInput };
 
 export interface AuthProfile {
   id: string;
@@ -63,6 +59,11 @@ interface AuthState {
 const AuthContext = createContext<AuthState | null>(null);
 
 const REGISTER_ENDPOINT = `${(import.meta.env as Record<string, string | undefined>).VITE_API_URL ?? "http://localhost:8080"}/auth/register`;
+// ponytail: REGISTER_ENDPOINT retained for back-compat with any third-party
+// debug tooling that may read it via the module surface. The live flow uses
+// registerUser() from lib/api/endpoints/auth so it goes through the full
+// interceptor chain. Remove once we confirm no external readers.
+void REGISTER_ENDPOINT;
 
 function parseRoles(claims: JwtClaims | null): Role[] {
   const realm = claims?.realm_access?.roles ?? [];
@@ -189,23 +190,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback(
     async (input: RegisterInput) => {
-      const res = await fetch(REGISTER_ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(input),
-      });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as
-          | { message?: string; errorCode?: string }
-          | null;
-        const message =
-          body?.message && typeof body.message === "string"
-            ? body.message
-            : `Registration failed (HTTP ${res.status})`;
-        const code =
-          body?.errorCode && typeof body.errorCode === "string" ? body.errorCode : "register_failed";
-        throw new AuthError(res.status, code, message);
+      try {
+        await registerUser(input);
+      } catch (err) {
+        if (err instanceof ApiError) {
+          throw new AuthError(
+            err.status,
+            err.errorCode ?? "register_failed",
+            err.message,
+          );
+        }
+        throw err;
       }
       // Auto-login with the credentials we just submitted.
       await loginWithCredentials(input.email, input.password);
