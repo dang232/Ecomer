@@ -20,6 +20,7 @@ vi.mock("../lib/api/endpoints/notifications", () => ({
 }));
 
 import { useNotifications } from "./use-notifications";
+import { makeWrapper } from "../test-utils/render-with-query-client";
 
 const buildPage = (content: { id: string; title: string; read?: boolean }[]) => ({
   content,
@@ -31,15 +32,6 @@ const buildPage = (content: { id: string; title: string; read?: boolean }[]) => 
   last: true,
 });
 
-function makeWrapper() {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  }
-  return { client, Wrapper };
-}
 
 beforeEach(() => {
   useAuthMock.mockReturnValue({ ready: true, authenticated: true });

@@ -38,18 +38,10 @@ import {
   useApproveAppeal,
   useRejectAppeal,
 } from "./use-admin-video-moderation";
+import { makeWrapper } from "../test-utils/render-with-query-client";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function makeWrapper() {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  }
-  return { client, Wrapper };
-}
 
 const makePage = (count = 2) => ({
   content: Array.from({ length: count }, (_, i) => ({

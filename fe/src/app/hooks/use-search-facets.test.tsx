@@ -9,16 +9,8 @@ vi.mock("../lib/api/endpoints/search", () => ({
 }));
 
 import { useSearchFacets } from "./use-search-facets";
+import { makeWrapper } from "../test-utils/render-with-query-client";
 
-function makeWrapper() {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  }
-  return { client, Wrapper };
-}
 
 beforeEach(() => {
   searchFacetsMock.mockReset();

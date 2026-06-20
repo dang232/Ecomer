@@ -12,16 +12,8 @@ vi.mock("../lib/api/endpoints/users", () => ({
 }));
 
 import { __testables__, useAvatarUpload } from "./use-avatar-upload";
+import { makeWrapper } from "../test-utils/render-with-query-client";
 
-function makeWrapper() {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  }
-  return { Wrapper, client };
-}
 
 function makeFile(opts: { name?: string; type?: string; size?: number } = {}) {
   const size = opts.size ?? 1024;

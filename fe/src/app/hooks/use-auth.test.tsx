@@ -69,6 +69,8 @@ function makeTokenSet(overrides: Partial<TokenSet> = {}): TokenSet {
 // ---------------------------------------------------------------------------
 // Wrapper factory — new client each call so mocks don't bleed between tests
 // ---------------------------------------------------------------------------
+// Wrapper factory — new client each call so mocks don't bleed between tests
+// ---------------------------------------------------------------------------
 function makeWrapper() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },

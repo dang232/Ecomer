@@ -22,16 +22,8 @@ vi.mock("../lib/api/endpoints/cart", () => ({
 }));
 
 import { useCart } from "./use-cart";
+import { makeWrapper } from "../test-utils/render-with-query-client";
 
-function makeWrapper() {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  }
-  return { client, Wrapper };
-}
 
 beforeEach(() => {
   useAuthMock.mockReturnValue({ ready: true, authenticated: true });
