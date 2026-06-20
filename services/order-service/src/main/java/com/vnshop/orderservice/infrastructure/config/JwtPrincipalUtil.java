@@ -20,6 +20,18 @@ public final class JwtPrincipalUtil {
         return jwt.getClaimAsString("sub");
     }
 
+    /**
+     * Returns the caller's effective role as a single string — only
+     * "ADMIN" or "SELLER" are surfaced today. Used by the return-approval
+     * flow to short-circuit seller-ownership checks when an admin
+     * mediates a cross-seller return.
+     */
+    public static String currentActorRole() {
+        if (hasRole("ADMIN")) return "ADMIN";
+        if (hasRole("SELLER")) return "SELLER";
+        return "BUYER";
+    }
+
     public static boolean hasRole(String role) {
         Jwt jwt = currentJwt();
         return hasRealmRole(jwt, role) || hasResourceRole(jwt, role);

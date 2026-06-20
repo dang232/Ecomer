@@ -45,7 +45,7 @@ class ApproveReturnUseCaseTest {
         orders.save(orderWith(orderId, subOrderId, SELLER_OWNER));
         returns.save(new Return(returnId, orderId.toString(), subOrderId, "buyer-1", "broken"));
 
-        Return approved = useCase.approve(returnId, SELLER_OWNER);
+        Return approved = useCase.approve(returnId, SELLER_OWNER, "SELLER");
 
         assertThat(approved.status()).isEqualTo(ReturnStatus.APPROVED);
         // Saved row reflects the new status — controller-side cache invalidation
@@ -62,7 +62,7 @@ class ApproveReturnUseCaseTest {
         orders.save(orderWith(orderId, subOrderId, SELLER_OWNER));
         returns.save(new Return(returnId, orderId.toString(), subOrderId, "buyer-1", "broken"));
 
-        assertThatThrownBy(() -> useCase.approve(returnId, SELLER_ATTACKER))
+        assertThatThrownBy(() -> useCase.approve(returnId, SELLER_ATTACKER, "SELLER"))
                 .isInstanceOf(OrderAccessDeniedException.class);
         // Return stays REQUESTED — the gate fires before approve() mutates state.
         // Pt15 day-simulation can't assert this; only a unit test can.
@@ -78,7 +78,7 @@ class ApproveReturnUseCaseTest {
         orders.save(orderWith(orderId, subOrderId, SELLER_OWNER));
         returns.save(new Return(returnId, orderId.toString(), subOrderId, "buyer-1", "broken"));
 
-        assertThatThrownBy(() -> useCase.approve(returnId, "  "))
+        assertThatThrownBy(() -> useCase.approve(returnId, "  ", "SELLER"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("sellerId");
         assertThat(returns.findById(returnId).orElseThrow().status())
@@ -89,7 +89,7 @@ class ApproveReturnUseCaseTest {
     void approveRejectsUnknownReturn() {
         // Pt40 audit: status-code parity with ownership-rejection.
         // Both branches now raise OAD with the same constant message.
-        assertThatThrownBy(() -> useCase.approve(UUID.randomUUID(), SELLER_OWNER))
+        assertThatThrownBy(() -> useCase.approve(UUID.randomUUID(), SELLER_OWNER, "SELLER"))
                 .isInstanceOf(OrderAccessDeniedException.class)
                 .hasMessage("not authorized to act on this return");
     }
@@ -104,7 +104,7 @@ class ApproveReturnUseCaseTest {
         UUID returnId = UUID.randomUUID();
         returns.save(new Return(returnId, UUID.randomUUID().toString(), 100L, "buyer-1", "broken"));
 
-        assertThatThrownBy(() -> useCase.approve(returnId, SELLER_OWNER))
+        assertThatThrownBy(() -> useCase.approve(returnId, SELLER_OWNER, "SELLER"))
                 .isInstanceOf(OrderAccessDeniedException.class)
                 .hasMessage("not authorized to act on this return");
     }
@@ -123,7 +123,7 @@ class ApproveReturnUseCaseTest {
         returns.save(new Return(returnId, orderId.toString(), subOrderId, "buyer-1", "broken"));
         String attackerSellerId = "guess-target-seller-xyz";
 
-        assertThatThrownBy(() -> useCase.approve(returnId, attackerSellerId))
+        assertThatThrownBy(() -> useCase.approve(returnId, attackerSellerId, "SELLER"))
                 .hasMessage("not authorized to act on this return")
                 .hasMessageNotContaining(attackerSellerId)
                 .hasMessageNotContaining(returnId.toString());

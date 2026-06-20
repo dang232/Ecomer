@@ -20,8 +20,7 @@ public interface OrderJpaSpringDataRepository extends JpaRepository<OrderJpaEnti
 
     @Query("""
         SELECT DISTINCT o FROM OrderJpaEntity o
-        LEFT JOIN FETCH o.subOrders s
-        LEFT JOIN FETCH s.items
+        LEFT JOIN FETCH o.subOrders
         WHERE o.id = :orderId
         """)
     Optional<OrderJpaEntity> findByIdWithGraph(@Param("orderId") UUID orderId);
@@ -35,8 +34,7 @@ public interface OrderJpaSpringDataRepository extends JpaRepository<OrderJpaEnti
 
     @Query("""
         SELECT DISTINCT o FROM OrderJpaEntity o
-        LEFT JOIN FETCH o.subOrders s
-        LEFT JOIN FETCH s.items
+        LEFT JOIN FETCH o.subOrders
         WHERE o.idempotencyKey = :key
         """)
     Optional<OrderJpaEntity> findByIdempotencyKeyWithGraph(@Param("key") String key);

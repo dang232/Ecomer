@@ -41,7 +41,7 @@ class RejectReturnUseCaseTest {
         orders.save(orderWith(orderId, subOrderId, SELLER_OWNER));
         returns.save(new Return(returnId, orderId.toString(), subOrderId, "buyer-1", "broken"));
 
-        Return rejected = useCase.reject(returnId, SELLER_OWNER);
+        Return rejected = useCase.reject(returnId, SELLER_OWNER, "SELLER");
 
         assertThat(rejected.status()).isEqualTo(ReturnStatus.REJECTED);
         assertThat(returns.findById(returnId).orElseThrow().status())
@@ -60,7 +60,7 @@ class RejectReturnUseCaseTest {
         orders.save(orderWith(orderId, subOrderId, SELLER_OWNER));
         returns.save(new Return(returnId, orderId.toString(), subOrderId, "buyer-1", "broken"));
 
-        assertThatThrownBy(() -> useCase.reject(returnId, SELLER_ATTACKER))
+        assertThatThrownBy(() -> useCase.reject(returnId, SELLER_ATTACKER, "SELLER"))
                 .isInstanceOf(OrderAccessDeniedException.class);
         assertThat(returns.findById(returnId).orElseThrow().status())
                 .isEqualTo(ReturnStatus.REQUESTED);

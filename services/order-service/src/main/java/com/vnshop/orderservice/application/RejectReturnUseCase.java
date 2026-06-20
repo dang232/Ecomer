@@ -18,13 +18,15 @@ public class RejectReturnUseCase {
 
     /**
      * Pt14 audit fix: only the seller who owns the SubOrder being returned
-     * may reject. See {@link ApproveReturnUseCase} for the same gate.
+     * may reject. ADMIN role bypasses the seller-ownership check (mirrors
+     * ApproveReturnUseCase / CompleteReturnUseCase).
      */
-    public Return reject(UUID returnId, String sellerId) {
-        // Pt40 audit: see ApproveReturnUseCase. Same fold.
+    public Return reject(UUID returnId, String sellerId, String actorRole) {
         Return orderReturn = returnRepository.findById(returnId)
                 .orElseThrow(() -> new OrderAccessDeniedException("not authorized to act on this return"));
-        ReturnAuthorization.requireSellerOwnsReturn(orderRepository, orderReturn, sellerId);
+        if (!"ADMIN".equalsIgnoreCase(actorRole)) {
+            ReturnAuthorization.requireSellerOwnsReturn(orderRepository, orderReturn, sellerId);
+        }
         orderReturn.reject();
         return returnRepository.save(orderReturn);
     }

@@ -48,7 +48,7 @@ class CompleteReturnUseCaseTest {
         orders.save(orderWith(orderId, subOrderId, SELLER_OWNER));
         returns.save(approvedReturn(returnId, orderId, subOrderId, "buyer-1"));
 
-        Return completed = useCase.complete(returnId, SELLER_OWNER);
+        Return completed = useCase.complete(returnId, SELLER_OWNER, "SELLER");
 
         assertThat(completed.status()).isEqualTo(ReturnStatus.COMPLETED);
         assertThat(refunds.calls).hasSize(1);
@@ -70,7 +70,7 @@ class CompleteReturnUseCaseTest {
         orders.save(orderWith(orderId, subOrderId, SELLER_OWNER));
         returns.save(approvedReturn(returnId, orderId, subOrderId, "buyer-1"));
 
-        assertThatThrownBy(() -> useCase.complete(returnId, SELLER_ATTACKER))
+        assertThatThrownBy(() -> useCase.complete(returnId, SELLER_ATTACKER, "SELLER"))
                 .isInstanceOf(OrderAccessDeniedException.class);
         assertThat(refunds.calls).isEmpty();
         // Return stays in pre-complete state — gate ran before complete() mutated it.
@@ -86,7 +86,7 @@ class CompleteReturnUseCaseTest {
         orders.save(orderWith(orderId, subOrderId, SELLER_OWNER));
         returns.save(approvedReturn(returnId, orderId, subOrderId, "buyer-1"));
 
-        assertThatThrownBy(() -> useCase.complete(returnId, "  "))
+        assertThatThrownBy(() -> useCase.complete(returnId, "  ", "SELLER"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("sellerId");
         assertThat(refunds.calls).isEmpty();
@@ -97,7 +97,7 @@ class CompleteReturnUseCaseTest {
         // Pt40 audit: status-code parity with ownership-rejection
         // (gotcha #106). Both branches now raise OAD with the same
         // constant message.
-        assertThatThrownBy(() -> useCase.complete(UUID.randomUUID(), SELLER_OWNER))
+        assertThatThrownBy(() -> useCase.complete(UUID.randomUUID(), SELLER_OWNER, "SELLER"))
                 .isInstanceOf(OrderAccessDeniedException.class)
                 .hasMessage("not authorized to act on this return");
         assertThat(refunds.calls).isEmpty();
@@ -118,7 +118,7 @@ class CompleteReturnUseCaseTest {
         // Seed in REQUESTED, not APPROVED.
         returns.save(new Return(returnId, orderId.toString(), subOrderId, "buyer-1", "broken"));
 
-        assertThatThrownBy(() -> useCase.complete(returnId, SELLER_OWNER))
+        assertThatThrownBy(() -> useCase.complete(returnId, SELLER_OWNER, "SELLER"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("REQUESTED");
         assertThat(refunds.calls).isEmpty();

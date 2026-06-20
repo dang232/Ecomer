@@ -59,25 +59,25 @@ public class ReturnController {
                 .map(ReturnResponse::fromDomain).toList());
     }
 
-    @PreAuthorize("hasRole('SELLER')")
+    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
     @PostMapping("/{returnId}/approve")
     public ApiResponse<ReturnResponse> approve(@PathVariable UUID returnId) {
         return ApiResponse.ok(ReturnResponse.fromDomain(
-                approveReturnUseCase.approve(returnId, JwtPrincipalUtil.currentSellerId())));
+                approveReturnUseCase.approve(returnId, JwtPrincipalUtil.currentSellerId(), JwtPrincipalUtil.currentActorRole())));
     }
 
-    @PreAuthorize("hasRole('SELLER')")
+    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
     @PostMapping("/{returnId}/reject")
     public ApiResponse<ReturnResponse> reject(@PathVariable UUID returnId) {
         return ApiResponse.ok(ReturnResponse.fromDomain(
-                rejectReturnUseCase.reject(returnId, JwtPrincipalUtil.currentSellerId())));
+                rejectReturnUseCase.reject(returnId, JwtPrincipalUtil.currentSellerId(), JwtPrincipalUtil.currentActorRole())));
     }
 
-    @PreAuthorize("hasRole('SELLER')")
+    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
     @PostMapping("/{returnId}/complete")
     public ApiResponse<ReturnResponse> complete(@PathVariable UUID returnId) {
         return ApiResponse.ok(ReturnResponse.fromDomain(
-                completeReturnUseCase.complete(returnId, JwtPrincipalUtil.currentSellerId())));
+                completeReturnUseCase.complete(returnId, JwtPrincipalUtil.currentSellerId(), JwtPrincipalUtil.currentActorRole())));
     }
 
     @PreAuthorize("isAuthenticated()")
