@@ -75,8 +75,8 @@ certs: ## Generate Kafka SSL certificates
 verify-backup: ## Verify database backups by dump/restore and smoke queries
 	./scripts/verify-backup.sh
 
-clean: ## Remove all containers, volumes, and build artifacts
-	docker compose --profile apps down -v
+clean: ## Remove all containers and build artifacts (preserves volumes)
+	docker compose --profile apps down
 	cd services/order-service && ./mvnw clean -q 2>/dev/null || true
 
 status: ## Show running containers and their health
