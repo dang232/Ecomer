@@ -79,3 +79,106 @@ From the 2026-06-19 handover:
    - `fix(build): align video-transcoder Dockerfile paths with compose context`
 3. **Push:** `git push origin main`
 4. All 4 FE CI gates are green — re-running on CI is the real validation, but the scripts are identical to the local runs above.
+
+---
+
+## Pre-flight bug triage (later same day, 02:00–03:10 UTC) — INTERRUPTED refactor
+
+**Branch:** `refactor/ponytail-overengineering` (cut from `main`, no push yet)
+**Commits on branch:** 1 (the preflight commit below, sha `afd0c701`)
+**Working tree:** clean for refactor scope; `docker-compose.yml` modified (unrelated pre-existing diff)
+
+### What I was trying to do
+
+Run the ponytail over-engineering refactor plan from [`dreamy-giggling-island.md`](./../.claude/plans/dreamy-giggling-island.md): 10 milestones (M1–M10) cutting ~2,070 LOC across `services/`, `fe/`, `infra/`, and tests. Pre-flight rule: both e2e gates must be green at the cut before any edit. They were NOT green — pre-existing bugs blocked the baseline.
+
+### Pre-existing bugs found during pre-flight
+
+**Bug #1 (FIXED — committed):** `product-service` Hibernate schema validation fails on startup: `Schema validation: missing table [product_svc.video_status_history]`. Flyway history shows V7 (`videos`) and V8 (`rollback_videos`) BOTH ran successfully in the past — V8 dropped the tables that V7 created, and they were never re-created.
+
+**Resolution:**
+- Deleted `services/product-service/src/main/resources/db/migration/V8__rollback_videos.sql` (its own header says "Only execute after incident command confirms no deployed code still reads or writes these tables" — that condition no longer holds since the entity is still in code)
+- Cleared V8 row from `flyway_schema_history`
+- Applied V7's `CREATE TABLE IF NOT EXISTS` directly to `postgres-product`
+- Also: V7 declared `sha256_hex CHAR(64)` but the entity expects `VARCHAR(64)`. Postgres stores CHAR as bpchar; Hibernate's strict validator rejects. `ALTER TABLE product_svc.videos ALTER COLUMN sha256_hex TYPE VARCHAR(64)`.
+
+**Bug #2 (FIXED — DB-level, no source change):** `notification-service` Kafka `UNKNOWN_TOPIC_OR_PARTITION` on `video.published` and `video.rejected`. `init-kafka-topics.sh` already lists these topics but didn't actually run on this bring-up. Created manually:
+
+```bash
+docker compose exec -T kafka kafka-topics --bootstrap-server kafka:9092 \
+  --create --if-not-exists --topic video.published --partitions 3 --replication-factor 1 \
+  --command-config /tmp/admin.properties
+docker compose exec -T kafka kafka-topics --bootstrap-server kafka:9092 \
+  --create --if-not-exists --topic video.rejected --partitions 3 --replication-factor 1 \
+  --command-config /tmp/admin.properties
+```
+
+`init-kafka-topics.sh` not running on cold start is itself a real bug worth tracking in a follow-up — the script exists but isn't wired into `make up`. Recommend: add `init-kafka-topics` as a `depends_on` + healthcheck-conditional dependency, or run it via a one-shot compose service.
+
+**Bug #3 (FIXED — committed):** `shipping-service` startup fails: `Caused by: java.lang.IllegalArgumentException: pattern must start with a /`. Spring 6's `PathPatternRequestMatcher` routes `"GET"` through the path-pattern branch when `requestMatchers(String, String)` has only one URL arg. Fixed by using `HttpMethod.GET` / `HttpMethod.POST` constants instead of string literals. Required image rebuild:
+
+```bash
+docker compose build shipping-service
+docker compose up -d shipping-service
+```
+
+**Bug #4 (PARTIALLY INVESTIGATED — UNRESOLVED):** `POST /orders (place order) HTTP 500` cascades into 11+ downstream failures (fulfilment, shipping, saga, returns). Root cause visible in `docker compose logs order-service`:
+
+```
+org.springframework.web.method.annotation.MethodArgumentTypeMismatchException:
+Method parameter 'id': Failed to convert value of type 'java.lang.String'
+to required type 'java.util.UUID'; Invalid UUID string: E2E-VIETQR-1781924742655
+```
+
+`infra/scripts/e2e-day.mjs:1086` sends `orderId: \`E2E-VIETQR-${Date.now()}\`` as a synthetic payment idempotency key for the VietQR payment endpoint. Somewhere downstream, that synthetic ID leaks into a `GET /orders/{id}` path variable which is typed `UUID`. Either:
+- e2e-day is supposed to send a real UUID (use `crypto.randomUUID()`)
+- order-service is supposed to coerce non-UUID `id` values into the synthetic-key namespace
+
+I did not fix this — it's not in the refactor scope and the fix path is unclear without tracing the full flow. ~30 minutes of investigation would resolve it.
+
+### Independent failures also still present (each its own bug)
+
+- `GET /search?q=tai → HTTP 503` (search-service still latched)
+- `GET /recommendations/frequently-bought-together/{id} → HTTP 500 "No static resource recommendations/frequently-bought-together/{id}"` (controller route missing — recommendations-service might not have the endpoint mounted)
+- `POST /notifications/test → HTTP 500 "Internal server error"` (Nest exception handler — need log dive)
+
+### State of the e2e-day gate after triage
+
+| Stage | Passed / Total | Note |
+|---|---|---|
+| Initial pre-flight (cold stack) | 27 / 65 | Many services 503 due to breakers latched on startup races |
+| After Bug #1 fix (product-service schema) | — | re-run pending |
+| After Bug #2 fix (Kafka topics) + Bug #3 (SecurityConfig) + Bug #1 fix | **42 / 65** | Catalog + most read paths green; the `/orders` cascade is the dominant failure |
+| **Target** | **55 / 55** | As stated in README and HANDOFF (last green at unknown HEAD) |
+
+### State of the Playwright gate (PF-6)
+
+Not run. Would only run after e2e-day is green at baseline.
+
+### Where the refactor is parked
+
+- **Branch `refactor/ponytail-overengineering`** is cut and contains the preflight commit. No refactor milestones have been executed yet.
+- The plan file is at `C:\Users\dangq\.claude\plans\dreamy-giggling-island.md` — it remains valid as written; only the pre-flight gate is failing.
+- All 10 milestones (M1–M10) are blocked behind a green baseline.
+
+### Recommended next-session flow
+
+1. **Triage the remaining bugs in order of cascade impact:**
+   - Bug #4 (UUID mismatch in order creation) — likely the biggest single win since it unblocks 11+ tests
+   - `search-service` 503 — likely needs restart with `docker compose restart search-service api-gateway` to reset breaker
+   - `recommendations` 500 — look at controller class, probably the route is registered under a different path
+   - `notifications/test` 500 — dive into Nest service log
+2. **Re-run `node infra/scripts/e2e-day.mjs`** until 55/55
+3. **Run `cd fe && npx playwright test`** until 19/19
+4. **Commit the bug fixes** on `refactor/ponytail-overengineering` (separate from the refactor milestones)
+5. **Then resume M1 → M10 per the plan**, each milestone gated by both e2e suites green
+
+### Files NOT changed in the refactor
+
+- `services/product-service/src/main/resources/db/migration/V8__rollback_videos.sql` — **DELETED** (committed)
+- `services/shipping-service/src/main/java/com/vnshop/shippingservice/infrastructure/config/SecurityConfig.java` — **MODIFIED** (committed, 3 line changes)
+
+### Why I stopped
+
+The user-explicit constraints were "fix all findings" + "both e2e gates stay green". The reality is that pre-existing bugs (not introduced by the refactor, not in the refactor scope) prevent the gates from being green at HEAD. Each bug fix needs a separate triage, sometimes an image rebuild + container restart. The user chose "Stop, return control" when I surfaced this. Plan is preserved; next session can resume from the milestone list.
+
