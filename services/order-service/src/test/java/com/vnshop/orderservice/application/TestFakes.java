@@ -3,8 +3,11 @@ package com.vnshop.orderservice.application;
 import com.vnshop.orderservice.domain.FulfillmentStatus;
 import com.vnshop.orderservice.domain.Order;
 import com.vnshop.orderservice.domain.Return;
+import com.vnshop.orderservice.domain.SubOrder;
+import com.vnshop.orderservice.domain.port.out.OrderEventPublisherPort;
 import com.vnshop.orderservice.domain.port.out.OrderRepositoryPort;
 import com.vnshop.orderservice.domain.port.out.ReturnRepositoryPort;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,18 +15,44 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Shared in-memory fakes for order-service application tests. Pre-pt24 these
- * were copy-pasted across ApproveReturnUseCaseTest, CompleteReturnUseCaseTest,
- * DisputeUseCaseTest, and ViewOrderUseCaseTest. The reviewer flagged the
- * triplication during the pt24 follow-up; one shared module-private home is
- * enough.
+ * Shared in-memory fakes for order-service application tests.
  *
  * <p>Package-private and test-scope only — never imported by production code.
  */
-final class TestFakes {
+public final class TestFakes {
     private TestFakes() {}
 
-    static final class FakeOrderRepository implements OrderRepositoryPort {
+    // ─── Order event publishers ───────────────────────────────────────────────
+
+    /** Records publishOrderUpdated calls. Use for Accept/Reject/Ship/ConfirmDelivery tests. */
+    public static final class RecordingOrderEvents implements OrderEventPublisherPort {
+        public final List<Order> updates = new ArrayList<>();
+        @Override public void publishOrderCreated(Order order) {}
+        @Override public void publishOrderUpdated(Order order) { updates.add(order); }
+        @Override public void publishOrderPaid(Order order) {}
+        @Override public void publishOrderDelivered(Order order, SubOrder subOrder) {}
+    }
+
+    /** Records publishOrderPaid calls. Use for PaymentCompletedListener tests. */
+    public static final class RecordingPublisher implements OrderEventPublisherPort {
+        public final List<Order> paid = new ArrayList<>();
+        @Override public void publishOrderCreated(Order order) {}
+        @Override public void publishOrderUpdated(Order order) {}
+        @Override public void publishOrderPaid(Order order) { paid.add(order); }
+        @Override public void publishOrderDelivered(Order order, SubOrder subOrder) {}
+    }
+
+    /** No-op publisher for tests that don't assert on events. */
+    public static final class NoopOrderEvents implements OrderEventPublisherPort {
+        @Override public void publishOrderCreated(Order order) {}
+        @Override public void publishOrderUpdated(Order order) {}
+        @Override public void publishOrderPaid(Order order) {}
+        @Override public void publishOrderDelivered(Order order, SubOrder subOrder) {}
+    }
+
+    // ─── Repositories ─────────────────────────────────────────────────────────
+
+    public static final class FakeOrderRepository implements OrderRepositoryPort {
         private final Map<UUID, Order> orders = new HashMap<>();
 
         @Override
@@ -45,7 +74,7 @@ final class TestFakes {
         @Override public List<Order> findBySellerIdAndFulfillmentStatus(String sellerId, FulfillmentStatus status) { return List.of(); }
     }
 
-    static final class FakeReturnRepository implements ReturnRepositoryPort {
+    public static final class FakeReturnRepository implements ReturnRepositoryPort {
         private final Map<UUID, Return> returns = new HashMap<>();
 
         @Override

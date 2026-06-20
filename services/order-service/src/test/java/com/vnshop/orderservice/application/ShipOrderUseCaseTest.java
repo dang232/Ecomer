@@ -35,7 +35,7 @@ class ShipOrderUseCaseTest {
     private static final String TRACKING = "TRK-001";
 
     private final TestFakes.FakeOrderRepository repository = new TestFakes.FakeOrderRepository();
-    private final RecordingEvents events = new RecordingEvents();
+    private final TestFakes.RecordingOrderEvents events = new TestFakes.RecordingOrderEvents();
     private final ShipOrderUseCase useCase = new ShipOrderUseCase(repository, events);
 
     @Test
@@ -119,12 +119,4 @@ class ShipOrderUseCaseTest {
                 "COD", PaymentStatus.PENDING, "idem-1");
     }
 
-    private static final class RecordingEvents implements OrderEventPublisherPort {
-        final List<Order> created = new ArrayList<>();
-        final List<Order> updates = new ArrayList<>();
-        @Override public void publishOrderCreated(Order order) { created.add(order); }
-        @Override public void publishOrderUpdated(Order order) { updates.add(order); }
-        @Override public void publishOrderPaid(Order order) {}
-        @Override public void publishOrderDelivered(Order order, SubOrder subOrder) {}
-    }
 }

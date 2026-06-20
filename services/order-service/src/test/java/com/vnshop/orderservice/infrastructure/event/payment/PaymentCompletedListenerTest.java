@@ -1,5 +1,6 @@
 package com.vnshop.orderservice.infrastructure.event.payment;
 
+import com.vnshop.orderservice.application.TestFakes;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vnshop.orderservice.domain.Address;
 import com.vnshop.orderservice.domain.FulfillmentStatus;
@@ -31,7 +32,7 @@ class PaymentCompletedListenerTest {
         UUID orderId = UUID.randomUUID();
         InMemoryOrderRepo repo = new InMemoryOrderRepo();
         repo.save(pendingOrder(orderId));
-        RecordingPublisher publisher = new RecordingPublisher();
+        TestFakes.RecordingPublisher publisher = new TestFakes.RecordingPublisher();
         PaymentCompletedListener listener = new PaymentCompletedListener(repo, publisher, objectMapper);
 
         listener.onPaymentCompleted(eventJson(orderId, "COMPLETED", "PAYPAL"));
@@ -50,7 +51,7 @@ class PaymentCompletedListenerTest {
         order.markPaymentCompleted();
         repo.save(order);
         repo.saveCount = 0;
-        RecordingPublisher publisher = new RecordingPublisher();
+        TestFakes.RecordingPublisher publisher = new TestFakes.RecordingPublisher();
         PaymentCompletedListener listener = new PaymentCompletedListener(repo, publisher, objectMapper);
 
         listener.onPaymentCompleted(eventJson(orderId, "COMPLETED", "PAYPAL"));
@@ -62,7 +63,7 @@ class PaymentCompletedListenerTest {
     @Test
     void skipsWhenOrderMissing() {
         InMemoryOrderRepo repo = new InMemoryOrderRepo();
-        RecordingPublisher publisher = new RecordingPublisher();
+        TestFakes.RecordingPublisher publisher = new TestFakes.RecordingPublisher();
         PaymentCompletedListener listener = new PaymentCompletedListener(repo, publisher, objectMapper);
 
         listener.onPaymentCompleted(eventJson(UUID.randomUUID(), "COMPLETED", "VNPAY"));
@@ -75,7 +76,7 @@ class PaymentCompletedListenerTest {
         UUID orderId = UUID.randomUUID();
         InMemoryOrderRepo repo = new InMemoryOrderRepo();
         repo.save(pendingOrder(orderId));
-        RecordingPublisher publisher = new RecordingPublisher();
+        TestFakes.RecordingPublisher publisher = new TestFakes.RecordingPublisher();
         PaymentCompletedListener listener = new PaymentCompletedListener(repo, publisher, objectMapper);
 
         listener.onPaymentCompleted(eventJson(orderId, "FAILED", "MOMO"));
@@ -88,7 +89,7 @@ class PaymentCompletedListenerTest {
     @Test
     void skipsMalformedOrderId() {
         InMemoryOrderRepo repo = new InMemoryOrderRepo();
-        RecordingPublisher publisher = new RecordingPublisher();
+        TestFakes.RecordingPublisher publisher = new TestFakes.RecordingPublisher();
         PaymentCompletedListener listener = new PaymentCompletedListener(repo, publisher, objectMapper);
 
         listener.onPaymentCompleted("{\"orderId\":\"not-a-uuid\",\"status\":\"COMPLETED\"}");
@@ -101,7 +102,7 @@ class PaymentCompletedListenerTest {
         UUID orderId = UUID.randomUUID();
         InMemoryOrderRepo repo = new InMemoryOrderRepo();
         repo.save(pendingOrder(orderId));
-        RecordingPublisher publisher = new RecordingPublisher();
+        TestFakes.RecordingPublisher publisher = new TestFakes.RecordingPublisher();
         PaymentCompletedListener listener = new PaymentCompletedListener(repo, publisher, objectMapper);
 
         Instant fxRateAt = Instant.parse("2024-06-01T10:00:00Z");
@@ -127,7 +128,7 @@ class PaymentCompletedListenerTest {
         UUID orderId = UUID.randomUUID();
         InMemoryOrderRepo repo = new InMemoryOrderRepo();
         repo.save(pendingOrder(orderId));
-        RecordingPublisher publisher = new RecordingPublisher();
+        TestFakes.RecordingPublisher publisher = new TestFakes.RecordingPublisher();
         PaymentCompletedListener listener = new PaymentCompletedListener(repo, publisher, objectMapper);
 
         // No FX fields in payload — must not throw NPE
@@ -181,11 +182,4 @@ class PaymentCompletedListenerTest {
         @Override public List<Order> findBySellerIdAndFulfillmentStatus(String sellerId, FulfillmentStatus status) { return List.of(); }
     }
 
-    private static final class RecordingPublisher implements OrderEventPublisherPort {
-        final List<Order> paid = new ArrayList<>();
-        @Override public void publishOrderCreated(Order order) {}
-        @Override public void publishOrderUpdated(Order order) {}
-        @Override public void publishOrderPaid(Order order) { paid.add(order); }
-        @Override public void publishOrderDelivered(Order order, SubOrder subOrder) {}
-    }
 }

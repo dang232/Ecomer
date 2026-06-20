@@ -50,7 +50,7 @@ class CheckoutOrderUseCaseTest {
     private final RecordingInventory inventory = new RecordingInventory();
     private final RecordingPayment payment = new RecordingPayment();
     private final RecordingShipping shipping = new RecordingShipping();
-    private final RecordingOrderEvents events = new RecordingOrderEvents();
+    private final TestFakes.NoopOrderEvents events = new TestFakes.NoopOrderEvents();
     private final FakeCartRepository cart = new FakeCartRepository();
     private final CommissionTierLookupPort tierLookup = new CommissionTierLookupPort() {
         @Override
@@ -231,12 +231,6 @@ class CheckoutOrderUseCaseTest {
         @Override public void requestShipping(String orderId, SubOrder subOrder, Address address) {}
     }
 
-    private static final class RecordingOrderEvents implements OrderEventPublisherPort {
-        @Override public void publishOrderCreated(Order order) {}
-        @Override public void publishOrderUpdated(Order order) {}
-        @Override public void publishOrderPaid(Order order) {}
-        @Override public void publishOrderDelivered(Order order, SubOrder subOrder) {}
-    }
 
     private static final class FakeCartRepository implements CartRepositoryPort {
         @Override public com.vnshop.orderservice.domain.checkout.CartSnapshot findByCartId(String cartId) { return new com.vnshop.orderservice.domain.checkout.CartSnapshot(cartId, List.of()); }
