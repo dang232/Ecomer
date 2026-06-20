@@ -178,6 +178,7 @@ test.describe("day simulation — buyer", () => {
           district: "101",
           city: "Ho Chi Minh",
         },
+        paymentMethod: "COD",
         items: [{ productId: product.id, quantity: 1 }],
       },
     });
@@ -200,6 +201,7 @@ test.describe("day simulation — buyer", () => {
           district: "101",
           city: "Ho Chi Minh",
         },
+        paymentMethod: "COD",
         items: [{ productId: product.id, quantity: 1 }],
       },
     });
@@ -482,6 +484,7 @@ test.describe("day simulation — payment-method shells", () => {
       headers: { ...headersA, "Idempotency-Key": idem },
       data: {
         shippingAddress: { street: "1 Return IDOR St", ward: "1442", district: "101", city: "Ho Chi Minh" },
+        paymentMethod: "COD",
         items: [{ productId: product.id, quantity: 1 }],
       },
     });
@@ -586,6 +589,7 @@ test.describe("day simulation — payment-method shells", () => {
           district: "101",
           city: "Ho Chi Minh",
         },
+        paymentMethod: "COD",
         items: [{ productId: product.id, quantity: 1 }],
       },
     });
