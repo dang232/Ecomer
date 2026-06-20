@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { expectNoGlobalError } from "./_helpers";
 
 /**
  * UI-driven QA spec for the wishlist page.
@@ -60,10 +61,6 @@ async function addToWishlist(
   expect(r.ok(), `wishlist add: ${r.status()} ${await r.text()}`).toBeTruthy();
 }
 
-async function expectNoGlobalError(page: Page): Promise<void> {
-  await expect(page.getByText(/Có lỗi xảy ra|Something went wrong/i)).toHaveCount(0);
-  await expect(page.getByText(/Invalid input/i)).toHaveCount(0);
-}
 
 test.describe("wishlist page UI", () => {
   test("/wishlist as guest redirects to login (does not crash)", async ({ page }) => {

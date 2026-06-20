@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { expectNoGlobalError } from "./_helpers";
 
 /**
  * UI-driven QA spec for the flash-sale strip on the home page.
@@ -16,10 +17,6 @@ import { test, expect, type Page } from "@playwright/test";
  * No backend or auth needed. Runs on the public home page.
  */
 
-async function expectNoGlobalError(page: Page): Promise<void> {
-  await expect(page.getByText(/Có lỗi xảy ra|Something went wrong/i)).toHaveCount(0);
-  await expect(page.getByText(/Invalid input/i)).toHaveCount(0);
-}
 
 test.describe("flash sale strip UI", () => {
   test("Flash sale section header renders", async ({ page }) => {

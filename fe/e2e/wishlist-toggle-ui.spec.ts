@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { expectNoGlobalError } from "./_helpers";
 
 /**
  * UI-driven QA spec for the wishlist heart toggle on ProductPage.
@@ -46,10 +47,6 @@ async function firstProductId(request: APIRequestContext): Promise<string> {
   return id;
 }
 
-async function expectNoGlobalError(page: Page): Promise<void> {
-  await expect(page.getByText(/Có lỗi xảy ra|Something went wrong/i)).toHaveCount(0);
-  await expect(page.getByText(/Invalid input/i)).toHaveCount(0);
-}
 
 test.describe("wishlist heart toggle UI", () => {
   test("Heart click on ProductPage adds to wishlist and shows success toast", async ({

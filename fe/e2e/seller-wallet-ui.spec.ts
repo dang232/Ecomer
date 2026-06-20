@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { expectNoGlobalError } from "./_helpers";
 
 /**
  * UI-driven QA spec for the seller wallet page.
@@ -30,10 +31,6 @@ async function loginAsSeller(request: APIRequestContext): Promise<AuthResult> {
   return { accessToken };
 }
 
-async function expectNoGlobalError(page: Page): Promise<void> {
-  await expect(page.getByText(/Có lỗi xảy ra|Something went wrong/i)).toHaveCount(0);
-  await expect(page.getByText(/Invalid input/i)).toHaveCount(0);
-}
 
 test.describe("seller wallet UI", () => {
   test("Wallet tab renders the balance card and history section", async ({ page }) => {

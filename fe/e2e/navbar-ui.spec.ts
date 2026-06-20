@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { expectNoGlobalError } from "./_helpers";
 
 /**
  * UI-driven QA spec for the global Navbar.
@@ -14,10 +15,6 @@ import { test, expect, type Page } from "@playwright/test";
  * No backend or auth needed.
  */
 
-async function expectNoGlobalError(page: Page): Promise<void> {
-  await expect(page.getByText(/Có lỗi xảy ra|Something went wrong/i)).toHaveCount(0);
-  await expect(page.getByText(/Invalid input/i)).toHaveCount(0);
-}
 
 test.describe("navbar UI", () => {
   test("Logo button navigates to / from any route", async ({ page }) => {
