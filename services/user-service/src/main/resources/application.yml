@@ -108,6 +108,8 @@ management:
     web:
       exposure:
         include: health,prometheus
+      discovery:
+        enabled: false
   endpoint:
     env:
       enabled: false

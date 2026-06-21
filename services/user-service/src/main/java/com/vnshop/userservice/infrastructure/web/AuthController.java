@@ -83,7 +83,7 @@ public class AuthController {
      * leaks through (no more "click the link to Keycloak's account
      * console" path).
      */
-    @PostMapping("/password-reset-request")
+    @PostMapping({"/password-reset-request", "/forgot-password"})
     @ResponseStatus(HttpStatus.ACCEPTED)
     public ApiResponse<PasswordResetResponse> requestPasswordReset(
             @Valid @RequestBody PasswordResetRequest request) {

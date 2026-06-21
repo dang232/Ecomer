@@ -12,6 +12,8 @@ import java.util.regex.Pattern;
 final class InputSanitizer {
 
     private static final Pattern HTML_TAG = Pattern.compile("<[^>]*>");
+    private static final Pattern JAVASCRIPT_URI = Pattern.compile("(?i)javascript\\s*:");
+    private static final Pattern EVENT_HANDLER = Pattern.compile("(?i)\\bon\\w+\\s*=");
 
     // RFC-1918 + loopback + link-local + unspecified
     private static final Pattern PRIVATE_IP = Pattern.compile(
@@ -33,14 +35,17 @@ final class InputSanitizer {
     private InputSanitizer() {}
 
     /**
-     * Strips all HTML tags from the input string.
+     * Strips all HTML tags, javascript: URIs, and event handler attributes from the input.
      * Returns null if input is null.
      */
     static String stripHtml(String input) {
         if (input == null) {
             return null;
         }
-        return HTML_TAG.matcher(input).replaceAll("");
+        String result = HTML_TAG.matcher(input).replaceAll("");
+        result = JAVASCRIPT_URI.matcher(result).replaceAll("");
+        result = EVENT_HANDLER.matcher(result).replaceAll("");
+        return result.trim();
     }
 
     /**

@@ -1,6 +1,7 @@
 package com.vnshop.apigateway.infrastructure.config;
 
 import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.web.server.ServerWebExchange;
@@ -32,7 +33,8 @@ public class TieredKeyResolver implements KeyResolver {
             .flatMap(ctx -> {
                 var auth = ctx.getAuthentication();
                 if (auth instanceof JwtAuthenticationToken jwtAuth
-                        && Boolean.TRUE.equals(auth.isAuthenticated())) {
+                        && Boolean.TRUE.equals(auth.isAuthenticated())
+                        && !(auth instanceof AnonymousAuthenticationToken)) {
                     String sub = jwtAuth.getToken().getSubject();
                     if (sub != null && !sub.isBlank()) {
                         return Mono.just(USER_PREFIX + sub);

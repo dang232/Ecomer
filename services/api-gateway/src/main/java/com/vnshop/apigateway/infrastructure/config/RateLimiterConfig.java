@@ -63,7 +63,8 @@ public class RateLimiterConfig {
     }
 
     // -----------------------------------------------------------------------
-    // Auth route: 3 req/s burst 5 (anon) | 10 req/s burst 20 (auth)
+    // Auth route: 3 req/s burst 5 — flat for BOTH anon and auth since
+    // auth endpoints are login/register, not post-auth operations.
     // -----------------------------------------------------------------------
 
     @Bean
@@ -73,7 +74,7 @@ public class RateLimiterConfig {
 
     @Bean
     RedisRateLimiter authAuthRateLimiter() {
-        return new RedisRateLimiter(10, 20, 1);
+        return new RedisRateLimiter(3, 5, 1);
     }
 
     @Bean
@@ -105,12 +106,15 @@ public class RateLimiterConfig {
     }
 
     // -----------------------------------------------------------------------
-    // General routes: 10 req/s burst 20 (anon) | 30 req/s burst 60 (auth)
+    // General routes: 5 req/s burst 10 (anon) | 30 req/s burst 60 (auth)
+    // NOTE: @Primary means SCG uses this for ALL rate-limited routes
+    // regardless of per-route setRateLimiter(). Anon tier must be strict
+    // enough to prevent brute-force on /auth/** as well.
     // -----------------------------------------------------------------------
 
     @Bean
     RedisRateLimiter generalAnonRateLimiter() {
-        return new RedisRateLimiter(10, 20, 1);
+        return new RedisRateLimiter(5, 10, 1);
     }
 
     @Bean
