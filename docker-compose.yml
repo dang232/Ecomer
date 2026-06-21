@@ -679,7 +679,7 @@ services:
       redis:
         condition: service_healthy
       keycloak:
-        condition: service_started
+        condition: service_healthy
     environment:
       SERVER_PORT: 8080
       REDIS_HOST: redis
@@ -723,7 +723,7 @@ services:
       api-gateway:
         condition: service_started
       keycloak:
-        condition: service_started
+        condition: service_healthy
 
   user-service:
     profiles: ["apps"]
@@ -939,6 +939,8 @@ services:
       redis:
         condition: service_healthy
       kafka:
+        condition: service_healthy
+      elasticsearch:
         condition: service_healthy
       configuration-service:
         condition: service_healthy
