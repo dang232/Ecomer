@@ -64,7 +64,7 @@ class BuyerUseCasesTest {
         RegisterBuyerUseCase registerUseCase = new RegisterBuyerUseCase(userRepositoryPort);
         UpsertBuyerProfileUseCase useCase = new UpsertBuyerProfileUseCase(userRepositoryPort, registerUseCase);
 
-        UpsertBuyerProfileCommand cmd = new UpsertBuyerProfileCommand("kc-1", "Bob", "+84987654321", "new-avatar");
+        UpsertBuyerProfileCommand cmd = new UpsertBuyerProfileCommand("kc-1", "Bob", "+84987654321", "https://cdn.example.com/new-avatar.jpg");
         BuyerProfile result = useCase.upsert(cmd);
 
         assertThat(result.keycloakId()).isEqualTo("kc-1");
@@ -82,11 +82,57 @@ class BuyerUseCasesTest {
         RegisterBuyerUseCase registerUseCase = new RegisterBuyerUseCase(userRepositoryPort);
         UpsertBuyerProfileUseCase useCase = new UpsertBuyerProfileUseCase(userRepositoryPort, registerUseCase);
 
-        UpsertBuyerProfileCommand cmd = new UpsertBuyerProfileCommand("kc-2", "Carol", "+84912345678", "avatar");
+        UpsertBuyerProfileCommand cmd = new UpsertBuyerProfileCommand("kc-2", "Carol", "+84912345678", "https://cdn.example.com/avatar.jpg");
         BuyerProfile result = useCase.upsert(cmd);
 
         assertThat(result.keycloakId()).isEqualTo("kc-2");
         verify(userRepositoryPort).saveBuyer(any());
+    }
+
+    // --- UpsertBuyerProfileUseCase (security) ---
+
+    @Test
+    void upsert_htmlInName_isStripped() {
+        BuyerProfile existing = buyer("kc-xss");
+        when(userRepositoryPort.findBuyerByKeycloakId("kc-xss")).thenReturn(Optional.of(existing));
+        when(userRepositoryPort.saveBuyer(existing)).thenReturn(existing);
+
+        RegisterBuyerUseCase registerUseCase = new RegisterBuyerUseCase(userRepositoryPort);
+        UpsertBuyerProfileUseCase useCase = new UpsertBuyerProfileUseCase(userRepositoryPort, registerUseCase);
+
+        UpsertBuyerProfileCommand cmd = new UpsertBuyerProfileCommand(
+                "kc-xss", "Alice<script>alert(1)</script>", "+84912345678",
+                "https://cdn.example.com/avatar.jpg");
+        useCase.upsert(cmd);
+
+        // The profile was updated with the sanitized name (no HTML tags)
+        assertThat(existing.name()).doesNotContain("<script>");
+    }
+
+    @Test
+    void upsert_privateIpAvatarUrl_throws() {
+        RegisterBuyerUseCase registerUseCase = new RegisterBuyerUseCase(userRepositoryPort);
+        UpsertBuyerProfileUseCase useCase = new UpsertBuyerProfileUseCase(userRepositoryPort, registerUseCase);
+
+        UpsertBuyerProfileCommand cmd = new UpsertBuyerProfileCommand(
+                "kc-ssrf", "Carol", "+84912345678", "http://169.254.169.254/latest/meta-data/");
+
+        assertThatThrownBy(() -> useCase.upsert(cmd))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("private or internal IP");
+    }
+
+    @Test
+    void upsert_internalHostAvatarUrl_throws() {
+        RegisterBuyerUseCase registerUseCase = new RegisterBuyerUseCase(userRepositoryPort);
+        UpsertBuyerProfileUseCase useCase = new UpsertBuyerProfileUseCase(userRepositoryPort, registerUseCase);
+
+        UpsertBuyerProfileCommand cmd = new UpsertBuyerProfileCommand(
+                "kc-ssrf2", "Dave", "+84912345678", "http://localhost/admin");
+
+        assertThatThrownBy(() -> useCase.upsert(cmd))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("disallowed internal host");
     }
 
     // --- ListBuyerPublicProfilesUseCase ---

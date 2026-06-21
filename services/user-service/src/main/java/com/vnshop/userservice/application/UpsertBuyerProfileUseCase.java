@@ -15,13 +15,17 @@ public class UpsertBuyerProfileUseCase {
     }
 
     public BuyerProfile upsert(UpsertBuyerProfileCommand command) {
+        // Sanitize user-supplied fields before touching domain or persistence.
+        String safeName = InputSanitizer.stripHtml(command.name());
+        InputSanitizer.validateAvatarUrl(command.avatarUrl());
+
         // Centralise the null/blank handling in PhoneNumber.parseOrNull so this
         // use case doesn't re-derive the rule. The register fallback below
         // reuses the same factory.
         PhoneNumber phone = PhoneNumber.parseOrNull(command.phone());
         return userRepositoryPort.findBuyerByKeycloakId(command.keycloakId())
                 .map(existing -> {
-                    existing.updateProfile(command.name(), phone, command.avatarUrl());
+                    existing.updateProfile(safeName, phone, command.avatarUrl());
                     return userRepositoryPort.saveBuyer(existing);
                 })
                 .orElseGet(() -> {
@@ -30,7 +34,7 @@ public class UpsertBuyerProfileUseCase {
                     // a FullName so the register use case stays type-safe.
                     return registerBuyerUseCase.register(new RegisterBuyerCommand(
                             command.keycloakId(),
-                            com.vnshop.userservice.domain.FullName.fromComposed(command.name()),
+                            com.vnshop.userservice.domain.FullName.fromComposed(safeName),
                             phone,
                             command.avatarUrl()));
                 });
