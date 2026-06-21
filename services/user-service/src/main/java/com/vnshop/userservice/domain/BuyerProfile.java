@@ -33,6 +33,10 @@ public class BuyerProfile {
         }
     }
 
+    public static BuyerProfile createDefault(String keycloakId) {
+        return new BuyerProfile(keycloakId, null, null, null, List.of());
+    }
+
     public String keycloakId() {
         return keycloakId;
     }

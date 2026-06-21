@@ -13,6 +13,6 @@ public class ViewBuyerProfileUseCase {
 
     public BuyerProfile view(String keycloakId) {
         return userRepositoryPort.findBuyerByKeycloakId(keycloakId)
-                .orElseThrow(() -> new IllegalArgumentException("buyer profile not found"));
+                .orElseGet(() -> userRepositoryPort.saveBuyer(BuyerProfile.createDefault(keycloakId)));
     }
 }
