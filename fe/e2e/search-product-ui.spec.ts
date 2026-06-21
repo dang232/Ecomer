@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { expectNoGlobalError } from "./_helpers";
 
 /**
  * UI-driven QA spec for search and product detail.
@@ -27,10 +28,6 @@ async function firstProduct(request: APIRequestContext): Promise<SeededProduct> 
   return { id: p.id, name: p.name };
 }
 
-async function expectNoGlobalError(page: Page): Promise<void> {
-  await expect(page.getByText(/Có lỗi xảy ra|Something went wrong/i)).toHaveCount(0);
-  await expect(page.getByText(/Invalid input/i)).toHaveCount(0);
-}
 
 test.describe("search + product detail UI", () => {
   test("/search renders without the global error fallback and shows product cards", async ({

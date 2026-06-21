@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { readJourneyState } from "./_journey-state";
+export { expectNoGlobalError } from "../_helpers";
 
 /**
  * Evidence + reporting helper for the BA-grade journey suite.
@@ -186,10 +187,6 @@ export async function copyArtifacts(chapterId: ChapterId): Promise<void> {
   }
 }
 
-export async function expectNoGlobalError(page: Page): Promise<void> {
-  await expect(page.getByText(/Có lỗi xảy ra|Something went wrong/i)).toHaveCount(0);
-  await expect(page.getByText(/Invalid input/i)).toHaveCount(0);
-}
 
 interface AcStatus {
   code: string;

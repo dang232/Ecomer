@@ -2,6 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { expectNoGlobalError } from "./_helpers";
 
 /**
  * E2E spec for Video FE Integration — proves the video UI wiring renders
@@ -38,10 +39,6 @@ async function loginViaUI(page: Page, username: string) {
   // No monkey-patch required — verify the real header is being sent.
 }
 
-async function expectNoGlobalError(page: Page): Promise<void> {
-  await expect(page.getByText(/Có lỗi xảy ra|Something went wrong/i)).toHaveCount(0);
-  await expect(page.getByText(/Invalid input/i)).toHaveCount(0);
-}
 
 // ─── Admin: Video Moderation tab renders ───────────────────────────────────
 

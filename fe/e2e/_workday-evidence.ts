@@ -2,6 +2,7 @@ import { test, expect, type Page, type TestInfo } from "@playwright/test";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+export { expectNoGlobalError } from "./_helpers";
 
 /**
  * Evidence helper for the persona-workday Playwright suite. Wraps
@@ -218,10 +219,6 @@ export async function finalizeReport(persona: Persona): Promise<void> {
  * Cross-language matcher for the global error fallback. Use after every
  * navigation in a workday step.
  */
-export async function expectNoGlobalError(page: Page): Promise<void> {
-  await expect(page.getByText(/Có lỗi xảy ra|Something went wrong/i)).toHaveCount(0);
-  await expect(page.getByText(/Invalid input/i)).toHaveCount(0);
-}
 
 /**
  * Drive the /login form for one of the seeded realm users (`seller1`,

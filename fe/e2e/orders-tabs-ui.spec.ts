@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { expectNoGlobalError } from "./_helpers";
 
 /**
  * UI-driven QA spec for the /orders tab filter.
@@ -87,10 +88,6 @@ async function placePendingOrder(
   return orderId;
 }
 
-async function expectNoGlobalError(page: Page): Promise<void> {
-  await expect(page.getByText(/Có lỗi xảy ra|Something went wrong/i)).toHaveCount(0);
-  await expect(page.getByText(/Invalid input/i)).toHaveCount(0);
-}
 
 test.describe("orders tab filter UI", () => {
   test("All tab and Pending tab both show the freshly placed order", async ({ page }) => {

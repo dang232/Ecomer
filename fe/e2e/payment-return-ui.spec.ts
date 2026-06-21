@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { expectNoGlobalError } from "./_helpers";
 
 /**
  * UI-driven QA spec for the payment-return landing page.
@@ -16,10 +17,6 @@ import { test, expect, type Page } from "@playwright/test";
  * manual testing per pt22 — see HANDOFF.md.
  */
 
-async function expectNoGlobalError(page: Page): Promise<void> {
-  await expect(page.getByText(/Có lỗi xảy ra|Something went wrong/i)).toHaveCount(0);
-  await expect(page.getByText(/Invalid input/i)).toHaveCount(0);
-}
 
 test.describe("payment-return page UI", () => {
   test("/payment/return/vnpay without orderId surfaces the error state", async ({ page }) => {

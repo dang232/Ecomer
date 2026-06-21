@@ -7,6 +7,7 @@ import com.vnshop.couponservice.application.IssueCouponUseCase;
 import com.vnshop.couponservice.application.ListCouponsUseCase;
 import com.vnshop.couponservice.application.UpdateCouponUseCase;
 import com.vnshop.couponservice.application.ValidateCouponUseCase;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -86,9 +87,18 @@ public class CouponController {
     }
 
     @PostMapping("/checkout/apply-coupon")
-    public ApiResponse<ApplyCouponResponse> applyCoupon(@RequestBody ApplyCouponRequest request) {
+    public ApiResponse<ApplyCouponResponse> applyCoupon(
+            @RequestBody ApplyCouponRequest request,
+            HttpServletRequest httpRequest) {
+        // The api-gateway forwards x-user-id from the JWT — use it when the
+        // body omits userId (the FE never has to know how to send it; the
+        // body field stays for direct /coupons callers).
+        String userId = request.userId();
+        if (userId == null || userId.isBlank()) {
+            userId = httpRequest.getHeader("x-user-id");
+        }
         return ApiResponse.ok(ApplyCouponResponse.from(
-                applyCouponUseCase.apply(request.code(), request.effectiveOrderAmount(), request.userId())));
+                applyCouponUseCase.apply(request.code(), request.effectiveOrderAmount(), userId)));
     }
 
     private static CouponTermsCommand toCommand(CreateCouponRequest request) {

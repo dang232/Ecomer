@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { expectNoGlobalError } from "./_helpers";
 
 /**
  * UI-driven QA spec for the Profile → Addresses tab.
@@ -39,10 +40,6 @@ async function seedBuyer(request: APIRequestContext): Promise<SeededBuyer> {
   return { email, accessToken };
 }
 
-async function expectNoGlobalError(page: Page): Promise<void> {
-  await expect(page.getByText(/Có lỗi xảy ra|Something went wrong/i)).toHaveCount(0);
-  await expect(page.getByText(/Invalid input/i)).toHaveCount(0);
-}
 
 async function seedAddressViaApi(
   request: APIRequestContext,

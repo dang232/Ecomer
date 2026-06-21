@@ -563,6 +563,7 @@ async function main() {
       headers: { "Idempotency-Key": idempotencyKey },
       body: {
         shippingAddress: { street: "1 Test Way", district: "Q1", city: "HCMC" },
+        paymentMethod: "COD",
         items: [
           {
             productId: ctx.sellerProductId,
@@ -677,6 +678,7 @@ async function main() {
       headers: { "Idempotency-Key": idempotencyKey },
       body: {
         shippingAddress: { street: "1 Test Way", district: "Q1", city: "HCMC" },
+        paymentMethod: "COD",
         items: [
           {
             productId: ctx.sellerProductId,
@@ -807,10 +809,10 @@ async function main() {
   });
 
   // 10. Recommendations.
-  await record("recs", "GET /recommendations/frequently-bought-together/{id}", async () => {
+  await record("recs", "GET /recommendations/frequently-bought-together", async () => {
     // 503 is the recommendations-service circuit-breaker fallback when the
     // service is unavailable — accept it as a documented degradation path.
-    await http("GET", `/recommendations/frequently-bought-together/${ctx.sellerProductId}`, {
+    await http("GET", `/recommendations/frequently-bought-together?productId=${ctx.sellerProductId}`, {
       expect: [200, 404, 503],
     });
   });

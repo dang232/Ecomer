@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { expectNoGlobalError } from "./_helpers";
 
 /**
  * UI-driven QA spec for the checkout flow.
@@ -77,10 +78,6 @@ async function addAddress(
   expect(r.ok()).toBeTruthy();
 }
 
-async function expectNoGlobalError(page: Page): Promise<void> {
-  await expect(page.getByText(/Có lỗi xảy ra|Something went wrong/i)).toHaveCount(0);
-  await expect(page.getByText(/Invalid input/i)).toHaveCount(0);
-}
 
 test.describe("checkout flow UI", () => {
   test("Empty cart on /checkout shows the empty-state CTA", async ({ page }) => {

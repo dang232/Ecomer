@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { expectNoGlobalError } from "./_helpers";
 
 /**
  * UI-driven QA spec for the admin console.
@@ -29,10 +30,6 @@ async function loginAsAdmin(request: APIRequestContext): Promise<AuthResult> {
   return { accessToken };
 }
 
-async function expectNoGlobalError(page: Page): Promise<void> {
-  await expect(page.getByText(/Có lỗi xảy ra|Something went wrong/i)).toHaveCount(0);
-  await expect(page.getByText(/Invalid input/i)).toHaveCount(0);
-}
 
 async function expectTabRenders(page: Page, tabName: RegExp, contentSignal: RegExp) {
   const tab = page.getByRole("button", { name: tabName }).first();

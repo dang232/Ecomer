@@ -275,77 +275,6 @@ services:
         limits:
           memory: 256M
 
-  redis-master:
-    image: redis:8.6-alpine
-    container_name: vnshop-redis-master
-    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "512mb", "--maxmemory-policy", "volatile-lru", "--requirepass", "${REDIS_PASSWORD:-vnshop123}", "--masterauth", "${REDIS_PASSWORD:-vnshop123}"]
-    ports:
-      - "6380:6379"
-    volumes:
-      - redis-master-data:/data
-    profiles: ["ha"]
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-
-  redis-replica-1:
-    image: redis:8.6-alpine
-    container_name: vnshop-redis-replica-1
-    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-vnshop123}", "--masterauth", "${REDIS_PASSWORD:-vnshop123}", "--replicaof", "redis-master", "6379"]
-    depends_on:
-      - redis-master
-    profiles: ["ha"]
-
-  redis-replica-2:
-    image: redis:8.6-alpine
-    container_name: vnshop-redis-replica-2
-    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-vnshop123}", "--masterauth", "${REDIS_PASSWORD:-vnshop123}", "--replicaof", "redis-master", "6379"]
-    depends_on:
-      - redis-master
-    profiles: ["ha"]
-
-  redis-sentinel-1:
-    image: redis:8.6-alpine
-    container_name: vnshop-redis-sentinel-1
-    entrypoint: ["sh", "/usr/local/bin/sentinel-entrypoint.sh"]
-    volumes:
-      - ./infra/redis/sentinel.conf:/etc/redis/sentinel.conf.template:ro
-      - ./infra/redis/sentinel-entrypoint.sh:/usr/local/bin/sentinel-entrypoint.sh:ro
-    environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-vnshop123}
-    depends_on:
-      - redis-master
-    ports:
-      - "26379:26379"
-    profiles: ["ha"]
-
-  redis-sentinel-2:
-    image: redis:8.6-alpine
-    container_name: vnshop-redis-sentinel-2
-    entrypoint: ["sh", "/usr/local/bin/sentinel-entrypoint.sh"]
-    volumes:
-      - ./infra/redis/sentinel.conf:/etc/redis/sentinel.conf.template:ro
-      - ./infra/redis/sentinel-entrypoint.sh:/usr/local/bin/sentinel-entrypoint.sh:ro
-    environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-vnshop123}
-    depends_on:
-      - redis-master
-    profiles: ["ha"]
-
-  redis-sentinel-3:
-    image: redis:8.6-alpine
-    container_name: vnshop-redis-sentinel-3
-    entrypoint: ["sh", "/usr/local/bin/sentinel-entrypoint.sh"]
-    volumes:
-      - ./infra/redis/sentinel.conf:/etc/redis/sentinel.conf.template:ro
-      - ./infra/redis/sentinel-entrypoint.sh:/usr/local/bin/sentinel-entrypoint.sh:ro
-    environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-vnshop123}
-    depends_on:
-      - redis-master
-    profiles: ["ha"]
-
   mongo:
     image: mongo:7.0
     container_name: vnshop-mongo
@@ -561,7 +490,8 @@ services:
   video-transcoder:
     profiles: ["apps"]
     build:
-      context: ./services/video-transcoder
+      context: .
+      dockerfile: services/video-transcoder/Dockerfile
     image: vnshop/video-transcoder:latest
     deploy:
       replicas: 3
@@ -1503,7 +1433,6 @@ volumes:
   postgres-shipping-data:
   postgres-cart-data:
   redis-data:
-  redis-master-data:
   kafka-data:
   elasticsearch-data:
   minio-data:

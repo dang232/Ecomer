@@ -14,6 +14,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -69,6 +71,7 @@ public class SubOrderJpaEntity extends BaseJpaEntity {
     private CommissionTier commissionTier = CommissionTier.STANDARD;
 
     @OneToMany(mappedBy = "subOrder", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Fetch(FetchMode.SUBSELECT)
     private List<OrderItemJpaEntity> items = new ArrayList<>();
 
     protected SubOrderJpaEntity() {

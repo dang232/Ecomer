@@ -6,7 +6,7 @@ import com.vnshop.orderservice.application.CheckoutOrderUseCase;
 import com.vnshop.orderservice.application.CheckoutOrderUseCase.CheckoutOrderCommand;
 import com.vnshop.orderservice.application.ConfirmDeliveryUseCase;
 import com.vnshop.orderservice.application.ViewOrderUseCase;
-import com.vnshop.orderservice.application.query.OrderQueryHandler;
+import com.vnshop.orderservice.domain.port.out.OrderSummaryQueryPort;
 import com.vnshop.orderservice.infrastructure.config.JwtPrincipalUtil;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -34,16 +34,16 @@ public class OrderController {
 
     private final CheckoutOrderUseCase checkoutOrderUseCase;
     private final CancelOrderUseCase cancelOrderUseCase;
-    private final OrderQueryHandler orderQueryHandler;
+    private final OrderSummaryQueryPort orderSummaryQueryPort;
     private final ViewOrderUseCase viewOrderUseCase;
     private final ConfirmDeliveryUseCase confirmDeliveryUseCase;
 
     public OrderController(CheckoutOrderUseCase checkoutOrderUseCase, CancelOrderUseCase cancelOrderUseCase,
-            OrderQueryHandler orderQueryHandler, ViewOrderUseCase viewOrderUseCase,
+            OrderSummaryQueryPort orderSummaryQueryPort, ViewOrderUseCase viewOrderUseCase,
             ConfirmDeliveryUseCase confirmDeliveryUseCase) {
         this.checkoutOrderUseCase = checkoutOrderUseCase;
         this.cancelOrderUseCase = cancelOrderUseCase;
-        this.orderQueryHandler = orderQueryHandler;
+        this.orderSummaryQueryPort = orderSummaryQueryPort;
         this.viewOrderUseCase = viewOrderUseCase;
         this.confirmDeliveryUseCase = confirmDeliveryUseCase;
     }
@@ -69,7 +69,7 @@ public class OrderController {
             Pageable pageable
     ) {
         return ApiResponse.ok(
-            orderQueryHandler.findByBuyerId(JwtPrincipalUtil.currentUserId(), status, pageable)
+            orderSummaryQueryPort.findByBuyerId(JwtPrincipalUtil.currentUserId(), status, pageable)
                 .map(OrderListItemResponse::fromProjection)
         );
     }

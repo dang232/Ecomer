@@ -58,13 +58,6 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null);
 
-const REGISTER_ENDPOINT = `${(import.meta.env as Record<string, string | undefined>).VITE_API_URL ?? "http://localhost:8080"}/auth/register`;
-// ponytail: REGISTER_ENDPOINT retained for back-compat with any third-party
-// debug tooling that may read it via the module surface. The live flow uses
-// registerUser() from lib/api/endpoints/auth so it goes through the full
-// interceptor chain. Remove once we confirm no external readers.
-void REGISTER_ENDPOINT;
-
 function parseRoles(claims: JwtClaims | null): Role[] {
   const realm = claims?.realm_access?.roles ?? [];
   return realm.filter((r): r is Role => r === "BUYER" || r === "SELLER" || r === "ADMIN");

@@ -1,6 +1,8 @@
 package com.vnshop.orderservice.infrastructure.audit;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 
 @Entity
@@ -26,6 +28,10 @@ public class AuditLogJpaEntity {
 
     private String resourceId;
 
+    // columnDefinition = "jsonb" only affects schema generation (per HANDOFF
+    // gotcha); @JdbcTypeCode(SqlTypes.JSON) tells Hibernate to bind the
+    // String as jsonb so Postgres doesn't reject the cast.
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private String details;
 

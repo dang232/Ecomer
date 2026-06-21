@@ -143,12 +143,9 @@ jobs:
   dependency-check:
     name: OWASP dependency check
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     needs: [changes, java-tests, node-tests]
     if: always() && (needs.changes.outputs.poms == 'true' || github.event_name == 'workflow_dispatch')
-    defaults:
-      run:
-        working-directory: services/inventory-service
 
     steps:
       - uses: actions/checkout@v4
@@ -179,8 +176,14 @@ jobs:
           restore-keys: |
             dependency-check-data-${{ runner.os }}-v1-
 
-      - name: OWASP dependency check
-        run: mvn --batch-mode org.owasp:dependency-check-maven:12.1.9:check -DfailBuildOnCVSS=7 -DknownExploitedEnabled=false
+      - name: OWASP dependency check (all services)
+        run: |
+          for pom in services/*/pom.xml; do
+            echo "::group::Scanning $(dirname "$pom")"
+            mvn --batch-mode -f "$pom" org.owasp:dependency-check-maven:12.1.9:check \
+              -DfailBuildOnCVSS=7 -DknownExploitedEnabled=false
+            echo "::endgroup::"
+          done
 
       - name: Upload dependency check report
         if: always()

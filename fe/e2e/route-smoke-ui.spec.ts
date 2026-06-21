@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { expectNoGlobalError } from "./_helpers";
 
 /**
  * Route breadth smoke spec — hits every public top-level route as a guest
@@ -25,12 +26,6 @@ const PUBLIC_ROUTES: { path: string; mountSignal: RegExp }[] = [
   { path: "/design-system", mountSignal: /Design System|VNShop Design/i },
 ];
 
-async function expectNoGlobalError(page: Page, route: string): Promise<void> {
-  await expect(
-    page.getByText(/Invalid input/i),
-    `route ${route} surfaced a Zod 'Invalid input' error`,
-  ).toHaveCount(0);
-}
 
 test.describe("public route breadth smoke", () => {
   for (const { path, mountSignal } of PUBLIC_ROUTES) {

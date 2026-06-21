@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { expectNoGlobalError } from "./_helpers";
 
 /**
  * WCAG 2.1 AA accessibility gate for the three primary personas.
@@ -82,10 +83,6 @@ async function installCsrfPatch(page: Page): Promise<void> {
   await page.addInitScript({ content: script });
 }
 
-async function expectNoGlobalError(page: Page): Promise<void> {
-  await expect(page.getByText(/Có lỗi xảy ra|Something went wrong/i)).toHaveCount(0);
-  await expect(page.getByText(/Invalid input/i)).toHaveCount(0);
-}
 
 // Build the AxeBuilder once per spec with the project-wide configuration.
 // Each test calls .analyze() on a fresh instance pointed at its page.

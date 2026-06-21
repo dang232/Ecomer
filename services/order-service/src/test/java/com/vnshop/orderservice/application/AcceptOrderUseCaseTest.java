@@ -25,7 +25,7 @@ class AcceptOrderUseCaseTest {
     private static final Money TEN_THOUSAND = new Money(BigDecimal.valueOf(10_000), "VND");
 
     private final TestFakes.FakeOrderRepository repository = new TestFakes.FakeOrderRepository();
-    private final RecordingEvents events = new RecordingEvents();
+    private final TestFakes.RecordingOrderEvents events = new TestFakes.RecordingOrderEvents();
     private final AcceptOrderUseCase useCase = new AcceptOrderUseCase(repository, events);
 
     @Test
@@ -79,11 +79,4 @@ class AcceptOrderUseCaseTest {
                 "COD", PaymentStatus.PENDING, "idem-1");
     }
 
-    private static final class RecordingEvents implements OrderEventPublisherPort {
-        final List<Order> updates = new ArrayList<>();
-        @Override public void publishOrderCreated(Order order) {}
-        @Override public void publishOrderUpdated(Order order) { updates.add(order); }
-        @Override public void publishOrderPaid(Order order) {}
-        @Override public void publishOrderDelivered(Order order, SubOrder subOrder) {}
-    }
 }

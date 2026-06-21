@@ -28,7 +28,7 @@ class RejectOrderUseCaseTest {
 
     private final TestFakes.FakeOrderRepository repository = new TestFakes.FakeOrderRepository();
     private final RecordingInventory inventory = new RecordingInventory();
-    private final RecordingEvents events = new RecordingEvents();
+    private final TestFakes.RecordingOrderEvents events = new TestFakes.RecordingOrderEvents();
     private final RejectOrderUseCase useCase = new RejectOrderUseCase(repository, inventory, events);
 
     @Test
@@ -81,11 +81,4 @@ class RejectOrderUseCaseTest {
         @Override public void release(String orderId) { released.add(orderId); }
     }
 
-    private static final class RecordingEvents implements OrderEventPublisherPort {
-        final List<Order> updates = new ArrayList<>();
-        @Override public void publishOrderCreated(Order order) {}
-        @Override public void publishOrderUpdated(Order order) { updates.add(order); }
-        @Override public void publishOrderPaid(Order order) {}
-        @Override public void publishOrderDelivered(Order order, SubOrder subOrder) {}
-    }
 }

@@ -2,7 +2,7 @@ package com.vnshop.orderservice.infrastructure.event.projection;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vnshop.orderservice.application.projection.OrderProjector;
+import com.vnshop.orderservice.domain.port.out.ProjectionPort;
 import java.math.BigDecimal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,11 +16,11 @@ import org.springframework.stereotype.Service;
 public class OrderProjectionListener {
     private static final Logger LOG = LoggerFactory.getLogger(OrderProjectionListener.class);
 
-    private final OrderProjector orderProjector;
+    private final ProjectionPort projectionPort;
     private final ObjectMapper objectMapper;
 
-    public OrderProjectionListener(OrderProjector orderProjector, ObjectMapper objectMapper) {
-        this.orderProjector = orderProjector;
+    public OrderProjectionListener(ProjectionPort projectionPort, ObjectMapper objectMapper) {
+        this.projectionPort = projectionPort;
         this.objectMapper = objectMapper;
     }
 
@@ -53,7 +53,7 @@ public class OrderProjectionListener {
         String firstSellerId = firstSellerId(payload);
         int itemCount = payload.path("itemCount").isMissingNode() ? 0 : payload.path("itemCount").asInt(0);
 
-        orderProjector.upsert(orderId, status, buyerId, firstSellerId, totalAmount, itemCount);
+        projectionPort.upsertOrderSummary(orderId, status, buyerId, firstSellerId, totalAmount, itemCount);
         LOG.debug("Projected {} for order {} (status={})", eventType, orderId, status);
     }
 

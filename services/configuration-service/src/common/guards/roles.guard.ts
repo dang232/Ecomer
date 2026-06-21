@@ -3,12 +3,9 @@ import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator.js';
 
 /**
- * Checks the x-user-roles header injected by the api-gateway.
- *
- * TODO: The gateway (UserIdHeaderFilter) currently only forwards x-user-id.
- * A companion filter must be added to extract realm_access.roles from the JWT
- * and forward them as a comma-separated x-user-roles header. Until then, any
- * endpoint decorated with @Roles() will reject all requests with 403.
+ * Checks the x-user-roles header injected by the api-gateway's
+ * UserIdHeaderFilter (extracts realm_access.roles from the JWT and
+ * forwards them as a comma-separated x-user-roles header).
  */
 @Injectable()
 export class RolesGuard implements CanActivate {

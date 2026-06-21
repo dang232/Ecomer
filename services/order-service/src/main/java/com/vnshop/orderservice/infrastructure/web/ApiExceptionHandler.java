@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -54,6 +55,17 @@ public class ApiExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiResponse<Void> badRequest(IllegalArgumentException exception) {
         return ApiResponse.error(exception.getMessage(), "BAD_REQUEST");
+    }
+
+    /**
+     * Synthetic/non-UUID ids (e2e fixtures like "E2E-VIETQR-...") hit a
+     * path variable typed as UUID and Spring throws this. Return 404 so the
+     * caller treats it as "order doesn't exist" without surfacing a 500.
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ApiResponse<Void> pathVariableTypeMismatch(MethodArgumentTypeMismatchException exception) {
+        return ApiResponse.error("Resource not found", "NOT_FOUND");
     }
 
     @ExceptionHandler(Exception.class)

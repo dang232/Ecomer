@@ -22,6 +22,7 @@ vi.mock("../lib/api/endpoints/messaging", async (importActual) => {
 });
 
 import { messagesKey, useMessages, useSendMessage } from "./use-messages";
+import { makeWrapper } from "../test-utils/render-with-query-client";
 
 const buildPage = (
   content: { id: string; threadId: string; senderId: string; body: string; sentAt: string }[],
@@ -31,15 +32,6 @@ const buildPage = (
   hasMore: false,
 });
 
-function makeWrapper() {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  }
-  return { client, Wrapper };
-}
 
 beforeEach(() => {
   useAuthMock.mockReturnValue({ ready: true, authenticated: true });

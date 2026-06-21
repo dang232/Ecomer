@@ -156,6 +156,7 @@ export class NotificationRestController {
       title: 'Test notification',
       body: 'This is a test notification.',
       metadata: { source: 'manual-test' },
+      idempotencyKey: `test:${userId}:${Date.now()}`,
     });
     if (!notification) {
       return {

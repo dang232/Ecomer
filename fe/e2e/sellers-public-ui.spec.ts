@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { expectNoGlobalError } from "./_helpers";
 
 /**
  * UI-driven QA spec for the public sellers surface.
@@ -17,10 +18,6 @@ import { test, expect, type APIRequestContext, type Page } from "@playwright/tes
 
 const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
 
-async function expectNoGlobalError(page: Page): Promise<void> {
-  await expect(page.getByText(/Có lỗi xảy ra|Something went wrong/i)).toHaveCount(0);
-  await expect(page.getByText(/Invalid input/i)).toHaveCount(0);
-}
 
 async function firstSellerId(request: APIRequestContext): Promise<string | null> {
   const r = await request.get(`${apiURL}/sellers?size=1`);

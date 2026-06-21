@@ -12,16 +12,8 @@ vi.mock("../lib/api/endpoints/search", () => ({
 }));
 
 import { useSearch } from "./use-search";
+import { makeWrapper } from "../test-utils/render-with-query-client";
 
-function makeWrapper() {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  }
-  return { Wrapper };
-}
 
 beforeEach(() => {
   searchProductsMock.mockReset();
