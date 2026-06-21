@@ -581,9 +581,9 @@ services:
   prometheus:
     image: prom/prometheus:v2.53.0
     container_name: vnshop-prometheus
-    ports:
+    # ports:
       # TODO(prod): restrict port 9090 to an internal network or VPN — do not expose to the public internet in production
-      - "9090:9090"
+      # - "9090:9090"  # ponytail: expose only behind VPN in prod
     volumes:
       - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./infra/prometheus/rules.yml:/etc/prometheus/rules.yml:ro
@@ -731,8 +731,8 @@ services:
       context: .
       dockerfile: services/user-service/Dockerfile
     container_name: vnshop-user-service
-    ports:
-      - "8081:8081"
+    # ports:
+      # - "8081:8081"  # ponytail: internal only, access via gateway
     depends_on:
       postgres-user:
         condition: service_healthy
@@ -774,8 +774,8 @@ services:
       context: .
       dockerfile: services/product-service/Dockerfile
     container_name: vnshop-product-service
-    ports:
-      - "8082:8082"
+    # ports:
+      # - "8082:8082"
     depends_on:
       postgres-product:
         condition: service_healthy
@@ -832,8 +832,8 @@ services:
       context: .
       dockerfile: services/inventory-service/Dockerfile
     container_name: vnshop-inventory-service
-    ports:
-      - "8083:8083"
+    # ports:
+      # - "8083:8083"
     depends_on:
       postgres-inventory:
         condition: service_healthy
@@ -931,8 +931,8 @@ services:
       context: .
       dockerfile: services/search-service/Dockerfile
     container_name: vnshop-search-service
-    ports:
-      - "8086:8086"
+    # ports:
+      # - "8086:8086"
     depends_on:
       postgres-search:
         condition: service_healthy
@@ -1005,8 +1005,8 @@ services:
     profiles: ["apps"]
     build: ./services/coupon-service
     container_name: vnshop-coupon-service
-    ports:
-      - "8088:8088"
+    # ports:
+      # - "8088:8088"
     depends_on:
       postgres-legacy:
         condition: service_healthy
@@ -1038,8 +1038,8 @@ services:
     profiles: ["apps"]
     build: ./services/seller-finance-service
     container_name: vnshop-seller-finance-service
-    ports:
-      - "8090:8090"
+    # ports:
+      # - "8090:8090"
     depends_on:
       postgres-legacy:
         condition: service_healthy
@@ -1075,8 +1075,8 @@ services:
     profiles: ["apps"]
     build: ./services/recommendations-service
     container_name: vnshop-recommendations-service
-    ports:
-      - "8094:8094"
+    # ports:
+      # - "8094:8094"
     depends_on:
       postgres-legacy:
         condition: service_healthy
@@ -1107,8 +1107,8 @@ services:
       context: .
       dockerfile: services/order-service/Dockerfile
     container_name: vnshop-order-service
-    ports:
-      - "8091:8091"
+    # ports:
+      # - "8091:8091"
     depends_on:
       postgres-order:
         condition: service_healthy
@@ -1164,8 +1164,8 @@ services:
       context: .
       dockerfile: services/payment-service/Dockerfile
     container_name: vnshop-payment-service
-    ports:
-      - "8092:8092"
+    # ports:
+      # - "8092:8092"
     depends_on:
       postgres-payment:
         condition: service_healthy
@@ -1233,8 +1233,8 @@ services:
       context: .
       dockerfile: services/shipping-service/Dockerfile
     container_name: vnshop-shipping-service
-    ports:
-      - "8093:8093"
+    # ports:
+      # - "8093:8093"
     depends_on:
       postgres-shipping:
         condition: service_healthy
