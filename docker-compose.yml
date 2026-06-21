@@ -582,6 +582,7 @@ services:
     image: prom/prometheus:v2.53.0
     container_name: vnshop-prometheus
     ports:
+      # TODO(prod): restrict port 9090 to an internal network or VPN — do not expose to the public internet in production
       - "9090:9090"
     volumes:
       - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro

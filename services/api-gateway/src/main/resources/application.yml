@@ -40,8 +40,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,gateway,prometheus
+        include: health,prometheus
   endpoint:
+    env:
+      enabled: false
     health:
       probes:
         enabled: true
