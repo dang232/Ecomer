@@ -261,8 +261,8 @@ services:
     image: redis:8.6-alpine
     container_name: vnshop-redis
     command: ["redis-server", "--appendonly", "yes", "--maxmemory", "512mb", "--maxmemory-policy", "volatile-lru", "--requirepass", "${REDIS_PASSWORD:-vnshop123}"]
-    ports:
-      - "6379:6379"
+    # ports:
+      # - "6379:6379"  # internal only
     volumes:
       - redis-data:/data
     healthcheck:
@@ -279,8 +279,8 @@ services:
     image: mongo:7.0
     container_name: vnshop-mongo
     restart: unless-stopped
-    ports:
-      - "27017:27017"
+    # ports:
+      # - "27017:27017"  # internal only
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-vnshop}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-vnshop123}
@@ -430,8 +430,8 @@ services:
       ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:?ELASTIC_PASSWORD must be set}
       xpack.security.http.ssl.enabled: "false"
       ES_JAVA_OPTS: -Xms512m -Xmx512m
-    ports:
-      - "9200:9200"
+    # ports:
+      # - "9200:9200"  # internal only
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
     healthcheck:
