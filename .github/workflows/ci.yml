@@ -134,16 +134,17 @@ jobs:
           npm test -- --coverage --passWithNoTests
           npm run build
 
-  # ── Dependency check ──
-  # Only runs when a pom.xml or the workflow itself changes, since OWASP
-  # signal is dependency-version-driven; pure code commits can't introduce
-  # new CVEs. Persists the NVD CVE database between runs (the previous bare
-  # invocation re-downloaded the entire NVD feed on every run, ~20 minutes
-  # cold; with the cache primed warm runs land in 2-3 minutes).
+  # ── Dependency CVE scan (Trivy filesystem) ──
+  # Replaces OWASP dependency-check which required downloading the full NVD
+  # feed (~2GB, 20+ min cold) and consistently timed out on GitHub runners.
+  # Trivy uses its own compact vulnerability DB (~30MB, cached) and finishes
+  # in under 60 seconds. Scans all pom.xml + package-lock.json for known CVEs.
+  # Maven local repo is pre-populated so Trivy doesn't hammer Maven Central
+  # (which rate-limits GitHub runner IPs with HTTP 429).
   dependency-check:
-    name: OWASP dependency check
+    name: Dependency CVE scan
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     needs: [changes, java-tests, node-tests]
     if: always() && (needs.changes.outputs.poms == 'true' || github.event_name == 'workflow_dispatch')
 
@@ -157,42 +158,49 @@ jobs:
           java-version: '25'
           cache: maven
 
-      - name: Cache local Maven repository
+      - name: Cache Maven local repository
         uses: actions/cache@v4
         with:
-          path: ~/.m2/repository
-          key: maven-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
-          restore-keys: maven-${{ runner.os }}-
+          path: ${{ github.workspace }}/.m2/repository
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2-
 
-      - name: Compute OWASP cache key
-        id: owasp-cache
-        run: echo "month=$(date +'%Y-%m')" >> "$GITHUB_OUTPUT"
-
-      - name: Cache NVD CVE database
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository/org/owasp/dependency-check-data
-          key: dependency-check-data-${{ runner.os }}-v1-${{ steps.owasp-cache.outputs.month }}
-          restore-keys: |
-            dependency-check-data-${{ runner.os }}-v1-
-
-      - name: OWASP dependency check (all services)
+      - name: Populate Maven cache (resolve dependencies)
         run: |
           for pom in services/*/pom.xml; do
-            echo "::group::Scanning $(dirname "$pom")"
-            mvn --batch-mode -f "$pom" org.owasp:dependency-check-maven:12.1.9:check \
-              -DfailBuildOnCVSS=7 -DknownExploitedEnabled=false
-            echo "::endgroup::"
+            mvn -B -f "$pom" dependency:resolve -DskipTests || true
           done
+        env:
+          MAVEN_OPTS: -Dmaven.repo.local=${{ github.workspace }}/.m2/repository
 
-      - name: Upload dependency check report
-        if: always()
-        uses: actions/upload-artifact@v4
+      - name: Trivy dependency scan
+        uses: aquasecurity/trivy-action@master
         with:
-          name: dependency-check-report
-          path: |
-            services/*/target/dependency-check-report.*
-          if-no-files-found: ignore
+          scan-type: fs
+          scan-ref: services/
+          format: table
+          severity: CRITICAL,HIGH
+          scanners: vuln
+          exit-code: '1'
+
+      - name: Trivy dependency scan (SARIF)
+        if: always()
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: services/
+          format: sarif
+          output: trivy-deps.sarif
+          severity: CRITICAL,HIGH
+          scanners: vuln
+          exit-code: '0'
+
+      - name: Upload SARIF to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-deps.sarif
+          category: dependency-scan
 
   # ── Docker build + Trivy scan (parallel per service) ──
   docker-scan:
