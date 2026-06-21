@@ -2,7 +2,7 @@
 
 A polyglot microservices e-commerce platform demonstrating DDD, CQRS, hexagonal architecture, and event-driven sagas, with a React storefront on top.
 
-VNShop is a portfolio full-stack project for a Vietnamese multi-seller marketplace inspired by Shopee, Lazada, and Tiki. It ships with: 18 services (Spring Boot + NestJS), per-service Postgres, Kafka (SASL-authenticated + per-service ACLs) + saga + outbox, Keycloak-backed httpOnly-cookie auth, and a React + Vite SPA. Two end-to-end test suites gate every change — `e2e-day.mjs` (55/55 API endpoints) and Playwright (19/19 browser scenarios).
+VNShop is a portfolio full-stack project for a Vietnamese multi-seller marketplace inspired by Shopee, Lazada, and Tiki. It ships with: 18 services (Spring Boot + NestJS), per-service Postgres, Kafka (SASL-authenticated + per-service ACLs) + saga + outbox, Keycloak-backed httpOnly-cookie auth, and a React + Vite SPA. Two end-to-end test suites gate every change — `e2e-day.mjs` (65/65 API endpoints) and Playwright (108/108 browser scenarios).
 
 ## System Requirements
 
@@ -96,14 +96,14 @@ Two end-to-end gates run green at the current HEAD:
 
 | Suite | Result | Coverage |
 | --- | --- | --- |
-| `node infra/scripts/e2e-day.mjs` | **55/55 PASS** | Single-day flow: register → login (buyer/seller/admin) → catalog → public sellers → seller fulfilment → cart → wishlist → checkout (live shipping rate quote) → order → coupon validate + apply → admin seller approval → saga compensation (cancel + return + refund) → messaging WebSocket handshake → reviews + Q&A → recommendations → admin dashboards → user profile |
-| `cd fe && npx playwright test` | **19/19 PASS** | Real browser against dockerised FE: smoke, buyer happy path, authenticated routes, role guards, search, public sellers, guest cart |
+| `node infra/scripts/e2e-day.mjs` | **65/65 PASS** | Single-day flow: register → login (buyer/seller/admin) → catalog → public sellers → seller fulfilment → cart → wishlist → checkout (live shipping rate quote) → order → coupon validate + apply → admin seller approval → saga compensation (cancel + return + refund) → messaging WebSocket handshake → reviews + Q&A → recommendations → admin dashboards → user profile → video moderation |
+| `cd fe && npx playwright test` | **108/108 PASS** | Real browser against dockerised FE: smoke, buyer happy path, authenticated routes, role guards, search, public sellers, guest cart, seller dashboard, admin panel, video integration, journey flows |
 
-Per-service unit tests at HEAD (2026-06-09):
+Per-service unit tests at HEAD (2026-06-21):
 
 | Service | Tests |
 | --- | --- |
-| order-service | 144/144 |
+| order-service | 132/132 |
 | user-service | 141/141 |
 | payment-service | 89/89 |
 | notification-service | 89/89 |
@@ -112,8 +112,9 @@ Per-service unit tests at HEAD (2026-06-09):
 | FE vitest | 169/169 |
 | FE typecheck | 0 errors |
 
-### Recent shipped (2026-06-02 → 2026-06-09)
+### Recent shipped (2026-06-09 → 2026-06-21)
 
+- **Ponytail over-engineering cleanup** (2026-06-21). Codebase-wide audit removed ~1,100 lines of dead code, test duplication, and infra bloat across 9 commits: dead FE hooks/components deleted, 35 test-helper duplicates consolidated into shared modules, unused Redis HA stack (6 services) removed, `spring-boot-devtools` dropped from 3 services, manual `@Repository` JPQL replaced with Spring Data, YAGNI application-layer wrappers inlined, test-the-framework tests deleted, `ConfirmDialog` rebuilt as thin `Modal` wrapper.
 - **Centralized configuration service** (2026-06-09). NestJS service at `:8097` with YAML-backed business config. Java services fetch on startup via `ConfigServiceClient`; hot-reload via `POST /api/config/reload`. Extracted hardcoded constants (currency, invoice template, payment methods, shipping thresholds) into `services/configuration-service/config/services.yml`.
 - **Invoice service** (2026-06-09). Spring Boot service at `:8098` generates XML invoices per Vietnamese e-invoice spec. JAXB marshalling, buyer/seller ownership checks, Kafka integration.
 - **Kafka SASL + ACL security hardening** (pt49). Broker switched to `SASL_PLAINTEXT` with per-service credentials and `StandardAuthorizer` ACLs. Prevents event forgery between bounded contexts.
@@ -237,8 +238,8 @@ node infra/scripts/seed-demo.mjs
 Verify the stack is healthy with both gates:
 
 ```bash
-node infra/scripts/e2e-day.mjs       # 55/55 — day-in-the-life API smoke
-cd fe && npx playwright test         # 19/19 — real browser FE-to-BE
+node infra/scripts/e2e-day.mjs       # 65/65 — day-in-the-life API smoke
+cd fe && npx playwright test         # 108/108 — real browser FE-to-BE
 ```
 
 If you see 503s on either suite, Spring Cloud Gateway's Resilience4j breaker has latched. Reset with `docker compose restart api-gateway`.
