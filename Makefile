@@ -1,4 +1,4 @@
-.PHONY: up down restart rebuild logs logs-all test-order test-payment test-cart test-fe test-e2e test-all build-java compile-order seed migrate psql certs clean status verify-backup help
+.PHONY: up down restart rebuild logs logs-all test-order test-payment test-user test-cart test-fe test-e2e test-all test-java build-java compile-order seed migrate psql certs clean status verify-backup help
 
 # ─── Stack Management ─────────────────────────────────────
 up: ## Start full stack
@@ -30,6 +30,22 @@ test-order: ## Run order-service tests
 test-payment: ## Run payment-service tests
 	cd services/payment-service && ./mvnw test -q
 
+test-user: ## Run user-service tests in Temurin 25 (Docker) — matches CI exactly
+	docker run --rm \
+		-v "$(CURDIR):/work" \
+		-w /work/services/user-service \
+		-v m2-cache:/root/.m2 \
+		eclipse-temurin:25-jdk \
+		./mvnw -B test "-Dtest=!*ApplicationTests,!ArchitectureRulesTest" -Djacoco.skip=true
+
+test-java: ## Run tests for a Java service in Temurin 25 (Docker) — usage: make test-java s=user-service
+	docker run --rm \
+		-v "$(CURDIR):/work" \
+		-w /work/services/$(s) \
+		-v m2-cache:/root/.m2 \
+		eclipse-temurin:25-jdk \
+		./mvnw -B test "-Dtest=!*ApplicationTests,!ArchitectureRulesTest" -Djacoco.skip=true
+
 test-cart: ## Run cart-service tests
 	cd services/cart-service && npm test
 
@@ -39,11 +55,12 @@ test-fe: ## Run frontend tests
 test-e2e: ## Run Playwright E2E tests
 	cd fe && npx playwright test
 
-test-all: ## Run all unit tests (Java + Node)
+test-all: ## Run all unit tests (Java via Docker Temurin 25, + Node)
 	@echo "=== Java services ==="
-	cd services/order-service && ./mvnw test -q
-	cd services/payment-service && ./mvnw test -q
-	cd services/product-service && ./mvnw test -q
+	$(MAKE) test-java s=order-service
+	$(MAKE) test-java s=payment-service
+	$(MAKE) test-java s=product-service
+	$(MAKE) test-java s=user-service
 	@echo "=== Node services ==="
 	cd services/cart-service && npm test
 	@echo "=== Frontend ==="
