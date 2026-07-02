@@ -16,11 +16,11 @@ mkdir -p "${BACKUP_DIR}"
 cd "${PROJECT_ROOT}"
 
 echo "Creating PostgreSQL backup: ${POSTGRES_BACKUP}"
-docker compose exec -T postgres pg_dump -U vnshop vnshop | gzip > "${POSTGRES_BACKUP}"
+docker compose exec -T postgres-legacy pg_dump -U vnshop vnshop | gzip > "${POSTGRES_BACKUP}"
 
 echo "Creating Keycloak realm backup: ${KEYCLOAK_BACKUP}"
-docker compose exec -T keycloak /opt/keycloak/bin/kc.sh export --realm vnshop --dir /tmp
-docker cp "${KEYCLOAK_CONTAINER}:/tmp/vnshop-realm.json" "${KEYCLOAK_BACKUP}"
+docker compose exec -T keycloak /opt/keycloak/bin/kc.sh export --realm vnshop --dir /opt/keycloak/data/export
+docker cp "${KEYCLOAK_CONTAINER}:/opt/keycloak/data/export/vnshop-realm.json" "${KEYCLOAK_BACKUP}"
 
 echo "Backup complete"
 echo "PostgreSQL: ${POSTGRES_BACKUP}"
