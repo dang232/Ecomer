@@ -800,7 +800,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
       KAFKA_SASL_USERNAME: svc-product
-      KAFKA_SASL_PASSWORD: ${KAFKA_SVC_PRODUCT_PASSWORD:?KAFKA_SVC_PRODUCT_PASSWORD must be set}
+      KAFKA_SASL_PASSWORD: ${KAFKA_SVC_PRODUCT_PASSWORD:-kafka-product}
       KEYCLOAK_ISSUER_URI: http://localhost:8085/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
@@ -858,7 +858,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
       KAFKA_SASL_USERNAME: svc-inventory
-      KAFKA_SASL_PASSWORD: ${KAFKA_SVC_INVENTORY_PASSWORD:?KAFKA_SVC_INVENTORY_PASSWORD must be set}
+      KAFKA_SASL_PASSWORD: ${KAFKA_SVC_INVENTORY_PASSWORD:-kafka-inventory}
       KEYCLOAK_ISSUER_URI: http://localhost:8085/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
@@ -962,7 +962,7 @@ services:
       OTEL_TRACES_SAMPLER_ARG: "1.0"
       KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
       KAFKA_SASL_USERNAME: svc-search
-      KAFKA_SASL_PASSWORD: ${KAFKA_SVC_SEARCH_PASSWORD:?KAFKA_SVC_SEARCH_PASSWORD must be set}
+      KAFKA_SASL_PASSWORD: ${KAFKA_SVC_SEARCH_PASSWORD:-kafka-search}
     volumes:
       - ./infra/kafka/certs/kafka.truststore.jks:/etc/kafka/secrets/kafka.truststore.jks:ro
     deploy:
@@ -992,7 +992,7 @@ services:
       OTEL_TRACES_SAMPLER_ARG: "1.0"
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_SASL_USERNAME: svc-order
-      KAFKA_SASL_PASSWORD: ${KAFKA_SVC_ORDER_PASSWORD:?KAFKA_SVC_ORDER_PASSWORD must be set}
+      KAFKA_SASL_PASSWORD: ${KAFKA_SVC_ORDER_PASSWORD:-kafka-order}
       KEYCLOAK_ISSUER_URI: http://localhost:8085/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
       # Email channel (SES). Set EMAIL_ENABLED=true + AWS creds to activate.
@@ -1068,7 +1068,7 @@ services:
       OTEL_TRACES_SAMPLER_ARG: "1.0"
       KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
       KAFKA_SASL_USERNAME: svc-finance
-      KAFKA_SASL_PASSWORD: ${KAFKA_SVC_FINANCE_PASSWORD:?KAFKA_SVC_FINANCE_PASSWORD must be set}
+      KAFKA_SASL_PASSWORD: ${KAFKA_SVC_FINANCE_PASSWORD:-kafka-finance}
     volumes:
       - ./infra/kafka/certs/kafka.truststore.jks:/etc/kafka/secrets/kafka.truststore.jks:ro
     deploy:
@@ -1098,7 +1098,7 @@ services:
       PRODUCT_SERVICE_URL: http://product-service:8082
       KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
       KAFKA_SASL_USERNAME: svc-recommendations
-      KAFKA_SASL_PASSWORD: ${KAFKA_SVC_RECOMMENDATIONS_PASSWORD:?KAFKA_SVC_RECOMMENDATIONS_PASSWORD must be set}
+      KAFKA_SASL_PASSWORD: ${KAFKA_SVC_RECOMMENDATIONS_PASSWORD:-kafka-recommendations}
     volumes:
       - ./infra/kafka/certs/kafka.truststore.jks:/etc/kafka/secrets/kafka.truststore.jks:ro
     deploy:
@@ -1149,7 +1149,7 @@ services:
       VNSHOP_INVOICE_STORAGE_PATH_STYLE_ACCESS: ${INVOICE_STORAGE_PATH_STYLE:-true}
       KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
       KAFKA_SASL_USERNAME: svc-order
-      KAFKA_SASL_PASSWORD: ${KAFKA_SVC_ORDER_PASSWORD:?KAFKA_SVC_ORDER_PASSWORD must be set}
+      KAFKA_SASL_PASSWORD: ${KAFKA_SVC_ORDER_PASSWORD:-kafka-order}
       GRPC_CLIENT_INVENTORY_HOST: inventory-service
       GRPC_CLIENT_INVENTORY_PORT: 9093
       GRPC_CLIENT_PAYMENT_HOST: payment-service
@@ -1224,7 +1224,7 @@ services:
       # Kafka SASL/PLAIN credentials for payment-service.
       KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
       KAFKA_SASL_USERNAME: svc-payment
-      KAFKA_SASL_PASSWORD: ${KAFKA_SVC_PAYMENT_PASSWORD:?KAFKA_SVC_PAYMENT_PASSWORD must be set}
+      KAFKA_SASL_PASSWORD: ${KAFKA_SVC_PAYMENT_PASSWORD:-kafka-payment}
     volumes:
       - ./infra/kafka/certs/kafka.truststore.jks:/etc/kafka/secrets/kafka.truststore.jks:ro
     deploy:
@@ -1258,7 +1258,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
       KAFKA_SASL_USERNAME: svc-shipping
-      KAFKA_SASL_PASSWORD: ${KAFKA_SVC_SHIPPING_PASSWORD:?KAFKA_SVC_SHIPPING_PASSWORD must be set}
+      KAFKA_SASL_PASSWORD: ${KAFKA_SVC_SHIPPING_PASSWORD:-kafka-shipping}
       KEYCLOAK_ISSUER_URI: http://localhost:8085/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
@@ -1306,7 +1306,7 @@ services:
       OTEL_TRACES_SAMPLER_ARG: "1.0"
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_SASL_USERNAME: svc-order
-      KAFKA_SASL_PASSWORD: ${KAFKA_SVC_ORDER_PASSWORD:?KAFKA_SVC_ORDER_PASSWORD must be set}
+      KAFKA_SASL_PASSWORD: ${KAFKA_SVC_ORDER_PASSWORD:-kafka-order}
       KEYCLOAK_ISSUER_URI: http://localhost:8085/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
 
@@ -1418,7 +1418,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
       KAFKA_SASL_USERNAME: svc-invoice
-      KAFKA_SASL_PASSWORD: ${KAFKA_SVC_INVOICE_PASSWORD:?KAFKA_SVC_INVOICE_PASSWORD must be set}
+      KAFKA_SASL_PASSWORD: ${KAFKA_SVC_INVOICE_PASSWORD:-kafka-invoice}
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
       OTEL_TRACES_SAMPLER: parentbased_traceidratio
       OTEL_TRACES_SAMPLER_ARG: "1.0"
