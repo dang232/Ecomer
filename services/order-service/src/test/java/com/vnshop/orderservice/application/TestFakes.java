@@ -1,7 +1,11 @@
 package com.vnshop.orderservice.application;
 
+import com.vnshop.orderservice.domain.Address;
 import com.vnshop.orderservice.domain.FulfillmentStatus;
+import com.vnshop.orderservice.domain.Money;
 import com.vnshop.orderservice.domain.Order;
+import com.vnshop.orderservice.domain.OrderItem;
+import com.vnshop.orderservice.domain.PaymentStatus;
 import com.vnshop.orderservice.domain.Return;
 import com.vnshop.orderservice.domain.SubOrder;
 import com.vnshop.orderservice.domain.port.out.OrderEventPublisherPort;
@@ -97,5 +101,33 @@ public final class TestFakes {
         public Optional<Return> findBySubOrderId(Long subOrderId) {
             return Optional.empty();
         }
+    }
+
+    // ─── Order factories ───────────────────────────────────────────────────────
+
+    private static final Money DEFAULT_MONEY = new Money(java.math.BigDecimal.valueOf(10_000), "VND");
+
+    /** Creates an Order with one pending-acceptance SubOrder owned by sellerId. */
+    public static Order orderWithPendingSubOrder(UUID orderId, String sellerId) {
+        return orderWithSubOrder(orderId, sellerId, FulfillmentStatus.PENDING_ACCEPTANCE);
+    }
+
+    /** Creates an Order with one accepted SubOrder owned by sellerId. */
+    public static Order orderWithAcceptedSubOrder(UUID orderId, String sellerId) {
+        return orderWithSubOrder(orderId, sellerId, FulfillmentStatus.ACCEPTED);
+    }
+
+    private static Order orderWithSubOrder(UUID orderId, String sellerId, FulfillmentStatus status) {
+        OrderItem item = new OrderItem(
+                "product-1", "P-1", sellerId, "Phone",
+                1, DEFAULT_MONEY, null);
+        SubOrder subOrder = new SubOrder(
+                100L, sellerId, List.of(item),
+                status, Money.ZERO, "STANDARD", null, null);
+        Address shippingAddress = new Address("123 Day Street", "Ward 1", "District 1", "HCMC");
+        return new Order(
+                orderId, "ORD-1", "buyer-1", shippingAddress, List.of(subOrder),
+                DEFAULT_MONEY, Money.ZERO, Money.ZERO,
+                "COD", PaymentStatus.PENDING, "idem-1");
     }
 }

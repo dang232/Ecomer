@@ -7,8 +7,9 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+
+import { makeWrapper } from "../../test-utils/render-with-query-client";
 
 // --- Stripe SDK stubs ---
 const mockConfirmPayment = vi.fn();
@@ -35,15 +36,6 @@ vi.mock("sonner", () => ({ toast: { error: vi.fn(), message: vi.fn() } }));
 
 import { StripePaymentSection } from "./StripePaymentSection";
 
-function makeWrapper() {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  };
-}
-
 beforeEach(() => {
   vi.stubEnv("VITE_STRIPE_ENABLED", "true");
   vi.stubEnv("VITE_STRIPE_PUBLISHABLE_KEY", "pk_test_mock");
@@ -59,7 +51,7 @@ describe("StripePaymentSection i18n (P0-6)", () => {
   it("loading state renders t('stripe.initializing') — no Vietnamese literal", async () => {
     // Never resolve clientSecret so the component stays in loading state.
     stripeCreateMock.mockImplementation(() => new Promise(() => {}));
-    const Wrapper = makeWrapper();
+    const { Wrapper } = makeWrapper();
     const { container } = render(
       <Wrapper>
         <StripePaymentSection orderId="ORDER-1" idempotencyKey="idem-1" onCompleted={vi.fn()} />
@@ -77,7 +69,7 @@ describe("StripePaymentSection i18n (P0-6)", () => {
 
   it("submit button: polling state renders t('stripe.confirming') key", async () => {
     stripeCreateMock.mockResolvedValueOnce({ clientSecret: "cs_test_mock" });
-    const Wrapper = makeWrapper();
+    const { Wrapper } = makeWrapper();
     render(
       <Wrapper>
         <StripePaymentSection orderId="ORDER-1" idempotencyKey="idem-1" onCompleted={vi.fn()} />
@@ -96,7 +88,7 @@ describe("StripePaymentSection i18n (P0-6)", () => {
 
   it("submit button: default/idle state renders t('stripe.pay') key — no hardcoded 'Thanh toán'", async () => {
     stripeCreateMock.mockResolvedValueOnce({ clientSecret: "cs_test_mock" });
-    const Wrapper = makeWrapper();
+    const { Wrapper } = makeWrapper();
     const { container } = render(
       <Wrapper>
         <StripePaymentSection orderId="ORDER-1" idempotencyKey="idem-1" onCompleted={vi.fn()} />

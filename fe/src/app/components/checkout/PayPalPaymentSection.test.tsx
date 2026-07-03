@@ -1,7 +1,8 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { makeWrapper } from "../../test-utils/render-with-query-client";
 
 const noop = () => undefined;
 
@@ -38,15 +39,6 @@ vi.mock("@paypal/react-paypal-js", () => ({
 
 import { PayPalPaymentSection } from "./PayPalPaymentSection";
 
-function makeWrapper() {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  };
-}
-
 beforeEach(() => {
   paypalCreateMock.mockReset();
   paypalCaptureMock.mockReset();
@@ -70,7 +62,7 @@ describe("PayPalPaymentSection", () => {
       clientId: "sb-test-client-id",
       status: "CREATED",
     });
-    const Wrapper = makeWrapper();
+    const { Wrapper } = makeWrapper();
     render(
       <Wrapper>
         <PayPalPaymentSection orderId="ORDER-1" idempotencyKey="idem-1" onCompleted={noop} />
@@ -95,7 +87,7 @@ describe("PayPalPaymentSection", () => {
       payment: { paymentId: "pay-uuid-2", status: "COMPLETED" },
     });
     const onCompleted = vi.fn();
-    const Wrapper = makeWrapper();
+    const { Wrapper } = makeWrapper();
     render(
       <Wrapper>
         <PayPalPaymentSection orderId="ORDER-1" idempotencyKey="idem-1" onCompleted={onCompleted} />
@@ -124,7 +116,7 @@ describe("PayPalPaymentSection", () => {
     });
     paypalCaptureMock.mockRejectedValueOnce(new Error("capture exploded"));
     const onCompleted = vi.fn();
-    const Wrapper = makeWrapper();
+    const { Wrapper } = makeWrapper();
     render(
       <Wrapper>
         <PayPalPaymentSection orderId="ORDER-1" idempotencyKey="idem-1" onCompleted={onCompleted} />
@@ -146,7 +138,7 @@ describe("PayPalPaymentSection", () => {
 
   it("onApprove guards against being called before createOrder set the paymentId", async () => {
     const onCompleted = vi.fn();
-    const Wrapper = makeWrapper();
+    const { Wrapper } = makeWrapper();
     render(
       <Wrapper>
         <PayPalPaymentSection orderId="ORDER-1" idempotencyKey="idem-1" onCompleted={onCompleted} />

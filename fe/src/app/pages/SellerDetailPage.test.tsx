@@ -1,7 +1,7 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import { type ReactNode, Suspense } from "react";
 import { MemoryRouter, Route, Routes } from "react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 import { ErrorBoundary } from "../components/error-boundary";
@@ -33,6 +33,8 @@ const SELLER = {
   totalProducts: 20,
 };
 
+// NOTE: SellerDetailPage requires MemoryRouter + ErrorBoundary + Suspense wrapping,
+// so this local wrapper is intentionally kept distinct from the shared helper.
 function makeWrapper(id = "s1") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },

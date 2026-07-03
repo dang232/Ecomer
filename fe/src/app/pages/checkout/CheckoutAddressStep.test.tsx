@@ -1,8 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
-import type { ReactNode } from "react";
 
+import { makeWrapper } from "../../test-utils/render-with-query-client";
 import { CheckoutAddressStep } from "./CheckoutAddressStep";
 import type { Address } from "../../types/api";
 
@@ -33,15 +32,6 @@ const addresses: Address[] = [
   },
 ];
 
-function makeWrapper() {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  };
-}
-
 const baseProps = {
   buyerName: "Mai Nguyen",
   isLoading: false,
@@ -50,7 +40,7 @@ const baseProps = {
 
 describe("CheckoutAddressStep", () => {
   it("renders a real <input type=\"radio\"> per address (no buttons-as-radios)", () => {
-    const Wrapper = makeWrapper();
+    const { Wrapper } = makeWrapper();
     render(
       <Wrapper>
         <CheckoutAddressStep
@@ -71,7 +61,7 @@ describe("CheckoutAddressStep", () => {
   });
 
   it("marks the selected address as checked and shares a name across the group", () => {
-    const Wrapper = makeWrapper();
+    const { Wrapper } = makeWrapper();
     render(
       <Wrapper>
         <CheckoutAddressStep
@@ -94,7 +84,7 @@ describe("CheckoutAddressStep", () => {
 
   it("calls setSelectedAddressIndex when a radio is changed (e.g. by arrow keys)", () => {
     const setSelectedAddressIndex = vi.fn();
-    const Wrapper = makeWrapper();
+    const { Wrapper } = makeWrapper();
     render(
       <Wrapper>
         <CheckoutAddressStep
@@ -114,7 +104,7 @@ describe("CheckoutAddressStep", () => {
   });
 
   it("focusable radio inputs are in the natural tab order", () => {
-    const Wrapper = makeWrapper();
+    const { Wrapper } = makeWrapper();
     render(
       <Wrapper>
         <CheckoutAddressStep
@@ -139,7 +129,7 @@ describe("CheckoutAddressStep", () => {
 
   it("wraps each address card in a <label> so the whole card is clickable", () => {
     const setSelectedAddressIndex = vi.fn();
-    const Wrapper = makeWrapper();
+    const { Wrapper } = makeWrapper();
     render(
       <Wrapper>
         <CheckoutAddressStep
@@ -158,7 +148,7 @@ describe("CheckoutAddressStep", () => {
   });
 
   it("exposes the radiogroup role on the wrapper with an aria-label", () => {
-    const Wrapper = makeWrapper();
+    const { Wrapper } = makeWrapper();
     render(
       <Wrapper>
         <CheckoutAddressStep

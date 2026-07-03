@@ -5,9 +5,9 @@
  * so English-locale rendering never contains Vietnamese characters.
  */
 import { render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { makeWrapper } from "../../test-utils/render-with-query-client";
 
 // --- API stubs ---
 const paymentStatusMock = vi.fn();
@@ -18,15 +18,6 @@ vi.mock("../../lib/api/endpoints/payment", () => ({
 }));
 
 import { VietQrPaymentSection } from "./VietQrPaymentSection";
-
-function makeWrapper() {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  };
-}
 
 beforeEach(() => {
   vietqrCreateMock.mockReset();
@@ -41,7 +32,7 @@ describe("VietQrPaymentSection i18n (P0-6)", () => {
   it("loading state renders t('vietqr.creating') key — no hardcoded Vietnamese", async () => {
     // Never resolve the QR so the component stays in loading state.
     vietqrCreateMock.mockImplementation(() => new Promise(() => {}));
-    const Wrapper = makeWrapper();
+    const { Wrapper } = makeWrapper();
     const { container } = render(
       <Wrapper>
         <VietQrPaymentSection orderId="ORDER-1" idempotencyKey="idem-1" onCompleted={vi.fn()} />
@@ -68,7 +59,7 @@ describe("VietQrPaymentSection i18n (P0-6)", () => {
     // Payment status never resolves (no COMPLETED), so the component stays on the QR view.
     paymentStatusMock.mockImplementation(() => new Promise(() => {}));
 
-    const Wrapper = makeWrapper();
+    const { Wrapper } = makeWrapper();
     const { container } = render(
       <Wrapper>
         <VietQrPaymentSection orderId="ORDER-1" idempotencyKey="idem-1" onCompleted={vi.fn()} />
@@ -101,7 +92,7 @@ describe("VietQrPaymentSection i18n (P0-6)", () => {
     });
     paymentStatusMock.mockImplementation(() => new Promise(() => {}));
 
-    const Wrapper = makeWrapper();
+    const { Wrapper } = makeWrapper();
     const { container } = render(
       <Wrapper>
         <VietQrPaymentSection orderId="ORDER-1" idempotencyKey="idem-1" onCompleted={vi.fn()} />
