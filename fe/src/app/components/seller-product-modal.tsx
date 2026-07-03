@@ -19,7 +19,6 @@ import { useProductVideos } from "../../features/videos/hooks/useProductVideos";
 import { useVideoUpload } from "../../features/videos/hooks/useVideoUpload";
 
 import { ImageWithFallback } from "./image-with-fallback";
-import { ConfirmDialog } from "./ui/confirm-dialog";
 import { Modal } from "./ui/modal";
 
 interface SellerProductModalProps {
@@ -678,30 +677,63 @@ function SellerProductModalBody({
       </div>
 
       {/* P2-5: replaces window.confirm() at the upload-cancel exit path. */}
-      <ConfirmDialog
+      <Modal
         open={cancelUploadConfirmOpen}
         onClose={() => setCancelUploadConfirmOpen(false)}
-        onConfirm={confirmCancelUpload}
         title={t("video.seller.cancelUpload")}
-        description={t("video.upload.cancelConfirm")}
-        confirmLabel={t("common.confirm")}
-        cancelLabel={t("common.cancel")}
-      />
+        size="sm"
+        footer={
+          <div className="flex gap-3 justify-center w-full">
+            <button
+              type="button"
+              onClick={() => setCancelUploadConfirmOpen(false)}
+              className="px-5 py-2.5 rounded-[var(--radius-lg)] text-sm font-medium border border-border bg-transparent text-foreground hover:bg-background transition-colors"
+            >
+              {t("common.cancel")}
+            </button>
+            <button
+              type="button"
+              onClick={confirmCancelUpload}
+              className="px-5 py-2.5 rounded-[var(--radius-lg)] text-sm font-medium bg-primary text-white hover:opacity-90 transition-opacity"
+            >
+              {t("common.confirm")}
+            </button>
+          </div>
+        }
+      >
+        <p className="text-sm text-text-secondary mb-4 text-center">{t("video.upload.cancelConfirm")}</p>
+      </Modal>
 
       {/* P2-5: destructive confirm for the per-row "Remove video" action. */}
-      <ConfirmDialog
+      <Modal
         open={removeVideoId !== null}
         onClose={() => setRemoveVideoId(null)}
-        onConfirm={() => {
-          if (removeVideoId) void handleRemoveVideo(removeVideoId);
-          setRemoveVideoId(null);
-        }}
         title={t("seller.productModal.removeVideoTitle")}
-        description={t("seller.productModal.removeVideoDescription")}
-        confirmLabel={t("seller.productModal.removeVideo")}
-        cancelLabel={t("common.cancel")}
-        variant="danger"
-      />
+        size="sm"
+        footer={
+          <div className="flex gap-3 justify-center w-full">
+            <button
+              type="button"
+              onClick={() => setRemoveVideoId(null)}
+              className="px-5 py-2.5 rounded-[var(--radius-lg)] text-sm font-medium border border-border bg-transparent text-foreground hover:bg-background transition-colors"
+            >
+              {t("common.cancel")}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (removeVideoId) void handleRemoveVideo(removeVideoId);
+                setRemoveVideoId(null);
+              }}
+              className="px-5 py-2.5 rounded-[var(--radius-lg)] text-sm font-medium bg-error text-white hover:opacity-90 transition-opacity"
+            >
+              {t("seller.productModal.removeVideo")}
+            </button>
+          </div>
+        }
+      >
+        <p className="text-sm text-text-secondary mb-4 text-center">{t("seller.productModal.removeVideoDescription")}</p>
+      </Modal>
     </Modal>
     </>
   );

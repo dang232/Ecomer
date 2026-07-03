@@ -82,6 +82,47 @@ From the 2026-06-19 handover:
 
 ---
 
+## Ponytail M6+M7+M10 executed (2026-07-03)
+
+**Branch:** `dev-deploy` (not refactor branch — preflight was merged to main/dev-deploy)
+**Commits:** `7e2a1cc5` — `refactor(order-service): M6+M7+M10 — ponytail over-engineering`
+
+### What was committed
+
+| Milestone | Summary | Lines saved |
+|---|---|---|
+| M6 | Consolidated `orderWith` factories into `TestFakes`. Added `orderWith(UUID, Long, String)` with `CommissionTier.PREFERRED`. Updated 3 return-use-case tests to use shared factory. | ~134 |
+| M7 | New `SubOrderTransition` sealed interface + `TransitionSubOrderUseCase`. Old 4 use cases delegate with `@Deprecated`. | ~148 |
+| M10 | Deleted `confirm-dialog.tsx` + test. Refactored 3 callers to use `Modal` directly. | ~574 |
+| **Total** | | **~856 lines removed** |
+
+### Regression fixed
+
+`CompleteReturnUseCaseTest.completeTransitionsReturnAndRequestsRefundForOwnerSeller` failed after M6 — `orderWith` in TestFakes used the 8-param `SubOrder` constructor (no commission tier → defaults to `STANDARD`), but the test asserted `PREFERRED`. Fixed by:
+1. Adding `import CommissionTier` to TestFakes
+2. Switching `orderWith` to the 9-param constructor with `"PREFERRED"` shipping + `CommissionTier.PREFERRED`
+
+### Verification
+
+| Gate | Result |
+|---|---|
+| `mvn test -Dtest="*UseCaseTest,*TransitionTest"` | ✅ All unit tests pass |
+| `npm test -- --run` (fe) | ✅ 422/422 pass |
+| `mvn test` (full) | ⚠️ 12 failures — all **pre-existing** (ArchitectureRulesTest 7 = ArchUnit empty sets; GrpcShippingRequestAdapterTest 3 = testcontainer; OrderServiceIntegrationTest 2 = ApplicationContext) |
+
+### Current state
+
+- **M6, M7, M10 committed** to `dev-deploy`
+- **No push** — `dev-deploy` is not the target branch
+- Remaining milestones (M1–M5, M8–M9) not yet started
+- Plan file: `C:\Users\dangq\.claude\plans\dreamy-giggling-island.md`
+
+### Files changed in M6+M7+M10 commit
+
+16 files: 2 new (SubOrderTransition.java, TransitionSubOrderUseCase.java), 8 modified (use cases → delegates + test factories), 3 deleted (confirm-dialog.tsx + 2 tests), 3 modified FE callers
+
+---
+
 ## Pre-flight bug triage (later same day, 02:00–03:10 UTC) → **COMPLETED 14:50 UTC, gates green**
 
 **Branch:** `refactor/ponytail-overengineering` (cut from `main`, no push yet)

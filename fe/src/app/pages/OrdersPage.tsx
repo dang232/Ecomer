@@ -8,7 +8,6 @@ import { toast } from "sonner";
 
 import { ImageWithFallback } from "../components/image-with-fallback";
 import { Modal } from "../components/ui/modal";
-import { ConfirmDialog } from "../components/ui/confirm-dialog";
 import { useAuth } from "../hooks/use-auth";
 import { useCart } from "../hooks/use-cart";
 import { useCancelOrder, myOrdersOptions } from "../hooks/use-orders";
@@ -507,21 +506,42 @@ function OrderCard({
           </div>
         </div>
       </motion.div>
-      <ConfirmDialog
+      <Modal
         open={cancelId !== null}
         onClose={() => setCancelId(null)}
-        onConfirm={() => {
-          if (cancelId) onCancel(cancelId);
-        }}
         title={t("orders.cancelDialog.title", { defaultValue: "Cancel order?" })}
-        description={t("orders.cancelDialog.description", {
-          defaultValue: "This will cancel your order. You won't be able to undo this.",
-        })}
-        confirmLabel={t("orders.actions.cancel")}
-        cancelLabel={t("common.cancel")}
-        variant="danger"
-        icon={<IconCircleX size={24} />}
-      />
+        size="sm"
+        footer={
+          <div className="flex gap-3 justify-center w-full">
+            <button
+              type="button"
+              onClick={() => setCancelId(null)}
+              className="px-5 py-2.5 rounded-[var(--radius-lg)] text-sm font-medium border border-border bg-transparent text-foreground hover:bg-background transition-colors"
+            >
+              {t("common.cancel")}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (cancelId) onCancel(cancelId);
+                setCancelId(null);
+              }}
+              className="px-5 py-2.5 rounded-[var(--radius-lg)] text-sm font-medium bg-error text-white hover:opacity-90 transition-opacity"
+            >
+              {t("orders.actions.cancel")}
+            </button>
+          </div>
+        }
+      >
+        <div className="w-14 h-14 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4 [&>svg]:w-6 [&>svg]:h-6" aria-hidden="true">
+          <IconCircleX size={24} />
+        </div>
+        <p className="text-sm text-text-secondary mb-4 text-center">
+          {t("orders.cancelDialog.description", {
+            defaultValue: "This will cancel your order. You won't be able to undo this.",
+          })}
+        </p>
+      </Modal>
     </>
   );
 }

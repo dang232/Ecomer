@@ -1,18 +1,26 @@
 package com.vnshop.orderservice.application;
 
+import com.vnshop.orderservice.domain.Address;
+import com.vnshop.orderservice.domain.CommissionTier;
 import com.vnshop.orderservice.domain.FulfillmentStatus;
+import com.vnshop.orderservice.domain.Money;
 import com.vnshop.orderservice.domain.Order;
+import com.vnshop.orderservice.domain.OrderItem;
+import com.vnshop.orderservice.domain.PaymentStatus;
 import com.vnshop.orderservice.domain.Return;
 import com.vnshop.orderservice.domain.SubOrder;
 import com.vnshop.orderservice.domain.port.out.OrderEventPublisherPort;
 import com.vnshop.orderservice.domain.port.out.OrderRepositoryPort;
 import com.vnshop.orderservice.domain.port.out.ReturnRepositoryPort;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+
+import static com.vnshop.orderservice.domain.Money.ZERO;
 
 /**
  * Shared in-memory fakes for order-service application tests.
@@ -97,5 +105,20 @@ public final class TestFakes {
         public Optional<Return> findBySubOrderId(Long subOrderId) {
             return Optional.empty();
         }
+    }
+
+    // ─── Order factories ───────────────────────────────────────────────────────
+
+    private static final Money TEN_THOUSAND = new Money(BigDecimal.valueOf(10_000), "VND");
+
+    /** Creates an Order with a single shipped SubOrder containing one item. */
+    public static Order orderWith(UUID orderId, Long subOrderId, String sellerId) {
+        OrderItem item = new OrderItem("product-1", "P-1", sellerId, "Phone", 1, TEN_THOUSAND, null);
+        SubOrder subOrder = new SubOrder(subOrderId, sellerId, List.of(item),
+                FulfillmentStatus.SHIPPED, ZERO, "PREFERRED", "GHN", "TRK-1", CommissionTier.PREFERRED);
+        Address shippingAddress = new Address("123 Day Street", "Ward 1", "District 1", "HCMC");
+        return new Order(orderId, "ORD-1", "buyer-1", shippingAddress, List.of(subOrder),
+                TEN_THOUSAND, Money.ZERO, Money.ZERO,
+                "COD", PaymentStatus.COMPLETED, "idem-1");
     }
 }

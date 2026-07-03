@@ -1,10 +1,10 @@
 import { IconBan, IconCheck, IconRefresh } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { Modal } from "../../components/ui/modal";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { ConfirmDialog } from "../../components/ui/confirm-dialog";
 import { ApiError } from "../../lib/api";
 import {
   adminCancelOrder,
@@ -58,6 +58,7 @@ export function OrderManagement() {
   const [statusFilter, setStatusFilter] = useState("");
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
   const [refundOrderId, setRefundOrderId] = useState<string | null>(null);
+  const [refundReason, setRefundReason] = useState("");
 
   const { data: orders = [], isLoading, isError } = useQuery({
     queryKey: ["admin", "orders", statusFilter],
@@ -198,17 +199,43 @@ export function OrderManagement() {
         </div>
       )}
 
-      <ConfirmDialog
+      <Modal
         open={refundDialogOpen}
-        onClose={() => { setRefundDialogOpen(false); setRefundOrderId(null); }}
-        onConfirm={(reason) => { if (refundOrderId) refund.mutate(refundOrderId); }}
-        variant="danger"
-        reasonField
+        onClose={() => { setRefundDialogOpen(false); setRefundOrderId(null); setRefundReason(""); }}
         title={t("admin.orders.refundConfirmTitle")}
-        description={t("admin.orders.refundConfirmDescription")}
-        confirmLabel={t("admin.orders.refundConfirmBtn")}
-        cancelLabel={t("common.cancel")}
-      />
+        size="sm"
+        footer={
+          <div className="flex gap-3 justify-center w-full">
+            <button
+              type="button"
+              onClick={() => { setRefundDialogOpen(false); setRefundOrderId(null); setRefundReason(""); }}
+              className="px-5 py-2.5 rounded-[var(--radius-lg)] text-sm font-medium border border-border bg-transparent text-foreground hover:bg-background transition-colors"
+            >
+              {t("common.cancel")}
+            </button>
+            <button
+              type="button"
+              disabled={refundReason.trim().length < 5}
+              onClick={() => { if (refundOrderId) refund.mutate(refundOrderId); setRefundDialogOpen(false); setRefundOrderId(null); setRefundReason(""); }}
+              className="px-5 py-2.5 rounded-[var(--radius-lg)] text-sm font-medium bg-error text-white hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {t("admin.orders.refundConfirmBtn")}
+            </button>
+          </div>
+        }
+      >
+        <p className="text-sm text-text-secondary mb-4 text-center">{t("admin.orders.refundConfirmDescription")}</p>
+        <textarea
+          value={refundReason}
+          onChange={(e) => setRefundReason(e.target.value)}
+          placeholder="Enter reason"
+          required
+          minLength={5}
+          rows={3}
+          className="w-full rounded-[var(--radius-md)] border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+          aria-label="Reason"
+        />
+      </Modal>
     </div>
   );
 }

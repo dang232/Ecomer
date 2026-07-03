@@ -2,18 +2,13 @@ package com.vnshop.orderservice.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static com.vnshop.orderservice.application.TestFakes.orderWith;
 
-import com.vnshop.orderservice.domain.Address;
 import com.vnshop.orderservice.domain.CommissionTier;
-import com.vnshop.orderservice.domain.FulfillmentStatus;
 import com.vnshop.orderservice.domain.Money;
 import com.vnshop.orderservice.domain.Order;
-import com.vnshop.orderservice.domain.OrderItem;
-import com.vnshop.orderservice.domain.PaymentStatus;
 import com.vnshop.orderservice.domain.Return;
 import com.vnshop.orderservice.domain.ReturnStatus;
-import com.vnshop.orderservice.domain.ShippingInfo;
-import com.vnshop.orderservice.domain.SubOrder;
 import com.vnshop.orderservice.domain.port.out.RefundRequestPort;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -33,6 +28,7 @@ import org.junit.jupiter.api.Test;
 class CompleteReturnUseCaseTest {
     private static final String SELLER_OWNER = "seller-1";
     private static final String SELLER_ATTACKER = "seller-2";
+    // TEN_THOUSAND kept for assertions on refund amounts
     private static final Money TEN_THOUSAND = new Money(BigDecimal.valueOf(10_000), "VND");
 
     private final TestFakes.FakeReturnRepository returns = new TestFakes.FakeReturnRepository();
@@ -131,16 +127,6 @@ class CompleteReturnUseCaseTest {
         // state machine so the test exercises the same path production hits.
         return new Return(returnId, orderId.toString(), subOrderId, buyerId, "broken",
                 ReturnStatus.APPROVED, Instant.now(), null);
-    }
-
-    private static Order orderWith(UUID orderId, Long subOrderId, String sellerId) {
-        OrderItem item = new OrderItem("product-1", "P-1", sellerId, "Phone", 1, TEN_THOUSAND, null);
-        SubOrder subOrder = new SubOrder(subOrderId, sellerId, List.of(item),
-                FulfillmentStatus.SHIPPED, new ShippingInfo(Money.ZERO, "STANDARD", "GHN", "TRK-1"), CommissionTier.PREFERRED);
-        Address shippingAddress = new Address("123 Day Street", "Ward 1", "District 1", "HCMC");
-        return new Order(orderId, "ORD-1", "buyer-1", shippingAddress, List.of(subOrder),
-                TEN_THOUSAND, Money.ZERO, Money.ZERO,
-                "COD", PaymentStatus.COMPLETED, "idem-1");
     }
 
     private static final class RecordingRefundPort implements RefundRequestPort {
