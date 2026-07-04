@@ -1,8 +1,8 @@
 FROM maven:3.9.11-eclipse-temurin-25-alpine AS builder
 WORKDIR /workspace
-COPY services/product-service/pom.xml .
+COPY pom.xml .
 RUN --mount=type=cache,target=/root/.m2 mvn dependency:go-offline
-COPY services/product-service/src ./src
+COPY src ./src
 RUN --mount=type=cache,target=/root/.m2 mvn package -DskipTests
 RUN cd target && JAR=$(ls -S *.jar 2>/dev/null | grep -vE "(sources|javadoc|original|opentelemetry-javaagent).jar$" | head -1) && mv "$JAR" app.jar
 

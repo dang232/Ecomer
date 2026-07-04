@@ -1,8 +1,8 @@
 FROM maven:3.9.6-eclipse-temurin-21 AS builder
 WORKDIR /workspace
-COPY services/invoice-service/pom.xml .
+COPY pom.xml .
 RUN --mount=type=cache,target=/root/.m2 mvn dependency:go-offline
-COPY services/invoice-service/src ./src
+COPY src ./src
 RUN --mount=type=cache,target=/root/.m2 mvn package -DskipTests
 RUN cd target && JAR=$(ls -S *.jar 2>/dev/null | grep -vE "(sources|javadoc|original).jar$" | head -1) && mv "$JAR" app.jar
 
