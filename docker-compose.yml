@@ -492,8 +492,8 @@ services:
   video-transcoder:
     # profiles removed for full deployment
     build:
-      context: .
-      dockerfile: services/video-transcoder/Dockerfile
+      context: ./services/video-transcoder
+      dockerfile: Dockerfile
     image: vnshop/video-transcoder:latest
     deploy:
       replicas: 3
@@ -672,8 +672,8 @@ services:
   api-gateway:
     # profiles removed for full deployment
     build:
-      context: .
-      dockerfile: services/api-gateway/Dockerfile
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
     container_name: vnshop-api-gateway
     restart: on-failure:5
     ports:
@@ -731,8 +731,8 @@ services:
   user-service:
     # profiles removed for full deployment
     build:
-      context: .
-      dockerfile: services/user-service/Dockerfile
+      context: ./services/user-service
+      dockerfile: Dockerfile
     container_name: vnshop-user-service
     # ports:
       # - "8081:8081"  # ponytail: internal only, access via gateway
@@ -774,8 +774,8 @@ services:
   product-service:
     # profiles removed for full deployment
     build:
-      context: .
-      dockerfile: services/product-service/Dockerfile
+      context: ./services/product-service
+      dockerfile: Dockerfile
     container_name: vnshop-product-service
     # ports:
       # - "8082:8082"
@@ -832,8 +832,8 @@ services:
   inventory-service:
     # profiles removed for full deployment
     build:
-      context: .
-      dockerfile: services/inventory-service/Dockerfile
+      context: ./services/inventory-service
+      dockerfile: Dockerfile
     container_name: vnshop-inventory-service
     # ports:
       # - "8083:8083"
@@ -931,8 +931,8 @@ services:
   search-service:
     # profiles removed for full deployment
     build:
-      context: .
-      dockerfile: services/search-service/Dockerfile
+      context: ./services/search-service
+      dockerfile: Dockerfile
     container_name: vnshop-search-service
     # ports:
       # - "8086:8086"
@@ -1109,8 +1109,8 @@ services:
   order-service:
     # profiles removed for full deployment
     build:
-      context: .
-      dockerfile: services/order-service/Dockerfile
+      context: ./services/order-service
+      dockerfile: Dockerfile
     container_name: vnshop-order-service
     # ports:
       # - "8091:8091"
@@ -1166,8 +1166,8 @@ services:
   payment-service:
     # profiles removed for full deployment
     build:
-      context: .
-      dockerfile: services/payment-service/Dockerfile
+      context: ./services/payment-service
+      dockerfile: Dockerfile
     container_name: vnshop-payment-service
     # ports:
       # - "8092:8092"
@@ -1235,8 +1235,8 @@ services:
   shipping-service:
     # profiles removed for full deployment
     build:
-      context: .
-      dockerfile: services/shipping-service/Dockerfile
+      context: ./services/shipping-service
+      dockerfile: Dockerfile
     container_name: vnshop-shipping-service
     # ports:
       # - "8093:8093"
@@ -1397,8 +1397,8 @@ services:
   invoice-service:
     # profiles removed for full deployment
     build:
-      context: .
-      dockerfile: services/invoice-service/Dockerfile
+      context: ./services/invoice-service
+      dockerfile: Dockerfile
     container_name: vnshop-invoice-service
     ports:
       - "8098:8098"
