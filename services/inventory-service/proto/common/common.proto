@@ -1,0 +1,9 @@
+syntax = "proto3";
+package vnshop.common;
+option java_multiple_files = true;
+option java_package = "com.vnshop.proto.common";
+
+message Money {
+  string amount = 1;   // BigDecimal as string
+  string currency = 2; // "VND"
+}

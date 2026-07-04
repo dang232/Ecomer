@@ -1,0 +1,32 @@
+syntax = "proto3";
+package vnshop.payment;
+option java_multiple_files = true;
+option java_package = "com.vnshop.proto.payment";
+
+import "common/common.proto";
+
+service PaymentService {
+  rpc RequestPayment(PaymentRequest) returns (PaymentResponse);
+  rpc GetPaymentStatus(PaymentStatusRequest) returns (PaymentStatusResponse);
+}
+
+message PaymentRequest {
+  string order_id = 1;
+  string buyer_id = 2;
+  vnshop.common.Money amount = 3;
+  string payment_method = 4; // "COD", "VNPAY", "MOMO"
+}
+
+message PaymentResponse {
+  string payment_id = 1;
+  string status = 2; // "PENDING", "COMPLETED", "FAILED"
+}
+
+message PaymentStatusRequest {
+  string order_id = 1;
+}
+
+message PaymentStatusResponse {
+  string payment_id = 1;
+  string status = 2;
+}
