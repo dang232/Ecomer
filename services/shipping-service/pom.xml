@@ -28,6 +28,7 @@
 	</scm>
 	<properties>
 		<jackson.version>2.21.4</jackson.version>
+		<jackson3.version>3.1.4</jackson3.version>
 		<java.version>25</java.version>
 		<netty.version>4.2.15.Final</netty.version>
 		<spring-kafka.version>4.0.6</spring-kafka.version>
@@ -44,6 +45,12 @@
 				<groupId>com.fasterxml.jackson.core</groupId>
 				<artifactId>jackson-databind</artifactId>
 				<version>${jackson.version}</version>
+			</dependency>
+			<!-- Jackson 3.x (from opentelemetry-javaagent transitive) CVE-2026-54512 -->
+			<dependency>
+				<groupId>tools.jackson.core</groupId>
+				<artifactId>jackson-databind</artifactId>
+				<version>${jackson3.version}</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
