@@ -21,6 +21,7 @@
 		<netty.version>4.2.15.Final</netty.version>
 		<spring-kafka.version>4.0.6</spring-kafka.version>
 		<bouncycastle.version>1.84</bouncycastle.version>
+		<jackson.version>2.21.4</jackson.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -102,6 +103,12 @@
 				<groupId>org.bouncycastle</groupId>
 				<artifactId>bcprov-jdk18on</artifactId>
 				<version>${bouncycastle.version}</version>
+			</dependency>
+			<!-- Jackson CVE-2026-54512, CVE-2026-54513: PolymorphicTypeValidator bypass -->
+			<dependency>
+				<groupId>com.fasterxml.jackson.core</groupId>
+				<artifactId>jackson-databind</artifactId>
+				<version>${jackson.version}</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
