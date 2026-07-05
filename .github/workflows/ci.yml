@@ -202,6 +202,7 @@ jobs:
           severity: CRITICAL,HIGH
           scanners: vuln
           exit-code: '1'
+          trivyignores: .trivyignore
 
   # ── Eslint check (notification service only) ──
   lint:
