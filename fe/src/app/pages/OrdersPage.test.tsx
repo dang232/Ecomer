@@ -75,6 +75,8 @@ vi.mock("@tanstack/react-query", () => {
 
 import { OrdersPage } from "./OrdersPage";
 
+// NOTE: OrdersPage mocks entire @tanstack/react-query, so this local wrapper
+// is intentionally kept distinct from the shared helper.
 function makeWrapper() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   function Wrapper({ children }: { children: RLNode }) {

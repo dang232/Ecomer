@@ -71,6 +71,8 @@ const PROFILE = {
   addresses: [ADDRESS_1, ADDRESS_2],
 };
 
+// NOTE: ProfilePage requires custom gcTime/staleTime and prefetchProfile setup,
+// so this local wrapper is intentionally kept distinct from the shared helper.
 function makeWrapper(prefetchProfile: unknown) {
   const client = new QueryClient({
     defaultOptions: {
