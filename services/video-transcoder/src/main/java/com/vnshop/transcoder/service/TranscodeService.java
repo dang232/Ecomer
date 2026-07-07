@@ -8,8 +8,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
-import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.core.async.AsyncRequestBody;
+import software.amazon.awssdk.core.async.AsyncResponseTransformer;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -22,6 +23,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -33,7 +35,7 @@ public class TranscodeService {
     private static final String STAGING_BUCKET  = "vnshop-videos-staging";
     private static final int    PROCESS_TIMEOUT = 360; // seconds
 
-    private final S3Client            s3Client;
+    private final S3AsyncClient           s3AsyncClient;
     private final FfmpegCommandBuilder ffmpegCommandBuilder;
 
     @Value("${transcoder.tmpfs-dir:/tmp/transcoder}")
@@ -124,11 +126,27 @@ public class TranscodeService {
         return ownerSegment + "/videos/" + job.videoId() + "_720p.mp4";
     }
 
-    private void downloadRaw(String key, Path destination) {
-        s3Client.getObject(
-                GetObjectRequest.builder().bucket(UPLOADS_BUCKET).key(key).build(),
-                destination
-        );
+    private void downloadRaw(String key, Path destination) throws InterruptedException, java.util.concurrent.ExecutionException {
+        GetObjectRequest request = GetObjectRequest.builder()
+                .bucket(UPLOADS_BUCKET)
+                .key(key)
+                .build();
+
+        // Download asynchronously and write bytes to file
+        CompletableFuture<Path> future = s3AsyncClient.getObject(
+                request,
+                AsyncResponseTransformer.toBytes()
+        ).thenApply(bytes -> {
+            try {
+                Files.write(destination, bytes.asByteArray());
+                return destination;
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to write downloaded file", e);
+            }
+        });
+
+        // Block on the async operation (transcode is inherently sequential)
+        future.get();
     }
 
     /**
@@ -206,17 +224,26 @@ public class TranscodeService {
         }
     }
 
-    private void uploadToStaging(Path file, String key) throws IOException {
-        s3Client.putObject(
-                PutObjectRequest.builder().bucket(STAGING_BUCKET).key(key).build(),
-                RequestBody.fromFile(file)
-        );
+    private void uploadToStaging(Path file, String key) throws InterruptedException, java.util.concurrent.ExecutionException {
+        PutObjectRequest request = PutObjectRequest.builder()
+                .bucket(STAGING_BUCKET)
+                .key(key)
+                .build();
+
+        // Upload asynchronously
+        AsyncRequestBody requestBody = AsyncRequestBody.fromFile(file);
+        s3AsyncClient.putObject(request, requestBody).get();
     }
 
     private void deleteRaw(String key) {
         try {
-            s3Client.deleteObject(
-                    DeleteObjectRequest.builder().bucket(UPLOADS_BUCKET).key(key).build());
+            DeleteObjectRequest request = DeleteObjectRequest.builder()
+                    .bucket(UPLOADS_BUCKET)
+                    .key(key)
+                    .build();
+
+            // Fire and forget - non-critical operation
+            s3AsyncClient.deleteObject(request);
             log.info("Deleted raw file key={}", key);
         } catch (Exception e) {
             // Non-fatal: raw bucket has its own lifecycle policy

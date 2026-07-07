@@ -6,6 +6,8 @@ import com.vnshop.inventoryservice.infrastructure.event.InventoryEventPublisher;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,10 +51,15 @@ public class ReleaseStockUseCase {
                 .map(r -> new InventoryEventPublisher.ReleasedItem(r.productId(), r.quantity()))
                 .toList();
 
-        for (StockReservation reservation : active) {
-            port.increment(reservation.productId(), reservation.quantity());
-            port.markReleased(reservation.released(now));
-        }
+        // Batch release: accumulate quantities by productId and release all in one operation
+        Map<String, Integer> quantitiesToRelease = active.stream()
+                .collect(Collectors.groupingBy(
+                        StockReservation::productId,
+                        Collectors.summingInt(StockReservation::quantity)));
+        port.incrementBatch(quantitiesToRelease);
+        port.batchMarkReleased(
+                active.stream().map(StockReservation::reservationId).toList(),
+                now);
         log.info("Released {} reservations for orderId={}", active.size(), orderId);
 
         eventPublisher.publishReleased(orderId, null, releasedItems);

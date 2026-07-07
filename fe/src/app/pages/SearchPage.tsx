@@ -1,6 +1,6 @@
 import { SlidersHorizontal, Star, X, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { motion } from "motion/react";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, memo } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router";
 
@@ -17,7 +17,7 @@ import type { Product } from "../types/ui";
 
 const getScrollKey = () => `scroll:${window.location.pathname}${window.location.search}`;
 
-function ProductCard({ product, index }: { product: Product; index: number }) {
+const ProductCard = memo(function ProductCard({ product, index }: { product: Product; index: number }) {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { toggleWishlist, isWishlisted } = useVNShop();
@@ -113,7 +113,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
       </div>
     </motion.div>
   );
-}
+});
 
 const PAGE_SIZE = 20;
 

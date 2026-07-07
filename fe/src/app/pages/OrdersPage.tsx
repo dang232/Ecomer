@@ -1,7 +1,7 @@
 import { IconPackage, IconTruck, IconCircleCheck, IconCircleX, IconClock, IconRefresh, IconMapPin, IconMessage, IconStar, IconRotate, IconAlertCircle, IconLogin, IconArrowsLeftRight } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { motion } from "motion/react";
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState, memo } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -334,7 +334,7 @@ function ReturnModal({
   );
 }
 
-function OrderCard({
+const OrderCard = memo(function OrderCard({
   order,
   rawOrder,
   onCancel,
@@ -524,7 +524,7 @@ function OrderCard({
       />
     </>
   );
-}
+});
 
 export function OrdersPage() {
   const navigate = useNavigate();
@@ -536,7 +536,7 @@ export function OrdersPage() {
   const { addItemAsync } = useCart();
   const { t } = useTranslation();
 
-  const handleReorder = async (items: UIOrder["items"]) => {
+  const handleReorder = useCallback(async (items: UIOrder["items"]) => {
     if (items.length === 0) {
       toast.info(t("orders.reorder.noItems"));
       return;
@@ -583,7 +583,7 @@ export function OrdersPage() {
         },
       });
     }
-  };
+  }, [addItemAsync, t, navigate]);
 
   const allOrders = useMemo(() => {
     const content = ordersQuery.data?.content ?? [];
@@ -595,20 +595,23 @@ export function OrdersPage() {
     [allOrders, activeTab],
   );
 
-  const tabs: { id: OrderTab; labelKey: string }[] = [
-    { id: "all", labelKey: "orders.tabs.all" },
-    { id: "pending", labelKey: "orders.tabs.pending" },
-    { id: "shipping", labelKey: "orders.tabs.shipping" },
-    { id: "delivered", labelKey: "orders.tabs.delivered" },
-    { id: "cancelled", labelKey: "orders.tabs.cancelled" },
-  ];
+  const tabs = useMemo<{ id: OrderTab; labelKey: string }[]>(
+    () => [
+      { id: "all", labelKey: "orders.tabs.all" },
+      { id: "pending", labelKey: "orders.tabs.pending" },
+      { id: "shipping", labelKey: "orders.tabs.shipping" },
+      { id: "delivered", labelKey: "orders.tabs.delivered" },
+      { id: "cancelled", labelKey: "orders.tabs.cancelled" },
+    ],
+    [],
+  );
 
-  const handleCancel = (id: string) => {
+  const handleCancel = useCallback((id: string) => {
     cancelOrder.mutate(id, {
       onSuccess: () => toast.success(t("orders.cancelOk")),
       onError: (err) => toast.error(err instanceof ApiError ? err.message : t("orders.cancelErr")),
     });
-  };
+  }, [cancelOrder, t]);
 
   const tabCounts = useMemo(() => {
     const counts: Partial<Record<OrderTab, number>> = {};

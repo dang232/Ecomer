@@ -26,6 +26,19 @@ public interface StockReservationPort {
     /** Add quantity back to projected stock. Creates the row if needed. */
     void increment(String productId, int quantity);
 
+    /**
+     * Batch release: add quantities back to projected stock in a single operation.
+     * Key = productId, Value = quantity to add back.
+     */
+    void incrementBatch(java.util.Map<String, Integer> productQuantities);
+
+    /**
+     * Batch release: mark multiple reservations as RELEASED in a single UPDATE.
+     * @param reservationIds List of reservation IDs to mark as released
+     * @param releasedAt Timestamp of release
+     */
+    void batchMarkReleased(java.util.List<java.util.UUID> reservationIds, java.time.Instant releasedAt);
+
     void saveReservation(StockReservation reservation);
 
     List<StockReservation> findActiveReservationsByOrderId(String orderId);

@@ -13,6 +13,8 @@ import java.util.UUID;
 
 import com.vnshop.orderservice.domain.annotation.Audited;
 
+import org.springframework.transaction.annotation.Transactional;
+
 public class CancelOrderUseCase {
     private static final Set<FulfillmentStatus> CANCELLABLE_STATUSES = Set.of(
             FulfillmentStatus.PENDING_ACCEPTANCE,
@@ -34,6 +36,7 @@ public class CancelOrderUseCase {
     }
 
     @Audited(action = "CANCEL_ORDER", resourceType = "Order")
+    @Transactional
     public Order cancel(CancelOrderCommand command) {
         Objects.requireNonNull(command.id(), "orderId is required");
         requireNonBlank(command.buyerId(), "buyerId");

@@ -19,4 +19,15 @@ public interface StockReservationJpaSpringDataRepository
     int updateStatus(@Param("id") UUID id,
                      @Param("status") StockReservation.Status status,
                      @Param("releasedAt") Instant releasedAt);
+
+    /**
+     * Batch release of multiple reservations in a single UPDATE.
+     * Reduces N database round trips to 1 for order cancellation flows.
+     */
+    @Modifying
+    @Query("update StockReservationJpaEntity r set r.status = :status, r.releasedAt = :releasedAt "
+           + "where r.reservationId in :ids")
+    int batchUpdateStatus(@Param("ids") List<UUID> ids,
+                          @Param("status") StockReservation.Status status,
+                          @Param("releasedAt") Instant releasedAt);
 }

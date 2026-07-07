@@ -8,6 +8,8 @@ import com.vnshop.orderservice.domain.port.out.OrderRepositoryPort;
 import java.util.Objects;
 import java.util.UUID;
 
+import org.springframework.transaction.annotation.Transactional;
+
 public class AcceptOrderUseCase {
     private final OrderRepositoryPort orderRepository;
     private final OrderEventPublisherPort orderEventPublisherPort;
@@ -17,6 +19,7 @@ public class AcceptOrderUseCase {
         this.orderEventPublisherPort = Objects.requireNonNull(orderEventPublisherPort, "orderEventPublisherPort is required");
     }
 
+    @Transactional
     public Order accept(UUID orderId, String sellerId) {
         Order order = findOrder(orderId);
         findSellerSubOrder(order, sellerId).accept();

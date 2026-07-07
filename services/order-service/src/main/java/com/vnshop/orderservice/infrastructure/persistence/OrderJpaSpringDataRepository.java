@@ -16,7 +16,12 @@ public interface OrderJpaSpringDataRepository extends JpaRepository<OrderJpaEnti
 
     Optional<OrderJpaEntity> findByIdempotencyKey(String idempotencyKey);
 
-    List<OrderJpaEntity> findByBuyerId(String buyerId);
+    @Query("""
+        SELECT DISTINCT o FROM OrderJpaEntity o
+        LEFT JOIN FETCH o.subOrders
+        WHERE o.buyerId = :buyerId
+        """)
+    List<OrderJpaEntity> findByBuyerId(@Param("buyerId") String buyerId);
 
     @Query("""
         SELECT DISTINCT o FROM OrderJpaEntity o
@@ -42,16 +47,31 @@ public interface OrderJpaSpringDataRepository extends JpaRepository<OrderJpaEnti
     @Query("select subOrder.order.id from SubOrderJpaEntity subOrder where subOrder.id = :subOrderId")
     Optional<UUID> findOrderIdBySubOrderId(@Param("subOrderId") Long subOrderId);
 
-    @Query("select subOrder.order from SubOrderJpaEntity subOrder where subOrder.id = :subOrderId")
+    @Query("""
+        SELECT DISTINCT o FROM OrderJpaEntity o
+        LEFT JOIN FETCH o.subOrders sub
+        LEFT JOIN FETCH sub.items
+        WHERE o.id = (SELECT subOrder.order.id FROM SubOrderJpaEntity subOrder WHERE subOrder.id = :subOrderId)
+        """)
     Optional<OrderJpaEntity> findBySubOrderId(@Param("subOrderId") Long subOrderId);
 
-    @Query("select distinct subOrder.order from SubOrderJpaEntity subOrder where subOrder.sellerId = :sellerId and subOrder.fulfillmentStatus = :status")
+    @Query("""
+        SELECT DISTINCT o FROM OrderJpaEntity o
+        LEFT JOIN FETCH o.subOrders sub
+        LEFT JOIN FETCH sub.items
+        WHERE sub.sellerId = :sellerId AND sub.fulfillmentStatus = :status
+        """)
     List<OrderJpaEntity> findBySellerIdAndFulfillmentStatus(
             @Param("sellerId") String sellerId,
             @Param("status") FulfillmentStatus status
     );
 
-    @Query("select distinct subOrder.order from SubOrderJpaEntity subOrder where subOrder.sellerId = :sellerId and subOrder.fulfillmentStatus in :statuses")
+    @Query("""
+        SELECT DISTINCT o FROM OrderJpaEntity o
+        LEFT JOIN FETCH o.subOrders sub
+        LEFT JOIN FETCH sub.items
+        WHERE sub.sellerId = :sellerId AND sub.fulfillmentStatus IN :statuses
+        """)
     List<OrderJpaEntity> findBySellerIdAndFulfillmentStatusIn(
             @Param("sellerId") String sellerId,
             @Param("statuses") List<FulfillmentStatus> statuses

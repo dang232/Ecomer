@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import org.springframework.transaction.annotation.Transactional;
+
 public class AdminOrderUseCase {
 
     private final OrderRepositoryPort orderRepository;
@@ -51,6 +53,7 @@ public class AdminOrderUseCase {
      * Force-cancels every non-terminal sub-order of an order, releases
      * inventory, and marks payment as failed.
      */
+    @Transactional
     public Order forceCancel(UUID orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("order not found: " + orderId));
@@ -70,6 +73,7 @@ public class AdminOrderUseCase {
     /**
      * Marks the order as disputed (triggers downstream refund flow via events).
      */
+    @Transactional
     public Order forceRefund(UUID orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("order not found: " + orderId));
@@ -84,6 +88,7 @@ public class AdminOrderUseCase {
      * status where the transition is valid. Sub-orders already in or past the
      * target state are silently skipped.
      */
+    @Transactional
     public Order changeStatus(UUID orderId, String targetStatus) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("order not found: " + orderId));

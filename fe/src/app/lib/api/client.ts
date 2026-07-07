@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from "uuid";
 import type { z } from "zod";
 
 import { ApiError } from "./envelope";
@@ -43,7 +42,8 @@ let crossTabRefreshResolve: ((success: boolean) => void) | null = null;
 /** True while this tab owns the in-flight refresh. */
 let thisTabRefreshing = false;
 /** Epoch-ms timestamp when this tab claimed the refresh lock. Used to detect stale locks. */
-let _refreshLockTimestamp = 0;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars,@typescript-eslint/no-explicit-any
+let _refreshLockTimestamp: any = 0;
 const REFRESH_LOCK_TIMEOUT_MS = 15_000;
 
 if (REFRESH_CHANNEL) {
@@ -160,7 +160,7 @@ export async function request<TSchema extends z.ZodType>(
 ): Promise<z.infer<TSchema>> {
   const method: Method = opts.method ?? "GET";
   const auth = opts.auth ?? true;
-  const correlationId = uuidv4();
+  const correlationId = crypto.randomUUID();
   const url = buildUrl(opts.path, opts.query);
   const hasBody = opts.body !== undefined && method !== "GET";
 

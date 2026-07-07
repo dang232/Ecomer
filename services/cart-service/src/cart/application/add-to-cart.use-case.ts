@@ -14,10 +14,12 @@ export class AddToCartUseCase {
   ) {}
 
   async execute(command: AddToCartCommand): Promise<CartResponse> {
-    const cart =
-      (await this.cartRepository.findByUserId(command.userId)) ??
-      Cart.create(command.userId);
-    const snapshot = await this.productClient.getSnapshot(command.productId);
+    // Run cart lookup and product snapshot in parallel for better performance
+    const [cartResult, snapshot] = await Promise.all([
+      this.cartRepository.findByUserId(command.userId),
+      this.productClient.getSnapshot(command.productId),
+    ]);
+    const cart = cartResult ?? Cart.create(command.userId);
     const item = CartItem.create(
       snapshot.productId,
       snapshot.productName,

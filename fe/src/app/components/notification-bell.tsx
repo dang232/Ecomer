@@ -1,6 +1,6 @@
 ﻿import { IconBell } from "@tabler/icons-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
@@ -87,7 +87,7 @@ export function NotificationBell() {
     };
   }, [open]);
 
-  const handleSelect = (n: Notification) => {
+  const handleSelect = useCallback((n: Notification) => {
     if (!n.read) markRead(n.id);
     setOpen(false);
     if (n.deepLink) {
@@ -102,7 +102,7 @@ export function NotificationBell() {
         void navigate(n.deepLink);
       }
     }
-  };
+  }, [markRead, navigate]);
 
   // Show only top 10, already sorted by createdAt DESC from the API
   const displayed = items.slice(0, 10);

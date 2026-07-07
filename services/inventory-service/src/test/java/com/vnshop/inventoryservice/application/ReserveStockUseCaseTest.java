@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
@@ -168,6 +169,24 @@ class ReserveStockUseCaseTest {
                 if (reservations.get(i).reservationId().equals(reservation.reservationId())) {
                     reservations.set(i, reservation);
                     return;
+                }
+            }
+        }
+
+        @Override
+        public synchronized void incrementBatch(java.util.Map<String, Integer> productQuantities) {
+            productQuantities.forEach((productId, qty) ->
+                levels.computeIfAbsent(productId, k -> new AtomicInteger(0)).addAndGet(qty));
+        }
+
+        @Override
+        public synchronized void batchMarkReleased(List<UUID> reservationIds, java.time.Instant releasedAt) {
+            for (UUID id : reservationIds) {
+                for (int i = 0; i < reservations.size(); i++) {
+                    if (reservations.get(i).reservationId().equals(id)) {
+                        reservations.set(i, reservations.get(i).released(releasedAt));
+                        break;
+                    }
                 }
             }
         }
