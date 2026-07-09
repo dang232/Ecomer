@@ -98,7 +98,10 @@ export class OneSignalPushChannelAdapter {
       );
       return true;
     } catch (error) {
-      this.logger.error(`Failed to send push to user=${recipient.userId}`, error);
+      this.logger.error(
+        `Failed to send push to user=${recipient.userId}`,
+        error,
+      );
       return false;
     }
   }
@@ -150,10 +153,7 @@ export class OneSignalPushChannelAdapter {
       this.logger.log(`Push sent to segment="${segment}": "${title}"`);
       return true;
     } catch (error) {
-      this.logger.error(
-        `Failed to send push to segment="${segment}"`,
-        error,
-      );
+      this.logger.error(`Failed to send push to segment="${segment}"`, error);
       return false;
     }
   }
