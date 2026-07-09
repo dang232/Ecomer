@@ -3,7 +3,9 @@ package com.vnshop.inventoryservice.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -27,7 +29,14 @@ class ReleaseStockUseCaseTest {
     @Test
     void releaseSuccessBatchReleasesAllReservations() {
         // Given
-        InMemoryStockReservationPort port = new InMemoryStockReservationPort();
+        InMemoryStockReservationPort realPort = new InMemoryStockReservationPort();
+        StockReservationPort port = mock(StockReservationPort.class);
+        when(port.tryDecrement(any(), anyInt())).thenAnswer(inv -> realPort.tryDecrement(inv.getArgument(0), inv.getArgument(1)));
+        when(port.findActiveReservationsByOrderId(any())).thenAnswer(inv -> realPort.findActiveReservationsByOrderId(inv.getArgument(0)));
+        doAnswer(inv -> { realPort.incrementBatch(inv.getArgument(0)); return null; }).when(port).incrementBatch(any());
+        doAnswer(inv -> { realPort.batchMarkReleased(inv.getArgument(0), inv.getArgument(1)); return null; }).when(port).batchMarkReleased(any(), any());
+        doAnswer(inv -> { realPort.markReleased(inv.getArgument(0)); return null; }).when(port).markReleased(any());
+
         InventoryEventPublisher eventPublisher = mock(InventoryEventPublisher.class);
         ReleaseStockUseCase useCase = new ReleaseStockUseCase(port, fixedClock, eventPublisher);
 
@@ -36,10 +45,10 @@ class ReleaseStockUseCaseTest {
         Instant now = fixedClock.instant();
 
         // Seed two reservations for the same order
-        port.addReservation(new StockReservation(
+        realPort.addReservation(new StockReservation(
                 res1, "order-1", "prod-A", "default", 3,
                 StockReservation.Status.RESERVED, now, null));
-        port.addReservation(new StockReservation(
+        realPort.addReservation(new StockReservation(
                 res2, "order-1", "prod-B", "default", 5,
                 StockReservation.Status.RESERVED, now, null));
 
@@ -59,7 +68,14 @@ class ReleaseStockUseCaseTest {
     @Test
     void releaseMultipleReservationsForSameProductAccumulatesQuantity() {
         // Given
-        InMemoryStockReservationPort port = new InMemoryStockReservationPort();
+        InMemoryStockReservationPort realPort = new InMemoryStockReservationPort();
+        StockReservationPort port = mock(StockReservationPort.class);
+        when(port.tryDecrement(any(), anyInt())).thenAnswer(inv -> realPort.tryDecrement(inv.getArgument(0), inv.getArgument(1)));
+        when(port.findActiveReservationsByOrderId(any())).thenAnswer(inv -> realPort.findActiveReservationsByOrderId(inv.getArgument(0)));
+        doAnswer(inv -> { realPort.incrementBatch(inv.getArgument(0)); return null; }).when(port).incrementBatch(any());
+        doAnswer(inv -> { realPort.batchMarkReleased(inv.getArgument(0), inv.getArgument(1)); return null; }).when(port).batchMarkReleased(any(), any());
+        doAnswer(inv -> { realPort.markReleased(inv.getArgument(0)); return null; }).when(port).markReleased(any());
+
         InventoryEventPublisher eventPublisher = mock(InventoryEventPublisher.class);
         ReleaseStockUseCase useCase = new ReleaseStockUseCase(port, fixedClock, eventPublisher);
 
@@ -68,10 +84,10 @@ class ReleaseStockUseCaseTest {
         Instant now = fixedClock.instant();
 
         // Two reservations for the same product
-        port.addReservation(new StockReservation(
+        realPort.addReservation(new StockReservation(
                 res1, "order-2", "prod-A", "default", 2,
                 StockReservation.Status.RESERVED, now, null));
-        port.addReservation(new StockReservation(
+        realPort.addReservation(new StockReservation(
                 res2, "order-2", "prod-A", "variant-1", 3,
                 StockReservation.Status.RESERVED, now, null));
 
@@ -86,7 +102,14 @@ class ReleaseStockUseCaseTest {
     @Test
     void releaseNoActiveReservationsIsNoOp() {
         // Given
-        InMemoryStockReservationPort port = new InMemoryStockReservationPort();
+        InMemoryStockReservationPort realPort = new InMemoryStockReservationPort();
+        StockReservationPort port = mock(StockReservationPort.class);
+        when(port.tryDecrement(any(), anyInt())).thenAnswer(inv -> realPort.tryDecrement(inv.getArgument(0), inv.getArgument(1)));
+        when(port.findActiveReservationsByOrderId(any())).thenAnswer(inv -> realPort.findActiveReservationsByOrderId(inv.getArgument(0)));
+        doAnswer(inv -> { realPort.incrementBatch(inv.getArgument(0)); return null; }).when(port).incrementBatch(any());
+        doAnswer(inv -> { realPort.batchMarkReleased(inv.getArgument(0), inv.getArgument(1)); return null; }).when(port).batchMarkReleased(any(), any());
+        doAnswer(inv -> { realPort.markReleased(inv.getArgument(0)); return null; }).when(port).markReleased(any());
+
         InventoryEventPublisher eventPublisher = mock(InventoryEventPublisher.class);
         ReleaseStockUseCase useCase = new ReleaseStockUseCase(port, fixedClock, eventPublisher);
 
@@ -95,7 +118,8 @@ class ReleaseStockUseCaseTest {
 
         // Then
         assertThat(result).isTrue();
-        verifyNoInteractions(port);
+        // Only findActiveReservationsByOrderId should be called (returns empty list)
+        verify(port).findActiveReservationsByOrderId("order-without-reservations");
         verifyNoInteractions(eventPublisher);
     }
 
