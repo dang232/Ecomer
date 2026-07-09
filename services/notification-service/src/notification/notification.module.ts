@@ -28,7 +28,7 @@ import { SocketioRealtimeChannelAdapter } from './infrastructure/realtime/socket
 import { SesEmailChannelAdapter } from './infrastructure/email/ses-email-channel.adapter';
 
 // Infrastructure — Push
-import { FcmPushChannelAdapter } from './infrastructure/push/fcm-push-channel.adapter';
+import { OneSignalPushChannelAdapter } from './infrastructure/push/onesignal-push-channel.adapter';
 
 // Infrastructure — SMS
 import { TwilioSmsChannelAdapter } from './infrastructure/sms/twilio-sms-channel.adapter';
@@ -107,7 +107,7 @@ import { SMS_CHANNEL_PORT } from './domain/port/outbound/sms-channel.port';
       useClass: RedisConnectionRegistryAdapter,
     },
     { provide: EMAIL_CHANNEL_PORT, useClass: SesEmailChannelAdapter },
-    { provide: PUSH_CHANNEL_PORT, useClass: FcmPushChannelAdapter },
+    { provide: PUSH_CHANNEL_PORT, useClass: OneSignalPushChannelAdapter },
     { provide: SMS_CHANNEL_PORT, useClass: TwilioSmsChannelAdapter },
     {
       provide: NOTIFICATION_PREFERENCES_REPOSITORY,
