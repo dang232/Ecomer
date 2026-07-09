@@ -134,8 +134,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   @override
   Future<TokenSet> refreshToken(String refreshToken) async {
     try {
-      final response = await Dio().post(
-        '${ApiConstants.baseUrlWithVersion}${ApiConstants.refreshToken}',
+      final response = await _dioClient.post(
+        ApiConstants.refreshToken,
         data: {'refresh_token': refreshToken},
       );
 

@@ -13,6 +13,7 @@ class DioClient {
 
   late final Dio _dio;
   AuthInterceptor? _authInterceptor;
+  bool _isInitialized = false;
 
   /// Initialize the Dio client with dependencies
   /// Must be called before making any API calls
@@ -23,7 +24,7 @@ class DioClient {
     required Future<void> Function() clearTokens,
     required void Function() onSessionExpired,
   }) {
-      _dio = Dio(
+    _dio = Dio(
       BaseOptions(
         baseUrl: ApiConstants.baseUrlWithVersion,
         connectTimeout: ApiConstants.connectTimeout,
@@ -48,15 +49,46 @@ class DioClient {
     _dio.interceptors.addAll([
       _authInterceptor!,
       LogInterceptor(
-        requestBody: true,
-        responseBody: true,
+        requestBody: false,
+        responseBody: false,
+        requestHeader: true,
+        responseHeader: true,
+        error: true,
         logPrint: (object) {
-          // In production, use a proper logging service
+          // ponytail: production logging should use a proper service
           // ignore: avoid_print
-          print('[DioClient] $object');
+          print('[DioClient] ${_redactSensitiveData(object)}');
         },
       ),
     ]);
+    _isInitialized = true;
+  }
+
+  /// Redact sensitive fields from log output
+  String _redactSensitiveData(Object object) {
+    String str = object.toString();
+    const sensitiveKeys = [
+      'password',
+      'access_token',
+      'refresh_token',
+      'authorization',
+      'bearer',
+      'token',
+      'secret',
+      'apikey',
+      'api_key',
+    ];
+    for (final key in sensitiveKeys) {
+      final regex = RegExp(
+        '$key["\']?\\s*[:=]\\s*["\']?([^"\'&\\s,}]+)',
+        caseSensitive: false,
+      );
+      str = str.replaceAllMapped(regex, (m) {
+        final parts = m.group(0)!.split('=');
+        return '${parts[0].trim()}=[REDACTED]';
+      });
+    }
+    return str;
   }
 
   /// Get the Dio instance for making API calls
@@ -68,8 +100,6 @@ class DioClient {
     }
     return _dio;
   }
-
-  bool _isInitialized = false;
 
   /// Check if client is initialized
   bool get isInitialized => _isInitialized && _authInterceptor != null;
