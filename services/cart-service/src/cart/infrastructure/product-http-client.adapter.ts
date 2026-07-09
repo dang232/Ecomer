@@ -125,7 +125,7 @@ export class ProductHttpClientAdapter implements ProductClientPort {
     }
 
     try {
-      const product = await this.circuitBreaker.fire(productId);
+      const product = (await this.circuitBreaker.fire(productId)) as ProductServiceResponse;
       const { amount, currency } = pickPrice(product);
 
       return {
