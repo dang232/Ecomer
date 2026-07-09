@@ -1,6 +1,5 @@
 import * as tus from "tus-js-client";
 import { useCallback, useRef, useState } from "react";
-import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
 
 import { videoUploadInit } from "../../../app/lib/api/endpoints/videos";
@@ -212,7 +211,7 @@ export function useVideoUpload(options: VideoUploadOptions) {
             contentType: file.type,
             sizeBytes: file.size,
             durationSeconds: durationSeconds ?? undefined,
-            idempotencyKey: uuidv4(),
+            idempotencyKey: crypto.randomUUID(),
           });
           tusEndpoint = init.tusEndpoint;
           videoId = init.videoId;

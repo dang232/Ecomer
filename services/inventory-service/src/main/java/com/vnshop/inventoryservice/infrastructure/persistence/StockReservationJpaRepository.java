@@ -4,6 +4,8 @@ import com.vnshop.inventoryservice.domain.StockReservation;
 import com.vnshop.inventoryservice.domain.port.out.StockReservationPort;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -56,10 +58,24 @@ public class StockReservationJpaRepository implements StockReservationPort {
     }
 
     @Override
+    public void incrementBatch(Map<String, Integer> productQuantities) {
+        productQuantities.forEach((productId, qty) ->
+                stockLevelRepository.upsertIncrement(productId, qty));
+    }
+
+    @Override
     public void markReleased(StockReservation reservation) {
         reservationRepository.updateStatus(
                 reservation.reservationId(),
                 StockReservation.Status.RELEASED,
                 reservation.releasedAt() != null ? reservation.releasedAt() : Instant.now());
+    }
+
+    @Override
+    public void batchMarkReleased(List<UUID> reservationIds, Instant releasedAt) {
+        reservationRepository.batchUpdateStatus(
+                reservationIds,
+                StockReservation.Status.RELEASED,
+                releasedAt);
     }
 }

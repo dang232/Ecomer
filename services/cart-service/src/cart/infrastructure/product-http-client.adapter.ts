@@ -2,6 +2,7 @@ import { ProductNotFoundException } from '../domain/product-not-found.exception'
 import { Money } from '../domain/money';
 import type { ProductClientPort } from '../application/product-client.port';
 import type { ProductSnapshot } from '../application/product-snapshot';
+import CircuitBreaker from 'opossum';
 
 // product-service ProductResponse — the actual wire shape today.
 // Top-level price/image do NOT exist; they live under variants[] and images[].
@@ -76,16 +77,23 @@ function pickImage(product: ProductServiceResponse): string {
 }
 
 export class ProductHttpClientAdapter implements ProductClientPort {
-  constructor(private readonly productServiceUrl?: string) {}
+  private readonly circuitBreaker: CircuitBreaker;
+  private readonly productServiceUrl: string | undefined;
 
-  async getSnapshot(productId: string): Promise<ProductSnapshot> {
+  constructor(productServiceUrl?: string) {
+    this.productServiceUrl = productServiceUrl;
+    // Configure circuit breaker with sensible defaults
+    this.circuitBreaker = new CircuitBreaker(this.fetchProduct.bind(this), {
+      timeout: 3000, // If product service doesn't respond in 3s, trip the circuit
+      errorThresholdPercentage: 50, // Trip circuit if 50% of requests fail
+      resetTimeout: 30000, // Try to reopen circuit after 30s
+      volumeThreshold: 5, // Need at least 5 requests before evaluating
+    });
+  }
+
+  private async fetchProduct(productId: string): Promise<ProductServiceResponse> {
     if (!this.productServiceUrl) {
-      return {
-        productId,
-        productName: productId,
-        productImage: '',
-        unitPrice: Money.zero('VND'),
-      };
+      throw new ProductNotFoundException(productId);
     }
 
     const response = await fetch(
@@ -103,14 +111,41 @@ export class ProductHttpClientAdapter implements ProductClientPort {
     const payload = (await response.json()) as
       | ProductServiceResponse
       | { data: ProductServiceResponse };
-    const product = 'data' in payload ? payload.data : payload;
-    const { amount, currency } = pickPrice(product);
+    return 'data' in payload ? payload.data : payload;
+  }
 
-    return {
-      productId: product.productId ?? product.id ?? productId,
-      productName: product.productName ?? product.name ?? productId,
-      productImage: pickImage(product),
-      unitPrice: Money.of(amount, currency),
-    };
+  async getSnapshot(productId: string): Promise<ProductSnapshot> {
+    if (!this.productServiceUrl) {
+      return {
+        productId,
+        productName: productId,
+        productImage: '',
+        unitPrice: Money.zero('VND'),
+      };
+    }
+
+    try {
+      const product = (await this.circuitBreaker.fire(productId)) as ProductServiceResponse;
+      const { amount, currency } = pickPrice(product);
+
+      return {
+        productId: product.productId ?? product.id ?? productId,
+        productName: product.productName ?? product.name ?? productId,
+        productImage: pickImage(product),
+        unitPrice: Money.of(amount, currency),
+      };
+    } catch (error) {
+      // Re-throw ProductNotFoundException so callers can handle 404s properly
+      if (error instanceof ProductNotFoundException) {
+        throw error;
+      }
+      // Circuit breaker open or other failure - return fallback
+      return {
+        productId,
+        productName: productId,
+        productImage: '',
+        unitPrice: Money.zero('VND'),
+      };
+    }
   }
 }

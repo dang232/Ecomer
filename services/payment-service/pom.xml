@@ -204,6 +204,13 @@
 			<artifactId>opentelemetry-api</artifactId>
 			<version>1.45.0</version>
 		</dependency>
+
+		<!-- Resilience4j Circuit Breaker -->
+		<dependency>
+			<groupId>io.github.resilience4j</groupId>
+			<artifactId>resilience4j-spring-boot3</artifactId>
+			<version>2.2.0</version>
+		</dependency>
 	</dependencies>
 
 	<build>

@@ -26,6 +26,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.transaction.annotation.Transactional;
+
 public class CreateOrderUseCase {
     private final OrderRepositoryPort orderRepository;
     private final InventoryReservationPort inventoryReservationPort;
@@ -74,6 +76,7 @@ public class CreateOrderUseCase {
                 .orElseGet(() -> createNewOrder(command.buyerId(), command.shippingAddress(), command.items(), command.idempotencyKey()));
     }
 
+    @Transactional
     private Order createNewOrder(String buyerId, Address shippingAddress, List<OrderItem> items, String idempotencyKey) {
         var timerSample = metricsPort.startTimer();
         List<OrderItem> itemSnapshot = List.copyOf(items);

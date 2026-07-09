@@ -9,8 +9,8 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
-import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.core.async.AsyncRequestBody;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -21,6 +21,7 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -31,7 +32,7 @@ import static org.mockito.Mockito.*;
 class TranscodeServiceTest {
 
     @Mock
-    private S3Client s3Client;
+    private S3AsyncClient s3AsyncClient;
 
     private TranscodeService transcodeService;
 
@@ -41,7 +42,7 @@ class TranscodeServiceTest {
     @BeforeEach
     void setUp() {
         FfmpegCommandBuilder cmdBuilder = new FfmpegCommandBuilder();
-        transcodeService = new TranscodeService(s3Client, cmdBuilder);
+        transcodeService = new TranscodeService(s3AsyncClient, cmdBuilder);
         // Inject the @Value field so Path.of(tmpfsDir, ...) does not NPE
         ReflectionTestUtils.setField(transcodeService, "tmpfsDir", tmpDir.toString());
     }
@@ -85,8 +86,8 @@ class TranscodeServiceTest {
 
     @Test
     void transcode_s3DownloadFailure_throwsTranscodeException() {
-        when(s3Client.getObject(any(GetObjectRequest.class), any(Path.class)))
-                .thenThrow(new RuntimeException("S3 connection refused"));
+        when(s3AsyncClient.getObject(any(GetObjectRequest.class), any()))
+                .thenReturn(CompletableFuture.failedFuture(new RuntimeException("S3 connection refused")));
 
         UUID videoId   = UUID.randomUUID();
         UUID productId = UUID.randomUUID();
@@ -116,11 +117,9 @@ class TranscodeServiceTest {
         // S3 download writes actual bytes to the destination path
         byte[] actualContent = "real video content".getBytes();
         doAnswer(invocation -> {
-            Path dest = invocation.getArgument(1);
-            Files.createDirectories(dest.getParent());
-            Files.write(dest, actualContent);
-            return null;
-        }).when(s3Client).getObject(any(GetObjectRequest.class), any(Path.class));
+            return CompletableFuture.completedFuture(
+                    software.amazon.awssdk.core.Bytes.fromByteArray(actualContent));
+        }).when(s3AsyncClient).getObject(any(GetObjectRequest.class), any());
 
         TranscodeJob job = TranscodeJob.builder()
                 .videoId(videoId)
@@ -138,7 +137,7 @@ class TranscodeServiceTest {
                 .hasMessageContaining("SHA-256 mismatch");
 
         // Raw file must NOT be deleted when verification fails
-        verify(s3Client, never()).deleteObject(any(DeleteObjectRequest.class));
+        verify(s3AsyncClient, never()).deleteObject(any(DeleteObjectRequest.class));
     }
 
     // --- M18 fix: ownerType drives staging key prefix ---

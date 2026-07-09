@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 
 import { api } from "../client";
@@ -71,7 +70,7 @@ export const listMessages = (
   });
 
 export const sendMessage = (threadId: string, body: { body: string; idempotencyKey?: string }) => {
-  const key = body.idempotencyKey ?? uuidv4();
+  const key = body.idempotencyKey ?? crypto.randomUUID();
   return api.post(
     `/messaging/threads/${encodeURIComponent(threadId)}/messages`,
     messageSchema,

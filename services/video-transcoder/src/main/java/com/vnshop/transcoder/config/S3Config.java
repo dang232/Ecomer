@@ -6,9 +6,10 @@ import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 
 import java.net.URI;
+import java.time.Duration;
 
 @Configuration
 public class S3Config {
@@ -26,12 +27,14 @@ public class S3Config {
     private String secretKey;
 
     @Bean
-    public S3Client s3Client() {
-        var builder = S3Client.builder()
+    public S3AsyncClient s3AsyncClient() {
+        var builder = S3AsyncClient.builder()
                 .region(Region.of(region))
                 .credentialsProvider(
                         StaticCredentialsProvider.create(
-                                AwsBasicCredentials.create(accessKey, secretKey)));
+                                AwsBasicCredentials.create(accessKey, secretKey)))
+                .overrideConfiguration(b -> b
+                        .putHeader("Accept", "application/json"));
 
         if (!endpoint.isBlank()) {
             // MinIO / localstack override

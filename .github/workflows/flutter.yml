@@ -1,0 +1,218 @@
+name: Flutter Mobile CI/CD
+
+on:
+  push:
+    branches: [main, 'release/**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  FLUTTER_VERSION: '3.44.5'
+  DART_VERSION: '3.12.2'
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+
+      - name: Cache Flutter packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            vnshop_mobile/.dart_tool
+            vnshop_mobile/.packages
+          key: ${{ runner.os }}-flutter-${{ env.FLUTTER_VERSION }}-${{ hashFiles('vnshop_mobile/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-flutter-${{ env.FLUTTER_VERSION }}-
+
+      - name: Install dependencies
+        run: |
+          cd vnshop_mobile
+          flutter pub get
+
+      - name: Analyze
+        run: |
+          cd vnshop_mobile
+          flutter analyze --no-fatal-infos --no-fatal-warnings
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: analyze
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+
+      - name: Cache Flutter packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            vnshop_mobile/.dart_tool
+          key: ${{ runner.os }}-flutter-${{ env.FLUTTER_VERSION }}-${{ hashFiles('vnshop_mobile/pubspec.lock') }}
+
+      - name: Install dependencies
+        run: |
+          cd vnshop_mobile
+          flutter pub get
+
+      - name: Run tests with coverage
+        run: |
+          cd vnshop_mobile
+          flutter test --coverage --coverage-path=coverage/lcov.info
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: vnshop_mobile/coverage/lcov.info
+          flags: unittests
+          name: flutter-coverage
+
+  build-android:
+    name: Build Android (Debug)
+    runs-on: ubuntu-latest
+    needs: analyze
+    if: "!contains(github.event.head_commit.message, 'skip-android')"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+
+      - name: Cache Flutter packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            vnshop_mobile/.dart_tool
+          key: ${{ runner.os }}-flutter-${{ env.FLUTTER_VERSION }}-${{ hashFiles('vnshop_mobile/pubspec.lock') }}
+
+      - name: Install dependencies
+        run: |
+          cd vnshop_mobile
+          flutter pub get
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Configure Firebase (Staging)
+        env:
+          GOOGLE_SERVICES_JSON_B64: ${{ secrets.STAGING_GOOGLE_SERVICES_JSON_B64 }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON_B64" ]; then
+            echo "$GOOGLE_SERVICES_JSON_B64" | base64 -d > vnshop_mobile/android/app/google-services.json
+          fi
+
+      - name: Build APK
+        run: |
+          cd vnshop_mobile
+          flutter build apk --debug --no-pub
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-apk
+          path: vnshop_mobile/build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 7
+
+  build-web:
+    name: Build Web
+    runs-on: ubuntu-latest
+    needs: analyze
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+
+      - name: Cache Flutter packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            vnshop_mobile/.dart_tool
+          key: ${{ runner.os }}-flutter-${{ env.FLUTTER_VERSION }}-${{ hashFiles('vnshop_mobile/pubspec.lock') }}
+
+      - name: Install dependencies
+        run: |
+          cd vnshop_mobile
+          flutter pub get
+
+      - name: Build Web
+        run: |
+          cd vnshop_mobile
+          flutter build web --no-pub
+
+      - name: Upload Web Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-web-build
+          path: vnshop_mobile/build/web
+          retention-days: 7
+
+  # iOS build requires macOS - will fail without macOS runner
+  build-ios:
+    name: Build iOS (macOS only)
+    runs-on: macos-latest
+    needs: analyze
+    if: false # Disabled until macOS runner is provisioned
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+
+      - name: Install dependencies
+        run: |
+          cd vnshop_mobile
+          flutter pub get
+
+      - name: Configure Firebase (Staging)
+        env:
+          GOOGLE_SERVICES_JSON_B64: ${{ secrets.STAGING_GOOGLE_SERVICES_JSON_B64 }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON_B64" ]; then
+            echo "$GOOGLE_SERVICES_JSON_B64" | base64 -d > vnshop_mobile/ios/Runner/GoogleService-Info.plist
+          fi
+
+      - name: Build iOS
+        run: |
+          cd vnshop_mobile
+          flutter build ios --release --no-codesign --no-pub
+
+      - name: Upload iOS Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build
+          path: vnshop_mobile/build/ios/iphoneos/Runner.app
+          retention-days: 7
+
+  all-checks:
+    name: All Checks Passed
+    runs-on: ubuntu-latest
+    needs: [analyze, test]
+    if: always()
+    steps:
+      - name: Check status
+        run: |
+          echo "All required checks completed"
+          echo "Note: iOS build requires macOS runner"

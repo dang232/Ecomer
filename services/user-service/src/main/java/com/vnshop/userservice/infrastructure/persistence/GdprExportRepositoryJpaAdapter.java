@@ -48,7 +48,8 @@ public class GdprExportRepositoryJpaAdapter implements GdprExportRepositoryPort 
     @Override
     public Optional<GdprExportRequest> findByRequestId(String requestId) {
         var results = jdbcTemplate.query(
-                "SELECT * FROM user_svc.gdpr_export_requests WHERE request_id = ?",
+                "SELECT request_id, user_id, status, fragments, missing_services, created_at, completed_at " +
+                "FROM user_svc.gdpr_export_requests WHERE request_id = ?",
                 (rs, rowNum) -> mapRow(rs),
                 requestId);
         return results.isEmpty() ? Optional.empty() : Optional.of(results.get(0));
@@ -57,7 +58,8 @@ public class GdprExportRepositoryJpaAdapter implements GdprExportRepositoryPort 
     @Override
     public Optional<GdprExportRequest> findLatestByUserId(String userId) {
         var results = jdbcTemplate.query(
-                "SELECT * FROM user_svc.gdpr_export_requests WHERE user_id = ? ORDER BY created_at DESC LIMIT 1",
+                "SELECT request_id, user_id, status, fragments, missing_services, created_at, completed_at " +
+                "FROM user_svc.gdpr_export_requests WHERE user_id = ? ORDER BY created_at DESC LIMIT 1",
                 (rs, rowNum) -> mapRow(rs),
                 userId);
         return results.isEmpty() ? Optional.empty() : Optional.of(results.get(0));

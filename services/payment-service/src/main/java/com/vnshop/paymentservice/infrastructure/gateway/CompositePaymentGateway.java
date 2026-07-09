@@ -4,6 +4,7 @@ import com.vnshop.paymentservice.domain.Payment;
 import com.vnshop.paymentservice.domain.PaymentMethod;
 import com.vnshop.paymentservice.domain.PaymentStatus;
 import com.vnshop.paymentservice.domain.port.out.PaymentGatewayPort;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -19,8 +20,11 @@ import java.util.Map;
  * dependencies aren't configured) leave their handler out of the context, so
  * dispatch surfaces a {@code METHOD_DISABLED} failure that the caller can
  * translate into a 4xx instead of a 500.
+ *
+ * <p>Circuit breaker opens after 5 failures within a sliding window of 10 calls.
  */
 @Component
+@CircuitBreaker(name = "paymentGateway", fallbackMethod = "processPaymentFallback")
 public class CompositePaymentGateway implements PaymentGatewayPort {
     private static final Logger log = LoggerFactory.getLogger(CompositePaymentGateway.class);
 
@@ -59,5 +63,16 @@ public class CompositePaymentGateway implements PaymentGatewayPort {
 
     public boolean isMethodEnabled(PaymentMethod method) {
         return handlers.containsKey(method);
+    }
+
+    /**
+     * Fallback when circuit breaker is open or call fails.
+     * Returns a FAILED status with service unavailable message.
+     */
+    @SuppressWarnings("unused")
+    private GatewayPaymentResult processPaymentFallback(Payment payment, Throwable throwable) {
+        log.warn("Circuit breaker triggered for processPayment: paymentId={}, error={}",
+                payment.paymentId(), throwable.getMessage());
+        return new GatewayPaymentResult(PaymentStatus.FAILED, "SERVICE_TEMPORARILY_UNAVAILABLE");
     }
 }

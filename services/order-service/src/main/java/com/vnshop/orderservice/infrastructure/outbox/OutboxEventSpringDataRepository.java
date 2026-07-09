@@ -15,7 +15,10 @@ public interface OutboxEventSpringDataRepository extends JpaRepository<OutboxEve
     );
 
     @Query(value = """
-        SELECT * FROM outbox_events
+        SELECT id, aggregate_type, aggregate_id, event_type, payload,
+               status, next_attempt_at, attempt_count, last_error,
+               created_at, updated_at
+        FROM outbox_events
         WHERE status = 'PENDING'
         AND (next_attempt_at IS NULL OR next_attempt_at <= :now)
         ORDER BY created_at ASC

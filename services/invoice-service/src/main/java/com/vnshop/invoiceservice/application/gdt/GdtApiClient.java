@@ -2,6 +2,7 @@ package com.vnshop.invoiceservice.application.gdt;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -25,6 +26,7 @@ import org.springframework.web.client.RestTemplate;
 public class GdtApiClient {
 
     private static final String SUBMIT_PATH = "/invoices/submit";
+    private static final String CIRCUIT_BREAKER_NAME = "gdtApi";
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
@@ -44,10 +46,12 @@ public class GdtApiClient {
 
     /**
      * Submits a signed TKHDon XML payload to the GDT API.
+     * Uses circuit breaker to prevent cascade failures when GDT API is unavailable.
      *
      * @param xmlPayload validated TKHDon XML string
      * @return {@link GdtSubmissionResult} indicating acceptance or rejection
      */
+    @CircuitBreaker(name = CIRCUIT_BREAKER_NAME, fallbackMethod = "submitInvoiceFallback")
     public GdtSubmissionResult submitInvoice(String xmlPayload) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_XML);
@@ -91,5 +95,14 @@ public class GdtApiClient {
             log.error("Failed to parse GDT response body: {}", body, parseEx);
             return GdtSubmissionResult.rejected("Unparseable GDT response (HTTP " + statusCode + ")");
         }
+    }
+
+    /**
+     * Fallback method when circuit breaker is open or call fails.
+     * Returns a rejected result indicating temporary unavailability.
+     */
+    private GdtSubmissionResult submitInvoiceFallback(String xmlPayload, Throwable throwable) {
+        log.error("GDT API circuit breaker open or call failed: {}", throwable.getMessage());
+        return GdtSubmissionResult.rejected("GDT service temporarily unavailable. Please try again later.");
     }
 }

@@ -1,0 +1,7 @@
+# Network fix - ensure all services are on the same Docker network
+# Apply with: docker compose -f docker-compose.yml -f docker-compose.network.yml up -d
+
+networks:
+  default:
+    name: vnshop_default
+    external: false

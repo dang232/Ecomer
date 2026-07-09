@@ -14,7 +14,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
@@ -45,24 +45,32 @@ export function AnnouncementBar() {
 }
 
 // ─── Categories Bar ────────────────────────────────────────────────────────────
+const CATEGORIES_CONFIG = [
+  { id: "all", labelKey: "home.tabs.all", default: "All" },
+  { id: "electronics", labelKey: "categories.electronics", default: "Electronics" },
+  { id: "fashion", labelKey: "categories.fashion", default: "Fashion" },
+  { id: "home", labelKey: "categories.home", default: "Home & Living" },
+  { id: "software", labelKey: "categories.software", default: "Software" },
+  { id: "beauty", labelKey: "categories.beauty", default: "Beauty" },
+  { id: "sports", labelKey: "categories.sports", default: "Sports" },
+  { id: "books", labelKey: "categories.books", default: "Books" },
+  { id: "automotive", labelKey: "categories.automotive", default: "Automotive" },
+  { id: "digital", labelKey: "categories.digital", default: "Digital Goods" },
+  { id: "food", labelKey: "categories.food", default: "Food & Beverage" },
+] as const;
+
 export function CategoriesBar() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [active, setActive] = useState("all");
 
-  const categories = [
-    { id: "all", label: t("home.tabs.all", { defaultValue: "All" }) },
-    { id: "electronics", label: t("categories.electronics", { defaultValue: "Electronics" }) },
-    { id: "fashion", label: t("categories.fashion", { defaultValue: "Fashion" }) },
-    { id: "home", label: t("categories.home", { defaultValue: "Home & Living" }) },
-    { id: "software", label: t("categories.software", { defaultValue: "Software" }) },
-    { id: "beauty", label: t("categories.beauty", { defaultValue: "Beauty" }) },
-    { id: "sports", label: t("categories.sports", { defaultValue: "Sports" }) },
-    { id: "books", label: t("categories.books", { defaultValue: "Books" }) },
-    { id: "automotive", label: t("categories.automotive", { defaultValue: "Automotive" }) },
-    { id: "digital", label: t("categories.digital", { defaultValue: "Digital Goods" }) },
-    { id: "food", label: t("categories.food", { defaultValue: "Food & Beverage" }) },
-  ];
+  const categories = useMemo(() =>
+    CATEGORIES_CONFIG.map((cat) => ({
+      id: cat.id,
+      label: t(cat.labelKey, { defaultValue: cat.default }),
+    })),
+    [t]
+  );
 
   return (
     <div className="flex gap-1 px-[var(--content-padding)] py-3 bg-card border-b border-border overflow-x-auto scrollbar-hide">

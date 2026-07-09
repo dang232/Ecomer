@@ -51,11 +51,11 @@ public class ProductJpaEntity extends BaseJpaEntity {
     @Column(name = "status", nullable = false)
     private String status;
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(schema = "product_svc", name = "product_variants", joinColumns = @JoinColumn(name = "product_id"))
     private List<ProductVariantEmbeddable> variants = new ArrayList<>();
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(schema = "product_svc", name = "product_images", joinColumns = @JoinColumn(name = "product_id"))
     private List<ProductImageEmbeddable> images = new ArrayList<>();
 

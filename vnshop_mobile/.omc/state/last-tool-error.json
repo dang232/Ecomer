@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"cd \\\"C:\\\\Users\\\\dangq\\\\OneDrive\\\\Documents\\\\GitHub\\\\Full-Stack-E-commerce\\\\vnshop_mobile\\\" && flutter analyze lib/app/router/app_router.dart 2>&1\",\"timeout\":60000}",
+  "error": "Exit code 1\nResolving dependencies...\nDownloading packages...\n  _fe_analyzer_shared 99.0.0 (104.0.0 available)\n  analyzer 12.1.0 (14.0.0 available)\n  dart_style 3.1.8 (3.1.9 available)\n  dbus 0.7.13 (0.7.14 available)\n  flutter_dotenv 5.2.1 (6.0.1 available)\n  flutter_secure_storage_darwin 0.3.2 (0.4.0 available)\n  freezed 3.2.6-dev.1 (4.0.0-dev.3 available)\n  intl 0.20.2 (0.20.3 available)\n  matcher 0.12.19 (0.12.20 available)\n  meta 1.18.0 (1.18.3 available)\n  package_config 2.2.0 (3.0.0 avail...",
+  "timestamp": "2026-07-09T07:33:33.566Z",
+  "retry_count": 1
+}

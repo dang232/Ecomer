@@ -148,11 +148,14 @@ export function VNShopProvider({ children }: { children: ReactNode }) {
     };
   }, [auth.authenticated, auth.profile, auth.roles, auth.subject, profileQuery.data]);
 
+  // Stable reference for wishlist array to prevent context re-renders
+  const wishlistIds = wishlistStore.ids;
+
   const value = useMemo<VNShopContextType>(
     () => ({
       cartCount,
       addToCart,
-      wishlist: wishlistStore.ids,
+      wishlist: wishlistIds,
       toggleWishlist,
       isWishlisted,
       user,
@@ -164,7 +167,7 @@ export function VNShopProvider({ children }: { children: ReactNode }) {
     [
       cartCount,
       addToCart,
-      wishlistStore.ids,
+      wishlistIds,
       toggleWishlist,
       isWishlisted,
       user,

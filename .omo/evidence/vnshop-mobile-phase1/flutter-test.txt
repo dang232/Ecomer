@@ -1,0 +1,3 @@
+00:00 +0: loading C:/Users/dangq/OneDrive/Documents/GitHub/Full-Stack-E-commerce/vnshop_mobile/test/widget_test.dart
+00:00 +0: renders VNShop shell routes
+00:00 +1: All tests passed!

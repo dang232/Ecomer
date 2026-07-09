@@ -5,7 +5,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { v4 as uuidv4 } from "uuid";
 
 import { PayPalPaymentSection } from "../../components/checkout/PayPalPaymentSection";
 import { StripePaymentSection } from "../../components/checkout/StripePaymentSection";
@@ -219,7 +218,7 @@ export function CheckoutPage() {
 
   // Idempotency key generated once per checkout attempt; reused on retries.
   const idempotencyKeyRef = useRef<string>("");
-  if (!idempotencyKeyRef.current) idempotencyKeyRef.current = uuidv4();
+  if (!idempotencyKeyRef.current) idempotencyKeyRef.current = crypto.randomUUID();
 
   // Track whether a payment flow is active — suppress key regeneration during it.
   const paymentInFlightRef = useRef(false);
@@ -229,7 +228,7 @@ export function CheckoutPage() {
   // Never regenerate while a payment flow is in progress (prevents race with refetchCart).
   useEffect(() => {
     if (!paymentInFlightRef.current) {
-      idempotencyKeyRef.current = uuidv4();
+      idempotencyKeyRef.current = crypto.randomUUID();
     }
   }, [cartItems]);
 
@@ -458,7 +457,7 @@ export function CheckoutPage() {
       setIsProcessing(false);
       paymentInFlightRef.current = false;
       // Regenerate key for the NEXT attempt (if user retries after failure).
-      idempotencyKeyRef.current = uuidv4();
+      idempotencyKeyRef.current = crypto.randomUUID();
     }
   };
 

@@ -17,7 +17,7 @@ import {
   Dumbbell,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useMemo } from "react";
+import { useMemo, memo } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
@@ -31,7 +31,7 @@ import { formatPrice } from "../lib/format";
 import type { Product } from "../types/ui";
 
 // ─── Section Header ────────────────────────────────────────────────────────────
-function SectionHeader({
+const SectionHeader = memo(function SectionHeader({
   title,
   ctaLabel,
   ctaPath,
@@ -57,10 +57,10 @@ function SectionHeader({
       ) : null}
     </div>
   );
-}
+});
 
 // ─── Product Card ─────────────────────────────────────────────────────────────
-function ProductCard({ product, index = 0 }: { product: Product; index?: number }) {
+const ProductCard = memo(function ProductCard({ product, index = 0 }: { product: Product; index?: number }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { toggleWishlist, isWishlisted } = useVNShop();
@@ -151,7 +151,7 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
       </div>
     </motion.div>
   );
-}
+});
 
 // ─── Product Card Skeleton ────────────────────────────────────────────────────
 function ProductCardSkeleton() {
@@ -397,30 +397,25 @@ function FlashSaleSection() {
 }
 
 // ─── Trust Bar ────────────────────────────────────────────────────────────────
+// Static configuration outside component to avoid recreation on every render
+const TRUST_ITEMS_CONFIG = [
+  { icon: Truck, titleKey: "trust.freeShipping", subKey: "trust.freeShippingSub" },
+  { icon: ShieldCheck, titleKey: "trust.authentic", subKey: "trust.authenticSub" },
+  { icon: BadgeCheck, titleKey: "trust.returns", subKey: "trust.returnsSub" },
+  { icon: Lock, titleKey: "trust.support247", subKey: "trust.support247Sub" },
+] as const;
+
 function TrustBar() {
   const { t } = useTranslation();
-  const trustItems = [
-    {
-      icon: Truck,
-      title: t("trust.freeShipping", { defaultValue: "Free Shipping" }),
-      sub: t("trust.freeShippingSub", { defaultValue: "Orders over ₫500,000" }),
-    },
-    {
-      icon: ShieldCheck,
-      title: t("trust.authentic", { defaultValue: "Buyer Protection" }),
-      sub: t("trust.authenticSub", { defaultValue: "Full refund guarantee" }),
-    },
-    {
-      icon: BadgeCheck,
-      title: t("trust.returns", { defaultValue: "Verified Sellers" }),
-      sub: t("trust.returnsSub", { defaultValue: "Quality assurance" }),
-    },
-    {
-      icon: Lock,
-      title: t("trust.support247", { defaultValue: "Secure Payment" }),
-      sub: t("trust.support247Sub", { defaultValue: "Multiple options" }),
-    },
-  ];
+
+  const trustItems = useMemo(() =>
+    TRUST_ITEMS_CONFIG.map((item) => ({
+      icon: item.icon,
+      title: t(item.titleKey, { defaultValue: item.titleKey }),
+      sub: t(item.subKey, { defaultValue: item.subKey }),
+    })),
+    [t]
+  );
 
   return (
     <div className="mx-[var(--content-padding)] my-6 grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">

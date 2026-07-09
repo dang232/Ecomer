@@ -332,7 +332,7 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
       KAFKA_ADMIN_PASSWORD: ${KAFKA_ADMIN_PASSWORD:?KAFKA_ADMIN_PASSWORD must be set}
       KAFKA_ORDER_PASSWORD: ${KAFKA_ORDER_PASSWORD:?KAFKA_ORDER_PASSWORD must be set}
@@ -508,6 +508,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_SASL_USERNAME: ${KAFKA_VIDEO_USERNAME:-svc-video-transcoder}
       KAFKA_SASL_PASSWORD: ${KAFKA_VIDEO_TRANSCODER_PASSWORD:?KAFKA_VIDEO_TRANSCODER_PASSWORD must be set}
+      KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
       S3_ENDPOINT: http://minio:9000
       S3_ACCESS_KEY: ${MINIO_ROOT_USER:-vnshop}
       S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-vnshop123}
@@ -515,6 +516,7 @@ services:
       S3_BUCKET_STAGING: vnshop-videos-staging
       SPRING_PROFILES_ACTIVE: docker
     tmpfs:
+      - /tmp:size=512M
       - /tmp/transcode:size=4G,noexec
     security_opt:
       - no-new-privileges:true
@@ -696,6 +698,12 @@ services:
       resources:
         limits:
           memory: 768M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   frontend:
     # profiles removed for full deployment
@@ -770,6 +778,12 @@ services:
       resources:
         limits:
           memory: 768M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8081/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   product-service:
     # profiles removed for full deployment
@@ -828,6 +842,12 @@ services:
       resources:
         limits:
           memory: 768M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8082/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   inventory-service:
     # profiles removed for full deployment
@@ -870,6 +890,12 @@ services:
       resources:
         limits:
           memory: 768M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8083/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   cart-service:
     # profiles removed for full deployment
@@ -900,6 +926,12 @@ services:
       resources:
         limits:
           memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8084/health || curl -fs http://localhost:8084 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   configuration-service:
     # profiles removed for full deployment
@@ -969,6 +1001,12 @@ services:
       resources:
         limits:
           memory: 768M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8086/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   notification-service:
     # profiles removed for full deployment
@@ -1001,10 +1039,19 @@ services:
       AWS_REGION: ${AWS_REGION:-ap-southeast-1}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      # OneSignal Push Notifications
+      ONESIGNAL_APP_ID: ${ONESIGNAL_APP_ID:-}
+      ONESIGNAL_REST_API_KEY: ${ONESIGNAL_REST_API_KEY:-}
     deploy:
       resources:
         limits:
           memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8087/health || curl -fs http://localhost:8087 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   coupon-service:
     # profiles removed for full deployment
@@ -1037,6 +1084,12 @@ services:
       resources:
         limits:
           memory: 768M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8088/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
 
   seller-finance-service:
@@ -1075,6 +1128,12 @@ services:
       resources:
         limits:
           memory: 768M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8090/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   recommendations-service:
     # profiles removed for full deployment
@@ -1105,6 +1164,12 @@ services:
       resources:
         limits:
           memory: 768M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8094/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   order-service:
     # profiles removed for full deployment
@@ -1162,6 +1227,12 @@ services:
       resources:
         limits:
           memory: 768M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8091/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   payment-service:
     # profiles removed for full deployment
@@ -1231,6 +1302,12 @@ services:
       resources:
         limits:
           memory: 768M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8092/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   shipping-service:
     # profiles removed for full deployment
@@ -1281,6 +1358,12 @@ services:
       resources:
         limits:
           memory: 768M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8093/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   messaging-service:
     # profiles removed for full deployment
@@ -1309,6 +1392,12 @@ services:
       KAFKA_SASL_PASSWORD: ${KAFKA_SVC_ORDER_PASSWORD:-kafka-order}
       KEYCLOAK_ISSUER_URI: http://localhost:8085/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8095/health || curl -fs http://localhost:8095 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   monitoring-service-v2:
     # profiles removed for full deployment
