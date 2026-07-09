@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import '../l10n/generated/app_localizations.dart';
 
 import '../core/theme/app_theme.dart';
+import '../core/notifications/order_notification_service.dart';
 import '../features/cart/data/datasources/cart_local_datasource.dart';
 import '../features/cart/data/datasources/cart_remote_datasource.dart';
 import '../features/cart/data/repositories/cart_repository_impl.dart';
@@ -16,6 +17,12 @@ class VnShopApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Initialize order notification service
+    OrderNotificationService.instance.initialize();
+
+    // Setup FCM deep linking
+    setupFcmDeepLinking(appRouter);
+
     return MaterialApp.router(
       title: 'VNShop',
       debugShowCheckedModeBanner: false,

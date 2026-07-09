@@ -34,11 +34,7 @@ public class S3Config {
                         StaticCredentialsProvider.create(
                                 AwsBasicCredentials.create(accessKey, secretKey)))
                 .overrideConfiguration(b -> b
-                        // Netty async executor with proper thread pool sizing
-                        .putHttpClientProperties(cp -> cp
-                                .maxConcurrency(100)
-                                .connectionTimeout(Duration.ofSeconds(30))
-                                .readTimeout(Duration.ofSeconds(60))));
+                        .putHeader("Accept", "application/json"));
 
         if (!endpoint.isBlank()) {
             // MinIO / localstack override

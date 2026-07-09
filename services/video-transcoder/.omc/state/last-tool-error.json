@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"docker exec vnshop-video-transcoder-1 curl -f http://localhost:8098/actuator/health 2>&1\",\"description\":\"Test curl healthcheck again\"}",
+  "error": "Exit code 7\n  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current\n                                 Dload  Upload  Total   Spent   Left   Speed\n\r  0      0   0      0   0      0      0      0                              0\ncurl: (7) Failed to connect to localhost port 8098 after 0 ms: Could not connect to server",
+  "timestamp": "2026-07-08T07:32:15.816Z",
+  "retry_count": 3
+}

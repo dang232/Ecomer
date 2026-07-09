@@ -1,0 +1,23 @@
+{
+  "generatedAt": "2026-07-07T18:58:39.330Z",
+  "source": "Flutter web build served locally via Node http server and system Chrome",
+  "expectedCartHash": "#/cart",
+  "runs": [
+    {
+      "viewport": "desktop",
+      "homeScreenshot": "desktop-home.png",
+      "cartScreenshot": "desktop-cart.png",
+      "finalUrl": "http://127.0.0.1:53126/#/cart",
+      "consoleErrorCount": 0,
+      "consoleErrors": []
+    },
+    {
+      "viewport": "mobile",
+      "homeScreenshot": "mobile-home.png",
+      "cartScreenshot": "mobile-cart.png",
+      "finalUrl": "http://127.0.0.1:53126/#/cart",
+      "consoleErrorCount": 0,
+      "consoleErrors": []
+    }
+  ]
+}

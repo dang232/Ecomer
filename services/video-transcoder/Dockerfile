@@ -3,7 +3,7 @@ WORKDIR /workspace
 COPY pom.xml .
 RUN --mount=type=cache,target=/root/.m2 mvn dependency:go-offline
 COPY src ./src
-RUN --mount=type=cache,target=/root/.m2 mvn package -DskipTests
+RUN --mount=type=cache,target=/root/.m2 mvn package -Dmaven.test.skip=true
 RUN cd target && JAR=$(ls -S *.jar 2>/dev/null | grep -vE "(sources|javadoc|original|opentelemetry-javaagent).jar$" | head -1) && mv "$JAR" app.jar
 
 FROM eclipse-temurin:25-jre-alpine AS runner
