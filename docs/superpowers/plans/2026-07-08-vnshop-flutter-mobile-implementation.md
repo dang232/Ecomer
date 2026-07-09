@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Complete VNShop Flutter mobile app with auth, cart offline-first, checkout, and FCM notifications.
+**Goal:** Complete VNShop Flutter mobile app with auth, cart offline-first, checkout, and OneSignal push notifications.
 
 **Architecture:** BLoC pattern with repository/data-source layers, Hive for offline cache, flutter_secure_storage for tokens, GoRouter for navigation.
 
-**Tech Stack:** Flutter 3.12+, flutter_bloc, dio, hive_ce, go_router, firebase_core/messaging, flutter_secure_storage, equatable, uuid, intl.
+**Tech Stack:** Flutter 3.12+, flutter_bloc, dio, hive_ce, go_router, onesignal_flutter, flutter_local_notifications, flutter_secure_storage, equatable, uuid, intl.
 
 ---
 
@@ -14,7 +14,7 @@
 
 ```
 vnshop_mobile/lib/
-├── main.dart                              # App entry, Firebase init order
+├── main.dart                              # App entry, OneSignal init order
 ├── app/
 │   ├── app.dart                          # VnShopApp root widget
 │   └── router/app_router.dart            # GoRouter with auth redirect
@@ -34,10 +34,9 @@ vnshop_mobile/lib/
 │   │   ├── exceptions.dart                # Exception classes
 │   │   └── result.dart                   # Either<ResultFailure, Success>
 │   ├── storage/hive_storage.dart          # Hive init + type adapters
-│   ├── firebase/
-│   │   ├── firebase_service.dart         # Firebase init (FIX 7,8)
-│   │   └── fcm_handler.dart               # Background handler
 │   ├── notifications/
+│   │   ├── onesignal_handler.dart        # OneSignal push handling
+│   │   ├── order_notification_service.dart # Order update notifications
 │   │   └── local_notification_service.dart
 │   ├── theme/
 │   │   ├── app_theme.dart
@@ -724,19 +723,33 @@ Expected: 0 errors.
 
 ---
 
-## Phase 7: FCM Notifications
+## Phase 7: OneSignal Notifications
 
 > **Research Priority:** P2 — Order updates are high value, low fatigue. Promotional notifications should be opt-in only.
 
-### Task 7.1: FCM Order Update Notifications
+**Status:** ✅ Completed - Migrated from Firebase FCM to OneSignal
 
-### Task 7.2: Notification Opt-in Flow (Order Updates Default)
+### Task 7.1: OneSignal Order Update Notifications ✅
+
+**Completed:**
+- `onesignal_handler.dart` - OneSignal SDK wrapper
+- `order_notification_service.dart` - Order-specific notification handling
+- Foreground notification display via flutter_local_notifications
+- Deep linking to order detail on tap
+- Tag-based subscription (equivalent to FCM topics)
+
+### Task 7.2: Notification Opt-in Flow (Order Updates Default) ✅
+
+**Completed:**
+- Permission requested after OneSignal init
+- User can opt-out via system settings
+- Tags for order updates and user-specific subscriptions
 
 ---
 
-## Phase 8: Firebase Service (FIX 7,8)
+## Phase 8: OneSignal Integration
 
-### Task 8.1: Verify Firebase Background Handler Order (FIX 7)
+### Task 8.1: Verify OneSignal Initialization Order
 
 **Files:**
 - Modify: `vnshop_mobile/lib/main.dart`
@@ -749,26 +762,17 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EnvConfig.initialize();
   await HiveStorage.initialize();
-  await FirebaseService.instance.initialize();
   await LocalNotificationService.instance.initialize();
-  await FcmHandler.instance.initialize();
+  await _initializeOneSignal();
   runApp(const VnShopApp());
 }
 ```
 
-The `_firebaseMessagingBackgroundHandler` is registered in `FcmHandler.instance.initialize()` which is called AFTER Firebase.initializeApp(). This satisfies FIX 7.
-
-- [ ] **Step 2: Verify background handler is top-level**
-
-Check `fcm_handler.dart` line 206:
-```dart
-@pragma('vm:entry-point')
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // ...
-}
-```
-
-Expected: Already correct.
+OneSignal SDK initialization order:
+1. `OneSignal.Debug.setLogLevel()` - debug logging
+2. `OneSignal.initialize(appId)` - init SDK
+3. `OneSignalHandler.instance.initialize()` - set up listeners
+4. `OneSignal.Notifications.requestPermission()` - request permission
 
 ---
 
@@ -865,7 +869,7 @@ git commit -m "ci: add Flutter CI workflow"
 | 3 | Search debounced 300ms | Debounce transformer applied |
 | 4 | Cart clearCart works | Repository method callable |
 | 5 | Error types consistent | Either pattern throughout |
-| 6 | FCM background handler registered | Order: Firebase init → Background handler |
+| 6 | OneSignal notification tap | Deep link to order detail |
 | 7 | CI workflow passes | GitHub Actions green |
 
 ---
@@ -933,7 +937,7 @@ I'll automatically:
 | **P1** | MoMo integration | 41M users, 1.5B txns/yr (PaymentsJournal) |
 | **P1** | Offline cart | Critical for 80%+ mobile abandonment |
 | **P1** | Payment trust signals | Trust = #1 conversion factor |
-| **P2** | FCM order updates | 35-45% opt-in (Airship) |
+| **P2** | OneSignal order updates | 35-45% opt-in (Airship) |
 | **P2** | Personalized notifications | 4x engagement lift (Braze) |
 
 **Sources:** [ecdb.com](https://ecdb.com/resources/sample-data/market/vn/all), [Statista](https://www.statista.com/statistics/1117373/vietnam-e-commerce-payment-methods/), [PaymentsJournal](https://www.paymentsjournal.com/vietnam-digital-payments-2025-outlook/), [Airship](https://www.airship.com/blog/mobile-push-notification-opt-in-rates-by-region/), [Braze](https://www.braze.com/blog/push-notification-best-practices)
