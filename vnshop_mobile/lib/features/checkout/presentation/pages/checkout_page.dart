@@ -16,6 +16,7 @@ import '../widgets/address_card.dart';
 import '../widgets/checkout_bottom_bar.dart';
 import '../widgets/order_summary_sheet.dart';
 import '../widgets/payment_method_card.dart';
+import '../widgets/payment_trust_signals.dart';
 import '../widgets/shipping_method_card.dart';
 
 /// Main checkout page with all checkout steps
@@ -669,6 +670,11 @@ class _PaymentSection extends StatelessWidget {
           onTap: () => context
               .read<CheckoutBloc>()
               .add(CheckoutPaymentMethodSelected(PaymentMethod.cod)),
+        ),
+        // Trust signals after payment methods
+        const Padding(
+          padding: EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.md),
+          child: PaymentTrustSignals(),
         ),
       ],
     );
