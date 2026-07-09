@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"cd /c/Users/dangq/OneDrive/Documents/GitHub/full-stack-ecommerce/vnshop_mobile && flutter test test/features/checkout/momo_service_test.dart 2>&1\",\"timeout\":180000,\"description\":\"Run simpl...",
+  "error": "Exit code 1\n00:00 +0: loading C:/Users/dangq/OneDrive/Documents/GitHub/Full-Stack-Ecommerce/vnshop_mobile/test/features/checkout/momo_service_test.dart\n00:00 +0: MoMoService parseDeepLink parses successful payment return\n00:00 +1: MoMoService parseDeepLink parses failed payment return with user cancelled\n00:00 +2: MoMoService parseDeepLink handles missing parameters\n00:00 +3: MoMoService parseDeepLink handles various result codes\n00:00 +4: MoMoService generateDeepLink generates valid deep link U...",
+  "timestamp": "2026-07-08T20:33:19.043Z",
+  "retry_count": 4
+}
