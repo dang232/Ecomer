@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/auth/presentation/pages/login_page.dart';
+import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/cart/presentation/pages/cart_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/orders/presentation/pages/order_detail_page.dart';
@@ -158,7 +160,12 @@ GoRouter buildAppRouter({required AuthStatusReader isAuthenticated}) {
       GoRoute(
         path: '/login',
         name: 'login',
-        builder: (context, state) => const PlaceholderPage(title: 'Đăng nhập'),
+        builder: (context, state) => const LoginPage(),
+      ),
+      GoRoute(
+        path: '/register',
+        name: 'register',
+        builder: (context, state) => const RegisterPage(),
       ),
       GoRoute(
         path: '/checkout',
