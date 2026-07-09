@@ -38,7 +38,7 @@ export class OneSignalPushChannelAdapter {
    * Uses player_id (OneSignal user ID) as the target
    */
   async send(
-    recipient: { userId: string; deviceToken?: string },
+    recipient: { userId: string; deviceToken: string },
     title: string,
     body: string,
     data?: Record<string, string>,
@@ -52,7 +52,7 @@ export class OneSignalPushChannelAdapter {
 
     // OneSignal requires player_id (OneSignal ID), not the push token
     // The deviceToken in our system maps to the OneSignal player_id
-    const playerId = recipient.deviceToken || recipient.userId;
+    const playerId = recipient.deviceToken;
 
     try {
       const payload = {

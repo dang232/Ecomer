@@ -18,7 +18,16 @@ describe('OneSignalPushChannelAdapter', () => {
 
     it('should return false on send', async () => {
       const result = await adapter.send(
-        { userId: 'user-123' },
+        { userId: 'user-123', deviceToken: 'test-token' },
+        'Test Title',
+        'Test Body',
+      );
+      expect(result).toBe(false);
+    });
+
+    it('should return false on sendToSegment', async () => {
+      const result = await adapter.sendToSegment(
+        'All',
         'Test Title',
         'Test Body',
       );
@@ -83,7 +92,47 @@ describe('OneSignalPushChannelAdapter', () => {
       global.fetch = mockFetch;
 
       const result = await adapter.send(
-        { userId: 'user-123' },
+        { userId: 'user-123', deviceToken: 'player-456' },
+        'Test',
+        'Body',
+      );
+
+      expect(result).toBe(false);
+    });
+
+    it('should send to segment successfully', async () => {
+      const mockFetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ id: 'notif-456', recipients: 10 }),
+      });
+      global.fetch = mockFetch;
+
+      const result = await adapter.sendToSegment(
+        'All',
+        'Broadcast',
+        'System maintenance scheduled',
+      );
+
+      expect(result).toBe(true);
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://api.onesignal.com/notifications',
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.stringContaining('"included_segments":["All"]'),
+        }),
+      );
+    });
+
+    it('should handle segment API errors gracefully', async () => {
+      const mockFetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        text: () => Promise.resolve('Bad Request'),
+      });
+      global.fetch = mockFetch;
+
+      const result = await adapter.sendToSegment(
+        'Active Users',
         'Test',
         'Body',
       );
