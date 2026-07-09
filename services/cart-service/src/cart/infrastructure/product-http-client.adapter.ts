@@ -134,8 +134,12 @@ export class ProductHttpClientAdapter implements ProductClientPort {
         productImage: pickImage(product),
         unitPrice: Money.of(amount, currency),
       };
-    } catch {
-      // Circuit breaker is open or request failed - return fallback
+    } catch (error) {
+      // Re-throw ProductNotFoundException so callers can handle 404s properly
+      if (error instanceof ProductNotFoundException) {
+        throw error;
+      }
+      // Circuit breaker open or other failure - return fallback
       return {
         productId,
         productName: productId,
