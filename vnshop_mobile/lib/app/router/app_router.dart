@@ -22,7 +22,7 @@ import '../../features/checkout/presentation/pages/checkout_page.dart';
 import '../../features/checkout/presentation/pages/address_form_page.dart';
 import '../../features/checkout/presentation/bloc/checkout_bloc.dart';
 import '../../features/checkout/domain/repositories/checkout_repository.dart';
-import '../../core/firebase/fcm_handler.dart';
+import '../../core/notifications/onesignal_handler.dart';
 import '../shell/main_shell.dart';
 
 typedef AuthStatusReader = bool Function();
@@ -283,12 +283,11 @@ GoRouter buildAppRouter({required AuthStatusReader isAuthenticated}) {
   );
 }
 
-/// Setup FCM deep linking
+/// Setup OneSignal deep linking
 /// Call this after app initialization to handle notification taps
-void setupFcmDeepLinking(GoRouter router) {
-  FcmHandler.instance.onNotificationTap = (message) {
-    final payload = NotificationPayload.fromJson(message.data.toString());
-    final deepLink = payload.deepLink;
+void setupOneSignalDeepLinking(GoRouter router) {
+  OneSignalHandler.instance.onNotificationTap = (notification) {
+    final deepLink = notification.deepLink;
 
     if (deepLink != null) {
       // Navigate to the appropriate screen

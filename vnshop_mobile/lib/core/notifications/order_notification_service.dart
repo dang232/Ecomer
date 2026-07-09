@@ -1,10 +1,10 @@
 import 'dart:convert';
 
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 
-import '../firebase/firebase_service.dart';
-import '../firebase/fcm_handler.dart';
+import '../config/env_config.dart';
+import '../notifications/onesignal_handler.dart';
 import 'local_notification_service.dart';
 import '../../features/orders/data/models/order_model.dart';
 
@@ -40,8 +40,8 @@ class OrderNotificationService {
     // Set up notification tap callback for order updates
     _localNotificationService.onNotificationTap = _handleNotificationTap;
 
-    // Set up FCM handler callback
-    FcmHandler.instance.onNotificationTap = _handleFCMMessage;
+    // Set up OneSignal handler callback
+    OneSignalHandler.instance.onNotificationTap = _handleOneSignalNotification;
 
     if (kDebugMode) {
       print('📱 OrderNotificationService initialized');
@@ -64,13 +64,10 @@ class OrderNotificationService {
     }
   }
 
-  /// Handle FCM message tap
-  void _handleFCMMessage(RemoteMessage message) {
-    if (message.data['order_id'] != null) {
-      _navigateToOrder(
-        message.data['order_id'] as String?,
-        message.data['status'] as String?,
-      );
+  /// Handle OneSignal notification tap
+  void _handleOneSignalNotification(OneSignalReceivedNotification notification) {
+    if (notification.orderId != null) {
+      _navigateToOrder(notification.orderId, notification.status);
     }
   }
 
@@ -90,9 +87,9 @@ class OrderNotificationService {
   /// Returns true if permission is granted
   /// Should be called AFTER user has seen value (e.g., after first order)
   Future<bool> requestPermission() async {
-    if (FirebaseService.isMockMode || !FirebaseService.isConfigured) {
+    if (!EnvConfig.onesignalEnabled) {
       if (kDebugMode) {
-        print('📱 OrderNotificationService: Running in mock mode');
+        print('📱 OrderNotificationService: OneSignal not configured');
       }
       // In mock mode, simulate permission granted
       onPermissionGranted?.call();
@@ -100,18 +97,7 @@ class OrderNotificationService {
     }
 
     try {
-      final settings = await FirebaseMessaging.instance.requestPermission(
-        alert: true,
-        announcement: false,
-        badge: true,
-        carPlay: false,
-        criticalAlert: false,
-        provisional: false,
-        sound: true,
-      );
-
-      final granted = settings.authorizationStatus == AuthorizationStatus.authorized ||
-          settings.authorizationStatus == AuthorizationStatus.provisional;
+      final granted = await OneSignal.Notifications.requestPermission(false);
 
       if (granted) {
         onPermissionGranted?.call();
@@ -209,10 +195,10 @@ class OrderNotificationService {
   ///
   /// This allows sending targeted notifications to specific users
   Future<void> subscribeToUserOrders(String userId) async {
-    if (FirebaseService.isMockMode || !FirebaseService.isConfigured) return;
+    if (!EnvConfig.onesignalEnabled) return;
 
     try {
-      await FirebaseMessaging.instance.subscribeToTopic('user_$userId');
+      await OneSignalHandler.instance.subscribeToTag('user_$userId');
       if (kDebugMode) {
         print('📱 Subscribed to user orders: $userId');
       }
@@ -225,10 +211,10 @@ class OrderNotificationService {
 
   /// Unsubscribe from order notifications
   Future<void> unsubscribeFromUserOrders(String userId) async {
-    if (FirebaseService.isMockMode || !FirebaseService.isConfigured) return;
+    if (!EnvConfig.onesignalEnabled) return;
 
     try {
-      await FirebaseMessaging.instance.unsubscribeFromTopic('user_$userId');
+      await OneSignalHandler.instance.unsubscribeFromTag('user_$userId');
       if (kDebugMode) {
         print('📱 Unsubscribed from user orders: $userId');
       }
@@ -241,10 +227,10 @@ class OrderNotificationService {
 
   /// Subscribe to all orders topic (for broadcasts)
   Future<void> subscribeToAllOrders() async {
-    if (FirebaseService.isMockMode || !FirebaseService.isConfigured) return;
+    if (!EnvConfig.onesignalEnabled) return;
 
     try {
-      await FirebaseMessaging.instance.subscribeToTopic('all_orders');
+      await OneSignalHandler.instance.subscribeToTag('all_orders');
       if (kDebugMode) {
         print('📱 Subscribed to all orders');
       }
@@ -257,30 +243,28 @@ class OrderNotificationService {
 
   /// Check if notification permission is granted
   Future<bool> isPermissionGranted() async {
-    if (FirebaseService.isMockMode || !FirebaseService.isConfigured) {
+    if (!EnvConfig.onesignalEnabled) {
       return true; // Mock mode - assume granted
     }
 
     try {
-      final settings = await FirebaseMessaging.instance.getNotificationSettings();
-      return settings.authorizationStatus == AuthorizationStatus.authorized ||
-          settings.authorizationStatus == AuthorizationStatus.provisional;
+      return await OneSignalHandler.instance.isPermissionGranted();
     } catch (e) {
       return false;
     }
   }
 
-  /// Get FCM token for this device
+  /// Get push token for this device
   Future<String?> getToken() async {
-    if (FirebaseService.isMockMode || !FirebaseService.isConfigured) {
+    if (!EnvConfig.onesignalEnabled) {
       return null;
     }
 
     try {
-      return await FirebaseMessaging.instance.getToken();
+      return await OneSignalHandler.instance.getPushToken();
     } catch (e) {
       if (kDebugMode) {
-        print('📱 Error getting FCM token: $e');
+        print('📱 Error getting push token: $e');
       }
       return null;
     }

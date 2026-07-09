@@ -20,8 +20,8 @@ class VnShopApp extends StatelessWidget {
     // Initialize order notification service
     OrderNotificationService.instance.initialize();
 
-    // Setup FCM deep linking
-    setupFcmDeepLinking(appRouter);
+    // Setup OneSignal deep linking
+    setupOneSignalDeepLinking(appRouter);
 
     return MaterialApp.router(
       title: 'VNShop',

@@ -76,16 +76,16 @@ class EnvConfig {
       get('KEYCLOAK_CLIENT_ID', defaultValue: 'vnshop-api');
 
   // =========================================================================
-  // Firebase Configuration
+  // OneSignal Configuration
   // =========================================================================
 
-  /// Whether Firebase is enabled
-  static bool get firebaseEnabled =>
-      getBool('FIREBASE_ENABLED', defaultValue: false);
+  /// OneSignal App ID
+  static String get onesignalAppId =>
+      get('ONESIGNAL_APP_ID', defaultValue: '');
 
-  /// Firebase Project ID
-  static String get firebaseProjectId =>
-      get('FIREBASE_PROJECT_ID', defaultValue: '');
+  /// Whether OneSignal is enabled
+  static bool get onesignalEnabled =>
+      onesignalAppId.isNotEmpty;
 
   // =========================================================================
   // App Configuration
