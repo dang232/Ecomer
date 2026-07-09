@@ -47,4 +47,7 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+
+    // OneSignal SDK for Android
+    implementation("com.onesignal:OneSignal:[5.0.0, 5.99.99]")
 }
