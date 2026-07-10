@@ -1,4 +1,12 @@
-import { IconPhoto, IconLoader2, IconPlus, IconTrash, IconVideo, IconX as IconXClose } from "@tabler/icons-react";
+import {
+  IconEdit,
+  IconPhoto,
+  IconLoader2,
+  IconPlus,
+  IconTrash,
+  IconVideo,
+  IconX as IconXClose,
+} from "@tabler/icons-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -100,6 +108,49 @@ function SellerProductModalBody({
   );
   const [stock, setStock] = useState(() => (product?.stock ? String(product.stock) : "1"));
   const [category, setCategory] = useState(() => product?.category ?? "");
+
+  // ── Variant matrix ─────────────────────────────────────────────────────────
+  // Grid: rows = sizes, cols = colors. Each cell holds { sku, price, stock }.
+  const [variants, setVariants] = useState<Record<string, Record<string, { sku: string; price: number; stock: number }>>>(() => {
+    if (product?.variants) {
+      const grid: Record<string, Record<string, { sku: string; price: number; stock: number }>> = {};
+      for (const v of product.variants) {
+        const parts = (v.name ?? "").split(" / ").map((p) => p.trim());
+        if (parts.length >= 2) {
+          const color = parts[parts.length - 2];
+          const size = parts[parts.length - 1];
+          if (!grid[size]) grid[size] = {};
+          grid[size][color] = { sku: v.sku ?? "", price: v.priceAmount ?? product.price, stock: v.stockQuantity ?? product.stock };
+        }
+      }
+      return grid;
+    }
+    return {};
+  });
+  const [matrixColors, setMatrixColors] = useState<string[]>(() => {
+    if (product?.variants) {
+      const seen = new Set<string>();
+      for (const v of product.variants) {
+        const parts = (v.name ?? "").split(" / ").map((p) => p.trim());
+        if (parts.length >= 2) seen.add(parts[parts.length - 2]);
+      }
+      return Array.from(seen);
+    }
+    return ["Đỏ", "Xanh", "Đen"];
+  });
+  const [matrixSizes, setMatrixSizes] = useState<string[]>(() => {
+    if (product?.variants) {
+      const seen = new Set<string>();
+      for (const v of product.variants) {
+        const parts = (v.name ?? "").split(" / ").map((p) => p.trim());
+        if (parts.length >= 2) seen.add(parts[parts.length - 1]);
+      }
+      return Array.from(seen);
+    }
+    return ["S", "M", "L", "XL"];
+  });
+  const [matrixEditRow, setMatrixEditRow] = useState<string | null>(null); // size being renamed
+  const [matrixEditCol, setMatrixEditCol] = useState<string | null>(null); // color being renamed
 
   // Image state. `existingImages` are URLs already attached to the product (edit mode).
   // `staged` are local files the user picked but haven't been uploaded yet.
@@ -255,6 +306,16 @@ function SellerProductModalBody({
         category: category.trim() || undefined,
       };
 
+      // Build flat variants array from the matrix grid.
+      const flatVariants = Object.entries(variants).flatMap(([size, colorMap]) =>
+        Object.entries(colorMap).map(([color, cell]) => ({
+          sku: cell.sku.trim() || `${name.trim().replace(/\s+/g, "-")}-${color}-${size}`.toLowerCase(),
+          name: `${name.trim()} ${color} / ${size}`,
+          priceAmount: cell.price || priceNum,
+          stockQuantity: cell.stock ?? stockNum,
+        })),
+      );
+
       let productId: string;
       let isNew = false;
 
@@ -262,7 +323,7 @@ function SellerProductModalBody({
         productId = product.id;
       } else {
         setPhase("creating");
-        const created = await sellerProductCreate({ ...baseBody, images: [], image: undefined });
+        const created = await sellerProductCreate({ ...baseBody, variants: flatVariants, images: [], image: undefined });
         productId = created.id;
         isNew = true;
       }
@@ -308,6 +369,7 @@ function SellerProductModalBody({
           ...baseBody,
           images: allImages,
           image: allImages[0],
+          variants: flatVariants,
         });
       }
 
@@ -354,6 +416,9 @@ function SellerProductModalBody({
   };
 
   if (!open) return null;
+
+  const defaultVariantPrice = parsePriceInput(price);
+  const defaultVariantStock = parsePriceInput(stock);
 
   const submitLabel = (() => {
     switch (phase) {
@@ -674,6 +739,226 @@ function SellerProductModalBody({
               disabled={isBusy}
             />
           </div>
+        </div>
+
+        {/* ── Variant Matrix ─────────────────────────────────────────────── */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-semibold text-foreground">
+              {t("seller.productModal.variantsLabel") ?? "Phân loại (Biến thể)"}
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const newSize = `Kích thước ${matrixSizes.length + 1}`;
+                  setMatrixSizes((prev) => [...prev, newSize]);
+                  setVariants((prev) => ({ ...prev, [newSize]: {} }));
+                }}
+                disabled={isBusy}
+                className="text-xs px-2 py-1 rounded border border-border hover:border-[var(--primary)] text-muted-foreground hover:text-[var(--primary)] transition-colors disabled:opacity-50"
+              >
+                + Kích thước
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const newColor = `Màu ${matrixColors.length + 1}`;
+                  setMatrixColors((prev) => [...prev, newColor]);
+                  setVariants((prev) => {
+                    const next = { ...prev };
+                    for (const size of Object.keys(next)) {
+                      if (!next[size][newColor]) next[size][newColor] = { sku: "", price: defaultVariantPrice, stock: defaultVariantStock };
+                    }
+                    return next;
+                  });
+                }}
+                disabled={isBusy}
+                className="text-xs px-2 py-1 rounded border border-border hover:border-[var(--primary)] text-muted-foreground hover:text-[var(--primary)] transition-colors disabled:opacity-50"
+              >
+                + Màu
+              </button>
+            </div>
+          </div>
+
+          <div className="border border-border rounded-xl overflow-hidden">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-muted">
+                  <th className="px-2 py-1.5 text-left font-semibold text-foreground w-20">Size</th>
+                  {matrixColors.map((color) => (
+                    <th key={color} className="px-2 py-1.5 text-center font-semibold text-foreground min-w-[120px]">
+                      <div className="flex flex-col items-center gap-1">
+                        <div className="flex items-center gap-1">
+                          {matrixEditCol === color ? (
+                            <input
+                              value={color}
+                              onChange={(e) => {
+                                const old = color;
+                                setMatrixColors((prev) => prev.map((c) => (c === old ? e.target.value : c)));
+                                setVariants((prev) => {
+                                  const next: Record<string, Record<string, { sku: string; price: number; stock: number }>> = {};
+                                  for (const [sz, cmap] of Object.entries(prev)) {
+                                    next[sz] = {};
+                                    for (const [cl, cell] of Object.entries(cmap)) {
+                                      next[sz][cl === old ? e.target.value : cl] = cell;
+                                    }
+                                  }
+                                  return next;
+                                });
+                                if (e.target.value !== old) setMatrixEditCol(null);
+                              }}
+                              onBlur={() => setMatrixEditCol(null)}
+                              onKeyDown={(e) => e.key === "Enter" && setMatrixEditCol(null)}
+                              className="w-20 px-1 py-0.5 border border-border rounded text-center text-xs"
+                              autoFocus
+                            />
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setMatrixEditCol(color)}
+                              disabled={isBusy}
+                              className="hover:text-[var(--primary)] transition-colors disabled:opacity-50"
+                            >
+                              {color}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMatrixColors((prev) => prev.filter((c) => c !== color));
+                              setVariants((prev) => {
+                                const next: Record<string, Record<string, { sku: string; price: number; stock: number }>> = {};
+                                for (const [sz, cmap] of Object.entries(prev)) {
+                                  next[sz] = {};
+                                  for (const [cl, cell] of Object.entries(cmap)) {
+                                    if (cl !== color) next[sz][cl] = cell;
+                                  }
+                                }
+                                return next;
+                              });
+                            }}
+                            disabled={isBusy || matrixColors.length <= 1}
+                            className="text-muted-foreground hover:text-red-500 disabled:opacity-30 transition-colors leading-none"
+                            aria-label={`Remove color ${color}`}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </div>
+                    </th>
+                  ))}
+                  <th className="w-8" />
+                </tr>
+              </thead>
+              <tbody>
+                {matrixSizes.map((size) => (
+                  <tr key={size} className="border-t border-border">
+                    <td className="px-2 py-1.5 font-medium text-foreground">
+                      {matrixEditRow === size ? (
+                        <input
+                          value={size}
+                          onChange={(e) => {
+                            const old = size;
+                            setMatrixSizes((prev) => prev.map((s) => (s === old ? e.target.value : s)));
+                            setVariants((prev) => {
+                              const next: Record<string, Record<string, { sku: string; price: number; stock: number }>> = {};
+                              for (const [sz, cmap] of Object.entries(prev)) {
+                                next[sz === old ? e.target.value : sz] = cmap;
+                              }
+                              return next;
+                            });
+                            if (e.target.value !== old) setMatrixEditRow(null);
+                          }}
+                          onBlur={() => setMatrixEditRow(null)}
+                          onKeyDown={(e) => e.key === "Enter" && setMatrixEditRow(null)}
+                          className="w-full px-1 py-0.5 border border-border rounded text-xs"
+                          autoFocus
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setMatrixEditRow(size)}
+                          disabled={isBusy}
+                          className="hover:text-[var(--primary)] transition-colors disabled:opacity-50 inline-flex items-center gap-1"
+                        >
+                          {size} <IconEdit size={10} />
+                        </button>
+                      )}
+                    </td>
+                    {matrixColors.map((color) => {
+                      const cell = variants[size]?.[color] ?? { sku: "", price: defaultVariantPrice, stock: defaultVariantStock };
+                      return (
+                        <td key={color} className="px-1 py-1 border-l border-border">
+                          <div className="flex flex-col gap-0.5 p-1">
+                            <input
+                              value={cell.sku}
+                              onChange={(e) =>
+                                setVariants((prev) => ({
+                                  ...prev,
+                                  [size]: { ...prev[size], [color]: { ...cell, sku: e.target.value } },
+                                }))
+                              }
+                              placeholder="SKU"
+                              className="w-full px-1.5 py-0.5 border border-border rounded text-[10px] outline-none focus:border-[var(--primary)]"
+                              disabled={isBusy}
+                            />
+                            <input
+                              value={cell.price || ""}
+                              onChange={(e) =>
+                                setVariants((prev) => ({
+                                  ...prev,
+                                  [size]: { ...prev[size], [color]: { ...cell, price: parsePriceInput(e.target.value) } },
+                                }))
+                              }
+                              placeholder="Giá"
+                              inputMode="numeric"
+                              className="w-full px-1.5 py-0.5 border border-border rounded text-[10px] outline-none focus:border-[var(--primary)]"
+                              disabled={isBusy}
+                            />
+                            <input
+                              value={cell.stock ?? ""}
+                              onChange={(e) =>
+                                setVariants((prev) => ({
+                                  ...prev,
+                                  [size]: { ...prev[size], [color]: { ...cell, stock: parseInt(e.target.value) || 0 } },
+                                }))
+                              }
+                              placeholder="Tồn"
+                              inputMode="numeric"
+                              className="w-full px-1.5 py-0.5 border border-border rounded text-[10px] outline-none focus:border-[var(--primary)]"
+                              disabled={isBusy}
+                            />
+                          </div>
+                        </td>
+                      );
+                    })}
+                    <td className="border-l border-border">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMatrixSizes((prev) => prev.filter((s) => s !== size));
+                          setVariants((prev) => {
+                            const next = { ...prev };
+                            delete next[size];
+                            return next;
+                          });
+                        }}
+                        disabled={isBusy}
+                        className="w-full h-full px-1 flex items-center justify-center text-muted-foreground hover:text-red-500 disabled:opacity-50 transition-colors"
+                        aria-label={`Remove size ${size}`}
+                      >
+                        <IconTrash size={12} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-1.5">
+            Nhấn vào tên cột/hàng để sửa. Để trống SKU → tự động tạo từ tên sản phẩm.
+          </p>
         </div>
       </div>
 
