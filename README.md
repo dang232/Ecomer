@@ -31,24 +31,20 @@ For a chronological view of what shipped, walk the handover series in `docs/SESS
 ## Architecture Overview
 
 ```text
-                    +------------------------------+
-                    |   React 18 + Vite SPA        |
-                    |   :3000 (docker) / :5173     |
-                    |   Native /login + /register  |
-                    +--------------+---------------+
-                                   |
-                    +--------------v---------------+
-                    |  Flutter Mobile App          |
-                    |  VietQR / MoMo payments      |
-                    |  OneSignal push notifications|
-                    +--------------+---------------+
-                                   |
-                    +--------------v---------------+
-                    |  Spring Cloud Gateway        |
-                    |  :8080 (Spring Boot 4)       |
-                    |  CORS, JWT validation,       |
-                    |  rate limit, circuit breaker |
-                    +------+-------+---------------+
+    +------------------------------+     +------------------------------+
+    |   React 18 + Vite SPA        |     |   Flutter Mobile App         |
+    |   :3000 (docker) / :5173     |     |   VietQR / MoMo payments     |
+    |   Native /login + /register  |     |   OneSignal push notifications|
+    +------------------------------+     +------------------------------+
+                    |                                   |
+                    +---------------+   +---------------+
+                                    |   |
+                    +--------------v---v---------------+
+                    |  Spring Cloud Gateway            |
+                    |  :8080 (Spring Boot 4)          |
+                    |  CORS, JWT validation,          |
+                    |  rate limit, circuit breaker    |
+                    +------+-------+------------------+
                            |       |
               +------------+-------+--------------+
               |            |       |              |
