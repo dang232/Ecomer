@@ -17,7 +17,7 @@ export class AddToCartUseCase {
     // Run cart lookup and product snapshot in parallel for better performance
     const [cartResult, snapshot] = await Promise.all([
       this.cartRepository.findByUserId(command.userId),
-      this.productClient.getSnapshot(command.productId),
+      this.productClient.getSnapshot(command.productId, command.variantId),
     ]);
     const cart = cartResult ?? Cart.create(command.userId);
     const item = CartItem.create(

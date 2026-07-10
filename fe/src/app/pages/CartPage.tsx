@@ -19,9 +19,11 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
 import { ImageWithFallback } from "../components/image-with-fallback";
+import { RecentlyViewedGrid } from "../components/RecentlyViewedGrid";
 import { useAppConfig } from "../hooks/use-app-config";
 import { useAuth } from "../hooks/use-auth";
 import { useCart } from "../hooks/use-cart";
+import { useRecentlyViewed } from "../hooks/use-recently-viewed";
 import { ApiError } from "../lib/api";
 import { validateCouponCode } from "../lib/api/endpoints/coupons";
 import { FREE_SHIPPING_THRESHOLD, FLAT_SHIPPING_FEE } from "../lib/domain-constants";
@@ -38,6 +40,7 @@ export function CartPage() {
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponError, setCouponError] = useState("");
   const { t } = useTranslation();
+  const { items: recentlyViewed } = useRecentlyViewed();
 
   // The real discount lands at checkout (/checkout/calculate is server-authoritative).
   // For the cart preview we hit /coupons/validate so the buyer sees the same code/discount
@@ -81,12 +84,15 @@ export function CartPage() {
 
   const MAX_ITEM_QTY = 99;
 
-  const onUpdate = (productId: string, quantity: number) => {
+  const onUpdate = (productId: string, quantity: number, variantId?: string) => {
     if (quantity <= 0) {
-      removeItem(productId, {
-        onError: (err) =>
-          toast.error(err instanceof ApiError ? err.message : t("cart.errors.cantRemove")),
-      });
+      removeItem(
+        { productId, variantId },
+        {
+          onError: (err) =>
+            toast.error(err instanceof ApiError ? err.message : t("cart.errors.cantRemove")),
+        },
+      );
       return;
     }
     if (quantity > MAX_ITEM_QTY) {
@@ -94,7 +100,7 @@ export function CartPage() {
       return;
     }
     updateItem(
-      { productId, quantity },
+      { productId, quantity, variantId },
       {
         onError: (err) =>
           toast.error(err instanceof ApiError ? err.message : t("cart.errors.cantUpdate")),
@@ -102,11 +108,14 @@ export function CartPage() {
     );
   };
 
-  const onRemove = (productId: string) =>
-    removeItem(productId, {
-      onError: (err) =>
-        toast.error(err instanceof ApiError ? err.message : t("cart.errors.cantRemove")),
-    });
+  const onRemove = (productId: string, variantId?: string) =>
+    removeItem(
+      { productId, variantId },
+      {
+        onError: (err) =>
+          toast.error(err instanceof ApiError ? err.message : t("cart.errors.cantRemove")),
+      },
+    );
 
   if (!ready) {
     return (
@@ -192,7 +201,7 @@ export function CartPage() {
           <AnimatePresence>
             {flatItems.map((item, index) => (
               <motion.div
-                key={item.productId}
+                key={item.variantId ? `${item.productId}:${item.variantId}` : item.productId}
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, x: -24 }}
@@ -250,7 +259,7 @@ export function CartPage() {
                       {/* Quantity stepper */}
                       <div className="flex items-center border-[1.5px] border-border rounded-[var(--radius-md)] overflow-hidden">
                         <button
-                          onClick={() => onUpdate(item.productId, item.quantity - 1)}
+                          onClick={() => onUpdate(item.productId, item.quantity - 1, item.variantId)}
                           aria-label="Decrease quantity"
                           className="w-[30px] h-[30px] flex items-center justify-center hover:bg-surface-elevated hover:text-primary transition-colors"
                         >
@@ -260,7 +269,7 @@ export function CartPage() {
                           {item.quantity}
                         </span>
                         <button
-                          onClick={() => onUpdate(item.productId, item.quantity + 1)}
+                          onClick={() => onUpdate(item.productId, item.quantity + 1, item.variantId)}
                           aria-label="Increase quantity"
                           className="w-[30px] h-[30px] flex items-center justify-center hover:bg-surface-elevated hover:text-primary transition-colors"
                         >
@@ -270,7 +279,7 @@ export function CartPage() {
 
                       {/* Remove button */}
                       <button
-                        onClick={() => onRemove(item.productId)}
+                        onClick={() => onRemove(item.productId, item.variantId)}
                         aria-label={`Remove ${item.name ?? "item"} from cart`}
                         className="w-[30px] h-[30px] flex items-center justify-center rounded-[var(--radius-sm)] text-muted-foreground hover:text-error hover:bg-error-light transition-colors"
                       >
@@ -289,6 +298,14 @@ export function CartPage() {
           >
             {t("cart.continueShopping")}
           </button>
+
+          {/* Recently Viewed */}
+          {recentlyViewed.length > 0 ? (
+            <RecentlyViewedGrid
+              title={t("home.recentlyViewed", { defaultValue: "Recently Viewed" })}
+              items={recentlyViewed}
+            />
+          ) : null}
         </div>
 
         {/* Summary Sidebar */}

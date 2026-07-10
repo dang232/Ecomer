@@ -22,11 +22,13 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
 import { ImageWithFallback } from "../components/image-with-fallback";
+import { RecentlyViewedGrid } from "../components/RecentlyViewedGrid";
 import { useVNShop } from "../components/vnshop-context";
 import { categoryDisplayLabel, useCategories } from "../hooks/use-categories";
 import { useCountdown } from "../hooks/use-countdown";
 import { useFlashSaleWithProducts } from "../hooks/use-flash-sale";
 import { useProducts } from "../hooks/use-products";
+import { useRecentlyViewed } from "../hooks/use-recently-viewed";
 import { formatPrice } from "../lib/format";
 import type { Product } from "../types/ui";
 
@@ -551,6 +553,9 @@ function SellerShowcaseSection() {
 
 // ─── Homepage ─────────────────────────────────────────────────────────────────
 export function HomePage() {
+  const { t } = useTranslation();
+  const { items: recentlyViewed } = useRecentlyViewed();
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero */}
@@ -567,6 +572,14 @@ export function HomePage() {
 
         {/* Trending */}
         <ProductsSection />
+
+        {/* Recently Viewed - localStorage only, cross-device requires BE in future sprint */}
+        {recentlyViewed.length > 0 ? (
+          <RecentlyViewedGrid
+            title={t("home.recentlyViewed", { defaultValue: "Recently Viewed" })}
+            items={recentlyViewed}
+          />
+        ) : null}
 
         {/* Top Sellers */}
         <SellerShowcaseSection />

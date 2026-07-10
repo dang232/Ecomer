@@ -3,7 +3,7 @@ import { api } from "../client";
 
 export const getCart = () => api.get("/cart", cartSchema);
 
-export const addCartItem = (body: { productId: string; quantity: number }) =>
+export const addCartItem = (body: { productId: string; quantity: number; variantId?: string }) =>
   api.post("/cart/items", cartSchema, body);
 
 export const updateCartItem = (productId: string, body: { quantity: number }) =>

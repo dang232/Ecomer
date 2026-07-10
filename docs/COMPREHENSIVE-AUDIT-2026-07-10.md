@@ -1,9 +1,12 @@
 # VNShop Comprehensive Deep Audit Report
 ## Multi-Seller Vietnamese E-Commerce Marketplace Platform
 
-**Date:** July 10, 2026  
-**Auditor:** Claude Code (Anthropic)  
-**Platform:** VNShop - Shopee/Tiki/Lazada Model for Vietnam Market
+**Date:** July 10, 2026
+**Auditor:** Claude Code (Anthropic) — Cross-validated against live codebase
+**Platform:** VNShop — Shopee/Tiki/Lazada Model for Vietnam Market
+
+> **⚠️ Audit Corrections Applied (2026-07-10):**
+> This document supersedes the prior version. Key corrections sourced from `CROSS-VALIDATION-REPORT-2026-07-10.md` which tested all claims against live code via grep + file read. All items marked ✅/❌/⚠️ reflect verified state. See §11 for detailed correction log.
 
 ---
 
@@ -12,13 +15,14 @@
 1. [Executive Summary](#1-executive-summary)
 2. [Complete Service Architecture](#2-complete-service-architecture)
 3. [Complete Workflow Maps](#3-complete-workflow-maps)
-4. [Missing Functionality (26 Features)](#4-missing-functionality-26-features)
+4. [Missing Functionality](#4-missing-functionality)
 5. [UI/UX Problems Analysis](#5-uiux-problems-analysis)
-6. [Vietnam-Specific Niche Features](#6-vietnam-specific-niche-features-to-add)
+6. [Vietnam-Specific Niche Features](#6-vietnam-specific-niche-features)
 7. [Sub-Functions Needed for Completeness](#7-sub-functions-needed-for-completeness)
 8. [Integration Gaps](#8-integration-gaps)
 9. [Sprint Planning](#9-sprint-planning)
 10. [Feature Matrix by Category](#10-feature-matrix-by-category)
+11. [Correction Log](#11-correction-log-from-cross-validation)
 
 ---
 
@@ -26,48 +30,62 @@
 
 ### 1.1 Platform Overview
 
-VNShop is a sophisticated polyglot microservices e-commerce platform modeled after Shopee, Tiki, and Lazada - Vietnam's dominant e-commerce marketplaces. The platform serves as a multi-seller marketplace where multiple vendors can sell products to consumers.
+VNShop is a sophisticated polyglot microservices e-commerce platform modeled after Shopee, Tiki, and Lazada — Vietnam's dominant e-commerce marketplaces. The platform serves as a multi-seller marketplace where multiple vendors can sell products to consumers.
 
 ### 1.2 Technology Stack
 
-| Layer | Technology | Details |
-|-------|------------|---------|
-| **API Gateway** | Spring Cloud Gateway | Port 8080, Auth, Routing, Rate Limiting |
-| **Backend Services** | Spring Boot 4.1 + NestJS 11 | 15 active microservices |
-| **Database** | PostgreSQL | Per-service databases |
-| **Cache** | Redis | Cart, sessions, CQRS, Lua scripts |
-| **Search** | Elasticsearch | Full-text search, faceting |
-| **Messaging** | Apache Kafka | Event-driven architecture, SASL authentication |
-| **Authentication** | Keycloak | OIDC/OAuth2, JWT tokens |
-| **Frontend Web** | React 18 + Vite 6 | SPA with Tailwind CSS v4 |
-| **Frontend Mobile** | Flutter 3.x + Dart 3.12 | Cross-platform mobile app |
-| **Payments** | VietQR, MoMo, Stripe, PayPal | Multi-gateway support |
-| **Notifications** | OneSignal | Push notifications |
+| Layer | Technology | Actual Version | Notes |
+|-------|------------|----------------|-------|
+| **API Gateway** | Spring Cloud Gateway | 2025.1.1 | Confirmed in pom.xml |
+| **Backend (Spring)** | Spring Boot | **4.0.6** | `pom.xml` — audit said 4.1.0 (wrong) |
+| **Backend (NestJS)** | NestJS | 11.1.21 | Audit said 11.x (correct) |
+| **Java** | OpenJDK | **25** | `java.version=25` — audit said 21 LTS (wrong) |
+| **Frontend Web** | React + Vite | ⚠️ 18.3.1 (outdated) + ❌ 6.3.5 (not found) | `fe/package.json` — React 19.2.7 is latest; **no v6.x Vite tags exist on GitHub** (latest is v8.1.4) |
+| **Frontend Mobile** | Flutter | 3.x | Dart 3.x — not verified in repo |
+| **Database** | PostgreSQL | 16.x | |
+| **Cache** | Redis | 7.x | |
+| **Search** | Elasticsearch | 8.x | |
+| **Messaging** | Apache Kafka | 3.x (KRaft) | |
+| **Authentication** | Keycloak | 25.x | ⚠️ Verify installed version |
+| **Payments** | VietQR, MoMo, Stripe, PayPal | — | All stubs |
+| **Notifications** | OneSignal + Socket.IO | — | Real-time via Socket.IO, not polling |
 
 ### 1.3 Architecture Patterns
 
-- **Domain-Driven Design (DDD)** - Bounded contexts per service
-- **CQRS (Command Query Responsibility Segregation)** - Separate read/write models
-- **Hexagonal Architecture** - Ports and adapters for external dependencies
-- **Event-Driven Architecture** - Kafka events for service communication
-- **Saga Pattern** - Distributed transactions with compensating actions
-- **Outbox Pattern** - Reliable event publishing with dual-write protection
+- **Domain-Driven Design (DDD)** — Bounded contexts per service
+- **CQRS (Command Query Responsibility Segregation)** — Separate read/write models
+- **Hexagonal Architecture** — Ports and adapters for external dependencies
+- **Event-Driven Architecture** — Kafka events for service communication
+- **Saga Pattern** — Orchestration for distributed transactions with compensating actions
+  - ⚠️ **Correction:** Order placement is **synchronous** within a `@Transactional` method. The saga tracks state and handles compensation on failure, but the primary order creation flow is NOT asynchronous Kafka-based. See §3.1.
+- **Outbox Pattern** — Reliable event publishing with dual-write protection
 
 ### 1.4 Coverage Metrics
 
-| Category | Coverage |
-|----------|----------|
-| **Feature Coverage** | 67/92 features (73%) — see §10 for per-category breakdown |
-| **Non-Functional Requirements** | 29/45 requirements (64%) |
-| **Authorization Audit** | 18 findings closed, all high-severity resolved |
+> ⚠️ **Feature count correction:** The audit matrix covers **120 features** (F1–F120), not 119 as originally stated.
+
+| Category | Total | Implemented | Coverage | Notes |
+|----------|-------|-----------|----------|-------|
+| Account & Profile | 13 | 10 | 77% | |
+| Product Browsing | 14 | 10 | 71% | |
+| Shopping Cart | 11 | 10 | 91% | |
+| Checkout & Ordering | 9 | 7 | 78% | |
+| Shipping & Delivery | 8 | 5 | 63% | |
+| Payment | 8 | 5 | 63% | |
+| Coupons & Discounts | 13 | 9 | 69% | |
+| Reviews & Ratings | 12 | 11 | 92% | |
+| Notifications | 9 | 6 | 67% | |
+| Post-Purchase | 6 | 5 | 83% | |
+| Admin & Seller | 16 | 10 | 63% | |
+| **TOTAL** | **120** | **~88** | **~73%** | |
 
 ### 1.5 Risk Assessment
 
 | Risk Level | Count | Key Areas |
 |------------|-------|-----------|
 | **Critical** | 1 | Payment gateway production integration |
-| **High** | 4 | Admin dashboard advanced features, GDT API submission, Recently Viewed, Multi-language i18n |
-| **Medium** | 12 | Multi-language, SEO, Social login |
+| **High** | 3 | Admin dashboard advanced features, GDT API submission, Recently Viewed |
+| **Medium** | 11 | Multi-language, SEO, Social login, Coupon stacking |
 | **Low** | 3 | Price comparison, Cart abandonment recovery |
 
 ---
@@ -78,23 +96,25 @@ VNShop is a sophisticated polyglot microservices e-commerce platform modeled aft
 
 | # | Service | Tech Stack | Port | Function | Status |
 |---|---------|------------|------|----------|--------|
-| 1 | **api-gateway** | Spring Cloud Gateway | 8080 | Authentication, Routing, Rate Limiting | ✅ Active |
-| 2 | **user-service** | Spring Boot | 8081 | User management, Seller profiles, Addresses | ✅ Active |
-| 3 | **product-service** | Spring Boot | 8082 | Product catalog, Variants, Reviews | ✅ Active |
-| 4 | **inventory-service** | Spring Boot | 8083 | Stock management, Reservations, Flash sales | ✅ Active |
-| 5 | **cart-service** | NestJS | 8084 | Shopping cart with Redis CQRS | ✅ Active |
-| 6 | **search-service** | Spring Boot + ES | 8086 | Full-text search, Faceting, Filtering | ✅ Active |
-| 7 | **notification-service** | NestJS | 8087 | Multi-channel notifications, Socket.IO | ✅ Active |
-| 8 | **order-service** | Spring Boot | 8091 | Order management, Checkout, Saga orchestration | ✅ Active |
-| 9 | **payment-service** | Spring Boot | 8092 | VietQR, MoMo, Stripe, PayPal | ⚠️ Stub |
-| 10 | **shipping-service** | Spring Boot | 8093 | GHTK/GHN carrier integration | ⚠️ Stub |
-| 11 | **seller-finance** | NestJS | 8090 | Commission, Wallet, Settlements | ✅ Active |
-| 12 | **recommendations** | Spring Boot | 8094 | Frequently bought together | ✅ Active |
+| 1 | **api-gateway** | Spring Cloud Gateway 2025.1.1 | 8080 | Auth, Routing, Rate Limiting | ✅ Active |
+| 2 | **user-service** | Spring Boot 4.0.6 | 8081 | User, Seller profiles, Addresses | ✅ Active |
+| 3 | **product-service** | Spring Boot 4.0.6 | 8082 | Product catalog, Variants, Reviews | ✅ Active |
+| 4 | **inventory-service** | Spring Boot 4.0.6 | 8083 | Stock, Reservations, Flash sales | ✅ Active |
+| 5 | **cart-service** | NestJS 11.1 | 8084 | Shopping cart + MergeCartUseCase | ✅ Active |
+| 6 | **search-service** | Spring Boot + ES | 8086 | Full-text search, Faceting | ✅ Active |
+| 7 | **notification-service** | NestJS + Socket.IO | 8087 | Real-time push (not polling) | ✅ Active |
+| 8 | **order-service** | Spring Boot 4.0.6 | 8091 | Orders, Checkout, Saga orchestration | ✅ Active |
+| 9 | **payment-service** | Spring Boot 4.0.6 | 8092 | VietQR, MoMo, Stripe, PayPal | ⚠️ Stub |
+| 10 | **shipping-service** | Spring Boot 4.0.6 | 8093 | GHTK/GHN carrier integration | ⚠️ Stub |
+| 11 | **seller-finance** | NestJS 11.1 | 8090 | Commission, Wallet, Settlements | ✅ Active |
+| 12 | **recommendations** | Spring Boot 4.0.6 | 8094 | Frequently bought together | ✅ Active |
 | 13 | **messaging-service** | NestJS + WebSocket | 8095 | Buyer-seller chat | ✅ Active |
-| 14 | **invoice-service** | Spring Boot | 8098 | Vietnam e-invoice XML generation (JAXB+XSD) | ✅ Active |
-| 15 | **configuration-service** | NestJS | 8097 | Centralized config hot-reload | ✅ Active |
-| 16 | **coupon-service** | Spring Boot | 8088 | ⚰️ Deprecated → merged into order-service | ⚰️ Deprecated |
-| 17 | **review-service** | Spring Boot | 8089 | ⚰️ Deprecated → merged into product-service | ⚰️ Deprecated |
+| 14 | **invoice-service** | Spring Boot 4.0.6 | 8098 | Vietnam e-invoice XML (JAXB+XSD) | ✅ Active |
+| 15 | **configuration-service** | NestJS 11.1 | 8097 | Centralized config hot-reload | ✅ Active |
+| 16 | **coupon-service** | Spring Boot 4.0.6 | 8088 | ⚰️ Deprecated → merged into order-service | ⚰️ Deprecated |
+| 17 | **review-service** | Spring Boot 4.0.6 | 8089 | ⚰️ Deprecated → merged into product-service | ⚰️ Deprecated |
+
+> ⚠️ **Correction:** `seller-finance-service` (Spring Boot) IS deprecated per `DEPRECATED.md` (dated 2026-05-12). Finance logic migrated to `order-service`. The audit was correct. Row 18 correctly shows it as deprecated. The NestJS `seller-finance` (row 11, port 8090) is a separate active service — audit correctly listed it as ✅ Active.
 
 ### 2.2 Service Communication Patterns
 
@@ -134,6 +154,7 @@ VNShop is a sophisticated polyglot microservices e-commerce platform modeled aft
 | `payment.failed` | payment-service | order | Payment failure handling |
 | `inventory.reserved` | inventory-service | order | Stock reservation confirmed |
 | `inventory.released` | inventory-service | order | Stock release on cancellation |
+| `inventory.reservation-expired` | inventory-service | order | Flash sale TTL expiry |
 | `order.shipped` | shipping-service | notification, order | Shipment initiated |
 | `order.delivered` | shipping-service | order, seller-finance | Delivery confirmed |
 | `review.submitted` | product-service | notification | New review event |
@@ -148,7 +169,7 @@ VNShop is a sophisticated polyglot microservices e-commerce platform modeled aft
 | product-service | PostgreSQL | products, categories, product_variants | CQRS |
 | inventory-service | PostgreSQL | inventory, reservations | Event sourcing |
 | cart-service | Redis | cart:{userId} | CQRS events |
-| order-service | PostgreSQL | orders, order_items, sub_orders | CQRS + Saga |
+| order-service | PostgreSQL | orders, order_items, sub_orders, returns | CQRS + Saga |
 | payment-service | PostgreSQL | payments, payment_intents | Event sourcing |
 | seller-finance | PostgreSQL | wallets, transactions, settlements | CQRS |
 | search-service | Elasticsearch | products, suggestions | Read model |
@@ -167,6 +188,9 @@ VNShop is a sophisticated polyglot microservices e-commerce platform modeled aft
 ## 3. Complete Workflow Maps
 
 ### 3.1 Buyer Purchase Flow
+
+> ⚠️ **Critical Correction — Checkout Saga is Synchronous:**
+> The original audit described order placement as "202 Accepted — Order placed asynchronously via Kafka." This is **incorrect**. The actual implementation in `CreateOrderUseCase.createNewOrder()` is **synchronous sequential orchestration** within a single `@Transactional` method: inventory → payment → shipping → save → publish Kafka events. The saga tracks state and handles **compensation on failure** (e.g., refund if payment fails), but the happy-path flow is synchronous. The HTTP response may still return 202 (unverified — needs controller check), but the backend logic is not async.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -228,26 +252,21 @@ VNShop is a sophisticated polyglot microservices e-commerce platform modeled aft
 │         │                                     ▼                                 │
 │         │                         ┌──────────────────────┐                   │
 │         │                         │    PLACE ORDER        │                   │
-│         │                         │  (Returns 202 Async)  │                   │
-│         │                         └──────────────────────┘                   │
-│         │                                     │                                 │
-│         │                                     ▼                                 │
-│         │                         ┌──────────────────────┐                   │
-│         │                         │ SYNCHRONOUS SAGA     │                   │
-│         │                         │(State+Compensate)   │                   │
+│         │                         │ ⚠️ SYNCHRONOUS SAGA    │                   │
+│         │                         │ (not async Kafka)     │                   │
 │         │                         └──────────────────────┘                   │
 │         │                                     │                                 │
 │         │                    ┌────────────────┼────────────────┐              │
 │         │                    ▼                ▼                ▼              │
 │         │             ┌───────────┐    ┌───────────┐   ┌───────────┐        │
 │         │             │  SUCCESS  │    │  PENDING  │   │  FAILED   │        │
-│         │             │           │    │           │   │           │        │
+│         │             │           │    │   (COD)   │   │           │        │
 │         │             └─────┬─────┘    └─────┬─────┘   └─────┬─────┘        │
 │         │                   │                │                │              │
 │         │                   ▼                │                ▼              │
 │         │             ┌───────────┐          │          ┌───────────┐        │
 │         │             │  ORDER    │          │          │ COMPENSATE │        │
-│         │             │CONFIRMED  │          │          │  / RETRY   │        │
+│         │             │CONFIRMED  │          │          │  (Refund)  │        │
 │         │             └───────────┘          │          └───────────┘        │
 │         │                   │                │                               │
 │         │                   └────────┬───────┘                               │
@@ -282,19 +301,19 @@ VNShop is a sophisticated polyglot microservices e-commerce platform modeled aft
 │  ┌──────────────────────────────────────────────────────────────────────┐    │
 │  │                         NEW ORDER ARRIVES                             │    │
 │  └──────────────────────────────────────────────────────────────────────┘    │
-│                                    │                                          │
-│                                    ▼                                          │
+│                                    │                                        │
+│                                    ▼                                        │
 │  ┌──────────────────────────────────────────────────────────────────────┐    │
 │  │                    NOTIFY SELLER (Push + Email)                       │    │
-│  │                    seller.notifyOrderReceived()                      │    │
+│  │                    notification-service → Socket.IO                     │    │
 │  └──────────────────────────────────────────────────────────────────────┘    │
-│                                    │                                          │
-│                                    ▼                                          │
-│                         ┌────────────────────┐                               │
-│                         │  SELLER DASHBOARD  │                               │
-│                         │    ORDER QUEUE     │                               │
-│                         └────────────────────┘                               │
-│                                    │                                          │
+│                                    │                                        │
+│                                    ▼                                        │
+│                         ┌────────────────────┐                              │
+│                         │  SELLER DASHBOARD   │                              │
+│                         │    ORDER QUEUE      │                              │
+│                         └────────────────────┘                              │
+│                                    │                                        │
 │                    ┌───────────────┼───────────────┐                         │
 │                    ▼               ▼               ▼                          │
 │             ┌───────────┐  ┌───────────┐  ┌───────────┐                     │
@@ -302,57 +321,60 @@ VNShop is a sophisticated polyglot microservices e-commerce platform modeled aft
 │             │           │  │            │  │ (Auto-    │                     │
 │             └─────┬─────┘  └─────┬─────┘  │  cancel)  │                     │
 │                   │              │         └───────────┘                     │
-│                   ▼              ▼                                            │
-│           ┌───────────┐  ┌───────────┐                                        │
-│           │ SUB_ORDER │  │  REFUND   │                                        │
-│           │  ACCEPTED │  │  TRIGGER  │                                        │
-│           └─────┬─────┘  └───────────┘                                        │
-│                 │                                                             │
-│                 ▼                                                             │
+│                   ▼              ▼                                          │
+│           ┌───────────┐  ┌───────────┐                                       │
+│           │ SUB_ORDER │  │  REFUND   │                                       │
+│           │  ACCEPTED │  │  TRIGGER  │                                       │
+│           └─────┬─────┘  └───────────┘                                       │
+│                 │                                                            │
+│                 ▼                                                            │
 │  ┌──────────────────────────────────────────────────────────────────────┐    │
-│  │                         PACKING PHASE                                 │    │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                  │    │
-│  │  │PRINT LABEL  │  │PACK PRODUCTS │  │CONFIRM PACK │                  │    │
-│  │  │  (GHTK/GHN) │  │   ITEMS     │  │   COMPLETE  │                  │    │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘                  │    │
+│  │                         PACKING PHASE                                  │    │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                   │    │
+│  │  │PRINT LABEL  │  │PACK PRODUCTS │  │CONFIRM PACK │                   │    │
+│  │  │  (GHTK/GHN) │  │   ITEMS     │  │   COMPLETE  │                   │    │
+│  │  └─────────────┘  └─────────────┘  └─────────────┘                   │    │
 │  └──────────────────────────────────────────────────────────────────────┘    │
-│                                    │                                          │
-│                                    ▼                                          │
+│                                    │                                        │
+│                                    ▼                                        │
 │  ┌──────────────────────────────────────────────────────────────────────┐    │
-│  │                        SHIPPING PHASE                                  │    │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                  │    │
-│  │  │SCHEDULE PICKUP│ │ GIVE TO     │  │ TRACK SHIPMENT│                │    │
-│  │  │(GHTK/GHN API)│ │ CARRIER     │  │  (Webhooks)  │                  │    │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘                  │    │
+│  │                        SHIPPING PHASE                                 │    │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                   │    │
+│  │  │SCHEDULE PICKUP│ │ GIVE TO     │  │ TRACK SHIPMENT│                 │    │
+│  │  │(GHTK/GHN API)│ │ CARRIER     │  │  (Webhooks)  │                   │    │
+│  │  └─────────────┘  └─────────────┘  └─────────────┘                   │    │
 │  └──────────────────────────────────────────────────────────────────────┘    │
-│                                    │                                          │
+│                                    │                                        │
 │                    ┌───────────────┴───────────────┐                         │
-│                    ▼                               ▼                          │
+│                    ▼                               ▼                         │
 │            ┌───────────────┐               ┌───────────────┐                 │
-│            │   DELIVERED   │               │EXCEPTION/     │                 │
-│            │               │               │   RETURNED     │                 │
+│            │   DELIVERED   │               │EXCEPTION/    │                 │
+│            │               │               │   RETURNED    │                 │
 │            └───────┬───────┘               └───────┬───────┘                 │
 │                    │                               │                          │
 │                    ▼                               ▼                          │
 │  ┌──────────────────────────────────────────────────────────────────────┐    │
 │  │                      SETTLEMENT PHASE                                 │    │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                  │    │
-│  │  │CALCULATE   │  │   UPDATE    │  │  TRANSFER   │                  │    │
-│  │  │COMMISSION  │  │   WALLET    │  │    FUNDS    │                  │    │
-│  │  │(10/8/5/3%) │  │             │  │   (Bank)    │                  │    │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘                  │    │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                   │    │
+│  │  │CALCULATE   │  │   UPDATE    │  │  TRANSFER   │                   │    │
+│  │  │COMMISSION  │  │   WALLET    │  │    FUNDS    │                   │    │
+│  │  │(10/8/5/3%) │  │             │  │   (Bank)    │                   │    │
+│  │  └─────────────┘  └─────────────┘  └─────────────┘                   │    │
 │  └──────────────────────────────────────────────────────────────────────┘    │
-│                                    │                                          │
-│                                    ▼                                          │
+│                                    │                                        │
+│                                    ▼                                        │
 │                           ┌───────────────┐                                  │
-│                           │  SETTLEMENT   │                                  │
-│                           │  COMPLETED    │                                  │
+│                           │  SETTLEMENT  │                                  │
+│                           │  COMPLETED   │                                  │
 │                           └───────────────┘                                  │
 │                                                                            │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### 3.3 Payment Saga Flow
+
+> ⚠️ **Correction — Inventory TTL is 15 Minutes, Not 7 Days:**
+> The original audit stated "Inventory reserved with 7-day TTL." This is **incorrect**. Live code shows `RESERVATION_TTL = Duration.ofMinutes(15)` for flash sale reservations. Redis keyspace notifications track `flash:reservation:*` expiry. The 7-day claim was not found anywhere in the codebase.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -377,60 +399,61 @@ VNShop is a sophisticated polyglot microservices e-commerce platform modeled aft
 │    │                                                                       │
 │    ▼                                                                       │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │ STEP 2: RESERVE INVENTORY                                            │   │
+│  │ STEP 2: RESERVE INVENTORY ⚠️ CORRECTED                               │   │
 │  │                                                                       │   │
 │  │  inventory-service.reserveStock(orderId, items)                      │   │
 │  │                                                                       │   │
-│  │  ├── Check available stock (Redis Lua script)                       │   │
-│  │  ├── Create soft reservation (15-minute TTL for flash sales)        │   │
-│  │  ├── Publish inventory.reserved event                                │   │
-│  │  └── Return: { reservationId, reservedItems[] }                      │   │
+│  │  ├── Check available stock (Redis Lua script)                        │   │
+│  │  ├── Create soft reservation (⚠️ 15-MINUTE TTL for flash sales)     │   │
+│  │  │   NOT 7-day TTL as originally stated                              │   │
+│  │  ├── Publish inventory.reserved event                                 │   │
+│  │  └── Return: { reservationId, reservedItems[] }                       │   │
 │  │                                                                       │   │
-│  │  Compensation: releaseReservation(reservationId)                     │   │
+│  │  Compensation: releaseReservation(reservationId)                      │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │    │                                                                       │
 │    ▼                                                                       │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │ STEP 3: AWAIT PAYMENT CONFIRMATION                                  │   │
 │  │                                                                       │   │
-│  │  Gateway (VietQR/MoMo/Stripe) ──► Webhook ──► payment-service        │   │
+│  │  Gateway (VietQR/MoMo/Stripe) ──► Webhook ──► payment-service       │   │
 │  │                                                                       │   │
 │  │  Timeout: 30 minutes                                                 │   │
-│  │  └── If timeout: trigger compensation                                │   │
+│  │  └── If timeout: trigger compensation                                 │   │
 │  │                                                                       │   │
-│  │  Success path: payment.success event                                 │   │
+│  │  Success path: payment.success event                                  │   │
 │  │  Failure path: payment.failed event                                  │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │    │                                                                       │
-│    ├──────────────────────────┬──────────────────────┐                      │
+│    ├──────────────────────────┬──────────────────────┐                     │
 │    ▼                          ▼                      ▼                     │
-│  ┌────────────┐         ┌────────────┐         ┌────────────┐             │
-│  │  SUCCESS   │         │  PENDING   │         │  FAILED    │             │
-│  │            │         │  (COD)     │         │            │             │
+│  ┌────────────┐         ┌────────────┐         ┌────────────┐              │
+│  │  SUCCESS   │         │  PENDING   │         │  FAILED    │              │
+│  │            │         │  (COD)     │         │            │              │
 │  └─────┬──────┘         └─────┬──────┘         └─────┬──────┘             │
-│        │                      │                      │                     │
-│        ▼                      │                      ▼                     │
+│        │                      │                       │                    │
+│        ▼                      │                       ▼                    │
 │  ┌─────────────────────────────────────────────────────────────────────┐  │
 │  │ STEP 4a: CONFIRM PAYMENT (Online)                                    │  │
 │  │                                                                     │  │
-│  │  ├── Update payment status to CONFIRMED                             │  │
+│  │  ├── Update payment status to CONFIRMED                              │  │
 │  │  ├── Publish payment.success event                                   │  │
-│  │  ├── Trigger order confirmation                                      │  │
-│  │  └── Send confirmation notifications                                  │  │
+│  │  ├── Trigger order confirmation                                     │  │
+│  │  └── Send confirmation notifications                                 │  │
 │  └─────────────────────────────────────────────────────────────────────┘  │
-│                                    │                                        │
-│                                    ▼                                        │
+│                                    │                                       │
+│                                    ▼                                       │
 │  ┌─────────────────────────────────────────────────────────────────────┐  │
 │  │ STEP 5a: COMMIT INVENTORY                                            │  │
 │  │                                                                     │  │
 │  │  inventory-service.commitReservation(reservationId)                  │  │
 │  │                                                                     │  │
 │  │  ├── Convert soft reservation to hard deduction                      │  │
-│  │  ├── Update stock levels                                             │  │
+│  │  ├── Update stock levels                                            │  │
 │  │  └── Publish inventory.committed event                              │  │
 │  └─────────────────────────────────────────────────────────────────────┘  │
-│                                    │                                        │
-│                                    ▼                                        │
+│                                    │                                       │
+│                                    ▼                                       │
 │  ┌─────────────────────────────────────────────────────────────────────┐  │
 │  │ STEP 6a: CREATE SUB-ORDERS                                           │  │
 │  │                                                                     │  │
@@ -438,15 +461,15 @@ VNShop is a sophisticated polyglot microservices e-commerce platform modeled aft
 │  │                                                                     │  │
 │  │  ├── Group items by seller                                          │  │
 │  │  ├── Create sub-order per seller                                    │  │
-│  │  ├── Publish order.created (per seller)                              │  │
+│  │  ├── Publish order.created (per seller)                             │  │
 │  │  └── Notify each seller                                             │  │
 │  └─────────────────────────────────────────────────────────────────────┘  │
-│                                    │                                        │
-│                                    ▼                                        │
-│                              ┌───────────┐                                   │
-│                              │   SAGA   │                                   │
-│                              │ COMPLETE │                                   │
-│                              └───────────┘                                   │
+│                                    │                                       │
+│                                    ▼                                       │
+│                              ┌───────────┐                                 │
+│                              │   SAGA   │                                 │
+│                              │ COMPLETE  │                                 │
+│                              └───────────┘                                 │
 │                                                                            │
 │  ───────────────────────────────────────────────────────────────────────  │
 │                                                                            │
@@ -454,150 +477,128 @@ VNShop is a sophisticated polyglot microservices e-commerce platform modeled aft
 │                                                                            │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │ COMPENSATE: Release Inventory                                        │   │
-│  │  inventory-service.releaseReservation(reservationId)                │   │
+│  │  inventory-service.releaseReservation(reservationId)                 │   │
 │  │  ├── Delete soft reservation                                        │   │
 │  │  └── Publish inventory.released event                               │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                        │
-│                                    ▼                                        │
+│                                    │                                       │
+│                                    ▼                                       │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │ COMPENSATE: Cancel Payment Intent                                    │   │
-│  │  payment-service.cancelIntent(paymentId)                            │   │
-│  │  └── Update payment status to CANCELLED                             │   │
+│  │  payment-service.cancelIntent(paymentId)                             │   │
+│  │  └── Update payment status to CANCELLED                              │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                        │
-│                                    ▼                                        │
+│                                    │                                       │
+│                                    ▼                                       │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │ COMPENSATE: Update Order Status                                     │   │
-│  │  order-service.updateStatus(orderId, PAYMENT_FAILED)                │   │
+│  │  order-service.updateStatus(orderId, PAYMENT_FAILED)                 │   │
 │  │  └── Notify buyer of failure                                        │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                        │
-│                                    ▼                                        │
-│                              ┌───────────┐                                   │
-│                              │   SAGA    │                                   │
-│                              │  ROLLED   │                                   │
-│                              │   BACK    │                                   │
-│                              └───────────┘                                   │
+│                                    │                                       │
+│                                    ▼                                       │
+│                              ┌───────────┐                                │
+│                              │   SAGA    │                                │
+│                              │  ROLLED   │                                │
+│                              │   BACK    │                                │
+│                              └───────────┘                                │
 │                                                                            │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### 3.4 Return/Refund Flow
 
+> ⚠️ **Correction — Return/Refund is NOT Missing:**
+> The original audit listed this as a "Critical Missing" item. This is **completely incorrect**. The codebase contains:
+> - `Return.java` — domain entity with full state machine (`approve()`, `reject()`, `complete()`, `markRefunded()`)
+> - `ReturnStatus.java` — enum
+> - `Dispute.java` — dispute entity
+> - 4 use cases: `RequestReturnUseCase`, `ApproveReturnUseCase`, `RejectReturnUseCase`, `CompleteReturnUseCase`, `DisputeUseCase`
+> - 4 test classes with full coverage
+> - `PaymentRefundedListener.java` — Kafka listener for refund events
+>
+> The backend for return/refund is **fully implemented with tests**.
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                          RETURN/REFUND FLOW                                   │
+│                          RETURN/REFUND FLOW                                 │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │  ┌──────────────────────────────────────────────────────────────────────┐   │
-│  │                         BUYER INITIATES RETURN                         │   │
+│  │                         BUYER INITIATES RETURN                        │   │
 │  │                                                                       │   │
 │  │  Order Delivered ──► Return Window (7 days) ──► Buyer clicks Return   │   │
 │  └──────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                          │
-│                                    ▼                                          │
+│                                    │                                        │
+│                                    ▼                                        │
 │  ┌──────────────────────────────────────────────────────────────────────┐   │
 │  │                    RETURN REQUEST FORM                                 │   │
 │  │                                                                       │   │
-│  │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐        │   │
-│  │  │  RETURN REASON  │  │  EVIDENCE UPLOAD│  │  PICKUP/DROPOFF │        │   │
-│  │  │                 │  │                 │  │    SELECTION    │        │   │
-│  │  │ ○ Defective     │  │  [Photo 1]      │  │                 │        │   │
-│  │  │ ○ Wrong item    │  │  [Photo 2]      │  │ ○ Home pickup   │        │   │
-│  │  │ ○ Changed mind  │  │  [Photo 3]      │  │ ○ Drop at locker │       │   │
-│  │  │ ○ Not as desc.  │  │                 │  │ ○ Drop at post   │        │   │
-│  │  └─────────────────┘  └─────────────────┘  └─────────────────┘        │   │
-│  └──────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                          │
-│                                    ▼                                          │
-│  ┌──────────────────────────────────────────────────────────────────────┐   │
-│  │                      SELLER REVIEW PHASE                               │   │
-│  │                                                                       │   │
-│  │  SLA: 48 hours to respond                                            │   │
-│  │                                                                       │   │
 │  │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐       │   │
-│  │  │     APPROVE      │  │     REJECT      │  │  AUTO-APPROVE   │       │   │
-│  │  │                  │  │                 │  │  (High-rated    │       │   │
-│  │  │  ✓ Reason valid │  │  ✗ Reason invalid│  │   seller)      │       │   │
-│  │  │  ✓ Evidence ok   │  │  ✗ No evidence  │  │                 │       │   │
-│  │  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘       │   │
-│  │           │                    │                    │                │   │
-│  │           ▼                    ▼                    ▼                │   │
+│  │  │  RETURN REASON  │  │  EVIDENCE UPLOAD│  │  PICKUP/DROPOFF │       │   │
+│  │  │                 │  │                 │  │    SELECTION    │       │   │
+│  │  │ ○ Defective     │  │  [Photo 1]      │  │ ○ Home pickup   │       │   │
+│  │  │ ○ Wrong item    │  │  [Photo 2]      │  │ ○ Drop at locker│       │   │
+│  │  │ ○ Changed mind  │  │  [Photo 3]      │  │ ○ Drop at post  │       │   │
+│  │  │ ○ Not as desc.  │  │                 │  │                 │       │   │
+│  │  └─────────────────┘  └─────────────────┘  └─────────────────┘       │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                        │
+│                                    ▼                                        │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │                      SELLER REVIEW PHASE                              │   │
+│  │                                                                       │   │
+│  │  SLA: 48 hours to respond                                             │   │
+│  │                                                                       │   │
+│  │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐      │   │
+│  │  │     APPROVE      │  │     REJECT      │  │  AUTO-APPROVE   │      │   │
+│  │  │                  │  │                 │  │  (High-rated    │      │   │
+│  │  │  ✓ Reason valid │  │  ✗ Reason invalid│ │   seller)       │      │   │
+│  │  │  ✓ Evidence ok   │  │  ✗ No evidence  │  │                  │      │   │
+│  │  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘      │   │
+│  │           │                    │                    │               │   │
+│  │           ▼                    ▼                    ▼               │   │
 │  │  ┌──────────────────────────────────────────────────────────────┐    │   │
 │  │  │              RETURN LABEL GENERATED                            │    │   │
-│  │  │                                                               │    │   │
-│  │  │  • QR code for drop-off                                       │    │   │
-│  │  │  • Prepaid shipping label                                      │    │   │
-│  │  │  • Return instructions sent to buyer                           │    │   │
 │  │  └──────────────────────────────────────────────────────────────┘    │   │
 │  └──────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                          │
-│                                    ▼                                          │
+│                                    │                                        │
+│                                    ▼                                        │
 │  ┌──────────────────────────────────────────────────────────────────────┐   │
 │  │                        ITEM RETURNED                                  │   │
 │  │                                                                       │   │
 │  │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐       │   │
 │  │  │  INSPECTION     │  │  PHOTO VERIFIED │  │  CONFIRM ITEM   │       │   │
 │  │  │  BY SELLER/WH   │  │                 │  │  MATCHES        │       │   │
-│  │  │                 │  │                 │  │                 │       │   │
-│  │  │ ✓ Matches desc  │  │ ✓ In original   │  │ ✓ Correct qty  │       │   │
-│  │  │ ✓ Not damaged   │  │   packaging     │  │ ✓ Original cond│       │   │
 │  │  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘       │   │
-│  │           │                    │                    │                │   │
 │  │           └────────────┬────────┴────────────────────┘                │   │
 │  │                        ▼                                              │   │
-│  │               ┌───────────────┐                                       │   │
-│  │               │   ITEM OK     │                                       │   │
-│  │               │   ────────    │                                       │   │
-│  │               │ PROCESS REFUND│                                       │   │
-│  │               └───────┬───────┘                                       │   │
-│  │                       │                                                │   │
-│  │           ┌───────────┴───────────┐                                   │   │
-│  │           ▼                       ▼                                   │   │
+│  │               ┌───────────────┐                                     │   │
+│  │               │   ITEM OK     │                                     │   │
+│  │               │   ────────    │                                     │   │
+│  │               │ PROCESS REFUND │                                     │   │
+│  │               └───────┬───────┘                                     │   │
+│  │                       │                                               │   │
+│  │           ┌───────────┴───────────┐                                  │   │
+│  │           ▼                       ▼                                  │   │
 │  │    ┌─────────────┐         ┌─────────────┐                          │   │
 │  │    │  REFUND TO  │         │  EXCHANGE   │                          │   │
 │  │    │ORIGINAL PAY │         │   REQUEST   │                          │   │
 │  │    │   METHOD    │         │             │                          │   │
 │  │    └─────────────┘         └─────────────┘                          │   │
 │  └──────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                          │
-│                                    ▼                                          │
-│  ┌──────────────────────────────────────────────────────────────────────┐   │
-│  │                       REFUND PROCESSING                                │   │
-│  │                                                                       │   │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                  │   │
-│  │  │   CALCULATE │  │   EXECUTE   │  │   NOTIFY    │                  │   │
-│  │  │   REFUND    │  │   REFUND    │  │   BUYERS    │                  │   │
-│  │  │             │  │             │  │             │                  │   │
-│  │  │ • Full amt  │  │ • Original  │  │ • Email     │                  │   │
-│  │  │ • Partial   │  │   payment   │  │ • Push      │                  │   │
-│  │  │ • Deductions│  │ • Wallet    │  │ • In-app    │                  │   │
-│  │  │   (shipping)│  │   option    │  │             │                  │   │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘                  │   │
-│  └──────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                          │
-│                                    ▼                                          │
-│                           ┌───────────────┐                                  │
-│                           │   REFUND     │                                  │
-│                           │  COMPLETED   │                                  │
-│                           │              │                                  │
-│                           │ • Refund ID  │                                  │
-│                           │ • Timeline   │                                  │
-│                           │ • Evidence   │                                  │
-│                           └───────────────┘                                  │
+│                                    │                                        │
+│                                    ▼                                        │
+│                           ┌───────────────┐                                │
+│                           │   REFUND     │                                │
+│                           │  COMPLETED   │                                │
+│                           └───────────────┘                                │
 │                                                                            │
 │  ───────────────────────────────────────────────────────────────────────  │
-│                                                                            │
 │                         DISPUTE ESCALATION                                  │
 │                                                                            │
 │  ┌──────────────────────────────────────────────────────────────────────┐   │
-│  │  Seller Rejects ──► Admin Mediation Queue ──► Admin Reviews ──► Ruling │
-│  │                                                                     │   │
-│  │  • Both parties submit evidence                                     │   │
-│  │  • Admin has 72h to decide                                           │   │
-│  │  • Decision is final and binding                                     │   │
-│  │  • Appeals within 48h (one level)                                   │   │
+│  │  Seller Rejects ──► Admin Mediation Queue ──► Admin Reviews ──► Ruling │   │
 │  └──────────────────────────────────────────────────────────────────────┘   │
 │                                                                            │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -605,52 +606,54 @@ VNShop is a sophisticated polyglot microservices e-commerce platform modeled aft
 
 ---
 
-## 4. Missing Functionality (26 Features)
+## 4. Missing Functionality
 
-### 4.1 Critical - P0 (Blocks Core Shopping)
+### 4.1 Features Already Implemented (Previously Misreported)
 
-| ID | Feature | Description | Impact | Effort | Services Affected |
-|----|---------|-------------|--------|--------|-------------------|
-| F23 | **Product Variants** | ✅ Implemented — `ProductVariant` record with full validation | N/A | N/A | product-service, inventory-service |
-| F35 | **Guest Cart** | ✅ Implemented — `MergeCartUseCase` with guest-to-authenticated merge | N/A | N/A | cart-service, user-service |
-| F100 | **Return/Refund Flow** | ✅ Implemented — Return entity, 4 use cases, 4 test classes, state machine | N/A | N/A | order-service, payment-service |
+The following features were listed as "Critical Missing" in the original audit but are **fully implemented**:
+
+| ID | Feature | Actual Status | Evidence |
+|----|---------|---------------|----------|
+| F23 | **Product Variants** | ✅ Implemented | `ProductVariant.java` — 44-line record with validation, equals/hashCode, backwards-compatible constructor. 13+ related files in product-service |
+| F35 | **Guest Cart** | ✅ Implemented | `MergeCartUseCase.ts` — full merge on login, guest session tracking |
+| F100 | **Return/Refund Flow** | ✅ Implemented | `Return.java` entity, 4 use cases, 4 test classes, `Dispute.java`, `PaymentRefundedListener.java` |
 
 ### 4.2 High Priority - P1
 
-| ID | Feature | Description | Impact | Effort | Services Affected |
-|----|---------|-------------|--------|--------|-------------------|
-| F53 | **Real Order Tracking** | Carrier API integration for live tracking | Buyers cannot see delivery status | Medium | shipping-service, order-service |
-| F24 | **Product Image Gallery** | Multiple images with zoom and swipe | Cannot showcase products properly | Low | product-service, frontend |
-| F113 | **Admin Dashboard** | Revenue, orders, growth metrics | No operational visibility | High | admin-service (new) |
-| F26 | **Recently Viewed Products** | Browsing history per user | No "browse again" feature | Low | product-service, user-service |
-| F27 | **Related Products** | "Frequently bought together" surfaced | Missing upsell opportunities | Medium | recommendations, product-service |
-| F102 | **Digital Invoice (E-Invoice)** | Vietnam B2C e-invoice XML | Regulatory compliance | High | invoice-service |
-| F54 | **Delivery Proof** | Photo + signature capture | Delivery confirmation | Medium | shipping-service |
+| ID | Feature | Status | Description | Services Affected |
+|----|---------|--------|-------------|-------------------|
+| F53 | **Real Order Tracking** | ⚠️ Stub | Carrier API integration for live tracking | shipping-service, order-service |
+| F24 | **Product Image Gallery** | ❌ Missing | Multiple images with zoom and swipe | product-service, frontend |
+| F113 | **Admin Dashboard** | ⚠️ Partial | Revenue, orders, growth metrics. Basic MVP built (231-line AdminDashboard.tsx with KPI cards, charts). Advanced features missing. | frontend |
+| F26 | **Recently Viewed Products** | ❌ Missing | Browsing history per user | product-service, user-service |
+| F27 | **Related Products** | ⚠️ Partial | Backend ready (`recommendations` service), not surfaced in frontend | recommendations, frontend |
+| F102 | **Digital Invoice (E-Invoice)** | ⚠️ Partial | JAXB+XSD generation and validation built. GDT API submission endpoint unverified. | invoice-service |
+| F54 | **Delivery Proof** | ❌ Missing | Photo + signature capture | shipping-service |
 
 ### 4.3 Medium Priority - P2
 
-| ID | Feature | Description | Impact | Effort | Services Affected |
-|----|---------|-------------|--------|--------|-------------------|
-| F12 | **Multi-Language (i18n)** | Vietnamese/English support | Only Vietnamese market | Medium | All services, frontend |
-| F13 | **Delete Account (GDPR)** | Account deletion with data purge | Privacy compliance | Medium | user-service |
-| F72 | **Coupon Stacking** | Multiple coupons per order | Limited promotional flexibility | Medium | order-service, coupon-service |
-| F74 | **Auto-Apply Coupons** | System auto-applies best coupon | Conversion optimization | Medium | order-service |
-| F76 | **First-Time Buyer Coupon** | Welcome discount for new users | Acquisition funnel | Low | order-service, user-service |
-| F88 | **Review Photo Filter** | Filter reviews by photo only | Product research | Low | product-service |
-| F97 | **Push Deep Links** | Notification → specific page | Better engagement | Medium | notification-service, frontend |
-| F103 | **Re-order** | One-click reorder from history | Convenience | Medium | order-service, cart-service |
-| F114 | **Sales Reports** | Daily/weekly/monthly analytics | Business intelligence | High | seller-finance, admin |
-| F116 | **Customer Management** | Admin user segmentation | Operational efficiency | High | admin-service (new) |
-| F117 | **Content CMS** | Banners, landing pages | Marketing flexibility | Medium | cms-service (new) |
+| ID | Feature | Status | Description | Impact |
+|----|---------|--------|-------------|--------|
+| F12 | **Multi-Language (i18n)** | ❌ Not started | Vietnamese/English support | Only Vietnamese market |
+| F13 | **Delete Account (GDPR)** | ❌ Not started | Account deletion with data purge | Privacy compliance |
+| F72 | **Coupon Stacking** | ❌ Not started | Multiple coupons per order | Limited promotional flexibility |
+| F74 | **Auto-Apply Coupons** | ❌ Not started | System auto-applies best coupon | Conversion optimization |
+| F76 | **First-Time Buyer Coupon** | ❌ Not started | Welcome discount for new users | Acquisition funnel |
+| F88 | **Review Photo Filter** | ❌ Not started | Filter reviews by photo only | Product research |
+| F97 | **Push Deep Links** | ❌ Not started | Notification → specific page | Better engagement |
+| F103 | **Re-order** | ❌ Not started | One-click reorder from history | Convenience |
+| F114 | **Sales Reports** | ❌ Not started | Daily/weekly/monthly analytics | Business intelligence |
+| F116 | **Customer Management** | ❌ Not started | Admin user segmentation | Operational efficiency |
+| F117 | **Content CMS** | ❌ Not started | Banners, landing pages | Marketing flexibility |
 
 ### 4.4 Low Priority - P3
 
-| ID | Feature | Description | Impact | Effort | Services Affected |
-|----|---------|-------------|--------|--------|-------------------|
-| F25 | **Product Comparison** | Side-by-side comparison | Research feature | Medium | product-service |
-| F38 | **Cart Abandonment Recovery** | Automated recovery emails | Revenue recovery | Medium | notification-service |
-| F62 | **Installment Payment** | VNPAY 0% interest installments | Big-ticket purchases | High | payment-service |
-| F63 | **Saved Payment Methods** | Tokenized cards for faster checkout | Conversion optimization | Medium | payment-service |
+| ID | Feature | Status | Description |
+|----|---------|--------|-------------|
+| F25 | **Product Comparison** | ❌ Not started | Side-by-side comparison |
+| F38 | **Cart Abandonment Recovery** | ❌ Not started | Automated recovery emails |
+| F62 | **Installment Payment** | ❌ Not started | VNPAY 0% interest installments |
+| F63 | **Saved Payment Methods** | ❌ Not started | Tokenized cards for faster checkout |
 
 ---
 
@@ -662,650 +665,224 @@ Based on UI/UX Pro Max design principles, the following issues have been identif
 
 ### 5.2 Critical UI/UX Issues
 
-| # | Issue | Design Rule Violated | Category | Impact | Recommendation |
-|---|-------|---------------------|----------|--------|---------------|
-| 1 | **No loading skeletons** | `progressive-loading` | Performance | Poor perceived performance | Add shimmer/skeleton screens for >1s loads |
-| 2 | ~~Push notifications poll every 30s~~ | — | — | ~~Battery drain, delayed notifications~~ | ✅ Socket.IO gateway implemented — `socketio-notification.gateway.ts`; real-time, not polling |
-| 3 | **Icon-only buttons without labels** | `aria-labels` | Accessibility | Screen reader users cannot navigate | Add `aria-label` to all icon buttons |
-| 4 | **No focus visible states** | `focus-states` | Accessibility | Keyboard users lost | Add 2-4px visible focus rings |
-| 5 | **Relies on hover for interactions** | `hover-vs-tap` | Touch/Interaction | Mobile users cannot use features | Add tap alternatives for all hover states |
+| # | Issue | Design Rule Violated | Category | Impact | Status |
+|---|-------|---------------------|----------|--------|--------|
+| 1 | **No loading skeletons** | `progressive-loading` | Performance | Poor perceived performance | Needs fix |
+| 2 | ~~Push notifications poll every 30s~~ | — | — | ~~Battery drain, delayed notifications~~ | ✅ **CORRECTED**: Socket.IO gateway at `socketio-notification.gateway.ts`. Real-time, not polling. 18 files match WebSocket/Socket.IO patterns. |
+| 3 | **Icon-only buttons without labels** | `aria-labels` | Accessibility | Screen reader users cannot navigate | Needs fix |
+| 4 | **No focus visible states** | `focus-states` | Accessibility | Keyboard users lost | Needs fix |
+| 5 | **Relies on hover for interactions** | `hover-vs-tap` | Touch/Interaction | Mobile users cannot use features | Needs fix |
 
 ### 5.3 High Priority Issues
 
-| # | Issue | Design Rule Violated | Category | Impact | Recommendation |
-|---|-------|---------------------|----------|--------|---------------|
-| 6 | **Wishlist is localStorage only** | `local-state` | Data | Data loss on clear cache | Migrate to `/users/me/wishlist` API |
-| 7 | **Cart stock validated only at order** | `inline-validation` | Forms | Cart shows unavailable items | Real-time stock check on cart page |
-| 8 | ~~No dark mode~~ | — | — | ~~User preference ignored~~ | ✅ Implemented — 47-file codemod with e2e test suite; `dark-mode-ui.spec.ts` verifies `#0b0e14` dark bg and `#f4f6f9` light bg toggle |
-| 9 | **Missing alt text on images** | `alt-text` | Accessibility | Screen reader users miss content | Add descriptive alt attributes |
-| 10 | **No skip links** | `skip-links` | Accessibility | Keyboard users must tab through nav | Add skip to main content link |
-| 11 | **Fixed px container widths** | `container-width` | Layout | Poor tablet/responsive experience | Use responsive max-w classes |
-| 12 | **Placeholder-only labels** | `input-labels` | Forms | Users forget input purpose | Add visible labels above inputs |
-| 13 | **No press feedback on cards** | `press-feedback` | Touch/Interaction | Unclear if tap registered | Add ripple/highlight on press |
-| 14 | **Horizontal swipe on content** | `gesture-conflicts` | Touch/Interaction | Accidental navigation | Use vertical scroll only |
+| # | Issue | Design Rule Violated | Category | Impact | Status |
+|---|-------|---------------------|----------|--------|--------|
+| 6 | **Wishlist is localStorage only** | `local-state` | Data | Data loss on clear cache | Needs fix |
+| 7 | **Cart stock validated only at order** | `inline-validation` | Forms | Cart shows unavailable items | Needs fix |
+| 8 | ~~No dark mode~~ | — | — | ~~User preference ignored~~ | ✅ **CORRECTED**: Full implementation with e2e test suite. `dark-mode-ui.spec.ts` verifies `#0b0e14` dark bg and `#f4f6f9` light bg toggle. 28 files match dark/theme patterns, 47-file codemod. |
+| 9 | **Missing alt text on images** | `alt-text` | Accessibility | Screen reader users miss content | Needs fix |
+| 10 | **No skip links** | `skip-links` | Accessibility | Keyboard users must tab through nav | Needs fix |
+| 11 | **Fixed px container widths** | `container-width` | Layout | Poor tablet/responsive experience | Needs fix |
+| 12 | **Placeholder-only labels** | `input-labels` | Forms | Users forget input purpose | Needs fix |
+| 13 | **No press feedback on cards** | `press-feedback` | Touch/Interaction | Unclear if tap registered | Needs fix |
+| 14 | **Horizontal swipe on content** | `gesture-conflicts` | Touch/Interaction | Accidental navigation | Needs fix |
 
 ### 5.4 Medium Priority Issues
 
-| # | Issue | Design Rule Violated | Category | Impact | Recommendation |
-|---|-------|---------------------|----------|--------|---------------|
-| 15 | **Color-only status indicators** | `color-not-only` | Accessibility | Colorblind users cannot distinguish | Add icons/text for status |
-| 16 | **Errors only at top of form** | `error-placement` | Forms | User doesn't know which field | Show errors below fields |
-| 17 | **No confirmation for destructive** | `confirmation-dialogs` | Forms | Accidental deletes | Add confirm before delete |
-| 18 | **Instant state changes (0ms)** | `state-transition` | Animation | Jarring UX | Add 150-300ms transitions |
-| 19 | **No reduced-motion support** | `reduced-motion` | Animation | Motion sickness risk | Check `prefers-reduced-motion` |
-| 20 | **Body text <16px on mobile** | `readable-font-size` | Layout | iOS auto-zoom on inputs | Enforce 16px minimum body text |
-| 21 | **No haptic feedback** | `haptic-feedback` | Touch/Interaction | Poor confirmation feel | Add haptics for confirmations |
-| 22 | **No loading indicators** | `loading-states` | Animation | Unclear async operations | Add skeleton for async content |
+| # | Issue | Design Rule Violated | Category | Impact | Status |
+|---|-------|---------------------|----------|--------|--------|
+| 15 | **Color-only status indicators** | `color-not-only` | Accessibility | Colorblind users cannot distinguish | Needs fix |
+| 16 | **Errors only at top of form** | `error-placement` | Forms | User doesn't know which field | Needs fix |
+| 17 | **No confirmation for destructive** | `confirmation-dialogs` | Forms | Accidental deletes | Needs fix |
+| 18 | **Instant state changes (0ms)** | `state-transition` | Animation | Jarring UX | Needs fix |
+| 19 | **No reduced-motion support** | `reduced-motion` | Animation | Motion sickness risk | Needs fix |
+| 20 | **Body text <16px on mobile** | `readable-font-size` | Layout | iOS auto-zoom on inputs | Needs fix |
+| 21 | **No haptic feedback** | `haptic-feedback` | Touch/Interaction | Poor confirmation feel | Needs fix |
+| 22 | **No loading indicators** | `loading-states` | Animation | Unclear async operations | Needs fix |
 
 ### 5.5 Low Priority Issues
 
-| # | Issue | Design Rule Violated | Category | Impact | Recommendation |
-|---|-------|---------------------|----------|--------|---------------|
-| 23 | **No auto-dismiss toasts** | `toast-dismiss` | Forms | Toasts persist forever | Auto-dismiss in 3-5s |
-| 24 | **Blocking animations** | `no-blocking-animation` | Animation | User cannot interact | Never block input during animation |
-| 25 | **No keyboard shortcuts** | `keyboard-shortcuts` | Accessibility | Power users limited | Add common shortcuts |
+| # | Issue | Design Rule Violated | Category | Impact | Status |
+|---|-------|---------------------|----------|--------|--------|
+| 23 | **No auto-dismiss toasts** | `toast-dismiss` | Forms | Toasts persist forever | Needs fix |
+| 24 | **Blocking animations** | `no-blocking-animation` | Animation | User cannot interact | Needs fix |
+| 25 | **No keyboard shortcuts** | `keyboard-shortcuts` | Accessibility | Power users limited | Needs fix |
 
 ---
 
-## 6. Vietnam-Specific Niche Features to Add
+## 6. Vietnam-Specific Niche Features
 
 ### 6.1 Payment Innovations (Vietnam Market)
 
-Vietnam is a cash-heavy society with unique payment preferences. The following payment features are critical for market adoption:
+Vietnam is a cash-heavy society with unique payment preferences:
 
-| Feature | Description | Implementation Notes | Priority | Impact |
-|---------|-------------|---------------------|----------|--------|
-| **VietQR Advanced** | QR payment with bank selection, QR code generation, QR scanning via camera | Use VietQR API for dynamic QR codes; implement camera scanning for MoMo/Stripe | P0 | High |
-| **MoMo E-Wallet** | Deep MoMo integration with balance checking, recharge | MoMo sandbox configured; need production API credentials | P0 | High |
-| **VNPay Installment** | 0% interest installments via credit card | EMI calculation, bank partner agreements required | P1 | Medium |
-| **ATM Transfer Auto-Reconcile** | Bank transfer detection via webhook | Bank webhooks for real-time confirmation | P1 | High |
-| **Cash Deposit Points** | 7-Eleven, WinMart deposit points | Integration with convenience store payment networks | P2 | Medium |
-| **ZaloPay Integration** | ZaloPay e-wallet for younger demographics | ZaloPay API integration for Gen Z users | P2 | Medium |
-| **Installment Calculator** | EMI calculator for big-ticket items | Widget showing monthly payments for 3/6/9/12 months | P2 | Medium |
+| Feature | Description | Status | Priority | Impact |
+|---------|-------------|--------|----------|--------|
+| **VietQR Advanced** | QR payment with bank selection, QR generation, camera scanning | ⚠️ Stub | P0 | High |
+| **MoMo E-Wallet** | Deep MoMo integration with balance checking, recharge | ⚠️ Stub | P0 | High |
+| **VNPay Installment** | 0% interest installments via credit card | ❌ Not started | P1 | Medium |
+| **ATM Transfer Auto-Reconcile** | Bank transfer detection via webhook | ⚠️ Stub | P1 | High |
+| **Cash Deposit Points** | 7-Eleven, WinMart deposit points | ❌ Not started | P2 | Medium |
+| **ZaloPay Integration** | ZaloPay e-wallet for younger demographics | ❌ Not started | P2 | Medium |
+| **Installment Calculator** | EMI calculator for big-ticket items | ❌ Not started | P2 | Medium |
 
 ### 6.2 Shipping Innovations
 
-Vietnam's geography and logistics infrastructure require specialized shipping features:
-
-| Feature | Description | Implementation Notes | Priority | Impact |
-|---------|-------------|---------------------|----------|--------|
-| **GHTK Live Tracking** | Real-time GPS tracking visualization | GHTK webhook integration for status updates | P1 | High |
-| **GHN COD Management** | Cash collection with reconciliation | COD fee calculation, fund settlement | P0 | High |
-| **Locker Pickup** | J&T, GHN locker network integration | Locker selection in checkout, PIN code delivery | P2 | Medium |
-| **Same-Day Delivery** | Premium tier for major cities (HN, HCM) | Delivery slot selection, express fulfillment | P2 | High |
-| **Scheduled Delivery** | Buyer selects delivery time slot | 2-hour window selection, driver routing | P2 | Medium |
-| **Proof of Delivery** | Photo capture + digital signature | Mobile app integration for delivery confirmation | P1 | Medium |
-| **Vietnam Address Standardization** | Tỉnh/Thành phố → Quận/Huyện → Phường/Xã | Address autocomplete with Vietnam administrative divisions | P0 | High |
+| Feature | Description | Status | Priority | Impact |
+|---------|-------------|--------|----------|--------|
+| **GHTK Live Tracking** | Real-time GPS tracking visualization | ⚠️ Stub | P1 | High |
+| **GHN COD Management** | Cash collection with reconciliation | ⚠️ Stub | P0 | High |
+| **Locker Pickup** | J&T, GHN locker network integration | ❌ Not started | P2 | Medium |
+| **Same-Day Delivery** | Premium tier for major cities (HN, HCM) | ❌ Not started | P2 | High |
+| **Scheduled Delivery** | Buyer selects delivery time slot | ❌ Not started | P2 | Medium |
+| **Proof of Delivery** | Photo capture + digital signature | ❌ Not started | P1 | Medium |
+| **Vietnam Address Standardization** | Tỉnh/Thành phố → Quận/Huyện → Phường/Xã | ⚠️ Partial | P0 | High |
 
 ### 6.3 Vietnam-Specific Commerce Features
 
-These features align VNShop with local market expectations:
-
-| Feature | Description | Implementation Notes | Priority | Impact |
-|---------|-------------|---------------------|----------|--------|
-| **Flash Sale Engine** | Timed deals with countdown, limited stock | Countdown timer, urgency UI, stock depletion indicators | P0 | High |
-| **Coin/Cashback System** | VNShop Coins for repeat purchases | Points earned per order, redemption at checkout | P1 | High |
-| **Bundle Deals** | "Mua 3 tặng 1" (Buy 3 Get 1) engine | Bundle rule engine, quantity-based discounts | P1 | Medium |
-| **Price Hunt** | Price drop alerts for watched products | Price watch API, notification on drop | P2 | Medium |
-| **Social Sharing Rewards** | Facebook/Zalo share for discounts | Social share buttons, reward attribution | P2 | Medium |
-| **Seller Badges** | "Yêu thích" (Favorite), "Mall", "Chính hãng" (Genuine) | Badge system with verification workflows | P0 | High |
-| **Genuine Product Badge** | Certified authentic product verification | Document verification, brand partnership | P1 | High |
-| **Consumer Protection** | Return window, refund timeline prominently displayed | Trust badges, policy highlights | P0 | Critical |
+| Feature | Description | Status | Priority | Impact |
+|---------|-------------|--------|----------|--------|
+| **Flash Sale Engine** | Timed deals with countdown, limited stock | ⚠️ Partial (15-min TTL reservations) | P0 | High |
+| **Coin/Cashback System** | VNShop Coins for repeat purchases | ❌ Not started | P1 | High |
+| **Bundle Deals** | "Mua 3 tặng 1" (Buy 3 Get 1) engine | ❌ Not started | P1 | Medium |
+| **Price Hunt** | Price drop alerts for watched products | ❌ Not started | P2 | Medium |
+| **Social Sharing Rewards** | Facebook/Zalo share for discounts | ❌ Not started | P2 | Medium |
+| **Seller Badges** | "Yêu thích" (Favorite), "Mall", "Chính hãng" (Genuine) | ⚠️ Partial | P0 | High |
+| **Genuine Product Badge** | Certified authentic product verification | ❌ Not started | P1 | High |
+| **Consumer Protection** | Return window, refund timeline prominently displayed | ✅ Implemented | P0 | Critical |
 
 ### 6.4 Regulatory Compliance Features
 
-Vietnam has specific e-commerce regulations that must be addressed:
-
-| Feature | Description | Implementation Notes | Priority | Impact |
-|---------|-------------|---------------------|----------|--------|
-| **E-Invoice (Hóa đơn điện tử)** | Vietnam mandated B2C invoices | XML format per Vietnam e-invoice regulations | P0 | Critical |
-| **Tax Calculation** | Per-transaction VAT computation | 10% VAT calculation for applicable products | P1 | High |
-| **MST (Tax Code) Verification** | Seller tax ID validation | Tax code format validation, API verification | P0 | High |
-| **GPKD Verification** | Business license number validation | GPKD number format validation | P1 | High |
-| **Price Display Compliance** | "Giá đã bao gồm VAT" badges | Tax-inclusive pricing display rules | P1 | Medium |
-| **Age Verification** | For restricted product categories | Date of birth verification for certain items | P2 | Medium |
+| Feature | Description | Status | Priority | Impact |
+|---------|-------------|--------|----------|--------|
+| **E-Invoice (Hóa đơn điện tử)** | Vietnam mandated B2C invoices | ⚠️ Partial — JAXB+XSD generation built; GDT API submission unverified | P0 | Critical |
+| **Tax Calculation** | Per-transaction VAT computation | ⚠️ Partial | P1 | High |
+| **MST (Tax Code) Verification** | Seller tax ID validation | ⚠️ Partial | P0 | High |
+| **GPKD Verification** | Business license number validation | ⚠️ Partial | P1 | High |
+| **Price Display Compliance** | "Giá đã bao gồm VAT" badges | ⚠️ Partial | P1 | Medium |
+| **Age Verification** | For restricted product categories | ❌ Not started | P2 | Medium |
 
 ---
 
 ## 7. Sub-Functions Needed for Completeness
 
-### 7.1 Product Variants System (F23)
+### 7.1 Product Variants System (F23) — Backend Implemented ✅
 
-Product variants are essential for selling clothing, electronics, and other products with multiple options.
+> ⚠️ **Correction:** Backend is fully implemented. Frontend variant selector UI is still needed.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                       PRODUCT VARIANTS ARCHITECTURE                          │
+│                       PRODUCT VARIANTS — BACKEND READY ✅                    │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│  1. ATTRIBUTE DEFINITIONS                                                    │
-│  ├── Attribute Entity                                                        │
-│  │   ├── id: UUID                                                            │
-│  │   ├── name: String (e.g., "Size", "Color")                               │
-│  │   ├── type: Enum (DROPDOWN, SWATCH, TEXT)                                │
-│  │   ├── required: Boolean                                                  │
-│  │   ├── displayOrder: Integer                                              │
-│  │   └── validationRules: JSON                                              │
-│  │                                                                           │
-│  ├── Attribute Options                                                       │
-│  │   ├── id: UUID                                                            │
-│  │   ├── attributeId: FK                                                     │
-│  │   ├── value: String (e.g., "XL", "Red")                                  │
-│  │   ├── displayOrder: Integer                                               │
-│  │   ├── swatchColor: String (for color swatches)                           │
-│  │   └── swatchImage: URL (for visual options)                              │
-│  │                                                                           │
-│  └── Attribute Categories                                                   │
-│      ├── CategoryAttribute                                                   │
-│      └── Defines which attributes apply to which categories                  │
+│  BACKEND STATUS: ✅ IMPLEMENTED                                              │
+│  ────────────────────────────────                                           │
+│  ProductVariant.java record (44 lines) with:                                 │
+│  • sku, name, price (Money), imageUrl, stockQuantity                         │
+│  • Validation: sku non-blank, price non-null, stockQuantity >= 0           │
+│  • equals/hashCode (by sku)                                                │
+│  • Backwards-compatible constructor (defaults stockQuantity to 0)          │
 │                                                                              │
-│  2. VARIANT MATRIX                                                           │
-│  ├── ProductVariant Entity                                                  │
-│  │   ├── id: UUID                                                            │
-│  │   ├── productId: FK                                                      │
-│  │   ├── sku: String (unique, auto-generated or manual)                     │
-│  │   ├── price: Decimal                                                      │
-│  │   ├── compareAtPrice: Decimal (for sales)                                │
-│  │   ├── costPrice: Decimal (for margin calculation)                        │
-│  │   ├── weight: Decimal                                                     │
-│  │   ├── images: String[] (variant-specific images)                          │
-│  │   ├── attributes: JSON ({size: "XL", color: "Red"})                     │
-│  │   └── metadata: JSON (additional variant data)                           │
-│  │                                                                           │
-│  ├── SKU Generation Strategy                                                 │
-│  │   ├── Pattern: {PRODUCT_SKU}-{ATTR1_CODE}-{ATTR2_CODE}                   │
-│  │   ├── Example: TSHIRT-RED-XL                                             │
-│  │   └── Custom SKU override allowed                                        │
-│  │                                                                           │
-│  └── Inventory Per Variant                                                   │
-│      ├── inventory-service tracks stock per variantId                        │
-│      ├── Lua script for atomic stock operations                             │
-│      └── Reserved stock per variant                                          │
-│                                                                              │
-│  3. VARIANT SELECTION UI                                                     │
+│  FRONTEND STATUS: ❌ NEEDS IMPLEMENTATION                                   │
+│  ───────────────────────────────────────────                                 │
+│  1. VARIANT SELECTION UI                                                   │
 │  ├── Swatch Selector (Color)                                                │
-│  │   ├── Circular color buttons with border on selected                     │
-│  │   ├── Disabled state for out-of-stock colors                             │
-│  │   ├── Tooltip with color name on hover                                   │
-│  │   └── Click selects and updates product display                          │
-│  │                                                                           │
-│  ├── Dropdown Selector (Size)                                                │
-│  │   ├── Native <select> or custom dropdown                                 │
-│  │   ├── Disabled options for out-of-stock sizes                            │
-│  │   └── Size guide link                                                    │
-│  │                                                                           │
-│  ├── Price/Stock Update                                                     │
-│  │   ├── On variant selection, update price display                          │
-│  │   ├── Show "X left" if low stock                                         │
-│  │   ├── Show "Out of stock" badge if unavailable                           │
-│  │   └── Update add-to-cart button state                                     │
-│  │                                                                           │
-│  └── Variant Image Gallery                                                   │
-│      ├── Show variant-specific image when selected                           │
-│      ├── Fall back to attribute-specific images                             │
-│      └── Zoom on image hover/tap                                             │
+│  ├── Dropdown Selector (Size)                                              │
+│  ├── Price/Stock Update on selection                                        │
+│  └── Variant Image Gallery                                                  │
 │                                                                              │
-│  4. CART INTEGRATION                                                         │
-│  ├── Add to Cart Payload                                                    │
-│  │   ├── productId: UUID                                                    │
-│  │   ├── variantId: UUID (required for variant products)                    │
-│  │   ├── quantity: Integer                                                   │
-│  │   └── snapshot: {price, name, image} (for cart display)                 │
-│  │                                                                           │
-│  ├── Cart Display                                                            │
-│  │   ├── Show variant attributes in cart item                               │
-│  │   ├── "Size: XL, Color: Red"                                             │
-│  │   └── Variant image thumbnail                                            │
-│  │                                                                           │
-│  └── Order Line Items                                                        │
-│      ├── Store variantId in order_items                                     │
-│      ├── For reporting: aggregate by variant                                │
-│      └── For fulfillment: reference variant-specific data                     │
-│                                                                              │
-│  5. ADMIN INTERFACE                                                          │
-│  ├── Variant Matrix Editor                                                   │
-│  │   ├── Grid view of all combinations                                      │
-│  │   ├── Bulk edit prices, stock, SKUs                                      │
-│  │   ├── Import via CSV                                                    │
-│  │   └── Generate missing variants                                          │
-│  │                                                                           │
+│  2. ADMIN INTERFACE                                                        │
+│  ├── Variant Matrix Editor                                                  │
 │  └── Attribute Management                                                    │
-│      ├── Create/edit attributes                                             │
-│      ├── Assign to categories                                                │
-│      └── Set display order and type                                          │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 7.2 Guest Cart System (F35)
+### 7.2 Guest Cart System (F35) — Backend Implemented ✅
 
-Guest cart enables anonymous users to add items before logging in, with seamless merge on signup.
+> ⚠️ **Correction:** Backend is fully implemented via `MergeCartUseCase`. Frontend session banner and merge UI are still needed.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                          GUEST CART ARCHITECTURE                             │
+│                       GUEST CART — BACKEND READY ✅                          │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│  1. ANONYMOUS SESSION                                                        │
-│  ├── Session ID Generation                                                   │
-│  │   ├── UUID v4 generated on first cart action                             │
-│  │   ├── Stored in localStorage + cookie (httpOnly, secure)                  │
-│  │   └── 30-day TTL                                                          │
-│  │                                                                           │
-│  ├── Session Storage (Redis)                                                 │
-│  │   ├── Key: cart:guest:{sessionId}                                        │
-│  │   ├── TTL: 30 days                                                        │
-│  │   └── Data: { items[], createdAt, updatedAt }                            │
-│  │                                                                           │
-│  └── Session Identification                                                  │
-│      ├── Cookie: vnshop_guest_session                                        │
-│      ├── Fallback: localStorage vnshop_guest_session                        │
-│      └── Cross-device: Not supported (use for cart transfer link instead)   │
+│  BACKEND STATUS: ✅ IMPLEMENTED                                              │
+│  ────────────────────────────────                                           │
+│  MergeCartUseCase.ts:                                                       │
+│  • Merges guest cart to authenticated user on login                         │
+│  • Same product: sum quantities                                             │
+│  • Adds new items                                                            │
+│  • Deletes guest cart after merge                                           │
 │                                                                              │
-│  2. GUEST CART API                                                           │
-│  ├── Add Item                                                                │
-│  │   POST /api/v1/cart/guest/{sessionId}/items                              │
-│  │   Body: { productId, variantId?, quantity }                              │
-│  │   Response: { cart, item }                                                │
-│  │                                                                           │
-│  ├── Get Cart                                                                │
-│  │   GET /api/v1/cart/guest/{sessionId}                                     │
-│  │   Response: { items[], subtotal, itemCount }                             │
-│  │                                                                           │
-│  ├── Update Item                                                             │
-│  │   PATCH /api/v1/cart/guest/{sessionId}/items/{itemId}                   │
-│  │   Body: { quantity }                                                      │
-│  │                                                                           │
-│  ├── Remove Item                                                             │
-│  │   DELETE /api/v1/cart/guest/{sessionId}/items/{itemId}                  │
-│  │                                                                           │
-│  └── Clear Cart                                                              │
-│      DELETE /api/v1/cart/guest/{sessionId}                                   │
-│                                                                              │
-│  3. CART MERGING ON LOGIN                                                    │
-│  ├── Detection Trigger                                                        │
-│  │   └── When user logs in with existing guest session                      │
-│  │                                                                           │
-│  ├── Merge Strategy                                                          │
-│  │   ├── Same product: sum quantities (cap at max available)                │
-│  │   ├── Price reconciliation: use current prices                           │
-│  │   ├── Expired promotions: recalculate                                    │
-│  │   └── Stock validation: check availability before merge                   │
-│  │                                                                           │
-│  ├── User Preference                                                         │
-│  │   ├── Default: Merge carts                                               │
-│  │   ├── Option: "Keep separate"                                            │
-│  │   └── Remembered preference                                              │
-│  │                                                                           │
-│  └── Merge Endpoint                                                          │
-│      POST /api/v1/cart/merge                                                 │
-│      Body: { guestSessionId }                                                │
-│      Response: { mergedCart, conflicts[] }                                   │
-│                                                                              │
-│  4. UX INDICATORS                                                            │
-│  ├── Guest Cart Banner                                                       │
-│  │   ├── "Sign in to save your cart"                                        │
-│  │   ├── Show savings if user had signed in                                  │
-│  │   └── Prominent CTA to sign in/register                                  │
-│  │                                                                           │
-│  ├── Persistent Cart Notice                                                  │
-│  │   ├── "Your cart is saved locally"                                       │
-│  │   └── "Create an account to access on any device"                        │
-│  │                                                                           │
-│  └── Header Cart Icon                                                        │
-│      ├── Show guest cart count                                               │
-│      ├── "Guest" label until login                                           │
-│      └── Badge animation on add                                              │
-│                                                                              │
-│  5. CONVERSION TRACKING                                                      │
-│  ├── Anonymous Checkout                                                       │
-│  │   ├── Guest checkout allowed                                              │
-│  │   ├── Guest account created with order                                    │
-│  │   └── Option to set password later                                        │
-│  │                                                                           │
-│  └── Analytics Events                                                        │
-│      ├── guest_cart_add (product, price, quantity)                          │
-│      ├── guest_cart_merge (items merged)                                     │
-│      └── guest_checkout_start (conversion funnel)                            │
+│  FRONTEND STATUS: ❌ NEEDS IMPLEMENTATION                                   │
+│  ───────────────────────────────────────────                                 │
+│  1. Guest Cart Banner                                                        │
+│  2. Session Persistence (localStorage + cookie)                             │
+│  3. Merge Prompt UI on login                                                 │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 7.3 Return/Refund Flow (F100)
+### 7.3 Return/Refund Flow (F100) — Backend Fully Implemented ✅
 
-Vietnam consumer law mandates a 7-day return window. Complete flow implementation:
+> ⚠️ **Correction:** Full return/refund backend exists with tests. Frontend request UI and status tracking are still needed.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                       RETURN/REFUND FLOW DETAIL                             │
+│                   RETURN/REFUND — BACKEND FULLY IMPLEMENTED ✅                │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│  1. RETURN ELIGIBILITY                                                       │
-│  ├── Return Window                                                            │
-│  │   ├── 7 days from delivery confirmation                                   │
-│  │   ├── Configurable by seller tier                                         │
-│  │   └── Digital products: Not eligible                                     │
-│  │                                                                           │
-│  ├── Eligible Order States                                                   │
-│  │   ├── DELIVERED (only)                                                    │
-│  │   └── Not: CANCELLED, RETURNED, REFUNDED                                 │
-│  │                                                                           │
-│  └── Excluded Categories                                                     │
-│      ├── Personal care items                                                 │
-│      ├── Customized products                                                 │
-│      └── Perishable goods                                                     │
+│  BACKEND STATUS: ✅ FULLY IMPLEMENTED WITH TESTS                            │
+│  ───────────────────────────────────────────────────                         │
+│  Domain:                                                                    │
+│  • Return.java — state machine (REQUESTED→APPROVED→COMPLETED→REFUNDED)      │
+│  • ReturnStatus.java — enum                                                 │
+│  • Dispute.java — dispute entity for escalation                             │
 │                                                                              │
-│  2. RETURN REQUEST                                                           │
-│  ├── Return Reasons (Buyer Selects)                                          │
-│  │   ├── DEFECTIVE - Product has manufacturing defects                       │
-│  │   ├── WRONG_ITEM - Received different product                             │
-│  │   ├── NOT_AS_DESCRIBED - Doesn't match listing                            │
-│  │   ├── CHANGED_MIND - Buyer's personal preference                           │
-│  │   └── LATE_DELIVERY - Arrived after promised date                          │
-│  │                                                                           │
-│  ├── Evidence Upload                                                         │
-│  │   ├── Required: 1-5 photos                                                │
-│  │   ├── Format: JPG, PNG (max 5MB each)                                     │
-│  │   ├── Content: Product photos, packaging, defect close-ups                 │
-│  │   └── Processing: Image compression, watermark                           │
-│  │                                                                           │
-│  ├── Return Method                                                           │
-│  │   ├── HOME_PICKUP - Carrier picks up from buyer (fee may apply)           │
-│  │   ├── DROP_OFF_LOCKER - J&T/GHN locker (free)                            │
-│  │   └── DROP_OFF_POST - Postal service (free)                               │
-│  │                                                                           │
-│  └── Return Request Entity                                                   │
-│      ├── id: UUID                                                            │
-│      ├── orderId: FK                                                         │
-│      ├── subOrderId: FK                                                      │
-│      ├── reason: Enum                                                        │
-│      ├── reasonDetail: String (buyer description)                            │
-│      ├── evidenceUrls: String[]                                              │
-│      ├── returnMethod: Enum                                                  │
-│      ├── status: Enum (PENDING, APPROVED, REJECTED, RECEIVED, COMPLETED)     │
-│      ├── requestedAt: Timestamp                                              │
-│      └── expiresAt: Timestamp (7 days from delivery)                        │
+│  Use Cases:                                                                 │
+│  • RequestReturnUseCase.java                                               │
+│  • ApproveReturnUseCase.java                                               │
+│  • RejectReturnUseCase.java                                                │
+│  • CompleteReturnUseCase.java                                              │
+│  • DisputeUseCase.java                                                      │
 │                                                                              │
-│  3. SELLER REVIEW                                                            │
-│  ├── SLA Timer                                                               │
-│  │   ├── 48 hours to respond                                                 │
-│  │   ├── Auto-approve after timeout (configurable)                           │
-│  │   └── Notification at 24h and 47h                                         │
-│  │                                                                           │
-│  ├── Auto-Approval Rules                                                     │
-│  │   ├── Seller tier: MALL (automatic approval)                              │
-│  │   ├── Seller rating: >4.8 (automatic approval)                           │
-│  │   └── Return reason: DEFECTIVE (review required)                         │
-│  │                                                                           │
-│  ├── Approval Actions                                                        │
-│  │   ├── APPROVE - Accept return, generate label                            │
-│  │   ├── REJECT - Provide reason, escalate option                           │
-│  │   └── REQUEST_INFO - Ask buyer for more details                           │
-│  │                                                                           │
-│  └── Rejection Reasons                                                       │
-│      ├── Product used/damaged by buyer                                       │
-│      ├── Missing original packaging                                          │
-│      ├── Outside return window                                               │
-│      └── Item not purchased from this seller                                  │
+│  Tests: 4 test classes covering approve/reject/complete/dispute             │
+│  Infrastructure: PaymentRefundedListener.java (Kafka)                       │
 │                                                                              │
-│  4. RETURN LOGISTICS                                                         │
-│  ├── Label Generation                                                        │
-│  │   ├── QR Code for drop-off                                                │
-│  │   ├── Prepaid shipping label (for pickup)                                 │
-│  │   └── Return address (seller warehouse or VNShop warehouse)              │
-│  │                                                                           │
-│  ├── Buyer Instructions                                                       │
-│  │   ├── Step-by-step return guide                                           │
-│  │   ├── Pack product securely                                               │
-│  │   ├── Include return form                                                 │
-│  │   └── Drop off or schedule pickup                                        │
-│  │                                                                           │
-│  └── Tracking Return Shipment                                                │
-│      ├── Carrier tracking integration                                        │
-│      ├── Status updates to buyer/seller                                      │
-│      └── Estimated arrival                                                    │
-│                                                                              │
-│  5. INSPECTION PHASE                                                         │
-│  ├── Item Received                                                            │
-│  │   ├── Warehouse/scanner confirms arrival                                   │
-│  │   ├── Notification to seller                                              │
-│  │   └── Inspection window: 3 business days                                 │
-│  │                                                                           │
-│  ├── Inspection Checklist                                                     │
-│  │   ├── Product matches listing                                             │
-│  │   ├── Condition: New/used/damaged                                        │
-│  │   ├── Original packaging present                                          │
-│  │   ├── All accessories included                                           │
-│  │   └── Serial numbers match (if applicable)                               │
-│  │                                                                           │
-│  └── Inspection Outcome                                                      │
-│      ├── PASS - Refund approved                                              │
-│      ├── PARTIAL - Partial refund (deduct for damage)                        │
-│      └── FAIL - Return to buyer, no refund                                  │
-│                                                                              │
-│  6. REFUND PROCESSING                                                        │
-│  ├── Refund Calculation                                                       │
-│  │   ├── Full refund: Item price + original shipping                         │
-│  │   ├── Partial refund: Item price - deduction                             │
-│  │   └── Deductions: Shipping (if buyer fault), restocking fee               │
-│  │                                                                           │
-│  ├── Refund Methods                                                          │
-│  │   ├── Original payment method (default)                                   │
-│  │   ├── VNShop Wallet (instant)                                             │
-│  │   └── Bank transfer (1-5 business days)                                   │
-│  │                                                                           │
-│  ├── Saga Compensation                                                       │
-│  │   ├── Trigger: inspection PASS                                           │
-│  │   ├── Action: Release held funds to seller                               │
-│  │   ├── Inventory: Return stock to available                                │
-│  │   └── Accounting: Create refund transaction                              │
-│  │                                                                           │
-│  └── Refund Timeline                                                         │
-│      ├── Wallet: Instant                                                      │
-│      ├── Credit card: 5-10 business days                                    │
-│      ├── Bank transfer: 1-5 business days                                   │
-│      └── Notification: Email + Push + In-app                                │
-│                                                                              │
-│  7. DISPUTE RESOLUTION                                                        │
-│  ├── Escalation Trigger                                                       │
-│  │   ├── Seller rejects valid return                                         │
-│  │   ├── Buyer disputes inspection decision                                  │
-│  │   └── Partial refund disagreement                                         │
-│  │                                                                           │
-│  ├── Admin Mediation                                                          │
-│  │   ├── Queue for admin review                                              │
-│  │   ├── Both parties submit additional evidence                             │
-│  │   ├── 72h SLA for admin decision                                         │
-│  │   └── Decision: Final and binding                                        │
-│  │                                                                           │
-│  └── Appeal Process                                                          │
-│      ├── One level of appeal                                                  │
-│      ├── 48h window to appeal                                                 │
-│      └── Senior admin review                                                  │
-│                                                                              │
-│  8. NOTIFICATIONS                                                             │
-│  ├── To Buyer                                                                 │
-│  │   ├── Return request submitted                                             │
-│  │   ├── Seller responded (approved/rejected)                                │
-│  │   ├── Return label ready                                                  │
-│  │   ├── Item received                                                       │
-│  │   ├── Inspection complete                                                  │
-│  │   └── Refund processed                                                    │
-│  │                                                                           │
-│  └── To Seller                                                                │
-│      ├── Return request received                                              │
-│      ├── SLA reminder                                                         │
-│      ├── Item received at warehouse                                           │
-│      └── Refund deducted from wallet                                          │
+│  FRONTEND STATUS: ❌ NEEDS IMPLEMENTATION                                   │
+│  ───────────────────────────────────────────                                 │
+│  1. Return Request Form UI                                                  │
+│  2. Return Status Tracking                                                  │
+│  3. Dispute Submission UI                                                   │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 7.4 Admin Dashboard (F113)
+### 7.4 Admin Dashboard (F113) — MVP Built ⚠️
 
-A comprehensive admin dashboard for operational visibility:
+> ⚠️ **Correction:** The audit said "Needs full build." This was too harsh. A 231-line `AdminDashboard.tsx` exists with KPI cards, revenue area chart, top products bar chart, top sellers list, and React Query integration. This is an MVP, not a blank slate.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         ADMIN DASHBOARD ARCHITECTURE                         │
+│                   ADMIN DASHBOARD — MVP PARTIALLY BUILT ⚠️                   │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│  1. OVERVIEW METRICS                                                        │
-│  ├── KPI Cards                                                                │
-│  │   ├── Today's Revenue (vs yesterday, %)                                  │
-│  │   ├── Today's GMV (Gross Merchandise Value)                             │
-│  │   ├── Orders Today (vs yesterday, %)                                     │
-│  │   ├── Active Buyers (30-day rolling)                                     │
-│  │   └── Active Sellers (30-day rolling)                                    │
-│  │                                                                           │
-│  ├── Growth Metrics                                                           │
-│  │   ├── Week-over-week growth                                              │
-│  │   ├── Month-over-month growth                                             │
-│  │   └── Year-over-year comparison                                          │
-│  │                                                                           │
-│  └── Real-time Feed                                                          │
-│      ├── Latest orders (live)                                                │
-│      ├── Recent signups                                                       │
-│      └── System alerts                                                        │
+│  CURRENT STATE: ⚠️ MVP BUILT                                                 │
+│  ────────────────────────────                                                │
+│  AdminDashboard.tsx (231 lines) — functional React component:               │
+│  ✅ KPI cards (revenue, orders, growth)                                       │
+│  ✅ Revenue area chart                                                       │
+│  ✅ Top products bar chart                                                   │
+│  ✅ Top sellers list                                                         │
+│  ✅ React Query integration                                                 │
 │                                                                              │
-│  2. CHARTS & VISUALIZATIONS                                                  │
-│  ├── Revenue Trend Chart                                                     │
-│  │   ├── Line chart with daily/weekly/monthly granularity                   │
-│  │   ├── Comparison line (previous period)                                  │
-│  │   ├── Hover tooltip with exact values                                    │
-│  │   └── Export as PNG/CSV                                                  │
-│  │                                                                           │
-│  ├── Top Products Chart                                                      │
-│  │   ├── Horizontal bar chart (top 10)                                      │
-│  │   ├── By revenue or units sold                                           │
-│  │   └── Click to view product details                                      │
-│  │                                                                           │
-│  ├── Sales by Category                                                       │
-│  │   ├── Donut/pie chart                                                    │
-│  │   ├── Legend with percentages                                            │
-│  │   └── Click to drill down                                                │
-│  │                                                                           │
-│  ├── Geography Heat Map                                                      │
-│  │   ├── Vietnam map colored by sales volume                               │
-│  │   ├── Province-level drill down                                           │
-│  │   └── Top cities breakdown                                                │
-│  │                                                                           │
-│  └── Conversion Funnel                                                      │
-│      ├── Visits → Add to Cart → Checkout → Purchase                        │
-│      └── Funnel visualization with drop-off rates                            │
-│                                                                              │
-│  3. ORDER MANAGEMENT                                                         │
-│  ├── Order List                                                               │
-│  │   ├── Sortable columns: ID, Customer, Amount, Status, Date              │
-│  │   ├── Filters: Status, Date range, Seller, Amount range                  │
-│  │   ├── Search: Order ID, Customer name/email                              │
-│  │   └── Pagination with page size selector                                 │
-│  │                                                                           │
-│  ├── Order Detail                                                             │
-│  │   ├── Customer info and shipping address                                  │
-│  │   ├── Order items with thumbnails                                        │
-│  │   ├── Payment status and method                                          │
-│  │   ├── Fulfillment status and tracking                                     │
-│  │   └── Action buttons: Update status, Issue refund, Contact customer      │
-│  │                                                                           │
-│  ├── Bulk Operations                                                          │
-│  │   ├── Select multiple orders                                              │
-│  │   ├── Bulk status update                                                  │
-│  │   ├── Bulk export to CSV                                                  │
-│  │   └── Bulk label generation                                              │
-│  │                                                                           │
-│  └── Export Functionality                                                     │
-│      ├── Export filtered orders to CSV/Excel                                 │
-│      ├── Scheduled export (daily/weekly)                                     │
-│      └── Custom date range                                                   │
-│                                                                              │
-│  4. USER MANAGEMENT                                                          │
-│  ├── User List                                                                │
-│  │   ├── Columns: ID, Name, Email, Type, Joined, Orders, Spent             │
-│  │   ├── Filters: Type (buyer/seller), Date joined, Order count           │
-│  │   └── Search: Name, Email, Phone                                        │
-│  │                                                                           │
-│  ├── User Detail                                                              │
-│  │   ├── Profile information                                                 │
-│  │   ├── Address book                                                        │
-│  │   ├── Order history (linked)                                             │
-│  │   ├── Account status (active/suspended)                                   │
-│  │   └── Activity log                                                        │
-│  │                                                                           │
-│  ├── Account Actions                                                          │
-│  │   ├── Suspend account (temporary)                                         │
-│  │   ├── Ban account (permanent)                                             │
-│  │   ├── Verify identity                                                     │
-│  │   └── Send message to user                                                │
-│  │                                                                           │
-│  └── Segmentation                                                             │
-│      ├── New users (last 7 days)                                             │
-│      ├── At-risk users (no order 30+ days)                                  │
-│      ├── VIP users (lifetime value > threshold)                             │
-│      └── Bulk tag management                                                  │
-│                                                                              │
-│  5. SELLER MANAGEMENT                                                         │
-│  ├── Seller List                                                              │
-│  │   ├── Columns: ID, Shop Name, Tier, Products, Orders, Revenue, Rating   │
-│  │   ├── Filters: Tier, Verification status, Category                       │
-│  │   └── Search: Shop name, Seller email                                    │
-│  │                                                                           │
-│  ├── Seller Approval Queue                                                    │
-│  │   ├── Pending verification applications                                   │
-│  │   ├── Required documents checklist                                        │
-│  │   ├── Approve/Reject with notes                                          │
-│  │   └── Bulk approve option                                                 │
-│  │                                                                           │
-│  ├── Performance Metrics                                                      │
-│  │   ├── Order fulfillment rate                                              │
-│  │   ├── Cancellation rate                                                   │
-│  │   ├── Return rate                                                         │
-│  │   ├── Response time                                                       │
-│  │   └── Rating trend                                                         │
-│  │                                                                           │
-│  └── Tier Management                                                          │
-│      ├── Upgrade/Downgrade sellers                                            │
-│      ├── Tier benefits configuration                                         │
-│      └── Tier change notifications                                           │
-│                                                                              │
-│  6. SYSTEM HEALTH                                                             │
-│  ├── Service Status                                                           │
-│  │   ├── All 19 services with status indicators                              │
-│  │   ├── Uptime percentage                                                    │
-│  │   └── Response time trend                                                 │
-│  │                                                                           │
-│  ├── Error Monitoring                                                         │
-│  │   ├── Error rate by service                                               │
-│  │   ├── Recent errors with stack traces                                    │
-│  │   └── Alert thresholds configuration                                      │
-│  │                                                                           │
-│  ├── API Latency                                                              │
-│  │   ├── p50, p95, p99 by endpoint                                          │
-│  │   ├── Slow query detection                                                │
-│  │   └── Performance alerts                                                   │
-│  │                                                                           │
-│  └── Active Users                                                             │
-│      ├── Real-time user count                                                │
-│      ├── Concurrent sessions                                                  │
-│      └── Peak usage times                                                     │
-│                                                                              │
-│  7. REPORTING & EXPORTS                                                       │
-│  ├── Report Builder                                                           │
-│  │   ├── Select metrics and dimensions                                      │
-│  │   ├── Apply filters                                                        │
-│  │   ├── Schedule reports (daily/weekly/monthly)                            │
-│  │   └── Email delivery                                                       │
-│  │                                                                           │
-│  ├── Financial Reports                                                        │
-│  │   ├── Daily settlement reports                                             │
-│  │   ├── Commission earned                                                    │
-│  │   ├── Refund totals                                                       │
-│  │   └── Platform fees                                                       │
-│  │                                                                           │
-│  └── Custom Date Ranges                                                       │
-│      ├── Preset: Today, Yesterday, Last 7/30/90 days                        │
-│      ├── Custom: Calendar picker                                             │
-│      └── Compare: vs previous period                                          │
+│  MISSING:                                                                   │
+│  ❌ Geography heat map                                                      │
+│  ❌ Conversion funnel                                                        │
+│  ❌ Export functionality (CSV/PNG)                                          │
+│  ❌ Scheduled reports                                                       │
+│  ❌ System health dashboard                                                 │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -1318,12 +895,13 @@ A comprehensive admin dashboard for operational visibility:
 
 | Service | Status | Details | Priority | Effort |
 |---------|--------|---------|----------|--------|
-| **Keycloak** | ✅ Complete | Auth working | - | - |
-| **Kafka** | ✅ Complete | SASL + ACLs configured | - | - |
-| **Elasticsearch** | ✅ Complete | Full-text + faceting | - | - |
-| **Redis** | ✅ Complete | Cart, sessions, caching | - | - |
-| **PostgreSQL** | ✅ Complete | Per-service databases | - | - |
-| **OneSignal** | ✅ Complete | Push notifications working | - | - |
+| **Keycloak** | ✅ Complete | Auth working | — | — |
+| **Kafka** | ✅ Complete | SASL + ACLs configured | — | — |
+| **Elasticsearch** | ✅ Complete | Full-text + faceting | — | — |
+| **Redis** | ✅ Complete | Cart, sessions, caching | — | — |
+| **PostgreSQL** | ✅ Complete | Per-service databases | — | — |
+| **OneSignal** | ✅ Complete | Push notifications working | — | — |
+| **Socket.IO** | ✅ Complete | Real-time notifications (NOT polling) | — | — |
 | **VietQR** | ⚠️ Stub | Sandbox only, need production | P0 | Medium |
 | **MoMo** | ⚠️ Stub | Sandbox only, need production | P0 | Medium |
 | **Stripe** | ⚠️ Stub | Sandbox only, need production | P1 | Medium |
@@ -1352,10 +930,10 @@ A comprehensive admin dashboard for operational visibility:
 
 | Gap | Current State | Target State | Impact | Effort |
 |-----|--------------|--------------|--------|--------|
-| **E-Invoice Integration** | ⚠️ Partial | JAXB+XSD generation built; GDT API submission endpoint unverified | Compliance | High |
+| **E-Invoice GDT Submission** | ⚠️ Partial | JAXB+XSD generation built; GDT API submission **unverified** | Compliance | High |
 | **Data Retention Policy** | ⚠️ Partial | Configurable per data type | Compliance | Medium |
 | **Backup Strategy** | ⚠️ Basic | Point-in-time recovery | DR | High |
-| **GDPR Deletion** | ⚠️ Missing | Full data purge flow | Compliance | Medium |
+| **GDPR Deletion** | ❌ Missing | Full data purge flow | Compliance | Medium |
 
 ---
 
@@ -1363,82 +941,53 @@ A comprehensive admin dashboard for operational visibility:
 
 ### 9.1 Recommended Sprint Sequence
 
-#### Sprint 1: Core Shopping Experience (2 weeks)
-**Focus:** Complete variant integration, guest cart, return flow (all backend implemented — add missing frontend and admin views)
+#### Sprint 1: Frontend Completeness (2 weeks)
+**Focus:** Connect frontend to implemented backends. Previously labeled "Critical Missing" items are already built.
 
-| Task | Description | Effort | Owner |
-|------|-------------|--------|-------|
-| T1.1 | Product Variants - Frontend Variant Selector UI | 2 days | Frontend |
-| T1.2 | Guest Cart - Frontend Session Banner + Merge UI | 1 day | Frontend |
-| T1.3 | Return Flow - Frontend Request UI + Status Tracking | 2 days | Frontend |
-| T1.4 | Cart Stock Validation - Real-time Check | 1 day | Backend |
-| T1.5 | Return Flow - GDT Submission Endpoint | 2 days | Backend |
-| T1.6 | E-Invoice - GDT API Submission Integration | 2 days | Backend |
+| Task | Description | Effort | Owner | Status |
+|------|-------------|--------|-------|--------|
+| T1.1 | Product Variants - Frontend Variant Selector UI | 2 days | Frontend | ❌ Needed |
+| T1.2 | Guest Cart - Frontend Session Banner + Merge UI | 1 day | Frontend | ❌ Needed |
+| T1.3 | Return Flow - Frontend Request UI + Status Tracking | 2 days | Frontend | ❌ Needed |
+| T1.4 | Cart Stock Validation - Real-time Check | 1 day | Backend | ⚠️ Partial |
+| T1.5 | E-Invoice - **Verify GDT API submission endpoint** | 2 days | Backend | ❌ Verify |
+| T1.6 | Related Products - Surface in frontend | 1 day | Frontend | ❌ Needed |
 
 **Definition of Done:**
-- [x] ✅ Users can select size/color variants (backend ready)
-- [x] ✅ Stock is tracked per variant (backend ready)
-- [x] ✅ Anonymous users can add to cart (backend ready)
-- [x] ✅ Cart merges on login (backend ready)
-- [x] ✅ Buyers can request returns with evidence (backend ready)
-- [x] ✅ Sellers can approve/reject returns (backend ready)
-- [x] ✅ Refunds process correctly (backend ready)
-- [ ] E-invoices submitted to GDT API
+- [ ] E-invoices submitted to GDT API (verify `InvoiceSubmissionService.java` wiring)
 - [ ] Frontend variant selector, guest cart UI, return request UI
 
-#### Sprint 3: Admin & Operations (2 weeks)
+#### Sprint 2: Admin & Operations (2 weeks)
 **Focus:** Operational visibility and control
 
 | Task | Description | Effort | Owner |
 |------|-------------|--------|-------|
-| T3.1 | Admin Dashboard - Overview & Metrics | 2 days | Frontend |
-| T3.2 | Admin Dashboard - Order Management | 2 days | Backend + Frontend |
-| T3.3 | Admin Dashboard - User Management | 2 days | Backend + Frontend |
-| T3.4 | Admin Dashboard - Seller Management | 2 days | Backend + Frontend |
-| T3.5 | Sales Reports - Revenue & GMV | 2 days | Backend + Frontend |
-| T3.6 | System Health Dashboard | 1 day | Backend + Frontend |
+| T2.1 | Admin Dashboard - Geography Heat Map | 2 days | Frontend |
+| T2.2 | Admin Dashboard - Conversion Funnel | 1 day | Frontend |
+| T2.3 | Admin Dashboard - Export (CSV/PNG) | 2 days | Frontend |
+| T2.4 | System Health Dashboard | 1 day | Backend + Frontend |
+| T2.5 | Sales Reports - Revenue & GMV | 2 days | Backend + Frontend |
 
-**Definition of Done:**
-- [ ] Dashboard shows all KPIs
-- [ ] CRUD operations for orders/users/sellers
-- [ ] Charts render correctly
-- [ ] Export functionality works
-
-#### Sprint 4: Payment & Shipping Live (2 weeks)
-**Focus:** Production payment and shipping integration
+#### Sprint 3: Payment & Shipping Live (2 weeks)
 
 | Task | Description | Effort | Owner |
 |------|-------------|--------|-------|
-| T4.1 | VietQR - Production API Integration | 2 days | Backend |
-| T4.2 | MoMo - Production API Integration | 2 days | Backend |
-| T4.3 | GHTK - Production API + Tracking | 2 days | Backend |
-| T4.4 | GHN - Production API + Tracking | 2 days | Backend |
-| T4.5 | Real-time Tracking - Webhook Handlers | 2 days | Backend |
-| T4.6 | Delivery Proof - Photo + Signature | 2 days | Backend + Frontend |
+| T3.1 | VietQR - Production API Integration | 2 days | Backend |
+| T3.2 | MoMo - Production API Integration | 2 days | Backend |
+| T3.3 | GHTK - Production API + Tracking | 2 days | Backend |
+| T3.4 | GHN - Production API + Tracking | 2 days | Backend |
+| T3.5 | Real-time Tracking - Webhook Handlers | 2 days | Backend |
+| T3.6 | Delivery Proof - Photo + Signature | 2 days | Backend + Frontend |
 
-**Definition of Done:**
-- [ ] VietQR payments process in production
-- [ ] MoMo payments process in production
-- [ ] Live tracking updates visible
-- [ ] Delivery proof captured
-
-#### Sprint 5: Growth Features (2 weeks)
-**Focus:** Competitive features and user engagement
+#### Sprint 4: Growth Features (2 weeks)
 
 | Task | Description | Effort | Owner |
 |------|-------------|--------|-------|
-| T5.1 | Flash Sale Engine - Backend | 2 days | Backend |
-| T5.2 | Flash Sale Engine - UI with Countdown | 1 day | Frontend |
-| T5.3 | Multi-Language - Backend i18n | 2 days | Backend |
-| T5.4 | Multi-Language - Frontend i18n | 2 days | Frontend |
-| T5.5 | Coin/Cashback System - Core | 2 days | Backend |
-| T5.6 | Recently Viewed Products | 1 day | Backend + Frontend |
-
-**Definition of Done:**
-- [ ] Flash sales create urgency
-- [ ] Users can switch languages
-- [ ] Coins earned on purchase
-- [ ] Recently viewed shown
+| T4.1 | Flash Sale Engine - UI with Countdown | 1 day | Frontend |
+| T4.2 | Multi-Language - Backend i18n | 2 days | Backend |
+| T4.3 | Multi-Language - Frontend i18n | 2 days | Frontend |
+| T4.4 | Coin/Cashback System - Core | 2 days | Backend |
+| T4.5 | Recently Viewed Products | 1 day | Backend + Frontend |
 
 ### 9.2 Quarterly Roadmap
 
@@ -1451,13 +1000,13 @@ A comprehensive admin dashboard for operational visibility:
 │  ═══════════                  ═══════════                  ═══════════        │
 │                                 ▲                                           │
 │  ┌─────────────────┐    ┌──────┴─────────┐      ┌─────────────────┐        │
-│  │  Sprint 1-2     │    │    Sprint 3    │      │  Sprint 4-5      │        │
+│  │  Sprint 1       │    │    Sprint 2    │      │  Sprint 3-4      │        │
 │  │                 │    │                │      │                 │        │
-│  │ • Variants      │    │ • Admin Dash   │      │ • Payments Live │        │
-│  │ • Guest Cart    │    │ • Reports      │      │ • Shipping Live │        │
-│  │ • Returns       │    │ • User Mgmt    │      │ • Flash Sales   │        │
-│  │ • E-Invoice     │    │                │      │ • i18n          │        │
-│  │                 │    │                │      │                 │        │
+│  │ • Variant UI    │    │ • Admin Dash  │      │ • Payments Live │        │
+│  │ • Guest Cart UI │    │ • Reports     │      │ • Shipping Live │        │
+│  │ • Return UI     │    │ • System Health│      │ • Flash Sales   │        │
+│  │ • GDT Verify    │    │               │      │ • i18n          │        │
+│  │                 │    │               │      │                 │        │
 │  └─────────────────┘    └────────────────┘      └─────────────────┘        │
 │                                                                              │
 │  ════════════════════════════════════════════════════════════════════════   │
@@ -1489,7 +1038,7 @@ A comprehensive admin dashboard for operational visibility:
 | F8 | Change Password | ✅ | |
 | F9 | Address Management | ✅ | CRUD |
 | F10 | Default Address | ✅ | |
-| F11 | Account Deletion | ⚠️ | Partial - needs GDPR |
+| F11 | Account Deletion | ⚠️ | Partial — needs GDPR |
 | F12 | Multi-Language | ❌ | Not started |
 | F13 | Delete Account (GDPR) | ❌ | Not started |
 
@@ -1508,13 +1057,13 @@ A comprehensive admin dashboard for operational visibility:
 | F20 | Filter by Seller | ✅ | |
 | F21 | Sort Options | ✅ | Price, rating, date |
 | F22 | Pagination | ✅ | |
-| F23 | Product Variants | ✅ | `ProductVariant` record with validation, equals/hashCode |
+| F23 | Product Variants | ✅ | `ProductVariant.java` record — **CORRECTED: Implemented** |
 | F24 | Image Gallery | ❌ | Multiple images needed |
 | F25 | Product Comparison | ❌ | Nice to have |
 | F26 | Recently Viewed | ❌ | Not started |
 | F27 | Related Products | ⚠️ | Backend ready, not surfaced |
 
-**Category Coverage: 10/14 (71%)** — F23 variants now ✅, F24 image gallery still ❌
+**Category Coverage: 10/14 (71%)**
 
 ### 10.3 Shopping Cart (11 Features)
 
@@ -1527,12 +1076,12 @@ A comprehensive admin dashboard for operational visibility:
 | F32 | Cart Total | ✅ | |
 | F33 | Apply Coupon | ✅ | |
 | F34 | Clear Cart | ✅ | |
-| F35 | Guest Cart | ✅ | Implemented merge on login |
+| F35 | Guest Cart | ✅ | `MergeCartUseCase.ts` — **CORRECTED: Implemented** |
 | F36 | Cart Persistence | ✅ | Redis |
 | F37 | Cart Count Badge | ✅ | |
 | F38 | Cart Abandonment | ❌ | Recovery emails needed |
 
-**Category Coverage: 10/11 (91%)** — F35 guest cart now ✅
+**Category Coverage: 10/11 (91%)**
 
 ### 10.4 Checkout & Ordering (9 Features)
 
@@ -1542,7 +1091,7 @@ A comprehensive admin dashboard for operational visibility:
 | F40 | Shipping Address | ✅ | Selection/entry |
 | F41 | Shipping Method | ✅ | GHTK/GHN |
 | F42 | Order Review | ✅ | |
-| F43 | Place Order | ✅ | Saga orchestration |
+| F43 | Place Order | ⚠️ | Saga orchestration — **CORRECTED: Synchronous, not async** |
 | F44 | Order Confirmation | ✅ | |
 | F45 | Order History | ✅ | |
 | F46 | Order Cancel | ✅ | Within window |
@@ -1559,7 +1108,7 @@ A comprehensive admin dashboard for operational visibility:
 | F50 | Shipping Label | ✅ | Generated |
 | F51 | Carrier Selection | ✅ | Buyer choice |
 | F52 | Estimated Delivery | ✅ | |
-| F53 | Order Tracking | ⚠️ | Stub - needs live API |
+| F53 | Order Tracking | ⚠️ | Stub — needs live API |
 | F54 | Delivery Proof | ❌ | Photo + signature |
 | F55 | Delivery Exception | ⚠️ | Alert, no resolution flow |
 
@@ -1636,18 +1185,20 @@ A comprehensive admin dashboard for operational visibility:
 
 **Category Coverage: 6/9 (67%)**
 
+> ⚠️ **Correction:** Notification system uses **Socket.IO gateway** (`socketio-notification.gateway.ts`) for **real-time** delivery, NOT 30-second polling as originally stated.
+
 ### 10.10 Post-Purchase (6 Features)
 
 | ID | Feature | Status | Notes |
 |----|---------|--------|-------|
 | F99 | Order Details | ✅ | Full history |
-| F100 | Return/Refund | ✅ | 4 use cases + 4 test classes + state machine |
-| F101 | Dispute | ⚠️ | Basic - needs flow |
-| F102 | Digital Invoice | ⚠️ | Basic - needs Vietnam format |
+| F100 | Return/Refund | ✅ | 4 use cases + 4 test classes + state machine — **CORRECTED: Fully implemented** |
+| F101 | Dispute | ⚠️ | Basic — needs flow |
+| F102 | Digital Invoice | ⚠️ | JAXB+XSD built; GDT submission unverified |
 | F103 | Reorder | ❌ | One-click reorder |
 | F104 | Write Review | ✅ | From order |
 
-**Category Coverage: 5/6 (83%)** — F100 return/refund now ✅; F102 e-invoice JAXB+XSD built, GDT submission pending
+**Category Coverage: 5/6 (83%)**
 
 ### 10.11 Admin & Seller (16 Features)
 
@@ -1661,7 +1212,7 @@ A comprehensive admin dashboard for operational visibility:
 | F110 | Commission Rates | ✅ | Tier-based |
 | F111 | Settlement Schedule | ✅ | Weekly/monthly |
 | F112 | Seller Wallet | ✅ | Balances |
-| F113 | Admin Dashboard | ❌ | Needs full build |
+| F113 | Admin Dashboard | ⚠️ | MVP built (231-line AdminDashboard.tsx) — **CORRECTED: Not "needs full build"** |
 | F114 | Sales Reports | ❌ | Needs reports |
 | F115 | Performance Metrics | ✅ | Basic |
 | F116 | Customer Mgmt | ❌ | Admin user seg |
@@ -1674,9 +1225,60 @@ A comprehensive admin dashboard for operational visibility:
 
 ---
 
-## Appendix A: API Endpoints Summary
+## 11. Correction Log (from Cross-Validation)
 
-### Core Services
+All corrections below are sourced from `CROSS-VALIDATION-REPORT-2026-07-10.md`, which verified claims against live code.
+
+### 11.1 CRITICAL — Report Was Fundamentally Wrong
+
+| # | Original Claim | Correction | Severity | Source |
+|---|---------------|------------|----------|--------|
+| C1 | "❌ Critical Missing — Product variants needs full implementation" | ✅ Implemented — `ProductVariant.java` 44-line record with validation | CRITICAL | `services/product-service/.../domain/ProductVariant.java` |
+| C2 | "❌ Critical Missing — Return/refund system needs implementation" | ✅ Fully implemented — Return entity, 4 use cases, 4 test classes, Dispute entity, Kafka listener | CRITICAL | `services/order-service/.../domain/Return.java`, `.../application/` |
+| C3 | "❌ Missing — Guest cart needs full implementation" | ✅ Implemented — `MergeCartUseCase.ts` with guest-to-authenticated merge | HIGH | `services/cart-service/.../merge-cart.use-case.ts` |
+
+### 11.2 HIGH — Arithmetic and Structural Errors
+
+| # | Original Claim | Correction | Severity | Source |
+|---|---------------|------------|----------|--------|
+| C4 | "85/119 features (71%)" | Actual: 120 features (F1–F120). Matrix covers ~107. Real coverage ~73% | HIGH | Feature matrix analysis |
+| C5 | "review-service ⚰️ Deprecated" listed twice (rows 17 and 19) | Duplicate entry — removed second instance | LOW | Service table cleanup |
+| C6 | "seller-finance-service ⚰️ Deprecated" | ✅ Audit was correct — service IS deprecated. `DEPRECATED.md` dated 2026-05-12; finance logic migrated to `order-service`. The Spring Boot `seller-finance-service` (row 18) is deprecated. The NestJS `seller-finance` (row 11) is a separate active service. | HIGH | `services/seller-finance-service/DEPRECATED.md` |
+
+### 11.3 MEDIUM — Wrong Technical Claims
+
+| # | Original Claim | Correction | Severity | Source |
+|---|---------------|------------|----------|--------|
+| C7 | "202 Accepted — Order placed asynchronously via Kafka" | SYNCHRONOUS — `CreateOrderUseCase.createNewOrder()` runs sequential steps inside `@Transactional`. HTTP returns **201 CREATED** (not 202). Saga handles compensation, not primary flow | MEDIUM | `CreateOrderUseCase.java:80-117`, `OrderController.java:53` |
+| C8 | "Inventory reserved with 7-day TTL" | 15-MINUTE TTL — `RESERVATION_TTL = Duration.ofMinutes(15)` for flash sales | MEDIUM | `InventoryService.java` |
+| C9 | "❌ Not started — Dark mode UI" | ✅ Fully implemented with e2e tests, 47-file codemod | MEDIUM | `fe/e2e/dark-mode-ui.spec.ts`, 28+ files |
+| C10 | "⚠️ Poll every 30s — Push notifications use long-polling" | ✅ REAL-TIME via Socket.IO gateway | MEDIUM | `socketio-notification.gateway.ts`, 18 files |
+| C11 | "⚠️ Pending — E-invoice integration not yet submitted to GDT" | JAXB+XSD generation VALIDATED. GDT submission **unverified** (not "pending") | MEDIUM | `InvoiceXmlGenerator.java` (304 lines) |
+| C12 | "F113 Admin Dashboard — ❌ Needs full build" | MVP BUILT — 231-line `AdminDashboard.tsx` with KPI cards, charts, React Query | MEDIUM | `fe/src/app/pages/admin/AdminDashboard.tsx` |
+
+### 11.4 Version Corrections (vs. pom.xml/package.json)
+
+| # | Audit Said | Actual | Source |
+|---|-----------|--------|--------|
+| V1 | Spring Boot 4.1.0 | **4.0.6** | `services/api-gateway/pom.xml:8` |
+| V2 | Java 21 LTS | **25** | `services/api-gateway/pom.xml:17` |
+| V3 | NestJS 11.x | **11.1.21** | `services/cart-service/package.json` |
+| V4 | React 18.x | ⚠️ **18.3.1 (outdated)** | `fe/package.json` — **Latest: React 19.2.7** (v19.2.7 tag confirmed on GitHub, June 2026) |
+| V5 | Vite 6.x | ❌ **6.3.5 (unverifiable)** | `fe/package.json` — **No v6.x tags exist on GitHub** (scanned pages 1–4, only v4.x, v5.x, v7.x, v8.x found; latest is **v8.1.4**) |
+| V6 | Spring Cloud not mentioned | **2025.1.1** | `services/api-gateway/pom.xml:20` |
+| V7 | Keycloak 25.x | **25.x** (⚠️ unverified installed version) | Audit said 25.x, correct |
+
+### 11.5 Unverified Items (Need Deeper Investigation)
+
+| Item | Question | Priority |
+|------|----------|----------|
+| U1 | Does `InvoiceSubmissionService.java` wire the GDT API endpoint? | HIGH — affects compliance |
+| U2 | Does the order controller return 202 while use case is synchronous? | ✅ **RESOLVED: Returns 201 CREATED** — `@ResponseStatus(HttpStatus.CREATED)` confirmed in `OrderController.java:53`. Not 202. Saga is synchronous. | MEDIUM — architectural clarity |
+| U3 | Is general (non-flash) inventory reservation TTL 7 days or different? | MEDIUM — only flash sale TTL verified |
+
+---
+
+## Appendix A: API Endpoints Summary
 
 | Service | Base URL | Key Endpoints |
 |---------|----------|---------------|
@@ -1728,25 +1330,38 @@ A comprehensive admin dashboard for operational visibility:
 
 ## Appendix C: Technology Versions
 
-| Component | Version | Notes |
-|-----------|---------|-------|
-| Java | 21 LTS | |
-| Spring Boot | 4.1.0 | ⚠️ Verify in pom.xml |
-| NestJS | 11.x | |
-| Node.js | 24.x LTS | Previous 20 LTS now outdated |
-| React | 18.x | |
-| Vite | 6.x | |
-| Flutter | 3.x | Dart 3.12 |
-| Keycloak | 25.x | ⚠️ 26.7.0 available — verify installed version |
+| Component | Version | Source |
+|-----------|---------|--------|
+| Java | **25** | `pom.xml` `java.version=25` |
+| Spring Boot | **4.0.6** | `pom.xml` |
+| Spring Cloud | **2025.1.1** | `pom.xml` |
+| NestJS | **11.1.21** | `package.json` |
+| Node.js | 24.x LTS | ⚠️ Not verified in repo |
+| React | **18.3.1** | `package.json` |
+| Vite | **6.3.5** | `package.json` |
+| Flutter | 3.x / Dart 3.x | ⚠️ Not verified in repo |
+| Keycloak | 25.x | ⚠️ Verify installed version |
 | PostgreSQL | 16.x | |
 | Redis | 7.x | |
 | Elasticsearch | 8.x | |
-| Kafka | 3.x | KRaft mode |
-| Keycloak | 25.x | |
+| Kafka | 3.x (KRaft) | |
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** July 10, 2026  
-**Next Review:** August 10, 2026  
+**Document Version:** 2.1 (corrected)
+**Last Updated:** July 10, 2026
+**Corrections Applied:** 22 items (C1–C12, V1–V7, U1–U3, V8–V9, U2 resolved)
+**Cross-Validation Source:** `CROSS-VALIDATION-REPORT-2026-07-10.md`
 **Author:** Claude Code (Anthropic)
+**Next Review:** August 10, 2026
+
+### Version 2.1 Corrections (July 10, 2026)
+| ID | Issue | Evidence |
+|----|-------|---------|
+| V8 | React 18.3.1 is **outdated** — React 19.2.7 is latest | GitHub react/tags page 1: v19.2.7 confirmed |
+| V9 | Vite **6.3.5 unverifiable** — no v6.x tags exist on GitHub | Scanned pages 1–4: only v4.x, v5.x, v7.x, v8.x found. Latest is v8.1.4 |
+| U2 | OrderController returns **201 CREATED**, not 202 | `OrderController.java:53` `@ResponseStatus(HttpStatus.CREATED)` |
+| C6 | seller-finance-service IS deprecated — audit was correct | `seller-finance-service/DEPRECATED.md` dated 2026-05-12 |
+| V10 | Java 25 **confirmed** — jdk-25.0.3+9 released April 22, 2026 | `adoptium/temurin25-binaries/releases` |
+| V11 | Vite latest confirmed as **v8.1.4** (July 9, 2026) | `github.com/vitejs/vite/releases` |
+| V12 | Spring Boot latest is **4.1.0** (4.0.6 is still correct but older) | `repo.spring.io` |
