@@ -1,8 +1,8 @@
 # VNShop — Multi-Seller Retail Marketplace
 
-A polyglot microservices e-commerce platform demonstrating DDD, CQRS, hexagonal architecture, and event-driven sagas, with a React storefront on top.
+A polyglot microservices e-commerce platform demonstrating DDD, CQRS, hexagonal architecture, and event-driven sagas, with a React SPA and Flutter mobile app.
 
-VNShop is a portfolio full-stack project for a Vietnamese multi-seller marketplace inspired by Shopee, Lazada, and Tiki. It ships with: 18 services (Spring Boot + NestJS), per-service Postgres, Kafka (SASL-authenticated + per-service ACLs) + saga + outbox, Keycloak-backed httpOnly-cookie auth, and a React + Vite SPA. Two end-to-end test suites gate every change — `e2e-day.mjs` (65/65 API endpoints) and Playwright (108/108 browser scenarios).
+VNShop is a portfolio full-stack project for a Vietnamese multi-seller marketplace inspired by Shopee, Lazada, and Tiki. It ships with: 19 services (Spring Boot + NestJS), per-service Postgres, Kafka (SASL-authenticated + per-service ACLs) + saga + outbox, Keycloak-backed httpOnly-cookie auth, a React + Vite SPA, and a Flutter mobile app with OneSignal push notifications and VietQR/MoMo payment integration. Two end-to-end test suites gate every change — `e2e-day.mjs` (65/65 API endpoints) and Playwright (108/108 browser scenarios).
 
 ## System Requirements
 
@@ -23,6 +23,7 @@ VNShop is a portfolio full-stack project for a Vietnamese multi-seller marketpla
 | [E2E audit 2026-05-18](docs/E2E-AUDIT-2026-05-18.md) | What `e2e-day.mjs` and Playwright cover, plus the bugs fixed during the buildout |
 | [Latest session handover](docs/SESSION-HANDOVER-2026-06-09.md) | Most recent change set (centralized configuration service, Docker/Kafka infra fixes) |
 | [Frontend README](fe/README.md) | React + Vite SPA setup, scripts, layout |
+| [Mobile README](vnshop_mobile/README.md) | Flutter mobile app setup, payment integration |
 | [Docker Compose](docker-compose.yml) | Local infrastructure and service definitions |
 
 For a chronological view of what shipped, walk the handover series in `docs/SESSION-HANDOVER-2026-05-{17..29}-pt{0..44}.md` and `docs/SESSION-HANDOVER-2026-06-*.md`. For the day-to-day pickup case, [HANDOFF.md](HANDOFF.md) is enough.
@@ -34,6 +35,12 @@ For a chronological view of what shipped, walk the handover series in `docs/SESS
                     |   React 18 + Vite SPA        |
                     |   :3000 (docker) / :5173     |
                     |   Native /login + /register  |
+                    +--------------+---------------+
+                                   |
+                    +--------------v---------------+
+                    |  Flutter Mobile App          |
+                    |  VietQR / MoMo payments      |
+                    |  OneSignal push notifications|
                     +--------------+---------------+
                                    |
                     +--------------v---------------+
@@ -112,7 +119,11 @@ Per-service unit tests at HEAD (2026-06-21):
 | FE vitest | 169/169 |
 | FE typecheck | 0 errors |
 
-### Recent shipped (2026-06-09 → 2026-06-21)
+### Recent shipped (2026-07-10 → )
+
+- **Flutter mobile app** (2026-07-10). VNShop mobile app with VietQR/MoMo payment integration, OneSignal push notifications, BLoC state management, Vietnamese/English localization, and Material 3 design system.
+
+### Previous shipped (2026-06-09 → 2026-06-21)
 
 - **Ponytail over-engineering cleanup** (2026-06-21). Codebase-wide audit removed ~1,100 lines of dead code, test duplication, and infra bloat across 9 commits: dead FE hooks/components deleted, 35 test-helper duplicates consolidated into shared modules, unused Redis HA stack (6 services) removed, `spring-boot-devtools` dropped from 3 services, manual `@Repository` JPQL replaced with Spring Data, YAGNI application-layer wrappers inlined, test-the-framework tests deleted, `ConfirmDialog` rebuilt as thin `Modal` wrapper.
 - **Centralized configuration service** (2026-06-09). NestJS service at `:8097` with YAML-backed business config. Java services fetch on startup via `ConfigServiceClient`; hot-reload via `POST /api/config/reload`. Extracted hardcoded constants (currency, invoice template, payment methods, shipping thresholds) into `services/configuration-service/config/services.yml`.
@@ -132,7 +143,7 @@ Per-service unit tests at HEAD (2026-06-21):
 | 1 | R2 swap for avatar storage | Ready (checklist in `docs/R2-SWAP-CHECKLIST.md`) | R2 credentials |
 | 2 | PayPal sandbox manual smoke | All code committed + unit-tested | `PAYPAL_CLIENT_ID`/`SECRET` |
 | 3 | Per-seller commission tier on SubOrder | Design ready, hardcoded to STANDARD | Business decision |
-| 4 | VNPay / MoMo payment methods | Phase 3 | Business registration (MST + GPKD) |
+| 4 | VNPay payment method | Phase 3 | Business registration (MST + GPKD) |
 | 5 | Notifications inbox (FE bell) | Kafka consumer exists | FE work |
 | 6 | Real GHN/GHTK shipping adapter | Port exists, stub in place | API key |
 | 7 | Native password reset / 2FA | Bounces to Keycloak account console | Design decision |
@@ -197,6 +208,7 @@ flowchart TB
 | Java services | Java 25 LTS, Spring Boot 4.0.6, Spring Cloud Gateway, Maven 3.9 |
 | Node services | Node.js 24 LTS, NestJS 11 |
 | Frontend | React 18.3, Vite 6.3, TanStack Query 5, react-router 7, i18next 26, zod 4, Tailwind v4 |
+| Mobile | Flutter 3.27, BLoC state management, Dio HTTP, OneSignal push |
 | Identity | Keycloak 26.6 (`vnshop` realm), OIDC / OAuth2, JWT, ROPC for native login |
 | Data stores | PostgreSQL 17.9 (per-service), Redis 8.6, Elasticsearch 9.4.0, MinIO (S3-compatible) |
 | Messaging | Kafka (`confluentinc/cp-kafka:8.2.0`), SASL_PLAINTEXT + per-service ACLs, outbox pattern, saga orchestration |
@@ -256,6 +268,7 @@ If you see 503s on either suite, Spring Cloud Gateway's Resilience4j breaker has
 | `http://localhost:16686` | Jaeger UI |
 | `http://localhost:9000` | MinIO console |
 | `http://localhost:9093` | Alertmanager |
+| Mobile (Flutter) | `cd vnshop_mobile && flutter run` — connects to API gateway at `localhost:8080` |
 
 ### Default credentials
 
@@ -321,6 +334,7 @@ docker compose --profile apps down
 | Service | Port | Tech | Profile | Owns |
 | --- | ---: | --- | --- | --- |
 | frontend | 3000 | React 18 + Vite 6 | apps | Storefront SPA, native `/login` + `/register`, role-gated routes |
+| mobile | — | Flutter 3.27 | — | VietQR + MoMo payments, OneSignal push, BLoC state management |
 | api-gateway | 8080 | Spring Boot, Spring Cloud Gateway | apps | Edge routing, OAuth2 resource server, CORS, rate limiting, circuit breakers |
 | user-service | 8081 | Spring Boot | apps | Buyer + seller profiles, addresses, wishlist, native `/auth/register`, public seller endpoints (`GET /sellers`, `GET /sellers/{id}`) |
 | product-service | 8082 | Spring Boot | apps | Seller catalog, categories, variants, product images, reviews, questions, batch seller stats endpoints |
@@ -448,6 +462,7 @@ services/
   invoice-service/         # XML invoice generation (8098)
   review-service/          # Backwards-compat shell
 fe/                        # React + Vite SPA
+vnshop_mobile/             # Flutter mobile app (VietQR, MoMo, OneSignal)
 infra/
   scripts/
     e2e-day.mjs            # 55-step day-in-the-life API suite
