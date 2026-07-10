@@ -30,67 +30,55 @@ For a chronological view of what shipped, walk the handover series in `docs/SESS
 
 ## Architecture Overview
 
-```text
-    +------------------------------+     +------------------------------+
-    |   React 18 + Vite SPA        |     |   Flutter Mobile App         |
-    |   :3000 (docker) / :5173     |     |   VietQR / MoMo payments     |
-    |   Native /login + /register  |     |   OneSignal push notifications|
-    +------------------------------+     +------------------------------+
-                    |                                   |
-                    +---------------+   +---------------+
-                                    |   |
-                    +--------------v---v---------------+
-                    |  Spring Cloud Gateway            |
-                    |  :8080 (Spring Boot 4)          |
-                    |  CORS, JWT validation,          |
-                    |  rate limit, circuit breaker    |
-                    +------+-------+------------------+
-                           |       |
-              +------------+-------+--------------+
-              |            |       |              |
-    +---------v----+ +----v---+ +-v----------+   |
-    | Keycloak 26  | | User   | | Product    |   |
-    | :8085        | | :8081  | | :8082      |   |
-    | OIDC / OAuth | |Sellers,| |Catalog +   |   |
-    | JWT issuer   | |native  | |reviews +   |   |
-    | (vnshop      | |register| |questions   |   |
-    |  realm)      | |Caffeine| |+CQRS reads |   |
-    +--------------+ +---+----+ +-----+------+   |
-                         |            |          |
-                         |     +------v------+   |
-                         |     | Order       |   |
-                         |     | :8091       |   |
-                         |     | Saga +      |   |
-                         |     | outbox +    |   |
-                         |     | projections |   |
-                         |     +------+------+
-                         |            |
-                  +------v------+ +---v----------+
-                  | Cart        | | Kafka        |
-                  | :8084       | | SASL_PLAIN   |
-                  | NestJS      | | per-svc ACLs |
-                  | Redis-only  | | order.* /    |
-                  +-------------+ | product.* /  |
-                                  | notif.* /    |
-                                  | messaging.*  |
-                                  +-------+------+
-                                          |
-        +-----------+-------+--------+---------+----------+--------+----------+
-        |           |       |        |         |          |        |          |
-+-------v----+ +---v---+ +-v-----+ +v-------+ +v--------+ +v------+ +v-------+
-|Search      | |Notif. | |Inv.   | |Pay     | |Shipping | |Recs   | |Messag- |
-|:8086       | |:8087  | |:8083  | |:8092   | |:8093    | |:8094  | |ing :8095|
-|Spring Boot | |NestJS | |Stock +| |COD/    | |Carrier  | |Spring | |NestJS  |
-|Elasticsearch||+Kafka | |flash  | |VietQR/ | |+ tracking|Boot   | |+WebSocket|
-|            | |       | |       | |Stripe/ | |        | |       | |        |
-|            | |       | |       | |PayPal  | |        | |       | |        |
-+------------+ +-------+ +-------+ +--------+ +---------+ +-------+ +--------+
+```mermaid
+flowchart TB
+    subgraph clients [User Clients]
+        FE["React 18 + Vite SPA<br/>:3000 (docker) / :5173<br/>Native /login + /register"]
+        MOB["Flutter Mobile App<br/>VietQR / MoMo payments<br/>OneSignal push notifications"]
+    end
 
-         Configuration (:8097, NestJS) — centralized business config (YAML-driven, hot-reload)
-         Invoice (:8098, Spring Boot) — XML invoice generation
-         Seller Finance (:8090, Spring Boot) — wallet + payouts
-         Coupon (:8088, profile=legacy) — superseded by order-service in app profile
-         Review (profile=apps) — kept for backwards compatibility; review APIs are owned by product-service
+    subgraph edge [Edge]
+        GW["Spring Cloud Gateway<br/>:8080<br/>CORS, JWT validation<br/>rate limit, circuit breaker"]
+        KC["Keycloak 26 :8085<br/>OIDC / OAuth<br/>JWT issuer (vnshop realm)"]
+    end
+
+    subgraph core [Core Services]
+        U["user-service :8081<br/>Sellers, native /register<br/>Caffeine cache"]
+        P["product-service :8082<br/>Catalog + reviews<br/>+CQRS reads"]
+        O["order-service :8091<br/>Saga + outbox<br/>projections"]
+        I["inventory-service :8083<br/>Stock + flash"]
+        C["cart-service :8084<br/>NestJS Redis-only"]
+        PAY["payment-service :8092<br/>COD / VietQR / Stripe / PayPal"]
+        SHIP["shipping-service :8093<br/>Carrier + tracking"]
+        SF["seller-finance :8090<br/>Wallet + payouts"]
+        INV["invoice-service :8098<br/>XML invoice generation"]
+        CFG["configuration-service :8097<br/>Centralized config (hot-reload)"]
+    end
+
+    subgraph msg [Messaging]
+        K["Kafka<br/>SASL_PLAIN<br/>per-svc ACLs<br/>order.* / product.*<br/>notif.* / messaging.*"]
+    end
+
+    subgraph ancillary [Ancillary Services]
+        S["search-service :8086<br/>Spring Boot + Elasticsearch"]
+        N["notification-service :8087<br/>NestJS + Kafka"]
+        R["recommendations :8094<br/>Spring Boot"]
+        M["messaging-service :8095<br/>NestJS + WebSocket"]
+    end
+
+    FE --> GW
+    MOB --> GW
+    GW --> KC
+    GW --> U & P & O & I & C & S & N & PAY & SHIP & SF & R & M & INV
+    CFG -. hot-reload .-> U & P & O & PAY & SHIP
+
+    O --> K
+    P --> K
+    I --> K
+    PAY --> K
+    SHIP --> K
+    N --> K
+    M --> K
 ```
 
 ## Project Status
