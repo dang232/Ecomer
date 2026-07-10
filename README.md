@@ -69,7 +69,7 @@ flowchart TB
     FE --> GW
     MOB --> GW
     GW --> KC
-    GW --> U & P & O & I & C & S & N & PAY & SHIP & SF & R & M & INV
+    GW --> U & P & O & I & C & S & N & CFG & PAY & SHIP & SF & R & M & INV
     CFG -. hot-reload .-> U & P & O & PAY & SHIP
 
     O --> K
@@ -128,12 +128,12 @@ Per-service unit tests at HEAD (2026-06-21):
 | 2 | PayPal sandbox manual smoke | All code committed + unit-tested | `PAYPAL_CLIENT_ID`/`SECRET` |
 | 3 | Per-seller commission tier on SubOrder | Design ready, hardcoded to STANDARD | Business decision |
 | 4 | VNPay payment method | Phase 3 | Business registration (MST + GPKD) |
-| 5 | Notifications inbox (FE bell) | Kafka consumer exists | FE work |
-| 6 | Real GHN/GHTK shipping adapter | Port exists, stub in place | API key |
+| 5 | Notifications inbox (FE bell) | Kafka consumer + FE bell icon shipped | — |
+| 6 | Real GHN/GHTK shipping adapter | Live adapters implemented (`CARRIER_MODE=stub` default) | API key |
 | 7 | Native password reset / 2FA | Bounces to Keycloak account console | Design decision |
 | 8 | Email verification flow | Currently auto-verified on register | Design decision |
 | 9 | Hero/promo/trending CMS for HomePage | Stubs via `<ComingSoonCard>` | Content strategy |
-| 10 | Config hot-reload without restart | Java services fetch on startup only | Webhook/event push |
+| 10 | Config hot-reload without restart | Hot-reload via `POST /api/config/reload` | Webhook/event push |
 | 11 | Remaining OWASP findings (32/50) | Tracked in security audit docs | Architectural effort |
 | 12 | monitoring-service TypeORM drift | `service_id` column missing in entity | Schema fix |
 
@@ -144,6 +144,7 @@ flowchart TB
   GW[api-gateway :8080]
   KC[Keycloak :8085]
   FE[frontend :3000]
+  MOB[Flutter Mobile]
 
   subgraph CoreSpringBoot
     U[user-service :8081]
@@ -166,8 +167,9 @@ flowchart TB
   end
 
   FE --> GW
+  MOB --> GW
   GW --> KC
-  GW --> U & P & O & I & C & S & N & PAY & SHIP & SF & R & M & INV
+  GW --> U & P & O & I & C & S & N & CFG & PAY & SHIP & SF & R & M & INV
 
   CFG --> ConfigYAML[Centralized business config, hot-reload, per-service + global]
   U --> SellerProfile[Buyers, sellers, addresses, wishlist, native /auth/register]
@@ -189,14 +191,14 @@ flowchart TB
 
 | Area | Technology |
 | --- | --- |
-| Java services | Java 25 LTS, Spring Boot 4.0.6, Spring Cloud Gateway, Maven 3.9 |
+| Java services | Java 25 LTS, Spring Boot 4.1.0, Spring Cloud Gateway, Maven 3.9 |
 | Node services | Node.js 24 LTS, NestJS 11 |
 | Frontend | React 18.3, Vite 6.3, TanStack Query 5, react-router 7, i18next 26, zod 4, Tailwind v4 |
-| Mobile | Flutter 3.27, BLoC state management, Dio HTTP, OneSignal push |
+| Mobile | Flutter 3.44, BLoC state management, Dio HTTP, OneSignal push |
 | Identity | Keycloak 26.6 (`vnshop` realm), OIDC / OAuth2, JWT, ROPC for native login |
 | Data stores | PostgreSQL 17.9 (per-service), Redis 8.6, Elasticsearch 9.4.0, MinIO (S3-compatible) |
 | Messaging | Kafka (`confluentinc/cp-kafka:8.2.0`), SASL_PLAINTEXT + per-service ACLs, outbox pattern, saga orchestration |
-| Payments | COD, VietQR, SePay (live); Stripe, PayPal (sandbox-ready, full refund saga); VNPay, MoMo (deferred) |
+| Payments | COD, VietQR, SePay (live); Stripe, PayPal (sandbox-ready, full refund saga); VNPay deferred; MoMo fully implemented (`MOMO_ENABLED=false` default) |
 | Inter-service | gRPC (order↔payment↔shipping↔inventory), Kafka events, REST with Resilience4j |
 | Observability | Jaeger (OTLP traces), Prometheus + Alertmanager, Loki, Grafana, Kafka producer health probes |
 | Resilience | Resilience4j circuit breaker + retry, Caffeine + Redis cache, idempotent consumers |
@@ -318,7 +320,7 @@ docker compose --profile apps down
 | Service | Port | Tech | Profile | Owns |
 | --- | ---: | --- | --- | --- |
 | frontend | 3000 | React 18 + Vite 6 | apps | Storefront SPA, native `/login` + `/register`, role-gated routes |
-| mobile | — | Flutter 3.27 | — | VietQR + MoMo payments, OneSignal push, BLoC state management |
+| mobile | — | Flutter 3.44 | — | VietQR + MoMo payments, OneSignal push, BLoC state management |
 | api-gateway | 8080 | Spring Boot, Spring Cloud Gateway | apps | Edge routing, OAuth2 resource server, CORS, rate limiting, circuit breakers |
 | user-service | 8081 | Spring Boot | apps | Buyer + seller profiles, addresses, wishlist, native `/auth/register`, public seller endpoints (`GET /sellers`, `GET /sellers/{id}`) |
 | product-service | 8082 | Spring Boot | apps | Seller catalog, categories, variants, product images, reviews, questions, batch seller stats endpoints |
@@ -328,14 +330,14 @@ docker compose --profile apps down
 | notification-service | 8087 | NestJS | apps | Kafka-driven email, SMS, push, in-app workflows |
 | coupon-service | 8088 | Spring Boot | legacy | Coupon validate/apply (superseded by order-service in app profile) |
 | seller-finance-service | 8090 | Spring Boot | apps | Seller wallet, payouts, transactions |
-| order-service | 8091 | Spring Boot | apps | Orders, sub-orders, checkout, coupons (in-process), saga orchestration, outbox, finance projections |
+| order-service | 8091 | Spring Boot | apps | Orders, sub-orders, checkout, coupon integration (calls coupon-service), saga orchestration, outbox, finance projections |
 | payment-service | 8092 | Spring Boot | apps | Payment intents, COD + VietQR + SePay live, Stripe + PayPal sandbox-ready (full refund saga), VNPay deferred (see [PAYMENT-ROADMAP.md](docs/PAYMENT-ROADMAP.md)) |
 | shipping-service | 8093 | Spring Boot | apps | Shipment creation, carrier integration, tracking |
 | recommendations-service | 8094 | Spring Boot | apps | Frequently-bought-together via co-purchase aggregator |
 | messaging-service | 8095 | NestJS | apps | Buyer-seller direct messaging (REST + WebSocket fan-out) |
 | configuration-service | 8097 | NestJS | apps | Centralized business config (YAML-driven, per-service + global, hot-reload via POST /reload) |
 | invoice-service | 8098 | Spring Boot | apps | XML invoice generation per VN e-invoice spec |
-| monitoring-service-v2 | — | NestJS | — | Prometheus metrics aggregation, service health dashboards |
+| monitoring-service-v2 | 8096 | NestJS | — | Prometheus metrics aggregation, service health dashboards |
 | video-transcoder | — | Spring Boot | — | FFmpeg-based video transcoding, S3 input/output, Kafka events |
 | video-moderator | — | Python Flask | — | Video content moderation via Kafka, ML-based classification |
 
@@ -436,7 +438,7 @@ services/
   inventory-service/       # Stock + flash sales (8083)
   cart-service/            # NestJS Redis cart (8084)
   search-service/          # Elasticsearch (8086)
-  notification-service/    # NestJS email/SMS/push (8087)
+  notification-service/   # NestJS email/SMS/push (8087)
   coupon-service/          # Legacy profile (8088)
   seller-finance-service/  # Wallet + payouts (8090)
   order-service/           # Orders, checkout, saga, finance (8091)
@@ -446,12 +448,14 @@ services/
   messaging-service/       # NestJS chat REST + WS (8095)
   configuration-service/   # NestJS centralized config server (8097)
   invoice-service/         # XML invoice generation (8098)
-  review-service/          # Backwards-compat shell
+  monitoring-service-v2/   # Prometheus metrics + Grafana dashboards (8096)
+  video-transcoder/        # FFmpeg video transcoding, S3 I/O, Kafka events
+  video-moderator/         # Python Flask, Kafka consumer, ML content classification
 fe/                        # React + Vite SPA
 vnshop_mobile/             # Flutter mobile app (VietQR, MoMo, OneSignal)
 infra/
   scripts/
-    e2e-day.mjs            # 55-step day-in-the-life API suite
+    e2e-day.mjs            # 65/65 API endpoint day-in-the-life suite
     seed-demo.mjs          # Demo catalog seeder
     setup-keycloak-admin-client.sh
     init-kafka-topics.sh   # Pre-create Kafka topics + ACLs
