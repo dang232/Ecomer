@@ -1,88 +1,63 @@
 # VNShop E-Commerce Platform
 
-**Generated:** 2026-07-05
-**Commit:** latest
+> **⚠️ This file is stale (2026-07-05). For AI agents, see the authoritative `.agents/` hierarchy below.**
+
+<!-- Redirect: use `.agents/AGENTS.md` as the primary AI-readable doc -->
+
+**Generated:** 2026-07-05 (stale — see `.agents/` for current docs)
 **Branch:** main
 
 ## OVERVIEW
-Full-stack e-commerce marketplace with 21+ microservices (Spring Boot, NestJS, React) and a React frontend. Vietnamese market focus with payment providers (VNPay, MoMo, VietQR, COD).
+Full-stack e-commerce marketplace with 19 microservices (Spring Boot, NestJS, Python), React SPA, and Flutter mobile app for the Vietnamese market. Payment providers: COD, VietQR, SePay (live); Stripe, PayPal (sandbox); MoMo, VNPay (disabled).
 
-## STRUCTURE
+## AI-AGENTS: USE `.agents/` HIERARCHY
 ```
-Full-Stack-E-commerce/
-├── fe/                    # React + Vite + TypeScript frontend
-├── services/              # 21 microservices (Java, Node, Python)
-│   ├── api-gateway/      # Spring Cloud Gateway (port 8080)
-│   ├── user-service/     # Spring Boot user/auth (8081)
-│   ├── product-service/  # Spring Boot catalog (8082)
-│   ├── order-service/    # Spring Boot orders (8091)
-│   ├── payment-service/  # Spring Boot payments (8092)
-│   ├── shipping-service/  # Spring Boot shipping (8093)
-│   ├── cart-service/     # NestJS cart (8084)
-│   ├── notification-svc/ # NestJS notifications (8087)
-│   ├── search-service/   # NestJS + Elasticsearch (8086)
-│   └── ...               # 12+ more services
-├── infra/                # Docker, Kafka, monitoring, IaC
-├── proto/                # gRPC protocol buffers
-└── docker-compose.yml    # Full stack orchestration
+.agents/AGENTS.md          ← Start here (root overview, service port map, tech stack)
+├── .agents/fe/AGENTS.md         ← React SPA details
+├── .agents/vnshop_mobile/AGENTS.md ← Flutter mobile details
+├── .agents/infra/AGENTS.md      ← Docker, Kafka, Prometheus, Grafana, scripts
+├── .agents/proto/AGENTS.md      ← gRPC Buf-managed contracts
+└── services/AGENTS.md           ← Per-service inventory and patterns
 ```
 
-## WHERE TO LOOK
-| Task | Location | Notes |
-|------|----------|-------|
-| Frontend work | `fe/` | React 18, Vite, TypeScript, Tailwind |
-| Java services | `services/*/` | Spring Boot, Maven, port 8081-8094 |
-| Node services | `services/{cart,notification,config}*/` | NestJS, TypeScript |
-| Infrastructure | `infra/` | Kafka, Prometheus, Grafana, Docker |
-| Proto/gRPC | `proto/` | shared between Java services |
-| Local dev | `docker-compose.yml` | Full stack in Docker |
+## KEY DOCS
+| Doc | What it covers |
+|-----|----------------|
+| `.agents/AGENTS.md` | Service port map, Java 25 / Spring Boot 4.1.0 / NestJS 11 / Flutter 3.44 |
+| `services/AGENTS.md` | 19 services, test commands, Java patterns |
+| `services/order-service/AGENTS.md` | gRPC clients, Kafka, Redis, JaCoCo |
+| `services/payment-service/AGENTS.md` | Payment provider toggles via env vars |
+| `README.md` | Primary human-readable documentation |
 
-## CONVENTIONS (THIS PROJECT)
-- **Java**: Spring Boot 3.x, Java 25, Maven, Flyway migrations, Kafka for async
-- **Node**: NestJS, TypeScript strict mode, tsconfig path aliases
-- **Frontend**: Feature-based structure, Zustand stores, React Query, Vitest tests
-- **Testing**: Vitest (FE), JUnit 5 (Java), Playwright (E2E), 90% coverage gate
-- **Auth**: Keycloak OAuth2, JWT validation at gateway
-- **Ports**: Gateway 8080, Java services 8081-8094, Node services 8084/8087
-- **Proto**: Buf for gRPC IDL management, breaking change detection in CI
-
-## ANTI-PATTERNS (THIS PROJECT)
-- **NEVER commit secrets** to `secrets.env.local.example` or any file
-- **NEVER expose internal ports** (8081-8094) - access via gateway only
-- **DO NOT** use synchronous Kafka producers in hot paths
-- **DO NOT** commit `.env` files - only `.env.example` or `.env.local.example`
-- **MUST** use tmpfs for video transcoding staging directories
-- **MUST NOT** set `dev` profile for production builds
-- **KAFKA_VIDEO_TRANSCODER_PASSWORD** and **KAFKA_VIDEO_MODERATOR_PASSWORD** have NO defaults - CI fails without them
-
-## UNIQUE STYLES
-- Ponytail comments: inline notes like `# ponytail: internal only` explain design decisions
-- Superpowers: `/gsd` commands for agentic workflow (GSD framework)
-- S3-compatible storage: MinIO for local dev, Cloudflare R2 for production
-- Multi-broker Kafka: single broker locally (replica=1), 3-broker StatefulSet in prod
-
-## COMMANDS
+## QUICK START
 ```bash
-# Full stack
-make up                    # Start all services
-make down                  # Stop all
-
-# Java services
-make test-java s=<svc>     # Test specific Java service
-cd services/<svc> && ./mvnw test
-
-# Frontend
-cd fe && npm run dev       # Dev server (port 3000)
-cd fe && npm test           # Unit tests
-cd fe && npx playwright test # E2E tests
-
-# Build
-cd services/<svc> && ./mvnw package -DskipTests
+docker compose --profile apps up -d
+bash infra/scripts/setup-keycloak-admin-client.sh
+bash infra/scripts/init-kafka-topics.sh
+node infra/scripts/seed-demo.mjs
 ```
+
+## STALE CONTENT (for reference only)
+```
+Services:  fe/  services/  infra/  proto/  vnshop_mobile/
+Java:      Spring Boot 4.1.0 (NOT 3.x), Java 25
+Node:      NestJS 11 (NOT NestJS 10)
+Frontend:  React 18 SPA + Flutter 3.44 mobile
+Payments:  COD, VietQR, SePay live; MoMo, VNPay, Stripe, PayPal sandbox
+Shipping:  GHN/GHTK adapters (live code, CARRIER_MODE=stub default)
+Kafka:     SASL_PLAINTEXT, per-service ACLs, 8.2.0
+```
+
+## ANTI-PATTERNS
+- **NEVER** commit secrets — `.env` excluded via `.gitignore`
+- **NEVER** expose internal ports (8081-8098) — route through gateway `:8080`
+- **DO NOT** use synchronous Kafka producers in hot paths
+- **MUST** use tmpfs for video transcoding staging
+- `KAFKA_VIDEO_TRANSPARECTOR_PASSWORD` and `KAFKA_VIDEO_MODERATOR_PASSWORD` have NO defaults — CI fails without them
 
 ## NOTES
-- MinIO console: http://localhost:9001 (default creds: vnshop/vnshop123)
-- Keycloak: http://localhost:8085 (admin/admin)
-- Grafana: http://localhost:3001 (admin/vnshop123)
-- Jaeger tracing: http://localhost:16686
-- Kafka: SASL_PLAINTEXT on port 29092 (local), 9092 (internal)
+- Gateway: `http://localhost:8080`
+- Keycloak: `http://localhost:8085` (admin/admin)
+- MinIO console: `http://localhost:9000` (vnshop/vnshop123)
+- Jaeger tracing: `http://localhost:16686`
+- Alertmanager: `http://localhost:9093`
