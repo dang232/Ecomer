@@ -96,6 +96,7 @@ export class CartExceptionFilter implements ExceptionFilter {
       case 'INVALID_CART_OPERATION': return 400;
       case 'CURRENCY_MISMATCH': return 500;
       case 'PRODUCT_NOT_FOUND': return 404;
+      case 'VARIANT_NOT_FOUND': return 404;
       default: return 500;
     }
   }

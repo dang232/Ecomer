@@ -237,13 +237,17 @@ export function CheckoutPage() {
     queryKey: [
       "checkout",
       "calculate",
-      cartItems.map((i) => `${i.productId}:${i.quantity}`).join(","),
+      cartItems.map((i) => `${i.productId}:${i.variantId ?? ""}:${i.quantity}`).join(","),
       addresses[selectedAddressIndex]?.street,
       appliedCoupon,
     ],
     queryFn: () =>
       calculateCheckout({
-        items: cartItems.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+        items: cartItems.map((i) => ({
+          productId: i.productId,
+          variantSku: i.variantId,
+          quantity: i.quantity,
+        })),
         couponCode: appliedCoupon ?? undefined,
       }),
     enabled: cartItems.length > 0,
@@ -365,7 +369,11 @@ export function CheckoutPage() {
       }
       const order = await placeOrder(
         {
-          items: cartItems.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+          items: cartItems.map((i) => ({
+            productId: i.productId,
+            quantity: i.quantity,
+            variantSku: i.variantId,
+          })),
           shippingAddress: {
             street: selectedAddress.street,
             ward: selectedAddress.ward ?? undefined,
