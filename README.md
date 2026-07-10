@@ -329,13 +329,15 @@ docker compose --profile apps down
 | coupon-service | 8088 | Spring Boot | legacy | Coupon validate/apply (superseded by order-service in app profile) |
 | seller-finance-service | 8090 | Spring Boot | apps | Seller wallet, payouts, transactions |
 | order-service | 8091 | Spring Boot | apps | Orders, sub-orders, checkout, coupons (in-process), saga orchestration, outbox, finance projections |
-| payment-service | 8092 | Spring Boot | apps | Payment intents, COD + VietQR + SePay live, Stripe + PayPal sandbox-ready (full refund saga), VNPay/MoMo deferred (see [PAYMENT-ROADMAP.md](docs/PAYMENT-ROADMAP.md)) |
+| payment-service | 8092 | Spring Boot | apps | Payment intents, COD + VietQR + SePay live, Stripe + PayPal sandbox-ready (full refund saga), VNPay deferred (see [PAYMENT-ROADMAP.md](docs/PAYMENT-ROADMAP.md)) |
 | shipping-service | 8093 | Spring Boot | apps | Shipment creation, carrier integration, tracking |
 | recommendations-service | 8094 | Spring Boot | apps | Frequently-bought-together via co-purchase aggregator |
 | messaging-service | 8095 | NestJS | apps | Buyer-seller direct messaging (REST + WebSocket fan-out) |
 | configuration-service | 8097 | NestJS | apps | Centralized business config (YAML-driven, per-service + global, hot-reload via POST /reload) |
 | invoice-service | 8098 | Spring Boot | apps | XML invoice generation per VN e-invoice spec |
-| review-service | — | Spring Boot | apps | Backwards-compat shell; review APIs are owned by product-service |
+| monitoring-service-v2 | — | NestJS | — | Prometheus metrics aggregation, service health dashboards |
+| video-transcoder | — | Spring Boot | — | FFmpeg-based video transcoding, S3 input/output, Kafka events |
+| video-moderator | — | Python Flask | — | Video content moderation via Kafka, ML-based classification |
 
 ## Architecture Patterns
 
