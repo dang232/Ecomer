@@ -1,0 +1,299 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1783757381383,
+  "projectRoot": "C:\\Users\\dangq\\OneDrive\\Documents\\GitHub\\Full-Stack-E-commerce\\fe",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      },
+      {
+        "name": "TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "tsconfig.json"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "react",
+        "version": "18.3.1",
+        "category": "frontend"
+      },
+      {
+        "name": "react-dom",
+        "version": "18.3.1",
+        "category": "frontend"
+      },
+      {
+        "name": "@playwright/test",
+        "version": "1.60.0",
+        "category": "testing"
+      },
+      {
+        "name": "vite",
+        "version": "6.3.5",
+        "category": "build"
+      },
+      {
+        "name": "vitest",
+        "version": "2.1.9",
+        "category": "testing"
+      }
+    ],
+    "packageManager": "pnpm",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": "cd \"C:\\Users\\dangq\\OneDrive\\Documents\\GitHub\\Full-Stack-E-commerce\\fe\" && pnpm build 2>&1 | grep \"error TS\"",
+    "testCommand": "cd \"C:\\Users\\dangq\\OneDrive\\Documents\\GitHub\\Full-Stack-E-commerce\\fe\" && pnpm test 2>&1 | tail -15",
+    "lintCommand": "pnpm lint",
+    "devCommand": "pnpm dev",
+    "scripts": {
+      "dev": "vite",
+      "build": "tsc -b && vite build",
+      "preview": "vite preview",
+      "typecheck": "tsc -b --noEmit",
+      "test": "vitest run",
+      "test:watch": "vitest",
+      "lint": "eslint .",
+      "lint:i18n": "node scripts/check-i18n-keys.mjs",
+      "lint:tokens": "node scripts/check-design-tokens.mjs",
+      "lint:all": "npm run lint && npm run lint:i18n && npm run lint:tokens",
+      "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\" \"e2e/**/*.{ts,tsx}\"",
+      "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\" \"e2e/**/*.{ts,tsx}\"",
+      "verify": "npm run typecheck && npm run lint && npm run lint:i18n && npm run lint:tokens && npm run format:check && npm run test && npm run build",
+      "test:e2e": "playwright test",
+      "pretest:e2e": "node scripts/hydrate-e2e.mjs",
+      "test:e2e:ui": "playwright test --ui",
+      "pretest:e2e:ui": "node scripts/hydrate-e2e.mjs",
+      "test:a11y": "playwright test e2e/a11y.spec.ts"
+    }
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": "feature-based"
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "public",
+      "scripts",
+      "src"
+    ],
+    "gitBranches": {
+      "defaultBranch": "main",
+      "branchingStrategy": null
+    }
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "coverage": {
+      "path": "coverage",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1783757381202,
+      "keyFiles": [
+        "lcov.info"
+      ]
+    },
+    "dist": {
+      "path": "dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 3,
+      "lastAccessed": 1783757381249,
+      "keyFiles": [
+        "index.html",
+        "robots.txt",
+        "silent-check-sso.html"
+      ]
+    },
+    "e2e": {
+      "path": "e2e",
+      "purpose": null,
+      "fileCount": 46,
+      "lastAccessed": 1783757381252,
+      "keyFiles": [
+        "a11y.spec.ts",
+        "admin-coupon-crud-ui.spec.ts",
+        "admin-ui.spec.ts",
+        "auth-forms-ui.spec.ts",
+        "authenticated-routes.spec.ts"
+      ]
+    },
+    "guidelines": {
+      "path": "guidelines",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1783757381258,
+      "keyFiles": [
+        "Guidelines.md"
+      ]
+    },
+    "playwright-report": {
+      "path": "playwright-report",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1783757381265,
+      "keyFiles": [
+        "index.html"
+      ]
+    },
+    "public": {
+      "path": "public",
+      "purpose": "Public files",
+      "fileCount": 2,
+      "lastAccessed": 1783757381288,
+      "keyFiles": [
+        "robots.txt",
+        "silent-check-sso.html"
+      ]
+    },
+    "scripts": {
+      "path": "scripts",
+      "purpose": "Build/utility scripts",
+      "fileCount": 6,
+      "lastAccessed": 1783757381290,
+      "keyFiles": [
+        "check-design-tokens.mjs",
+        "check-i18n-keys.mjs",
+        "generate-sitemap.ts",
+        "hydrate-e2e.mjs",
+        "migrate-dark-tokens.mjs"
+      ]
+    },
+    "src": {
+      "path": "src",
+      "purpose": "Source code",
+      "fileCount": 3,
+      "lastAccessed": 1783757381313,
+      "keyFiles": [
+        "main.tsx",
+        "test-setup.ts",
+        "vite-env.d.ts"
+      ]
+    },
+    "test-results": {
+      "path": "test-results",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1783757381339,
+      "keyFiles": []
+    },
+    "dist\\assets": {
+      "path": "dist\\assets",
+      "purpose": "Static assets",
+      "fileCount": 59,
+      "lastAccessed": 1783757381356,
+      "keyFiles": [
+        "arrow-right-BWLRMqC3.js",
+        "CartPage-BvDfe5oT.js",
+        "chevron-left-Bk-0OwLk.js"
+      ]
+    },
+    "src\\app": {
+      "path": "src\\app",
+      "purpose": "Application code",
+      "fileCount": 2,
+      "lastAccessed": 1783757381376,
+      "keyFiles": [
+        "App.tsx",
+        "routes.ts"
+      ]
+    },
+    "src\\utils": {
+      "path": "src\\utils",
+      "purpose": "Utility functions",
+      "fileCount": 1,
+      "lastAccessed": 1783757381381,
+      "keyFiles": [
+        "meta-tags.ts"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "src\\app\\hooks\\use-cart.ts",
+      "accessCount": 17,
+      "lastAccessed": 1783760078637,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\lib\\api\\product-mapper.ts",
+      "accessCount": 9,
+      "lastAccessed": 1783758000508,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\lib\\auth\\native-auth.ts",
+      "accessCount": 2,
+      "lastAccessed": 1783757548621,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\hooks\\use-cart.test.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1783759932541,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\lib\\api\\endpoints\\products.ts",
+      "accessCount": 1,
+      "lastAccessed": 1783757437564,
+      "type": "file"
+    },
+    {
+      "path": "eslint.config.js",
+      "accessCount": 1,
+      "lastAccessed": 1783757468939,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\lib\\api\\client.ts",
+      "accessCount": 1,
+      "lastAccessed": 1783757647651,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\types\\ui.ts",
+      "accessCount": 1,
+      "lastAccessed": 1783757804992,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\types\\api",
+      "accessCount": 1,
+      "lastAccessed": 1783757833857,
+      "type": "directory"
+    },
+    {
+      "path": "src\\app\\types\\api\\product.ts",
+      "accessCount": 1,
+      "lastAccessed": 1783757843764,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\types\\api\\index.ts",
+      "accessCount": 1,
+      "lastAccessed": 1783757895586,
+      "type": "directory"
+    },
+    {
+      "path": "src\\app\\types\\api\\branded-ids.ts",
+      "accessCount": 1,
+      "lastAccessed": 1783758292864,
+      "type": "directory"
+    }
+  ],
+  "userDirectives": []
+}

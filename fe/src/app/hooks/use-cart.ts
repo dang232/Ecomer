@@ -333,7 +333,7 @@ export function useCart() {
     queries: guestItems.map(
       (item) => ({
         queryKey: ["product", item.productId] as const,
-        queryFn: () => productById(item.productId) as Promise<ProductDetail | null>,
+        queryFn: () => productById(item.productId),
         staleTime: 5 * 60 * 1000,
         enabled: isGuest,
       }),
@@ -350,14 +350,14 @@ export function useCart() {
     ? {
         ...guestItemsToCart(guestItems),
         items: guestItems.map((item, idx) => {
-          const raw = productQueries[idx]?.data as ProductDetail | null | undefined;
+          const raw = productQueries[idx]?.data;
           if (!raw) {
             return { productId: item.productId as ProductId, name: undefined, image: undefined, price: 0, quantity: item.quantity, sellerId: undefined, variantId: item.variantId };
           }
-          const variant = findVariant(raw, item.variantId) as { priceAmount?: number; imageUrl?: string } | undefined;
+          const variant = findVariant(raw, item.variantId);
           const mapped = fromServer(raw);
-          const price = (variant?.priceAmount as number | undefined) ?? mapped.price;
-          const image = (variant?.imageUrl as string | undefined) ?? mapped.image;
+          const price = (variant?.priceAmount) ?? mapped.price;
+          const image = (variant?.imageUrl) ?? mapped.image;
           return {
             productId: item.productId as ProductId,
             name: mapped.name,
@@ -370,10 +370,10 @@ export function useCart() {
           };
         }),
         totalAmount: guestItems.reduce((sum, item, idx) => {
-          const raw = productQueries[idx]?.data as ProductDetail | null | undefined;
+          const raw = productQueries[idx]?.data;
           if (!raw) return sum;
-          const variant = findVariant(raw, item.variantId) as { priceAmount?: number } | undefined;
-          const price = (variant?.priceAmount as number | undefined) ?? fromServer(raw).price;
+          const variant = findVariant(raw, item.variantId);
+          const price = (variant?.priceAmount) ?? fromServer(raw).price;
           return sum + price * item.quantity;
         }, 0),
       }
@@ -426,14 +426,20 @@ export function useCart() {
       const itemKey = input.variantId ? `${input.productId}:${input.variantId}` : input.productId;
       return updateItem.mutate({ productId: itemKey, quantity: input.quantity }, options);
     },
-    removeItem: (input: { productId: string; variantId?: string }, options?: Parameters<typeof removeItem.mutate>[1]) => {
+    removeItem: (input: string | { productId: string; variantId?: string }, options?: Parameters<typeof removeItem.mutate>[1]) => {
       if (isGuest) {
-        guestRemove(input.productId, input.variantId);
+        if (typeof input === "string") {
+          guestRemove(input);
+        } else {
+          guestRemove(input.productId, input.variantId);
+        }
         return;
       }
       if (!query.isSuccess) return;
       // Cart service keys variant items as productId:variantId
-      const itemKey = input.variantId ? `${input.productId}:${input.variantId}` : input.productId;
+      const productId = typeof input === "string" ? input : input.productId;
+      const variantId = typeof input === "string" ? undefined : input.variantId;
+      const itemKey = variantId ? `${productId}:${variantId}` : productId;
       return removeItem.mutate(itemKey, options);
     },
     clear: (options?: Parameters<typeof clear.mutate>[1]) => {
