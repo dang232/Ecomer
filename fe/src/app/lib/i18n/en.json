@@ -216,6 +216,7 @@
       "qa": "Q & A",
       "specs": "Specifications"
     },
+    "recentlyViewed": "Recently Viewed",
     "info": {
       "category": "Category",
       "origin": "Origin",
@@ -299,6 +300,7 @@
       "orders": "Orders",
       "vouchers": "Vouchers"
     },
+    "recentlyViewed": "Recently Viewed",
     "hero": {
       "eyebrow": "Welcome to VNShop",
       "title": "Shop authentic. Ship fast. Live easy.",
@@ -1087,7 +1089,8 @@
       "removeVideo": "Remove video",
       "removeVideoTitle": "Remove this video?",
       "removeVideoDescription": "This video will be permanently deleted. This action cannot be undone.",
-      "videoCreateHint": "Save the product first, then add videos from the edit screen."
+      "videoCreateHint": "Save the product first, then add videos from the edit screen.",
+      "variantsLabel": "Variants"
     }
   },
   "profile": {
