@@ -2,9 +2,12 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 
+# Install pnpm globally (the project uses pnpm-lock.yaml, not package-lock.json)
+RUN corepack enable && corepack prepare pnpm@9 --activate
+
 # Copy lock + manifest first for layer caching
-COPY package.json package-lock.json* ./
-RUN npm ci --no-audit --no-fund
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 
 COPY . .
 

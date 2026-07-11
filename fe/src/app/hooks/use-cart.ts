@@ -9,8 +9,9 @@ import {
   updateCartItem,
 } from "../lib/api/endpoints/cart";
 import { productById } from "../lib/api/endpoints/products";
-import type { Cart } from "../types/api";
-import type { ProductId } from "../types/api/branded-ids";
+import { fromServer, findVariant } from "../lib/api/product-mapper";
+import type { Cart, ProductDetail } from "../types/api";
+import type { ProductId, SellerId } from "../types/api/branded-ids";
 
 import { useAuth } from "./use-auth";
 
@@ -329,36 +330,50 @@ export function useCart() {
   // For guest carts, fan-out product fetches to hydrate name/image/price.
   // `useQueries` runs in parallel; once all settle `isHydrating` becomes false.
   const productQueries = useQueries({
-    queries: isGuest
-      ? guestItems.map((item) => ({
-          queryKey: ["product", item.productId] as const,
-          queryFn: () => productById(item.productId),
-          staleTime: 5 * 60 * 1000,
-        }))
-      : [],
+    queries: guestItems.map(
+      (item) => ({
+        queryKey: ["product", item.productId] as const,
+        queryFn: () => productById(item.productId) as Promise<ProductDetail | null>,
+        staleTime: 5 * 60 * 1000,
+        enabled: isGuest,
+      }),
+    ),
   });
 
   // Hydrating as long as any guest product fetch is still pending.
   const isHydrating = isGuest && guestItems.length > 0 && productQueries.some((q) => q.isPending);
 
   // Build a richer cart for guest mode by overlaying resolved product data.
+  // findVariant resolves the selected SKU so variant products render the
+  // correct price/image instead of always falling back to variants[0].
   const hydratedGuestCart: Cart | undefined = isGuest
     ? {
         ...guestItemsToCart(guestItems),
         items: guestItems.map((item, idx) => {
-          const product = productQueries[idx]?.data;
+          const raw = productQueries[idx]?.data as ProductDetail | null | undefined;
+          if (!raw) {
+            return { productId: item.productId as ProductId, name: undefined, image: undefined, price: 0, quantity: item.quantity, sellerId: undefined, variantId: item.variantId };
+          }
+          const variant = findVariant(raw, item.variantId) as { priceAmount?: number; imageUrl?: string } | undefined;
+          const mapped = fromServer(raw);
+          const price = (variant?.priceAmount as number | undefined) ?? mapped.price;
+          const image = (variant?.imageUrl as string | undefined) ?? mapped.image;
           return {
             productId: item.productId as ProductId,
-            name: product?.name,
-            image: product?.image,
-            price: product?.price ?? 0,
+            name: mapped.name,
+            image,
+            price,
+            originalPrice: mapped.originalPrice,
             quantity: item.quantity,
-            sellerId: product?.sellerId,
+            sellerId: mapped.sellerId as SellerId,
             variantId: item.variantId,
           };
         }),
         totalAmount: guestItems.reduce((sum, item, idx) => {
-          const price = productQueries[idx]?.data?.price ?? 0;
+          const raw = productQueries[idx]?.data as ProductDetail | null | undefined;
+          if (!raw) return sum;
+          const variant = findVariant(raw, item.variantId) as { priceAmount?: number } | undefined;
+          const price = (variant?.priceAmount as number | undefined) ?? fromServer(raw).price;
           return sum + price * item.quantity;
         }, 0),
       }

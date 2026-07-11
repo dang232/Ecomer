@@ -58,11 +58,26 @@ function parseVariantAttributes(
 }
 
 /**
+ * Find a specific variant by its SKU within a product.
+ * Returns undefined if no SKU is provided or the variant isn't found.
+ * When no SKU is given the caller should use `fromServer` (falls back to variants[0]).
+ */
+export function findVariant(
+  p: ProductSummary | ProductDetail,
+  sku: string | undefined,
+): { sku?: string; name?: string; priceAmount?: number; imageUrl?: string } | undefined {
+  if (!sku) return undefined;
+  return p.variants?.find((v) => (v as { sku?: string }).sku === sku);
+}
+
+/**
  * Map a server product (summary or detail) into the UI Product shape.
  * Detail-only fields (description, colors, sizes, tags) collapse to their
  * defaults when called with a summary — no fields are silently dropped.
  * The BE returns prices on the first variant (`variants[0].priceAmount`)
  * and not always on a top-level `price`, so we fall through to that.
+ * Use {@link findVariant} to resolve the selected variant before calling
+ * `fromServer` when you need the price/image of a specific SKU.
  */
 export function fromServer(p: ProductSummary | ProductDetail): Product {
   const detail = p as Partial<ProductDetail>;
