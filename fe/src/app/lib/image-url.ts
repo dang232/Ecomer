@@ -67,7 +67,7 @@ function isTrustedOrigin(src: string): boolean {
 export function imageUrl(
   src: string | undefined | null,
   preset: ImagePreset = "original",
-  dpr: number = 1,
+  dpr = 1,
 ): string {
   if (!src) return "";
 

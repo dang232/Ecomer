@@ -3,9 +3,10 @@ import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
-import { ImageWithFallback } from "./image-with-fallback";
-import { formatPrice } from "../lib/format";
 import type { RecentlyViewedItem } from "../hooks/use-recently-viewed";
+import { formatPrice } from "../lib/format";
+
+import { ImageWithFallback } from "./image-with-fallback";
 
 // ─── Recently Viewed Card ────────────────────────────────────────────────────────
 const RecentlyViewedCard = memo(function RecentlyViewedCard({
@@ -68,11 +69,9 @@ export function RecentlyViewedGrid({
 
   return (
     <section>
-      {title && (
-        <h2 className="text-xl font-bold text-foreground tracking-tight mb-5">
+      {title ? <h2 className="text-xl font-bold text-foreground tracking-tight mb-5">
           {title}
-        </h2>
-      )}
+        </h2> : null}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
         {items.map((item, i) => (
           <RecentlyViewedCard key={item.productId} item={item} index={i} />

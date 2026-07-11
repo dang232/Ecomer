@@ -12,6 +12,10 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { VideoUploadDropzone } from "../../features/videos/components/VideoUploadDropzone";
+import { VideoUploadProgress } from "../../features/videos/components/VideoUploadProgress";
+import { useProductVideos } from "../../features/videos/hooks/useProductVideos";
+import { useVideoUpload } from "../../features/videos/hooks/useVideoUpload";
 import { ApiError } from "../lib/api";
 import {
   sellerProductCreate,
@@ -21,10 +25,6 @@ import {
 } from "../lib/api/endpoints/products";
 import { videoDelete } from "../lib/api/endpoints/videos";
 import type { Product } from "../types/ui";
-import { VideoUploadDropzone } from "../../features/videos/components/VideoUploadDropzone";
-import { VideoUploadProgress } from "../../features/videos/components/VideoUploadProgress";
-import { useProductVideos } from "../../features/videos/hooks/useProductVideos";
-import { useVideoUpload } from "../../features/videos/hooks/useVideoUpload";
 
 import { ImageWithFallback } from "./image-with-fallback";
 import { ConfirmDialog } from "./ui/confirm-dialog";
@@ -564,8 +564,7 @@ function SellerProductModalBody({
           </label>
 
           {/* Existing videos list */}
-          {existingVideos.length > 0 && (
-            <ul className="space-y-2 mb-3">
+          {existingVideos.length > 0 ? <ul className="space-y-2 mb-3">
               {existingVideos.map((video) => (
                 <li
                   key={video.id}
@@ -601,12 +600,10 @@ function SellerProductModalBody({
                   </button>
                 </li>
               ))}
-            </ul>
-          )}
+            </ul> : null}
 
           {/* Active upload progress */}
-          {videoUploadState.videoId && videoUploading && (
-            <div className="mb-3 space-y-2">
+          {videoUploadState.videoId && videoUploading ? <div className="mb-3 space-y-2">
               <VideoUploadProgress videoId={videoUploadState.videoId} enabled={videoUploading} />
               <button
                 type="button"
@@ -615,8 +612,7 @@ function SellerProductModalBody({
               >
                 {t("video.upload.dropzone.cancelAria")}
               </button>
-            </div>
-          )}
+            </div> : null}
 
           {/* Dropzone — only shown in edit mode when slots are free and not uploading */}
           {isEdit && videoSlotsFree > 0 && !videoUploading ? (

@@ -55,7 +55,7 @@ export function ConfirmDialog({
         </button>
         <button
           type="button"
-          disabled={reasonField && reason.trim().length < 5}
+          disabled={reasonField ? reason.trim().length < 5 : null}
           onClick={() => {
             onConfirm(reason.trim() || undefined);
             setReason("");

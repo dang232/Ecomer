@@ -9,13 +9,13 @@ import { toast } from "sonner";
 import { useProductVideos, VideoPlayer, ReviewVideoDisplay } from "../../features/videos";
 import { VideoPlayerSkeleton } from "../../features/videos/components/VideoPlayer";
 import { usePageMeta } from "../../utils/meta-tags";
-import { RecentlyViewedGrid } from "../components/RecentlyViewedGrid";
-import { useRecentlyViewed } from "../hooks/use-recently-viewed";
 import { ImageWithFallback } from "../components/image-with-fallback";
+import { RecentlyViewedGrid } from "../components/RecentlyViewedGrid";
 import { useVNShop } from "../components/vnshop-context";
 import { useAuth } from "../hooks/use-auth";
 import { useProductReviews } from "../hooks/use-product-reviews";
 import { productDetailOptions } from "../hooks/use-products";
+import { useRecentlyViewed } from "../hooks/use-recently-viewed";
 import { useFrequentlyBoughtTogether, useYouMayAlsoLike } from "../hooks/use-recommendations";
 import { useSellerDetail } from "../hooks/use-sellers";
 import { ApiError } from "../lib/api";
@@ -396,15 +396,13 @@ export function ProductPage() {
             ) : null}
 
             {/* Zoom lightbox button */}
-            {currentItem?.type === "image" && (
-              <button
+            {currentItem?.type === "image" ? <button
                 onClick={() => setShowLightbox(true)}
                 aria-label="Open zoomed view"
                 className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/80 shadow-md flex items-center justify-center hover:bg-card transition-colors"
               >
                 <ZoomIn size={18} className="text-foreground" />
-              </button>
-            )}
+              </button> : null}
           </div>
 
           {/* Thumbnail strip */}
@@ -426,23 +424,20 @@ export function ProductPage() {
                   alt=""
                   className="w-full h-full object-cover"
                 />
-                {item.type === "video" && (
-                  <>
+                {item.type === "video" ? <>
                     <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                       <Play size={18} className="text-white" aria-hidden="true" />
                     </div>
                     <span className="absolute top-1 right-1 px-1.5 py-0.5 rounded bg-black/70 text-[9px] font-bold uppercase tracking-wider text-white">
                       Video
                     </span>
-                  </>
-                )}
+                  </> : null}
               </button>
             ))}
           </div>
 
           {/* Dot indicators */}
-          {galleryItems.length > 1 && (
-            <div className="flex justify-center gap-2 pt-2" role="tablist" aria-label="Gallery navigation">
+          {galleryItems.length > 1 ? <div className="flex justify-center gap-2 pt-2" role="tablist" aria-label="Gallery navigation">
               {galleryItems.map((_, i) => (
                 <button
                   key={i}
@@ -458,14 +453,12 @@ export function ProductPage() {
                   ].join(" ")}
                 />
               ))}
-            </div>
-          )}
+            </div> : null}
         </div>
 
         {/* Zoom lightbox */}
         <AnimatePresence>
-          {showLightbox && currentItem?.type === "image" && (
-            <motion.div
+          {showLightbox && currentItem?.type === "image" ? <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -479,8 +472,7 @@ export function ProductPage() {
               >
                 <X size={24} className="text-white" />
               </button>
-              {galleryItems.length > 1 && (
-                <>
+              {galleryItems.length > 1 ? <>
                   <button
                     className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
                     onClick={(e) => { e.stopPropagation(); setImageIdx((i) => (i - 1 + galleryItems.length) % galleryItems.length); setIsZoomed(false); }}
@@ -495,16 +487,14 @@ export function ProductPage() {
                   >
                     <ChevronRight size={24} className="text-white" />
                   </button>
-                </>
-              )}
+                </> : null}
               <ImageWithFallback
                 src={currentItem.url}
                 alt={product.name}
                 className="max-w-[90vw] max-h-[90vh] object-contain"
                 onClick={(e) => e.stopPropagation()}
               />
-            </motion.div>
-          )}
+            </motion.div> : null}
         </AnimatePresence>
 
         {/* ── B. Right Column — Product Info ── */}
@@ -768,8 +758,7 @@ export function ProductPage() {
                     : t("product.tabs.qa")}
             </button>
           ))}
-          {productVideos.length > 0 && (
-            <button
+          {productVideos.length > 0 ? <button
               id="product-tab-videos"
               role="tab"
               aria-selected={activeTab === "videos"}
@@ -783,8 +772,7 @@ export function ProductPage() {
               ].join(" ")}
             >
               {t("video.tab.title")} ({productVideos.length})
-            </button>
-          )}
+            </button> : null}
         </div>
 
         <div role="tabpanel" aria-labelledby={`product-tab-${activeTab}`} aria-live="polite">
@@ -1077,8 +1065,7 @@ export function ProductPage() {
             </div>
           ) : null}
 
-          {activeTab === "videos" && (
-            <div
+          {activeTab === "videos" ? <div
               className="grid grid-cols-1 sm:grid-cols-2 gap-4"
               aria-busy={isProductVideosLoading}
               aria-live="polite"
@@ -1118,8 +1105,7 @@ export function ProductPage() {
                   {t("video.tab.empty")}
                 </p>
               )}
-            </div>
-          )}
+            </div> : null}
         </div>
       </div>
 

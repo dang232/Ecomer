@@ -42,7 +42,7 @@ let crossTabRefreshResolve: ((success: boolean) => void) | null = null;
 /** True while this tab owns the in-flight refresh. */
 let thisTabRefreshing = false;
 /** Epoch-ms timestamp when this tab claimed the refresh lock. Used to detect stale locks. */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars,@typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let _refreshLockTimestamp: any = 0;
 const REFRESH_LOCK_TIMEOUT_MS = 15_000;
 

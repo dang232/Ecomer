@@ -43,7 +43,7 @@ export const formatAsYouType = (raw: string, country: CountryCode): string => {
  * accepts the number with or without a leading country code.
  */
 export const isValidPhone = (raw: string, country: CountryCode = DEFAULT_COUNTRY): boolean => {
-  if (!raw || !raw.trim()) return false;
+  if (!raw?.trim()) return false;
   try {
     const parsed = parsePhoneNumber(raw, country);
     return parsed.isValid() && parsed.country === country;

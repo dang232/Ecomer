@@ -1,6 +1,6 @@
-import * as tus from "tus-js-client";
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
+import * as tus from "tus-js-client";
 
 import { videoUploadInit } from "../../../app/lib/api/endpoints/videos";
 import type { VideoContext } from "../../../app/types/api/video";

@@ -32,7 +32,7 @@ function stepState(stepKey: VideoStatus, currentStatus: VideoStatus | undefined)
   if (!currentStatus) return "pending";
   if (currentStatus === "REJECTED" || currentStatus === "FAILED") {
     // Show everything up to the failed step as done, rest as error/pending
-    const currentIdx = STATUS_ORDER.indexOf(currentStatus as VideoStatus) - 1;
+    const currentIdx = STATUS_ORDER.indexOf(currentStatus) - 1;
     const stepIdx = STATUS_ORDER.indexOf(stepKey);
     if (stepIdx < currentIdx) return "done";
     return "error";
@@ -77,24 +77,20 @@ export function VideoUploadProgress({ videoId, enabled = true }: VideoUploadProg
       </p>
 
       {/* Stuck in pipeline for too long — suggest user contact support */}
-      {isStuck && (
-        <div className="flex items-start gap-2 p-3 rounded-[var(--radius-md)] bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900">
+      {isStuck ? <div className="flex items-start gap-2 p-3 rounded-[var(--radius-md)] bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900">
           <XCircle size={15} className="text-amber-500 shrink-0 mt-0.5" />
           <p className="text-xs text-amber-700 dark:text-amber-300">
             {t("video.pipeline.stuckMessage")}
           </p>
-        </div>
-      )}
+        </div> : null}
 
       {/* Rejection reason */}
-      {isRejected && data?.rejectionReason && (
-        <div className="flex items-start gap-2 p-3 rounded-[var(--radius-md)] bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900">
+      {isRejected && data?.rejectionReason ? <div className="flex items-start gap-2 p-3 rounded-[var(--radius-md)] bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900">
           <XCircle size={15} className="text-red-500 shrink-0 mt-0.5" />
           <p className="text-xs text-red-700 dark:text-red-300">
             {t("video.pipeline.rejectionReason", { reason: data.rejectionReason })}
           </p>
-        </div>
-      )}
+        </div> : null}
 
       {/* Pipeline steps — aria-live=polite so screen readers announce step transitions */}
       <ol
@@ -154,11 +150,9 @@ export function VideoUploadProgress({ videoId, enabled = true }: VideoUploadProg
               </span>
 
               {/* Active spinner label */}
-              {state === "active" && (
-                <span className="text-xs text-muted-foreground ml-auto">
+              {state === "active" ? <span className="text-xs text-muted-foreground ml-auto">
                   {t("video.pipeline.inProgress")}
-                </span>
-              )}
+                </span> : null}
             </li>
           );
         })}
