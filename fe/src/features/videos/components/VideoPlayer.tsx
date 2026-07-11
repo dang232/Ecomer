@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
 import { Play, Loader2, AlertCircle } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -150,8 +150,7 @@ export function VideoPlayer({ src, poster, title, className = "", loading = fals
       </video>
 
       {/* Custom big-play overlay shown before first play on poster */}
-      {showPoster && !playing && !error && (
-        <button
+      {showPoster && !playing && !error ? <button
           type="button"
           aria-label={t("video.player.playAria")}
           onClick={handleClickOverlay}
@@ -160,24 +159,20 @@ export function VideoPlayer({ src, poster, title, className = "", loading = fals
           <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
             <Play size={24} className="text-gray-900 ml-1" fill="currentColor" />
           </div>
-        </button>
-      )}
+        </button> : null}
 
       {/* Buffering spinner — role=status so screen readers announce it */}
-      {buffering && !error && (
-        <div
+      {buffering && !error ? <div
           className="absolute inset-0 flex items-center justify-center bg-black/40 pointer-events-none"
           role="status"
           aria-live="polite"
           aria-label={t("video.player.buffering")}
         >
           <Loader2 size={32} className="text-white animate-spin" />
-        </div>
-      )}
+        </div> : null}
 
       {/* Error overlay — visible feedback when the video fails to load */}
-      {error && (
-        <div
+      {error ? <div
           className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/70 text-white p-6"
           role="alert"
         >
@@ -185,8 +180,7 @@ export function VideoPlayer({ src, poster, title, className = "", loading = fals
           <p className="text-sm text-center max-w-xs">
             {t("video.player.error")}
           </p>
-        </div>
-      )}
+        </div> : null}
     </div>
   );
 }

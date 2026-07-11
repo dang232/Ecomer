@@ -1,3 +1,4 @@
+import type { CountryCode } from "libphonenumber-js";
 import { ChevronDown, Search, X } from "lucide-react";
 import {
   useCallback,
@@ -8,7 +9,6 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
-import type { CountryCode } from "libphonenumber-js";
 
 import {
   filterCountries,

@@ -294,6 +294,11 @@
 							<version>${lombok.version}</version>
 						</path>
 					</annotationProcessorPaths>
+					<fork>true</fork>
+					<compilerArgs combine.self="override">
+						<arg>-J-XX:+IgnoreUnrecognizedVMOptions</arg>
+						<arg>-J-XX:-PrintWarnings</arg>
+					</compilerArgs>
 				</configuration>
 			</plugin>
 			<plugin>

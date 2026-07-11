@@ -35,6 +35,13 @@ export const productById = (id: string) =>
   api.get(`/products/${encodeURIComponent(id)}`, productDetailSchema, undefined, { auth: false });
 
 /** Body for create / update on the seller product endpoints. */
+export interface SellerVariant {
+  sku: string;
+  name: string;
+  priceAmount: number;
+  stockQuantity: number;
+}
+
 export interface SellerProductWriteBody {
   name: string;
   description?: string;
@@ -44,6 +51,7 @@ export interface SellerProductWriteBody {
   category?: string;
   images?: string[];
   image?: string;
+  variants?: SellerVariant[];
 }
 
 export const sellerProductCreate = (body: SellerProductWriteBody) =>

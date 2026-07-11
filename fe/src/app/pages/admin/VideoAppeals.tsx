@@ -14,8 +14,8 @@ import {
   useRejectAppeal,
   useVideoAppeals,
 } from "../../hooks/use-admin-video-moderation";
-import type { AdminVideoAppealItem } from "../../types/api";
 import { formatDate } from "../../lib/format";
+import type { AdminVideoAppealItem } from "../../types/api";
 
 // ─── Duration formatter ───────────────────────────────────────────────────────
 
@@ -334,8 +334,8 @@ export function VideoAppeals() {
             onPreview={() => setPreviewItem(item)}
             onApprove={() => approveAppeal.mutate(item.videoId)}
             onReject={() => setRejectFor(item.videoId)}
-            isApproving={approveAppeal.isPending && approveAppeal.variables === item.videoId}
-            isRejecting={rejectAppeal.isPending && rejectAppeal.variables?.videoId === item.videoId}
+            isApproving={approveAppeal.isPending ? approveAppeal.variables === item.videoId : null}
+            isRejecting={rejectAppeal.isPending ? rejectAppeal.variables?.videoId === item.videoId : null}
           />
         ))}
       </div>

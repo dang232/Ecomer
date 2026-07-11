@@ -1,8 +1,8 @@
 import { useRef, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
-import { VideoModeration } from "./VideoModeration";
 import { VideoAppeals } from "./VideoAppeals";
+import { VideoModeration } from "./VideoModeration";
 
 type SubTab = "queue" | "appeals";
 

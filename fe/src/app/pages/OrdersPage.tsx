@@ -7,8 +7,8 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
 import { ImageWithFallback } from "../components/image-with-fallback";
-import { Modal } from "../components/ui/modal";
 import { ConfirmDialog } from "../components/ui/confirm-dialog";
+import { Modal } from "../components/ui/modal";
 import { useAuth } from "../hooks/use-auth";
 import { useCart } from "../hooks/use-cart";
 import { useCancelOrder, myOrdersOptions } from "../hooks/use-orders";

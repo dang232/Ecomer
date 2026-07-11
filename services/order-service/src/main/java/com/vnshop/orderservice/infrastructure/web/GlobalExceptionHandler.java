@@ -6,6 +6,7 @@ import com.vnshop.orderservice.domain.InvoiceAccessDeniedException;
 import com.vnshop.orderservice.infrastructure.cart.CartUnavailableException;
 import com.vnshop.orderservice.infrastructure.product.ProductCatalogUnavailableException;
 import io.opentelemetry.api.trace.Span;
+import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -45,6 +46,21 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> badRequest(IllegalArgumentException ex) {
         return ResponseEntity.badRequest()
             .body(ErrorResponse.of("BAD_REQUEST", ex.getMessage(), traceId()));
+    }
+
+    @ExceptionHandler(NumberFormatException.class)
+    public ResponseEntity<ErrorResponse> numberFormatException(NumberFormatException ex) {
+        return ResponseEntity.badRequest()
+            .body(ErrorResponse.of("BAD_REQUEST", "Invalid numeric value: " + ex.getMessage(), traceId()));
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponse> constraintViolation(ConstraintViolationException ex) {
+        List<String> details = ex.getConstraintViolations().stream()
+            .map(v -> v.getPropertyPath() + ": " + v.getMessage())
+            .toList();
+        return ResponseEntity.badRequest()
+            .body(ErrorResponse.of("VALIDATION_ERROR", "Constraint violation", details, traceId()));
     }
 
     // --- 401 / 403 -------------------------------------------------------------

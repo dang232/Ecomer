@@ -1,8 +1,6 @@
-import { useId, useMemo } from "react";
 import type { CountryCode } from "libphonenumber-js";
+import { useId, useMemo } from "react";
 
-import { CountryDropdown } from "./CountryDropdown";
-import { FormField } from "./FormField";
 import {
   DEFAULT_COUNTRY,
   dialCodeForCountry,
@@ -13,6 +11,9 @@ import {
   parseOptionalPhone,
   type LivePhoneStatus,
 } from "../../lib/validation/phone";
+
+import { CountryDropdown } from "./CountryDropdown";
+import { FormField } from "./FormField";
 
 export interface CountryPhoneInputProps {
   /** Full E.164 value (e.g. "+84912345678") or empty string. */

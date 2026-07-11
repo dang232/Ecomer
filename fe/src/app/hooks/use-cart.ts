@@ -9,8 +9,9 @@ import {
   updateCartItem,
 } from "../lib/api/endpoints/cart";
 import { productById } from "../lib/api/endpoints/products";
-import type { Cart } from "../types/api";
-import type { ProductId } from "../types/api/branded-ids";
+import { fromServer, findVariant } from "../lib/api/product-mapper";
+import type { Cart, ProductDetail } from "../types/api";
+import type { ProductId, SellerId } from "../types/api/branded-ids";
 
 import { useAuth } from "./use-auth";
 
@@ -22,6 +23,7 @@ const EMPTY_CART: Cart = { items: [], itemCount: 0, totalAmount: 0 };
 interface GuestCartItem {
   productId: string;
   quantity: number;
+  variantId?: string;
 }
 
 function readGuestCart(): GuestCartItem[] {
@@ -38,9 +40,11 @@ function readGuestCart(): GuestCartItem[] {
           it !== null &&
           typeof (it as GuestCartItem).productId === "string" &&
           typeof (it as GuestCartItem).quantity === "number" &&
-          (it as GuestCartItem).quantity > 0,
+          (it as GuestCartItem).quantity > 0 &&
+          (typeof (it as GuestCartItem).variantId === "string" ||
+            (it as GuestCartItem).variantId === undefined),
       )
-      .map((it) => ({ productId: it.productId, quantity: it.quantity }));
+      .map((it) => ({ productId: it.productId, quantity: it.quantity, variantId: it.variantId }));
   } catch {
     return [];
   }
@@ -68,6 +72,7 @@ function guestItemsToCart(items: GuestCartItem[]): Cart {
       price: 0,
       quantity: it.quantity,
       sellerId: undefined,
+      variantId: it.variantId,
     })),
     itemCount: items.reduce((n, i) => n + i.quantity, 0),
     totalAmount: 0,
@@ -75,10 +80,10 @@ function guestItemsToCart(items: GuestCartItem[]): Cart {
 }
 
 /** Compute optimistic cart state for an "add" before the server has responded. */
-function optimisticAdd(cart: Cart | undefined, productId: string, quantity: number): Cart {
+function optimisticAdd(cart: Cart | undefined, productId: string, quantity: number, variantId?: string): Cart {
   const base = cart ?? EMPTY_CART;
   const items = [...(base.items ?? [])];
-  const existing = items.findIndex((i) => i.productId === productId);
+  const existing = items.findIndex((i) => i.productId === productId && i.variantId === variantId);
   if (existing >= 0) {
     items[existing] = { ...items[existing], quantity: items[existing].quantity + quantity };
   } else {
@@ -90,6 +95,7 @@ function optimisticAdd(cart: Cart | undefined, productId: string, quantity: numb
       price: 0,
       quantity,
       sellerId: undefined,
+      variantId,
     });
   }
   return recomputeTotals({ ...base, items });
@@ -148,43 +154,61 @@ export function useCart() {
   useEffect(() => {
     if (!ready || !authenticated) return;
     if (mergeAttempted.current) return;
+    // Gate on server cart being loaded — prevents race where localStorage is cleared
+    // before the query cache has the authoritative server state for dedup.
+    if (!query.isSuccess || !query.data) return;
     const pending = readGuestCart();
     if (pending.length === 0) return;
     mergeAttempted.current = true;
-    // Clear localStorage before the async loop so a page refresh mid-merge
-    // doesn't re-read the same guest items and double quantities.
-    writeGuestCart([]);
-    setGuestItems([]);
 
     const aborted = { current: false };
 
     void (async () => {
+      const failedItems: GuestCartItem[] = [];
       for (const item of pending) {
         if (aborted.current) break;
-        // Deduplication guard: if the server cart already has this item with
-        // at least the guest quantity, a previous merge attempt already added
-        // it — skip to avoid doubling on flaky connections.
-        const serverCart = qc.getQueryData<Cart>(CART_KEY);
-        const serverItem = serverCart?.items?.find((i) => i.productId === item.productId);
+        // Deduplication guard: dedupe against authoritative query.data (not getQueryData
+        // which may be stale during initial load).
+        const serverItem = query.data?.items?.find(
+          (i) => i.productId === item.productId && i.variantId === item.variantId,
+        );
         if (serverItem && serverItem.quantity >= item.quantity) continue;
+        // Runtime guard: warn if product has variants but guest cart lacks selection
+        if (item.variantId === undefined) {
+          console.warn(
+            `[cart] addCartItem called without variantId for product ${item.productId} — ` +
+              `variant selection may be lost on login migration`,
+          );
+        }
         try {
-          await addCartItem({ productId: item.productId, quantity: item.quantity });
+          await addCartItem({
+            productId: item.productId,
+            quantity: item.quantity,
+            variantId: item.variantId,
+          });
         } catch (err) {
           console.warn("cart merge: failed to add", item.productId, err);
+          failedItems.push(item);
         }
       }
-      if (!aborted.current) {
+      // Clear guest cart only after all items succeed — so failures can retry.
+      if (aborted.current) return;
+
+      // Keep failed lines in local storage so a later authenticated load can retry them.
+      writeGuestCart(failedItems);
+      setGuestItems(failedItems);
+      if (failedItems.length === 0) {
         void qc.invalidateQueries({ queryKey: CART_KEY });
       }
     })();
 
     return () => { aborted.current = true; };
-  }, [ready, authenticated, qc]);
+  }, [ready, authenticated, query.isSuccess, query.data, qc]);
 
   const addItem = useMutation<
     Cart,
     unknown,
-    { productId: string; quantity: number },
+    { productId: string; quantity: number; variantId?: string },
     { previous?: Cart }
   >({
     mutationFn: (input) => addCartItem(input),
@@ -193,7 +217,7 @@ export function useCart() {
       const previous = qc.getQueryData<Cart>(CART_KEY);
       if (query.isSuccess) {
         qc.setQueryData<Cart>(CART_KEY, (curr) =>
-          optimisticAdd(curr, input.productId, input.quantity),
+          optimisticAdd(curr, input.productId, input.quantity, input.variantId),
         );
       }
       return { previous };
@@ -259,34 +283,40 @@ export function useCart() {
   // Guest-mode mutations: localStorage-backed, no server round-trip.
   const isGuest = ready && !authenticated;
 
-  const guestAdd = (productId: string, quantity: number) => {
+  const guestAdd = (productId: string, quantity: number, variantId?: string) => {
     setGuestItems((prev) => {
-      const existing = prev.findIndex((i) => i.productId === productId);
+      const existing = prev.findIndex(
+        (i) => i.productId === productId && i.variantId === variantId,
+      );
       const next =
         existing >= 0
           ? prev.map((i, idx) =>
               idx === existing ? { ...i, quantity: i.quantity + quantity } : i,
             )
-          : [...prev, { productId, quantity }];
+          : [...prev, { productId, quantity, variantId }];
       writeGuestCart(next);
       return next;
     });
   };
 
-  const guestUpdate = (productId: string, quantity: number) => {
+  const guestUpdate = (productId: string, quantity: number, variantId?: string) => {
     setGuestItems((prev) => {
       const next =
         quantity <= 0
-          ? prev.filter((i) => i.productId !== productId)
-          : prev.map((i) => (i.productId === productId ? { ...i, quantity } : i));
+          ? prev.filter((i) => !(i.productId === productId && i.variantId === variantId))
+          : prev.map((i) =>
+              i.productId === productId && i.variantId === variantId
+                ? { ...i, quantity }
+                : i,
+            );
       writeGuestCart(next);
       return next;
     });
   };
 
-  const guestRemove = (productId: string) => {
+  const guestRemove = (productId: string, variantId?: string) => {
     setGuestItems((prev) => {
-      const next = prev.filter((i) => i.productId !== productId);
+      const next = prev.filter((i) => !(i.productId === productId && i.variantId === variantId));
       writeGuestCart(next);
       return next;
     });
@@ -300,35 +330,50 @@ export function useCart() {
   // For guest carts, fan-out product fetches to hydrate name/image/price.
   // `useQueries` runs in parallel; once all settle `isHydrating` becomes false.
   const productQueries = useQueries({
-    queries: isGuest
-      ? guestItems.map((item) => ({
-          queryKey: ["product", item.productId] as const,
-          queryFn: () => productById(item.productId),
-          staleTime: 5 * 60 * 1000,
-        }))
-      : [],
+    queries: guestItems.map(
+      (item) => ({
+        queryKey: ["product", item.productId] as const,
+        queryFn: () => productById(item.productId),
+        staleTime: 5 * 60 * 1000,
+        enabled: isGuest,
+      }),
+    ),
   });
 
   // Hydrating as long as any guest product fetch is still pending.
   const isHydrating = isGuest && guestItems.length > 0 && productQueries.some((q) => q.isPending);
 
   // Build a richer cart for guest mode by overlaying resolved product data.
+  // findVariant resolves the selected SKU so variant products render the
+  // correct price/image instead of always falling back to variants[0].
   const hydratedGuestCart: Cart | undefined = isGuest
     ? {
         ...guestItemsToCart(guestItems),
         items: guestItems.map((item, idx) => {
-          const product = productQueries[idx]?.data;
+          const raw = productQueries[idx]?.data;
+          if (!raw) {
+            return { productId: item.productId as ProductId, name: undefined, image: undefined, price: 0, quantity: item.quantity, sellerId: undefined, variantId: item.variantId };
+          }
+          const variant = findVariant(raw, item.variantId);
+          const mapped = fromServer(raw);
+          const price = (variant?.priceAmount) ?? mapped.price;
+          const image = (variant?.imageUrl) ?? mapped.image;
           return {
             productId: item.productId as ProductId,
-            name: product?.name,
-            image: product?.image,
-            price: product?.price ?? 0,
+            name: mapped.name,
+            image,
+            price,
+            originalPrice: mapped.originalPrice,
             quantity: item.quantity,
-            sellerId: product?.sellerId,
+            sellerId: mapped.sellerId as SellerId,
+            variantId: item.variantId,
           };
         }),
         totalAmount: guestItems.reduce((sum, item, idx) => {
-          const price = productQueries[idx]?.data?.price ?? 0;
+          const raw = productQueries[idx]?.data;
+          if (!raw) return sum;
+          const variant = findVariant(raw, item.variantId);
+          const price = (variant?.priceAmount) ?? fromServer(raw).price;
           return sum + price * item.quantity;
         }, 0),
       }
@@ -350,42 +395,52 @@ export function useCart() {
     isReady: isGuest ? true : query.isSuccess,
     error: isGuest ? null : query.error,
     addItem: (
-      input: { productId: string; quantity: number },
+      input: { productId: string; quantity: number; variantId?: string },
       options?: Parameters<typeof addItem.mutate>[1],
     ) => {
       if (isGuest) {
-        guestAdd(input.productId, input.quantity);
+        guestAdd(input.productId, input.quantity, input.variantId);
         return;
       }
       if (!query.isSuccess) return;
       return addItem.mutate(input, options);
     },
-    addItemAsync: async (input: { productId: string; quantity: number }) => {
+    addItemAsync: async (input: { productId: string; quantity: number; variantId?: string }) => {
       if (isGuest) {
-        guestAdd(input.productId, input.quantity);
+        guestAdd(input.productId, input.quantity, input.variantId);
         return;
       }
       if (!query.isSuccess) return;
       await addItem.mutateAsync(input);
     },
     updateItem: (
-      input: { productId: string; quantity: number },
+      input: { productId: string; quantity: number; variantId?: string },
       options?: Parameters<typeof updateItem.mutate>[1],
     ) => {
       if (isGuest) {
-        guestUpdate(input.productId, input.quantity);
+        guestUpdate(input.productId, input.quantity, input.variantId);
         return;
       }
       if (!query.isSuccess) return;
-      return updateItem.mutate(input, options);
+      // Cart service keys variant items as productId:variantId
+      const itemKey = input.variantId ? `${input.productId}:${input.variantId}` : input.productId;
+      return updateItem.mutate({ productId: itemKey, quantity: input.quantity }, options);
     },
-    removeItem: (productId: string, options?: Parameters<typeof removeItem.mutate>[1]) => {
+    removeItem: (input: string | { productId: string; variantId?: string }, options?: Parameters<typeof removeItem.mutate>[1]) => {
       if (isGuest) {
-        guestRemove(productId);
+        if (typeof input === "string") {
+          guestRemove(input);
+        } else {
+          guestRemove(input.productId, input.variantId);
+        }
         return;
       }
       if (!query.isSuccess) return;
-      return removeItem.mutate(productId, options);
+      // Cart service keys variant items as productId:variantId
+      const productId = typeof input === "string" ? input : input.productId;
+      const variantId = typeof input === "string" ? undefined : input.variantId;
+      const itemKey = variantId ? `${productId}:${variantId}` : productId;
+      return removeItem.mutate(itemKey, options);
     },
     clear: (options?: Parameters<typeof clear.mutate>[1]) => {
       if (isGuest) {

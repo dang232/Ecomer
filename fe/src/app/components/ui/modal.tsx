@@ -76,7 +76,7 @@ export function Modal({
   useEffect(() => {
     if (open) {
       if (externalTriggerRef) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- external React ref may be MutableRefObject or RefObject
+         
         (externalTriggerRef as React.MutableRefObject<Element | null>).current = document.activeElement;
       } else {
         fallbackTriggerRef.current = document.activeElement;

@@ -38,11 +38,46 @@ function flattenImages(p: ProductSummary | ProductDetail): string[] {
 }
 
 /**
+ * Extract unique colors and sizes from variant names.
+ * Naming pattern: "ProductName Color / Size" — last " / " part = size,
+ * second-to-last = color. E.g., "Áo Thun Đỏ / M" → color="Đỏ", size="M".
+ */
+function parseVariantAttributes(
+  variants: ProductSummary["variants"],
+): { colors: string[]; sizes: string[] } {
+  const colors = new Set<string>();
+  const sizes = new Set<string>();
+  for (const v of variants ?? []) {
+    const parts = (v.name ?? "").split(" / ").map((p) => p.trim());
+    if (parts.length >= 2) {
+      colors.add(parts[parts.length - 2]); // second-to-last = color
+      sizes.add(parts[parts.length - 1]); // last = size
+    }
+  }
+  return { colors: Array.from(colors), sizes: Array.from(sizes) };
+}
+
+/**
+ * Find a specific variant by its SKU within a product.
+ * Returns undefined if no SKU is provided or the variant isn't found.
+ * When no SKU is given the caller should use `fromServer` (falls back to variants[0]).
+ */
+export function findVariant(
+  p: ProductSummary | ProductDetail,
+  sku: string | undefined,
+): { sku?: string; name?: string; priceAmount?: number; imageUrl?: string } | undefined {
+  if (!sku) return undefined;
+  return p.variants?.find((v) => (v as { sku?: string }).sku === sku);
+}
+
+/**
  * Map a server product (summary or detail) into the UI Product shape.
  * Detail-only fields (description, colors, sizes, tags) collapse to their
  * defaults when called with a summary — no fields are silently dropped.
  * The BE returns prices on the first variant (`variants[0].priceAmount`)
  * and not always on a top-level `price`, so we fall through to that.
+ * Use {@link findVariant} to resolve the selected variant before calling
+ * `fromServer` when you need the price/image of a specific SKU.
  */
 export function fromServer(p: ProductSummary | ProductDetail): Product {
   const detail = p as Partial<ProductDetail>;
@@ -52,6 +87,8 @@ export function fromServer(p: ProductSummary | ProductDetail): Product {
   const images = flattenImages(p);
   const primaryImage = images[0] ?? firstVariant?.imageUrl ?? "";
   const stock = p.stock ?? firstVariant?.stockQuantity ?? 0;
+  // BE never sends colors/sizes — derive from variant names as fallback.
+  const parsedAttributes = p.variants?.length ? parseVariantAttributes(p.variants) : undefined;
   return {
     id: p.id,
     name: p.name,
@@ -70,8 +107,9 @@ export function fromServer(p: ProductSummary | ProductDetail): Product {
     sold: p.sold ?? 0,
     stock,
     description: detail.description ?? "",
-    colors: detail.colors,
-    sizes: detail.sizes,
+    colors: detail.colors ?? parsedAttributes?.colors, // BE value wins; parsed fallback if absent
+    sizes: detail.sizes ?? parsedAttributes?.sizes,    // same fallback logic
+    variants: p.variants,
     shipping: "Tiêu chuẩn",
     shippingFee: 0,
     location: "Việt Nam",

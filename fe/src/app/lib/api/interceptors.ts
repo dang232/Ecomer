@@ -290,7 +290,7 @@ export const retryInterceptor: ErrorInterceptor = async (err, ctx) => {
   if (attempts > MAX_ATTEMPTS) {
     recordTelemetry({
       correlationId: ctx.correlationId,
-      method: ctx.meta.method ?? (ctx.init.method as string | undefined) ?? "GET",
+      method: ctx.meta.method ?? (ctx.init.method) ?? "GET",
       path: safePathFromUrl(ctx.url, ctx.meta.path),
       status: err.status,
       durationMs: Date.now() - (ctx.meta.startedAt ?? Date.now()),
@@ -301,7 +301,7 @@ export const retryInterceptor: ErrorInterceptor = async (err, ctx) => {
     return undefined;
   }
 
-  const method = ctx.meta.method ?? (ctx.init.method as string | undefined) ?? "GET";
+  const method = ctx.meta.method ?? (ctx.init.method) ?? "GET";
   if (isUnsafeMutation(method, Boolean(ctx.meta.idempotencyKey))) return undefined;
 
   const signal = ctx.init.signal ?? undefined;
@@ -343,7 +343,7 @@ export const telemetryInterceptor: ResponseInterceptor = (ctx) => {
   const startedAt = ctx.request.meta.startedAt ?? Date.now();
   recordTelemetry({
     correlationId,
-    method: ctx.request.meta.method ?? (ctx.request.init.method as string | undefined) ?? "GET",
+    method: ctx.request.meta.method ?? (ctx.request.init.method) ?? "GET",
     path: safePathFromUrl(ctx.request.url, ctx.request.meta.path),
     status: ctx.response.status,
     durationMs: Date.now() - startedAt,

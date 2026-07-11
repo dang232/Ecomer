@@ -19,8 +19,8 @@ import {
   useVideoPreview,
   type VideoModerationQueueParams,
 } from "../../hooks/use-admin-video-moderation";
-import type { AdminVideoModerationQueueItem } from "../../types/api";
 import { formatDate } from "../../lib/format";
+import type { AdminVideoModerationQueueItem } from "../../types/api";
 
 // ─── NSFW score badge ─────────────────────────────────────────────────────────
 
@@ -476,8 +476,8 @@ export function VideoModeration() {
             onPreview={() => setPreviewId(item.videoId)}
             onApprove={() => handleApprove(item.videoId)}
             onReject={() => setRejectFor(item.videoId)}
-            isApproving={approve.isPending && approve.variables === item.videoId}
-            isRejecting={reject.isPending && reject.variables?.videoId === item.videoId}
+            isApproving={approve.isPending ? approve.variables === item.videoId : null}
+            isRejecting={reject.isPending ? reject.variables?.videoId === item.videoId : null}
           />
         ))}
       </div>

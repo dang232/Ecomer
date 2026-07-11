@@ -1,11 +1,11 @@
+import type { CountryCode } from "libphonenumber-js";
 import { Sparkles, Eye, EyeOff, ChevronRight } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useNavigate, useSearchParams } from "react-router";
-import type { CountryCode } from "libphonenumber-js";
 
-import { FormField } from "../components/form/FormField";
 import { CountryPhoneInput, DEFAULT_COUNTRY, parseOptionalPhone } from "../components/form/CountryPhoneInput";
+import { FormField } from "../components/form/FormField";
 import { useAuth } from "../hooks/use-auth";
 import { sanitizeRedirect } from "../lib/auth/sanitize-redirect";
 import { isValidEmail } from "../lib/validation/email";

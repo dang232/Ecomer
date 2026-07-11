@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 
 import { videoStatus } from "../../../app/lib/api/endpoints/videos";
 import type { VideoStatus } from "../../../app/types/api/video";
@@ -72,7 +72,7 @@ export function useVideoStatus(videoId: string | null, options: UseVideoStatusOp
   // Track how long we've been in a non-terminal state. Resets each time we
   // move to a new non-terminal status (e.g. UPLOADING → TRANSCODING).
   const [pollStartedAt, setPollStartedAt] = useState<number | null>(null);
-  const status = query.data?.status as VideoStatus | undefined;
+  const status = query.data?.status;
 
   useEffect(() => {
     if (enabled && !isTerminal(status) && pollStartedAt === null) {
@@ -90,7 +90,7 @@ export function useVideoStatus(videoId: string | null, options: UseVideoStatusOp
     status,
     data: query.data,
     isStuck,
-    error: query.error as Error | null,
+    error: query.error,
     isLoading: query.isLoading,
   };
 }

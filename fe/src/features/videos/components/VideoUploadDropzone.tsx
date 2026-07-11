@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
 import { Upload, X, FileVideo, AlertCircle, Loader2 } from "lucide-react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { VideoUploadState } from "../hooks/useVideoUpload";
@@ -112,8 +112,7 @@ export function VideoUploadDropzone({
             </p>
           </div>
 
-          {isError && (
-            <button
+          {isError ? <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
@@ -122,8 +121,7 @@ export function VideoUploadDropzone({
               className="mt-1 px-4 py-2 min-h-[44px] rounded-[var(--radius-md)] border border-border text-xs font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
             >
               {t("video.upload.dropzone.tryAgain")}
-            </button>
-          )}
+            </button> : null}
         </div>
 
         <input
@@ -167,23 +165,20 @@ export function VideoUploadDropzone({
           </p>
         </div>
         {/* Cancel button — only while actively uploading. P1-10: 44px touch target. */}
-        {isBusy && (
-          <button
+        {isBusy ? <button
             type="button"
             onClick={onCancel}
             aria-label={t("video.upload.dropzone.cancelAria")}
             className="min-h-[44px] min-w-[44px] rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-surface-elevated transition-colors shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
           >
             <X size={18} />
-          </button>
-        )}
+          </button> : null}
       </div>
 
       {/* Progress — P1-11: at 0% the bar would be invisible, so during
           initiating/validating show a spinner instead. Otherwise the bar
           still has min-width: 4px so it's never invisible. */}
-      {!isComplete && (
-        isPreUpload ? (
+      {!isComplete ? isPreUpload ? (
           <div
             className="h-1.5 w-full rounded-full bg-surface-elevated flex items-center justify-center"
             role="status"
@@ -206,15 +201,12 @@ export function VideoUploadDropzone({
               style={{ width: `${progress}%` }}
             />
           </div>
-        )
-      )}
+        ) : null}
 
       {/* Thumbnail preview once processing starts */}
-      {isComplete && uploadState.videoId && (
-        <p className="text-xs text-muted-foreground">
+      {isComplete && uploadState.videoId ? <p className="text-xs text-muted-foreground">
           {t("video.upload.dropzone.processingNote")}
-        </p>
-      )}
+        </p> : null}
     </div>
   );
 }

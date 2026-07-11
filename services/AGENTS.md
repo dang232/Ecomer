@@ -1,6 +1,6 @@
 # Backend Microservices (services/)
 
-**Stack:** Spring Boot 3.x (Java 25), NestJS (TypeScript), Python, Kafka, PostgreSQL, Redis
+**Stack:** Spring Boot 4.1.0 (Java 25), NestJS 11 (TypeScript), Python, Kafka, PostgreSQL, Redis
 
 ## SERVICE INVENTORY
 | Service | Stack | Port | Purpose |

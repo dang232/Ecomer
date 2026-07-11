@@ -25,7 +25,7 @@ interface User {
 interface VNShopContextType {
   // Cart actions still wired through here so the existing product cards keep working.
   cartCount: number;
-  addToCart: (product: Product, quantity?: number, variant?: { color?: string; size?: string }) => void;
+  addToCart: (product: Product, quantity?: number, variant?: { color?: string; size?: string; variantId?: string }) => void;
   // Wishlist — backed by /users/me/wishlist (user-service BE-8).
   wishlist: string[];
   toggleWishlist: (productId: string) => void;
@@ -71,10 +71,10 @@ export function VNShopProvider({ children }: { children: ReactNode }) {
   const cartCount = cart.itemCount;
 
   const addToCart = useCallback(
-    (product: Product, quantity = 1, variant?: { color?: string; size?: string }) => {
+    (product: Product, quantity = 1, variant?: { color?: string; size?: string; variantId?: string }) => {
       const variantDesc = [variant?.color, variant?.size].filter(Boolean).join(", ");
       cart.addItem(
-        { productId: product.id, quantity },
+        { productId: product.id, quantity, variantId: variant?.variantId },
         {
           onSuccess: () =>
             toast.success(

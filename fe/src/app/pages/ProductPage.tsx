@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { ShoppingCart, Zap, Heart, Star, Truck, Shield, RefreshCw, ChevronRight, ChevronLeft, MessageCircle, ThumbsUp, Share2, Play, X } from "lucide-react";
+import { ShoppingCart, Zap, Heart, Star, Truck, Shield, RefreshCw, ChevronRight, ChevronLeft, MessageCircle, ThumbsUp, Share2, Play, X, ZoomIn } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams, useNavigate, Navigate, Link } from "react-router";
 import { toast } from "sonner";
@@ -10,10 +10,12 @@ import { useProductVideos, VideoPlayer, ReviewVideoDisplay } from "../../feature
 import { VideoPlayerSkeleton } from "../../features/videos/components/VideoPlayer";
 import { usePageMeta } from "../../utils/meta-tags";
 import { ImageWithFallback } from "../components/image-with-fallback";
+import { RecentlyViewedGrid } from "../components/RecentlyViewedGrid";
 import { useVNShop } from "../components/vnshop-context";
 import { useAuth } from "../hooks/use-auth";
 import { useProductReviews } from "../hooks/use-product-reviews";
 import { productDetailOptions } from "../hooks/use-products";
+import { useRecentlyViewed } from "../hooks/use-recently-viewed";
 import { useFrequentlyBoughtTogether, useYouMayAlsoLike } from "../hooks/use-recommendations";
 import { useSellerDetail } from "../hooks/use-sellers";
 import { ApiError } from "../lib/api";
@@ -139,6 +141,21 @@ export function ProductPage() {
   const { authenticated, login } = useAuth();
   const qc = useQueryClient();
 
+  // Track recently viewed (localStorage only - cross-device requires BE in future sprint)
+  const { items: recentlyViewed, addToRecentlyViewed } = useRecentlyViewed();
+
+  // Add this product to recently viewed on mount
+  useEffect(() => {
+    if (product) {
+      addToRecentlyViewed(product.id, {
+        name: product.name,
+        image: product.images?.[0] ?? product.image ?? "",
+        price: product.price,
+        rating: product.rating,
+      });
+    }
+  }, [product, addToRecentlyViewed]);
+
   const liveReviewsQuery = useProductReviews(id);
 
   const liveQuestionsQuery = useQuery({
@@ -183,6 +200,8 @@ export function ProductPage() {
 
   const [imageIdx, setImageIdx] = useState(0);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [showLightbox, setShowLightbox] = useState(false);
   const [selectedColor, setSelectedColor] = useState(product.colors?.[0] ?? "");
   const [selectedSize, setSelectedSize] = useState(product.sizes?.[0] ?? "");
   const [quantity, setQuantity] = useState(1);
@@ -195,15 +214,38 @@ export function ProductPage() {
     image: product.images?.[0] ?? product.image,
   });
 
-  const variant = { color: selectedColor || undefined, size: selectedSize || undefined };
+  const variant = {
+    color: selectedColor || undefined,
+    size: selectedSize || undefined,
+    variantId: (() => {
+      if (!product.variants?.length) return undefined;
+      return (
+        product.variants.find((v) => {
+          const parts = (v.name ?? "").split(" / ").map((p) => p.trim());
+          return (
+            (!selectedColor || parts.includes(selectedColor)) &&
+            (!selectedSize || parts.includes(selectedSize))
+          );
+        })?.sku
+      );
+    })(),
+  };
+  const selectedVariant = product.variants?.find(
+    (v) => v.sku === variant.variantId,
+  );
   const handleAddToCart = () => addToCart(product, quantity, variant);
   const handleBuyNow = () => {
     addToCart(product, quantity, variant);
     void navigate("/checkout");
   };
 
-  const images = product.images && product.images.length > 0 ? product.images : [product.image];
-  const savings = product.originalPrice ? product.originalPrice - product.price : 0;
+  const variantImage = selectedVariant?.imageUrl;
+  const galleryImages = variantImage
+    ? [variantImage, ...(product.images ?? [])]
+    : (product.images ?? []);
+  const displayPrice = selectedVariant?.priceAmount ?? product.price;
+  const displayStock = selectedVariant?.stockQuantity ?? product.stock;
+  const savings = product.originalPrice ? product.originalPrice - displayPrice : 0;
 
   // ── Video-first gallery with discriminated union ──
   type GalleryItem =
@@ -218,7 +260,7 @@ export function ProductPage() {
       playbackUrl: v.playbackUrl ?? "",
       thumbnailUrl: v.thumbnailUrl ?? "",
     })),
-    ...images.map((url) => ({ type: "image" as const, url })),
+    ...galleryImages.map((url) => ({ type: "image" as const, url })),
   ];
 
   const currentItem = galleryItems[imageIdx] ?? galleryItems[0];
@@ -246,10 +288,12 @@ export function ProductPage() {
                       e.preventDefault();
                       setImageIdx((i) => (i - 1 + galleryItems.length) % galleryItems.length);
                       setIsVideoPlaying(false);
+                      setIsZoomed(false);
                     } else if (e.key === "ArrowRight") {
                       e.preventDefault();
                       setImageIdx((i) => (i + 1) % galleryItems.length);
                       setIsVideoPlaying(false);
+                      setIsZoomed(false);
                     }
                   }
                 : undefined
@@ -291,11 +335,15 @@ export function ProductPage() {
               <AnimatePresence mode="wait">
                 <motion.div
                   key={imageIdx}
-                  className="w-full h-full transition-transform duration-300 group-hover:scale-105"
+                  className={[
+                    "w-full h-full",
+                    isZoomed ? "cursor-zoom-out" : "cursor-zoom-in",
+                  ].join(" ")}
                   initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
+                  animate={{ opacity: 1, x: 0, scale: isZoomed ? 1.5 : 1 }}
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.25 }}
+                  onClick={() => setIsZoomed(!isZoomed)}
                 >
                   <ImageWithFallback
                     src={currentItem.url}
@@ -309,14 +357,14 @@ export function ProductPage() {
             {galleryItems.length > 1 ? (
               <>
                 <button
-                  onClick={() => { setImageIdx((i) => (i - 1 + galleryItems.length) % galleryItems.length); setIsVideoPlaying(false); }}
+                  onClick={() => { setImageIdx((i) => (i - 1 + galleryItems.length) % galleryItems.length); setIsVideoPlaying(false); setIsZoomed(false); }}
                   aria-label="Previous"
                   className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 shadow-md flex items-center justify-center hover:bg-card transition-colors"
                 >
                   <ChevronLeft size={18} className="text-foreground" />
                 </button>
                 <button
-                  onClick={() => { setImageIdx((i) => (i + 1) % galleryItems.length); setIsVideoPlaying(false); }}
+                  onClick={() => { setImageIdx((i) => (i + 1) % galleryItems.length); setIsVideoPlaying(false); setIsZoomed(false); }}
                   aria-label="Next"
                   className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 shadow-md flex items-center justify-center hover:bg-card transition-colors"
                 >
@@ -346,6 +394,15 @@ export function ProductPage() {
                       : t("product.badge.hot")}
               </span>
             ) : null}
+
+            {/* Zoom lightbox button */}
+            {currentItem?.type === "image" ? <button
+                onClick={() => setShowLightbox(true)}
+                aria-label="Open zoomed view"
+                className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/80 shadow-md flex items-center justify-center hover:bg-card transition-colors"
+              >
+                <ZoomIn size={18} className="text-foreground" />
+              </button> : null}
           </div>
 
           {/* Thumbnail strip */}
@@ -353,7 +410,7 @@ export function ProductPage() {
             {galleryItems.map((item, i) => (
               <button
                 key={i}
-                onClick={() => { setImageIdx(i); setIsVideoPlaying(false); }}
+                onClick={() => { setImageIdx(i); setIsVideoPlaying(false); setIsZoomed(false); }}
                 aria-label={item.type === "video" ? `${t("video.gallery.playOverlay")} ${i + 1}` : `View image ${i + 1}`}
                 className={[
                   "relative shrink-0 w-[72px] h-[72px] rounded-[var(--radius-md)] bg-surface-elevated border-2 overflow-hidden transition-all duration-150",
@@ -367,20 +424,78 @@ export function ProductPage() {
                   alt=""
                   className="w-full h-full object-cover"
                 />
-                {item.type === "video" && (
-                  <>
+                {item.type === "video" ? <>
                     <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                       <Play size={18} className="text-white" aria-hidden="true" />
                     </div>
                     <span className="absolute top-1 right-1 px-1.5 py-0.5 rounded bg-black/70 text-[9px] font-bold uppercase tracking-wider text-white">
                       Video
                     </span>
-                  </>
-                )}
+                  </> : null}
               </button>
             ))}
           </div>
+
+          {/* Dot indicators */}
+          {galleryItems.length > 1 ? <div className="flex justify-center gap-2 pt-2" role="tablist" aria-label="Gallery navigation">
+              {galleryItems.map((_, i) => (
+                <button
+                  key={i}
+                  role="tab"
+                  aria-selected={i === imageIdx}
+                  aria-label={`Go to image ${i + 1}`}
+                  onClick={() => { setImageIdx(i); setIsVideoPlaying(false); setIsZoomed(false); }}
+                  className={[
+                    "w-2.5 h-2.5 rounded-full transition-all duration-200",
+                    i === imageIdx
+                      ? "bg-primary scale-110"
+                      : "bg-border hover:bg-primary/50",
+                  ].join(" ")}
+                />
+              ))}
+            </div> : null}
         </div>
+
+        {/* Zoom lightbox */}
+        <AnimatePresence>
+          {showLightbox && currentItem?.type === "image" ? <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center"
+              onClick={() => setShowLightbox(false)}
+            >
+              <button
+                className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+                onClick={() => setShowLightbox(false)}
+                aria-label="Close zoomed view"
+              >
+                <X size={24} className="text-white" />
+              </button>
+              {galleryItems.length > 1 ? <>
+                  <button
+                    className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+                    onClick={(e) => { e.stopPropagation(); setImageIdx((i) => (i - 1 + galleryItems.length) % galleryItems.length); setIsZoomed(false); }}
+                    aria-label="Previous"
+                  >
+                    <ChevronLeft size={24} className="text-white" />
+                  </button>
+                  <button
+                    className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+                    onClick={(e) => { e.stopPropagation(); setImageIdx((i) => (i + 1) % galleryItems.length); setIsZoomed(false); }}
+                    aria-label="Next"
+                  >
+                    <ChevronRight size={24} className="text-white" />
+                  </button>
+                </> : null}
+              <ImageWithFallback
+                src={currentItem.url}
+                alt={product.name}
+                className="max-w-[90vw] max-h-[90vh] object-contain"
+                onClick={(e) => e.stopPropagation()}
+              />
+            </motion.div> : null}
+        </AnimatePresence>
 
         {/* ── B. Right Column — Product Info ── */}
         <div className="space-y-5">
@@ -419,7 +534,7 @@ export function ProductPage() {
           {/* Price block */}
           <div className="flex items-end gap-2 flex-wrap">
             <span className="text-3xl font-bold text-primary">
-              {formatPrice(product.price)}
+              {formatPrice(displayPrice)}
             </span>
             {product.originalPrice ? (
               <span className="text-lg line-through text-muted-foreground ml-3">
@@ -514,28 +629,33 @@ export function ProductPage() {
                 </button>
                 <span className="w-12 text-center font-medium text-foreground">{quantity}</span>
                 <button
-                  onClick={() => setQuantity((q) => Math.min(product.stock, q + 1))}
+                  onClick={() => setQuantity((q) => Math.min(displayStock, q + 1))}
                   aria-label="Increase quantity"
                   className="w-10 h-10 text-muted-foreground hover:bg-surface-elevated flex items-center justify-center font-bold transition-colors"
                 >
                   +
                 </button>
               </div>
-              <span className="text-xs text-muted-foreground">
-                {t("product.stockAvailable", { count: product.stock })}
-              </span>
+              {displayStock > 0 ? (
+                <span className="text-xs text-muted-foreground">
+                  {t("product.stockAvailable", { count: displayStock })}
+                </span>
+              ) : (
+                <span className="text-sm font-medium text-red-500">Hết hàng</span>
+              )}
             </div>
           </div>
 
           {/* Action buttons */}
-          <div className="flex gap-3 items-center">
-            <button
-              onClick={handleAddToCart}
-              className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-primary text-white font-bold rounded-[var(--radius-lg)] hover:opacity-90 transition-opacity"
-            >
-              <ShoppingCart size={18} />
-              {t("product.addToCart")}
-            </button>
+          {displayStock > 0 ? (
+            <div className="flex gap-3 items-center">
+              <button
+                onClick={handleAddToCart}
+                className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-primary text-white font-bold rounded-[var(--radius-lg)] hover:opacity-90 transition-opacity"
+              >
+                <ShoppingCart size={18} />
+                {t("product.addToCart")}
+              </button>
             <button
               onClick={handleBuyNow}
               className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-accent text-white font-bold rounded-[var(--radius-lg)] hover:opacity-90 transition-opacity"
@@ -569,6 +689,16 @@ export function ProductPage() {
               <Share2 size={20} />
             </button>
           </div>
+          ) : (
+            <button
+              type="button"
+              disabled
+              className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-muted text-muted-foreground font-bold rounded-[var(--radius-lg)] cursor-not-allowed"
+            >
+              <ShoppingCart size={18} />
+              Hết hàng
+            </button>
+          )}
 
           {/* Trust row */}
           <div className="flex gap-4 flex-wrap">
@@ -628,8 +758,7 @@ export function ProductPage() {
                     : t("product.tabs.qa")}
             </button>
           ))}
-          {productVideos.length > 0 && (
-            <button
+          {productVideos.length > 0 ? <button
               id="product-tab-videos"
               role="tab"
               aria-selected={activeTab === "videos"}
@@ -643,8 +772,7 @@ export function ProductPage() {
               ].join(" ")}
             >
               {t("video.tab.title")} ({productVideos.length})
-            </button>
-          )}
+            </button> : null}
         </div>
 
         <div role="tabpanel" aria-labelledby={`product-tab-${activeTab}`} aria-live="polite">
@@ -937,8 +1065,7 @@ export function ProductPage() {
             </div>
           ) : null}
 
-          {activeTab === "videos" && (
-            <div
+          {activeTab === "videos" ? <div
               className="grid grid-cols-1 sm:grid-cols-2 gap-4"
               aria-busy={isProductVideosLoading}
               aria-live="polite"
@@ -978,8 +1105,7 @@ export function ProductPage() {
                   {t("video.tab.empty")}
                 </p>
               )}
-            </div>
-          )}
+            </div> : null}
         </div>
       </div>
 
@@ -997,6 +1123,14 @@ export function ProductPage() {
           title={t("product.youMayAlsoLike")}
           items={ymalQuery.data}
           onSelect={(productId) => navigate(`/product/${productId}`)}
+        />
+      ) : null}
+
+      {/* Recently Viewed - localStorage only, cross-device requires BE in future sprint */}
+      {recentlyViewed.length > 0 ? (
+        <RecentlyViewedGrid
+          title={t("product.recentlyViewed", { defaultValue: "Recently Viewed" })}
+          items={recentlyViewed.filter(item => item.productId !== id).slice(0, 5)}
         />
       ) : null}
     </div>

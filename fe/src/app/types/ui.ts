@@ -31,6 +31,14 @@ export interface Product {
   badge?: "flash" | "new" | "bestseller" | "hot";
   colors?: string[];
   sizes?: string[];
+  variants?: {
+    sku?: string;
+    name?: string;
+    priceAmount?: number;
+    priceCurrency?: string;
+    imageUrl?: string;
+    stockQuantity?: number;
+  }[];
   shipping: string;
   shippingFee: number;
   location: string;

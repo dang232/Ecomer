@@ -216,6 +216,7 @@
       "qa": "Hỏi & Đáp",
       "specs": "Thông số"
     },
+    "recentlyViewed": "Đã xem gần đây",
     "info": {
       "category": "Danh mục",
       "origin": "Xuất xứ",
@@ -313,6 +314,7 @@
       "trending": "Xu hướng tìm kiếm sẽ hiển thị tại đây.",
       "sellers": "Shop uy tín sẽ được giới thiệu tại đây."
     },
+    "recentlyViewed": "Đã xem gần đây",
     "sellersSection": {
       "title": "Shop Nổi Bật",
       "subtitle": "Người bán được xác minh trên VNShop",
@@ -1087,7 +1089,8 @@
       "removeVideo": "Xoá video",
       "removeVideoTitle": "Xoá video này?",
       "removeVideoDescription": "Video này sẽ bị xoá vĩnh viễn. Hành động này không thể hoàn tác.",
-      "videoCreateHint": "Lưu sản phẩm trước, sau đó thêm video từ màn hình chỉnh sửa."
+      "videoCreateHint": "Lưu sản phẩm trước, sau đó thêm video từ màn hình chỉnh sửa.",
+      "variantsLabel": "Phân loại"
     }
   },
   "profile": {

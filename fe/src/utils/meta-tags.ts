@@ -17,8 +17,8 @@ export function usePageMeta(meta: PageMeta) {
     document.title = meta.title ? `${meta.title} | VNShop` : 'VNShop';
 
     const setMeta = (property: string, content: string) => {
-      let el = document.querySelector(`meta[property="${property}"]`) as HTMLMetaElement | null
-        ?? document.querySelector(`meta[name="${property}"]`) as HTMLMetaElement | null;
+      let el = document.querySelector(`meta[property="${property}"]`)
+        ?? document.querySelector(`meta[name="${property}"]`);
       if (!el) {
         el = document.createElement('meta');
         if (property.startsWith('og:')) {

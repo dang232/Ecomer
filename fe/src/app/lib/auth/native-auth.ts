@@ -166,13 +166,18 @@ export async function passwordLogin(username: string, password: string): Promise
 
 export async function refreshTokens(): Promise<TokenSet> {
   if (inFlightRefresh) return inFlightRefresh;
-  inFlightRefresh = (async () => {
+  const pending = (async () => {
     const res = await postAuth(REFRESH_ENDPOINT, undefined, csrfAuthHeader());
     return readEnvelope(res, "refresh_failed");
-  })().finally(() => {
-    inFlightRefresh = null;
+  })();
+  inFlightRefresh = pending;
+  // Clear the cache after consumers have had a chance to read it, so a
+  // second concurrent call (e.g. React StrictMode double-invoke) doesn't
+  // block on a stale null reference. The resolved value stays with callers.
+  void pending.finally(() => {
+    if (inFlightRefresh === pending) inFlightRefresh = null;
   });
-  return inFlightRefresh;
+  return pending;
 }
 
 export async function revokeTokens(): Promise<void> {

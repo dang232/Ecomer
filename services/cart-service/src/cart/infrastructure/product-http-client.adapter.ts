@@ -1,4 +1,5 @@
 import { ProductNotFoundException } from '../domain/product-not-found.exception';
+import { VariantNotFoundException } from '../domain/variant-not-found.exception';
 import { Money } from '../domain/money';
 import type { ProductClientPort } from '../application/product-client.port';
 import type { ProductSnapshot } from '../application/product-snapshot';
@@ -39,11 +40,23 @@ interface ProductServiceResponse {
   images?: ProductServiceImage[];
 }
 
-function pickPrice(product: ProductServiceResponse): {
-  amount: number;
-  currency: string;
-} {
-  // 1. Flat top-level price (legacy or future read-model shape).
+function pickPrice(
+  product: ProductServiceResponse,
+  variantId?: string | null,
+): { amount: number; currency: string } {
+  // 1. Specific variant by ID — throw if explicitly requested but not found.
+  if (variantId && product.variants) {
+    const matched = product.variants.find((v) => v.sku === variantId);
+    if (matched) {
+      if (typeof matched.priceAmount === 'number') {
+        return { amount: matched.priceAmount, currency: matched.priceCurrency ?? 'VND' };
+      }
+      return { amount: 0, currency: matched.priceCurrency ?? 'VND' };
+    }
+    // variantId provided but not found — reject, don't silently fall back.
+    throw new VariantNotFoundException(product.productId ?? product.id ?? '(unknown)', variantId);
+  }
+  // 2. Flat top-level price (legacy or future read-model shape).
   const flat = product.unitPrice ?? product.price;
   if (typeof flat === 'number') {
     return { amount: flat, currency: product.currency ?? 'VND' };
@@ -54,21 +67,29 @@ function pickPrice(product: ProductServiceResponse): {
       currency: flat.currency ?? product.currency ?? 'VND',
     };
   }
-  // 2. First variant — this is what product-service actually returns today.
+  // 3. First variant fallback (no explicit variantId requested).
   const variant = product.variants?.[0];
   if (variant && typeof variant.priceAmount === 'number') {
-    return {
-      amount: variant.priceAmount,
-      currency: variant.priceCurrency ?? 'VND',
-    };
+    return { amount: variant.priceAmount, currency: variant.priceCurrency ?? 'VND' };
   }
   return { amount: 0, currency: product.currency ?? 'VND' };
 }
 
-function pickImage(product: ProductServiceResponse): string {
+function pickImage(product: ProductServiceResponse, variantId?: string | null): string {
+  // 1. Variant-specific image by ID — throw only if variant is explicitly wrong.
+  if (variantId && product.variants) {
+    const matched = product.variants.find((v) => v.sku === variantId);
+    if (matched?.imageUrl) return matched.imageUrl;
+    // Variant exists but has no image — fall back to product-level images below.
+    // Only throw if the variantId doesn't exist at all.
+    if (!matched) {
+      throw new VariantNotFoundException(product.productId ?? product.id ?? '(unknown)', variantId);
+    }
+  }
+  // 2. Top-level legacy fields.
   if (product.productImage) return product.productImage;
   if (product.image) return product.image;
-  // product-service surfaces images[] (sortOrder ascending) and variants[].imageUrl.
+  // 3. First image in sorted array.
   const sorted = (product.images ?? [])
     .slice()
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
@@ -114,7 +135,7 @@ export class ProductHttpClientAdapter implements ProductClientPort {
     return 'data' in payload ? payload.data : payload;
   }
 
-  async getSnapshot(productId: string): Promise<ProductSnapshot> {
+  async getSnapshot(productId: string, variantId?: string | null): Promise<ProductSnapshot> {
     if (!this.productServiceUrl) {
       return {
         productId,
@@ -126,20 +147,25 @@ export class ProductHttpClientAdapter implements ProductClientPort {
 
     try {
       const product = (await this.circuitBreaker.fire(productId)) as ProductServiceResponse;
-      const { amount, currency } = pickPrice(product);
+      const { amount, currency } = pickPrice(product, variantId);
 
       return {
         productId: product.productId ?? product.id ?? productId,
         productName: product.productName ?? product.name ?? productId,
-        productImage: pickImage(product),
+        productImage: pickImage(product, variantId),
         unitPrice: Money.of(amount, currency),
       };
     } catch (error) {
-      // Re-throw ProductNotFoundException so callers can handle 404s properly
-      if (error instanceof ProductNotFoundException) {
+      // Re-throw domain/validation exceptions — these indicate a bad request,
+      // not an infrastructure outage. Let callers handle them explicitly.
+      if (
+        error instanceof VariantNotFoundException ||
+        error instanceof ProductNotFoundException
+      ) {
         throw error;
       }
-      // Circuit breaker open or other failure - return fallback
+      // Circuit breaker open or other infrastructure failure — return degraded
+      // fallback so the cart stays accessible even when product-service is down.
       return {
         productId,
         productName: productId,

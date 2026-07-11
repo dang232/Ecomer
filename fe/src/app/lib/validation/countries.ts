@@ -40,7 +40,7 @@ const isoToFlag = (code: string): string => {
 };
 
 /** Get every supported country with metadata. */
-export const listAllCountries = (locale: string = "en"): CountryOption[] => {
+export const listAllCountries = (locale = "en"): CountryOption[] => {
   const codes = getCountries();
   const displayNames =
     typeof Intl.DisplayNames === "function"
@@ -61,7 +61,7 @@ export const listAllCountries = (locale: string = "en"): CountryOption[] => {
  * the user with a random country at the top of a 245-item list.
  */
 export const sortedCountriesForPicker = (
-  locale: string = "en",
+  locale = "en",
 ): CountryOption[] => {
   const all = listAllCountries(locale);
   const primary = all.filter((c) => c.code === "VN");
