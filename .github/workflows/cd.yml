@@ -18,10 +18,22 @@ jobs:
       services: ${{ steps.filter.outputs.changes }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 2
+
+      - name: Resolve comparison base
+        id: comparison-base
+        env:
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          BASE_SHA=$(git rev-parse "${HEAD_SHA}^1")
+          echo "sha=${BASE_SHA}" >> "$GITHUB_OUTPUT"
+
       - uses: dorny/paths-filter@v3
         id: filter
         with:
-          base: ${{ github.event.workflow_run.head_sha }}~1
+          base: ${{ steps.comparison-base.outputs.sha }}
           ref: ${{ github.event.workflow_run.head_sha }}
           filters: |
             api-gateway:
