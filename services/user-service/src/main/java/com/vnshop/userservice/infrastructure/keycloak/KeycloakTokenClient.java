@@ -77,6 +77,27 @@ public class KeycloakTokenClient {
         }
     }
 
+    /**
+     * Exchanges an authorization code for tokens using the authorization_code grant.
+     * Used for OAuth/OIDC identity provider callbacks via Keycloak broker.
+     *
+     * @param code the authorization code from the callback
+     * @param codeVerifier the PKCE code verifier (for S256 challenge)
+     * @param redirectUri the redirect URI used in the original auth request
+     * @return TokenSet with access and refresh tokens
+     */
+    public TokenSet authorizationCodeGrant(String code, String codeVerifier, String redirectUri) {
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("grant_type", "authorization_code");
+        form.add("client_id", clientId);
+        form.add("code", code);
+        form.add("redirect_uri", redirectUri);
+        if (codeVerifier != null && !codeVerifier.isBlank()) {
+            form.add("code_verifier", codeVerifier);
+        }
+        return tokenRequest(form, "oauth_exchange_failed");
+    }
+
     private TokenSet tokenRequest(MultiValueMap<String, String> form, String errorCodeOnFailure) {
         try {
             String body = http.post()

@@ -55,6 +55,8 @@ vnshop:
     # double-submit check in CsrfProtectionFilter for defence-in-depth.
     cookie-secure: ${VNSHOP_AUTH_COOKIE_SECURE:false}
     cookie-same-site: ${VNSHOP_AUTH_COOKIE_SAME_SITE:Strict}
+    # OAuth callback base URL for social login
+    callback-base-url: ${VNSHOP_AUTH_CALLBACK_BASE_URL:http://localhost:8081/auth/oauth/callback}
   product-service:
     uri: ${PRODUCT_SERVICE_URI:http://product-service:8082}
     connect-timeout-ms: ${PRODUCT_SERVICE_CONNECT_TIMEOUT_MS:1000}
