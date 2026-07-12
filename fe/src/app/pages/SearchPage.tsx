@@ -135,9 +135,11 @@ export function SearchPage() {
     return v ? Number(v) : 0;
   });
   const [freeShipOnly, setFreeShipOnly] = useState(() => searchParams.get("freeShip") === "true");
-  const [sameDay, setSameDay] = useState(false);
-  const [verifiedOnly, setVerifiedOnly] = useState(false);
-  const [officialOnly, setOfficialOnly] = useState(false);
+  // NOTE: sameDay/verifiedOnly/officialOnly are initialized from URL but are only
+  // applied client-side — the backend does not yet support these filters.
+  const [sameDay, setSameDay] = useState(() => searchParams.get("sameDay") === "true");
+  const [verifiedOnly, setVerifiedOnly] = useState(() => searchParams.get("verifiedOnly") === "true");
+  const [officialOnly, setOfficialOnly] = useState(() => searchParams.get("officialOnly") === "true");
   const [selectedBrand, setSelectedBrand] = useState(() => searchParams.get("brand") ?? "");
 
   // Sync filter state to URL params so deep-links and browser back work correctly.
@@ -147,11 +149,14 @@ export function SearchPage() {
       if (minRating > 0) p.set("minRating", String(minRating)); else p.delete("minRating");
       if (freeShipOnly) p.set("freeShip", "true"); else p.delete("freeShip");
       if (selectedBrand) p.set("brand", selectedBrand); else p.delete("brand");
+      if (sameDay) p.set("sameDay", "true"); else p.delete("sameDay");
+      if (verifiedOnly) p.set("verifiedOnly", "true"); else p.delete("verifiedOnly");
+      if (officialOnly) p.set("officialOnly", "true"); else p.delete("officialOnly");
       // Only update if actually different to avoid infinite loop
       if (p.toString() === prev.toString()) return prev;
       return p;
     }, { replace: true });
-  }, [minRating, freeShipOnly, selectedBrand, setSearchParams]);
+  }, [minRating, freeShipOnly, selectedBrand, sameDay, verifiedOnly, officialOnly, setSearchParams]);
 
   // Current page for pagination
   const filterSignature = `${query}|${selectedCat}|${selectedBrand}|${priceMin}|${priceMax}|${minRating}|${freeShipOnly}|${sameDay}|${verifiedOnly}|${officialOnly}|${sortBy}|${isFlash}`;
@@ -197,6 +202,7 @@ export function SearchPage() {
   };
 
   const searchEnabled = !!(query || selectedBrand);
+  // Spring Pageable is 0-based; currentPage is 1-based.
   const search = useSearch(
     {
       q: query || undefined,
@@ -205,11 +211,8 @@ export function SearchPage() {
       minPrice: priceMin ? Number(priceMin) * 1000 : undefined,
       maxPrice: priceMax ? Number(priceMax) * 1000 : undefined,
       sort: sortBy === "popular" ? undefined : sortBy,
+      page: currentPage - 1,
       size: pageSize,
-      // P1: sameDay / verifiedOnly / officialOnly were set but never sent to the backend
-      ...(sameDay ? { sameDay: true } : {}),
-      ...(verifiedOnly ? { verifiedOnly: true } : {}),
-      ...(officialOnly ? { officialOnly: true } : {}),
     },
     searchEnabled,
   );
@@ -248,10 +251,14 @@ export function SearchPage() {
     if (priceMax) list = list.filter((p) => p.price <= Number(priceMax) * 1000);
     if (minRating > 0) list = list.filter((p) => p.rating >= minRating);
     if (freeShipOnly) list = list.filter((p) => p.shippingFee === 0);
-    // P1: sameDay / verifiedOnly / officialOnly filters were set but never applied
-    if (sameDay) list = list.filter((p) => p.sameDayDelivery);
-    if (verifiedOnly) list = list.filter((p) => p.verified);
-    if (officialOnly) list = list.filter((p) => p.isOfficial);
+    // NOTE: sameDay / verifiedOnly / officialOnly are gated behind !usedBackend.
+    // The backend does not yet support these filters, so applying them to backend
+    // results would collapse all items (those fields are always undefined from the BE).
+    if (!usedBackend) {
+      if (sameDay) list = list.filter((p) => p.sameDayDelivery);
+      if (verifiedOnly) list = list.filter((p) => p.verified);
+      if (officialOnly) list = list.filter((p) => p.isOfficial);
+    }
     switch (sortBy) {
       case "price-low":
         list.sort((a, b) => a.price - b.price);
@@ -285,10 +292,12 @@ export function SearchPage() {
     isFlash,
   ]);
 
+  // Backend handles its own pagination; only slice locally for the fallback catalog.
   const totalCount = usedBackend ? search.totalElements : filtered.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
-  const startIdx = (currentPage - 1) * pageSize;
-  const paginated = filtered.slice(startIdx, startIdx + pageSize);
+  const paginated = usedBackend
+    ? filtered
+    : filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const clearFilters = () => {
     setMinRating(0);
@@ -576,8 +585,8 @@ export function SearchPage() {
                 ) : (
                   <span>
                     {t("search.showingRange", {
-                      start: startIdx + 1,
-                      end: Math.min(startIdx + pageSize, filtered.length),
+                      start: (currentPage - 1) * pageSize + 1,
+                      end: Math.min(currentPage * pageSize, filtered.length),
                       total: totalCount,
                       query,
                       defaultValue: "Showing {{start}}–{{end}} of {{total}} results for '{{query}}'",

@@ -30,7 +30,10 @@ export function Root() {
   const isAdminRoute = location.pathname.startsWith("/admin");
   const isSellerRoute = location.pathname.startsWith("/seller");
   const isConsoleRoute = isAdminRoute || isSellerRoute;
-  const isAuthRoute = location.pathname === "/login" || location.pathname === "/register";
+  const isAuthRoute =
+    location.pathname === "/login" ||
+    location.pathname === "/register" ||
+    location.pathname === "/password-reset";
 
   return (
     <div className="min-h-screen flex flex-col bg-background">

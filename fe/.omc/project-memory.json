@@ -52,7 +52,7 @@
     "runtime": null
   },
   "build": {
-    "buildCommand": "cd \"C:/Users/dangq/OneDrive/Documents/GitHub/Full-Stack-E-commerce/fe\" && npx tsc -b --noEmit 2>&1 | head -30",
+    "buildCommand": "cd \"C:/Users/dangq/OneDrive/Documents/GitHub/Full-Stack-E-commerce/fe\" && npx tsc -b --noEmit 2>&1 | head -20",
     "testCommand": "cd \"C:\\Users\\dangq\\OneDrive\\Documents\\GitHub\\Full-Stack-E-commerce\\fe\" && pnpm test 2>&1 | tail -15",
     "lintCommand": "pnpm lint",
     "devCommand": "pnpm dev",
@@ -229,15 +229,15 @@
       "type": "file"
     },
     {
-      "path": "src\\app\\pages\\ProductPage.tsx",
-      "accessCount": 12,
-      "lastAccessed": 1783837480929,
+      "path": "src\\app\\pages\\SearchPage.tsx",
+      "accessCount": 15,
+      "lastAccessed": 1783853880458,
       "type": "file"
     },
     {
-      "path": "src\\app\\pages\\SearchPage.tsx",
-      "accessCount": 11,
-      "lastAccessed": 1783838151988,
+      "path": "src\\app\\pages\\ProductPage.tsx",
+      "accessCount": 12,
+      "lastAccessed": 1783837480929,
       "type": "file"
     },
     {
@@ -295,6 +295,18 @@
       "type": "file"
     },
     {
+      "path": "src\\app\\hooks\\use-search.ts",
+      "accessCount": 3,
+      "lastAccessed": 1783852363671,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\pages\\PasswordResetPage.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1783852430559,
+      "type": "file"
+    },
+    {
       "path": "src\\app\\lib\\auth\\native-auth.ts",
       "accessCount": 2,
       "lastAccessed": 1783757548621,
@@ -329,6 +341,12 @@
       "accessCount": 2,
       "lastAccessed": 1783837183251,
       "type": "file"
+    },
+    {
+      "path": "src\\app\\lib\\i18n\\en.json",
+      "accessCount": 2,
+      "lastAccessed": 1783852335882,
+      "type": "directory"
     },
     {
       "path": "src\\app\\lib\\api\\endpoints\\products.ts",
@@ -395,6 +413,24 @@
       "accessCount": 1,
       "lastAccessed": 1783838229734,
       "type": "directory"
+    },
+    {
+      "path": "src\\app\\pages\\Root.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1783852337738,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\lib\\api\\endpoints\\search.ts",
+      "accessCount": 1,
+      "lastAccessed": 1783852379287,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\lib\\image-url.ts",
+      "accessCount": 1,
+      "lastAccessed": 1783852386305,
+      "type": "file"
     }
   ],
   "userDirectives": []

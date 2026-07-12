@@ -26,9 +26,9 @@ const PRESETS: Record<ImagePreset, PresetConfig> = {
 type CdnMode = "imgproxy" | "cloudflare" | "none";
 
 const CDN_MODE: CdnMode =
-  (import.meta.env.VITE_IMAGE_CDN_MODE as CdnMode) || "none";
+  (import.meta.env.VITE_IMAGE_CDN_MODE as CdnMode | undefined) ?? "none";
 const IMGPROXY_URL: string =
-  import.meta.env.VITE_IMGPROXY_URL || "http://localhost:8081";
+  (import.meta.env.VITE_IMGPROXY_URL as string | undefined) ?? "http://localhost:8081";
 
 /**
  * Allowed origins for image URLs. Only URLs starting with one of these
@@ -36,7 +36,7 @@ const IMGPROXY_URL: string =
  * and content-spoofing attacks if a malicious URL somehow reaches the frontend.
  */
 const ALLOWED_ORIGINS: string[] = (
-  import.meta.env.VITE_IMAGE_ALLOWED_ORIGINS || "http://localhost:9000"
+  (import.meta.env.VITE_IMAGE_ALLOWED_ORIGINS as string | undefined) ?? "http://localhost:9000"
 )
   .split(",")
   .map((o: string) => o.trim())

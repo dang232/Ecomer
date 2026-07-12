@@ -67,9 +67,9 @@ export function PasswordResetPage() {
           <KeyRound className="w-7 h-7 text-primary" />
         </div>
 
-        <h2 className="text-2xl font-bold text-foreground mb-2">
+        <h1 className="text-2xl font-bold text-foreground mb-2">
           {t("passwordReset.title", { defaultValue: "Reset your password" })}
-        </h2>
+        </h1>
         <p className="text-sm text-muted-foreground mb-8">
           {t("passwordReset.subtitle", {
             defaultValue:

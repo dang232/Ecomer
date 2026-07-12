@@ -1,8 +1,23 @@
 import { keepPreviousData, queryOptions, useQuery } from "@tanstack/react-query";
 
-import { searchProducts, type SearchParams } from "../lib/api/endpoints/search";
+import { searchProducts } from "../lib/api/endpoints/search";
 import { fromServer } from "../lib/api/product-mapper";
 import type { Product } from "../types/ui";
+
+export interface SearchParams {
+  q?: string;
+  category?: string;
+  brand?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  sort?: string;
+  size?: number;
+  sameDay?: boolean;
+  verifiedOnly?: boolean;
+  officialOnly?: boolean;
+  /** 1-indexed page — caller is responsible for omitting when not paginating */
+  page?: number;
+}
 
 export const searchOptions = (params: SearchParams) =>
   queryOptions({

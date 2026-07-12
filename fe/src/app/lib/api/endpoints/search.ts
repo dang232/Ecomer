@@ -20,6 +20,9 @@ export interface SearchParams {
   sort?: string;
   page?: number;
   size?: number;
+  sameDay?: boolean;
+  verifiedOnly?: boolean;
+  officialOnly?: boolean;
 }
 
 export const searchProducts = (params: SearchParams) =>
@@ -35,6 +38,9 @@ export const searchProducts = (params: SearchParams) =>
       sort: params.sort,
       page: params.page,
       size: params.size ?? 24,
+      sameDay: params.sameDay,
+      verifiedOnly: params.verifiedOnly,
+      officialOnly: params.officialOnly,
     },
     { auth: false },
   );

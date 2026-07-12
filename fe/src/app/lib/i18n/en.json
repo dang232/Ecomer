@@ -131,7 +131,7 @@
     "brandsTitle": "Brands",
     "categoriesTitle": "Categories",
     "filterToggle": "Filter",
-    "resultsForQuery": "Results for \"{{q}}\"",
+    "resultsForQuery": "Results for \"{{query}}\"",
     "allProducts": "All products",
     "resultCount": "{{count}} products found",
     "emptyTitle": "No products found",
