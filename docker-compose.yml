@@ -402,6 +402,14 @@ services:
       KC_HOSTNAME_STRICT: "false"
       KEYCLOAK_GATEWAY_CLIENT_SECRET: ${KEYCLOAK_GATEWAY_CLIENT_SECRET:-vnshop-gateway-secret-dev}
       KEYCLOAK_ADMIN_API_CLIENT_SECRET: ${KEYCLOAK_ADMIN_API_CLIENT_SECRET:-vnshop-admin-api-secret-dev}
+      # Social OAuth identity providers (Google, Facebook). Both clientId and clientSecret
+      # must be set to enable. GOOGLE_OAUTH_ENABLED/FACEBOOK_OAUTH_ENABLED default to false.
+      GOOGLE_OAUTH_ENABLED: ${GOOGLE_OAUTH_ENABLED:-false}
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
+      FACEBOOK_OAUTH_ENABLED: ${FACEBOOK_OAUTH_ENABLED:-false}
+      FACEBOOK_OAUTH_CLIENT_ID: ${FACEBOOK_OAUTH_CLIENT_ID:-}
+      FACEBOOK_OAUTH_CLIENT_SECRET: ${FACEBOOK_OAUTH_CLIENT_SECRET:-}
     ports:
       - "8085:8080"
     volumes:
@@ -995,6 +1003,8 @@ services:
       KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
       KAFKA_SASL_USERNAME: svc-search
       KAFKA_SASL_PASSWORD: ${KAFKA_SVC_SEARCH_PASSWORD:-kafka-search}
+      # GeoIP database for IP-based location lookups (MaxMind GeoLite2).
+      GEOIP_DATABASE_PATH: ${GEOIP_DATABASE_PATH:-}
     volumes:
       - ./infra/kafka/certs/kafka.truststore.jks:/etc/kafka/secrets/kafka.truststore.jks:ro
     deploy:
@@ -1286,6 +1296,7 @@ services:
       PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID:-}
       PAYPAL_CLIENT_SECRET: ${PAYPAL_CLIENT_SECRET:-}
       PAYPAL_MODE: ${PAYPAL_MODE:-sandbox}
+      PAYPAL_WEBHOOK_ID: ${PAYPAL_WEBHOOK_ID:-}
       # SePay outbound polling for VietQR auto-confirm.
       SEPAY_API_KEY: ${SEPAY_API_KEY:-}
       SEPAY_ACCOUNT_ID: ${SEPAY_ACCOUNT_ID:-}
