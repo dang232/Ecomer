@@ -213,6 +213,9 @@ export function SearchPage() {
       sort: sortBy === "popular" ? undefined : sortBy,
       page: currentPage - 1,
       size: pageSize,
+      sameDay: sameDay || undefined,
+      verifiedOnly: verifiedOnly || undefined,
+      officialOnly: officialOnly || undefined,
     },
     searchEnabled,
   );
@@ -223,6 +226,9 @@ export function SearchPage() {
     brand: selectedBrand || undefined,
     minPrice: priceMin ? Number(priceMin) * 1000 : undefined,
     maxPrice: priceMax ? Number(priceMax) * 1000 : undefined,
+    sameDay: sameDay || undefined,
+    verifiedOnly: verifiedOnly || undefined,
+    officialOnly: officialOnly || undefined,
     enabled: searchEnabled,
   });
 
@@ -251,14 +257,9 @@ export function SearchPage() {
     if (priceMax) list = list.filter((p) => p.price <= Number(priceMax) * 1000);
     if (minRating > 0) list = list.filter((p) => p.rating >= minRating);
     if (freeShipOnly) list = list.filter((p) => p.shippingFee === 0);
-    // NOTE: sameDay / verifiedOnly / officialOnly are gated behind !usedBackend.
-    // The backend does not yet support these filters, so applying them to backend
-    // results would collapse all items (those fields are always undefined from the BE).
-    if (!usedBackend) {
-      if (sameDay) list = list.filter((p) => p.sameDayDelivery);
-      if (verifiedOnly) list = list.filter((p) => p.verified);
-      if (officialOnly) list = list.filter((p) => p.isOfficial);
-    }
+    if (sameDay) list = list.filter((p) => p.sameDayDelivery);
+    if (verifiedOnly) list = list.filter((p) => p.verified);
+    if (officialOnly) list = list.filter((p) => p.isOfficial);
     switch (sortBy) {
       case "price-low":
         list.sort((a, b) => a.price - b.price);

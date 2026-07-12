@@ -114,8 +114,8 @@ export function fromServer(p: ProductSummary | ProductDetail): Product {
     shippingFee: 0,
     location: "Việt Nam",
     tags: detail.tags ?? [],
-    // NOTE: sameDayDelivery / verified / isOfficial are not yet in the BE schema.
-    // When the BE adds them, add them here: sameDayDelivery: p.sameDayDelivery,
-    // verified: p.verified, isOfficial: p.isOfficial,
+    sameDayDelivery: p.sameDayDelivery ?? false,
+    verified: p.verified ?? false,
+    isOfficial: p.isOfficial ?? false,
   };
 }

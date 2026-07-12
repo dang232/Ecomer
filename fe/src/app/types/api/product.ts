@@ -46,6 +46,9 @@ export const productSummarySchema = z
     reviewCount: z.number().optional(),
     sold: z.number().optional(),
     stock: z.number().optional(),
+    sameDayDelivery: z.boolean().optional(),
+    verified: z.boolean().optional(),
+    isOfficial: z.boolean().optional(),
   })
   .passthrough();
 

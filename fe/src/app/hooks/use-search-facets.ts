@@ -8,6 +8,9 @@ interface UseSearchFacetsParams {
   brand?: string;
   minPrice?: number;
   maxPrice?: number;
+  sameDay?: boolean;
+  verifiedOnly?: boolean;
+  officialOnly?: boolean;
   enabled?: boolean;
 }
 
@@ -23,10 +26,10 @@ const EMPTY: SearchFacets = { categories: [], brands: [] };
  * doesn't have a query yet and is rendering the static welcome state).
  */
 export function useSearchFacets(params: UseSearchFacetsParams) {
-  const { enabled = true, q, category, brand, minPrice, maxPrice } = params;
+  const { enabled = true, q, category, brand, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly } = params;
   const result = useQuery({
-    queryKey: ["search", "facets", { q, category, brand, minPrice, maxPrice }],
-    queryFn: () => searchFacets({ q, category, brand, minPrice, maxPrice }),
+    queryKey: ["search", "facets", { q, category, brand, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly }],
+    queryFn: () => searchFacets({ q, category, brand, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly }),
     enabled,
     staleTime: 30_000,
     retry: false,

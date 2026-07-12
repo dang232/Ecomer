@@ -51,7 +51,7 @@ export const searchProducts = (params: SearchParams) =>
  * the query) but keeps q + price + the OTHER axis applied.
  */
 export const searchFacets = (
-  params: Pick<SearchParams, "q" | "category" | "brand" | "minPrice" | "maxPrice">,
+  params: Pick<SearchParams, "q" | "category" | "brand" | "minPrice" | "maxPrice" | "sameDay" | "verifiedOnly" | "officialOnly">,
 ) =>
   api.get(
     "/search/facets",
@@ -62,6 +62,9 @@ export const searchFacets = (
       brand: params.brand,
       minPrice: params.minPrice,
       maxPrice: params.maxPrice,
+      sameDay: params.sameDay,
+      verifiedOnly: params.verifiedOnly,
+      officialOnly: params.officialOnly,
     },
     { auth: false },
   );
