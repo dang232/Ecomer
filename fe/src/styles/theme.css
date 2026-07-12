@@ -85,7 +85,7 @@
   --secondary: oklch(97% 0.006 260);
   --secondary-foreground: oklch(15% 0.02 260);
   --muted: oklch(95.5% 0.006 260);
-  --muted-foreground: oklch(60% 0.015 260);
+  --muted-foreground: oklch(45% 0.015 260);
   --destructive: oklch(58% 0.22 25);
   --destructive-foreground: #ffffff;
   --input: transparent;
@@ -222,7 +222,7 @@
   --secondary: oklch(20% 0.02 260);
   --secondary-foreground: oklch(95% 0.005 260);
   --muted: oklch(25% 0.02 260);
-  --muted-foreground: oklch(60% 0.015 260);
+  --muted-foreground: oklch(55% 0.015 260);
   --destructive: oklch(40% 0.14 25);
   --destructive-foreground: oklch(68% 0.2 25);
   --input: oklch(20% 0.02 260);
@@ -564,6 +564,12 @@ html.dark { color-scheme: dark; }
 
 .animate-fade-in {
   animation: fade-in 0.3s var(--ease-out) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in {
+    animation: none;
+  }
 }
 
 .animate-fade-in-up {

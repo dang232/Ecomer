@@ -304,7 +304,7 @@
     "hero": {
       "eyebrow": "Welcome to VNShop",
       "title": "Shop authentic. Ship fast. Live easy.",
-      "titleLine2": "Shop authentic. Ship fast. Live easy.",
+      "titleLine2": "Vietnam's marketplace for quality goods",
       "subtitle": "Multi-seller marketplace with verified sellers, fast delivery, and a 30-day return policy.",
       "ctaShop": "Browse catalog",
       "ctaSignIn": "Sign in for personalised deals"
@@ -393,9 +393,9 @@
     "en": "EN"
   },
   "login": {
-    "tagline": "Vietnam's leading online shopping platform",
-    "brandDescription": "Vietnam's leading online shopping platform",
-    "trust5m": "Trusted by over <1>5 million</1> customers",
+    "tagline": "Modern multi-seller marketplace",
+    "brandDescription": "Modern multi-seller marketplace",
+    "trust5m": "Trusted by shoppers nationwide",
     "trustItems": {
       "fastDelivery": "Lightning-fast delivery",
       "ratingAvg": "Average rating",

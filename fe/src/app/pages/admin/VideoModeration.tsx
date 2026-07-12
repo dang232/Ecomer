@@ -476,8 +476,8 @@ export function VideoModeration() {
             onPreview={() => setPreviewId(item.videoId)}
             onApprove={() => handleApprove(item.videoId)}
             onReject={() => setRejectFor(item.videoId)}
-            isApproving={approve.isPending ? approve.variables === item.videoId : null}
-            isRejecting={reject.isPending ? reject.variables?.videoId === item.videoId : null}
+            isApproving={approve.isPending ? approve.variables === item.videoId : false}
+            isRejecting={reject.isPending ? reject.variables?.videoId === item.videoId : false}
           />
         ))}
       </div>

@@ -16,7 +16,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 
 import { useCart } from "../hooks/use-cart";
 import { useSearchSuggestions } from "../hooks/use-search-suggestions";
@@ -213,13 +213,13 @@ export function Navbar() {
         }`}
       >
         {/* Logo */}
-        <button
-          onClick={() => navigate("/")}
+        <Link
+          to="/"
           className="shrink-0 text-xl font-extrabold text-primary tracking-tight mr-5 hover:scale-[1.02] transition-transform duration-[var(--duration-fast)]"
           aria-label="VNShop home"
         >
           VNShop
-        </button>
+        </Link>
 
         {/* Search — desktop */}
         <div className="flex-1 max-w-[560px] hidden sm:block relative">
@@ -344,12 +344,12 @@ export function Navbar() {
               </AnimatePresence>
             </div>
           ) : (
-            <button
-              onClick={() => navigate("/login")}
+            <Link
+              to="/login"
               className="ml-1 flex items-center gap-1.5 px-4 py-2 rounded-[var(--radius-md)] text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary-hover transition-colors"
             >
               <User className="w-4 h-4" /> {t("auth.login", { defaultValue: "Sign In" })}
-            </button>
+            </Link>
           )}
 
           {/* Mobile menu toggle */}
@@ -396,17 +396,15 @@ export function Navbar() {
                 { icon: User, label: t("auth.myAccount"), path: "/profile" },
                 { icon: Store, label: t("nav.sellerChannel"), path: "/seller" },
               ].map((item) => (
-                <button
+                <Link
                   key={item.path}
-                  onClick={() => {
-                    void navigate(item.path);
-                    setMenuOpen(false);
-                  }}
+                  to={item.path}
+                  onClick={() => setMenuOpen(false)}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-md)] text-foreground hover:bg-muted transition-colors text-sm font-medium text-left"
                 >
                   <item.icon className="w-[18px] h-[18px] text-muted-foreground" />
                   {item.label}
-                </button>
+                </Link>
               ))}
               <div className="flex items-center gap-2 px-3 py-2.5">
                 <LanguageSwitcher />

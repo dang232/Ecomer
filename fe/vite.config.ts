@@ -50,8 +50,6 @@ export default defineConfig({
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router'],
           'icons': ['@tabler/icons-react'],
-          recharts: ['recharts'],
-          motion: ['motion'],
           'react-query': ['@tanstack/react-query'],
         },
       },

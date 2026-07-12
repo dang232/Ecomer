@@ -201,7 +201,7 @@ export function OrderManagement() {
       <ConfirmDialog
         open={refundDialogOpen}
         onClose={() => { setRefundDialogOpen(false); setRefundOrderId(null); }}
-        onConfirm={(reason) => { if (refundOrderId) refund.mutate(refundOrderId); }}
+        onConfirm={(_reason) => { if (refundOrderId) refund.mutate(refundOrderId); }}
         variant="danger"
         reasonField
         title={t("admin.orders.refundConfirmTitle")}

@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { videoStatus } from "../../../app/lib/api/endpoints/videos";
-import type { VideoStatus } from "../../../app/types/api/video";
+import type { VideoStatus, VideoStatusResponse } from "../../../app/types/api/video";
 
 // ─── Poll intervals per pipeline stage ───────────────────────────────────────
 
@@ -37,7 +37,7 @@ export interface UseVideoStatusResult {
   /** Current pipeline status, or undefined while loading. */
   status: VideoStatus | undefined;
   /** Raw response (carries rejectionReason, moderatedBy, etc.) for richer UI. */
-  data: import("../../../app/types/api/video").VideoStatusResponse | undefined;
+  data: VideoStatusResponse | undefined;
   /** True if the video has been non-terminal for >15 minutes. UI should show "contact support". */
   isStuck: boolean;
   error: Error | null;

@@ -29,7 +29,7 @@ export function VideoUploadDropzone({
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
 
-  const { phase, progress, filename, error } = uploadState;
+  const { phase, progress, filename } = uploadState;
   const isActive = phase !== "idle" && phase !== "error";
   const isError = phase === "error";
   const isComplete = phase === "complete";

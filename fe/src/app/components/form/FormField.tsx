@@ -1,12 +1,6 @@
 import { AlertCircle } from "lucide-react";
 import type { InputHTMLAttributes, ReactNode } from "react";
 
-const BASE_INPUT_CLASS =
-  "w-full py-3 px-3.5 border-[1.5px] border-border rounded-[var(--radius-lg)] text-sm bg-card text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-light)] transition-all";
-
-const ERROR_INPUT_CLASS =
-  "w-full py-3 px-3.5 border-[1.5px] border-red-400 rounded-[var(--radius-lg)] text-sm bg-card text-foreground placeholder:text-muted-foreground outline-none focus:border-red-500 focus:shadow-[0_0_0_3px_rgba(248,113,113,0.2)] transition-all";
-
 export interface FormFieldProps
   extends Omit<InputHTMLAttributes<HTMLInputElement>, "id" | "prefix"> {
   /** Field id — used as the input's id, the label's htmlFor, and the error's id prefix. */

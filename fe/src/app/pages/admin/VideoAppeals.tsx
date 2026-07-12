@@ -334,8 +334,8 @@ export function VideoAppeals() {
             onPreview={() => setPreviewItem(item)}
             onApprove={() => approveAppeal.mutate(item.videoId)}
             onReject={() => setRejectFor(item.videoId)}
-            isApproving={approveAppeal.isPending ? approveAppeal.variables === item.videoId : null}
-            isRejecting={rejectAppeal.isPending ? rejectAppeal.variables?.videoId === item.videoId : null}
+            isApproving={approveAppeal.isPending ? approveAppeal.variables === item.videoId : false}
+            isRejecting={rejectAppeal.isPending ? rejectAppeal.variables?.videoId === item.videoId : false}
           />
         ))}
       </div>

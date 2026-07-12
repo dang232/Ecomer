@@ -13,7 +13,7 @@ function DarkModeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="fixed bottom-6 right-6 z-50 w-11 h-11 rounded-full bg-card border border-border flex items-center justify-center shadow-lg text-muted-foreground hover:text-primary hover:border-primary hover:scale-110 hover:rotate-[15deg] hover:shadow-xl active:scale-95 transition-all duration-[var(--duration-base)]"
+      className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50 w-11 h-11 rounded-full bg-card border border-border hidden md:flex items-center justify-center shadow-lg text-muted-foreground hover:text-primary hover:border-primary hover:scale-110 hover:rotate-[15deg] hover:shadow-xl active:scale-95 transition-all duration-[var(--duration-base)]"
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
     >
       {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
@@ -30,12 +30,13 @@ export function Root() {
   const isAdminRoute = location.pathname.startsWith("/admin");
   const isSellerRoute = location.pathname.startsWith("/seller");
   const isConsoleRoute = isAdminRoute || isSellerRoute;
+  const isAuthRoute = location.pathname === "/login" || location.pathname === "/register";
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {isConsoleRoute ? (
         <ConsoleChrome persona={isAdminRoute ? "admin" : "seller"} />
-      ) : (
+      ) : isAuthRoute ? null : (
         <>
           <AnnouncementBar />
           <Navbar />
@@ -60,7 +61,7 @@ export function Root() {
             </button>
           </div>
         </footer>
-      ) : (
+      ) : isAuthRoute ? null : (
         <Footer />
       )}
 

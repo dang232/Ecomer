@@ -1,12 +1,11 @@
 import { Palette } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router";
+import { Link } from "react-router";
 
 import { comingSoon } from "../lib/ui/coming-soon";
 
 // ─── Footer ────────────────────────────────────────────────────────────────────
 export function Footer() {
-  const navigate = useNavigate();
   const { t } = useTranslation();
 
   return (
@@ -38,12 +37,12 @@ export function Footer() {
                 { label: t("footer.topSellers", { defaultValue: "Top Sellers" }), path: "/search" },
               ].map((link) => (
                 <li key={link.label}>
-                  <button
-                    onClick={() => navigate(link.path)}
+                  <Link
+                    to={link.path}
                     className="text-sm text-text-secondary hover:text-primary hover:translate-x-0.5 transition-all inline-block"
                   >
                     {link.label}
-                  </button>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -62,12 +61,12 @@ export function Footer() {
                 { label: t("footer.fees", { defaultValue: "Fees" }), path: "/seller" },
               ].map((link) => (
                 <li key={link.label}>
-                  <button
-                    onClick={() => navigate(link.path)}
+                  <Link
+                    to={link.path}
                     className="text-sm text-text-secondary hover:text-primary hover:translate-x-0.5 transition-all inline-block"
                   >
                     {link.label}
-                  </button>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -134,13 +133,13 @@ export function Footer() {
               {t("footer.terms", { defaultValue: "Terms" })}
             </button>
             <span>·</span>
-            <button
-              onClick={() => navigate("/design-system")}
+            <Link
+              to="/design-system"
               className="inline-flex items-center gap-1 hover:text-primary transition-colors"
             >
               <Palette className="w-3 h-3" />
               Design System
-            </button>
+            </Link>
           </div>
         </div>
       </div>

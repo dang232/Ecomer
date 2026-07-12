@@ -66,8 +66,9 @@ export function ConsoleChrome({ persona }: { persona: "admin" | "seller" }) {
 
         <button
           onClick={toggleTheme}
+          aria-label={isDark ? t("nav.lightMode") : t("nav.darkMode")}
+          aria-pressed={isDark}
           className="hidden md:flex items-center justify-center p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground"
-          title={isDark ? t("nav.lightMode") : t("nav.darkMode")}
         >
           {isDark ? <IconSun size={18} /> : <IconMoon size={18} />}
         </button>
@@ -78,6 +79,9 @@ export function ConsoleChrome({ persona }: { persona: "admin" | "seller" }) {
           <div className="relative">
             <button
               onClick={() => setUserMenuOpen((o) => !o)}
+              aria-label="User menu"
+              aria-haspopup="true"
+              aria-expanded={userMenuOpen}
               className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl hover:bg-muted transition-colors"
             >
               <ImageWithFallback

@@ -199,7 +199,7 @@ export function useVideoUpload(options: VideoUploadOptions) {
       let videoId: string;
 
       const cached = getResumeEntry(idempotencyKey);
-      if (cached && cached.sizeBytes === file.size && cached.filename === file.name) {
+      if (cached?.sizeBytes === file.size && cached?.filename === file.name) {
         tusEndpoint = cached.uploadUrl;
         videoId = cached.videoId;
       } else {

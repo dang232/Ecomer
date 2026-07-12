@@ -6,6 +6,8 @@ type ImageFallbackProps = ImgHTMLAttributes<HTMLImageElement> & {
   fallbackSrc?: string;
   /** Override the placeholder (defaults to a neutral icon on a gray tile). */
   placeholder?: React.ReactNode;
+  /** Priority loading for above-the-fold images - disables lazy load, enables fetchpriority. Reduces CLS. */
+  priority?: boolean;
 };
 
 /**
@@ -20,11 +22,16 @@ export function ImageWithFallback({
   className,
   loading = "lazy",
   decoding = "async",
+  priority = false,
   onError,
   ...rest
 }: ImageFallbackProps) {
   const [errored, setErrored] = useState(false);
   const [usingFallback, setUsingFallback] = useState(false);
+
+  // For priority images: eager load + high fetchpriority to prevent CLS
+  const imageLoading = priority ? "eager" : loading;
+  const imageFetchPriority = priority ? "high" : undefined;
 
   if (!src || errored) {
     return (
@@ -45,7 +52,8 @@ export function ImageWithFallback({
       src={currentSrc}
       alt={alt}
       className={className}
-      loading={loading}
+      loading={imageLoading}
+      fetchPriority={imageFetchPriority}
       decoding={decoding}
       onError={(e) => {
         if (!usingFallback && fallbackSrc) {

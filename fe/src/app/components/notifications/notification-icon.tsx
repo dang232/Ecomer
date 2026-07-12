@@ -14,14 +14,11 @@ import {
   IconTruck,
   IconWallet,
   IconX,
-  type Icon,
 } from "@tabler/icons-react";
 
 import type { NotificationType } from "../../types/api/notification";
 
-type TablerIcon = React.ForwardRefExoticComponent<React.ComponentPropsWithoutRef<Icon> & React.RefAttributes<Icon>>;
-
-const ICON_MAP: Record<NotificationType, TablerIcon> = {
+const ICON_MAP: Record<NotificationType, typeof IconBell> = {
   ORDER_CREATED: IconShoppingCart,
   ORDER_CANCELLED: IconX,
   ORDER_SHIPPED: IconTruck,

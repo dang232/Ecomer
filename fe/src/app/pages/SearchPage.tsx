@@ -154,7 +154,7 @@ export function SearchPage() {
   }, [minRating, freeShipOnly, selectedBrand, setSearchParams]);
 
   // Current page for pagination
-  const filterSignature = `${query}|${selectedCat}|${selectedBrand}|${priceMin}|${priceMax}|${minRating}|${freeShipOnly}|${sortBy}|${isFlash}`;
+  const filterSignature = `${query}|${selectedCat}|${selectedBrand}|${priceMin}|${priceMax}|${minRating}|${freeShipOnly}|${sameDay}|${verifiedOnly}|${officialOnly}|${sortBy}|${isFlash}`;
   const [currentPage, setCurrentPage] = useResettableState(1, filterSignature);
   const [pageSize] = useResettableState(PAGE_SIZE, filterSignature);
 
@@ -206,6 +206,10 @@ export function SearchPage() {
       maxPrice: priceMax ? Number(priceMax) * 1000 : undefined,
       sort: sortBy === "popular" ? undefined : sortBy,
       size: pageSize,
+      // P1: sameDay / verifiedOnly / officialOnly were set but never sent to the backend
+      ...(sameDay ? { sameDay: true } : {}),
+      ...(verifiedOnly ? { verifiedOnly: true } : {}),
+      ...(officialOnly ? { officialOnly: true } : {}),
     },
     searchEnabled,
   );
@@ -244,6 +248,10 @@ export function SearchPage() {
     if (priceMax) list = list.filter((p) => p.price <= Number(priceMax) * 1000);
     if (minRating > 0) list = list.filter((p) => p.rating >= minRating);
     if (freeShipOnly) list = list.filter((p) => p.shippingFee === 0);
+    // P1: sameDay / verifiedOnly / officialOnly filters were set but never applied
+    if (sameDay) list = list.filter((p) => p.sameDayDelivery);
+    if (verifiedOnly) list = list.filter((p) => p.verified);
+    if (officialOnly) list = list.filter((p) => p.isOfficial);
     switch (sortBy) {
       case "price-low":
         list.sort((a, b) => a.price - b.price);
@@ -270,12 +278,15 @@ export function SearchPage() {
     priceMax,
     minRating,
     freeShipOnly,
+    sameDay,
+    verifiedOnly,
+    officialOnly,
     sortBy,
     isFlash,
   ]);
 
   const totalCount = usedBackend ? search.totalElements : filtered.length;
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const startIdx = (currentPage - 1) * pageSize;
   const paginated = filtered.slice(startIdx, startIdx + pageSize);
 
@@ -349,6 +360,11 @@ export function SearchPage() {
 
   return (
     <div className="max-w-[1400px] mx-auto py-6 px-[var(--content-padding)]">
+      {/* Page heading for screen readers */}
+      <h1 className="sr-only">
+        {query ? t("search.resultsForQuery", { query, defaultValue: `Search results for "${query}"` }) : t("search.allProducts", { defaultValue: "All Products" })}
+      </h1>
+
       <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
 
         {/* ── Filter Sidebar ── */}

@@ -52,7 +52,7 @@
     "runtime": null
   },
   "build": {
-    "buildCommand": "cd \"C:\\Users\\dangq\\OneDrive\\Documents\\GitHub\\Full-Stack-E-commerce\\fe\" && pnpm build 2>&1 | grep \"error TS\"",
+    "buildCommand": "cd \"C:/Users/dangq/OneDrive/Documents/GitHub/Full-Stack-E-commerce/fe\" && npx tsc -b --noEmit 2>&1 | head -30",
     "testCommand": "cd \"C:\\Users\\dangq\\OneDrive\\Documents\\GitHub\\Full-Stack-E-commerce\\fe\" && pnpm test 2>&1 | tail -15",
     "lintCommand": "pnpm lint",
     "devCommand": "pnpm dev",
@@ -229,9 +229,69 @@
       "type": "file"
     },
     {
+      "path": "src\\app\\pages\\ProductPage.tsx",
+      "accessCount": 12,
+      "lastAccessed": 1783837480929,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\pages\\SearchPage.tsx",
+      "accessCount": 11,
+      "lastAccessed": 1783838151988,
+      "type": "file"
+    },
+    {
       "path": "src\\app\\lib\\api\\product-mapper.ts",
+      "accessCount": 11,
+      "lastAccessed": 1783838267720,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\components\\RecentlyViewedGrid.tsx",
       "accessCount": 9,
-      "lastAccessed": 1783758000508,
+      "lastAccessed": 1783837669795,
+      "type": "file"
+    },
+    {
+      "path": "src\\features\\videos\\components\\VideoPlayer.tsx",
+      "accessCount": 7,
+      "lastAccessed": 1783837093594,
+      "type": "file"
+    },
+    {
+      "path": "src\\app",
+      "accessCount": 6,
+      "lastAccessed": 1783838239706,
+      "type": "directory"
+    },
+    {
+      "path": "src\\app\\components\\notifications\\notification-icon.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1783837591148,
+      "type": "file"
+    },
+    {
+      "path": "src\\features\\videos\\hooks\\useVideoStatus.ts",
+      "accessCount": 4,
+      "lastAccessed": 1783836961856,
+      "type": "file"
+    },
+    {
+      "path": "src\\features\\videos\\hooks\\useVideoUpload.ts",
+      "accessCount": 3,
+      "lastAccessed": 1783836971515,
+      "type": "file"
+    },
+    {
+      "path": "src\\features\\videos\\components\\VideoUploadDropzone.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1783836972587,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\types\\ui.ts",
+      "accessCount": 3,
+      "lastAccessed": 1783838206348,
       "type": "file"
     },
     {
@@ -244,6 +304,30 @@
       "path": "src\\app\\hooks\\use-cart.test.tsx",
       "accessCount": 2,
       "lastAccessed": 1783759932541,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\pages\\admin",
+      "accessCount": 2,
+      "lastAccessed": 1783837123639,
+      "type": "directory"
+    },
+    {
+      "path": "src\\app\\components\\ui\\confirm-dialog.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1783837179207,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\pages\\admin\\VideoAppeals.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1783837182167,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\pages\\admin\\VideoModeration.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1783837183251,
       "type": "file"
     },
     {
@@ -262,12 +346,6 @@
       "path": "src\\app\\lib\\api\\client.ts",
       "accessCount": 1,
       "lastAccessed": 1783757647651,
-      "type": "file"
-    },
-    {
-      "path": "src\\app\\types\\ui.ts",
-      "accessCount": 1,
-      "lastAccessed": 1783757804992,
       "type": "file"
     },
     {
@@ -292,6 +370,30 @@
       "path": "src\\app\\types\\api\\branded-ids.ts",
       "accessCount": 1,
       "lastAccessed": 1783758292864,
+      "type": "directory"
+    },
+    {
+      "path": "package.json",
+      "accessCount": 1,
+      "lastAccessed": 1783836587260,
+      "type": "directory"
+    },
+    {
+      "path": "src\\utils\\meta-tags.ts",
+      "accessCount": 1,
+      "lastAccessed": 1783837180309,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\types",
+      "accessCount": 1,
+      "lastAccessed": 1783838216570,
+      "type": "directory"
+    },
+    {
+      "path": "src\\app\\lib\\api",
+      "accessCount": 1,
+      "lastAccessed": 1783838229734,
       "type": "directory"
     }
   ],

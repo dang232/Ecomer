@@ -1,6 +1,5 @@
 import { Star } from "lucide-react";
 import { memo } from "react";
-import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
 import type { RecentlyViewedItem } from "../hooks/use-recently-viewed";
@@ -11,13 +10,10 @@ import { ImageWithFallback } from "./image-with-fallback";
 // ─── Recently Viewed Card ────────────────────────────────────────────────────────
 const RecentlyViewedCard = memo(function RecentlyViewedCard({
   item,
-  index = 0,
 }: {
   item: RecentlyViewedItem;
-  index?: number;
 }) {
   const navigate = useNavigate();
-  const { t } = useTranslation();
 
   return (
     <button
@@ -63,8 +59,6 @@ export function RecentlyViewedGrid({
   title?: string;
   items: RecentlyViewedItem[];
 }) {
-  const { t } = useTranslation();
-
   if (items.length === 0) return null;
 
   return (
@@ -73,8 +67,8 @@ export function RecentlyViewedGrid({
           {title}
         </h2> : null}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        {items.map((item, i) => (
-          <RecentlyViewedCard key={item.productId} item={item} index={i} />
+        {items.map((item) => (
+          <RecentlyViewedCard key={item.productId} item={item} />
         ))}
       </div>
     </section>

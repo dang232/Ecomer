@@ -43,6 +43,12 @@ export interface Product {
   shippingFee: number;
   location: string;
   tags: string[];
+  /** Same-day delivery flag (set by Same-day delivery filter on SearchPage) */
+  sameDayDelivery?: boolean;
+  /** Verified seller flag (set by Verified only filter on SearchPage) */
+  verified?: boolean;
+  /** Official store flag (set by Official stores filter on SearchPage) */
+  isOfficial?: boolean;
 }
 
 export interface UIOrder {

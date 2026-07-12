@@ -30,6 +30,11 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [rememberMe, setRememberMe] = useState(() => localStorage.getItem("rememberMe") === "true");
 
+  // ponytail: rememberMe only persists the flag; actual session duration is server-controlled
+  const handleSocialLogin = (provider: "google" | "facebook") => {
+    setError(`${provider.charAt(0).toUpperCase() + provider.slice(1)} login is not yet implemented.`);
+  };
+
   if (ready && authenticated) {
     return <Navigate to={next} replace />;
   }
@@ -121,9 +126,9 @@ export function LoginPage() {
 
           {/* Header */}
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-foreground mb-2">
+            <h1 className="text-2xl font-bold text-foreground mb-2">
               {t("login.title", { defaultValue: "Sign in to your account" })}
-            </h2>
+            </h1>
             <p className="text-sm text-muted-foreground">
               {t("login.subtitle", { defaultValue: "Enter your credentials to access the marketplace" })}
             </p>
@@ -254,6 +259,7 @@ export function LoginPage() {
           <div className="flex gap-3">
             <button
               type="button"
+              onClick={() => handleSocialLogin("google")}
               className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[var(--radius-lg)] border border-border text-sm font-medium text-foreground hover:bg-muted hover:-translate-y-0.5 transition-all"
               aria-label="Continue with Google"
             >
@@ -261,6 +267,7 @@ export function LoginPage() {
             </button>
             <button
               type="button"
+              onClick={() => handleSocialLogin("facebook")}
               className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[var(--radius-lg)] border border-border text-sm font-medium text-foreground hover:bg-muted hover:-translate-y-0.5 transition-all"
               aria-label="Continue with Facebook"
             >

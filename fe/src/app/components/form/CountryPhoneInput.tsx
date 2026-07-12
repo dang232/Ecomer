@@ -1,5 +1,5 @@
 import type { CountryCode } from "libphonenumber-js";
-import { useId, useMemo } from "react";
+import { useId } from "react";
 
 import {
   DEFAULT_COUNTRY,

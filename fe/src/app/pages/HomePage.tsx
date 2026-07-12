@@ -19,7 +19,7 @@ import {
 import { motion } from "motion/react";
 import { useMemo, memo } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router";
+import { Link } from "react-router";
 
 import { ImageWithFallback } from "../components/image-with-fallback";
 import { RecentlyViewedGrid } from "../components/RecentlyViewedGrid";
@@ -42,20 +42,19 @@ const SectionHeader = memo(function SectionHeader({
   ctaLabel?: string;
   ctaPath?: string;
 }) {
-  const navigate = useNavigate();
   const { t } = useTranslation();
   const cta = ctaLabel ?? t("home.viewAll", { defaultValue: "See All" });
   return (
     <div className="flex items-center justify-between mb-4">
       <h2 className="text-xl font-bold text-foreground tracking-tight">{title}</h2>
       {ctaPath ? (
-        <button
-          onClick={() => navigate(ctaPath)}
+        <Link
+          to={ctaPath}
           className="group flex items-center gap-1 text-sm font-medium text-primary hover:underline"
         >
           {cta}
           <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-        </button>
+        </Link>
       ) : null}
     </div>
   );
@@ -64,27 +63,21 @@ const SectionHeader = memo(function SectionHeader({
 // ─── Product Card ─────────────────────────────────────────────────────────────
 const ProductCard = memo(function ProductCard({ product, index = 0 }: { product: Product; index?: number }) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { toggleWishlist, isWishlisted } = useVNShop();
   const loved = isWishlisted(product.id);
 
   return (
+    <Link
+      to={`/product/${product.id}`}
+      className="block"
+      aria-label={product.name}
+      data-testid="product-card"
+    >
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index * 0.05, 0.4), duration: 0.3 }}
       className="group bg-card border border-border rounded-[var(--radius-lg)] overflow-hidden cursor-pointer transition-all duration-[var(--duration-base)] hover:border-border-hover hover:shadow-lg hover:-translate-y-1"
-      role="link"
-      tabIndex={0}
-      aria-label={product.name}
-      data-testid="product-card"
-      onClick={() => void navigate(`/product/${product.id}`)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          void navigate(`/product/${product.id}`);
-        }
-      }}
     >
       {/* Image */}
       <div className="relative aspect-square bg-surface-elevated overflow-hidden flex items-center justify-center">
@@ -152,6 +145,7 @@ const ProductCard = memo(function ProductCard({ product, index = 0 }: { product:
         </div>
       </div>
     </motion.div>
+    </Link>
   );
 });
 
@@ -172,7 +166,6 @@ function ProductCardSkeleton() {
 // ─── Hero Section ─────────────────────────────────────────────────────────────
 function HeroSection() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
 
   return (
     <section className="mx-[var(--content-padding)] mt-6 bg-gradient-to-br from-primary to-[oklch(50%_0.22_295)] rounded-[var(--radius-2xl)] relative overflow-hidden">
@@ -199,13 +192,13 @@ function HeroSection() {
               "Thousands of deals across all categories. Electronics, fashion, software — everything ships free over ₫500,000.",
           })}
         </p>
-        <button
-          onClick={() => navigate("/search")}
+        <Link
+          to="/search"
           className="group inline-flex items-center gap-2 px-6 py-3 bg-white text-primary font-semibold text-sm rounded-[var(--radius-lg)] shadow-lg hover:-translate-y-0.5 hover:shadow-xl transition-all"
         >
           {t("home.hero.ctaShop", { defaultValue: "Shop Deals" })}
           <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-        </button>
+        </Link>
       </div>
     </section>
   );
@@ -231,7 +224,6 @@ function getCategoryIcon(slug: string): React.ElementType {
 
 // ─── Categories Grid ──────────────────────────────────────────────────────────
 function CategoriesSection() {
-  const navigate = useNavigate();
   const { t } = useTranslation();
   const { data: categories = [], isLoading } = useCategories();
 
@@ -253,21 +245,25 @@ function CategoriesSection() {
           {categories.slice(0, 6).map((cat, i) => {
             const Icon = getCategoryIcon(cat.id ?? "");
             return (
-              <motion.button
+              <Link
                 key={cat.id}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: i * 0.04, duration: 0.25 }}
-                onClick={() => navigate(`/search?cat=${cat.id}`)}
-                className="group flex flex-col items-center gap-2.5 py-5 px-2 bg-card border border-border rounded-[var(--radius-lg)] cursor-pointer transition-all hover:border-primary hover:bg-primary-light hover:-translate-y-0.5 hover:shadow-md"
+                to={`/search?cat=${cat.id}`}
+                className="block"
               >
-                <div className="w-12 h-12 rounded-[var(--radius-md)] bg-surface-elevated flex items-center justify-center text-text-secondary group-hover:text-primary group-hover:bg-card transition-colors">
-                  <Icon className="w-6 h-6" />
-                </div>
-                <span className="text-xs font-medium text-foreground text-center leading-tight">
-                  {categoryDisplayLabel(cat)}
-                </span>
-              </motion.button>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: i * 0.04, duration: 0.25 }}
+                  className="group flex flex-col items-center gap-2.5 py-5 px-2 bg-card border border-border rounded-[var(--radius-lg)] cursor-pointer transition-all hover:border-primary hover:bg-primary-light hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <div className="w-12 h-12 rounded-[var(--radius-md)] bg-surface-elevated flex items-center justify-center text-text-secondary group-hover:text-primary group-hover:bg-card transition-colors">
+                    <Icon className="w-6 h-6" />
+                  </div>
+                  <span className="text-xs font-medium text-foreground text-center leading-tight">
+                    {categoryDisplayLabel(cat)}
+                  </span>
+                </motion.div>
+              </Link>
             );
           })}
         </div>
@@ -284,7 +280,6 @@ function pctOff(originalPrice: number, salePrice: number): number {
 
 function FlashSaleSection() {
   const { items, isLoading } = useFlashSaleWithProducts();
-  const navigate = useNavigate();
   const { t } = useTranslation();
 
   const earliestEnd = useMemo(() => {
@@ -345,12 +340,15 @@ function FlashSaleSection() {
             const productName = product?.name ?? `Product #${c.productId.slice(0, 8)}`;
 
             return (
-              <motion.div
+              <Link
                 key={c.id}
+                to={`/product/${c.productId}`}
+                className="block"
+              >
+              <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.06 }}
-                onClick={() => navigate(`/product/${c.productId}`)}
                 className="group bg-card border border-border rounded-[var(--radius-lg)] overflow-hidden cursor-pointer hover:border-border-hover hover:shadow-lg hover:-translate-y-1 transition-all duration-[var(--duration-base)]"
               >
                 <div className="relative aspect-square bg-surface-elevated flex items-center justify-center overflow-hidden">
@@ -390,6 +388,7 @@ function FlashSaleSection() {
                   </div>
                 </div>
               </motion.div>
+              </Link>
             );
           })}
         </div>
@@ -481,7 +480,6 @@ function ProductsSection() {
 
 // ─── Seller Showcase Section ──────────────────────────────────────────────────
 function SellerShowcaseSection() {
-  const navigate = useNavigate();
   const { t } = useTranslation();
   const { data: sellers = [], isLoading } = useQuery({
     queryKey: ["sellers", "showcase"],
@@ -527,22 +525,17 @@ function SellerShowcaseSection() {
             const name = (s.shopName ?? s.name ?? "S") as string;
             const productCount = (s.productCount ?? 0) as number;
             return (
-              <div
+              <Link
                 key={String(id)}
-                role="button"
-                tabIndex={0}
-                onClick={() => void navigate(`/sellers/${String(id)}`)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") void navigate(`/sellers/${String(id)}`);
-                }}
-                className="bg-card border border-border rounded-[var(--radius-lg)] p-4 text-center hover:border-primary hover:shadow-md transition-all cursor-pointer"
+                to={`/sellers/${String(id)}`}
+                className="block bg-card border border-border rounded-[var(--radius-lg)] p-4 text-center hover:border-primary hover:shadow-md transition-all cursor-pointer"
               >
                 <div className="w-14 h-14 rounded-full bg-primary-light mx-auto mb-3 flex items-center justify-center text-primary font-bold text-lg">
                   {name.charAt(0).toUpperCase()}
                 </div>
                 <p className="text-sm font-semibold text-foreground line-clamp-1">{name}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">{productCount} products</p>
-              </div>
+              </Link>
             );
           })}
         </div>

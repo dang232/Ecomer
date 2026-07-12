@@ -130,12 +130,7 @@ export function ProductPage() {
   const { addToCart, toggleWishlist, isWishlisted } = useVNShop();
   const { t } = useTranslation();
 
-  // Guard: product ID is required — redirect to home if missing
-  if (!id) {
-    return <Navigate to="/" replace />;
-  }
-
-  const { data: product } = useSuspenseQuery(productDetailOptions(id));
+  const { data: product } = useSuspenseQuery(productDetailOptions(id!));
   const fbtQuery = useFrequentlyBoughtTogether(id);
   const ymalQuery = useYouMayAlsoLike(id);
   const { authenticated, login } = useAuth();
@@ -156,20 +151,20 @@ export function ProductPage() {
     }
   }, [product, addToRecentlyViewed]);
 
-  const liveReviewsQuery = useProductReviews(id);
+  const liveReviewsQuery = useProductReviews(id!);
 
   const liveQuestionsQuery = useQuery({
     queryKey: ["questions", "product", id],
-    queryFn: () => questionsByProduct(id),
+    queryFn: () => questionsByProduct(id!),
     enabled: !!id,
     retry: false,
   });
 
   const submitReview = useMutation({
     mutationFn: (input: { rating: number; comment: string }) =>
-      createReview({ productId: id, ...input }),
+      createReview({ productId: id!, ...input }),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["catalog", "reviews", "product", id] });
+      void qc.invalidateQueries({ queryKey: ["catalog", "reviews", "product", id!] });
       toast.success(t("product.reviews.submitOk"));
       setReviewDraft({ rating: 5, comment: "" });
     },
@@ -179,15 +174,15 @@ export function ProductPage() {
 
   const voteHelpful = useMutation({
     mutationFn: (reviewId: string) => voteReviewHelpful(reviewId),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["catalog", "reviews", "product", id] }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["catalog", "reviews", "product", id!] }),
     onError: (err) =>
       toast.error(err instanceof ApiError ? err.message : t("product.reviews.voteErr")),
   });
 
   const submitQuestion = useMutation({
-    mutationFn: (question: string) => askQuestion({ productId: id, question }),
+    mutationFn: (question: string) => askQuestion({ productId: id!, question }),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["questions", "product", id] });
+      void qc.invalidateQueries({ queryKey: ["questions", "product", id!] });
       toast.success(t("product.qa.submitOk"));
       setQuestionDraft("");
     },
@@ -262,6 +257,11 @@ export function ProductPage() {
     })),
     ...galleryImages.map((url) => ({ type: "image" as const, url })),
   ];
+
+  // Guard: product ID is required — redirect to home if missing
+  if (!id) {
+    return <Navigate to="/" replace />;
+  }
 
   const currentItem = galleryItems[imageIdx] ?? galleryItems[0];
 
