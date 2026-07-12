@@ -95,8 +95,8 @@ payment:
     pay-url: ${VNPAY_PAY_URL:https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
     tmn-code: ${VNPAY_TMN_CODE:}
     hash-secret: ${VNPAY_HASH_SECRET:}
-    return-url: ${VNPAY_RETURN_URL:http://localhost:8092/payment/vnpay/return}
-    ipn-url: ${VNPAY_IPN_URL:http://localhost:8092/payment/vnpay/ipn}
+    return-url: ${VNPAY_RETURN_URL:http://localhost:8080/payment/vnpay/return}
+    ipn-url: ${VNPAY_IPN_URL:http://localhost:8080/payment/vnpay/ipn}
     version: ${VNPAY_VERSION:2.1.0}
     command: ${VNPAY_COMMAND:pay}
     order-type: ${VNPAY_ORDER_TYPE:other}
@@ -110,8 +110,8 @@ payment:
     partner-code: ${MOMO_PARTNER_CODE:}
     access-key: ${MOMO_ACCESS_KEY:}
     secret-key: ${MOMO_SECRET_KEY:}
-    redirect-url: ${MOMO_REDIRECT_URL:http://localhost:8092/payment/momo/return}
-    ipn-url: ${MOMO_IPN_URL:http://localhost:8092/payment/momo/ipn}
+    redirect-url: ${MOMO_REDIRECT_URL:http://localhost:8080/payment/momo/return}
+    ipn-url: ${MOMO_IPN_URL:http://localhost:8080/payment/momo/ipn}
     request-type: ${MOMO_REQUEST_TYPE:captureWallet}
     lang: ${MOMO_LANG:vi}
   fx:

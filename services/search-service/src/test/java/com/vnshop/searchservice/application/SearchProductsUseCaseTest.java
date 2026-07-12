@@ -32,14 +32,14 @@ class SearchProductsUseCaseTest {
                 false, false, false
         );
         Page<ProductReadModel> page = new PageImpl<>(List.of(model));
-        when(repository.searchPaged(any(), any(), any(), any(), any(), any(Pageable.class)))
+        when(repository.searchPaged(any(), any(), any(), any(), any(), any(), any(), any(), any(Pageable.class)))
                 .thenReturn(page);
 
         Page<SearchProductResponse> result = useCase.searchPaged(
-                "phone", "electronics", "Acme", null, null, PageRequest.of(0, 10));
+                "phone", "electronics", "Acme", null, null, null, null, null, PageRequest.of(0, 10));
 
         assertThat(result.getContent()).hasSize(1);
-        assertThat(result.getContent().getFirst().productId()).isEqualTo("p1");
+        assertThat(result.getContent().getFirst().id()).isEqualTo("p1");
         assertThat(result.getContent().getFirst().name()).isEqualTo("Phone");
     }
 
@@ -72,15 +72,15 @@ class SearchProductsUseCaseTest {
 
     @Test
     void facets_mapsObjectArrayTuplesToFacetEntries() {
-        when(repository.categoryFacetsFor(any(), any(), any(), any())).thenReturn(List.of(
+        when(repository.categoryFacetsFor(any(), any(), any(), any(), any(), any(), any())).thenReturn(List.of(
                 new SearchFacetsResponse.FacetEntry("electronics", 12L),
                 new SearchFacetsResponse.FacetEntry("fashion", 5L)
         ));
-        when(repository.brandFacetsFor(any(), any(), any(), any())).thenReturn(List.of(
+        when(repository.brandFacetsFor(any(), any(), any(), any(), any(), any(), any())).thenReturn(List.of(
                 new SearchFacetsResponse.FacetEntry("Acme", 7L)
         ));
 
-        SearchFacetsResponse facets = useCase.facets("phone", "electronics", "Acme", null, null);
+        SearchFacetsResponse facets = useCase.facets("phone", "electronics", "Acme", null, null, null, null, null);
 
         assertThat(facets.categories()).containsExactly(
                 new SearchFacetsResponse.FacetEntry("electronics", 12L),
@@ -95,12 +95,12 @@ class SearchProductsUseCaseTest {
     void facets_handlesIntegerCounts() {
         // JPA may return Integer for COUNT depending on the dialect; the mapper must
         // accept any Number subtype.
-        when(repository.categoryFacetsFor(any(), any(), any(), any())).thenReturn(List.of(
+        when(repository.categoryFacetsFor(any(), any(), any(), any(), any(), any(), any())).thenReturn(List.of(
                 new SearchFacetsResponse.FacetEntry("electronics", 3L)
         ));
-        when(repository.brandFacetsFor(any(), any(), any(), any())).thenReturn(List.of());
+        when(repository.brandFacetsFor(any(), any(), any(), any(), any(), any(), any())).thenReturn(List.of());
 
-        SearchFacetsResponse facets = useCase.facets(null, null, null, null, null);
+        SearchFacetsResponse facets = useCase.facets(null, null, null, null, null, null, null, null);
 
         assertThat(facets.categories().getFirst().count()).isEqualTo(3L);
     }
@@ -109,12 +109,12 @@ class SearchProductsUseCaseTest {
     void facets_facetAxesUseRelaxedFilters() {
         // Verifies the "drop your own axis" semantic: the category-facet call drops
         // `category` and the brand-facet call drops `brand`.
-        when(repository.categoryFacetsFor(any(), any(), any(), any())).thenReturn(List.of());
-        when(repository.brandFacetsFor(any(), any(), any(), any())).thenReturn(List.of());
+        when(repository.categoryFacetsFor(any(), any(), any(), any(), any(), any(), any())).thenReturn(List.of());
+        when(repository.brandFacetsFor(any(), any(), any(), any(), any(), any(), any())).thenReturn(List.of());
 
-        useCase.facets("q", "electronics", "Acme", BigDecimal.ONE, BigDecimal.TEN);
+        useCase.facets("q", "electronics", "Acme", BigDecimal.ONE, BigDecimal.TEN, null, null, null);
 
-        verify(repository).categoryFacetsFor("q", "Acme", BigDecimal.ONE, BigDecimal.TEN);
-        verify(repository).brandFacetsFor("q", "electronics", BigDecimal.ONE, BigDecimal.TEN);
+        verify(repository).categoryFacetsFor("q", "Acme", BigDecimal.ONE, BigDecimal.TEN, null, null, null);
+        verify(repository).brandFacetsFor("q", "electronics", BigDecimal.ONE, BigDecimal.TEN, null, null, null);
     }
 }

@@ -7,8 +7,8 @@ import com.vnshop.inventoryservice.application.ReserveFlashSaleUseCase;
 import com.vnshop.inventoryservice.application.ReserveStockUseCase;
 import com.vnshop.inventoryservice.domain.port.out.FlashSaleCampaignPort;
 import com.vnshop.inventoryservice.domain.port.out.FlashSaleReservationPort;
+import com.vnshop.inventoryservice.domain.port.out.InventoryEventPublisherPort;
 import com.vnshop.inventoryservice.domain.port.out.StockReservationPort;
-import com.vnshop.inventoryservice.infrastructure.event.InventoryEventPublisher;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -40,7 +40,7 @@ public class UseCaseConfig {
     }
 
     @Bean
-    ReleaseStockUseCase releaseStockUseCase(StockReservationPort port, InventoryEventPublisher eventPublisher) {
+    ReleaseStockUseCase releaseStockUseCase(StockReservationPort port, InventoryEventPublisherPort eventPublisher) {
         return new ReleaseStockUseCase(port, eventPublisher);
     }
 }

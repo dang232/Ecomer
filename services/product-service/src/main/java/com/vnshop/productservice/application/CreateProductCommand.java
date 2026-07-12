@@ -16,11 +16,10 @@ public record CreateProductCommand(
         boolean verified,
         boolean isOfficial
 ) {
-    // Flags default to false for new products.
-    // Only seller-admin workflows can set verified/isOfficial to true.
-    public CreateProductCommand {
-        // Enforce false for seller-controlled flags - values passed are ignored
-    }
+    // Flags default to false for new products created via the 6-arg constructor.
+    // Only seller-admin workflows pass true for verified/isOfficial.
+    // Flags are preserved from the constructor arguments — callers are responsible
+    // for setting them to false when creating regular products.
 
     public CreateProductCommand(String sellerId, String name, String description, String categoryId,
                                String brand, List<ProductVariant> variants, List<ProductImage> images) {

@@ -1,8 +1,15 @@
 package com.vnshop.productservice;
 
+import com.vnshop.productservice.application.GetCategoriesUseCase;
 import com.vnshop.productservice.application.video.VideoAdminService;
+import com.vnshop.productservice.infrastructure.persistence.ObjectMetadataJpaSpringDataRepository;
+import com.vnshop.productservice.infrastructure.persistence.ProductJpaSpringDataRepository;
+import com.vnshop.productservice.infrastructure.persistence.review.ReviewJpaSpringDataRepository;
+import com.vnshop.productservice.infrastructure.persistence.video.VideoJpaSpringDataRepository;
+import com.vnshop.productservice.infrastructure.persistence.video.VideoStatusHistoryJpaSpringDataRepository;
 import com.vnshop.productservice.application.video.VideoUploadService;
 import com.vnshop.productservice.domain.ProductEvent;
+import com.vnshop.productservice.domain.port.out.CategoryRepositoryPort;
 import com.vnshop.productservice.domain.port.out.ObjectMetadataRepositoryPort;
 import com.vnshop.productservice.domain.port.out.ObjectStoragePort;
 import com.vnshop.productservice.domain.port.out.ProductRepositoryPort;
@@ -61,6 +68,31 @@ class ProductServiceApplicationTests {
 
     @MockitoBean
     private VideoUploadService videoUploadService;
+
+    // Category JPA repo is @Profile("jpa") - mock it in no-JPA test context
+    @MockitoBean
+    private CategoryRepositoryPort categoryRepositoryPort;
+
+    // GetCategoriesUseCase requires CategoryRepositoryPort - mock it too
+    @MockitoBean
+    private GetCategoriesUseCase getCategoriesUseCase;
+
+    // Video JPA repos are @Profile("jpa") - mock them in no-JPA test context
+    @MockitoBean
+    private VideoJpaSpringDataRepository videoJpaSpringDataRepository;
+
+    @MockitoBean
+    private VideoStatusHistoryJpaSpringDataRepository videoStatusHistoryJpaSpringDataRepository;
+
+    // Product JPA repos are @Profile("jpa") - mock them in no-JPA test context
+    @MockitoBean
+    private ProductJpaSpringDataRepository productJpaSpringDataRepository;
+
+    @MockitoBean
+    private ObjectMetadataJpaSpringDataRepository objectMetadataJpaSpringDataRepository;
+
+    @MockitoBean
+    private ReviewJpaSpringDataRepository reviewJpaSpringDataRepository;
 
     @Test
     void contextLoads() {

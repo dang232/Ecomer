@@ -17,8 +17,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Base64;
@@ -60,29 +58,32 @@ public class AuthSessionController {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     // OAuth configuration
-    private static final String KEYCLOAK_AUTH_URL = "http://keycloak:8080/realms/vnshop/protocol/openid-connect/auth";
-    private static final String DEFAULT_CALLBACK_URL = "http://localhost:8081/auth/oauth/callback";
+    private static final String DEFAULT_CALLBACK_URL = "http://localhost:8080/auth/oauth/callback";
     private static final Set<String> ALLOWED_PROVIDERS = Set.of("google", "facebook");
-    // Disallow off-origin redirects - must start with /
-    private static final Set<String> SAFE_RETURN_PREFIXES = Set.of("/", "/profile", "/products", "/cart", "/orders");
-
     private final AuthSessionUseCase useCase;
     private final OAuthLoginState oauthState;
     private final boolean cookieSecure;
     private final String cookieSameSite;
     private final String callbackBaseUrl;
+    private final String keycloakAuthorizationUrl;
+    private final String frontendBaseUrl;
 
     public AuthSessionController(
             AuthSessionUseCase useCase,
             OAuthLoginState oauthState,
             @Value("${vnshop.auth.cookie-secure:false}") boolean cookieSecure,
             @Value("${vnshop.auth.cookie-same-site:Strict}") String cookieSameSite,
-            @Value("${vnshop.auth.callback-base-url:}") String callbackBaseUrl) {
+            @Value("${vnshop.auth.callback-base-url:}") String callbackBaseUrl,
+            @Value("${keycloak.public-base-url:http://localhost:8085}") String keycloakPublicBaseUrl,
+            @Value("${vnshop.auth.frontend-base-url:http://localhost:3000}") String frontendBaseUrl) {
         this.useCase = useCase;
         this.oauthState = oauthState;
         this.cookieSecure = cookieSecure;
         this.cookieSameSite = cookieSameSite;
         this.callbackBaseUrl = (callbackBaseUrl != null && !callbackBaseUrl.isBlank()) ? callbackBaseUrl : DEFAULT_CALLBACK_URL;
+        this.keycloakAuthorizationUrl = stripTrailingSlash(keycloakPublicBaseUrl)
+                + "/realms/vnshop/protocol/openid-connect/auth";
+        this.frontendBaseUrl = normalizeFrontendBaseUrl(frontendBaseUrl);
     }
 
     @PostMapping("/login")
@@ -131,27 +132,22 @@ public class AuthSessionController {
     public void oauthStart(
             @PathVariable String provider,
             @RequestParam(name = "next", required = false, defaultValue = "/") String nextParam,
-            @RequestParam(name = "redirect_uri", required = false) String redirectUri,
             HttpServletResponse response) throws Exception {
 
         // Validate provider
         if (provider == null || provider.isBlank() || !ALLOWED_PROVIDERS.contains(provider.toLowerCase())) {
-            response.sendRedirect("/login?oauthError=unknown_provider");
+            response.sendRedirect(buildFrontendRedirect("/login?oauthError=unknown_provider"));
             return;
         }
 
         // Sanitize and validate the return path
         String sanitizedReturn = sanitizeReturnPath(nextParam);
-        if (sanitizedReturn == null) {
-            sanitizedReturn = "/";
-        }
-
         // Create state with PKCE
         OAuthLoginState.StateWithChallenge stateWithChallenge =
                 oauthState.createStateWithChallenge(provider.toLowerCase(), sanitizedReturn);
 
         // Build authorization URL with PKCE
-        StringBuilder authUrl = new StringBuilder(KEYCLOAK_AUTH_URL);
+        StringBuilder authUrl = new StringBuilder(keycloakAuthorizationUrl);
         authUrl.append("?client_id=vnshop-api");
         authUrl.append("&response_type=code");
         authUrl.append("&scope=openid profile email");
@@ -162,9 +158,8 @@ public class AuthSessionController {
         authUrl.append("&code_challenge=").append(stateWithChallenge.codeChallenge());
         authUrl.append("&code_challenge_method=S256");
 
-        // Use provided redirect_uri or default callback
-        String callbackUrl = redirectUri != null ? redirectUri : callbackBaseUrl;
-        authUrl.append("&redirect_uri=").append(java.net.URLEncoder.encode(callbackUrl, StandardCharsets.UTF_8.name()));
+        // The callback is server-owned so callers cannot select an arbitrary token-exchange URI.
+        authUrl.append("&redirect_uri=").append(java.net.URLEncoder.encode(callbackBaseUrl, StandardCharsets.UTF_8.name()));
 
         response.sendRedirect(authUrl.toString());
     }
@@ -182,20 +177,20 @@ public class AuthSessionController {
 
         // Check for OAuth error from Keycloak
         if (error != null) {
-            response.sendRedirect("/login?oauthError=oauth_failed");
+            response.sendRedirect(buildFrontendRedirect("/login?oauthError=oauth_failed"));
             return;
         }
 
         // Validate required parameters
         if (code == null || code.isBlank() || state == null || state.isBlank()) {
-            response.sendRedirect("/login?oauthError=missing_params");
+            response.sendRedirect(buildFrontendRedirect("/login?oauthError=missing_params"));
             return;
         }
 
         // Consume and validate state
         StateRecord stateRecord = oauthState.consumeState(state);
         if (stateRecord == null) {
-            response.sendRedirect("/login?oauthError=invalid_state");
+            response.sendRedirect(buildFrontendRedirect("/login?oauthError=invalid_state"));
             return;
         }
 
@@ -211,83 +206,57 @@ public class AuthSessionController {
             writeRefreshCookie(response, tokens.refreshToken(), tokens.refreshExpiresIn());
             writeCsrfCookie(response, csrfToken, tokens.refreshExpiresIn());
 
-            // Redirect to the requested path
+            // Redirect to the requested path on the SPA
             String returnTo = stateRecord.returnTo();
             if (returnTo == null || returnTo.isBlank() || !isSafeReturnPath(returnTo)) {
                 returnTo = "/";
             }
-            response.sendRedirect(returnTo);
+            response.sendRedirect(buildFrontendRedirect(returnTo));
 
         } catch (Exception e) {
             // Log the error but don't expose details to client
             // Redirect to login with generic error
-            response.sendRedirect("/login?oauthError=exchange_failed");
+            response.sendRedirect(buildFrontendRedirect("/login?oauthError=exchange_failed"));
         }
     }
 
     /**
      * Sanitizes the return path to prevent open redirect vulnerabilities.
-     * Only allows relative paths starting with safe prefixes.
+     * Only allows relative SPA paths starting with /, rejects protocol-relative //.
      */
-    private String sanitizeReturnPath(String path) {
+    private static String sanitizeReturnPath(String path) {
         if (path == null || path.isBlank()) {
             return "/";
         }
-
-        // Decode if encoded
-        try {
-            path = URLDecoder.decode(path, StandardCharsets.UTF_8.name());
-        } catch (UnsupportedEncodingException ignored) {
-            // Use as-is
+        String candidate = path.trim();
+        if (!isSafeReturnPath(candidate)) {
+            return "/";
         }
-
-        // Remove any query strings or fragments
-        int queryIndex = path.indexOf('?');
-        if (queryIndex > 0) {
-            path = path.substring(0, queryIndex);
-        }
-        int fragmentIndex = path.indexOf('#');
-        if (fragmentIndex > 0) {
-            path = path.substring(0, fragmentIndex);
-        }
-
-        // Must start with /
-        if (!path.startsWith("/")) {
-            path = "/" + path;
-        }
-
-        // Check against allowed prefixes
-        for (String prefix : SAFE_RETURN_PREFIXES) {
-            if (path.equals(prefix) || path.startsWith(prefix + "/") || path.startsWith(prefix + "?")) {
-                return path;
-            }
-        }
-
-        // Default to root if not in allowed list
-        return "/";
+        return candidate;
     }
 
     /**
      * Checks if a return path is safe for redirect.
      */
-    private boolean isSafeReturnPath(String path) {
+    private static boolean isSafeReturnPath(String path) {
         if (path == null || path.isBlank()) {
             return false;
         }
 
-        // Must start with /
-        if (!path.startsWith("/")) {
-            return false;
-        }
+        return path.startsWith("/")
+                && !path.startsWith("//")
+                && path.indexOf('\\') < 0
+                && path.indexOf('\r') < 0
+                && path.indexOf('\n') < 0;
+    }
 
-        // Check against allowed prefixes
-        for (String prefix : SAFE_RETURN_PREFIXES) {
-            if (path.equals(prefix) || path.startsWith(prefix + "/") || path.startsWith(prefix + "?")) {
-                return true;
-            }
-        }
-
-        return false;
+    /**
+     * Builds the full redirect URL by combining the frontend base URL with the
+     * given path. This ensures OAuth callbacks always land on the SPA, not the
+     * API gateway.
+     */
+    private String buildFrontendRedirect(String path) {
+        return frontendBaseUrl + sanitizeReturnPath(path);
     }
 
     private void writeRefreshCookie(HttpServletResponse response, String value, int maxAgeSeconds) {
@@ -347,6 +316,20 @@ public class AuthSessionController {
         byte[] bytes = new byte[32];
         SECURE_RANDOM.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    private static String stripTrailingSlash(String url) {
+        if (url == null || url.isBlank()) {
+            return "http://localhost:8085";
+        }
+        return url.replaceFirst("/+$", "");
+    }
+
+    private static String normalizeFrontendBaseUrl(String url) {
+        if (url == null || url.isBlank()) {
+            return "http://localhost:3000";
+        }
+        return url.replaceFirst("/+$", "");
     }
 
     private static String readRefreshCookie(HttpServletRequest request) {

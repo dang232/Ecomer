@@ -10,6 +10,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import java.lang.reflect.Field;
+import java.util.Arrays;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
@@ -31,7 +33,14 @@ class AuthSessionControllerTest {
 
     @BeforeEach
     void setUp() {
-        controller = new AuthSessionController(useCase, oauthState, false, "Strict", "http://localhost:8081/auth/oauth/callback");
+        controller = new AuthSessionController(
+                useCase,
+                oauthState,
+                false,
+                "Strict",
+                "http://localhost:8080/auth/oauth/callback",
+                "http://localhost:8085",
+                "http://localhost:3000");
         request = new MockHttpServletRequest();
         response = new MockHttpServletResponse();
     }
@@ -43,9 +52,9 @@ class AuthSessionControllerTest {
         when(oauthState.createStateWithChallenge("google", "/profile"))
                 .thenReturn(new OAuthLoginState.StateWithChallenge("test-state", "test-challenge"));
 
-        controller.oauthStart("google", "/profile", null, response);
+        controller.oauthStart("google", "/profile", response);
 
-        assertThat(response.getRedirectedUrl()).startsWith("http://keycloak:8080/realms/vnshop/protocol/openid-connect/auth");
+        assertThat(response.getRedirectedUrl()).startsWith("http://localhost:8085/realms/vnshop/protocol/openid-connect/auth");
         assertThat(response.getRedirectedUrl()).contains("kc_idp_hint=google");
         assertThat(response.getRedirectedUrl()).contains("state=test-state");
         assertThat(response.getRedirectedUrl()).contains("code_challenge=test-challenge");
@@ -54,9 +63,9 @@ class AuthSessionControllerTest {
 
     @Test
     void oauthStart_unknownProvider_redirectsToLoginWithError() throws Exception {
-        controller.oauthStart("unknown", "/profile", null, response);
+        controller.oauthStart("unknown", "/profile", response);
 
-        assertThat(response.getRedirectedUrl()).isEqualTo("/login?oauthError=unknown_provider");
+        assertThat(response.getRedirectedUrl()).isEqualTo("http://localhost:3000/login?oauthError=unknown_provider");
     }
 
     @Test
@@ -64,9 +73,9 @@ class AuthSessionControllerTest {
         when(oauthState.createStateWithChallenge("facebook", "/profile"))
                 .thenReturn(new OAuthLoginState.StateWithChallenge("fb-state", "fb-challenge"));
 
-        controller.oauthStart("facebook", "/profile", null, response);
+        controller.oauthStart("facebook", "/profile", response);
 
-        assertThat(response.getRedirectedUrl()).startsWith("http://keycloak:8080/realms/vnshop/protocol/openid-connect/auth");
+        assertThat(response.getRedirectedUrl()).startsWith("http://localhost:8085/realms/vnshop/protocol/openid-connect/auth");
         assertThat(response.getRedirectedUrl()).contains("kc_idp_hint=facebook");
     }
 
@@ -76,10 +85,49 @@ class AuthSessionControllerTest {
                 .thenReturn(new OAuthLoginState.StateWithChallenge("test-state", "test-challenge"));
 
         // Try an off-origin URL - should be sanitized to "/"
-        controller.oauthStart("google", "http://evil.com/path", null, response);
+        controller.oauthStart("google", "http://evil.com/path", response);
 
         // The return path should be sanitized to "/" (default)
         verify(oauthState).createStateWithChallenge(eq("google"), eq("/"));
+    }
+
+    @Test
+    void oauthStart_usesServerOwnedCallback() throws Exception {
+        when(oauthState.createStateWithChallenge("google", "/"))
+                .thenReturn(new OAuthLoginState.StateWithChallenge("test-state", "test-challenge"));
+
+        controller.oauthStart("google", "/", response);
+
+        assertThat(response.getRedirectedUrl())
+                .contains("redirect_uri=http%3A%2F%2Flocalhost%3A8080%2Fauth%2Foauth%2Fcallback");
+    }
+
+    @Test
+    void oauthStart_preservesSafeProductDetailPathAndQuery() throws Exception {
+        when(oauthState.createStateWithChallenge("google", "/product/p1?ref=wishlist"))
+                .thenReturn(new OAuthLoginState.StateWithChallenge("test-state", "test-challenge"));
+
+        controller.oauthStart("google", "/product/p1?ref=wishlist", response);
+
+        verify(oauthState).createStateWithChallenge("google", "/product/p1?ref=wishlist");
+    }
+
+    @Test
+    void frontendRedirectOrigin_isConstructorConfigured() {
+        boolean configurable = Arrays.stream(AuthSessionController.class.getDeclaredConstructors())
+                .anyMatch(constructor -> constructor.getParameterCount() == 7);
+
+        assertThat(configurable).isTrue();
+    }
+
+    @Test
+    void oauthState_usesSharedRedisStorage() {
+        boolean hasRedisTemplate = Arrays.stream(OAuthLoginState.class.getDeclaredFields())
+                .map(Field::getType)
+                .map(Class::getName)
+                .anyMatch("org.springframework.data.redis.core.StringRedisTemplate"::equals);
+
+        assertThat(hasRedisTemplate).isTrue();
     }
 
     // --- oauth callback tests ---
@@ -88,21 +136,21 @@ class AuthSessionControllerTest {
     void oauthCallback_oauthError_redirectsToLoginWithError() throws Exception {
         controller.oauthCallback(null, "test-state", "access_denied", response);
 
-        assertThat(response.getRedirectedUrl()).isEqualTo("/login?oauthError=oauth_failed");
+        assertThat(response.getRedirectedUrl()).isEqualTo("http://localhost:3000/login?oauthError=oauth_failed");
     }
 
     @Test
     void oauthCallback_missingCode_redirectsToLoginWithError() throws Exception {
         controller.oauthCallback(null, "test-state", null, response);
 
-        assertThat(response.getRedirectedUrl()).isEqualTo("/login?oauthError=missing_params");
+        assertThat(response.getRedirectedUrl()).isEqualTo("http://localhost:3000/login?oauthError=missing_params");
     }
 
     @Test
     void oauthCallback_missingState_redirectsToLoginWithError() throws Exception {
         controller.oauthCallback("auth-code", null, null, response);
 
-        assertThat(response.getRedirectedUrl()).isEqualTo("/login?oauthError=missing_params");
+        assertThat(response.getRedirectedUrl()).isEqualTo("http://localhost:3000/login?oauthError=missing_params");
     }
 
     @Test
@@ -111,7 +159,7 @@ class AuthSessionControllerTest {
 
         controller.oauthCallback("auth-code", "expired-state", null, response);
 
-        assertThat(response.getRedirectedUrl()).isEqualTo("/login?oauthError=invalid_state");
+        assertThat(response.getRedirectedUrl()).isEqualTo("http://localhost:3000/login?oauthError=invalid_state");
     }
 
     @Test
@@ -120,16 +168,16 @@ class AuthSessionControllerTest {
 
         controller.oauthCallback("auth-code", "invalid-state", null, response);
 
-        assertThat(response.getRedirectedUrl()).isEqualTo("/login?oauthError=invalid_state");
+        assertThat(response.getRedirectedUrl()).isEqualTo("http://localhost:3000/login?oauthError=invalid_state");
     }
 
     @Test
     void oauthCallback_successfulExchange_setsCookiesAndRedirects() throws Exception {
         OAuthLoginState.StateRecord stateRecord = new OAuthLoginState.StateRecord(
-                "google", "verifier", "challenge", "/profile", java.time.Instant.now().plusSeconds(600));
+                "google", "verifier", "challenge", "/profile");
         when(oauthState.consumeState("valid-state")).thenReturn(stateRecord);
         when(oauthState.getCodeVerifier(stateRecord)).thenReturn("verifier");
-        when(useCase.exchangeCodeForTokens("auth-code", "verifier", "http://localhost:8081/auth/oauth/callback"))
+        when(useCase.exchangeCodeForTokens("auth-code", "verifier", "http://localhost:8080/auth/oauth/callback"))
                 .thenReturn(TOKENS);
 
         controller.oauthCallback("auth-code", "valid-state", null, response);
@@ -142,14 +190,14 @@ class AuthSessionControllerTest {
         assertThat(response.getCookie("vnshop_csrf")).isNotNull();
         assertThat(response.getCookie("vnshop_csrf").getValue()).isNotBlank();
 
-        // Verify redirect to return path
-        assertThat(response.getRedirectedUrl()).isEqualTo("/profile");
+        // Verify redirect to return path on the SPA
+        assertThat(response.getRedirectedUrl()).isEqualTo("http://localhost:3000/profile");
     }
 
     @Test
     void oauthCallback_failedExchange_redirectsToLoginWithError() throws Exception {
         OAuthLoginState.StateRecord stateRecord = new OAuthLoginState.StateRecord(
-                "google", "verifier", "challenge", "/profile", java.time.Instant.now().plusSeconds(600));
+                "google", "verifier", "challenge", "/profile");
         when(oauthState.consumeState("valid-state")).thenReturn(stateRecord);
         when(oauthState.getCodeVerifier(stateRecord)).thenReturn("verifier");
         when(useCase.exchangeCodeForTokens(anyString(), anyString(), anyString()))
@@ -157,13 +205,13 @@ class AuthSessionControllerTest {
 
         controller.oauthCallback("auth-code", "valid-state", null, response);
 
-        assertThat(response.getRedirectedUrl()).isEqualTo("/login?oauthError=exchange_failed");
+        assertThat(response.getRedirectedUrl()).isEqualTo("http://localhost:3000/login?oauthError=exchange_failed");
     }
 
     @Test
     void oauthCallback_unsafeReturnPath_redirectsToRoot() throws Exception {
         OAuthLoginState.StateRecord stateRecord = new OAuthLoginState.StateRecord(
-                "google", "verifier", "challenge", "http://evil.com", java.time.Instant.now().plusSeconds(600));
+                "google", "verifier", "challenge", "http://evil.com");
         when(oauthState.consumeState("valid-state")).thenReturn(stateRecord);
         when(oauthState.getCodeVerifier(stateRecord)).thenReturn("verifier");
         when(useCase.exchangeCodeForTokens(anyString(), anyString(), anyString()))
@@ -171,8 +219,8 @@ class AuthSessionControllerTest {
 
         controller.oauthCallback("auth-code", "valid-state", null, response);
 
-        // Should redirect to / when return path is unsafe
-        assertThat(response.getRedirectedUrl()).isEqualTo("/");
+        // Should redirect to / on the SPA when return path is unsafe
+        assertThat(response.getRedirectedUrl()).isEqualTo("http://localhost:3000/");
     }
 
     // --- cookie tests ---
@@ -181,10 +229,16 @@ class AuthSessionControllerTest {
     void oauthCallback_secureCookie_setsSecureFlag() throws Exception {
         // Create controller with secure cookies
         AuthSessionController secureController = new AuthSessionController(
-                useCase, oauthState, true, "Strict", "http://localhost:8081/auth/oauth/callback");
+                useCase,
+                oauthState,
+                true,
+                "Strict",
+                "http://localhost:8080/auth/oauth/callback",
+                "http://localhost:8085",
+                "http://localhost:3000");
 
         OAuthLoginState.StateRecord stateRecord = new OAuthLoginState.StateRecord(
-                "google", "verifier", "challenge", "/profile", java.time.Instant.now().plusSeconds(600));
+                "google", "verifier", "challenge", "/profile");
         when(oauthState.consumeState("valid-state")).thenReturn(stateRecord);
         when(oauthState.getCodeVerifier(stateRecord)).thenReturn("verifier");
         when(useCase.exchangeCodeForTokens(anyString(), anyString(), anyString()))

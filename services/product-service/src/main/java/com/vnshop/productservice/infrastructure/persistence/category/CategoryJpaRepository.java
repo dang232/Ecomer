@@ -8,6 +8,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * JPA-backed CategoryRepository.
+ * Only active when the "jpa" profile is enabled; test contexts that disable JPA
+ * repository auto-configuration must provide a mock or alternative implementation.
+ */
 @Repository
 public class CategoryJpaRepository implements CategoryRepositoryPort {
     private final CategoryJpaSpringDataRepository springDataRepository;

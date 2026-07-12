@@ -12,8 +12,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.vnshop.inventoryservice.domain.StockReservation;
+import com.vnshop.inventoryservice.domain.port.out.InventoryEventPublisherPort;
 import com.vnshop.inventoryservice.domain.port.out.StockReservationPort;
-import com.vnshop.inventoryservice.infrastructure.event.InventoryEventPublisher;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -37,7 +37,7 @@ class ReleaseStockUseCaseTest {
         doAnswer(inv -> { realPort.batchMarkReleased(inv.getArgument(0), inv.getArgument(1)); return null; }).when(port).batchMarkReleased(any(), any());
         doAnswer(inv -> { realPort.markReleased(inv.getArgument(0)); return null; }).when(port).markReleased(any());
 
-        InventoryEventPublisher eventPublisher = mock(InventoryEventPublisher.class);
+        InventoryEventPublisherPort eventPublisher = mock(InventoryEventPublisherPort.class);
         ReleaseStockUseCase useCase = new ReleaseStockUseCase(port, fixedClock, eventPublisher);
 
         UUID res1 = UUID.randomUUID();
@@ -76,7 +76,7 @@ class ReleaseStockUseCaseTest {
         doAnswer(inv -> { realPort.batchMarkReleased(inv.getArgument(0), inv.getArgument(1)); return null; }).when(port).batchMarkReleased(any(), any());
         doAnswer(inv -> { realPort.markReleased(inv.getArgument(0)); return null; }).when(port).markReleased(any());
 
-        InventoryEventPublisher eventPublisher = mock(InventoryEventPublisher.class);
+        InventoryEventPublisherPort eventPublisher = mock(InventoryEventPublisherPort.class);
         ReleaseStockUseCase useCase = new ReleaseStockUseCase(port, fixedClock, eventPublisher);
 
         UUID res1 = UUID.randomUUID();
@@ -110,7 +110,7 @@ class ReleaseStockUseCaseTest {
         doAnswer(inv -> { realPort.batchMarkReleased(inv.getArgument(0), inv.getArgument(1)); return null; }).when(port).batchMarkReleased(any(), any());
         doAnswer(inv -> { realPort.markReleased(inv.getArgument(0)); return null; }).when(port).markReleased(any());
 
-        InventoryEventPublisher eventPublisher = mock(InventoryEventPublisher.class);
+        InventoryEventPublisherPort eventPublisher = mock(InventoryEventPublisherPort.class);
         ReleaseStockUseCase useCase = new ReleaseStockUseCase(port, fixedClock, eventPublisher);
 
         // When
@@ -127,7 +127,7 @@ class ReleaseStockUseCaseTest {
     void releaseNullOrderIdThrows() {
         // Given
         InMemoryStockReservationPort port = new InMemoryStockReservationPort();
-        InventoryEventPublisher eventPublisher = mock(InventoryEventPublisher.class);
+        InventoryEventPublisherPort eventPublisher = mock(InventoryEventPublisherPort.class);
         ReleaseStockUseCase useCase = new ReleaseStockUseCase(port, fixedClock, eventPublisher);
 
         // When/Then
@@ -140,7 +140,7 @@ class ReleaseStockUseCaseTest {
     void releaseBlankOrderIdThrows() {
         // Given
         InMemoryStockReservationPort port = new InMemoryStockReservationPort();
-        InventoryEventPublisher eventPublisher = mock(InventoryEventPublisher.class);
+        InventoryEventPublisherPort eventPublisher = mock(InventoryEventPublisherPort.class);
         ReleaseStockUseCase useCase = new ReleaseStockUseCase(port, fixedClock, eventPublisher);
 
         // When/Then

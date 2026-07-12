@@ -3,199 +3,74 @@ package com.vnshop.productservice.infrastructure.web;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
-import com.vnshop.productservice.infrastructure.web.CategoryResponse;
 import com.vnshop.productservice.application.CountSellerProductsUseCase;
 import com.vnshop.productservice.application.CreateProductUseCase;
 import com.vnshop.productservice.application.DeleteProductUseCase;
 import com.vnshop.productservice.application.GetCategoriesUseCase;
 import com.vnshop.productservice.application.GetProductUseCase;
 import com.vnshop.productservice.application.UpdateProductUseCase;
-
+import com.vnshop.productservice.application.UpdateProductEligibilityUseCase;
+import com.vnshop.productservice.domain.Category;
+import java.util.List;
+import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-
-/**
- * Unit tests for ProductController - focusing on category endpoint.
- */
 @ExtendWith(MockitoExtension.class)
 class ProductControllerTest {
 
-    @Mock
-    private CreateProductUseCase createProductUseCase;
-    @Mock
-    private UpdateProductUseCase updateProductUseCase;
-    @Mock
-    private DeleteProductUseCase deleteProductUseCase;
-    @Mock
-    private GetProductUseCase getProductUseCase;
-    @Mock
-    private CountSellerProductsUseCase countSellerProductsUseCase;
-    @Mock
-    private GetCategoriesUseCase getCategoriesUseCase;
+    @Mock private CreateProductUseCase createProductUseCase;
+    @Mock private UpdateProductUseCase updateProductUseCase;
+    @Mock private UpdateProductEligibilityUseCase updateProductEligibilityUseCase;
+    @Mock private DeleteProductUseCase deleteProductUseCase;
+    @Mock private GetProductUseCase getProductUseCase;
+    @Mock private CountSellerProductsUseCase countSellerProductsUseCase;
+    @Mock private GetCategoriesUseCase getCategoriesUseCase;
 
-    @InjectMocks
-    private ProductController controller;
+    @InjectMocks private ProductController controller;
 
     @Test
-    void findCategories_returnsTreeWithRootOrdering() {
-        // Given: two root categories with different sort orders
-        CategoryResponse electronics = new CategoryResponse(
-                "electronics",
-                null,
-                "electronics",
-                "Điện tử",
-                List.of()
-        );
-        CategoryResponse clothing = new CategoryResponse(
-                "clothing",
-                null,
-                "clothing",
-                "Quần áo",
-                List.of()
-        );
+    void findCategories_mapsDomainCategoriesToTreeResponse() {
+        Category phones = category("phones", "electronics", "phones", "Phones");
+        Category electronics = category("electronics", null, "electronics", "Electronics", phones);
+        Category clothing = category("clothing", null, "clothing", "Clothing");
+        when(getCategoriesUseCase.getCategoryTree()).thenReturn(List.of(electronics, clothing));
 
-        // Expect sorted by sort order (electronics=10 comes before clothing=20)
-        when(getCategoriesUseCase.getCategoryTree())
-                .thenReturn(Arrays.asList(electronics, clothing));
-
-        // When
         ApiResponse<List<CategoryResponse>> response = controller.findCategories();
 
-        // Then
         assertThat(response.success()).isTrue();
-        assertThat(response.data()).hasSize(2);
-        assertThat(response.data().get(0).id()).isEqualTo("electronics");
-        assertThat(response.data().get(1).id()).isEqualTo("clothing");
+        assertThat(response.data()).extracting(CategoryResponse::id)
+                .containsExactly("electronics", "clothing");
+        assertThat(response.data().getFirst().label()).isEqualTo("Electronics");
+        assertThat(response.data().getFirst().children()).extracting(CategoryResponse::id)
+                .containsExactly("phones");
     }
 
     @Test
-    void findCategories_returnsNestedChildrenWithOrdering() {
-        // Given: electronics with nested children
-        CategoryResponse phones = new CategoryResponse(
-                "phones",
-                "electronics",
-                "phones",
-                "Điện thoại",
-                List.of()
-        );
-        CategoryResponse laptops = new CategoryResponse(
-                "laptops",
-                "electronics",
-                "laptops",
-                "Laptop",
-                List.of()
-        );
-        CategoryResponse electronics = new CategoryResponse(
-                "electronics",
-                null,
-                "electronics",
-                "Điện tử",
-                Arrays.asList(phones, laptops) // sorted order
-        );
-
+    void findCategories_serializesEmptyChildrenAsAnEmptyList() {
         when(getCategoriesUseCase.getCategoryTree())
-                .thenReturn(List.of(electronics));
+                .thenReturn(List.of(category("empty", null, "empty", "Empty")));
 
-        // When
         ApiResponse<List<CategoryResponse>> response = controller.findCategories();
 
-        // Then
-        assertThat(response.success()).isTrue();
-        assertThat(response.data()).hasSize(1);
-        assertThat(response.data().get(0).children()).hasSize(2);
-        // Children should be sorted by sort order (phones=10 before laptops=20)
-        assertThat(response.data().get(0).children().get(0).id()).isEqualTo("phones");
-        assertThat(response.data().get(0).children().get(1).id()).isEqualTo("laptops");
+        assertThat(response.data().getFirst().children()).isEmpty();
     }
 
     @Test
-    void findCategories_includesLabels() {
-        // Given: categories with Vietnamese labels
-        CategoryResponse category = new CategoryResponse(
-                "electronics",
-                null,
-                "electronics",
-                "Điện tử",
-                List.of()
-        );
+    void exposesAdminEligibilityUpdateEndpoint() {
+        boolean endpointExists = Arrays.stream(ProductController.class.getDeclaredMethods())
+                .filter(method -> method.isAnnotationPresent(org.springframework.web.bind.annotation.PutMapping.class))
+                .flatMap(method -> Arrays.stream(
+                        method.getAnnotation(org.springframework.web.bind.annotation.PutMapping.class).value()))
+                .anyMatch("/products/{id}/eligibility"::equals);
 
-        when(getCategoriesUseCase.getCategoryTree())
-                .thenReturn(List.of(category));
-
-        // When
-        ApiResponse<List<CategoryResponse>> response = controller.findCategories();
-
-        // Then
-        assertThat(response.success()).isTrue();
-        assertThat(response.data().get(0).label()).isEqualTo("Điện tử");
-        assertThat(response.data().get(0).name()).isEqualTo("electronics");
+        assertThat(endpointExists).isTrue();
     }
 
-    @Test
-    void findCategories_noDuplicateIds() {
-        // Given: categories with no duplicates
-        CategoryResponse root = new CategoryResponse(
-                "root",
-                null,
-                "root",
-                "Root Category",
-                List.of(
-                        new CategoryResponse("child1", "root", "child1", "Child 1", List.of()),
-                        new CategoryResponse("child2", "root", "child2", "Child 2", List.of())
-                )
-        );
-
-        when(getCategoriesUseCase.getCategoryTree())
-                .thenReturn(List.of(root));
-
-        // When
-        ApiResponse<List<CategoryResponse>> response = controller.findCategories();
-
-        // Then
-        assertThat(response.success()).isTrue();
-        List<String> allIds = flattenIds(response.data());
-        assertThat(allIds).containsExactlyInAnyOrder("root", "child1", "child2");
-    }
-
-    @Test
-    void findCategories_emptyChildrenSerializedAsEmptyList() {
-        // Given: category with no children
-        CategoryResponse category = new CategoryResponse(
-                "empty",
-                null,
-                "empty",
-                "Empty Category",
-                Collections.emptyList()
-        );
-
-        when(getCategoriesUseCase.getCategoryTree())
-                .thenReturn(List.of(category));
-
-        // When
-        ApiResponse<List<CategoryResponse>> response = controller.findCategories();
-
-        // Then
-        assertThat(response.success()).isTrue();
-        assertThat(response.data().get(0).children()).isEmpty();
-    }
-
-    private List<String> flattenIds(List<CategoryResponse> categories) {
-        return categories.stream()
-                .flatMap(c -> {
-                    List<String> ids = new java.util.ArrayList<>();
-                    ids.add(c.id());
-                    if (c.children() != null) {
-                        ids.addAll(flattenIds(c.children()));
-                    }
-                    return ids.stream();
-                })
-                .toList();
+    private static Category category(String id, String parentId, String name, String label, Category... children) {
+        return new Category(id, parentId, name, label, 10, true).withChildren(List.of(children));
     }
 }

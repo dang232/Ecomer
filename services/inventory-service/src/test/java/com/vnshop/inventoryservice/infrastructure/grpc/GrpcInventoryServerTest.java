@@ -4,9 +4,9 @@ import com.vnshop.inventoryservice.application.ReleaseStockUseCase;
 import com.vnshop.inventoryservice.application.ReserveStockUseCase;
 import com.vnshop.inventoryservice.application.ReserveStockUseCase.ReserveStockResult;
 import com.vnshop.inventoryservice.domain.StockReservation;
+import com.vnshop.inventoryservice.domain.port.out.InventoryEventPublisherPort;
 import com.vnshop.inventoryservice.domain.port.out.StockReservationPort;
 import com.vnshop.inventoryservice.domain.port.out.StockReservationPort.DecrementOutcome;
-import com.vnshop.inventoryservice.infrastructure.event.InventoryEventPublisher;
 import com.vnshop.proto.inventory.*;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -36,7 +36,7 @@ class GrpcInventoryServerTest {
     void setUp() throws IOException {
         port = new InMemoryStockReservationPort();
         ReserveStockUseCase reserveUseCase = new ReserveStockUseCase(port);
-        ReleaseStockUseCase releaseUseCase = new ReleaseStockUseCase(port, mock(InventoryEventPublisher.class));
+        ReleaseStockUseCase releaseUseCase = new ReleaseStockUseCase(port, mock(InventoryEventPublisherPort.class));
         GrpcInventoryServer service = new GrpcInventoryServer(reserveUseCase, releaseUseCase);
         service.port = 0; // random port
         server = ServerBuilder.forPort(0).addService(service).build().start();

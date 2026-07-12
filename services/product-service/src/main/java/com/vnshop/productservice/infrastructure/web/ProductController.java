@@ -9,6 +9,7 @@ import com.vnshop.productservice.application.GetCategoriesUseCase;
 import com.vnshop.productservice.application.GetProductUseCase;
 import com.vnshop.productservice.application.ProductResponse;
 import com.vnshop.productservice.application.UpdateProductUseCase;
+import com.vnshop.productservice.application.UpdateProductEligibilityUseCase;
 import com.vnshop.productservice.infrastructure.config.JwtPrincipalUtil;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -34,16 +35,19 @@ import java.util.UUID;
 public class ProductController {
     private final CreateProductUseCase createProductUseCase;
     private final UpdateProductUseCase updateProductUseCase;
+    private final UpdateProductEligibilityUseCase updateProductEligibilityUseCase;
     private final DeleteProductUseCase deleteProductUseCase;
     private final GetProductUseCase getProductUseCase;
     private final CountSellerProductsUseCase countSellerProductsUseCase;
     private final GetCategoriesUseCase getCategoriesUseCase;
 
     public ProductController(CreateProductUseCase createProductUseCase, UpdateProductUseCase updateProductUseCase,
+            UpdateProductEligibilityUseCase updateProductEligibilityUseCase,
             DeleteProductUseCase deleteProductUseCase, GetProductUseCase getProductUseCase,
             CountSellerProductsUseCase countSellerProductsUseCase, GetCategoriesUseCase getCategoriesUseCase) {
         this.createProductUseCase = createProductUseCase;
         this.updateProductUseCase = updateProductUseCase;
+        this.updateProductEligibilityUseCase = updateProductEligibilityUseCase;
         this.deleteProductUseCase = deleteProductUseCase;
         this.getProductUseCase = getProductUseCase;
         this.countSellerProductsUseCase = countSellerProductsUseCase;
@@ -118,6 +122,20 @@ public class ProductController {
 
     @GetMapping("/categories")
     public ApiResponse<List<CategoryResponse>> findCategories() {
-        return ApiResponse.ok(getCategoriesUseCase.getCategoryTree());
+        return ApiResponse.ok(getCategoriesUseCase.getCategoryTree().stream()
+                .map(CategoryResponse::fromDomain)
+                .toList());
+    }
+
+    @PutMapping("/products/{id}/eligibility")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<ProductResponse> updateEligibility(
+            @PathVariable UUID id,
+            @RequestBody ProductEligibilityRequest request) {
+        return ApiResponse.ok(updateProductEligibilityUseCase.update(
+                id,
+                request.sameDayDelivery(),
+                request.verified(),
+                request.isOfficial()));
     }
 }

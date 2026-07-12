@@ -1,34 +1,36 @@
 package com.vnshop.userservice.infrastructure.web;
 
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.ObjectMapper;
 
 import java.security.SecureRandom;
-import java.time.Instant;
+import java.time.Duration;
 import java.util.Base64;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Stores OAuth state and PKCE verifier for the authorization code flow.
- * In production, this should be replaced with a signed JWT or server-side
- * session storage. For now, uses in-memory storage with short expiry.
+ * Stores state in Redis so a callback can be handled by any service replica.
  */
 @Component
 public class OAuthLoginState {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-    private static final int STATE_EXPIRY_MINUTES = 10;
-    private static final int CLEANUP_INTERVAL = 100; // Clean expired entries every N operations
+    private static final Duration STATE_EXPIRY = Duration.ofMinutes(10);
+    private static final String KEY_PREFIX = "auth:oauth:state:";
 
-    private final Map<String, StateRecord> stateStore = new ConcurrentHashMap<>();
-    private final java.util.concurrent.atomic.AtomicInteger operationCounter = new java.util.concurrent.atomic.AtomicInteger(0);
+    private final StringRedisTemplate redisTemplate;
+    private final ObjectMapper objectMapper;
+
+    public OAuthLoginState(StringRedisTemplate redisTemplate, ObjectMapper objectMapper) {
+        this.redisTemplate = redisTemplate;
+        this.objectMapper = objectMapper;
+    }
 
     public record StateRecord(
             String provider,
             String codeVerifier,
             String codeChallenge,
-            String returnTo,
-            Instant expiresAt
+            String returnTo
     ) {}
 
     /**
@@ -46,11 +48,10 @@ public class OAuthLoginState {
                 provider,
                 codeVerifier,
                 codeChallenge,
-                returnTo,
-                Instant.now().plusSeconds(STATE_EXPIRY_MINUTES * 60L)
+                returnTo
         );
 
-        stateStore.put(state, record);
+        store(state, record);
         return state;
     }
 
@@ -69,11 +70,10 @@ public class OAuthLoginState {
                 provider,
                 codeVerifier,
                 codeChallenge,
-                returnTo,
-                Instant.now().plusSeconds(STATE_EXPIRY_MINUTES * 60L)
+                returnTo
         );
 
-        stateStore.put(state, record);
+        store(state, record);
         return new StateWithChallenge(state, codeChallenge);
     }
 
@@ -81,6 +81,7 @@ public class OAuthLoginState {
 
     /**
      * Validates and consumes a state token from the OAuth callback.
+     * Uses Redis GETDEL for atomic get-and-delete to prevent replay across replicas.
      * @param state the state token from the callback
      * @return the StateRecord if valid, null if missing/expired
      */
@@ -89,26 +90,15 @@ public class OAuthLoginState {
             return null;
         }
 
-        StateRecord record = stateStore.remove(state);
-        if (record == null) {
+        String serialized = redisTemplate.opsForValue().getAndDelete(KEY_PREFIX + state);
+        if (serialized == null) {
             return null;
         }
-
-        if (Instant.now().isAfter(record.expiresAt())) {
-            return null;
+        try {
+            return objectMapper.readValue(serialized, StateRecord.class);
+        } catch (RuntimeException exception) {
+            throw new IllegalStateException("Stored OAuth state is invalid", exception);
         }
-
-        // Lazy cleanup: evict expired entries periodically
-        if (operationCounter.incrementAndGet() % CLEANUP_INTERVAL == 0) {
-            cleanupExpiredEntries();
-        }
-
-        return record;
-    }
-
-    private void cleanupExpiredEntries() {
-        Instant now = Instant.now();
-        stateStore.entrySet().removeIf(entry -> now.isAfter(entry.getValue().expiresAt()));
     }
 
     /**
@@ -133,6 +123,17 @@ public class OAuthLoginState {
             return null;
         }
         return record.codeChallenge();
+    }
+
+    private void store(String state, StateRecord record) {
+        try {
+            redisTemplate.opsForValue().set(
+                    KEY_PREFIX + state,
+                    objectMapper.writeValueAsString(record),
+                    STATE_EXPIRY);
+        } catch (RuntimeException exception) {
+            throw new IllegalStateException("Unable to store OAuth state", exception);
+        }
     }
 
     private static String generateRandomToken() {

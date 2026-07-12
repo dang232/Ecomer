@@ -765,9 +765,13 @@ services:
       SPRING_DATASOURCE_USERNAME: vnshop
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
       REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-vnshop123}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KEYCLOAK_ISSUER_URI: http://localhost:8085/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
+      KEYCLOAK_PUBLIC_BASE_URL: ${KEYCLOAK_PUBLIC_BASE_URL:-http://localhost:8085}
+      VNSHOP_AUTH_CALLBACK_BASE_URL: ${VNSHOP_AUTH_CALLBACK_BASE_URL:-http://localhost:8080/auth/oauth/callback}
+      VNSHOP_FRONTEND_URL: ${VNSHOP_FRONTEND_URL:-http://localhost:3000}
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
       OTEL_TRACES_SAMPLER: parentbased_traceidratio
       OTEL_TRACES_SAMPLER_ARG: "1.0"
