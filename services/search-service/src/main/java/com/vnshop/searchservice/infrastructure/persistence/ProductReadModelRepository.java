@@ -20,6 +20,9 @@ public interface ProductReadModelRepository extends JpaRepository<ProductReadMod
               and (:brand is null or product.brand = cast(:brand as string))
               and (:minPrice is null or product.maxPrice >= :minPrice)
               and (:maxPrice is null or product.minPrice <= :maxPrice)
+              and (:sameDay is null or product.sameDayDelivery = :sameDay)
+              and (:verifiedOnly is null or product.verified = :verifiedOnly)
+              and (:officialOnly is null or product.isOfficial = :officialOnly)
             """)
     Page<ProductReadModelJpaEntity> searchEntitiesPaged(
             @Param("query") String query,
@@ -27,6 +30,9 @@ public interface ProductReadModelRepository extends JpaRepository<ProductReadMod
             @Param("brand") String brand,
             @Param("minPrice") BigDecimal minPrice,
             @Param("maxPrice") BigDecimal maxPrice,
+            @Param("sameDay") Boolean sameDay,
+            @Param("verifiedOnly") Boolean verifiedOnly,
+            @Param("officialOnly") Boolean officialOnly,
             Pageable pageable
     );
 
@@ -57,6 +63,9 @@ public interface ProductReadModelRepository extends JpaRepository<ProductReadMod
               and (:brand is null or product.brand = cast(:brand as string))
               and (:minPrice is null or product.maxPrice >= :minPrice)
               and (:maxPrice is null or product.minPrice <= :maxPrice)
+              and (:sameDay is null or product.sameDayDelivery = :sameDay)
+              and (:verifiedOnly is null or product.verified = :verifiedOnly)
+              and (:officialOnly is null or product.isOfficial = :officialOnly)
               and product.categoryId is not null
             group by product.categoryId
             order by count(product) desc, product.categoryId asc
@@ -65,7 +74,10 @@ public interface ProductReadModelRepository extends JpaRepository<ProductReadMod
             @Param("query") String query,
             @Param("brand") String brand,
             @Param("minPrice") BigDecimal minPrice,
-            @Param("maxPrice") BigDecimal maxPrice
+            @Param("maxPrice") BigDecimal maxPrice,
+            @Param("sameDay") Boolean sameDay,
+            @Param("verifiedOnly") Boolean verifiedOnly,
+            @Param("officialOnly") Boolean officialOnly
     );
 
     @Query("""
@@ -74,6 +86,9 @@ public interface ProductReadModelRepository extends JpaRepository<ProductReadMod
               and (:categoryId is null or product.categoryId = cast(:categoryId as string))
               and (:minPrice is null or product.maxPrice >= :minPrice)
               and (:maxPrice is null or product.minPrice <= :maxPrice)
+              and (:sameDay is null or product.sameDayDelivery = :sameDay)
+              and (:verifiedOnly is null or product.verified = :verifiedOnly)
+              and (:officialOnly is null or product.isOfficial = :officialOnly)
               and product.brand is not null
             group by product.brand
             order by count(product) desc, product.brand asc
@@ -82,11 +97,14 @@ public interface ProductReadModelRepository extends JpaRepository<ProductReadMod
             @Param("query") String query,
             @Param("categoryId") String categoryId,
             @Param("minPrice") BigDecimal minPrice,
-            @Param("maxPrice") BigDecimal maxPrice
+            @Param("maxPrice") BigDecimal maxPrice,
+            @Param("sameDay") Boolean sameDay,
+            @Param("verifiedOnly") Boolean verifiedOnly,
+            @Param("officialOnly") Boolean officialOnly
     );
 
-    default Page<ProductReadModel> searchPaged(String query, String categoryId, String brand, BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable) {
-        return searchEntitiesPaged(blankToNull(query), blankToNull(categoryId), blankToNull(brand), minPrice, maxPrice, pageable)
+    default Page<ProductReadModel> searchPaged(String query, String categoryId, String brand, BigDecimal minPrice, BigDecimal maxPrice, Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly, Pageable pageable) {
+        return searchEntitiesPaged(blankToNull(query), blankToNull(categoryId), blankToNull(brand), minPrice, maxPrice, sameDay, verifiedOnly, officialOnly, pageable)
                 .map(ProductReadModelJpaEntity::toDomain);
     }
 
@@ -98,12 +116,12 @@ public interface ProductReadModelRepository extends JpaRepository<ProductReadMod
         return findSuggestions(normalized, pageable);
     }
 
-    default List<Object[]> categoryFacetsFor(String query, String brand, BigDecimal minPrice, BigDecimal maxPrice) {
-        return categoryFacets(blankToNull(query), blankToNull(brand), minPrice, maxPrice);
+    default List<Object[]> categoryFacetsFor(String query, String brand, BigDecimal minPrice, BigDecimal maxPrice, Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly) {
+        return categoryFacets(blankToNull(query), blankToNull(brand), minPrice, maxPrice, sameDay, verifiedOnly, officialOnly);
     }
 
-    default List<Object[]> brandFacetsFor(String query, String categoryId, BigDecimal minPrice, BigDecimal maxPrice) {
-        return brandFacets(blankToNull(query), blankToNull(categoryId), minPrice, maxPrice);
+    default List<Object[]> brandFacetsFor(String query, String categoryId, BigDecimal minPrice, BigDecimal maxPrice, Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly) {
+        return brandFacets(blankToNull(query), blankToNull(categoryId), minPrice, maxPrice, sameDay, verifiedOnly, officialOnly);
     }
 
     private static String blankToNull(String value) {

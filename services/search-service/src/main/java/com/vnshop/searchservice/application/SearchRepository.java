@@ -23,6 +23,9 @@ public interface SearchRepository {
             String brand,
             BigDecimal minPrice,
             BigDecimal maxPrice,
+            Boolean sameDay,
+            Boolean verifiedOnly,
+            Boolean officialOnly,
             Pageable pageable
     );
 
@@ -40,12 +43,14 @@ public interface SearchRepository {
      * categoryId filter relaxed — standard e-commerce sidebar UX).
      */
     List<SearchFacetsResponse.FacetEntry> categoryFacetsFor(
-            String query, String brand, BigDecimal minPrice, BigDecimal maxPrice);
+            String query, String brand, BigDecimal minPrice, BigDecimal maxPrice,
+            Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly);
 
     /**
      * Brand facet counts matching the given filters (categoryId filter applied,
      * brand filter relaxed).
      */
     List<SearchFacetsResponse.FacetEntry> brandFacetsFor(
-            String query, String categoryId, BigDecimal minPrice, BigDecimal maxPrice);
+            String query, String categoryId, BigDecimal minPrice, BigDecimal maxPrice,
+            Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly);
 }

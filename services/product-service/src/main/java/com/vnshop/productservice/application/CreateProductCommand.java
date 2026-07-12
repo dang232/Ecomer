@@ -11,5 +11,18 @@ public record CreateProductCommand(
         String categoryId,
         String brand,
         List<ProductVariant> variants,
-        List<ProductImage> images
-) {}
+        List<ProductImage> images,
+        boolean sameDayDelivery,
+        boolean verified,
+        boolean isOfficial
+) {
+    // Flags default to false for new products created via the 6-arg constructor.
+    // Only seller-admin workflows pass true for verified/isOfficial.
+    // Flags are preserved from the constructor arguments — callers are responsible
+    // for setting them to false when creating regular products.
+
+    public CreateProductCommand(String sellerId, String name, String description, String categoryId,
+                               String brand, List<ProductVariant> variants, List<ProductImage> images) {
+        this(sellerId, name, description, categoryId, brand, variants, images, false, false, false);
+    }
+}

@@ -1,6 +1,7 @@
 package com.vnshop.inventoryservice.infrastructure.event;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vnshop.inventoryservice.domain.port.out.InventoryEventPublisherPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -11,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 @Component
-public class InventoryEventPublisher {
+public class InventoryEventPublisher implements InventoryEventPublisherPort {
 
     private static final Logger LOG = LoggerFactory.getLogger(InventoryEventPublisher.class);
     private static final String TOPIC_RELEASED = "inventory.released";
@@ -24,6 +25,7 @@ public class InventoryEventPublisher {
         this.objectMapper = objectMapper;
     }
 
+    @Override
     public void publishReleased(String orderId, String sagaId, List<ReleasedItem> items) {
         try {
             Map<String, Object> payload = Map.of(
@@ -37,6 +39,4 @@ public class InventoryEventPublisher {
             LOG.warn("Failed to publish inventory.released for order {}", orderId, e);
         }
     }
-
-    public record ReleasedItem(String productId, int quantity) {}
 }

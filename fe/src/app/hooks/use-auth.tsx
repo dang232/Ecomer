@@ -52,6 +52,7 @@ interface AuthState {
    */
   login: (redirectTo?: string) => void;
   loginWithCredentials: (username: string, password: string) => Promise<void>;
+  beginOAuthLogin: (provider: "google" | "facebook", next?: string) => void;
   register: (input: RegisterInput) => Promise<void>;
   logout: () => void;
 }
@@ -213,6 +214,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.location.assign(`/login?next=${encodeURIComponent(next)}`);
   }, []);
 
+  const beginOAuthLogin = useCallback((provider: "google" | "facebook", next?: string) => {
+    const env = import.meta.env as Record<string, string | undefined>;
+    const apiUrl = env.VITE_API_URL ?? "http://localhost:8080";
+    // sanitizeRedirect is already applied in LoginPage, but double-check here for safety
+    const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
+    const url = `${apiUrl}/auth/oauth/${provider}/start?next=${encodeURIComponent(safeNext)}`;
+    window.location.href = url;
+  }, []);
+
   const value = useMemo<AuthState>(() => {
     const claims = tokenSet ? decodeJwt(tokenSet.accessToken) : null;
     return {
@@ -224,10 +234,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subject: claims?.sub,
       login,
       loginWithCredentials,
+      beginOAuthLogin,
       register,
       logout,
     };
-  }, [ready, tokenSet, login, loginWithCredentials, register, logout]);
+  }, [ready, tokenSet, login, loginWithCredentials, beginOAuthLogin, register, logout]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

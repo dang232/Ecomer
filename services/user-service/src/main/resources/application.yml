@@ -18,6 +18,11 @@ spring:
       idle-timeout: 600000
       max-lifetime: 1800000
       pool-name: user-svc-pool
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
   flyway:
     enabled: true
     schemas: user_svc
@@ -55,6 +60,9 @@ vnshop:
     # double-submit check in CsrfProtectionFilter for defence-in-depth.
     cookie-secure: ${VNSHOP_AUTH_COOKIE_SECURE:false}
     cookie-same-site: ${VNSHOP_AUTH_COOKIE_SAME_SITE:Strict}
+    # OAuth callback base URL for social login
+    callback-base-url: ${VNSHOP_AUTH_CALLBACK_BASE_URL:http://localhost:8080/auth/oauth/callback}
+    frontend-base-url: ${VNSHOP_FRONTEND_URL:http://localhost:3000}
   product-service:
     uri: ${PRODUCT_SERVICE_URI:http://product-service:8082}
     connect-timeout-ms: ${PRODUCT_SERVICE_CONNECT_TIMEOUT_MS:1000}
@@ -89,6 +97,8 @@ resilience4j:
           - java.io.IOException
 
 keycloak:
+  # Browser-facing Keycloak URL. Internal service calls still use keycloak:8080.
+  public-base-url: ${KEYCLOAK_PUBLIC_BASE_URL:http://localhost:8085}
   admin:
     base-url: ${KEYCLOAK_ADMIN_BASE_URL:http://keycloak:8080}
     realm: ${KEYCLOAK_ADMIN_REALM:vnshop}

@@ -64,10 +64,7 @@ export default tseslint.config(
       "@typescript-eslint/no-unsafe-member-access": "error",
       "@typescript-eslint/no-unsafe-return": "error",
 
-      "@typescript-eslint/consistent-type-imports": [
-        "error",
-        { prefer: "type-imports" },
-      ],
+      "@typescript-eslint/consistent-type-imports": ["error", { prefer: "type-imports" }],
       "@typescript-eslint/no-unused-vars": [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
@@ -98,16 +95,10 @@ export default tseslint.config(
       "react/jsx-key": ["error", { checkFragmentShorthand: true }],
       "react/no-array-index-key": "warn",
       "react/no-unstable-nested-components": "error",
-      "react/jsx-no-leaked-render": [
-        "error",
-        { validStrategies: ["ternary"] },
-      ],
+      "react/jsx-no-leaked-render": ["error", { validStrategies: ["ternary"] }],
       "react/self-closing-comp": "error",
 
-      "react-refresh/only-export-components": [
-        "warn",
-        { allowConstantExport: true },
-      ],
+      "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
 
       "jsx-a11y/label-has-associated-control": "warn",
       "jsx-a11y/click-events-have-key-events": "warn",
@@ -117,14 +108,7 @@ export default tseslint.config(
       "import/order": [
         "warn",
         {
-          groups: [
-            "builtin",
-            "external",
-            "internal",
-            "parent",
-            "sibling",
-            "index",
-          ],
+          groups: ["builtin", "external", "internal", "parent", "sibling", "index"],
           "newlines-between": "always",
           alphabetize: { order: "asc", caseInsensitive: true },
         },
@@ -137,11 +121,11 @@ export default tseslint.config(
   },
 
   {
-    files: [
-      "**/*.test.{ts,tsx}",
-      "**/test-setup.ts",
-      "**/*.config.{ts,js,mjs,cjs}",
-    ],
+    files: ["**/*.test.{ts,tsx}", "**/test-setup.ts", "**/*.config.{ts,js,mjs,cjs}"],
+    // Vitest files are intentionally excluded from the application tsconfig.
+    // Lint their syntax and React rules without asking the TypeScript project
+    // service to resolve them as production modules.
+    extends: [tseslint.configs.disableTypeChecked],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-unsafe-argument": "off",

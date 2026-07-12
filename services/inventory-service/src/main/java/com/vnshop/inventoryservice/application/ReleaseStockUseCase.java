@@ -1,8 +1,9 @@
 package com.vnshop.inventoryservice.application;
 
 import com.vnshop.inventoryservice.domain.StockReservation;
+import com.vnshop.inventoryservice.domain.port.out.InventoryEventPublisherPort;
+import com.vnshop.inventoryservice.domain.port.out.InventoryEventPublisherPort.ReleasedItem;
 import com.vnshop.inventoryservice.domain.port.out.StockReservationPort;
-import com.vnshop.inventoryservice.infrastructure.event.InventoryEventPublisher;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -22,13 +23,13 @@ public class ReleaseStockUseCase {
 
     private final StockReservationPort port;
     private final Clock clock;
-    private final InventoryEventPublisher eventPublisher;
+    private final InventoryEventPublisherPort eventPublisher;
 
-    public ReleaseStockUseCase(StockReservationPort port, InventoryEventPublisher eventPublisher) {
+    public ReleaseStockUseCase(StockReservationPort port, InventoryEventPublisherPort eventPublisher) {
         this(port, Clock.systemUTC(), eventPublisher);
     }
 
-    ReleaseStockUseCase(StockReservationPort port, Clock clock, InventoryEventPublisher eventPublisher) {
+    ReleaseStockUseCase(StockReservationPort port, Clock clock, InventoryEventPublisherPort eventPublisher) {
         this.port = port;
         this.clock = clock;
         this.eventPublisher = eventPublisher;
@@ -47,8 +48,8 @@ public class ReleaseStockUseCase {
         }
 
         Instant now = clock.instant();
-        List<InventoryEventPublisher.ReleasedItem> releasedItems = active.stream()
-                .map(r -> new InventoryEventPublisher.ReleasedItem(r.productId(), r.quantity()))
+        List<ReleasedItem> releasedItems = active.stream()
+                .map(r -> new ReleasedItem(r.productId(), r.quantity()))
                 .toList();
 
         // Batch release: accumulate quantities by productId and release all in one operation

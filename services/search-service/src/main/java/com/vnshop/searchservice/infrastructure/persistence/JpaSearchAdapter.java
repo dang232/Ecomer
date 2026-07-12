@@ -28,8 +28,10 @@ public class JpaSearchAdapter implements SearchRepository {
     @Override
     public Page<ProductReadModel> searchPaged(
             String query, String categoryId, String brand,
-            BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable) {
-        return repository.searchPaged(query, categoryId, brand, minPrice, maxPrice, pageable);
+            BigDecimal minPrice, BigDecimal maxPrice,
+            Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly,
+            Pageable pageable) {
+        return repository.searchPaged(query, categoryId, brand, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly, pageable);
     }
 
     @Override
@@ -44,14 +46,16 @@ public class JpaSearchAdapter implements SearchRepository {
 
     @Override
     public List<SearchFacetsResponse.FacetEntry> categoryFacetsFor(
-            String query, String brand, BigDecimal minPrice, BigDecimal maxPrice) {
-        return toFacetEntries(repository.categoryFacetsFor(query, brand, minPrice, maxPrice));
+            String query, String brand, BigDecimal minPrice, BigDecimal maxPrice,
+            Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly) {
+        return toFacetEntries(repository.categoryFacetsFor(query, brand, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly));
     }
 
     @Override
     public List<SearchFacetsResponse.FacetEntry> brandFacetsFor(
-            String query, String categoryId, BigDecimal minPrice, BigDecimal maxPrice) {
-        return toFacetEntries(repository.brandFacetsFor(query, categoryId, minPrice, maxPrice));
+            String query, String categoryId, BigDecimal minPrice, BigDecimal maxPrice,
+            Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly) {
+        return toFacetEntries(repository.brandFacetsFor(query, categoryId, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly));
     }
 
     private static List<SearchFacetsResponse.FacetEntry> toFacetEntries(List<Object[]> rows) {

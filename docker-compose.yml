@@ -402,6 +402,14 @@ services:
       KC_HOSTNAME_STRICT: "false"
       KEYCLOAK_GATEWAY_CLIENT_SECRET: ${KEYCLOAK_GATEWAY_CLIENT_SECRET:-vnshop-gateway-secret-dev}
       KEYCLOAK_ADMIN_API_CLIENT_SECRET: ${KEYCLOAK_ADMIN_API_CLIENT_SECRET:-vnshop-admin-api-secret-dev}
+      # Social OAuth identity providers (Google, Facebook). Both clientId and clientSecret
+      # must be set to enable. GOOGLE_OAUTH_ENABLED/FACEBOOK_OAUTH_ENABLED default to false.
+      GOOGLE_OAUTH_ENABLED: ${GOOGLE_OAUTH_ENABLED:-false}
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
+      FACEBOOK_OAUTH_ENABLED: ${FACEBOOK_OAUTH_ENABLED:-false}
+      FACEBOOK_OAUTH_CLIENT_ID: ${FACEBOOK_OAUTH_CLIENT_ID:-}
+      FACEBOOK_OAUTH_CLIENT_SECRET: ${FACEBOOK_OAUTH_CLIENT_SECRET:-}
     ports:
       - "8085:8080"
     volumes:
@@ -757,9 +765,13 @@ services:
       SPRING_DATASOURCE_USERNAME: vnshop
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
       REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-vnshop123}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KEYCLOAK_ISSUER_URI: http://localhost:8085/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
+      KEYCLOAK_PUBLIC_BASE_URL: ${KEYCLOAK_PUBLIC_BASE_URL:-http://localhost:8085}
+      VNSHOP_AUTH_CALLBACK_BASE_URL: ${VNSHOP_AUTH_CALLBACK_BASE_URL:-http://localhost:8080/auth/oauth/callback}
+      VNSHOP_FRONTEND_URL: ${VNSHOP_FRONTEND_URL:-http://localhost:3000}
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
       OTEL_TRACES_SAMPLER: parentbased_traceidratio
       OTEL_TRACES_SAMPLER_ARG: "1.0"
@@ -949,6 +961,8 @@ services:
       SOCIAL_YOUTUBE: https://youtube.com/vnshop
       PAYMENT_PROVIDERS: VNPay,MoMo,COD,Visa,Mastercard
       PAYMENT_DEFAULT: COD
+      GOOGLE_OAUTH_ENABLED: ${GOOGLE_OAUTH_ENABLED:-false}
+      FACEBOOK_OAUTH_ENABLED: ${FACEBOOK_OAUTH_ENABLED:-false}
       SUPPORT_PHONE: "1900-0000"
       SUPPORT_EMAIL: support@vnshop.vn
       CONFIG_FILE_PATH: /app/config/services.yml
@@ -995,6 +1009,8 @@ services:
       KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
       KAFKA_SASL_USERNAME: svc-search
       KAFKA_SASL_PASSWORD: ${KAFKA_SVC_SEARCH_PASSWORD:-kafka-search}
+      # GeoIP database for IP-based location lookups (MaxMind GeoLite2).
+      GEOIP_DATABASE_PATH: ${GEOIP_DATABASE_PATH:-}
     volumes:
       - ./infra/kafka/certs/kafka.truststore.jks:/etc/kafka/secrets/kafka.truststore.jks:ro
     deploy:
@@ -1286,6 +1302,7 @@ services:
       PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID:-}
       PAYPAL_CLIENT_SECRET: ${PAYPAL_CLIENT_SECRET:-}
       PAYPAL_MODE: ${PAYPAL_MODE:-sandbox}
+      PAYPAL_WEBHOOK_ID: ${PAYPAL_WEBHOOK_ID:-}
       # SePay outbound polling for VietQR auto-confirm.
       SEPAY_API_KEY: ${SEPAY_API_KEY:-}
       SEPAY_ACCOUNT_ID: ${SEPAY_ACCOUNT_ID:-}

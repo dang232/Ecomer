@@ -68,10 +68,12 @@ public class ElasticsearchSearchAdapter implements SearchRepository {
     @Override
     public Page<ProductReadModel> searchPaged(
             String query, String categoryId, String brand,
-            BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable) {
+            BigDecimal minPrice, BigDecimal maxPrice,
+            Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly,
+            Pageable pageable) {
         try {
             NativeQuery nativeQuery = NativeQuery.builder()
-                    .withQuery(buildSearchQuery(query, categoryId, brand, minPrice, maxPrice))
+                    .withQuery(buildSearchQuery(query, categoryId, brand, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly))
                     .withPageable(pageable)
                     .withSort(toEsSort(pageable.getSort()))
                     .build();
@@ -141,16 +143,18 @@ public class ElasticsearchSearchAdapter implements SearchRepository {
 
     @Override
     public List<SearchFacetsResponse.FacetEntry> categoryFacetsFor(
-            String query, String brand, BigDecimal minPrice, BigDecimal maxPrice) {
+            String query, String brand, BigDecimal minPrice, BigDecimal maxPrice,
+            Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly) {
         // Relax categoryId filter, apply brand/price filters
-        return runTermsFacet("categoryId", buildSearchQuery(query, null, brand, minPrice, maxPrice));
+        return runTermsFacet("categoryId", buildSearchQuery(query, null, brand, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly));
     }
 
     @Override
     public List<SearchFacetsResponse.FacetEntry> brandFacetsFor(
-            String query, String categoryId, BigDecimal minPrice, BigDecimal maxPrice) {
+            String query, String categoryId, BigDecimal minPrice, BigDecimal maxPrice,
+            Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly) {
         // Relax brand filter, apply categoryId/price filters
-        return runTermsFacet("brand", buildSearchQuery(query, categoryId, null, minPrice, maxPrice));
+        return runTermsFacet("brand", buildSearchQuery(query, categoryId, null, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly));
     }
 
     // -------------------------------------------------------------------------
@@ -163,7 +167,8 @@ public class ElasticsearchSearchAdapter implements SearchRepository {
      */
     private static Query buildSearchQuery(
             String query, String categoryId, String brand,
-            BigDecimal minPrice, BigDecimal maxPrice) {
+            BigDecimal minPrice, BigDecimal maxPrice,
+            Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly) {
 
         BoolQuery.Builder bool = new BoolQuery.Builder();
 
@@ -197,6 +202,21 @@ public class ElasticsearchSearchAdapter implements SearchRepository {
                 if (maxPrice != null) n.lte(max);
                 return n;
             }))));
+        }
+
+        // Same-day delivery filter
+        if (Boolean.TRUE.equals(sameDay)) {
+            bool.filter(Query.of(f -> f.term(t -> t.field("sameDayDelivery").value(true))));
+        }
+
+        // Verified seller filter
+        if (Boolean.TRUE.equals(verifiedOnly)) {
+            bool.filter(Query.of(f -> f.term(t -> t.field("verified").value(true))));
+        }
+
+        // Official store filter
+        if (Boolean.TRUE.equals(officialOnly)) {
+            bool.filter(Query.of(f -> f.term(t -> t.field("isOfficial").value(true))));
         }
 
         BoolQuery builtBool = bool.build();
@@ -281,7 +301,10 @@ public class ElasticsearchSearchAdapter implements SearchRepository {
                 doc.getPrice(),    // ES stores a single price; map to both min and max
                 doc.getPrice(),
                 0,                 // variantCount not stored in ES document
-                doc.getCreatedAt()
+                doc.getCreatedAt(),
+                Boolean.TRUE.equals(doc.getSameDayDelivery()),
+                Boolean.TRUE.equals(doc.getVerified()),
+                Boolean.TRUE.equals(doc.getIsOfficial())
         );
     }
 }

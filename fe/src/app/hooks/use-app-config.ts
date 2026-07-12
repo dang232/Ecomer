@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { z } from "zod";
 
 export interface AppConfig {
   brand: {
@@ -15,6 +16,9 @@ export interface AppConfig {
   payment: {
     providers: string[];
     defaultMethod: string;
+  };
+  auth: {
+    oauthProviders: string[];
   };
   features: {
     flashSale: boolean;
@@ -48,6 +52,7 @@ const DEFAULT_CONFIG: AppConfig = {
     providers: ["VNPay", "MoMo", "COD", "Visa", "Mastercard"],
     defaultMethod: "COD",
   },
+  auth: { oauthProviders: [] },
   features: {
     flashSale: true,
     messaging: true,
@@ -64,17 +69,43 @@ const DEFAULT_CONFIG: AppConfig = {
   },
 };
 
+const appConfigSchema = z.object({
+  brand: z.object({ name: z.string(), tagline: z.string(), logoUrl: z.string() }),
+  social: z.object({
+    facebook: z.string(),
+    instagram: z.string(),
+    twitter: z.string(),
+    youtube: z.string(),
+  }),
+  payment: z.object({ providers: z.array(z.string()), defaultMethod: z.string() }),
+  auth: z.object({ oauthProviders: z.array(z.string()) }).default({ oauthProviders: [] }),
+  features: z.object({
+    flashSale: z.boolean(),
+    messaging: z.boolean(),
+    notifications: z.boolean(),
+    reviews: z.boolean(),
+  }),
+  support: z.object({ phone: z.string(), email: z.string(), hours: z.string() }),
+  websocket: z.object({
+    notificationsPath: z.string(),
+    messagingPath: z.string(),
+    maxReconnectAttempts: z.number().int().nonnegative(),
+    reconnectBaseMs: z.number().int().positive(),
+    reconnectCapMs: z.number().int().positive(),
+  }),
+});
+
 const CONFIG_URL = (
   (import.meta.env as Record<string, string | undefined>).VITE_CONFIG_URL ??
   (import.meta.env as Record<string, string | undefined>).VITE_API_URL ??
-  "http://localhost:8097"
+  "http://localhost:8080"
 ).replace(/\/$/, "");
 
-async function fetchConfig(): Promise<AppConfig> {
+export async function fetchConfig(): Promise<AppConfig> {
   try {
     const res = await fetch(`${CONFIG_URL}/api/config`);
     if (!res.ok) throw new Error(`Config fetch failed: ${res.status}`);
-    return (await res.json()) as AppConfig;
+    return appConfigSchema.parse(await res.json());
   } catch {
     // Fallback to defaults if config service is unavailable
     return DEFAULT_CONFIG;

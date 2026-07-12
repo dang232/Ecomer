@@ -5,6 +5,7 @@ import com.vnshop.productservice.application.CreateProductUseCase;
 import com.vnshop.productservice.application.DeleteProductUseCase;
 import com.vnshop.productservice.application.GetProductUseCase;
 import com.vnshop.productservice.application.UpdateProductUseCase;
+import com.vnshop.productservice.application.UpdateProductEligibilityUseCase;
 import com.vnshop.productservice.application.image.ProductImageUploadService;
 import com.vnshop.productservice.application.review.AnswerQuestionUseCase;
 import com.vnshop.productservice.application.review.AskQuestionUseCase;
@@ -23,6 +24,7 @@ import com.vnshop.productservice.application.video.VideoRedisPort;
 import com.vnshop.productservice.application.video.VideoUploadService;
 import com.vnshop.productservice.domain.port.out.ObjectMetadataRepositoryPort;
 import com.vnshop.productservice.domain.port.out.ObjectStoragePort;
+import com.vnshop.productservice.domain.port.out.ContentSanitizerPort;
 import com.vnshop.productservice.domain.port.out.ProductEventPublisherPort;
 import com.vnshop.productservice.domain.port.out.ProductRepositoryPort;
 import com.vnshop.productservice.domain.review.port.out.BuyerProfileLookupPort;
@@ -41,14 +43,21 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 public class UseCaseConfig {
     @Bean
     CreateProductUseCase createProductUseCase(ProductRepositoryPort productRepositoryPort,
-            ProductEventPublisherPort productEventPublisherPort, HtmlSanitizer htmlSanitizer) {
-        return new CreateProductUseCase(productRepositoryPort, productEventPublisherPort, htmlSanitizer);
+            ProductEventPublisherPort productEventPublisherPort, ContentSanitizerPort contentSanitizer) {
+        return new CreateProductUseCase(productRepositoryPort, productEventPublisherPort, contentSanitizer);
     }
 
     @Bean
     UpdateProductUseCase updateProductUseCase(ProductRepositoryPort productRepositoryPort,
             ProductEventPublisherPort productEventPublisherPort, HtmlSanitizer htmlSanitizer) {
         return new UpdateProductUseCase(productRepositoryPort, productEventPublisherPort, htmlSanitizer);
+    }
+
+    @Bean
+    UpdateProductEligibilityUseCase updateProductEligibilityUseCase(
+            ProductRepositoryPort productRepositoryPort,
+            ProductEventPublisherPort productEventPublisherPort) {
+        return new UpdateProductEligibilityUseCase(productRepositoryPort, productEventPublisherPort);
     }
 
     @Bean
@@ -87,8 +96,8 @@ public class UseCaseConfig {
     }
 
     @Bean
-    CreateReviewUseCase createReviewUseCase(ReviewRepositoryPort reviewRepositoryPort, HtmlSanitizer htmlSanitizer) {
-        return new CreateReviewUseCase(reviewRepositoryPort, htmlSanitizer);
+    CreateReviewUseCase createReviewUseCase(ReviewRepositoryPort reviewRepositoryPort, ContentSanitizerPort contentSanitizer) {
+        return new CreateReviewUseCase(reviewRepositoryPort, contentSanitizer);
     }
 
     @Bean

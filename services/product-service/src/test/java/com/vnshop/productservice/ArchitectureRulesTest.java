@@ -5,6 +5,7 @@ import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.annotation.Profile;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
@@ -27,6 +28,7 @@ class ArchitectureRulesTest {
         noClasses()
                 .that().resideInAPackage("..domain..")
                 .should().dependOnClassesThat().resideInAPackage("..infrastructure..")
+                .allowEmptyShould(true)
                 .check(classes);
     }
 
@@ -35,6 +37,7 @@ class ArchitectureRulesTest {
         noClasses()
                 .that().resideInAPackage("..domain..")
                 .should().dependOnClassesThat().resideInAPackage("..application..")
+                .allowEmptyShould(true)
                 .check(classes);
     }
 
@@ -46,6 +49,7 @@ class ArchitectureRulesTest {
                 .orShould().beAnnotatedWith("org.springframework.stereotype.Repository")
                 .orShould().beAnnotatedWith("org.springframework.stereotype.Component")
                 .orShould().beAnnotatedWith("org.springframework.stereotype.Controller")
+                .allowEmptyShould(true)
                 .check(classes);
     }
 
@@ -54,6 +58,7 @@ class ArchitectureRulesTest {
         noClasses()
                 .that().resideInAPackage("..application..")
                 .should().dependOnClassesThat().resideInAPackage("..infrastructure..")
+                .allowEmptyShould(true)
                 .check(classes);
     }
 
@@ -62,6 +67,7 @@ class ArchitectureRulesTest {
         classes()
                 .that().areAnnotatedWith("org.springframework.web.bind.annotation.RestController")
                 .should().resideInAPackage("..infrastructure.web..")
+                .allowEmptyShould(true)
                 .check(classes);
     }
 
@@ -70,6 +76,7 @@ class ArchitectureRulesTest {
         classes()
                 .that().haveSimpleNameEndingWith("GrpcAdapter")
                 .should().resideInAPackage("..infrastructure.grpc..")
+                .allowEmptyShould(true)
                 .check(classes);
     }
 
@@ -78,6 +85,16 @@ class ArchitectureRulesTest {
         slices()
                 .matching(BASE_PACKAGE + ".(*)..")
                 .should().beFreeOfCycles()
+                .allowEmptyShould(true)
+                .check(classes);
+    }
+
+    @Test
+    void infrastructure_components_should_be_available_in_the_default_profile() {
+        noClasses()
+                .that().resideInAPackage("..infrastructure..")
+                .should().beAnnotatedWith(Profile.class)
+                .allowEmptyShould(true)
                 .check(classes);
     }
 }

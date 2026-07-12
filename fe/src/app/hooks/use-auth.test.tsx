@@ -110,7 +110,7 @@ describe("useAuth + useHasRole", () => {
 
     // Stub window.location.assign for login() shim tests
     Object.defineProperty(window, "location", {
-      value: { assign: vi.fn(), pathname: "/", search: "" },
+      value: { assign: vi.fn(), href: "", pathname: "/", search: "" },
       writable: true,
       configurable: true,
     });
@@ -494,6 +494,85 @@ describe("useAuth + useHasRole", () => {
       expect(result.current.authenticated).toBe(false);
       expect(result.current.token).toBeUndefined();
       expect(result.current.profile).toBeUndefined();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // G2. beginOAuthLogin
+  // -------------------------------------------------------------------------
+  describe("G2. beginOAuthLogin", () => {
+    beforeEach(() => {
+      // Mock import.meta.env for tests
+      vi.stubGlobal("import.meta", {
+        env: { VITE_API_URL: "http://localhost:8080" },
+      });
+    });
+
+    it("G2.1. redirects to correct URL with google provider and next param", async () => {
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
+
+      await waitFor(() => expect(result.current.ready).toBe(true));
+
+      act(() => {
+        result.current.beginOAuthLogin("google", "/dashboard");
+      });
+
+      expect(window.location.href).toBe("http://localhost:8080/auth/oauth/google/start?next=%2Fdashboard");
+    });
+
+    it("G2.2. redirects to correct URL with facebook provider and next param", async () => {
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
+
+      await waitFor(() => expect(result.current.ready).toBe(true));
+
+      act(() => {
+        result.current.beginOAuthLogin("facebook", "/profile");
+      });
+
+      expect(window.location.href).toBe("http://localhost:8080/auth/oauth/facebook/start?next=%2Fprofile");
+    });
+
+    it("G2.3. uses default / when next is not provided", async () => {
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
+
+      await waitFor(() => expect(result.current.ready).toBe(true));
+
+      act(() => {
+        result.current.beginOAuthLogin("google");
+      });
+
+      expect(window.location.href).toBe("http://localhost:8080/auth/oauth/google/start?next=%2F");
+    });
+
+    it("G2.4. falls back to / for malicious next values (open redirect prevention)", async () => {
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
+
+      await waitFor(() => expect(result.current.ready).toBe(true));
+
+      act(() => {
+        // Try protocol-relative URL
+        result.current.beginOAuthLogin("google", "//evil.com");
+      });
+
+      expect(window.location.href).toBe("http://localhost:8080/auth/oauth/google/start?next=%2F");
+    });
+
+    it("G2.5. falls back to / for absolute URLs (open redirect prevention)", async () => {
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
+
+      await waitFor(() => expect(result.current.ready).toBe(true));
+
+      act(() => {
+        // Try absolute URL
+        result.current.beginOAuthLogin("google", "https://evil.com");
+      });
+
+      expect(window.location.href).toBe("http://localhost:8080/auth/oauth/google/start?next=%2F");
     });
   });
 

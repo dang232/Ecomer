@@ -48,6 +48,14 @@ export class ConfigurationService {
         ).split(','),
         defaultMethod: process.env.PAYMENT_DEFAULT ?? 'COD',
       },
+      auth: {
+        oauthProviders: [
+          ...(process.env.GOOGLE_OAUTH_ENABLED === 'true' ? ['google'] : []),
+          ...(process.env.FACEBOOK_OAUTH_ENABLED === 'true'
+            ? ['facebook']
+            : []),
+        ],
+      },
       features: {
         flashSale: process.env.FEATURE_FLASH_SALE !== 'false',
         messaging: process.env.FEATURE_MESSAGING !== 'false',

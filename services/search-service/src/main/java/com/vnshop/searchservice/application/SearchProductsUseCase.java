@@ -17,8 +17,8 @@ public class SearchProductsUseCase {
         this.searchRepository = searchRepository;
     }
 
-    public Page<SearchProductResponse> searchPaged(String query, String category, String brand, BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable) {
-        return searchRepository.searchPaged(query, category, brand, minPrice, maxPrice, pageable)
+    public Page<SearchProductResponse> searchPaged(String query, String category, String brand, BigDecimal minPrice, BigDecimal maxPrice, Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly, Pageable pageable) {
+        return searchRepository.searchPaged(query, category, brand, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly, pageable)
                 .map(SearchProductResponse::fromDomain);
     }
 
@@ -37,10 +37,10 @@ public class SearchProductsUseCase {
      * with the OTHER filter relaxed so the user can see their other-axis options
      * without unselecting the current one (typical e-commerce facet UX).
      */
-    public SearchFacetsResponse facets(String query, String category, String brand, BigDecimal minPrice, BigDecimal maxPrice) {
+    public SearchFacetsResponse facets(String query, String category, String brand, BigDecimal minPrice, BigDecimal maxPrice, Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly) {
         return new SearchFacetsResponse(
-                searchRepository.categoryFacetsFor(query, brand, minPrice, maxPrice),
-                searchRepository.brandFacetsFor(query, category, minPrice, maxPrice)
+                searchRepository.categoryFacetsFor(query, brand, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly),
+                searchRepository.brandFacetsFor(query, category, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly)
         );
     }
 }

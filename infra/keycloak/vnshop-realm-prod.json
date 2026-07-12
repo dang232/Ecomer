@@ -424,5 +424,38 @@
   "directGrantFlow": "direct grant",
   "resetCredentialsFlow": "reset credentials",
   "clientAuthenticationFlow": "clients",
-  "dockerAuthenticationFlow": "docker auth"
+  "dockerAuthenticationFlow": "docker auth",
+  "identityProviderMappings": [],
+  "identityProviders": [
+    {
+      "alias": "google",
+      "providerId": "google",
+      "name": "Google",
+      "enabled": "${GOOGLE_OAUTH_ENABLED:false}",
+      "displayName": "Google",
+      "trustEmail": true,
+      "storeToken": false,
+      "addReadTokenRoleOnCreate": false,
+      "config": {
+        "clientId": "${GOOGLE_OAUTH_CLIENT_ID:}",
+        "clientSecret": "${GOOGLE_OAUTH_CLIENT_SECRET:}",
+        "hostedDomain": "",
+        "scopes": "openid profile email"
+      }
+    },
+    {
+      "alias": "facebook",
+      "providerId": "facebook",
+      "name": "Facebook",
+      "enabled": "${FACEBOOK_OAUTH_ENABLED:false}",
+      "displayName": "Facebook",
+      "trustEmail": false,
+      "storeToken": false,
+      "addReadTokenRoleOnCreate": false,
+      "config": {
+        "clientId": "${FACEBOOK_OAUTH_CLIENT_ID:}",
+        "clientSecret": "${FACEBOOK_OAUTH_CLIENT_SECRET:}"
+      }
+    }
+  ]
 }

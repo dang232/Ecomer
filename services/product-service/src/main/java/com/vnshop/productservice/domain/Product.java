@@ -20,6 +20,9 @@ public class Product {
     private ProductStatus status;
     private final List<ProductVariant> variants;
     private final List<ProductImage> images;
+    private boolean sameDayDelivery;
+    private boolean verified;
+    private boolean isOfficial;
 
     public Product(
             UUID productId,
@@ -31,6 +34,22 @@ public class Product {
             List<ProductVariant> variants,
             List<ProductImage> images
     ) {
+        this(productId, sellerId, name, description, categoryId, brand, variants, images, false, false, false);
+    }
+
+    public Product(
+            UUID productId,
+            String sellerId,
+            String name,
+            String description,
+            String categoryId,
+            String brand,
+            List<ProductVariant> variants,
+            List<ProductImage> images,
+            boolean sameDayDelivery,
+            boolean verified,
+            boolean isOfficial
+    ) {
         this.productId = productId == null ? UUID.randomUUID() : productId;
         this.sellerId = sellerId;
         this.name = requireValidName(name);
@@ -40,6 +59,9 @@ public class Product {
         this.status = ProductStatus.DRAFT;
         this.variants = new ArrayList<>();
         this.images = new ArrayList<>();
+        this.sameDayDelivery = sameDayDelivery;
+        this.verified = verified;
+        this.isOfficial = isOfficial;
         if (variants != null) {
             if (variants.size() > MAX_VARIANTS) {
                 throw new IllegalArgumentException("product cannot have more than 50 variants");
@@ -88,6 +110,30 @@ public class Product {
 
     public List<ProductImage> images() {
         return List.copyOf(images);
+    }
+
+    public boolean sameDayDelivery() {
+        return sameDayDelivery;
+    }
+
+    public boolean verified() {
+        return verified;
+    }
+
+    public boolean isOfficial() {
+        return isOfficial;
+    }
+
+    public void setSameDayDelivery(boolean sameDayDelivery) {
+        this.sameDayDelivery = sameDayDelivery;
+    }
+
+    public void setVerified(boolean verified) {
+        this.verified = verified;
+    }
+
+    public void setOfficial(boolean official) {
+        isOfficial = official;
     }
 
     public void publish() {

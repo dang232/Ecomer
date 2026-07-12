@@ -53,6 +53,9 @@ public class SearchController {
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
             @RequestParam(required = false) String sort,
+            @RequestParam(name = "sameDay", required = false) Boolean sameDay,
+            @RequestParam(name = "verifiedOnly", required = false) Boolean verifiedOnly,
+            @RequestParam(name = "officialOnly", required = false) Boolean officialOnly,
             Pageable pageable
     ) {
         Pageable resolved = PageRequest.of(
@@ -60,7 +63,7 @@ public class SearchController {
                 pageable.getPageSize(),
                 resolveSort(sort)
         );
-        return ApiResponse.ok(searchProductsUseCase.searchPaged(query, category, brand, minPrice, maxPrice, resolved));
+        return ApiResponse.ok(searchProductsUseCase.searchPaged(query, category, brand, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly, resolved));
     }
 
     @GetMapping("/categories")
@@ -89,9 +92,12 @@ public class SearchController {
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String brand,
             @RequestParam(required = false) BigDecimal minPrice,
-            @RequestParam(required = false) BigDecimal maxPrice
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(name = "sameDay", required = false) Boolean sameDay,
+            @RequestParam(name = "verifiedOnly", required = false) Boolean verifiedOnly,
+            @RequestParam(name = "officialOnly", required = false) Boolean officialOnly
     ) {
-        return ApiResponse.ok(searchProductsUseCase.facets(query, category, brand, minPrice, maxPrice));
+        return ApiResponse.ok(searchProductsUseCase.facets(query, category, brand, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly));
     }
 
     private static Sort resolveSort(String key) {

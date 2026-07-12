@@ -3,18 +3,24 @@ package com.vnshop.userservice.infrastructure.web;
 import com.vnshop.userservice.application.AuthSessionUseCase;
 import com.vnshop.userservice.application.RefreshTokenRejectedException;
 import com.vnshop.userservice.infrastructure.keycloak.KeycloakTokenClient.TokenSet;
+import com.vnshop.userservice.infrastructure.web.OAuthLoginState.StateRecord;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.util.Set;
 
 /**
  * httpOnly-cookie auth surface. Replaces the previous flow where the FE
@@ -51,17 +57,33 @@ public class AuthSessionController {
     private static final String COOKIE_PATH = "/auth";
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
+    // OAuth configuration
+    private static final String DEFAULT_CALLBACK_URL = "http://localhost:8080/auth/oauth/callback";
+    private static final Set<String> ALLOWED_PROVIDERS = Set.of("google", "facebook");
     private final AuthSessionUseCase useCase;
+    private final OAuthLoginState oauthState;
     private final boolean cookieSecure;
     private final String cookieSameSite;
+    private final String callbackBaseUrl;
+    private final String keycloakAuthorizationUrl;
+    private final String frontendBaseUrl;
 
     public AuthSessionController(
             AuthSessionUseCase useCase,
+            OAuthLoginState oauthState,
             @Value("${vnshop.auth.cookie-secure:false}") boolean cookieSecure,
-            @Value("${vnshop.auth.cookie-same-site:Strict}") String cookieSameSite) {
+            @Value("${vnshop.auth.cookie-same-site:Strict}") String cookieSameSite,
+            @Value("${vnshop.auth.callback-base-url:}") String callbackBaseUrl,
+            @Value("${keycloak.public-base-url:http://localhost:8085}") String keycloakPublicBaseUrl,
+            @Value("${vnshop.auth.frontend-base-url:http://localhost:3000}") String frontendBaseUrl) {
         this.useCase = useCase;
+        this.oauthState = oauthState;
         this.cookieSecure = cookieSecure;
         this.cookieSameSite = cookieSameSite;
+        this.callbackBaseUrl = (callbackBaseUrl != null && !callbackBaseUrl.isBlank()) ? callbackBaseUrl : DEFAULT_CALLBACK_URL;
+        this.keycloakAuthorizationUrl = stripTrailingSlash(keycloakPublicBaseUrl)
+                + "/realms/vnshop/protocol/openid-connect/auth";
+        this.frontendBaseUrl = normalizeFrontendBaseUrl(frontendBaseUrl);
     }
 
     @PostMapping("/login")
@@ -100,6 +122,141 @@ public class AuthSessionController {
         clearRefreshCookie(response);
         clearCsrfCookie(response);
         return ApiResponse.ok(new LogoutResponse(true));
+    }
+
+    /**
+     * Initiates OAuth flow with Keycloak broker.
+     * Redirects to Keycloak authorization endpoint with kc_idp_hint for the specified provider.
+     */
+    @GetMapping("/oauth/{provider}/start")
+    public void oauthStart(
+            @PathVariable String provider,
+            @RequestParam(name = "next", required = false, defaultValue = "/") String nextParam,
+            HttpServletResponse response) throws Exception {
+
+        // Validate provider
+        if (provider == null || provider.isBlank() || !ALLOWED_PROVIDERS.contains(provider.toLowerCase())) {
+            response.sendRedirect(buildFrontendRedirect("/login?oauthError=unknown_provider"));
+            return;
+        }
+
+        // Sanitize and validate the return path
+        String sanitizedReturn = sanitizeReturnPath(nextParam);
+        // Create state with PKCE
+        OAuthLoginState.StateWithChallenge stateWithChallenge =
+                oauthState.createStateWithChallenge(provider.toLowerCase(), sanitizedReturn);
+
+        // Build authorization URL with PKCE
+        StringBuilder authUrl = new StringBuilder(keycloakAuthorizationUrl);
+        authUrl.append("?client_id=vnshop-api");
+        authUrl.append("&response_type=code");
+        authUrl.append("&scope=openid profile email");
+        authUrl.append("&state=").append(stateWithChallenge.state());
+        authUrl.append("&kc_idp_hint=").append(provider.toLowerCase());
+
+        // Add PKCE parameters
+        authUrl.append("&code_challenge=").append(stateWithChallenge.codeChallenge());
+        authUrl.append("&code_challenge_method=S256");
+
+        // The callback is server-owned so callers cannot select an arbitrary token-exchange URI.
+        authUrl.append("&redirect_uri=").append(java.net.URLEncoder.encode(callbackBaseUrl, StandardCharsets.UTF_8.name()));
+
+        response.sendRedirect(authUrl.toString());
+    }
+
+    /**
+     * OAuth callback from Keycloak broker.
+     * Exchanges authorization code for tokens and sets cookies.
+     */
+    @GetMapping("/oauth/callback")
+    public void oauthCallback(
+            @RequestParam(name = "code", required = false) String code,
+            @RequestParam(name = "state", required = false) String state,
+            @RequestParam(name = "error", required = false) String error,
+            HttpServletResponse response) throws Exception {
+
+        // Check for OAuth error from Keycloak
+        if (error != null) {
+            response.sendRedirect(buildFrontendRedirect("/login?oauthError=oauth_failed"));
+            return;
+        }
+
+        // Validate required parameters
+        if (code == null || code.isBlank() || state == null || state.isBlank()) {
+            response.sendRedirect(buildFrontendRedirect("/login?oauthError=missing_params"));
+            return;
+        }
+
+        // Consume and validate state
+        StateRecord stateRecord = oauthState.consumeState(state);
+        if (stateRecord == null) {
+            response.sendRedirect(buildFrontendRedirect("/login?oauthError=invalid_state"));
+            return;
+        }
+
+        try {
+            // Exchange code for tokens
+            String codeVerifier = oauthState.getCodeVerifier(stateRecord);
+            String callbackUrl = callbackBaseUrl;
+
+            TokenSet tokens = useCase.exchangeCodeForTokens(code, codeVerifier, callbackUrl);
+
+            // Issue cookies (same as regular login)
+            String csrfToken = generateCsrfToken();
+            writeRefreshCookie(response, tokens.refreshToken(), tokens.refreshExpiresIn());
+            writeCsrfCookie(response, csrfToken, tokens.refreshExpiresIn());
+
+            // Redirect to the requested path on the SPA
+            String returnTo = stateRecord.returnTo();
+            if (returnTo == null || returnTo.isBlank() || !isSafeReturnPath(returnTo)) {
+                returnTo = "/";
+            }
+            response.sendRedirect(buildFrontendRedirect(returnTo));
+
+        } catch (Exception e) {
+            // Log the error but don't expose details to client
+            // Redirect to login with generic error
+            response.sendRedirect(buildFrontendRedirect("/login?oauthError=exchange_failed"));
+        }
+    }
+
+    /**
+     * Sanitizes the return path to prevent open redirect vulnerabilities.
+     * Only allows relative SPA paths starting with /, rejects protocol-relative //.
+     */
+    private static String sanitizeReturnPath(String path) {
+        if (path == null || path.isBlank()) {
+            return "/";
+        }
+        String candidate = path.trim();
+        if (!isSafeReturnPath(candidate)) {
+            return "/";
+        }
+        return candidate;
+    }
+
+    /**
+     * Checks if a return path is safe for redirect.
+     */
+    private static boolean isSafeReturnPath(String path) {
+        if (path == null || path.isBlank()) {
+            return false;
+        }
+
+        return path.startsWith("/")
+                && !path.startsWith("//")
+                && path.indexOf('\\') < 0
+                && path.indexOf('\r') < 0
+                && path.indexOf('\n') < 0;
+    }
+
+    /**
+     * Builds the full redirect URL by combining the frontend base URL with the
+     * given path. This ensures OAuth callbacks always land on the SPA, not the
+     * API gateway.
+     */
+    private String buildFrontendRedirect(String path) {
+        return frontendBaseUrl + sanitizeReturnPath(path);
     }
 
     private void writeRefreshCookie(HttpServletResponse response, String value, int maxAgeSeconds) {
@@ -159,6 +316,20 @@ public class AuthSessionController {
         byte[] bytes = new byte[32];
         SECURE_RANDOM.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    private static String stripTrailingSlash(String url) {
+        if (url == null || url.isBlank()) {
+            return "http://localhost:8085";
+        }
+        return url.replaceFirst("/+$", "");
+    }
+
+    private static String normalizeFrontendBaseUrl(String url) {
+        if (url == null || url.isBlank()) {
+            return "http://localhost:3000";
+        }
+        return url.replaceFirst("/+$", "");
     }
 
     private static String readRefreshCookie(HttpServletRequest request) {

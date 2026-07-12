@@ -17,6 +17,19 @@ public class AuthSessionUseCase {
         return tokenClient.passwordGrant(username, password);
     }
 
+    /**
+     * Exchanges an OAuth authorization code for tokens.
+     * Used for identity provider callbacks via Keycloak broker.
+     *
+     * @param code the authorization code from the OAuth callback
+     * @param codeVerifier the PKCE code verifier
+     * @param redirectUri the redirect URI used in the auth request
+     * @return TokenSet with access and refresh tokens
+     */
+    public TokenSet exchangeCodeForTokens(String code, String codeVerifier, String redirectUri) {
+        return tokenClient.authorizationCodeGrant(code, codeVerifier, redirectUri);
+    }
+
     public TokenSet refresh(String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank()) {
             throw new NoSessionException("No refresh-token cookie present");

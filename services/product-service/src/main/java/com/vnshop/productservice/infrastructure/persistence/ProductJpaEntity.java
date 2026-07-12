@@ -51,6 +51,15 @@ public class ProductJpaEntity extends BaseJpaEntity {
     @Column(name = "status", nullable = false)
     private String status;
 
+    @Column(name = "same_day_delivery", nullable = false)
+    private boolean sameDayDelivery;
+
+    @Column(name = "verified", nullable = false)
+    private boolean verified;
+
+    @Column(name = "is_official", nullable = false)
+    private boolean isOfficial;
+
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(schema = "product_svc", name = "product_variants", joinColumns = @JoinColumn(name = "product_id"))
     private List<ProductVariantEmbeddable> variants = new ArrayList<>();
@@ -71,6 +80,9 @@ public class ProductJpaEntity extends BaseJpaEntity {
         entity.categoryId = product.categoryId();
         entity.brand = product.brand();
         entity.status = product.status().name();
+        entity.sameDayDelivery = product.sameDayDelivery();
+        entity.verified = product.verified();
+        entity.isOfficial = product.isOfficial();
         entity.variants = product.variants().stream().map(ProductVariantEmbeddable::fromDomain).toList();
         entity.images = product.images().stream().map(ProductImageEmbeddable::fromDomain).toList();
         return entity;
@@ -85,7 +97,10 @@ public class ProductJpaEntity extends BaseJpaEntity {
                 categoryId,
                 brand,
                 variants.stream().map(ProductVariantEmbeddable::toDomain).toList(),
-                images.stream().map(ProductImageEmbeddable::toDomain).toList()
+                images.stream().map(ProductImageEmbeddable::toDomain).toList(),
+                sameDayDelivery,
+                verified,
+                isOfficial
         );
         ProductStatus mappedStatus = ProductStatus.valueOf(status);
         if (mappedStatus == ProductStatus.ACTIVE) {
