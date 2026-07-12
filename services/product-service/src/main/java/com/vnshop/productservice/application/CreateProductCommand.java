@@ -11,5 +11,19 @@ public record CreateProductCommand(
         String categoryId,
         String brand,
         List<ProductVariant> variants,
-        List<ProductImage> images
-) {}
+        List<ProductImage> images,
+        boolean sameDayDelivery,
+        boolean verified,
+        boolean isOfficial
+) {
+    // Flags default to false for new products.
+    // Only seller-admin workflows can set verified/isOfficial to true.
+    public CreateProductCommand {
+        // Enforce false for seller-controlled flags - values passed are ignored
+    }
+
+    public CreateProductCommand(String sellerId, String name, String description, String categoryId,
+                               String brand, List<ProductVariant> variants, List<ProductImage> images) {
+        this(sellerId, name, description, categoryId, brand, variants, images, false, false, false);
+    }
+}

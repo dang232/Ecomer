@@ -55,7 +55,13 @@ public class UpdateProductUseCase {
                 saved.productId().toString(),
                 ProductEvent.EventType.UPDATED,
                 null,
-                Map.of("sellerId", saved.sellerId(), "status", saved.status().name())
+                Map.of(
+                        "sellerId", saved.sellerId(),
+                        "status", saved.status().name(),
+                        "sameDayDelivery", saved.sameDayDelivery(),
+                        "verified", saved.verified(),
+                        "isOfficial", saved.isOfficial()
+                )
         ));
         return ProductResponse.fromDomain(saved);
     }

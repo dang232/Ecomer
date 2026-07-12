@@ -281,7 +281,10 @@ public class ElasticsearchSearchAdapter implements SearchRepository {
                 doc.getPrice(),    // ES stores a single price; map to both min and max
                 doc.getPrice(),
                 0,                 // variantCount not stored in ES document
-                doc.getCreatedAt()
+                doc.getCreatedAt(),
+                Boolean.TRUE.equals(doc.getSameDayDelivery()),
+                Boolean.TRUE.equals(doc.getVerified()),
+                Boolean.TRUE.equals(doc.getIsOfficial())
         );
     }
 }

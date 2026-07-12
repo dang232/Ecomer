@@ -68,6 +68,15 @@ public class ProductDocument {
     @Field(type = FieldType.Integer)
     private Integer totalSold;
 
+    @Field(type = FieldType.Boolean)
+    private Boolean sameDayDelivery;
+
+    @Field(type = FieldType.Boolean)
+    private Boolean verified;
+
+    @Field(type = FieldType.Boolean)
+    private Boolean isOfficial;
+
     // -------------------------------------------------------------------------
     // Getters and setters (explicit — avoids Lombok annotation-processor issues
     // on newer JDK versions)
@@ -121,6 +130,15 @@ public class ProductDocument {
     public Integer getTotalSold() { return totalSold; }
     public void setTotalSold(Integer totalSold) { this.totalSold = totalSold; }
 
+    public Boolean getSameDayDelivery() { return sameDayDelivery; }
+    public void setSameDayDelivery(Boolean sameDayDelivery) { this.sameDayDelivery = sameDayDelivery; }
+
+    public Boolean getVerified() { return verified; }
+    public void setVerified(Boolean verified) { this.verified = verified; }
+
+    public Boolean getIsOfficial() { return isOfficial; }
+    public void setIsOfficial(Boolean isOfficial) { this.isOfficial = isOfficial; }
+
     /**
      * Builds a {@link ProductDocument} from a Kafka event payload. Unknown or
      * missing fields are mapped to {@code null} / sensible defaults so the
@@ -142,6 +160,9 @@ public class ProductDocument {
         doc.setSellerName(stringValue(payload.get("sellerName")));
         doc.setStatus(stringValue(payload.getOrDefault("status", "DRAFT")));
         doc.setTotalSold(intValue(payload.get("totalSold")));
+        doc.setSameDayDelivery(booleanValue(payload.get("sameDayDelivery")));
+        doc.setVerified(booleanValue(payload.get("verified")));
+        doc.setIsOfficial(booleanValue(payload.get("isOfficial")));
         doc.setCreatedAt(Instant.now());
         return doc;
     }
@@ -170,5 +191,11 @@ public class ProductDocument {
         if (value == null) return null;
         if (value instanceof Number n) return n.intValue();
         return Integer.parseInt(value.toString());
+    }
+
+    private static Boolean booleanValue(Object value) {
+        if (value == null) return false;
+        if (value instanceof Boolean b) return b;
+        return Boolean.parseBoolean(value.toString());
     }
 }

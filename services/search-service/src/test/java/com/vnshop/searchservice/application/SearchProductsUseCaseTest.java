@@ -28,7 +28,8 @@ class SearchProductsUseCaseTest {
     void searchPaged_delegatesToRepositoryAndMapsToResponse() {
         ProductReadModel model = new ProductReadModel(
                 "p1", "Phone", "desc", "electronics", "Acme", "ACTIVE",
-                BigDecimal.valueOf(100), BigDecimal.valueOf(200), 3, Instant.now()
+                BigDecimal.valueOf(100), BigDecimal.valueOf(200), 3, Instant.now(),
+                false, false, false
         );
         Page<ProductReadModel> page = new PageImpl<>(List.of(model));
         when(repository.searchPaged(any(), any(), any(), any(), any(), any(Pageable.class)))

@@ -14,6 +14,9 @@ public record ProductResponse(
         String brand,
         String status,
         int stock,
+        boolean sameDayDelivery,
+        boolean verified,
+        boolean isOfficial,
         List<VariantResponse> variants,
         List<ImageResponse> images
 ) {
@@ -28,6 +31,9 @@ public record ProductResponse(
                 product.brand(),
                 product.status().name(),
                 totalStock,
+                product.sameDayDelivery(),
+                product.verified(),
+                product.isOfficial(),
                 product.variants().stream()
                         .map(v -> new VariantResponse(v.sku(), v.name(), v.price().amount(), v.price().currency(), v.imageUrl(), v.stockQuantity()))
                         .toList(),

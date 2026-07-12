@@ -14,11 +14,14 @@ public class ProductReadModel {
     private BigDecimal maxPrice;
     private int variantCount;
     private Instant createdAt;
+    private boolean sameDayDelivery;
+    private boolean verified;
+    private boolean isOfficial;
 
     public ProductReadModel() {
     }
 
-    public ProductReadModel(String productId, String name, String description, String categoryId, String brand, String status, BigDecimal minPrice, BigDecimal maxPrice, int variantCount, Instant createdAt) {
+    public ProductReadModel(String productId, String name, String description, String categoryId, String brand, String status, BigDecimal minPrice, BigDecimal maxPrice, int variantCount, Instant createdAt, boolean sameDayDelivery, boolean verified, boolean isOfficial) {
         this.productId = productId;
         this.name = name;
         this.description = description;
@@ -29,6 +32,9 @@ public class ProductReadModel {
         this.maxPrice = maxPrice;
         this.variantCount = variantCount;
         this.createdAt = createdAt;
+        this.sameDayDelivery = sameDayDelivery;
+        this.verified = verified;
+        this.isOfficial = isOfficial;
     }
 
     public String productId() {
@@ -69,5 +75,17 @@ public class ProductReadModel {
 
     public Instant createdAt() {
         return createdAt;
+    }
+
+    public boolean sameDayDelivery() {
+        return sameDayDelivery;
+    }
+
+    public boolean verified() {
+        return verified;
+    }
+
+    public boolean isOfficial() {
+        return isOfficial;
     }
 }

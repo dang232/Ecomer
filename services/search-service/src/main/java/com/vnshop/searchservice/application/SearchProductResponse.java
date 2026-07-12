@@ -12,7 +12,10 @@ public record SearchProductResponse(
         String status,
         BigDecimal minPrice,
         BigDecimal maxPrice,
-        int variantCount
+        int variantCount,
+        boolean sameDayDelivery,
+        boolean verified,
+        boolean isOfficial
 ) {
     public static SearchProductResponse fromDomain(ProductReadModel model) {
         return new SearchProductResponse(
@@ -24,7 +27,10 @@ public record SearchProductResponse(
                 model.status(),
                 model.minPrice(),
                 model.maxPrice(),
-                model.variantCount()
+                model.variantCount(),
+                model.sameDayDelivery(),
+                model.verified(),
+                model.isOfficial()
         );
     }
 }
