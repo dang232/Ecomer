@@ -11,6 +11,7 @@ const validConfig = {
     youtube: "https://youtube.com",
   },
   payment: { providers: ["COD"], defaultMethod: "COD" },
+  auth: { oauthProviders: ["google"] },
   features: { flashSale: true, messaging: true, notifications: true, reviews: true },
   support: { phone: "1900-0000", email: "support@vnshop.vn", hours: "24/7" },
   websocket: {
@@ -46,5 +47,14 @@ describe("fetchConfig", () => {
       brand: { name: "VNShop" },
       payment: { defaultMethod: "COD" },
     });
+  });
+
+  it("defaults OAuth providers to none for an older config response", async () => {
+    const { auth: _auth, ...legacyConfig } = validConfig;
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify(legacyConfig), { status: 200 }),
+    );
+
+    await expect(fetchConfig()).resolves.toMatchObject({ auth: { oauthProviders: [] } });
   });
 });

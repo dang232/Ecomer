@@ -14,6 +14,9 @@ export class AppConfigDto {
     providers: string[];
     defaultMethod: string;
   };
+  auth!: {
+    oauthProviders: string[];
+  };
   features!: {
     flashSale: boolean;
     messaging: boolean;

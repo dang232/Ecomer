@@ -17,6 +17,9 @@ export interface AppConfig {
     providers: string[];
     defaultMethod: string;
   };
+  auth: {
+    oauthProviders: string[];
+  };
   features: {
     flashSale: boolean;
     messaging: boolean;
@@ -49,6 +52,7 @@ const DEFAULT_CONFIG: AppConfig = {
     providers: ["VNPay", "MoMo", "COD", "Visa", "Mastercard"],
     defaultMethod: "COD",
   },
+  auth: { oauthProviders: [] },
   features: {
     flashSale: true,
     messaging: true,
@@ -74,6 +78,7 @@ const appConfigSchema = z.object({
     youtube: z.string(),
   }),
   payment: z.object({ providers: z.array(z.string()), defaultMethod: z.string() }),
+  auth: z.object({ oauthProviders: z.array(z.string()) }).default({ oauthProviders: [] }),
   features: z.object({
     flashSale: z.boolean(),
     messaging: z.boolean(),

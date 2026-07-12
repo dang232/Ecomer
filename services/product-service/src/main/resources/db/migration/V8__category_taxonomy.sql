@@ -18,9 +18,14 @@ CREATE INDEX idx_categories_active ON product_svc.categories (active);
 
 -- Backfill existing categories as root nodes
 -- For each distinct category_id in products, create a root category entry
+WITH distinct_categories AS (
+    SELECT DISTINCT category_id
+    FROM product_svc.products
+    WHERE category_id IS NOT NULL AND category_id != ''
+)
 INSERT INTO product_svc.categories (id, parent_id, name, label, sort_order, active, created_at, updated_at)
 SELECT
-    DISTINCT category_id,
+    category_id,
     NULL,
     -- Convert category_id to a stable name (lowercase, replace spaces/special chars with underscores)
     LOWER(REGEXP_REPLACE(category_id, '[^a-zA-Z0-9]+', '_', 'g')),
@@ -30,5 +35,4 @@ SELECT
     true,
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP
-FROM product_svc.products
-WHERE category_id IS NOT NULL AND category_id != '';
+FROM distinct_categories;

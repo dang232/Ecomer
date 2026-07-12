@@ -6,7 +6,7 @@ vi.mock("../client", () => ({
 
 import { api } from "../client";
 
-import { categoryTree } from "./categories";
+import { categoryTree, flattenCategoryTree } from "./categories";
 
 describe("categoryTree", () => {
   it("keeps names, labels, parents, and nested children from product-service", async () => {
@@ -32,6 +32,29 @@ describe("categoryTree", () => {
           { id: "phones", name: "Phones", label: "Phones", parentId: "electronics", children: [] },
         ],
       },
+    ]);
+  });
+
+  it("flattens nested categories for filters and labels", () => {
+    expect(
+      flattenCategoryTree([
+        {
+          id: "electronics",
+          label: "Electronics",
+          children: [
+            {
+              id: "phones",
+              label: "Phones",
+              parentId: "electronics",
+              children: [{ id: "android", label: "Android", parentId: "phones" }],
+            },
+          ],
+        },
+      ]),
+    ).toEqual([
+      expect.objectContaining({ id: "electronics" }),
+      expect.objectContaining({ id: "phones" }),
+      expect.objectContaining({ id: "android" }),
     ]);
   });
 });

@@ -12,12 +12,20 @@ import { useProducts } from "../hooks/use-products";
 import { useResettableState } from "../hooks/use-resettable-state";
 import { useSearch } from "../hooks/use-search";
 import { useSearchFacets } from "../hooks/use-search-facets";
+import { flattenCategoryTree } from "../lib/api/endpoints/categories";
 import { formatPrice } from "../lib/format";
+import { requiresBackendSearch } from "../lib/search-view";
 import type { Product } from "../types/ui";
 
 const getScrollKey = () => `scroll:${window.location.pathname}${window.location.search}`;
 
-const ProductCard = memo(function ProductCard({ product, index }: { product: Product; index: number }) {
+const ProductCard = memo(function ProductCard({
+  product,
+  index,
+}: {
+  product: Product;
+  index: number;
+}) {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { toggleWishlist, isWishlisted } = useVNShop();
@@ -99,7 +107,11 @@ const ProductCard = memo(function ProductCard({ product, index }: { product: Pro
           <span className="text-xs text-foreground">{product.rating}</span>
           <span className="text-xs text-muted-foreground">·</span>
           <span className="text-xs text-muted-foreground">
-            {(() => { const s: number = product.sold ?? 0; const formatted = s > 999 ? `${(s / 1000).toFixed(1)}k` : `${s}`; return t("product.soldCountShort", { count: formatted }); })()}
+            {(() => {
+              const s: number = product.sold ?? 0;
+              const formatted = s > 999 ? `${(s / 1000).toFixed(1)}k` : `${s}`;
+              return t("product.soldCountShort", { count: formatted });
+            })()}
           </span>
         </div>
         <div className="flex items-end gap-1.5">
@@ -138,25 +150,46 @@ export function SearchPage() {
   // NOTE: sameDay/verifiedOnly/officialOnly are initialized from URL but are only
   // applied client-side — the backend does not yet support these filters.
   const [sameDay, setSameDay] = useState(() => searchParams.get("sameDay") === "true");
-  const [verifiedOnly, setVerifiedOnly] = useState(() => searchParams.get("verifiedOnly") === "true");
-  const [officialOnly, setOfficialOnly] = useState(() => searchParams.get("officialOnly") === "true");
+  const [verifiedOnly, setVerifiedOnly] = useState(
+    () => searchParams.get("verifiedOnly") === "true",
+  );
+  const [officialOnly, setOfficialOnly] = useState(
+    () => searchParams.get("officialOnly") === "true",
+  );
   const [selectedBrand, setSelectedBrand] = useState(() => searchParams.get("brand") ?? "");
 
   // Sync filter state to URL params so deep-links and browser back work correctly.
   useEffect(() => {
-    setSearchParams((prev) => {
-      const p = new URLSearchParams(prev);
-      if (minRating > 0) p.set("minRating", String(minRating)); else p.delete("minRating");
-      if (freeShipOnly) p.set("freeShip", "true"); else p.delete("freeShip");
-      if (selectedBrand) p.set("brand", selectedBrand); else p.delete("brand");
-      if (sameDay) p.set("sameDay", "true"); else p.delete("sameDay");
-      if (verifiedOnly) p.set("verifiedOnly", "true"); else p.delete("verifiedOnly");
-      if (officialOnly) p.set("officialOnly", "true"); else p.delete("officialOnly");
-      // Only update if actually different to avoid infinite loop
-      if (p.toString() === prev.toString()) return prev;
-      return p;
-    }, { replace: true });
-  }, [minRating, freeShipOnly, selectedBrand, sameDay, verifiedOnly, officialOnly, setSearchParams]);
+    setSearchParams(
+      (prev) => {
+        const p = new URLSearchParams(prev);
+        if (minRating > 0) p.set("minRating", String(minRating));
+        else p.delete("minRating");
+        if (freeShipOnly) p.set("freeShip", "true");
+        else p.delete("freeShip");
+        if (selectedBrand) p.set("brand", selectedBrand);
+        else p.delete("brand");
+        if (sameDay) p.set("sameDay", "true");
+        else p.delete("sameDay");
+        if (verifiedOnly) p.set("verifiedOnly", "true");
+        else p.delete("verifiedOnly");
+        if (officialOnly) p.set("officialOnly", "true");
+        else p.delete("officialOnly");
+        // Only update if actually different to avoid infinite loop
+        if (p.toString() === prev.toString()) return prev;
+        return p;
+      },
+      { replace: true },
+    );
+  }, [
+    minRating,
+    freeShipOnly,
+    selectedBrand,
+    sameDay,
+    verifiedOnly,
+    officialOnly,
+    setSearchParams,
+  ]);
 
   // Current page for pagination
   const filterSignature = `${query}|${selectedCat}|${selectedBrand}|${priceMin}|${priceMax}|${minRating}|${freeShipOnly}|${sameDay}|${verifiedOnly}|${officialOnly}|${sortBy}|${isFlash}`;
@@ -176,8 +209,10 @@ export function SearchPage() {
   const setPriceFromUrl = (min: string, max: string) => {
     setSearchParams((prev) => {
       const p = new URLSearchParams(prev);
-      if (min) p.set("priceMin", min); else p.delete("priceMin");
-      if (max) p.set("priceMax", max); else p.delete("priceMax");
+      if (min) p.set("priceMin", min);
+      else p.delete("priceMin");
+      if (max) p.set("priceMax", max);
+      else p.delete("priceMax");
       return p;
     });
     setLocalPriceMin(min);
@@ -201,7 +236,17 @@ export function SearchPage() {
     });
   };
 
-  const searchEnabled = !!(query || selectedBrand);
+  const searchEnabled = requiresBackendSearch({
+    query,
+    category: selectedCat,
+    brand: selectedBrand,
+    minPrice: priceMin,
+    maxPrice: priceMax,
+    sameDay,
+    verifiedOnly,
+    officialOnly,
+    sortBy,
+  });
   // Spring Pageable is 0-based; currentPage is 1-based.
   const search = useSearch(
     {
@@ -234,6 +279,7 @@ export function SearchPage() {
 
   const { data: localCatalog = [] } = useProducts({ categoryId: selectedCat || undefined });
   const { data: categories = [] } = useCategories();
+  const flatCategories = useMemo(() => flattenCategoryTree(categories), [categories]);
 
   const usedBackend = searchEnabled && !search.error;
   const catalog = usedBackend ? search.products : localCatalog;
@@ -321,7 +367,7 @@ export function SearchPage() {
 
   const activeFilters: { label: string; onRemove: () => void }[] = [];
   if (selectedCat) {
-    const cat = categories.find((c) => c.id === selectedCat);
+    const cat = flatCategories.find((c) => c.id === selectedCat);
     activeFilters.push({
       label: cat ? categoryDisplayLabel(cat) : selectedCat,
       onRemove: () => setCategory(""),
@@ -360,7 +406,11 @@ export function SearchPage() {
     const pages: (number | "...")[] = [];
     pages.push(1);
     if (currentPage > 3) pages.push("...");
-    for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+    for (
+      let i = Math.max(2, currentPage - 1);
+      i <= Math.min(totalPages - 1, currentPage + 1);
+      i++
+    ) {
       pages.push(i);
     }
     if (currentPage < totalPages - 2) pages.push("...");
@@ -372,11 +422,12 @@ export function SearchPage() {
     <div className="max-w-[1400px] mx-auto py-6 px-[var(--content-padding)]">
       {/* Page heading for screen readers */}
       <h1 className="sr-only">
-        {query ? t("search.resultsForQuery", { query, defaultValue: `Search results for "${query}"` }) : t("search.allProducts", { defaultValue: "All Products" })}
+        {query
+          ? t("search.resultsForQuery", { query, defaultValue: `Search results for "${query}"` })
+          : t("search.allProducts", { defaultValue: "All Products" })}
       </h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
-
         {/* ── Filter Sidebar ── */}
         <aside>
           <div className="bg-card border border-border rounded-[var(--radius-xl)] p-5 lg:sticky lg:top-[80px] h-fit">
@@ -402,7 +453,7 @@ export function SearchPage() {
                 {t("search.categoriesTitle")}
               </p>
               <div className="space-y-1.5">
-                {categories.map((cat) => {
+                {flatCategories.map((cat) => {
                   const checked = selectedCat === cat.id;
                   return (
                     <label key={cat.id} className="flex items-center gap-2 cursor-pointer">
@@ -424,7 +475,7 @@ export function SearchPage() {
                     selected={selectedCat}
                     onToggle={(key) => setCategory(selectedCat === key ? "" : key)}
                     formatLabel={(key) => {
-                      const cat = categories.find((c) => c.id === key);
+                      const cat = flatCategories.find((c) => c.id === key);
                       return cat ? categoryDisplayLabel(cat) : key;
                     }}
                   />
@@ -487,7 +538,9 @@ export function SearchPage() {
                             className={i < r ? "text-amber-400" : "text-muted-foreground"}
                           />
                         ))}
-                        <span className="text-xs text-foreground ml-0.5">{t("search.andUp", { defaultValue: "& up" })}</span>
+                        <span className="text-xs text-foreground ml-0.5">
+                          {t("search.andUp", { defaultValue: "& up" })}
+                        </span>
                       </span>
                     </label>
                   );
@@ -508,7 +561,9 @@ export function SearchPage() {
                     onChange={() => setFreeShipOnly(!freeShipOnly)}
                     className="w-4 h-4 rounded border-border accent-primary"
                   />
-                  <span className="text-sm text-foreground">{t("search.freeShippingTag", { defaultValue: "Free shipping" })}</span>
+                  <span className="text-sm text-foreground">
+                    {t("search.freeShippingTag", { defaultValue: "Free shipping" })}
+                  </span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -517,7 +572,9 @@ export function SearchPage() {
                     onChange={() => setSameDay(!sameDay)}
                     className="w-4 h-4 rounded border-border accent-primary"
                   />
-                  <span className="text-sm text-foreground">{t("search.sameDayDelivery", { defaultValue: "Same-day delivery" })}</span>
+                  <span className="text-sm text-foreground">
+                    {t("search.sameDayDelivery", { defaultValue: "Same-day delivery" })}
+                  </span>
                 </label>
               </div>
             </div>
@@ -535,7 +592,9 @@ export function SearchPage() {
                     onChange={() => setVerifiedOnly(!verifiedOnly)}
                     className="w-4 h-4 rounded border-border accent-primary"
                   />
-                  <span className="text-sm text-foreground">{t("search.verifiedOnly", { defaultValue: "Verified only" })}</span>
+                  <span className="text-sm text-foreground">
+                    {t("search.verifiedOnly", { defaultValue: "Verified only" })}
+                  </span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -544,7 +603,9 @@ export function SearchPage() {
                     onChange={() => setOfficialOnly(!officialOnly)}
                     className="w-4 h-4 rounded border-border accent-primary"
                   />
-                  <span className="text-sm text-foreground">{t("search.officialStores", { defaultValue: "Official stores" })}</span>
+                  <span className="text-sm text-foreground">
+                    {t("search.officialStores", { defaultValue: "Official stores" })}
+                  </span>
                 </label>
               </div>
 
@@ -582,7 +643,12 @@ export function SearchPage() {
             <p aria-live="polite" aria-atomic="true" className="text-sm text-text-secondary">
               {query ? (
                 totalCount === 0 ? (
-                  <span>{t("search.noResultsFor", { query, defaultValue: "No results for '{{query}}'" })}</span>
+                  <span>
+                    {t("search.noResultsFor", {
+                      query,
+                      defaultValue: "No results for '{{query}}'",
+                    })}
+                  </span>
                 ) : (
                   <span>
                     {t("search.showingRange", {
@@ -590,7 +656,8 @@ export function SearchPage() {
                       end: Math.min(currentPage * pageSize, filtered.length),
                       total: totalCount,
                       query,
-                      defaultValue: "Showing {{start}}–{{end}} of {{total}} results for '{{query}}'",
+                      defaultValue:
+                        "Showing {{start}}–{{end}} of {{total}} results for '{{query}}'",
                     })}
                   </span>
                 )
@@ -627,7 +694,9 @@ export function SearchPage() {
           {paginated.length === 0 ? (
             <div className="py-24 text-center bg-card border border-border rounded-[var(--radius-xl)]">
               <Search size={48} className="mx-auto mb-4 text-muted-foreground opacity-30" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">{t("search.emptyTitle")}</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                {t("search.emptyTitle")}
+              </h3>
               <p className="text-sm text-muted-foreground mb-6">{t("search.emptySub")}</p>
               <button
                 onClick={clearFilters}
@@ -667,7 +736,9 @@ export function SearchPage() {
                 ) : (
                   <button
                     key={page}
-                    onClick={() => { if (typeof page === "number") setCurrentPage(page); }}
+                    onClick={() => {
+                      if (typeof page === "number") setCurrentPage(page);
+                    }}
                     aria-current={currentPage === page ? "page" : undefined}
                     className={`w-9 h-9 flex items-center justify-center border rounded-[var(--radius-md)] text-sm font-medium transition-colors ${
                       currentPage === page

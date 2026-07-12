@@ -13,6 +13,7 @@ import { useState, useEffect, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useNavigate, useSearchParams } from "react-router";
 
+import { useAppConfig } from "../hooks/use-app-config";
 import { useAuth } from "../hooks/use-auth";
 import { sanitizeRedirect } from "../lib/auth/sanitize-redirect";
 
@@ -20,6 +21,7 @@ export function LoginPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const { ready, authenticated, loginWithCredentials, beginOAuthLogin } = useAuth();
+  const config = useAppConfig();
   const { t } = useTranslation();
   const next = sanitizeRedirect(params.get("next"));
 
@@ -42,23 +44,38 @@ export function LoginPage() {
 
       // Map error codes to user-friendly messages
       const errorMessages: Record<string, string> = {
-        unknown_provider: t("login.oauth.errorUnknownProvider", { defaultValue: "Unknown OAuth provider" }),
+        unknown_provider: t("login.oauth.errorUnknownProvider", {
+          defaultValue: "Unknown OAuth provider",
+        }),
         oauth_failed: t("login.oauth.errorFailed", { defaultValue: "OAuth login failed" }),
-        missing_params: t("login.oauth.errorMissing", { defaultValue: "OAuth callback missing parameters" }),
-        invalid_state: t("login.oauth.errorInvalidState", { defaultValue: "OAuth state validation failed" }),
-        exchange_failed: t("login.oauth.errorExchange", { defaultValue: "Failed to complete OAuth login" }),
+        missing_params: t("login.oauth.errorMissing", {
+          defaultValue: "OAuth callback missing parameters",
+        }),
+        invalid_state: t("login.oauth.errorInvalidState", {
+          defaultValue: "OAuth state validation failed",
+        }),
+        exchange_failed: t("login.oauth.errorExchange", {
+          defaultValue: "Failed to complete OAuth login",
+        }),
       };
-      setError(errorMessages[oauthError] || t("login.oauth.errorGeneric", { defaultValue: "OAuth login failed" }));
+      setError(
+        errorMessages[oauthError] ||
+          t("login.oauth.errorGeneric", { defaultValue: "OAuth login failed" }),
+      );
     }
   }, [params, t]);
 
-  // Get unavailable providers from environment - in production these would come from backend config
-  const env = import.meta.env as Record<string, string | undefined>;
-  const unavailableProviders = env.VITE_UNAVAILABLE_OAUTH_PROVIDERS?.split(",").map(p => p.trim()) ?? [];
+  const unavailableProviders = ["google", "facebook"].filter(
+    (provider) => !config.auth.oauthProviders.includes(provider),
+  );
 
   const handleSocialLogin = (provider: "google" | "facebook") => {
     if (unavailableProviders.includes(provider)) {
-      setError(t("login.oauth.errorUnavailable", { defaultValue: `${provider} login is currently unavailable` }));
+      setError(
+        t("login.oauth.errorUnavailable", {
+          defaultValue: `${provider} login is currently unavailable`,
+        }),
+      );
       return;
     }
     beginOAuthLogin(provider, next);
@@ -99,10 +116,26 @@ export function LoginPage() {
   };
 
   const trustStats = [
-    { Icon: Rocket, val: "2h", label: t("login.trustItems.fastDelivery", { defaultValue: "Fast Delivery" }) },
-    { Icon: Star, val: "4.9★", label: t("login.trustItems.ratingAvg", { defaultValue: "Average Rating" }) },
-    { Icon: ShoppingBag, val: "10k+", label: t("login.trustItems.authentic", { defaultValue: "Verified Products" }) },
-    { Icon: Lock, val: "SSL", label: t("login.trustItems.secure", { defaultValue: "Secure Checkout" }) },
+    {
+      Icon: Rocket,
+      val: "2h",
+      label: t("login.trustItems.fastDelivery", { defaultValue: "Fast Delivery" }),
+    },
+    {
+      Icon: Star,
+      val: "4.9★",
+      label: t("login.trustItems.ratingAvg", { defaultValue: "Average Rating" }),
+    },
+    {
+      Icon: ShoppingBag,
+      val: "10k+",
+      label: t("login.trustItems.authentic", { defaultValue: "Verified Products" }),
+    },
+    {
+      Icon: Lock,
+      val: "SSL",
+      label: t("login.trustItems.secure", { defaultValue: "Secure Checkout" }),
+    },
   ];
 
   return (
@@ -159,7 +192,9 @@ export function LoginPage() {
               {t("login.title", { defaultValue: "Sign in to your account" })}
             </h1>
             <p className="text-sm text-muted-foreground">
-              {t("login.subtitle", { defaultValue: "Enter your credentials to access the marketplace" })}
+              {t("login.subtitle", {
+                defaultValue: "Enter your credentials to access the marketplace",
+              })}
             </p>
           </div>
 
@@ -180,7 +215,9 @@ export function LoginPage() {
                 required
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                placeholder={t("login.form.identifierPlaceholder", { defaultValue: "your@email.com" })}
+                placeholder={t("login.form.identifierPlaceholder", {
+                  defaultValue: "your@email.com",
+                })}
                 aria-describedby={error ? "login-error" : undefined}
                 className="w-full py-3 px-3.5 border-[1.5px] border-border rounded-[var(--radius-lg)] text-sm bg-card text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-light)] transition-all"
               />
@@ -202,7 +239,9 @@ export function LoginPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder={t("login.form.passwordPlaceholder", { defaultValue: "Enter your password" })}
+                  placeholder={t("login.form.passwordPlaceholder", {
+                    defaultValue: "Enter your password",
+                  })}
                   className="w-full py-3 px-3.5 pr-11 border-[1.5px] border-border rounded-[var(--radius-lg)] text-sm bg-card text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--primary-light)] transition-all"
                 />
                 <button

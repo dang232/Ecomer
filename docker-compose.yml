@@ -961,6 +961,8 @@ services:
       SOCIAL_YOUTUBE: https://youtube.com/vnshop
       PAYMENT_PROVIDERS: VNPay,MoMo,COD,Visa,Mastercard
       PAYMENT_DEFAULT: COD
+      GOOGLE_OAUTH_ENABLED: ${GOOGLE_OAUTH_ENABLED:-false}
+      FACEBOOK_OAUTH_ENABLED: ${FACEBOOK_OAUTH_ENABLED:-false}
       SUPPORT_PHONE: "1900-0000"
       SUPPORT_EMAIL: support@vnshop.vn
       CONFIG_FILE_PATH: /app/config/services.yml
