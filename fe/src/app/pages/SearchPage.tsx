@@ -14,7 +14,7 @@ import { useSearch } from "../hooks/use-search";
 import { useSearchFacets } from "../hooks/use-search-facets";
 import { flattenCategoryTree } from "../lib/api/endpoints/categories";
 import { formatPrice } from "../lib/format";
-import { requiresBackendSearch } from "../lib/search-view";
+import { normalizeSearchSort, requiresBackendSearch } from "../lib/search-view";
 import type { Product } from "../types/ui";
 
 const getScrollKey = () => `scroll:${window.location.pathname}${window.location.search}`;
@@ -138,7 +138,7 @@ export function SearchPage() {
 
   const priceMin = searchParams.get("priceMin") ?? "";
   const priceMax = searchParams.get("priceMax") ?? "";
-  const sortBy = searchParams.get("sort") ?? "popular";
+  const sortBy = normalizeSearchSort(searchParams.get("sort"));
 
   const [localPriceMin, setLocalPriceMin] = useState(priceMin);
   const [localPriceMax, setLocalPriceMax] = useState(priceMax);
@@ -147,8 +147,6 @@ export function SearchPage() {
     return v ? Number(v) : 0;
   });
   const [freeShipOnly, setFreeShipOnly] = useState(() => searchParams.get("freeShip") === "true");
-  // NOTE: sameDay/verifiedOnly/officialOnly are initialized from URL but are only
-  // applied client-side — the backend does not yet support these filters.
   const [sameDay, setSameDay] = useState(() => searchParams.get("sameDay") === "true");
   const [verifiedOnly, setVerifiedOnly] = useState(
     () => searchParams.get("verifiedOnly") === "true",
@@ -394,7 +392,6 @@ export function SearchPage() {
 
   const sortOptions = [
     { v: "popular", l: t("search.sort.shortPopular") },
-    { v: "rating", l: t("search.sort.shortRating") },
     { v: "price-low", l: t("search.sort.shortPriceLow") },
     { v: "price-high", l: t("search.sort.shortPriceHigh") },
     { v: "newest", l: t("search.sort.shortNewest") },

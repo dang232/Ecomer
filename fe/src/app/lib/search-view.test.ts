@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { requiresBackendSearch } from "./search-view";
+import { normalizeSearchSort, requiresBackendSearch } from "./search-view";
 
 describe("requiresBackendSearch", () => {
   it.each([
@@ -19,5 +19,10 @@ describe("requiresBackendSearch", () => {
 
   it("keeps the catalog fallback for an unfiltered popular view", () => {
     expect(requiresBackendSearch({ sortBy: "popular" })).toBe(false);
+  });
+
+  it("normalizes unsupported rating sort to popular", () => {
+    expect(normalizeSearchSort("rating")).toBe("popular");
+    expect(requiresBackendSearch({ sortBy: "rating" })).toBe(false);
   });
 });
