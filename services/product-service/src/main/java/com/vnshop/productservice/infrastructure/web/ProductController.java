@@ -1,9 +1,11 @@
 package com.vnshop.productservice.infrastructure.web;
 
+import com.vnshop.productservice.infrastructure.web.CategoryResponse;
 import com.vnshop.productservice.application.CountSellerProductsUseCase;
 import com.vnshop.productservice.application.CreateProductCommand;
 import com.vnshop.productservice.application.CreateProductUseCase;
 import com.vnshop.productservice.application.DeleteProductUseCase;
+import com.vnshop.productservice.application.GetCategoriesUseCase;
 import com.vnshop.productservice.application.GetProductUseCase;
 import com.vnshop.productservice.application.ProductResponse;
 import com.vnshop.productservice.application.UpdateProductUseCase;
@@ -35,15 +37,17 @@ public class ProductController {
     private final DeleteProductUseCase deleteProductUseCase;
     private final GetProductUseCase getProductUseCase;
     private final CountSellerProductsUseCase countSellerProductsUseCase;
+    private final GetCategoriesUseCase getCategoriesUseCase;
 
     public ProductController(CreateProductUseCase createProductUseCase, UpdateProductUseCase updateProductUseCase,
             DeleteProductUseCase deleteProductUseCase, GetProductUseCase getProductUseCase,
-            CountSellerProductsUseCase countSellerProductsUseCase) {
+            CountSellerProductsUseCase countSellerProductsUseCase, GetCategoriesUseCase getCategoriesUseCase) {
         this.createProductUseCase = createProductUseCase;
         this.updateProductUseCase = updateProductUseCase;
         this.deleteProductUseCase = deleteProductUseCase;
         this.getProductUseCase = getProductUseCase;
         this.countSellerProductsUseCase = countSellerProductsUseCase;
+        this.getCategoriesUseCase = getCategoriesUseCase;
     }
 
     @PostMapping("/sellers/me/products")
@@ -113,7 +117,7 @@ public class ProductController {
     }
 
     @GetMapping("/categories")
-    public ApiResponse<List<String>> findCategories() {
-        return ApiResponse.ok(getProductUseCase.findCategories());
+    public ApiResponse<List<CategoryResponse>> findCategories() {
+        return ApiResponse.ok(getCategoriesUseCase.getCategoryTree());
     }
 }
