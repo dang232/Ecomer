@@ -126,7 +126,7 @@ class AuthSessionControllerTest {
     @Test
     void oauthCallback_successfulExchange_setsCookiesAndRedirects() throws Exception {
         OAuthLoginState.StateRecord stateRecord = new OAuthLoginState.StateRecord(
-                "google", "verifier.challenge", "/profile", java.time.Instant.now().plusSeconds(600));
+                "google", "verifier", "challenge", "/profile", java.time.Instant.now().plusSeconds(600));
         when(oauthState.consumeState("valid-state")).thenReturn(stateRecord);
         when(oauthState.getCodeVerifier(stateRecord)).thenReturn("verifier");
         when(useCase.exchangeCodeForTokens("auth-code", "verifier", "http://localhost:8081/auth/oauth/callback"))
@@ -149,7 +149,7 @@ class AuthSessionControllerTest {
     @Test
     void oauthCallback_failedExchange_redirectsToLoginWithError() throws Exception {
         OAuthLoginState.StateRecord stateRecord = new OAuthLoginState.StateRecord(
-                "google", "verifier.challenge", "/profile", java.time.Instant.now().plusSeconds(600));
+                "google", "verifier", "challenge", "/profile", java.time.Instant.now().plusSeconds(600));
         when(oauthState.consumeState("valid-state")).thenReturn(stateRecord);
         when(oauthState.getCodeVerifier(stateRecord)).thenReturn("verifier");
         when(useCase.exchangeCodeForTokens(anyString(), anyString(), anyString()))
@@ -163,7 +163,7 @@ class AuthSessionControllerTest {
     @Test
     void oauthCallback_unsafeReturnPath_redirectsToRoot() throws Exception {
         OAuthLoginState.StateRecord stateRecord = new OAuthLoginState.StateRecord(
-                "google", "verifier.challenge", "http://evil.com", java.time.Instant.now().plusSeconds(600));
+                "google", "verifier", "challenge", "http://evil.com", java.time.Instant.now().plusSeconds(600));
         when(oauthState.consumeState("valid-state")).thenReturn(stateRecord);
         when(oauthState.getCodeVerifier(stateRecord)).thenReturn("verifier");
         when(useCase.exchangeCodeForTokens(anyString(), anyString(), anyString()))
@@ -184,7 +184,7 @@ class AuthSessionControllerTest {
                 useCase, oauthState, true, "Strict", "http://localhost:8081/auth/oauth/callback");
 
         OAuthLoginState.StateRecord stateRecord = new OAuthLoginState.StateRecord(
-                "google", "verifier.challenge", "/profile", java.time.Instant.now().plusSeconds(600));
+                "google", "verifier", "challenge", "/profile", java.time.Instant.now().plusSeconds(600));
         when(oauthState.consumeState("valid-state")).thenReturn(stateRecord);
         when(oauthState.getCodeVerifier(stateRecord)).thenReturn("verifier");
         when(useCase.exchangeCodeForTokens(anyString(), anyString(), anyString()))

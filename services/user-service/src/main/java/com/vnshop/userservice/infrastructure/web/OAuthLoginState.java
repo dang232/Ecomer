@@ -18,12 +18,15 @@ import java.util.concurrent.ConcurrentHashMap;
 public class OAuthLoginState {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final int STATE_EXPIRY_MINUTES = 10;
+    private static final int CLEANUP_INTERVAL = 100; // Clean expired entries every N operations
 
     private final Map<String, StateRecord> stateStore = new ConcurrentHashMap<>();
+    private final java.util.concurrent.atomic.AtomicInteger operationCounter = new java.util.concurrent.atomic.AtomicInteger(0);
 
     public record StateRecord(
             String provider,
             String codeVerifier,
+            String codeChallenge,
             String returnTo,
             Instant expiresAt
     ) {}
@@ -41,7 +44,8 @@ public class OAuthLoginState {
 
         StateRecord record = new StateRecord(
                 provider,
-                codeVerifier + "." + codeChallenge, // Store both for convenience
+                codeVerifier,
+                codeChallenge,
                 returnTo,
                 Instant.now().plusSeconds(STATE_EXPIRY_MINUTES * 60L)
         );
@@ -63,7 +67,8 @@ public class OAuthLoginState {
 
         StateRecord record = new StateRecord(
                 provider,
-                codeVerifier + "." + codeChallenge,
+                codeVerifier,
+                codeChallenge,
                 returnTo,
                 Instant.now().plusSeconds(STATE_EXPIRY_MINUTES * 60L)
         );
@@ -93,7 +98,17 @@ public class OAuthLoginState {
             return null;
         }
 
+        // Lazy cleanup: evict expired entries periodically
+        if (operationCounter.incrementAndGet() % CLEANUP_INTERVAL == 0) {
+            cleanupExpiredEntries();
+        }
+
         return record;
+    }
+
+    private void cleanupExpiredEntries() {
+        Instant now = Instant.now();
+        stateStore.entrySet().removeIf(entry -> now.isAfter(entry.getValue().expiresAt()));
     }
 
     /**
@@ -102,12 +117,10 @@ public class OAuthLoginState {
      * @return the code verifier
      */
     public String getCodeVerifier(StateRecord record) {
-        if (record == null || record.codeVerifier() == null) {
+        if (record == null) {
             return null;
         }
-        // Stored as "verifier.challenge", extract verifier
-        int dotIndex = record.codeVerifier().indexOf('.');
-        return dotIndex > 0 ? record.codeVerifier().substring(0, dotIndex) : record.codeVerifier();
+        return record.codeVerifier();
     }
 
     /**
@@ -116,12 +129,10 @@ public class OAuthLoginState {
      * @return the code challenge
      */
     public String getCodeChallenge(StateRecord record) {
-        if (record == null || record.codeVerifier() == null) {
+        if (record == null) {
             return null;
         }
-        // Stored as "verifier.challenge", extract challenge
-        int dotIndex = record.codeVerifier().indexOf('.');
-        return dotIndex > 0 ? record.codeVerifier().substring(dotIndex + 1) : null;
+        return record.codeChallenge();
     }
 
     private static String generateRandomToken() {
