@@ -406,6 +406,15 @@
     "subtitle": "Nhập thông tin tài khoản để tiếp tục.",
     "initializing": "Đang tải...",
     "termsNotice": "Bằng cách đăng nhập, bạn đồng ý với Điều khoản dịch vụ và Chính sách bảo mật của VNShop.",
+    "oauth": {
+      "errorUnknownProvider": "Nhà cung cấp đăng nhập này không được hỗ trợ.",
+      "errorFailed": "Đăng nhập mạng xã hội đã bị hủy hoặc thất bại.",
+      "errorMissing": "Phản hồi đăng nhập không đầy đủ. Vui lòng thử lại.",
+      "errorInvalidState": "Phiên đăng nhập đã hết hạn hoặc đã được sử dụng. Vui lòng thử lại.",
+      "errorExchange": "Không thể hoàn tất đăng nhập mạng xã hội. Vui lòng thử lại.",
+      "errorGeneric": "Đăng nhập mạng xã hội thất bại. Vui lòng thử lại.",
+      "errorUnavailable": "Nhà cung cấp đăng nhập này hiện không khả dụng."
+    },
     "form": {
       "identifierLabel": "Email hoặc tên đăng nhập",
       "identifierPlaceholder": "ban@example.com",

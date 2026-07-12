@@ -406,6 +406,15 @@
     "subtitle": "Enter your credentials to access your account.",
     "initializing": "Loading...",
     "termsNotice": "By signing in you agree to VNShop's Terms of Service and Privacy Policy.",
+    "oauth": {
+      "errorUnknownProvider": "This social login provider is not supported.",
+      "errorFailed": "Social login was cancelled or failed.",
+      "errorMissing": "The social login response is incomplete. Please try again.",
+      "errorInvalidState": "This social login session expired or was already used. Please try again.",
+      "errorExchange": "We couldn't complete social login. Please try again.",
+      "errorGeneric": "Social login failed. Please try again.",
+      "errorUnavailable": "This social login provider is currently unavailable."
+    },
     "form": {
       "identifierLabel": "Email or username",
       "identifierPlaceholder": "you@example.com",
