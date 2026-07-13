@@ -4,7 +4,7 @@ import { createElement } from "react";
 
 // Mock AnimatePresence to render children synchronously in jsdom (motion/react defers)
 vi.mock("motion/react", () => ({
-  AnimatePresence: ({ children, mode }: { children: ReactNode; mode?: string }) => {
+  AnimatePresence: ({ children, mode: _mode }: { children: ReactNode; mode?: string }) => {
     // mode="wait" means keep previous child until new one is ready
     // We just render children directly (skip the animation/deferral)
     return children;
@@ -230,7 +230,9 @@ describe("ConfirmDialog — primitive", () => {
 
       await waitFor(() => {
         expect(screen.getByRole("heading", { name: /Cancel order?/i })).toBeInTheDocument();
-        expect(screen.getByText("This will cancel your order and release the reservation.")).toBeInTheDocument();
+        expect(
+          screen.getByText("This will cancel your order and release the reservation."),
+        ).toBeInTheDocument();
       });
     });
 

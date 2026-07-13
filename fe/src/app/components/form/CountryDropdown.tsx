@@ -57,16 +57,10 @@ export function CountryDropdown({
   const [highlight, setHighlight] = useState(0);
 
   // Full list (memoized; the locale rarely changes).
-  const allCountries: CountryOption[] = useMemo(
-    () => sortedCountriesForPicker(locale),
-    [locale],
-  );
+  const allCountries: CountryOption[] = useMemo(() => sortedCountriesForPicker(locale), [locale]);
 
   // Filtered list based on the search query.
-  const visible = useMemo(
-    () => filterCountries(allCountries, query),
-    [allCountries, query],
-  );
+  const visible = useMemo(() => filterCountries(allCountries, query), [allCountries, query]);
 
   // Index of the active country in the *visible* list. Used to scroll the
   // popover to the active option when it opens.
@@ -135,9 +129,7 @@ export function CountryDropdown({
     requestAnimationFrame(() => {
       searchRef.current?.focus();
       const idx = activeIndexInVisible >= 0 ? activeIndexInVisible : 0;
-      const el = listRef.current?.querySelector<HTMLElement>(
-        `[data-idx="${idx}"]`,
-      );
+      const el = listRef.current?.querySelector<HTMLElement>(`[data-idx="${idx}"]`);
       el?.scrollIntoView({ block: "nearest" });
       setHighlight(idx);
     });
@@ -171,9 +163,7 @@ export function CountryDropdown({
 
   const scrollHighlightIntoView = () => {
     requestAnimationFrame(() => {
-      const el = listRef.current?.querySelector<HTMLElement>(
-        `[data-idx="${highlight}"]`,
-      );
+      const el = listRef.current?.querySelector<HTMLElement>(`[data-idx="${highlight}"]`);
       el?.scrollIntoView({ block: "nearest" });
     });
   };
@@ -212,10 +202,7 @@ export function CountryDropdown({
         >
           {/* Search box */}
           <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
-            <Search
-              aria-hidden="true"
-              className="w-4 h-4 text-muted-foreground flex-shrink-0"
-            />
+            <Search aria-hidden="true" className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             <input
               ref={searchRef}
               type="text"
@@ -254,7 +241,7 @@ export function CountryDropdown({
           >
             {visible.length === 0 ? (
               <li className="px-3 py-6 text-center text-sm text-muted-foreground">
-                No countries match "{query}"
+                No countries match &quot;{query}&quot;
               </li>
             ) : (
               visible.map((c, idx) => {
@@ -267,6 +254,7 @@ export function CountryDropdown({
                     role="option"
                     aria-selected={isActive}
                     onMouseEnter={() => setHighlight(idx)}
+                    onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && select(c.code)}
                     onClick={() => select(c.code)}
                     className={`flex items-center gap-2 px-3 py-2 cursor-pointer text-sm ${
                       isHighlighted ? "bg-muted" : ""
@@ -276,9 +264,7 @@ export function CountryDropdown({
                       {c.flag}
                     </span>
                     <span className="flex-1 truncate">{c.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {c.dialCode}
-                    </span>
+                    <span className="text-xs text-muted-foreground">{c.dialCode}</span>
                     {c.isPrimary ? (
                       <span className="text-[10px] uppercase tracking-wide text-primary font-semibold">
                         Primary

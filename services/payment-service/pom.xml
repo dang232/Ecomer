@@ -198,6 +198,13 @@
 			<artifactId>junit5</artifactId>
 			<version>4.6.14</version>
 			<scope>test</scope>
+			<exclusions>
+				<!-- Keep Pact's legacy transport from competing with grpc-netty-shaded. -->
+				<exclusion>
+					<groupId>io.grpc</groupId>
+					<artifactId>grpc-netty</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>io.opentelemetry</groupId>

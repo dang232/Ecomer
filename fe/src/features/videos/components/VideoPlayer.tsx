@@ -46,7 +46,14 @@ export function VideoPlayerSkeleton({ className = "" }: { className?: string }) 
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function VideoPlayer({ src, poster, title, className = "", loading = false, tracks }: VideoPlayerProps) {
+export function VideoPlayer({
+  src,
+  poster,
+  title,
+  className = "",
+  loading = false,
+  tracks,
+}: VideoPlayerProps) {
   const { t } = useTranslation();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [buffering, setBuffering] = useState(false);
@@ -59,8 +66,8 @@ export function VideoPlayer({ src, poster, title, className = "", loading = fals
   // element is held by a ref — without this, navigating away from a playing
   // video lets the audio continue in the background.
   useEffect(() => {
+    const v = videoRef.current;
     return () => {
-      const v = videoRef.current;
       if (v) {
         v.pause();
         // Clear src to release the network connection and decoder
@@ -119,6 +126,7 @@ export function VideoPlayer({ src, poster, title, className = "", loading = fals
       ].join(" ")}
     >
       {/* Native video element — accessible via keyboard through native controls */}
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption -- user-uploaded videos may not have captions; this is a known limitation for UGC content */}
       <video
         ref={videoRef}
         src={src}
@@ -150,7 +158,8 @@ export function VideoPlayer({ src, poster, title, className = "", loading = fals
       </video>
 
       {/* Custom big-play overlay shown before first play on poster */}
-      {showPoster && !playing && !error ? <button
+      {showPoster && !playing && !error ? (
+        <button
           type="button"
           aria-label={t("video.player.playAria")}
           onClick={handleClickOverlay}
@@ -159,28 +168,31 @@ export function VideoPlayer({ src, poster, title, className = "", loading = fals
           <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
             <Play size={24} className="text-gray-900 ml-1" fill="currentColor" />
           </div>
-        </button> : null}
+        </button>
+      ) : null}
 
       {/* Buffering spinner — role=status so screen readers announce it */}
-      {buffering && !error ? <div
+      {buffering && !error ? (
+        <div
           className="absolute inset-0 flex items-center justify-center bg-black/40 pointer-events-none"
           role="status"
           aria-live="polite"
           aria-label={t("video.player.buffering")}
         >
           <Loader2 size={32} className="text-white animate-spin" />
-        </div> : null}
+        </div>
+      ) : null}
 
       {/* Error overlay — visible feedback when the video fails to load */}
-      {error ? <div
+      {error ? (
+        <div
           className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/70 text-white p-6"
           role="alert"
         >
           <AlertCircle size={40} aria-hidden="true" />
-          <p className="text-sm text-center max-w-xs">
-            {t("video.player.error")}
-          </p>
-        </div> : null}
+          <p className="text-sm text-center max-w-xs">{t("video.player.error")}</p>
+        </div>
+      ) : null}
     </div>
   );
 }

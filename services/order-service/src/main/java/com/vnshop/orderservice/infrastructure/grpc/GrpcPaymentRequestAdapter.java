@@ -32,7 +32,7 @@ public class GrpcPaymentRequestAdapter implements PaymentRequestPort {
     }
 
     @Override
-    public void requestPayment(String orderId, String paymentMethod, Money amount) {
+    public void requestPayment(String orderId, String buyerId, String paymentMethod, Money amount) {
         var protoMoney = com.vnshop.proto.common.Money.newBuilder()
             .setAmount(amount.amount().toPlainString())
             .setCurrency(amount.currency())
@@ -40,6 +40,7 @@ public class GrpcPaymentRequestAdapter implements PaymentRequestPort {
 
         var request = PaymentRequest.newBuilder()
             .setOrderId(orderId)
+            .setBuyerId(buyerId)
             .setPaymentMethod(paymentMethod)
             .setAmount(protoMoney)
             .build();

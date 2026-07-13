@@ -160,6 +160,28 @@ class ManageAddressUseCaseTest {
         verify(userRepositoryPort, never()).saveBuyer(any());
     }
 
+    @Test
+    void updateAddress_ShouldReplaceAddressAtIndexAndSave() {
+        BuyerProfile buyerProfile = new BuyerProfile(
+                KEYCLOAK_ID,
+                "Name",
+                PHONE,
+                "avatar",
+                List.of(
+                        new Address("Old street", "W1", "D1", "C1", true),
+                        new Address("Other street", "W2", "D2", "C2", false)
+                )
+        );
+        Address replacement = new Address("New street", "W1", "D1", "C1", false);
+        when(userRepositoryPort.findBuyerByKeycloakId(KEYCLOAK_ID)).thenReturn(Optional.of(buyerProfile));
+        when(userRepositoryPort.saveBuyer(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        BuyerProfile result = manageAddressUseCase.updateAddress(KEYCLOAK_ID, 0, replacement);
+
+        assertThat(result.addresses()).containsExactly(replacement, buyerProfile.addresses().get(1));
+        verify(userRepositoryPort).saveBuyer(any(BuyerProfile.class));
+    }
+
     private BuyerProfile createBuyerProfile() {
         Address address = new Address("Street 1", "Ward 1", "District 1", "City 1", true);
         return new BuyerProfile(KEYCLOAK_ID, "John Doe", PHONE, "http://avatar.url", List.of(address));

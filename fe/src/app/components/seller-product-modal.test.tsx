@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { Toaster } from "sonner";
 import { createElement, type ReactNode } from "react";
+import { Toaster } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SellerProductModal } from "./seller-product-modal";
@@ -16,17 +16,24 @@ const useVideoUploadMock = vi.fn();
 // closes over this object, so mutating `.list` in place propagates to the
 // mocked hook without re-importing.
 const videosState: {
-  list: Array<{
+  list: {
     id: string;
     entityId: string;
     context: "PRODUCT";
     status: "PUBLISHED";
     originalFilename?: string;
-  }>;
+  }[];
 } = { list: [] };
 
 let mockUploadReturn: Record<string, unknown> = {
-  state: { phase: "idle", progress: 0, videoId: null, error: null, estimatedDuration: null, filename: null },
+  state: {
+    phase: "idle",
+    progress: 0,
+    videoId: null,
+    error: null,
+    estimatedDuration: null,
+    filename: null,
+  },
   upload: vi.fn(),
   cancel: vi.fn(),
   reset: vi.fn(),
@@ -104,12 +111,7 @@ function makeWrapper() {
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   function Wrapper({ children }: { children: ReactNode }) {
-    return createElement(
-      QueryClientProvider,
-      { client },
-      createElement(Toaster, null),
-      children,
-    );
+    return createElement(QueryClientProvider, { client }, createElement(Toaster, null), children);
   }
   return Wrapper;
 }
@@ -117,10 +119,9 @@ function makeWrapper() {
 function renderModal(props: Partial<React.ComponentProps<typeof SellerProductModal>> = {}) {
   const onClose = vi.fn();
   const product = props.product ?? makeProduct();
-  const utils = render(
-    <SellerProductModal open onClose={onClose} product={product} {...props} />,
-    { wrapper: makeWrapper() },
-  );
+  const utils = render(<SellerProductModal open onClose={onClose} product={product} {...props} />, {
+    wrapper: makeWrapper(),
+  });
   return { ...utils, onClose };
 }
 
@@ -136,7 +137,14 @@ beforeEach(() => {
   useVideoUploadMock.mockReset();
   setVideos([]);
   mockUploadReturn = {
-    state: { phase: "idle", progress: 0, videoId: null, error: null, estimatedDuration: null, filename: null },
+    state: {
+      phase: "idle",
+      progress: 0,
+      videoId: null,
+      error: null,
+      estimatedDuration: null,
+      filename: null,
+    },
     upload: vi.fn(),
     cancel: vi.fn(),
     reset: vi.fn(),
@@ -171,9 +179,7 @@ describe("SellerProductModal — P2-5 confirm dialogs", () => {
     fireEvent.click(removeBtn);
 
     // Dialog appears
-    expect(
-      await screen.findByRole("dialog", { name: /removeVideoTitle/i }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: /removeVideoTitle/i })).toBeInTheDocument();
     // Delete is NOT called until the user confirms
     expect(videoDeleteMock).not.toHaveBeenCalled();
   });
@@ -208,9 +214,7 @@ describe("SellerProductModal — P2-5 confirm dialogs", () => {
       expect(videoDeleteMock).toHaveBeenCalledWith("vid-42");
     });
     await waitFor(() => {
-      expect(
-        screen.queryByRole("dialog", { name: /removeVideoTitle/i }),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByRole("dialog", { name: /removeVideoTitle/i })).not.toBeInTheDocument();
     });
   });
 
@@ -237,9 +241,7 @@ describe("SellerProductModal — P2-5 confirm dialogs", () => {
 
     expect(videoDeleteMock).not.toHaveBeenCalled();
     await waitFor(() => {
-      expect(
-        screen.queryByRole("dialog", { name: /removeVideoTitle/i }),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByRole("dialog", { name: /removeVideoTitle/i })).not.toBeInTheDocument();
     });
   });
 });

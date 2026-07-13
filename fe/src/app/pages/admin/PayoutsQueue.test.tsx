@@ -3,10 +3,10 @@
  * Tests render the REAL PayoutsQueue component; useQuery is mocked so the
  * component exercises its own tab state, focus management, and key handlers.
  */
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { HTMLAttributes, ReactNode } from "react";
 import { createElement as h } from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AdminPayout } from "../../types/api";
 
@@ -24,12 +24,16 @@ vi.mock("motion/react", () => ({
 
 // Shared mutable state so each test can configure data before calling render.
 const pendingData = vi.fn(() => ({ data: [] as AdminPayout[], isLoading: false, isError: false }));
-const completedData = vi.fn(() => ({ data: [] as AdminPayout[], isLoading: false, isError: false }));
+const completedData = vi.fn(() => ({
+  data: [] as AdminPayout[],
+  isLoading: false,
+  isError: false,
+}));
 
 vi.mock("@tanstack/react-query", () => ({
   useQuery: ({ queryKey }: { queryKey: string[] }) => {
     const key = queryKey[2];
-    if (key === "pending")   return pendingData();
+    if (key === "pending") return pendingData();
     if (key === "completed") return completedData();
     return { data: undefined, isLoading: false, isError: false };
   },
@@ -56,7 +60,7 @@ vi.mock("../../lib/api/endpoints/admin", () => ({
 
 vi.mock("@tabler/icons-react", () => ({
   IconArrowsSort: () => h("span", null, "sort"),
-  IconSearch:    () => h("span", null, "search"),
+  IconSearch: () => h("span", null, "search"),
 }));
 
 // ── Mock sonner toast ─────────────────────────────────────────────────────────
@@ -69,7 +73,7 @@ import { PayoutsQueue } from "./PayoutsQueue";
 
 // ── Fixture helpers ───────────────────────────────────────────────────────────
 
-function makeAdminPayout(overrides: Partial<AdminPayout> = {}): AdminPayout {
+function _makeAdminPayout(overrides: Partial<AdminPayout> = {}): AdminPayout {
   return {
     id: "payout-1",
     sellerId: "seller-001" as AdminPayout["sellerId"],
@@ -88,8 +92,16 @@ function makeAdminPayout(overrides: Partial<AdminPayout> = {}): AdminPayout {
 describe("PayoutsQueue tablist — P1-11 roving tabindex", () => {
   // Reset mock implementations before each test
   beforeEach(() => {
-    pendingData.mockImplementation(() => ({ data: [] as AdminPayout[], isLoading: false, isError: false }));
-    completedData.mockImplementation(() => ({ data: [] as AdminPayout[], isLoading: false, isError: false }));
+    pendingData.mockImplementation(() => ({
+      data: [] as AdminPayout[],
+      isLoading: false,
+      isError: false,
+    }));
+    completedData.mockImplementation(() => ({
+      data: [] as AdminPayout[],
+      isLoading: false,
+      isError: false,
+    }));
   });
 
   it("PQ1 — renders both tabs with role='tab'; pending selected by default", () => {

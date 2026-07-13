@@ -52,7 +52,7 @@ public class GrpcNoopConfig {
             private static final Logger LOGGER = LoggerFactory.getLogger(PaymentRequestPort.class);
 
             @Override
-            public void requestPayment(String orderId, String paymentMethod, Money amount) {
+            public void requestPayment(String orderId, String buyerId, String paymentMethod, Money amount) {
                 LOGGER.warn("noop payment adapter — requestPayment skipped for order {} method={} amount={}; gRPC service unavailable",
                         orderId, paymentMethod, amount);
             }

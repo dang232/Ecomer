@@ -97,7 +97,21 @@ class GrpcPaymentServerTest {
                                 .setCurrency("VND")
                                 .build())
                         .setPaymentMethod("COD")
-                        .build()));
+                .build()));
+    }
+
+    @Test
+    void requestPaymentFailsWhenGatewayReturnsFailedPayment() {
+        Payment failedPayment = mock(Payment.class);
+        when(failedPayment.status()).thenReturn(PaymentStatus.FAILED);
+        when(processPaymentUseCase.processInternal(any(), any())).thenReturn(failedPayment);
+
+        assertThrows(Exception.class, () -> stub.requestPayment(PaymentRequest.newBuilder()
+                .setOrderId("ord-1")
+                .setBuyerId("buyer-1")
+                .setAmount(Money.newBuilder().setAmount("100000").setCurrency("VND").build())
+                .setPaymentMethod("VNPAY")
+                .build()));
     }
 
     @Test

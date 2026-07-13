@@ -76,16 +76,36 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       final response = await _dioClient.post(
         ApiConstants.login,
         data: {
-          'email': email,
+          'username': email, // Backend expects 'username' field
           'password': password,
         },
       );
 
       if (response.statusCode == 200 && response.data != null) {
-        final data = response.data as Map<String, dynamic>;
-        final tokenSet = TokenSet.fromJson(data['tokens'] as Map<String, dynamic>);
-        final user = UserModel.fromJson(data['user'] as Map<String, dynamic>);
-        return (tokenSet, user);
+        // Backend wraps response in ApiResponse<T> envelope
+        final envelope = response.data as Map<String, dynamic>;
+        final data = envelope['data'] as Map<String, dynamic>;
+
+        // LoginResponse: {accessToken, accessExpiresIn}
+        // Refresh token is in HTTP-only cookie, not in response body
+        final accessToken = data['accessToken'] as String;
+        final accessExpiresIn = data['accessExpiresIn'] as int;
+
+        // Calculate expiry time from seconds
+        final accessTokenExpiry = DateTime.now().add(Duration(seconds: accessExpiresIn));
+
+        // For TokenSet, we create without refresh token (it comes from cookie)
+        // Use default refresh token expiry of 7 days
+        final tokenSet = TokenSet(
+          accessToken: accessToken,
+          refreshToken: '', // Not provided in response - comes from HTTP-only cookie
+          accessTokenExpiry: accessTokenExpiry,
+          refreshTokenExpiry: DateTime.now().add(const Duration(days: 7)),
+        );
+
+        // Backend doesn't return user in login response - fetch profile separately
+        final user = await getProfile(accessToken);
+        return (tokenSet, user.copyWith(email: email));
       }
 
       throw ServerException(
@@ -105,20 +125,48 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     String? phone,
   }) async {
     try {
+      // Parse full name into first/last
+      final nameParts = fullName.trim().split(' ');
+      final firstName = nameParts.isNotEmpty ? nameParts.first : '';
+      final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+
       final response = await _dioClient.post(
         ApiConstants.register,
         data: {
           'email': email,
           'password': password,
-          'full_name': fullName,
+          'firstName': firstName,
+          'lastName': lastName,
           if (phone != null) 'phone': phone,
         },
       );
 
+      // Register returns ApiResponse<RegisterResponse> with {userId, email}
+      // No tokens returned - user needs to login after registration
       if (response.statusCode == 201 && response.data != null) {
-        final data = response.data as Map<String, dynamic>;
-        final tokenSet = TokenSet.fromJson(data['tokens'] as Map<String, dynamic>);
-        final user = UserModel.fromJson(data['user'] as Map<String, dynamic>);
+        // Registration successful but no tokens - return empty TokenSet
+        // Caller should redirect to login
+        final envelope = response.data as Map<String, dynamic>;
+        final data = envelope['data'] as Map<String, dynamic>;
+        final userId = data['userId'] as String;
+
+        // Return empty token set - user must login after register
+        final now = DateTime.now();
+        final tokenSet = TokenSet(
+          accessToken: '',
+          refreshToken: '',
+          accessTokenExpiry: now,
+          refreshTokenExpiry: now,
+        );
+
+        // Create minimal user model with the registered email
+        final user = UserModel(
+          id: userId,
+          email: email,
+          fullName: fullName,
+          phone: phone,
+        );
+
         return (tokenSet, user);
       }
 
@@ -134,18 +182,38 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   @override
   Future<TokenSet> refreshToken(String refreshToken) async {
     try {
+      // Refresh token is read from HTTP-only cookie on backend
+      // No body needed - just call the endpoint
       final response = await _dioClient.post(
         ApiConstants.refreshToken,
-        data: {'refresh_token': refreshToken},
+        options: Options(headers: await _dioClient.csrfHeaders()),
       );
 
       if (response.statusCode == 200 && response.data != null) {
-        return TokenSet.fromJson(response.data as Map<String, dynamic>);
+        // Backend wraps response in ApiResponse<T> envelope
+        final envelope = response.data as Map<String, dynamic>;
+        final data = envelope['data'] as Map<String, dynamic>;
+
+        // LoginResponse: {accessToken, accessExpiresIn}
+        final accessToken = data['accessToken'] as String;
+        final accessExpiresIn = data['accessExpiresIn'] as int;
+
+        // Calculate expiry time from seconds
+        final accessTokenExpiry = DateTime.now().add(Duration(seconds: accessExpiresIn));
+
+        // Return TokenSet with new access token
+        // Refresh token stays in HTTP-only cookie, we keep the old one
+        return TokenSet(
+          accessToken: accessToken,
+          refreshToken: refreshToken, // Keep existing refresh token
+          accessTokenExpiry: accessTokenExpiry,
+          refreshTokenExpiry: DateTime.now().add(const Duration(days: 7)),
+        );
       }
 
       throw AuthException.sessionExpired();
     } on DioException catch (e) {
-      if (e.response?.statusCode == 401) {
+      if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
         throw AuthException.sessionExpired();
       }
       throw _handleDioException(e);
@@ -159,6 +227,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         ApiConstants.logout,
         options: Options(
           headers: {
+            ...await _dioClient.csrfHeaders(),
             ApiConstants.authorization: '${ApiConstants.bearer} $accessToken',
           },
         ),
@@ -183,7 +252,18 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       );
 
       if (response.statusCode == 200 && response.data != null) {
-        return UserModel.fromJson(response.data as Map<String, dynamic>);
+        // Backend wraps response in ApiResponse<T> envelope
+        final envelope = response.data as Map<String, dynamic>;
+        final data = envelope['data'] as Map<String, dynamic>;
+
+        // BuyerProfileResponse: { keycloakId, name, phone, avatarUrl, banned, addresses }
+        return UserModel(
+          id: data['keycloakId'] as String? ?? '',
+          email: '', // Not in profile response, must be set from login context
+          fullName: data['name'] as String?,
+          phone: data['phone'] as String?,
+          avatarUrl: data['avatarUrl'] as String?,
+        );
       }
 
       throw ServerException(
@@ -205,14 +285,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     String? gender,
   }) async {
     try {
-      final response = await _dioClient.patch(
+      final response = await _dioClient.put(
         ApiConstants.updateProfile,
         data: {
-          if (fullName != null) 'full_name': fullName,
+          if (fullName != null) 'name': fullName,
           if (phone != null) 'phone': phone,
-          if (address != null) 'address': address,
-          if (dateOfBirth != null) 'date_of_birth': dateOfBirth.toIso8601String(),
-          if (gender != null) 'gender': gender,
         },
         options: Options(
           headers: {
@@ -222,7 +299,15 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       );
 
       if (response.statusCode == 200 && response.data != null) {
-        return UserModel.fromJson(response.data as Map<String, dynamic>);
+        final envelope = response.data as Map<String, dynamic>;
+        final data = envelope['data'] as Map<String, dynamic>;
+        return UserModel(
+          id: data['keycloakId'] as String? ?? '',
+          email: data['email'] as String? ?? '',
+          fullName: data['name'] as String?,
+          phone: data['phone'] as String?,
+          avatarUrl: data['avatarUrl'] as String?,
+        );
       }
 
       throw ServerException(

@@ -1,8 +1,8 @@
 /** P2-10: truncated orderId cell renders title={orderId} for tooltip.
  *  P0-10: admin refund reason dialog via ConfirmDialog isolation. */
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { HTMLAttributes, ReactNode } from "react";
 import { createElement } from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ConfirmDialog } from "../../components/ui/confirm-dialog";
@@ -205,6 +205,7 @@ vi.mock("@tabler/icons-react", () => ({
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import { useQuery } from "@tanstack/react-query";
+
 import { OrderManagement } from "./OrderManagement";
 
 describe("OrderManagement — P2-10 truncated orderId title tooltip", () => {
@@ -260,7 +261,9 @@ describe("OrderManagement — P0-10 refund dialog integration", () => {
 
     await waitFor(() => {
       const textarea = screen.getByRole("textbox");
-      fireEvent.change(textarea, { target: { value: "Customer requested refund for damaged item" } });
+      fireEvent.change(textarea, {
+        target: { value: "Customer requested refund for damaged item" },
+      });
       const confirmBtn = screen.getByRole("button", { name: /Refund/i });
       expect(confirmBtn).not.toBeDisabled();
       fireEvent.click(confirmBtn);

@@ -5,9 +5,9 @@ import '../models/cart_model.dart';
 
 abstract class CartRemoteDataSource {
   Future<CartModel> getCart(String userId);
-  Future<CartItemModel> addItem(String userId, CartItemModel item);
+  Future<CartModel> addItem(String userId, CartItemModel item);
   Future<void> removeItem(String userId, String cartItemId);
-  Future<CartItemModel> updateQuantity(String userId, String cartItemId, int quantity);
+  Future<CartModel> updateQuantity(String userId, String cartItemId, int quantity);
   Future<CartModel> applyCoupon(String userId, String couponCode);
   Future<CartModel> removeCoupon(String userId);
   Future<void> clearCart(String userId);
@@ -41,28 +41,32 @@ class CartRemoteDataSourceImpl implements CartRemoteDataSource {
     final response = await _dio.get(
       '/cart',
       options: Options(headers: _headers),
-      queryParameters: {'userId': userId},
     );
 
-    return CartModel.fromJson(response.data as Map<String, dynamic>);
+    final responseData = response.data as Map<String, dynamic>;
+    final data = responseData['data'] as Map<String, dynamic>;
+    return CartModel.fromJson(data);
   }
 
   @override
-  Future<CartItemModel> addItem(String userId, CartItemModel item) async {
+  Future<CartModel> addItem(String userId, CartItemModel item) async {
     if (_useMockBackend) {
       return _mockAddItem(userId, item);
     }
 
+    // P1: backend derives user from JWT — do not echo userId in the body.
+    // `userId` parameter kept for the abstract contract and mock path.
     final response = await _dio.post(
       '/cart/items',
       options: Options(headers: _headers),
       data: {
-        'userId': userId,
-        'item': item.toJson(),
+        'productId': item.productId,
+        if (item.sku != null) 'variantId': item.sku,
+        'quantity': item.quantity,
       },
     );
 
-    return CartItemModel.fromJson(response.data as Map<String, dynamic>);
+    return _cartFromResponse(response);
   }
 
   @override
@@ -71,15 +75,18 @@ class CartRemoteDataSourceImpl implements CartRemoteDataSource {
       return _mockRemoveItem(userId, cartItemId);
     }
 
+    final itemKey = _itemKeyParts(cartItemId);
     await _dio.delete(
-      '/cart/items/$cartItemId',
+      '/cart/items/${itemKey.productId}',
       options: Options(headers: _headers),
-      queryParameters: {'userId': userId},
+      data: {
+        if (itemKey.variantId != null) 'variantId': itemKey.variantId,
+      },
     );
   }
 
   @override
-  Future<CartItemModel> updateQuantity(
+  Future<CartModel> updateQuantity(
     String userId,
     String cartItemId,
     int quantity,
@@ -88,16 +95,18 @@ class CartRemoteDataSourceImpl implements CartRemoteDataSource {
       return _mockUpdateQuantity(userId, cartItemId, quantity);
     }
 
-    final response = await _dio.patch(
-      '/cart/items/$cartItemId',
+    // P1: backend derives user from JWT — do not echo userId in the body.
+    final itemKey = _itemKeyParts(cartItemId);
+    final response = await _dio.put(
+      '/cart/items/${itemKey.productId}',
       options: Options(headers: _headers),
       data: {
-        'userId': userId,
         'quantity': quantity,
+        if (itemKey.variantId != null) 'variantId': itemKey.variantId,
       },
     );
 
-    return CartItemModel.fromJson(response.data as Map<String, dynamic>);
+    return _cartFromResponse(response);
   }
 
   @override
@@ -106,16 +115,18 @@ class CartRemoteDataSourceImpl implements CartRemoteDataSource {
       return _mockApplyCoupon(userId, couponCode);
     }
 
+    // P1: backend derives user from JWT — do not echo userId in the body.
     final response = await _dio.post(
       '/cart/coupon',
       options: Options(headers: _headers),
       data: {
-        'userId': userId,
         'couponCode': couponCode,
       },
     );
 
-    return CartModel.fromJson(response.data as Map<String, dynamic>);
+    final responseData = response.data as Map<String, dynamic>;
+    final data = responseData['data'] as Map<String, dynamic>;
+    return CartModel.fromJson(data);
   }
 
   @override
@@ -127,10 +138,11 @@ class CartRemoteDataSourceImpl implements CartRemoteDataSource {
     final response = await _dio.delete(
       '/cart/coupon',
       options: Options(headers: _headers),
-      queryParameters: {'userId': userId},
     );
 
-    return CartModel.fromJson(response.data as Map<String, dynamic>);
+    final responseData = response.data as Map<String, dynamic>;
+    final data = responseData['data'] as Map<String, dynamic>;
+    return CartModel.fromJson(data);
   }
 
   @override
@@ -139,11 +151,7 @@ class CartRemoteDataSourceImpl implements CartRemoteDataSource {
       return _mockClearCart(userId);
     }
 
-    await _dio.delete(
-      '/cart',
-      options: Options(headers: _headers),
-      queryParameters: {'userId': userId},
-    );
+    await _dio.delete('/cart', options: Options(headers: _headers));
   }
 
   @override
@@ -152,16 +160,16 @@ class CartRemoteDataSourceImpl implements CartRemoteDataSource {
       return _mockSyncCart(userId, localCart);
     }
 
+    // P1: backend derives user from JWT — do not echo userId in the body.
     final response = await _dio.post(
       '/cart/sync',
       options: Options(headers: _headers),
-      data: {
-        'userId': userId,
-        'localCart': localCart.toJson(),
-      },
+      data: localCart.toJson(),
     );
 
-    return CartModel.fromJson(response.data as Map<String, dynamic>);
+    final responseData = response.data as Map<String, dynamic>;
+    final data = responseData['data'] as Map<String, dynamic>;
+    return CartModel.fromJson(data);
   }
 
   // Mock implementations for testing
@@ -170,28 +178,30 @@ class CartRemoteDataSourceImpl implements CartRemoteDataSource {
     return CartModel.empty(userId);
   }
 
-  Future<CartItemModel> _mockAddItem(String userId, CartItemModel item) async {
+  Future<CartModel> _mockAddItem(String userId, CartItemModel item) async {
     await Future.delayed(const Duration(milliseconds: 200));
-    return item;
+    return CartModel.empty(userId).addItem(item);
   }
 
   Future<void> _mockRemoveItem(String userId, String cartItemId) async {
     await Future.delayed(const Duration(milliseconds: 200));
   }
 
-  Future<CartItemModel> _mockUpdateQuantity(
+  Future<CartModel> _mockUpdateQuantity(
     String userId,
     String cartItemId,
     int quantity,
   ) async {
     await Future.delayed(const Duration(milliseconds: 200));
-    return CartItemModel(
+    final itemKey = _itemKeyParts(cartItemId);
+    return CartModel.empty(userId).addItem(CartItemModel(
       cartItemId: cartItemId,
-      productId: '',
+      productId: itemKey.productId,
       name: '',
       price: 0,
       quantity: quantity,
-    );
+      sku: itemKey.variantId,
+    ));
   }
 
   Future<CartModel> _mockApplyCoupon(String userId, String couponCode) async {
@@ -214,5 +224,21 @@ class CartRemoteDataSourceImpl implements CartRemoteDataSource {
   Future<CartModel> _mockSyncCart(String userId, CartModel localCart) async {
     await Future.delayed(const Duration(milliseconds: 400));
     return localCart;
+  }
+
+  CartModel _cartFromResponse(Response<dynamic> response) {
+    final responseData = response.data as Map<String, dynamic>;
+    return CartModel.fromJson(responseData['data'] as Map<String, dynamic>);
+  }
+
+  ({String productId, String? variantId}) _itemKeyParts(String itemKey) {
+    final separator = itemKey.indexOf(':');
+    if (separator < 0) {
+      return (productId: itemKey, variantId: null);
+    }
+    return (
+      productId: itemKey.substring(0, separator),
+      variantId: itemKey.substring(separator + 1),
+    );
   }
 }

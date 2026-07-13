@@ -1,8 +1,11 @@
-import 'package:dio/dio.dart';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../../features/auth/presentation/bloc/auth_state.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/cart/presentation/pages/cart_page.dart';
@@ -22,20 +25,35 @@ import '../../features/checkout/presentation/pages/checkout_page.dart';
 import '../../features/checkout/presentation/pages/address_form_page.dart';
 import '../../features/checkout/presentation/bloc/checkout_bloc.dart';
 import '../../features/checkout/domain/repositories/checkout_repository.dart';
+import '../../core/network/dio_client.dart';
 import '../../core/notifications/onesignal_handler.dart';
 import '../shell/main_shell.dart';
 
-typedef AuthStatusReader = bool Function();
+/// Listenable wrapper for AuthBloc to work with GoRouter's refreshListenable
+class AuthBlocListenable extends ChangeNotifier {
+  AuthBlocListenable(AuthBloc authBloc) {
+    _subscription = authBloc.stream.listen((_) {
+      notifyListeners();
+    });
+  }
 
-bool _stubAuthStatus() => false;
+  late final StreamSubscription<AuthState> _subscription;
 
-final appRouter = buildAppRouter(isAuthenticated: _stubAuthStatus);
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}
 
-GoRouter buildAppRouter({required AuthStatusReader isAuthenticated}) {
+GoRouter buildAppRouter(BuildContext context) {
+  final authBloc = context.read<AuthBloc>();
   return GoRouter(
     initialLocation: '/',
+    refreshListenable: AuthBlocListenable(authBloc),
     redirect: (context, state) {
-      final authenticated = isAuthenticated();
+      final authState = context.read<AuthBloc>().state;
+      final authenticated = authState.isAuthenticated;
       final isGoingToLogin = state.matchedLocation == '/login';
 
       // ponytail: real session state is wired in Phase 2 auth work.
@@ -205,10 +223,9 @@ GoRouter buildAppRouter({required AuthStatusReader isAuthenticated}) {
         name: 'orders',
         builder: (context, state) => BlocProvider(
           create: (context) {
-            // Create repository with injected dependencies
-            final dio = Dio(); // TODO: Inject Dio from dependency injection
+            // Use DioClient.instance instead of raw unconfigured Dio
             final orderRepository = OrderRepositoryImpl(
-              remoteDataSource: OrderRemoteDataSourceImpl(dio: dio),
+              remoteDataSource: OrderRemoteDataSourceImpl(dio: DioClient.instance.dio),
               localDataSource: OrderLocalDataSourceImpl(),
             );
             return OrderListBloc(orderRepository: orderRepository);

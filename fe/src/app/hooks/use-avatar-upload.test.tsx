@@ -1,6 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const avatarUploadMock = vi.fn();
@@ -11,9 +9,9 @@ vi.mock("../lib/api/endpoints/users", () => ({
   avatarActivate: (...args: unknown[]) => avatarActivateMock(...args),
 }));
 
-import { __testables__, useAvatarUpload } from "./use-avatar-upload";
 import { makeWrapper } from "../test-utils/render-with-query-client";
 
+import { __testables__, useAvatarUpload } from "./use-avatar-upload";
 
 function makeFile(opts: { name?: string; type?: string; size?: number } = {}) {
   const size = opts.size ?? 1024;
@@ -83,8 +81,7 @@ describe("useAvatarUpload", () => {
     it("rejects empty files (size 0)", () => {
       // The throw lives in `preflight` so we can drive it directly without
       // running the full mutation pipeline.
-      expect(() => __testables__.preflight(makeFile({ size: 0 })))
-        .toThrow("avatar:empty");
+      expect(() => __testables__.preflight(makeFile({ size: 0 }))).toThrow("avatar:empty");
     });
   });
 

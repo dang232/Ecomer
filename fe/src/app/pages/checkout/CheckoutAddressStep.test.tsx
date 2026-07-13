@@ -1,10 +1,11 @@
-import { fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { describe, expect, it, vi } from "vitest";
+
+import type { Address } from "../../types/api";
 
 import { CheckoutAddressStep } from "./CheckoutAddressStep";
-import type { Address } from "../../types/api";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -49,7 +50,7 @@ const baseProps = {
 };
 
 describe("CheckoutAddressStep", () => {
-  it("renders a real <input type=\"radio\"> per address (no buttons-as-radios)", () => {
+  it('renders a real <input type="radio"> per address (no buttons-as-radios)', () => {
     const Wrapper = makeWrapper();
     render(
       <Wrapper>

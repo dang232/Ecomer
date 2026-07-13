@@ -2,6 +2,7 @@ package com.vnshop.paymentservice.infrastructure.web;
 
 import com.stripe.exception.StripeException;
 import com.vnshop.paymentservice.application.GetPaymentStatusUseCase;
+import com.vnshop.paymentservice.application.OrderAccessDeniedException;
 import com.vnshop.paymentservice.application.PaymentMethodInput;
 import com.vnshop.paymentservice.application.PaymentPromotionService;
 import com.vnshop.paymentservice.application.ProcessPaymentCommand;
@@ -79,7 +80,8 @@ public class PaymentController {
             @RequestHeader(name = IDEMPOTENCY_KEY_HEADER, required = false) String idempotencyKey,
             @Valid @RequestBody PaymentRequest request
     ) {
-        return ApiResponse.ok(PaymentResponse.fromDomain(processPaymentUseCase.process(new ProcessPaymentCommand(request.orderId(), JwtPrincipalUtil.currentUserId(), PaymentMethodInput.COD, idempotencyKey))));
+        return ApiResponse.ok(PaymentResponse.fromDomain(
+                processOrReuse(request.orderId(), PaymentMethodInput.COD, idempotencyKey)));
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -88,7 +90,8 @@ public class PaymentController {
             @RequestHeader(name = IDEMPOTENCY_KEY_HEADER, required = false) String idempotencyKey,
             @Valid @RequestBody PaymentRequest request
     ) {
-        return ApiResponse.ok(PaymentResponse.fromDomain(processPaymentUseCase.process(new ProcessPaymentCommand(request.orderId(), JwtPrincipalUtil.currentUserId(), PaymentMethodInput.VNPAY, idempotencyKey))));
+        return ApiResponse.ok(PaymentResponse.fromDomain(
+                processOrReuse(request.orderId(), PaymentMethodInput.VNPAY, idempotencyKey)));
     }
 
     @GetMapping("/vnpay/ipn")
@@ -109,7 +112,8 @@ public class PaymentController {
             @RequestHeader(name = IDEMPOTENCY_KEY_HEADER, required = false) String idempotencyKey,
             @Valid @RequestBody PaymentRequest request
     ) {
-        return ApiResponse.ok(PaymentResponse.fromDomain(processPaymentUseCase.process(new ProcessPaymentCommand(request.orderId(), JwtPrincipalUtil.currentUserId(), PaymentMethodInput.MOMO, idempotencyKey))));
+        return ApiResponse.ok(PaymentResponse.fromDomain(
+                processOrReuse(request.orderId(), PaymentMethodInput.MOMO, idempotencyKey)));
     }
 
     @PostMapping("/momo/ipn")
@@ -134,9 +138,7 @@ public class PaymentController {
     ) {
         VietQrService qrService = vietQrService.orElseThrow(() ->
                 new IllegalStateException("VietQR is not enabled — set payment.vietqr.enabled=true"));
-        Payment payment = processPaymentUseCase.process(new ProcessPaymentCommand(
-                request.orderId(), JwtPrincipalUtil.currentUserId(),
-                PaymentMethodInput.VIETQR, idempotencyKey));
+        Payment payment = processOrReuse(request.orderId(), PaymentMethodInput.VIETQR, idempotencyKey);
         VietQrService.VietQrPayment qr = qrService.generate(
                 payment.paymentId().toString(), payment.amount());
         return ApiResponse.ok(new VietQrCreateResponse(
@@ -313,5 +315,24 @@ public class PaymentController {
 
     private MomoCallbackService requireMomoCallbackService() {
         return momoCallbackService.orElseThrow(() -> new IllegalStateException("MoMo gateway is not enabled"));
+    }
+
+    /**
+     * Order creation already runs the trusted payment step before persisting
+     * the order. The buyer-facing confirmation call must return that payment
+     * instead of charging the same order a second time.
+     */
+    private Payment processOrReuse(String orderId, PaymentMethodInput method, String idempotencyKey) {
+        String buyerId = JwtPrincipalUtil.currentUserId();
+        Optional<Payment> existing = paymentRepository.findByOrderId(orderId);
+        if (existing.isPresent()) {
+            Payment payment = existing.get();
+            if (!buyerId.equals(payment.buyerId()) || !method.name().equals(payment.method().name())) {
+                throw new OrderAccessDeniedException(
+                        "not authorized to use this payment");
+            }
+            return payment;
+        }
+        return processPaymentUseCase.process(new ProcessPaymentCommand(orderId, buyerId, method, idempotencyKey));
     }
 }

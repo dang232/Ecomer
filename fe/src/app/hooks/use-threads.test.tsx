@@ -1,6 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
-import { type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const useAuthMock = vi.fn();
@@ -17,9 +15,9 @@ vi.mock("../lib/api/endpoints/messaging", async (importActual) => {
   };
 });
 
-import { useThreads } from "./use-threads";
 import { makeWrapper } from "../test-utils/render-with-query-client";
 
+import { useThreads } from "./use-threads";
 
 beforeEach(() => {
   useAuthMock.mockReturnValue({ ready: true, authenticated: true });

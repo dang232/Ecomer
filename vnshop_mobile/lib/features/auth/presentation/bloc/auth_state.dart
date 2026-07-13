@@ -53,6 +53,12 @@ class AuthState extends Equatable {
           errorMessage: errorMessage ?? 'Phiên đăng nhập đã hết hạn',
         );
 
+  /// Account created but email verification is required before login
+  const AuthState.needsVerification({UserModel? user}) : this(
+          status: AuthStatus.needsVerification,
+          user: user,
+        );
+
   /// Error state
   const AuthState.error({
     required String message,
@@ -121,6 +127,9 @@ enum AuthStatus {
 
   /// Error occurred
   error,
+
+  /// Registration succeeded but user must verify email before login
+  needsVerification,
 }
 
 /// Extension for AuthStatus
@@ -140,6 +149,8 @@ extension AuthStatusExtension on AuthStatus {
         return 'Đang xử lý...';
       case AuthStatus.error:
         return 'Có lỗi xảy ra';
+      case AuthStatus.needsVerification:
+        return 'Vui lòng xác thực email';
     }
   }
 }

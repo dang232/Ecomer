@@ -42,9 +42,10 @@ function flattenImages(p: ProductSummary | ProductDetail): string[] {
  * Naming pattern: "ProductName Color / Size" — last " / " part = size,
  * second-to-last = color. E.g., "Áo Thun Đỏ / M" → color="Đỏ", size="M".
  */
-function parseVariantAttributes(
-  variants: ProductSummary["variants"],
-): { colors: string[]; sizes: string[] } {
+function parseVariantAttributes(variants: ProductSummary["variants"]): {
+  colors: string[];
+  sizes: string[];
+} {
   const colors = new Set<string>();
   const sizes = new Set<string>();
   for (const v of variants ?? []) {
@@ -99,7 +100,9 @@ export function fromServer(p: ProductSummary | ProductDetail): Product {
     image: primaryImage,
     images: images.length > 0 ? images : primaryImage ? [primaryImage] : [],
     category: p.category ?? p.categoryId ?? "",
+    categoryId: p.categoryId,
     categoryLabel: p.category ?? p.categoryId ?? "",
+    brand: (p as { brand?: string }).brand,
     sellerId: p.sellerId ?? "",
     sellerName: p.sellerName ?? "",
     rating: p.rating ?? 0,
@@ -108,7 +111,7 @@ export function fromServer(p: ProductSummary | ProductDetail): Product {
     stock,
     description: detail.description ?? "",
     colors: detail.colors ?? parsedAttributes?.colors, // BE value wins; parsed fallback if absent
-    sizes: detail.sizes ?? parsedAttributes?.sizes,    // same fallback logic
+    sizes: detail.sizes ?? parsedAttributes?.sizes, // same fallback logic
     variants: p.variants,
     shipping: "Tiêu chuẩn",
     shippingFee: 0,

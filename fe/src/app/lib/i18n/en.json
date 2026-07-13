@@ -1072,6 +1072,7 @@
       "originalPriceLabel": "Original price (optional)",
       "stockLabel": "Stock",
       "categoryLabel": "Category",
+      "brandLabel": "Brand",
       "cancel": "Cancel",
       "save": "Save changes",
       "publish": "Publish product",

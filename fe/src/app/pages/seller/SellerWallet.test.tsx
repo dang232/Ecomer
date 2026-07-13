@@ -3,9 +3,9 @@
  * Tests render the REAL SellerWallet component with controlled props;
  * the component's own WITHDRAWAL_STATUS_FILTER drives the filtering.
  */
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { HTMLAttributes, ReactNode } from "react";
 import { createElement } from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { Payout } from "../../lib/api/endpoints/seller-finance";
@@ -74,13 +74,13 @@ function makePayout(
 
 /** All 7 statuses from the original test fixture. */
 const SEVEN_FIXTURES: Payout[] = [
-  makePayout({ id: "p-1", status: "COMPLETED",         amount: 100000 }),
+  makePayout({ id: "p-1", status: "COMPLETED", amount: 100000 }),
   makePayout({ id: "p-2", status: "COMPLETED_BY_ADMIN", amount: 200000 }),
-  makePayout({ id: "p-3", status: "PENDING",           amount: 300000 }),
-  makePayout({ id: "p-4", status: "FAILED",            amount: 400000 }),
-  makePayout({ id: "p-5", status: "REJECTED",          amount: 500000 }),
-  makePayout({ id: "p-6", status: "PENDING_REVIEW",   amount: 600000 }),
-  makePayout({ id: "p-7", status: "PAID_OUT",          amount: 700000 }),
+  makePayout({ id: "p-3", status: "PENDING", amount: 300000 }),
+  makePayout({ id: "p-4", status: "FAILED", amount: 400000 }),
+  makePayout({ id: "p-5", status: "REJECTED", amount: 500000 }),
+  makePayout({ id: "p-6", status: "PENDING_REVIEW", amount: 600000 }),
+  makePayout({ id: "p-7", status: "PAID_OUT", amount: 700000 }),
 ];
 
 /**
@@ -104,12 +104,7 @@ function getRowCount(): number {
 describe("SellerWallet history filter — P1-7 enum set", () => {
   it("SW1 — Filter 'all': all 7 payouts are visible", () => {
     render(
-      <SellerWallet
-        balance={1_000_000}
-        payouts={SEVEN_FIXTURES}
-        isLoading={false}
-        error={null}
-      />,
+      <SellerWallet balance={1_000_000} payouts={SEVEN_FIXTURES} isLoading={false} error={null} />,
     );
 
     expect(screen.getByText("seller.wallet.historyTitle")).toBeInTheDocument();
@@ -118,12 +113,7 @@ describe("SellerWallet history filter — P1-7 enum set", () => {
 
   it("SW2 — Filter 'completed': only COMPLETED, COMPLETED_BY_ADMIN, PAID_OUT rows appear", () => {
     render(
-      <SellerWallet
-        balance={1_000_000}
-        payouts={SEVEN_FIXTURES}
-        isLoading={false}
-        error={null}
-      />,
+      <SellerWallet balance={1_000_000} payouts={SEVEN_FIXTURES} isLoading={false} error={null} />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "seller.wallet.historyFilter.completed" }));
@@ -132,12 +122,7 @@ describe("SellerWallet history filter — P1-7 enum set", () => {
 
   it("SW2 — Filter 'completed' does NOT include PENDING or FAILED rows", () => {
     render(
-      <SellerWallet
-        balance={1_000_000}
-        payouts={SEVEN_FIXTURES}
-        isLoading={false}
-        error={null}
-      />,
+      <SellerWallet balance={1_000_000} payouts={SEVEN_FIXTURES} isLoading={false} error={null} />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "seller.wallet.historyFilter.completed" }));
@@ -146,12 +131,7 @@ describe("SellerWallet history filter — P1-7 enum set", () => {
 
   it("SW3 — Filter 'pending': only PENDING and PENDING_REVIEW rows appear", () => {
     render(
-      <SellerWallet
-        balance={1_000_000}
-        payouts={SEVEN_FIXTURES}
-        isLoading={false}
-        error={null}
-      />,
+      <SellerWallet balance={1_000_000} payouts={SEVEN_FIXTURES} isLoading={false} error={null} />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "seller.wallet.historyFilter.pending" }));
@@ -160,12 +140,7 @@ describe("SellerWallet history filter — P1-7 enum set", () => {
 
   it("SW3 — Filter 'pending' does NOT include COMPLETED or FAILED rows", () => {
     render(
-      <SellerWallet
-        balance={1_000_000}
-        payouts={SEVEN_FIXTURES}
-        isLoading={false}
-        error={null}
-      />,
+      <SellerWallet balance={1_000_000} payouts={SEVEN_FIXTURES} isLoading={false} error={null} />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "seller.wallet.historyFilter.pending" }));
@@ -174,12 +149,7 @@ describe("SellerWallet history filter — P1-7 enum set", () => {
 
   it("SW4 — Filter 'failed': only FAILED and REJECTED rows appear", () => {
     render(
-      <SellerWallet
-        balance={1_000_000}
-        payouts={SEVEN_FIXTURES}
-        isLoading={false}
-        error={null}
-      />,
+      <SellerWallet balance={1_000_000} payouts={SEVEN_FIXTURES} isLoading={false} error={null} />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "seller.wallet.historyFilter.failed" }));
@@ -188,12 +158,7 @@ describe("SellerWallet history filter — P1-7 enum set", () => {
 
   it("SW4 — Filter 'failed' does NOT include COMPLETED or PENDING rows", () => {
     render(
-      <SellerWallet
-        balance={1_000_000}
-        payouts={SEVEN_FIXTURES}
-        isLoading={false}
-        error={null}
-      />,
+      <SellerWallet balance={1_000_000} payouts={SEVEN_FIXTURES} isLoading={false} error={null} />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "seller.wallet.historyFilter.failed" }));
@@ -203,17 +168,10 @@ describe("SellerWallet history filter — P1-7 enum set", () => {
   it("SW5 — Empty filtered state: clicking 'completed' with zero COMPLETED payouts shows empty message", () => {
     const noCompleted: Payout[] = [
       makePayout({ id: "x1", status: "PENDING", amount: 100000 }),
-      makePayout({ id: "x2", status: "FAILED",  amount: 200000 }),
+      makePayout({ id: "x2", status: "FAILED", amount: 200000 }),
     ];
 
-    render(
-      <SellerWallet
-        balance={500000}
-        payouts={noCompleted}
-        isLoading={false}
-        error={null}
-      />,
-    );
+    render(<SellerWallet balance={500000} payouts={noCompleted} isLoading={false} error={null} />);
 
     fireEvent.click(screen.getByRole("button", { name: "seller.wallet.historyFilter.completed" }));
     expect(getRowCount()).toBe(0);
@@ -223,17 +181,10 @@ describe("SellerWallet history filter — P1-7 enum set", () => {
   it("SW6 — Case-insensitivity: lowercase status values still match the completed filter", () => {
     const lower: Payout[] = [
       makePayout({ id: "l1", status: "completed", amount: 100000 }),
-      makePayout({ id: "l2", status: "paid_out",  amount: 200000 }),
+      makePayout({ id: "l2", status: "paid_out", amount: 200000 }),
     ];
 
-    render(
-      <SellerWallet
-        balance={500000}
-        payouts={lower}
-        isLoading={false}
-        error={null}
-      />,
-    );
+    render(<SellerWallet balance={500000} payouts={lower} isLoading={false} error={null} />);
 
     fireEvent.click(screen.getByRole("button", { name: "seller.wallet.historyFilter.completed" }));
     expect(getRowCount()).toBe(2);

@@ -59,7 +59,8 @@ public class OrderController {
                 JwtPrincipalUtil.currentUserId(),
                 request.shippingAddress().toDomain(),
                 request.toLineItems(),
-                idempotencyKey))));
+                idempotencyKey,
+                request.paymentMethod()))));
     }
 
     @PreAuthorize("isAuthenticated()")

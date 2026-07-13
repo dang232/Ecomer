@@ -126,7 +126,7 @@ class PaymentTransaction extends Equatable {
 
   factory PaymentTransaction.fromJson(Map<String, dynamic> json) {
     return PaymentTransaction(
-      id: json['id'] as String? ?? '',
+      id: json['id'] as String? ?? json['paymentId'] as String? ?? '',
       orderId: json['orderId'] as String? ?? json['order_id'] as String? ?? '',
       idempotencyKey: json['idempotencyKey'] as String? ??
           json['idempotency_key'] as String? ??
@@ -139,10 +139,10 @@ class PaymentTransaction extends Equatable {
           json['transactionRef'] as String?,
       paymentUrl: json['paymentUrl'] as String? ??
           json['payment_url'] as String? ??
-          json['paymentUrl'] as String?,
+          json['redirectUrl'] as String?,
       qrCodeUrl: json['qrCodeUrl'] as String? ??
           json['qr_code_url'] as String? ??
-          json['qrCodeUrl'] as String?,
+          json['qrImageUrl'] as String?,
       errorCode: json['errorCode'] as String? ??
           json['error_code'] as String? ??
           json['errorCode'] as String?,
@@ -166,6 +166,32 @@ class PaymentTransaction extends Equatable {
     );
   }
 
+  /// Decode both ApiResponse<PaymentResponse> and the nested VietQR response.
+  factory PaymentTransaction.fromApiResponse(Map<String, dynamic> response) {
+    final rawData = response['data'];
+    if (rawData is! Map) {
+      return PaymentTransaction.fromJson(response);
+    }
+
+    final data = Map<String, dynamic>.from(rawData);
+    final nestedPayment = data['payment'];
+    if (nestedPayment is Map) {
+      final payment = Map<String, dynamic>.from(nestedPayment);
+      if (payment['qrCodeUrl'] == null && data['qrImageUrl'] != null) {
+        payment['qrCodeUrl'] = data['qrImageUrl'];
+      }
+      final metadata = payment['metadata'];
+      payment['metadata'] = {
+        if (metadata is Map) ...Map<String, dynamic>.from(metadata),
+        for (final key in ['bankBin', 'accountNo', 'accountName', 'reference'])
+          if (data[key] != null) key: data[key],
+      };
+      return PaymentTransaction.fromJson(payment);
+    }
+
+    return PaymentTransaction.fromJson(data);
+  }
+
   static PaymentMethod _parsePaymentMethod(String? method) {
     switch (method?.toLowerCase()) {
       case 'vnpay':
@@ -174,7 +200,6 @@ class PaymentTransaction extends Equatable {
         return PaymentMethod.momo;
       case 'vietqr':
       case 'viet_qr':
-      case 'vietqr':
         return PaymentMethod.vietqr;
       case 'cod':
       case 'cash_on_delivery':

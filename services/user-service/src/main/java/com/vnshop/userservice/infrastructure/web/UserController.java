@@ -70,6 +70,15 @@ public class UserController {
         return ApiResponse.ok(BuyerProfileResponse.fromDomain(manageAddressUseCase.addAddress(JwtPrincipalUtil.currentUserId(), request.toDomain())));
     }
 
+    @PutMapping("/me/addresses/{index}")
+    @PreAuthorize("isAuthenticated()")
+    public ApiResponse<BuyerProfileResponse> updateAddress(
+            @PathVariable int index,
+            @RequestBody AddressRequest request) {
+        return ApiResponse.ok(BuyerProfileResponse.fromDomain(
+                manageAddressUseCase.updateAddress(JwtPrincipalUtil.currentUserId(), index, request.toDomain())));
+    }
+
     @DeleteMapping("/me/addresses/{index}")
     @PreAuthorize("isAuthenticated()")
     public ApiResponse<BuyerProfileResponse> removeAddress(@PathVariable int index) {

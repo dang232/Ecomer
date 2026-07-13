@@ -15,6 +15,7 @@ public class SellerProfile {
     private String description;
     private String logoUrl;
     private String bannerUrl;
+    private String rejectionReason;
     private final Instant createdAt;
 
     /** Existing 8-arg constructor — new fields default to null. All existing call sites unchanged. */
@@ -72,6 +73,7 @@ public class SellerProfile {
     public String description() { return description; }
     public String logoUrl() { return logoUrl; }
     public String bannerUrl() { return bannerUrl; }
+    public String rejectionReason() { return rejectionReason; }
     public Instant createdAt() { return createdAt; }
 
     public void updateShop(String shopName, Address pickupAddress) {
@@ -88,12 +90,22 @@ public class SellerProfile {
         this.approved = true;
     }
 
+    public void reject(String reason) {
+        this.approved = false;
+        this.rejectionReason = reason;
+    }
+
     public void changeTier(Tier tier) {
         this.tier = Objects.requireNonNull(tier, "tier is required");
     }
 
     public void setVacationMode(boolean vacationMode) {
         this.vacationMode = vacationMode;
+    }
+
+    public SellerProfile withRejectionReason(String reason) {
+        this.rejectionReason = reason;
+        return this;
     }
 
     private static String requireNonBlank(String value, String fieldName) {

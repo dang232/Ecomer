@@ -40,7 +40,7 @@ public class PersistenceConfig {
     PaymentRequestPort paymentRequestPort() {
         return new PaymentRequestPort() {
             @Override
-            public void requestPayment(String orderId, String paymentMethod, Money amount) {
+            public void requestPayment(String orderId, String buyerId, String paymentMethod, Money amount) {
                 LOGGER.info("Stub payment request pending for order {} method {} amount {} {}", orderId, paymentMethod, amount.amount(), amount.currency());
             }
         };

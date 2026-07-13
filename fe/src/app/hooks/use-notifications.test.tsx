@@ -1,6 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor, act } from "@testing-library/react";
-import { type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const useAuthMock = vi.fn();
@@ -19,8 +17,9 @@ vi.mock("../lib/api/endpoints/notifications", () => ({
   unreadNotificationCount: (...args: unknown[]) => unreadNotificationCountMock(...args),
 }));
 
-import { useNotifications } from "./use-notifications";
 import { makeWrapper } from "../test-utils/render-with-query-client";
+
+import { useNotifications } from "./use-notifications";
 
 const buildPage = (content: { id: string; title: string; read?: boolean }[]) => ({
   content,
@@ -31,7 +30,6 @@ const buildPage = (content: { id: string; title: string; read?: boolean }[]) => 
   first: true,
   last: true,
 });
-
 
 beforeEach(() => {
   useAuthMock.mockReturnValue({ ready: true, authenticated: true });

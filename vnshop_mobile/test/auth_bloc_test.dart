@@ -119,6 +119,32 @@ void main() {
       );
     });
 
+    group('Registration', () {
+      blocTest<AuthBloc, AuthState>(
+        'emits needsVerification when registration succeeds without tokens',
+        build: () {
+          when(() => mockAuthRepository.register(
+                email: any(named: 'email'),
+                password: any(named: 'password'),
+                fullName: any(named: 'fullName'),
+                phone: any(named: 'phone'),
+              )).thenAnswer((_) async => Either.right(testUser));
+          when(() => mockAuthRepository.authStateChanges)
+              .thenAnswer((_) => const Stream.empty());
+          return AuthBloc(authRepository: mockAuthRepository);
+        },
+        act: (bloc) => bloc.add(const AuthRegisterRequested(
+          email: 'test@example.com',
+          password: 'Password123!',
+          fullName: 'Test User',
+        )),
+        expect: () => [
+          const AuthState(status: AuthStatus.loading),
+          const AuthState.needsVerification(user: testUser),
+        ],
+      );
+    });
+
     group('Session Expired', () {
       blocTest<AuthBloc, AuthState>(
         'emits [expired] when session expired event is added',

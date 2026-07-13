@@ -10,7 +10,7 @@ import {
 } from "../lib/api/endpoints/cart";
 import { productById } from "../lib/api/endpoints/products";
 import { fromServer, findVariant } from "../lib/api/product-mapper";
-import type { Cart, ProductDetail } from "../types/api";
+import type { Cart } from "../types/api";
 import type { ProductId, SellerId } from "../types/api/branded-ids";
 
 import { useAuth } from "./use-auth";
@@ -80,7 +80,12 @@ function guestItemsToCart(items: GuestCartItem[]): Cart {
 }
 
 /** Compute optimistic cart state for an "add" before the server has responded. */
-function optimisticAdd(cart: Cart | undefined, productId: string, quantity: number, variantId?: string): Cart {
+function optimisticAdd(
+  cart: Cart | undefined,
+  productId: string,
+  quantity: number,
+  variantId?: string,
+): Cart {
   const base = cart ?? EMPTY_CART;
   const items = [...(base.items ?? [])];
   const existing = items.findIndex((i) => i.productId === productId && i.variantId === variantId);
@@ -202,7 +207,9 @@ export function useCart() {
       }
     })();
 
-    return () => { aborted.current = true; };
+    return () => {
+      aborted.current = true;
+    };
   }, [ready, authenticated, query.isSuccess, query.data, qc]);
 
   const addItem = useMutation<
@@ -290,9 +297,7 @@ export function useCart() {
       );
       const next =
         existing >= 0
-          ? prev.map((i, idx) =>
-              idx === existing ? { ...i, quantity: i.quantity + quantity } : i,
-            )
+          ? prev.map((i, idx) => (idx === existing ? { ...i, quantity: i.quantity + quantity } : i))
           : [...prev, { productId, quantity, variantId }];
       writeGuestCart(next);
       return next;
@@ -305,9 +310,7 @@ export function useCart() {
         quantity <= 0
           ? prev.filter((i) => !(i.productId === productId && i.variantId === variantId))
           : prev.map((i) =>
-              i.productId === productId && i.variantId === variantId
-                ? { ...i, quantity }
-                : i,
+              i.productId === productId && i.variantId === variantId ? { ...i, quantity } : i,
             );
       writeGuestCart(next);
       return next;
@@ -330,14 +333,12 @@ export function useCart() {
   // For guest carts, fan-out product fetches to hydrate name/image/price.
   // `useQueries` runs in parallel; once all settle `isHydrating` becomes false.
   const productQueries = useQueries({
-    queries: guestItems.map(
-      (item) => ({
-        queryKey: ["product", item.productId] as const,
-        queryFn: () => productById(item.productId),
-        staleTime: 5 * 60 * 1000,
-        enabled: isGuest,
-      }),
-    ),
+    queries: guestItems.map((item) => ({
+      queryKey: ["product", item.productId] as const,
+      queryFn: () => productById(item.productId),
+      staleTime: 5 * 60 * 1000,
+      enabled: isGuest,
+    })),
   });
 
   // Hydrating as long as any guest product fetch is still pending.
@@ -352,12 +353,20 @@ export function useCart() {
         items: guestItems.map((item, idx) => {
           const raw = productQueries[idx]?.data;
           if (!raw) {
-            return { productId: item.productId as ProductId, name: undefined, image: undefined, price: 0, quantity: item.quantity, sellerId: undefined, variantId: item.variantId };
+            return {
+              productId: item.productId as ProductId,
+              name: undefined,
+              image: undefined,
+              price: 0,
+              quantity: item.quantity,
+              sellerId: undefined,
+              variantId: item.variantId,
+            };
           }
           const variant = findVariant(raw, item.variantId);
           const mapped = fromServer(raw);
-          const price = (variant?.priceAmount) ?? mapped.price;
-          const image = (variant?.imageUrl) ?? mapped.image;
+          const price = variant?.priceAmount ?? mapped.price;
+          const image = variant?.imageUrl ?? mapped.image;
           return {
             productId: item.productId as ProductId,
             name: mapped.name,
@@ -373,7 +382,7 @@ export function useCart() {
           const raw = productQueries[idx]?.data;
           if (!raw) return sum;
           const variant = findVariant(raw, item.variantId);
-          const price = (variant?.priceAmount) ?? fromServer(raw).price;
+          const price = variant?.priceAmount ?? fromServer(raw).price;
           return sum + price * item.quantity;
         }, 0),
       }
@@ -426,7 +435,10 @@ export function useCart() {
       const itemKey = input.variantId ? `${input.productId}:${input.variantId}` : input.productId;
       return updateItem.mutate({ productId: itemKey, quantity: input.quantity }, options);
     },
-    removeItem: (input: string | { productId: string; variantId?: string }, options?: Parameters<typeof removeItem.mutate>[1]) => {
+    removeItem: (
+      input: string | { productId: string; variantId?: string },
+      options?: Parameters<typeof removeItem.mutate>[1],
+    ) => {
       if (isGuest) {
         if (typeof input === "string") {
           guestRemove(input);

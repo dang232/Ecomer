@@ -64,7 +64,7 @@ class CartModel extends Equatable {
 
   CartModel addItem(CartItemModel item) {
     final existingIndex = items.indexWhere(
-      (i) => i.productId == item.productId && i.optionName == item.optionName,
+      (i) => i.productId == item.productId && i.sku == item.sku,
     );
 
     if (existingIndex != -1) {

@@ -1,6 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor, act } from "@testing-library/react";
-import { type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // ─── API mocks (must be declared before importing the module under test) ───────
@@ -29,6 +27,8 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
+import { makeWrapper } from "../test-utils/render-with-query-client";
+
 import {
   useVideoModerationQueue,
   useVideoPreview,
@@ -38,10 +38,8 @@ import {
   useApproveAppeal,
   useRejectAppeal,
 } from "./use-admin-video-moderation";
-import { makeWrapper } from "../test-utils/render-with-query-client";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
 
 const makePage = (count = 2) => ({
   content: Array.from({ length: count }, (_, i) => ({

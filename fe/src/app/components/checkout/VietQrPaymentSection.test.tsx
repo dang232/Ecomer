@@ -4,8 +4,8 @@
  * All user-facing strings must come from t() — the mock returns the key itself,
  * so English-locale rendering never contains Vietnamese characters.
  */
-import { render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -55,7 +55,9 @@ describe("VietQrPaymentSection i18n (P0-6)", () => {
 
     // Must be the i18n key, not "Đang tạo QR…"
     expect(screen.getByText("vietqr.creating")).toBeInTheDocument();
-    expect(container.textContent).not.toMatch(/[àáảãạăằắẳẵặâầấậẩẫèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i);
+    expect(container.textContent).not.toMatch(
+      /[àáảãạăằắẳẵặâầấậẩẫèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i,
+    );
   });
 
   it("QR loaded state: account label uses t('vietqr.accountLabel') key — no 'Tài khoản:' literal", async () => {
@@ -113,6 +115,8 @@ describe("VietQrPaymentSection i18n (P0-6)", () => {
     });
 
     // Comprehensive check: no Vietnamese diacritic characters at all.
-    expect(container.textContent).not.toMatch(/[àáảãạăằắẳẵặâầấậẩẫèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i);
+    expect(container.textContent).not.toMatch(
+      /[àáảãạăằắẳẵặâầấậẩẫèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i,
+    );
   });
 });

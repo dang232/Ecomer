@@ -149,6 +149,15 @@ class _RegisterPageState extends State<RegisterPage> {
           if (state.isAuthenticated) {
             context.go('/');
           }
+
+          if (state.status == AuthStatus.needsVerification) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('ÄÄƒng kÃ½ thÃ nh cÃ´ng. HÃ£y xÃ¡c thá»±c email trÆ°á»›c khi Ä‘Äƒng nháº­p.'),
+              ),
+            );
+            context.go('/login');
+          }
         },
         builder: (context, state) {
           return SafeArea(

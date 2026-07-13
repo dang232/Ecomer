@@ -10,6 +10,7 @@ import com.vnshop.orderservice.domain.Order;
 import com.vnshop.orderservice.domain.OrderItem;
 import com.vnshop.orderservice.domain.SubOrder;
 import com.vnshop.orderservice.domain.CommissionTier;
+import com.vnshop.orderservice.domain.PaymentMethod;
 import com.vnshop.orderservice.domain.port.out.CommissionTierLookupPort;
 import com.vnshop.orderservice.domain.port.out.InventoryReservationPort;
 import com.vnshop.orderservice.domain.port.out.OrderEventPublisherPort;
@@ -124,6 +125,25 @@ class CheckoutOrderUseCaseTest {
     }
 
     @Test
+    void preservesRequestedPaymentMethodForThePaymentSaga() {
+        catalog.add(new CatalogProduct(
+                "p1",
+                "seller-A",
+                "Product",
+                List.of(new CatalogProduct.Variant("sku-1", new Money(new BigDecimal("100000"), "VND"))),
+                ""));
+
+        Order order = newUseCase().checkout(new CheckoutOrderCommand(
+                "buyer-1",
+                new Address("street", "ward", "district", "city"),
+                List.of(new CheckoutLineItem("p1", "sku-1", 1)),
+                "idem-vietqr",
+                PaymentMethod.VIETQR));
+
+        assertThat(order.paymentMethod()).isEqualTo("VIETQR");
+    }
+
+    @Test
     void rejectsMissingProduct() {
         // Catalog empty — any productId is unknown.
 
@@ -224,7 +244,7 @@ class CheckoutOrderUseCaseTest {
     }
 
     private static final class RecordingPayment implements PaymentRequestPort {
-        @Override public void requestPayment(String orderId, String paymentMethod, Money amount) {}
+        @Override public void requestPayment(String orderId, String buyerId, String paymentMethod, Money amount) {}
     }
 
     private static final class RecordingShipping implements ShippingRequestPort {

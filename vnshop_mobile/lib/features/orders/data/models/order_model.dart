@@ -124,8 +124,11 @@ class OrderModel extends Equatable {
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
     return OrderModel(
-      id: json['id'] as String,
-      orderNumber: json['order_number'] as String? ?? json['orderNumber'] as String? ?? '',
+      id: json['id'] as String? ?? json['orderId'] as String? ?? '',
+      orderNumber: json['order_number'] as String? ??
+          json['orderNumber'] as String? ??
+          json['orderId'] as String? ??
+          '',
       status: OrderStatus.fromString(json['status'] as String? ?? 'PENDING'),
       items: (json['items'] as List<dynamic>?)
               ?.map((e) => OrderItemModel.fromJson(e as Map<String, dynamic>))

@@ -8,6 +8,7 @@
 /services/cart-service/node_modules
 /services/cart-service/dist
 /.omc
+**/.omc/
 /fe/node_modules
 /fe/dist
 /fe/.env
@@ -234,3 +235,5 @@ app.*.symbols
 .agents/skills/personal-*
 /.agent-shell/
 /docs
+/services/configuration-service/dist
+/services/product-service/.omc

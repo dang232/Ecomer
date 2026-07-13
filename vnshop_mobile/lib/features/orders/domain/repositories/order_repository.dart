@@ -29,7 +29,6 @@ abstract class OrderRepository {
   Future<OrderModel> cancelOrder(String orderId);
 
   /// Cập nhật trạng thái đơn hàng (internal use)
-  Future<OrderModel> updateOrderStatus(String orderId, OrderStatus status);
 
   /// Lưu đơn hàng vào cache cục bộ
   Future<void> cacheOrder(OrderModel order);

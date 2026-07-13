@@ -90,6 +90,14 @@ interface ApiEnvelope<T> {
 }
 
 function tokenSetFrom(payload: AuthSessionResponse): TokenSet {
+  // Guard: reject empty access tokens to prevent silent auth failures
+  if (
+    !payload.accessToken ||
+    typeof payload.accessToken !== "string" ||
+    !payload.accessToken.trim()
+  ) {
+    throw new AuthError(401, "empty_token", "Login failed: no valid token received");
+  }
   return {
     accessToken: payload.accessToken,
     accessExpiresAt: Date.now() + payload.accessExpiresIn * 1000,
@@ -122,7 +130,11 @@ export function csrfAuthHeader(): Record<string, string> | undefined {
   return token ? { [CSRF_HEADER_NAME]: token } : undefined;
 }
 
-async function postAuth(url: string, body?: unknown, extraHeaders?: Record<string, string>): Promise<Response> {
+async function postAuth(
+  url: string,
+  body?: unknown,
+  extraHeaders?: Record<string, string>,
+): Promise<Response> {
   const headers: Record<string, string> = {};
   if (body != null) headers["Content-Type"] = "application/json";
   if (extraHeaders) Object.assign(headers, extraHeaders);

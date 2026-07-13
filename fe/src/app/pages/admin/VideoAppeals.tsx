@@ -36,7 +36,10 @@ function NsfwBadge({ score }: { score: number | undefined }) {
       ? { bg: "bg-red-100 dark:bg-red-900/30", text: "text-red-700 dark:text-red-400" }
       : pct >= 40
         ? { bg: "bg-amber-100 dark:bg-amber-900/30", text: "text-amber-700 dark:text-amber-400" }
-        : { bg: "bg-emerald-100 dark:bg-emerald-900/30", text: "text-emerald-700 dark:text-emerald-400" };
+        : {
+            bg: "bg-emerald-100 dark:bg-emerald-900/30",
+            text: "text-emerald-700 dark:text-emerald-400",
+          };
   return (
     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${color.bg} ${color.text}`}>
       NSFW {pct}%
@@ -46,13 +49,7 @@ function NsfwBadge({ score }: { score: number | undefined }) {
 
 // ─── Video preview modal ──────────────────────────────────────────────────────
 
-function AppealVideoModal({
-  item,
-  onClose,
-}: {
-  item: AdminVideoAppealItem;
-  onClose: () => void;
-}) {
+function AppealVideoModal({ item, onClose }: { item: AdminVideoAppealItem; onClose: () => void }) {
   const { t } = useTranslation();
 
   return (
@@ -62,10 +59,13 @@ function AppealVideoModal({
       aria-label={t("admin.videoAppeals.previewTitle")}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.75)" }}
+
       onClick={onClose}
+      onKeyDown={(e) => e.key === "Escape" && onClose()}
     >
       <div
         className="bg-card rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden"
+
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
@@ -288,9 +288,17 @@ export function VideoAppeals() {
 
       {appealsQuery.isLoading ? (
         // P2-10: 3-row skeleton (matches the count the user is waiting for)
-        <div className="space-y-2" role="status" aria-live="polite" aria-label={t("admin.videoAppeals.loading")}>
+        <div
+          className="space-y-2"
+          role="status"
+          aria-live="polite"
+          aria-label={t("admin.videoAppeals.loading")}
+        >
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-card rounded-2xl p-4 shadow-sm animate-pulse flex items-center gap-3">
+            <div
+              key={i}
+              className="bg-card rounded-2xl p-4 shadow-sm animate-pulse flex items-center gap-3"
+            >
               <div className="w-20 h-12 rounded-md bg-surface-elevated" />
               <div className="flex-1 space-y-2">
                 <div className="h-3 bg-surface-elevated rounded w-1/3" />
@@ -335,7 +343,9 @@ export function VideoAppeals() {
             onApprove={() => approveAppeal.mutate(item.videoId)}
             onReject={() => setRejectFor(item.videoId)}
             isApproving={approveAppeal.isPending ? approveAppeal.variables === item.videoId : false}
-            isRejecting={rejectAppeal.isPending ? rejectAppeal.variables?.videoId === item.videoId : false}
+            isRejecting={
+              rejectAppeal.isPending ? rejectAppeal.variables?.videoId === item.videoId : false
+            }
           />
         ))}
       </div>

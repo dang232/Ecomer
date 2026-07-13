@@ -1,10 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor, act } from "@testing-library/react";
-import { type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../lib/api/envelope";
 import { type JwtClaims, type TokenSet } from "../lib/auth/native-auth";
+
 import { AuthProvider, useAuth, useHasRole } from "./use-auth";
 
 // TokenSet is referenced in makeTokenSet() below.
@@ -153,7 +153,9 @@ describe("useAuth + useHasRole", () => {
     });
 
     it("A3. filters roles to BUYER/SELLER/ADMIN only (drops junk roles)", async () => {
-      const claims = makeClaims({ realm_access: { roles: ["BUYER", "SELLER", "offline_access", "uma_authorization"] } });
+      const claims = makeClaims({
+        realm_access: { roles: ["BUYER", "SELLER", "offline_access", "uma_authorization"] },
+      });
       refreshTokensMock.mockResolvedValueOnce(makeTokenSet());
       decodeJwtMock.mockReturnValueOnce(claims);
 
@@ -227,7 +229,12 @@ describe("useAuth + useHasRole", () => {
       await waitFor(() => expect(result.current.ready).toBe(true));
 
       await act(async () => {
-        await result.current.register({ email: "newbie@test.com", password: "Pass456", firstName: "New", lastName: "User" });
+        await result.current.register({
+          email: "newbie@test.com",
+          password: "Pass456",
+          firstName: "New",
+          lastName: "User",
+        });
       });
 
       expect(registerUserMock).toHaveBeenCalledWith({
@@ -242,7 +249,9 @@ describe("useAuth + useHasRole", () => {
     });
 
     it("C2. wraps ApiError from registerUser into AuthError(statusCode, errorCode, message)", async () => {
-      registerUserMock.mockRejectedValueOnce(new ApiError(409, "email_conflict", "Email already in use"));
+      registerUserMock.mockRejectedValueOnce(
+        new ApiError(409, "email_conflict", "Email already in use"),
+      );
 
       const { Wrapper } = makeWrapper();
       const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
@@ -253,7 +262,12 @@ describe("useAuth + useHasRole", () => {
       let thrown: unknown;
       try {
         await act(async () => {
-          await result.current.register({ email: "dup@test.com", password: "Pass789", firstName: "Dupe", lastName: "User" });
+          await result.current.register({
+            email: "dup@test.com",
+            password: "Pass789",
+            firstName: "Dupe",
+            lastName: "User",
+          });
         });
       } catch (e) {
         thrown = e;
@@ -277,7 +291,12 @@ describe("useAuth + useHasRole", () => {
 
       await expect(
         act(async () => {
-          await result.current.register({ email: "fail@test.com", password: "Pass", firstName: "F", lastName: "L" });
+          await result.current.register({
+            email: "fail@test.com",
+            password: "Pass",
+            firstName: "F",
+            lastName: "L",
+          });
         }),
       ).rejects.toThrow("network failure");
     });
@@ -296,7 +315,12 @@ describe("useAuth + useHasRole", () => {
 
       await expect(
         act(async () => {
-          await result.current.register({ email: "autofail@test.com", password: "Pass999", firstName: "Auto", lastName: "Fail" });
+          await result.current.register({
+            email: "autofail@test.com",
+            password: "Pass999",
+            firstName: "Auto",
+            lastName: "Fail",
+          });
         }),
       ).rejects.toThrow("login after register failed");
 
@@ -417,9 +441,7 @@ describe("useAuth + useHasRole", () => {
 
       // The void-async handler eventually calls refreshTokens() and the
       // resolved token set propagates through applyTokenSet.
-      await waitFor(() =>
-        expect(refreshTokensMock.mock.calls.length).toBeGreaterThan(callsBefore),
-      );
+      await waitFor(() => expect(refreshTokensMock.mock.calls.length).toBeGreaterThan(callsBefore));
       await waitFor(() => expect(result.current.authenticated).toBe(true));
     });
 
@@ -467,9 +489,7 @@ describe("useAuth + useHasRole", () => {
         window.dispatchEvent(new Event("focus"));
       });
 
-      await waitFor(() =>
-        expect(refreshTokensMock.mock.calls.length).toBeGreaterThan(callsBefore),
-      );
+      await waitFor(() => expect(refreshTokensMock.mock.calls.length).toBeGreaterThan(callsBefore));
     });
   });
 
@@ -518,7 +538,9 @@ describe("useAuth + useHasRole", () => {
         result.current.beginOAuthLogin("google", "/dashboard");
       });
 
-      expect(window.location.href).toBe("http://localhost:8080/auth/oauth/google/start?next=%2Fdashboard");
+      expect(window.location.href).toBe(
+        "http://localhost:8080/auth/oauth/google/start?next=%2Fdashboard",
+      );
     });
 
     it("G2.2. redirects to correct URL with facebook provider and next param", async () => {
@@ -531,7 +553,9 @@ describe("useAuth + useHasRole", () => {
         result.current.beginOAuthLogin("facebook", "/profile");
       });
 
-      expect(window.location.href).toBe("http://localhost:8080/auth/oauth/facebook/start?next=%2Fprofile");
+      expect(window.location.href).toBe(
+        "http://localhost:8080/auth/oauth/facebook/start?next=%2Fprofile",
+      );
     });
 
     it("G2.3. uses default / when next is not provided", async () => {

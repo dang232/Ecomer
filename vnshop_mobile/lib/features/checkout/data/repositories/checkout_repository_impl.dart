@@ -3,7 +3,6 @@ import 'package:dio/dio.dart';
 import '../../domain/repositories/checkout_repository.dart';
 import '../models/address_model.dart';
 import '../models/checkout_session.dart';
-import '../models/payment_method.dart';
 import '../models/payment_transaction.dart';
 import '../models/shipping_quote.dart';
 
@@ -37,13 +36,12 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
     }
 
     final response = await _dio.get(
-      '/addresses',
+      '/users/me',
       options: Options(headers: _headers),
     );
 
-    return (response.data as List)
-        .map((e) => VietnamAddress.fromJson(e as Map<String, dynamic>))
-        .toList();
+    final responseData = response.data as Map<String, dynamic>;
+    return _addressesFromProfile(responseData['data'] as Map<String, dynamic>);
   }
 
   @override
@@ -54,12 +52,19 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
     }
 
     final response = await _dio.post(
-      '/addresses',
+      '/users/me/addresses',
       options: Options(headers: _headers),
-      data: address.toJson(),
+      data: address.toBackendJson(),
     );
 
-    return VietnamAddress.fromJson(response.data as Map<String, dynamic>);
+    final responseData = response.data as Map<String, dynamic>;
+    final addresses = _addressesFromProfile(
+      responseData['data'] as Map<String, dynamic>,
+    );
+    if (addresses.isEmpty) {
+      throw StateError('address was not returned by the server');
+    }
+    return addresses.last;
   }
 
   @override
@@ -70,12 +75,20 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
     }
 
     final response = await _dio.put(
-      '/addresses/${address.id}',
+      '/users/me/addresses/${address.id}',
       options: Options(headers: _headers),
-      data: address.toJson(),
+      data: address.toBackendJson(),
     );
 
-    return VietnamAddress.fromJson(response.data as Map<String, dynamic>);
+    final responseData = response.data as Map<String, dynamic>;
+    final addresses = _addressesFromProfile(
+      responseData['data'] as Map<String, dynamic>,
+    );
+    final index = int.tryParse(address.id);
+    if (index == null || index < 0 || index >= addresses.length) {
+      throw StateError('updated address was not returned by the server');
+    }
+    return addresses[index];
   }
 
   @override
@@ -86,7 +99,7 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
     }
 
     await _dio.delete(
-      '/addresses/$addressId',
+      '/users/me/addresses/$addressId',
       options: Options(headers: _headers),
     );
   }
@@ -98,8 +111,8 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
       return;
     }
 
-    await _dio.patch(
-      '/addresses/$addressId/default',
+    await _dio.put(
+      '/users/me/addresses/$addressId/default',
       options: Options(headers: _headers),
     );
   }
@@ -110,17 +123,24 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
       return _mockGetShippingQuotes(address);
     }
 
-    final response = await _dio.get(
-      '/shipping/quotes',
+    final response = await _dio.post(
+      '/checkout/shipping-options',
       options: Options(headers: _headers),
-      queryParameters: {
-        'city': address.city,
-        'district': address.district,
-        'ward': address.ward,
+      data: {
+        'address': {
+          'street': address.streetAddress,
+          'ward': address.ward,
+          'district': address.district,
+          'city': address.city,
+        },
       },
     );
 
-    return (response.data as List)
+    // Backend returns ApiResponse envelope: { data: [{ method, cost, estimate }] }
+    final responseData = response.data as Map<String, dynamic>;
+    final data = responseData['data'] as List<dynamic>;
+
+    return data
         .map((e) => ShippingQuote.fromJson(e as Map<String, dynamic>))
         .toList();
   }
@@ -128,6 +148,7 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
   @override
   Future<CheckoutSession> createSession({
     required String userId,
+    required List<LineItem> lineItems,
     required double subtotal,
     double discountAmount = 0,
     String? couponCode,
@@ -135,6 +156,7 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
     if (_useMockBackend) {
       return CheckoutSession.create(
         userId: userId,
+        lineItems: lineItems,
         subtotal: subtotal,
         discountAmount: discountAmount,
         couponCode: couponCode,
@@ -142,17 +164,26 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
     }
 
     final response = await _dio.post(
-      '/checkout/sessions',
+      '/checkout/calculate',
       options: Options(headers: _headers),
       data: {
-        'userId': userId,
-        'subtotal': subtotal,
-        'discountAmount': discountAmount,
+        'items': lineItems.map((item) => item.toJson()).toList(),
         'couponCode': couponCode,
       },
     );
 
-    return CheckoutSession.fromJson(response.data as Map<String, dynamic>);
+    // Backend returns ApiResponse envelope: { data: { ...CheckoutBreakdownResponse... } }
+    final responseData = response.data as Map<String, dynamic>;
+    final data = responseData['data'] as Map<String, dynamic>;
+
+    return CheckoutSession.fromBreakdown(
+      userId: userId,
+      lineItems: lineItems,
+      breakdown: data,
+      subtotalFallback: subtotal,
+      discountFallback: discountAmount,
+      couponCode: couponCode,
+    );
   }
 
   @override
@@ -162,13 +193,33 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
       return session;
     }
 
-    final response = await _dio.patch(
-      '/checkout/sessions/${session.sessionId}',
+    final response = await _dio.post(
+      '/checkout/calculate',
       options: Options(headers: _headers),
-      data: session.toJson(),
+      data: {
+        'items': session.lineItems.map((item) => item.toJson()).toList(),
+        'couponCode': session.couponCode,
+      },
     );
 
-    return CheckoutSession.fromJson(response.data as Map<String, dynamic>);
+    // Backend returns ApiResponse envelope: { data: { ... } }
+    final responseData = response.data as Map<String, dynamic>;
+    final data = responseData['data'] as Map<String, dynamic>;
+
+    final recalculated = CheckoutSession.fromBreakdown(
+      userId: session.userId,
+      lineItems: session.lineItems,
+      breakdown: data,
+      subtotalFallback: session.subtotal,
+      discountFallback: session.discountAmount,
+      couponCode: session.couponCode,
+    );
+    return session.copyWith(
+      subtotal: recalculated.subtotal,
+      shippingFee: recalculated.shippingFee,
+      discountAmount: recalculated.discountAmount,
+      totalAmount: recalculated.totalAmount,
+    );
   }
 
   @override
@@ -181,8 +232,29 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
       return _mockInitiatePayment(session, method, idempotencyKey);
     }
 
+    // Map PaymentMethod to backend endpoint
+    final String endpoint;
+    switch (method) {
+      case PaymentMethod.vnpay:
+        endpoint = '/payment/vnpay/create';
+        break;
+      case PaymentMethod.momo:
+        endpoint = '/payment/momo/create';
+        break;
+      case PaymentMethod.vietqr:
+        endpoint = '/payment/vietqr/create';
+        break;
+      case PaymentMethod.cod:
+        endpoint = '/payment/cod/confirm';
+        break;
+      case PaymentMethod.bankTransfer:
+        // Bank transfer uses VietQR
+        endpoint = '/payment/vietqr/create';
+        break;
+    }
+
     final response = await _dio.post(
-      '/payment/initiate',
+      endpoint,
       options: Options(
         headers: {
           ..._headers,
@@ -190,72 +262,83 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
         },
       ),
       data: {
-        'sessionId': session.sessionId,
-        'method': method.name,
-        'amount': session.totalAmount,
-        'orderInfo': 'VNShop Order ${session.sessionId}',
+        'orderId': session.sessionId,
       },
     );
 
-    return PaymentTransaction.fromJson(response.data as Map<String, dynamic>);
+    // Backend returns ApiResponse envelope: { data: { ... } }
+    final responseData = response.data as Map<String, dynamic>;
+    return PaymentTransaction.fromApiResponse(responseData);
   }
 
   @override
-  Future<PaymentTransaction> getPaymentStatus(String transactionId) async {
+  Future<PaymentTransaction> getPaymentStatus(String orderId) async {
     if (_useMockBackend) {
-      return _mockGetPaymentStatus(transactionId);
+      return _mockGetPaymentStatus(orderId);
     }
 
     final response = await _dio.get(
-      '/payment/$transactionId/status',
+      '/payment/status/$orderId',
       options: Options(headers: _headers),
     );
 
-    return PaymentTransaction.fromJson(response.data as Map<String, dynamic>);
-  }
-
-  @override
-  Future<PaymentTransaction> retryPayment({
-    required String transactionId,
-    required String newIdempotencyKey,
-  }) async {
-    if (_useMockBackend) {
-      return _mockRetryPayment(transactionId, newIdempotencyKey);
-    }
-
-    final response = await _dio.post(
-      '/payment/$transactionId/retry',
-      options: Options(
-        headers: {
-          ..._headers,
-          'Idempotency-Key': newIdempotencyKey,
-        },
-      ),
+    return PaymentTransaction.fromApiResponse(
+      response.data as Map<String, dynamic>,
     );
-
-    return PaymentTransaction.fromJson(response.data as Map<String, dynamic>);
   }
 
   @override
   Future<String> createOrder({
     required CheckoutSession session,
     required PaymentTransaction transaction,
+    required String idempotencyKey,
   }) async {
     if (_useMockBackend) {
       await Future.delayed(const Duration(milliseconds: 500));
       return 'ORD_${DateTime.now().millisecondsSinceEpoch}';
     }
 
+    // Map PaymentMethod enum to backend string values
+    String paymentMethodString;
+    switch (transaction.method) {
+      case PaymentMethod.cod:
+        paymentMethodString = 'COD';
+        break;
+      case PaymentMethod.vnpay:
+        paymentMethodString = 'VNPAY';
+        break;
+      case PaymentMethod.momo:
+        paymentMethodString = 'MOMO';
+        break;
+      case PaymentMethod.vietqr:
+      case PaymentMethod.bankTransfer:
+        paymentMethodString = 'VIETQR';
+    }
+
     final response = await _dio.post(
       '/orders',
-      options: Options(headers: _headers),
+      options: Options(
+        headers: {
+          ..._headers,
+          'Idempotency-Key': idempotencyKey,
+        },
+      ),
       data: {
-        'session': session.toJson(),
-        'transaction': transaction.toJson(),
+        'shippingAddress': {
+          'street': session.selectedAddress?.streetAddress,
+          'ward': session.selectedAddress?.ward,
+          'district': session.selectedAddress?.district,
+          'city': session.selectedAddress?.city,
+        },
+        'items': session.lineItems.map((item) => item.toJson()).toList(),
+        'paymentMethod': paymentMethodString,
       },
     );
 
-    return response.data['orderId'] as String;
+    // Backend returns ApiResponse envelope: { data: { id: "order-id", ... } }
+    final responseData = response.data as Map<String, dynamic>;
+    final data = responseData['data'] as Map<String, dynamic>;
+    return data['id'] as String;
   }
 
   @override
@@ -265,10 +348,25 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
       return;
     }
 
-    await _dio.post(
+    await _dio.delete(
       '/orders/$orderId/cancel',
       options: Options(headers: _headers),
     );
+  }
+
+  List<VietnamAddress> _addressesFromProfile(Map<String, dynamic> responseData) {
+    final addresses = responseData['addresses'] as List<dynamic>? ?? const [];
+    final name = responseData['name'] as String? ?? '';
+    final phone = responseData['phone'] as String? ?? '';
+    return [
+      for (var index = 0; index < addresses.length; index++)
+        VietnamAddress.fromBackendJson(
+          addresses[index] as Map<String, dynamic>,
+          index: index,
+          recipientName: name,
+          phoneNumber: phone,
+        ),
+    ];
   }
 
   // Mock implementations
@@ -314,6 +412,9 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
         name: 'Giao hàng nhanh',
         description: 'Giao hàng trong 1-2 ngày',
         price: baseRate,
+        cost: baseRate,
+        method: 'EXPRESS',
+        estimate: '1-2 days',
         estimatedDays: 1,
         provider: ShippingProvider.giaoHangNhanh,
       ),
@@ -322,6 +423,9 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
         name: 'Giao hàng tiết kiệm',
         description: 'Giao hàng trong 2-4 ngày',
         price: baseRate * 0.7,
+        cost: baseRate * 0.7,
+        method: 'STANDARD',
+        estimate: '3-5 days',
         estimatedDays: 3,
         provider: ShippingProvider.giaoHangTietKiem,
       ),
@@ -330,6 +434,9 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
         name: 'Viettel Post',
         description: 'Giao hàng trong 2-3 ngày',
         price: baseRate * 0.85,
+        cost: baseRate * 0.85,
+        method: 'STANDARD',
+        estimate: '2-3 days',
         estimatedDays: 2,
         provider: ShippingProvider.viettelPost,
       ),
@@ -390,20 +497,4 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
     );
   }
 
-  Future<PaymentTransaction> _mockRetryPayment(
-    String transactionId,
-    String newIdempotencyKey,
-  ) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    return PaymentTransaction(
-      id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-      orderId: 'order_mock',
-      idempotencyKey: newIdempotencyKey,
-      method: PaymentMethod.vnpay,
-      status: PaymentStatus.pending,
-      amount: 100000,
-      createdAt: DateTime.now(),
-      attemptCount: 2,
-    );
-  }
 }

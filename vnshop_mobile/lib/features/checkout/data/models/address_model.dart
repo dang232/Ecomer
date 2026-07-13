@@ -66,6 +66,7 @@ class VietnamAddress extends Equatable {
           '',
       streetAddress: json['streetAddress'] as String? ??
           json['street_address'] as String? ??
+          json['street'] as String? ??
           '',
       ward: json['ward'] as String? ?? '',
       district: json['district'] as String? ?? '',
@@ -76,6 +77,34 @@ class VietnamAddress extends Equatable {
           json['is_default'] as bool? ??
           false,
     );
+  }
+
+  factory VietnamAddress.fromBackendJson(
+    Map<String, dynamic> json, {
+    required int index,
+    String? recipientName,
+    String? phoneNumber,
+  }) {
+    return VietnamAddress(
+      id: index.toString(),
+      recipientName: recipientName ?? '',
+      phoneNumber: phoneNumber ?? '',
+      streetAddress: json['street'] as String? ?? '',
+      ward: json['ward'] as String? ?? '',
+      district: json['district'] as String? ?? '',
+      city: json['city'] as String? ?? '',
+      isDefault: json['isDefault'] as bool? ?? false,
+    );
+  }
+
+  Map<String, dynamic> toBackendJson() {
+    return {
+      'street': streetAddress,
+      'ward': ward,
+      'district': district,
+      'city': city,
+      'isDefault': isDefault,
+    };
   }
 
   Map<String, dynamic> toJson() {
