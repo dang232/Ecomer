@@ -4,6 +4,7 @@ import com.vnshop.orderservice.domain.Address;
 import com.vnshop.orderservice.domain.CommissionTier;
 import com.vnshop.orderservice.domain.Order;
 import com.vnshop.orderservice.domain.OrderItem;
+import com.vnshop.orderservice.domain.PaymentMethod;
 import com.vnshop.orderservice.domain.SubOrder;
 import com.vnshop.orderservice.domain.port.out.CommissionTierLookupPort;
 import com.vnshop.orderservice.domain.port.out.InventoryReservationPort;
@@ -73,15 +74,31 @@ public class CreateOrderUseCase {
         }
 
         return orderRepository.findByIdempotencyKey(command.idempotencyKey())
-                .orElseGet(() -> createNewOrder(command.buyerId(), command.shippingAddress(), command.items(), command.idempotencyKey()));
+                .orElseGet(() -> createNewOrder(
+                        command.buyerId(),
+                        command.shippingAddress(),
+                        command.items(),
+                        command.idempotencyKey(),
+                        command.paymentMethod()));
     }
 
     @Transactional
-    private Order createNewOrder(String buyerId, Address shippingAddress, List<OrderItem> items, String idempotencyKey) {
+    private Order createNewOrder(
+            String buyerId,
+            Address shippingAddress,
+            List<OrderItem> items,
+            String idempotencyKey,
+            PaymentMethod paymentMethod) {
         var timerSample = metricsPort.startTimer();
         List<OrderItem> itemSnapshot = List.copyOf(items);
         List<SubOrder> subOrders = splitBySeller(itemSnapshot);
-        Order order = new Order(UUID.randomUUID(), buyerId, shippingAddress, subOrders, idempotencyKey);
+        Order order = new Order(
+                UUID.randomUUID(),
+                buyerId,
+                shippingAddress,
+                subOrders,
+                paymentMethod == null ? PaymentMethod.COD.name() : paymentMethod.name(),
+                idempotencyKey);
 
         TaxResult taxResult = taxCalculationService.calculate(itemSnapshot);
         order.applyTax(new Money(taxResult.totalTax()));
@@ -93,7 +110,11 @@ public class CreateOrderUseCase {
             inventoryReservationPort.reserve(order.id().toString(), itemSnapshot);
             sagaOrchestrator.stepCompleted(sagaId, "INVENTORY");
 
-            paymentRequestPort.requestPayment(order.id().toString(), order.paymentMethod(), order.finalAmount());
+            paymentRequestPort.requestPayment(
+                    order.id().toString(),
+                    order.buyerId(),
+                    order.paymentMethod(),
+                    order.finalAmount());
             sagaOrchestrator.stepCompleted(sagaId, "PAYMENT");
 
             for (SubOrder subOrder : order.subOrders()) {

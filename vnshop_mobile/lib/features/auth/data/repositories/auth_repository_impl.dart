@@ -59,6 +59,15 @@ class AuthRepositoryImpl implements AuthRepository {
         password: password,
       );
 
+      // Guard: don't authenticate if access token is empty
+      if (tokenSet.accessToken.isEmpty) {
+        _emitAuthState(const AuthState(status: AuthStatus.unauthenticated));
+        return Either.left(const AuthFailure(
+          message: 'Đăng nhập thất bại: không nhận được token hợp lệ',
+          code: 'EMPTY_ACCESS_TOKEN',
+        ));
+      }
+
       // Save tokens and user locally
       await _saveAuthData(tokenSet, user);
 
@@ -105,6 +114,15 @@ class AuthRepositoryImpl implements AuthRepository {
         fullName: fullName,
         phone: phone,
       );
+
+      // P1: Treat registration as success even if the server did not return an
+      // access token (e.g. email-verification flow). The account is created —
+      // failing the whole call would mislead the user into retrying. Return
+      // the user in `Either.right`; the bloc distinguishes via the synchronous
+      // AuthState stream (we emit `needsVerification` instead of `authenticated`).
+      if (tokenSet.accessToken.isEmpty) {
+        return Either.right(user);
+      }
 
       // Save tokens and user locally
       await _saveAuthData(tokenSet, user);
@@ -216,13 +234,21 @@ class AuthRepositoryImpl implements AuthRepository {
         ));
       }
 
-      final user = await _remoteDataSource.updateProfile(
+      final updatedUser = await _remoteDataSource.updateProfile(
         accessToken: accessToken,
         fullName: fullName,
         phone: phone,
         address: address,
         dateOfBirth: dateOfBirth,
         gender: gender,
+      );
+
+      final cachedUser = await _localDataSource.getUser();
+      final user = updatedUser.copyWith(
+        email: updatedUser.email.isEmpty ? cachedUser?.email : updatedUser.email,
+        address: cachedUser?.address,
+        dateOfBirth: cachedUser?.dateOfBirth,
+        gender: cachedUser?.gender,
       );
 
       // Update local cache

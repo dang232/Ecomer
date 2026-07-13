@@ -1,7 +1,6 @@
 /** Unit tests for the CountryDropdown component. */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { CountryCode } from "libphonenumber-js";
 
 import { CountryDropdown } from "./CountryDropdown";
 
@@ -12,9 +11,7 @@ afterEach(() => {
 describe("CountryDropdown", () => {
   it("renders the trigger with the active country's flag and dial code", () => {
     render(<CountryDropdown value="VN" onChange={() => {}} />);
-    const trigger = document.querySelector<HTMLButtonElement>(
-      'button[aria-haspopup="listbox"]',
-    );
+    const trigger = document.querySelector<HTMLButtonElement>('button[aria-haspopup="listbox"]');
     expect(trigger).not.toBeNull();
     expect(trigger?.getAttribute("aria-label")).toBe("Country code");
     expect(trigger?.getAttribute("aria-expanded")).toBe("false");
@@ -25,26 +22,20 @@ describe("CountryDropdown", () => {
 
   it("opens the popover when the trigger is clicked", async () => {
     render(<CountryDropdown value="VN" onChange={() => {}} />);
-    const trigger = document.querySelector<HTMLButtonElement>(
-      'button[aria-haspopup="listbox"]',
-    )!;
+    const trigger = document.querySelector<HTMLButtonElement>('button[aria-haspopup="listbox"]')!;
     fireEvent.click(trigger);
     await waitFor(() => {
       expect(trigger.getAttribute("aria-expanded")).toBe("true");
     });
     expect(document.querySelector('[role="dialog"]')).not.toBeNull();
     // Search box is auto-focused.
-    const search = document.querySelector<HTMLInputElement>(
-      'input[role="combobox"]',
-    );
+    const search = document.querySelector<HTMLInputElement>('input[role="combobox"]');
     expect(search).not.toBeNull();
   });
 
   it("filters the list when the user types in the search box", async () => {
     render(<CountryDropdown value="VN" onChange={() => {}} />);
-    const trigger = document.querySelector<HTMLButtonElement>(
-      'button[aria-haspopup="listbox"]',
-    )!;
+    const trigger = document.querySelector<HTMLButtonElement>('button[aria-haspopup="listbox"]')!;
     fireEvent.click(trigger);
     const search = (await waitFor(() =>
       document.querySelector<HTMLInputElement>('input[role="combobox"]'),
@@ -63,11 +54,7 @@ describe("CountryDropdown", () => {
   it("calls onChange with the picked country's code", async () => {
     const onChange = vi.fn();
     render(<CountryDropdown value="VN" onChange={onChange} />);
-    fireEvent.click(
-      document.querySelector<HTMLButtonElement>(
-        'button[aria-haspopup="listbox"]',
-      )!,
-    );
+    fireEvent.click(document.querySelector<HTMLButtonElement>('button[aria-haspopup="listbox"]')!);
     await waitFor(() => {
       expect(document.querySelector('[role="dialog"]')).not.toBeNull();
     });
@@ -82,11 +69,7 @@ describe("CountryDropdown", () => {
 
   it("closes the popover on Escape", async () => {
     render(<CountryDropdown value="VN" onChange={() => {}} />);
-    fireEvent.click(
-      document.querySelector<HTMLButtonElement>(
-        'button[aria-haspopup="listbox"]',
-      )!,
-    );
+    fireEvent.click(document.querySelector<HTMLButtonElement>('button[aria-haspopup="listbox"]')!);
     await waitFor(() => {
       expect(document.querySelector('[role="dialog"]')).not.toBeNull();
     });
@@ -98,11 +81,7 @@ describe("CountryDropdown", () => {
 
   it("supports keyboard navigation: ArrowDown highlights the next option", async () => {
     render(<CountryDropdown value="VN" onChange={vi.fn()} />);
-    fireEvent.click(
-      document.querySelector<HTMLButtonElement>(
-        'button[aria-haspopup="listbox"]',
-      )!,
-    );
+    fireEvent.click(document.querySelector<HTMLButtonElement>('button[aria-haspopup="listbox"]')!);
     const search = (await waitFor(() =>
       document.querySelector<HTMLInputElement>('input[role="combobox"]'),
     ))!;
@@ -121,11 +100,7 @@ describe("CountryDropdown", () => {
   it("Enter on the highlighted option selects it", async () => {
     const onChange = vi.fn();
     render(<CountryDropdown value="VN" onChange={onChange} />);
-    fireEvent.click(
-      document.querySelector<HTMLButtonElement>(
-        'button[aria-haspopup="listbox"]',
-      )!,
-    );
+    fireEvent.click(document.querySelector<HTMLButtonElement>('button[aria-haspopup="listbox"]')!);
     const search = (await waitFor(() =>
       document.querySelector<HTMLInputElement>('input[role="combobox"]'),
     ))!;
@@ -143,11 +118,7 @@ describe("CountryDropdown", () => {
         <CountryDropdown value="VN" onChange={() => {}} />
       </div>,
     );
-    fireEvent.click(
-      document.querySelector<HTMLButtonElement>(
-        'button[aria-haspopup="listbox"]',
-      )!,
-    );
+    fireEvent.click(document.querySelector<HTMLButtonElement>('button[aria-haspopup="listbox"]')!);
     await waitFor(() => {
       expect(document.querySelector('[role="dialog"]')).not.toBeNull();
     });
@@ -159,25 +130,15 @@ describe("CountryDropdown", () => {
 
   it("Vietnam is marked as the primary market", () => {
     render(<CountryDropdown value="VN" onChange={() => {}} />);
-    fireEvent.click(
-      document.querySelector<HTMLButtonElement>(
-        'button[aria-haspopup="listbox"]',
-      )!,
-    );
+    fireEvent.click(document.querySelector<HTMLButtonElement>('button[aria-haspopup="listbox"]')!);
     const options = document.querySelectorAll<HTMLElement>('[role="option"]');
-    const vnOption = Array.from(options).find((o) =>
-      (o.textContent ?? "").includes("Vietnam"),
-    );
+    const vnOption = Array.from(options).find((o) => (o.textContent ?? "").includes("Vietnam"));
     expect(vnOption?.textContent).toMatch(/Primary/i);
   });
 
   it("flags the active country as selected (aria-selected)", async () => {
     render(<CountryDropdown value="US" onChange={() => {}} />);
-    fireEvent.click(
-      document.querySelector<HTMLButtonElement>(
-        'button[aria-haspopup="listbox"]',
-      )!,
-    );
+    fireEvent.click(document.querySelector<HTMLButtonElement>('button[aria-haspopup="listbox"]')!);
     const options = document.querySelectorAll<HTMLElement>('[role="option"]');
     const usOption = Array.from(options).find((o) =>
       (o.textContent ?? "").includes("United States"),
@@ -187,15 +148,11 @@ describe("CountryDropdown", () => {
 
   it("the chevron rotates 180° when the popover is open", async () => {
     render(<CountryDropdown value="VN" onChange={() => {}} />);
-    fireEvent.click(
-      document.querySelector<HTMLButtonElement>(
-        'button[aria-haspopup="listbox"]',
-      )!,
-    );
+    fireEvent.click(document.querySelector<HTMLButtonElement>('button[aria-haspopup="listbox"]')!);
     await waitFor(() => {
       expect(document.querySelector('[role="dialog"]')).not.toBeNull();
     });
-    const chevron = document.querySelector('svg.lucide-chevron-down');
+    const chevron = document.querySelector("svg.lucide-chevron-down");
     expect(chevron?.classList.contains("rotate-180")).toBe(true);
   });
 });

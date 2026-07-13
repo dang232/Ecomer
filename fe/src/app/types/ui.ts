@@ -20,7 +20,9 @@ export interface Product {
   image: string;
   images: string[];
   category: string;
+  categoryId?: string;
   categoryLabel: string;
+  brand?: string;
   sellerId: string;
   sellerName: string;
   rating: number;

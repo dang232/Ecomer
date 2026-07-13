@@ -1,6 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor, act } from "@testing-library/react";
-import { type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const useAuthMock = vi.fn();
@@ -21,9 +19,9 @@ vi.mock("../lib/api/endpoints/wishlist", () => ({
   clearWishlist: (...args: unknown[]) => clearWishlistMock(...args),
 }));
 
-import { useWishlist } from "./use-wishlist";
 import { makeWrapper } from "../test-utils/render-with-query-client";
 
+import { useWishlist } from "./use-wishlist";
 
 beforeEach(() => {
   useAuthMock.mockReturnValue({ ready: true, authenticated: true });

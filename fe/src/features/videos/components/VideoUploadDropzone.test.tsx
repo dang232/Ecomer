@@ -1,8 +1,9 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { VideoUploadDropzone } from "./VideoUploadDropzone";
 import type { VideoUploadState } from "../hooks/useVideoUpload";
+
+import { VideoUploadDropzone } from "./VideoUploadDropzone";
 
 // i18next mock — returns the key so assertions are key-based
 vi.mock("react-i18next", () => ({
@@ -85,9 +86,7 @@ describe("VideoUploadDropzone", () => {
   it("renders the hint text with default max size label in idle state", () => {
     renderDropzone();
     // The hint key is rendered with opts injected by the t() mock
-    expect(
-      screen.getByText(/video\.upload\.dropzone\.hint/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/video\.upload\.dropzone\.hint/)).toBeInTheDocument();
   });
 
   it("renders a hidden file input accepting video formats", () => {
@@ -303,9 +302,7 @@ describe("VideoUploadDropzone", () => {
     const onCancel = vi.fn();
     renderDropzone({ uploadState: uploadingState, onCancel });
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "video.upload.dropzone.cancelAria" }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "video.upload.dropzone.cancelAria" }));
 
     expect(onCancel).toHaveBeenCalledOnce();
   });
@@ -320,15 +317,11 @@ describe("VideoUploadDropzone", () => {
 
   it("does not show cancel button when upload is complete", () => {
     renderDropzone({ uploadState: completeState });
-    expect(
-      screen.queryByRole("button", { name: "video.upload.dropzone.cancelAria" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "video.upload.dropzone.cancelAria" })).toBeNull();
   });
 
   it("shows the processing note when upload is complete and videoId is present", () => {
     renderDropzone({ uploadState: completeState });
-    expect(
-      screen.getByText("video.upload.dropzone.processingNote"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("video.upload.dropzone.processingNote")).toBeInTheDocument();
   });
 });

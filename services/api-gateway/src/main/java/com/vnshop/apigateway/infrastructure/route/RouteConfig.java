@@ -94,6 +94,9 @@ public class RouteConfig {
             .route("products", route -> route.path("/products/**")
                 .filters(filters -> rateLimited(filters, "product-service", generalRateLimiter, tieredKeyResolver))
                 .uri(productServiceUri))
+            .route("videos", route -> route.path("/videos/**")
+                .filters(filters -> resilient(filters, "product-service"))
+                .uri(productServiceUri))
             .route("categories", route -> route.path("/categories/**")
                 .filters(filters -> resilient(filters, "product-service"))
                 .uri(productServiceUri))
@@ -229,6 +232,11 @@ public class RouteConfig {
             .route("admin-vietqr", route -> route.path("/admin/vietqr/**")
                 .filters(filters -> resilient(filters, "payment-service"))
                 .uri(paymentServiceUri))
+            // Admin video moderation endpoints live on product-service. Must
+            // precede the catch-all /admin/** below.
+            .route("admin-videos", route -> route.path("/admin/videos/**")
+                .filters(filters -> resilient(filters, "product-service"))
+                .uri(productServiceUri))
             .route("monitoring", route -> route.path("/monitoring/**")
                 .filters(filters -> resilient(filters, "monitoring-service"))
                 .uri(monitoringServiceUri))

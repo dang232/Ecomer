@@ -4,10 +4,43 @@ import 'package:uuid/uuid.dart';
 import 'address_model.dart';
 import 'shipping_quote.dart';
 
+/// Represents a single line item in the checkout session
+class LineItem extends Equatable {
+  final String productId;
+  final String? variantSku;
+  final int quantity;
+
+  const LineItem({
+    required this.productId,
+    this.variantSku,
+    required this.quantity,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'productId': productId,
+      if (variantSku != null) 'variantSku': variantSku,
+      'quantity': quantity,
+    };
+  }
+
+  factory LineItem.fromJson(Map<String, dynamic> json) {
+    return LineItem(
+      productId: json['productId'] as String? ?? '',
+      variantSku: json['variantSku'] as String?,
+      quantity: json['quantity'] as int? ?? 1,
+    );
+  }
+
+  @override
+  List<Object?> get props => [productId, variantSku, quantity];
+}
+
 class CheckoutSession extends Equatable {
   final String sessionId;
   final String idempotencyKey;
   final String userId;
+  final List<LineItem> lineItems;
   final VietnamAddress? selectedAddress;
   final ShippingQuote? selectedShipping;
   final String? selectedPaymentMethod;
@@ -24,6 +57,7 @@ class CheckoutSession extends Equatable {
     required this.sessionId,
     required this.idempotencyKey,
     required this.userId,
+    required this.lineItems,
     this.selectedAddress,
     this.selectedShipping,
     this.selectedPaymentMethod,
@@ -52,6 +86,7 @@ class CheckoutSession extends Equatable {
     String? sessionId,
     String? idempotencyKey,
     String? userId,
+    List<LineItem>? lineItems,
     VietnamAddress? selectedAddress,
     ShippingQuote? selectedShipping,
     String? selectedPaymentMethod,
@@ -68,6 +103,7 @@ class CheckoutSession extends Equatable {
       sessionId: sessionId ?? this.sessionId,
       idempotencyKey: idempotencyKey ?? this.idempotencyKey,
       userId: userId ?? this.userId,
+      lineItems: lineItems ?? this.lineItems,
       selectedAddress: selectedAddress ?? this.selectedAddress,
       selectedShipping: selectedShipping ?? this.selectedShipping,
       selectedPaymentMethod: selectedPaymentMethod ?? this.selectedPaymentMethod,
@@ -93,8 +129,39 @@ class CheckoutSession extends Equatable {
     );
   }
 
+  static CheckoutSession fromBreakdown({
+    required String userId,
+    required List<LineItem> lineItems,
+    required Map<String, dynamic> breakdown,
+    required double subtotalFallback,
+    double discountFallback = 0,
+    String? couponCode,
+  }) {
+    double number(String key, double fallback) {
+      return (breakdown[key] as num?)?.toDouble() ?? fallback;
+    }
+
+    final subtotal = number('itemsTotal', subtotalFallback);
+    final shippingFee = number('shippingEstimate', 0);
+    final discountAmount = number('discount', discountFallback);
+
+    return CheckoutSession(
+      sessionId: const Uuid().v4(),
+      idempotencyKey: const Uuid().v4(),
+      userId: userId,
+      lineItems: lineItems,
+      subtotal: subtotal,
+      shippingFee: shippingFee,
+      discountAmount: discountAmount,
+      totalAmount: number('finalAmount', subtotal + shippingFee - discountAmount),
+      couponCode: couponCode,
+      createdAt: DateTime.now(),
+    );
+  }
+
   factory CheckoutSession.create({
     required String userId,
+    required List<LineItem> lineItems,
     required double subtotal,
     double discountAmount = 0,
     String? couponCode,
@@ -105,6 +172,7 @@ class CheckoutSession extends Equatable {
       sessionId: const Uuid().v4(),
       idempotencyKey: const Uuid().v4(),
       userId: userId,
+      lineItems: lineItems,
       subtotal: subtotal,
       shippingFee: 0,
       discountAmount: discountAmount,
@@ -116,12 +184,19 @@ class CheckoutSession extends Equatable {
   }
 
   factory CheckoutSession.fromJson(Map<String, dynamic> json) {
+    final items = json['lineItems'] as List<dynamic>?;
+    final parsedLineItems = items != null
+        ? items
+            .map((e) => LineItem.fromJson(e as Map<String, dynamic>))
+            .toList()
+        : <LineItem>[];
     return CheckoutSession(
       sessionId: json['sessionId'] as String? ?? json['session_id'] as String? ?? '',
       idempotencyKey: json['idempotencyKey'] as String? ??
           json['idempotency_key'] as String? ??
           const Uuid().v4(),
       userId: json['userId'] as String? ?? json['user_id'] as String? ?? '',
+      lineItems: parsedLineItems,
       selectedAddress: json['selectedAddress'] != null
           ? VietnamAddress.fromJson(
               json['selectedAddress'] as Map<String, dynamic>)
@@ -165,6 +240,7 @@ class CheckoutSession extends Equatable {
       'sessionId': sessionId,
       'idempotencyKey': idempotencyKey,
       'userId': userId,
+      'lineItems': lineItems.map((e) => e.toJson()).toList(),
       'selectedAddress': selectedAddress?.toJson(),
       'selectedShipping': selectedShipping?.toJson(),
       'selectedPaymentMethod': selectedPaymentMethod,
@@ -184,6 +260,7 @@ class CheckoutSession extends Equatable {
         sessionId,
         idempotencyKey,
         userId,
+        lineItems,
         selectedAddress,
         selectedShipping,
         selectedPaymentMethod,

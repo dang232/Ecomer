@@ -86,6 +86,10 @@ public class GrpcPaymentServer extends PaymentServiceGrpc.PaymentServiceImplBase
             // lookup-based process(cmd) entry point.
             Payment payment = processPaymentUseCase.processInternal(cmd, amount);
 
+            if (payment.status() == com.vnshop.paymentservice.domain.PaymentStatus.FAILED) {
+                throw new IllegalStateException("payment request failed");
+            }
+
             responseObserver.onNext(PaymentResponse.newBuilder()
                     .setPaymentId(payment.paymentId().toString())
                     .setStatus(payment.status().name())

@@ -48,6 +48,24 @@ public class ManageAddressUseCase {
                 buyerProfile.name(),
                 buyerProfile.phone(),
                 buyerProfile.avatarUrl(),
+                buyerProfile.banned(),
+                updatedAddresses
+        );
+        return userRepositoryPort.saveBuyer(buyerProfile);
+    }
+
+    public BuyerProfile updateAddress(String keycloakId, int addressIndex, Address replacement) {
+        BuyerProfile buyerProfile = findBuyer(keycloakId);
+        addressAt(buyerProfile, addressIndex);
+
+        List<Address> updatedAddresses = new ArrayList<>(buyerProfile.addresses());
+        updatedAddresses.set(addressIndex, replacement);
+        buyerProfile = new BuyerProfile(
+                buyerProfile.keycloakId(),
+                buyerProfile.name(),
+                buyerProfile.phone(),
+                buyerProfile.avatarUrl(),
+                buyerProfile.banned(),
                 updatedAddresses
         );
         return userRepositoryPort.saveBuyer(buyerProfile);

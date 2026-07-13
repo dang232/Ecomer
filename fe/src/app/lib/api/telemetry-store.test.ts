@@ -48,6 +48,7 @@ describe("telemetry-store", () => {
 
   it("emits console.debug in DEV mode", () => {
     if (!IS_DEV) return; // skip outside dev (e.g., CI)
+
     const spy = vi.spyOn(console, "debug").mockImplementation(() => {});
     recordTelemetry(rec({ method: "GET", path: "/x", status: 200, durationMs: 5 }));
     expect(spy).toHaveBeenCalled();

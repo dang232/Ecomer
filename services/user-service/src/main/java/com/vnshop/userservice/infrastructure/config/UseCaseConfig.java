@@ -4,6 +4,7 @@ import com.vnshop.userservice.application.AdminUserUseCase;
 import com.vnshop.userservice.application.ApproveSellerUseCase;
 import com.vnshop.userservice.application.AuthSessionUseCase;
 import com.vnshop.userservice.application.GetPublicSellerUseCase;
+import com.vnshop.userservice.application.RejectSellerUseCase;
 import com.vnshop.userservice.application.ListBuyerPublicProfilesUseCase;
 import com.vnshop.userservice.application.ListPendingSellersUseCase;
 import com.vnshop.userservice.application.ListPublicSellersUseCase;
@@ -49,6 +50,11 @@ public class UseCaseConfig {
     @Bean
     ApproveSellerUseCase approveSellerUseCase(UserRepositoryPort userRepositoryPort) {
         return new ApproveSellerUseCase(userRepositoryPort);
+    }
+
+    @Bean
+    RejectSellerUseCase rejectSellerUseCase(UserRepositoryPort userRepositoryPort) {
+        return new RejectSellerUseCase(userRepositoryPort);
     }
 
     @Bean

@@ -4,6 +4,7 @@ import com.vnshop.orderservice.application.catalog.CatalogProduct;
 import com.vnshop.orderservice.domain.Address;
 import com.vnshop.orderservice.domain.Order;
 import com.vnshop.orderservice.domain.OrderItem;
+import com.vnshop.orderservice.domain.PaymentMethod;
 import com.vnshop.orderservice.domain.port.out.ProductCatalogPort;
 
 import java.util.ArrayList;
@@ -40,7 +41,8 @@ public class CheckoutOrderUseCase {
                 command.buyerId(),
                 command.shippingAddress(),
                 resolved,
-                command.idempotencyKey()));
+                command.idempotencyKey(),
+                command.paymentMethod()));
     }
 
     private List<OrderItem> resolveItems(List<CheckoutLineItem> lineItems) {
@@ -81,8 +83,16 @@ public class CheckoutOrderUseCase {
             String buyerId,
             Address shippingAddress,
             List<CheckoutLineItem> lineItems,
-            String idempotencyKey
+            String idempotencyKey,
+            PaymentMethod paymentMethod
     ) {
+        public CheckoutOrderCommand(
+                String buyerId,
+                Address shippingAddress,
+                List<CheckoutLineItem> lineItems,
+                String idempotencyKey) {
+            this(buyerId, shippingAddress, lineItems, idempotencyKey, PaymentMethod.COD);
+        }
     }
 
     public record CheckoutLineItem(String productId, String variantSku, int quantity) {

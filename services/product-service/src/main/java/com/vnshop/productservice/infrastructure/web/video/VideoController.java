@@ -38,7 +38,7 @@ import java.util.UUID;
  * are enforced inside {@link VideoUploadService}.
  */
 @RestController
-@RequestMapping("/api/v1/videos")
+@RequestMapping("/videos")
 @RequiredArgsConstructor
 public class VideoController {
 
@@ -73,7 +73,7 @@ public class VideoController {
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_TUS_RESUMABLE, TUS_RESUMABLE);
-        headers.set("Location", "/api/v1/videos/upload/" + video.videoId());
+        headers.set("Location", "/videos/upload/" + video.videoId());
         return ResponseEntity.status(HttpStatus.CREATED).headers(headers).build();
     }
 

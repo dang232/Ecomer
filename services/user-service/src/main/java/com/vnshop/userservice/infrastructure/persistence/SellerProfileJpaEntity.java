@@ -57,6 +57,9 @@ public class SellerProfileJpaEntity extends BaseJpaEntity {
     @Column(name = "banner_url", length = 500)
     private String bannerUrl;
 
+    @Column(columnDefinition = "TEXT")
+    private String rejectionReason;
+
     protected SellerProfileJpaEntity() {
     }
 
@@ -84,6 +87,7 @@ public class SellerProfileJpaEntity extends BaseJpaEntity {
         entity.description = sellerProfile.description();
         entity.logoUrl = sellerProfile.logoUrl();
         entity.bannerUrl = sellerProfile.bannerUrl();
+        entity.rejectionReason = sellerProfile.rejectionReason();
         return entity;
     }
 
@@ -101,7 +105,7 @@ public class SellerProfileJpaEntity extends BaseJpaEntity {
                 logoUrl,
                 bannerUrl,
                 getCreatedAt()
-        );
+        ).withRejectionReason(rejectionReason);
     }
 
     private void applyPickupAddress(Address pickupAddress) {

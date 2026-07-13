@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
+import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 
 import '../constants/api_constants.dart';
 
@@ -13,6 +15,7 @@ class DioClient {
 
   late final Dio _dio;
   AuthInterceptor? _authInterceptor;
+  CookieJar? _cookieJar;
   bool _isInitialized = false;
 
   /// Initialize the Dio client with dependencies
@@ -23,10 +26,12 @@ class DioClient {
     required Future<void> Function(String, String) saveTokens,
     required Future<void> Function() clearTokens,
     required void Function() onSessionExpired,
+    CookieJar? cookieJar,
   }) {
+    _cookieJar = cookieJar ?? CookieJar();
     _dio = Dio(
       BaseOptions(
-        baseUrl: ApiConstants.baseUrlWithVersion,
+        baseUrl: ApiConstants.baseUrl,
         connectTimeout: ApiConstants.connectTimeout,
         receiveTimeout: ApiConstants.receiveTimeout,
         sendTimeout: ApiConstants.sendTimeout,
@@ -44,9 +49,11 @@ class DioClient {
       saveTokens: saveTokens,
       clearTokens: clearTokens,
       onSessionExpired: onSessionExpired,
+      getCsrfHeaders: csrfHeaders,
     );
 
     _dio.interceptors.addAll([
+      CookieManager(_cookieJar!),
       _authInterceptor!,
       LogInterceptor(
         requestBody: false,
@@ -107,6 +114,23 @@ class DioClient {
   /// Reset auth interceptor state (useful after logout)
   void resetAuthState() {
     _authInterceptor?.reset();
+    unawaited(_cookieJar?.deleteAll());
+  }
+
+  /// Return the double-submit CSRF header for cookie-authenticated auth calls.
+  Future<Map<String, String>> csrfHeaders() async {
+    final jar = _cookieJar;
+    if (jar == null) return const {};
+
+    final cookies = await jar.loadForRequest(
+      Uri.parse('${ApiConstants.baseUrl}/auth/refresh'),
+    );
+    for (final cookie in cookies) {
+      if (cookie.name == 'vnshop_csrf' && cookie.value.isNotEmpty) {
+        return {ApiConstants.csrfToken: cookie.value};
+      }
+    }
+    return const {};
   }
 
   /// Dispose the client (for testing or cleanup)
@@ -212,12 +236,14 @@ class AuthInterceptor extends Interceptor {
     required Future<void> Function(String, String) saveTokens,
     required Future<void> Function() clearTokens,
     required void Function() onSessionExpired,
+    required Future<Map<String, String>> Function() getCsrfHeaders,
   })  : _dio = dio,
         _getAccessToken = getAccessToken,
         _getRefreshToken = getRefreshToken,
         _saveTokens = saveTokens,
         _clearTokens = clearTokens,
-        _onSessionExpired = onSessionExpired;
+        _onSessionExpired = onSessionExpired,
+        _getCsrfHeaders = getCsrfHeaders;
 
   final Dio _dio;
   final Future<String?> Function() _getAccessToken;
@@ -225,6 +251,7 @@ class AuthInterceptor extends Interceptor {
   final Future<void> Function(String, String) _saveTokens;
   final Future<void> Function() _clearTokens;
   final void Function() _onSessionExpired;
+  final Future<Map<String, String>> Function() _getCsrfHeaders;
 
   /// Single-flight completer for token refresh
   Completer<void>? _inFlightRefresh;
@@ -326,6 +353,8 @@ class AuthInterceptor extends Interceptor {
     const authEndpoints = [
       '/auth/login',
       '/auth/register',
+      '/auth/refresh',
+      '/auth/logout',
       '/auth/forgot-password',
       '/auth/reset-password',
       '/auth/verify-email',
@@ -336,31 +365,28 @@ class AuthInterceptor extends Interceptor {
   }
 
   /// Refreshes tokens using the refresh token
+  /// Note: Refresh token is stored in HTTP-only cookie on backend, not in body
   Future<_TokenPair?> _refreshTokens() async {
     final refreshToken = await _getRefreshToken();
 
-    if (refreshToken == null) {
-      return null;
-    }
-
     try {
+      // Refresh endpoint reads token from HTTP-only cookie - no body needed
       final response = await _dio.post(
-        '${ApiConstants.baseUrlWithVersion}${ApiConstants.refreshToken}',
-        data: {'refresh_token': refreshToken},
-        options: Options(
-          headers: {
-            ApiConstants.contentType: ApiConstants.contentType,
-          },
-        ),
+        ApiConstants.refreshToken,
+        options: Options(headers: await _getCsrfHeaders()),
       );
 
       if (response.statusCode == 200 && response.data != null) {
-        final data = response.data as Map<String, dynamic>;
-        final newAccessToken = data['access_token'] as String?;
-        final newRefreshToken = data['refresh_token'] as String?;
+        // Backend wraps response in ApiResponse<T> envelope
+        final envelope = response.data as Map<String, dynamic>;
+        final data = envelope['data'] as Map<String, dynamic>?;
 
-        if (newAccessToken != null && newRefreshToken != null) {
-          return _TokenPair(newAccessToken, newRefreshToken);
+        // LoginResponse: {accessToken, accessExpiresIn}
+        final newAccessToken = data?['accessToken'] as String?;
+
+        if (newAccessToken != null) {
+          // Return new access token, keep existing refresh token (it stays in cookie)
+          return _TokenPair(newAccessToken, refreshToken ?? '');
         }
       }
 

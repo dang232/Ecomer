@@ -4,11 +4,10 @@
  * All user-facing strings must come from t() — the mock returns the key itself,
  * so English-locale rendering never contains Vietnamese characters.
  */
-import { render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MemoryRouter, useSearchParams } from "react-router";
 
 // paymentStatus is called on mount; mock it so the page skips the network layer
 // and renders deterministically without timers.
@@ -61,14 +60,18 @@ describe("PaymentReturnPage i18n (P0-6)", () => {
         expect(screen.getByRole("heading", { level: 1 })).toBeDefined();
       });
 
-      expect(container.textContent).not.toMatch(/[àáảãạăằắẳẵặâầấậẩẫèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i);
+      expect(container.textContent).not.toMatch(
+        /[àáảãạăằắẳẵặâầấậẩẫèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i,
+      );
     });
 
     it("completed phase: renders paymentReturn key for title, not the literal", async () => {
       paymentStatusMock.mockResolvedValueOnce({ status: "COMPLETED" });
       const { container } = renderPage(["/payment-return/vnpay?orderId=ORDER-456"]);
       await waitFor(() => {
-        expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("paymentReturn.completed.title");
+        expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+          "paymentReturn.completed.title",
+        );
       });
 
       // Confirm no Vietnamese literals leaked in
@@ -79,7 +82,9 @@ describe("PaymentReturnPage i18n (P0-6)", () => {
       paymentStatusMock.mockResolvedValueOnce({ status: "FAILED" });
       const { container } = renderPage(["/payment-return/momo?orderId=ORDER-789"]);
       await waitFor(() => {
-        expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("paymentReturn.failed.title");
+        expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+          "paymentReturn.failed.title",
+        );
       });
 
       expect(container.textContent).not.toMatch(/Thanh toán không thành công/i);
@@ -89,7 +94,9 @@ describe("PaymentReturnPage i18n (P0-6)", () => {
       // No ?orderId= → page short-circuits to error phase immediately.
       const { container } = renderPage(["/payment-return/vnpay"]);
       await waitFor(() => {
-        expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("paymentReturn.error.title");
+        expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+          "paymentReturn.error.title",
+        );
       });
 
       expect(container.textContent).not.toMatch(/Không tìm thấy mã đơn/i);

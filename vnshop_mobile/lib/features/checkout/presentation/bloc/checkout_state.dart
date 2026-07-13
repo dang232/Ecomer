@@ -76,12 +76,13 @@ class CheckoutState extends Equatable {
     bool? isLoadingAddresses,
     bool? isLoadingShipping,
     bool? isProcessingPayment,
+    bool clearSelectedAddress = false,
   }) {
     return CheckoutState(
       status: status ?? this.status,
       session: session ?? this.session,
       addresses: addresses ?? this.addresses,
-      selectedAddress: selectedAddress ?? this.selectedAddress,
+      selectedAddress: clearSelectedAddress ? null : (selectedAddress ?? this.selectedAddress),
       shippingQuotes: shippingQuotes ?? this.shippingQuotes,
       selectedShipping: selectedShipping ?? this.selectedShipping,
       selectedPaymentMethod: selectedPaymentMethod ?? this.selectedPaymentMethod,

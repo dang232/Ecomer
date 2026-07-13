@@ -9,6 +9,7 @@
  * does <em>not</em> attach it on login (which is excluded by the filter).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import {
   CSRF_COOKIE_NAME,
   CSRF_HEADER_NAME,

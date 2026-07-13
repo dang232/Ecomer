@@ -5,7 +5,7 @@ import '../../data/models/checkout_session.dart';
 import '../../data/models/payment_transaction.dart';
 import '../../domain/repositories/checkout_repository.dart';
 import 'checkout_event.dart';
-import 'checkout_state.dart';
+import 'checkout_state.dart' show CheckoutState, CheckoutStatus;
 
 class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
   final CheckoutRepository _repository;
@@ -23,12 +23,13 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     on<CheckoutAddressesLoaded>(_onAddressesLoaded);
     on<CheckoutAddressSelected>(_onAddressSelected);
     on<CheckoutAddressAdded>(_onAddressAdded);
+    on<CheckoutAddressUpdated>(_onAddressUpdated);
+    on<CheckoutAddressDeleted>(_onAddressDeleted);
     on<CheckoutShippingQuotesRequested>(_onShippingQuotesRequested);
     on<CheckoutShippingSelected>(_onShippingSelected);
     on<CheckoutPaymentMethodSelected>(_onPaymentMethodSelected);
     on<CheckoutPaymentInitiated>(_onPaymentInitiated);
     on<CheckoutPaymentStatusChecked>(_onPaymentStatusChecked);
-    on<CheckoutPaymentRetried>(_onPaymentRetried);
     on<CheckoutOrderPlaced>(_onOrderPlaced);
     on<CheckoutReset>(_onReset);
   }
@@ -40,8 +41,14 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     emit(state.copyWith(status: CheckoutStatus.loading));
 
     try {
+      final lineItems = event.lineItems.map((item) => LineItem(
+            productId: item.productId,
+            variantSku: item.variantSku,
+            quantity: item.quantity,
+          )).toList();
       final session = await _repository.createSession(
         userId: _guestUserId,
+        lineItems: lineItems,
         subtotal: event.subtotal,
         discountAmount: event.discountAmount,
         couponCode: event.couponCode,
@@ -128,6 +135,60 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
       emit(state.copyWith(
         isLoadingAddresses: false,
         errorMessage: 'Không thể thêm địa chỉ: ${e.toString()}',
+      ));
+    }
+  }
+
+  Future<void> _onAddressUpdated(
+    CheckoutAddressUpdated event,
+    Emitter<CheckoutState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingAddresses: true));
+
+    try {
+      final updatedAddress = await _repository.updateAddress(event.address);
+      final addresses = state.addresses
+          .map((address) => address.id == updatedAddress.id ? updatedAddress : address)
+          .toList();
+      emit(state.copyWith(
+        status: CheckoutStatus.addressesLoaded,
+        addresses: addresses,
+        selectedAddress: state.selectedAddress?.id == updatedAddress.id
+            ? updatedAddress
+            : state.selectedAddress,
+        isLoadingAddresses: false,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        isLoadingAddresses: false,
+        errorMessage: 'KhÃ´ng thá»ƒ cáº­p nháº­t Ä‘á»‹a chá»‰: ${e.toString()}',
+      ));
+    }
+  }
+
+  Future<void> _onAddressDeleted(
+    CheckoutAddressDeleted event,
+    Emitter<CheckoutState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingAddresses: true));
+
+    try {
+      await _repository.deleteAddress(event.addressId);
+      final addresses = state.addresses
+          .where((address) => address.id != event.addressId)
+          .toList();
+      final deletedSelected = state.selectedAddress?.id == event.addressId;
+      emit(state.copyWith(
+        status: CheckoutStatus.addressesLoaded,
+        addresses: addresses,
+        selectedAddress: deletedSelected && addresses.isNotEmpty ? addresses.first : null,
+        clearSelectedAddress: deletedSelected && addresses.isEmpty,
+        isLoadingAddresses: false,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        isLoadingAddresses: false,
+        errorMessage: 'KhÃ´ng thá»ƒ xÃ³a Ä‘á»‹a chá»‰: ${e.toString()}',
       ));
     }
   }
@@ -226,20 +287,38 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
           ? state.session?.idempotencyKey ?? _uuid.v4()
           : _uuid.v4();
 
-      final transaction = await _repository.initiatePayment(
+      // P0: Create the order FIRST so the payment gateway can attach to a real
+      // orderId. Previously we called initiatePayment with the cart sessionId,
+      // which leaked orphaned payment transactions when the user never finished.
+      final orderId = await _repository.createOrder(
         session: state.session!,
-        method: state.selectedPaymentMethod!,
+        transaction: _placeholderTransaction(state, idempotencyKey),
         idempotencyKey: idempotencyKey,
       );
+      final orderSession = state.session!.copyWith(sessionId: orderId);
+
+      PaymentTransaction? transaction;
+      if (state.selectedPaymentMethod != PaymentMethod.cod) {
+        transaction = await _repository.initiatePayment(
+          session: orderSession,
+          method: state.selectedPaymentMethod!,
+          idempotencyKey: idempotencyKey,
+        );
+      }
 
       emit(state.copyWith(
+        session: orderSession,
+        orderId: orderId,
         currentTransaction: transaction,
         isProcessingPayment: false,
       ));
 
-      // For COD, automatically complete
+      // For COD, the order is already created; just mark placed.
       if (state.selectedPaymentMethod == PaymentMethod.cod) {
-        add(const CheckoutOrderPlaced());
+        emit(state.copyWith(
+          status: CheckoutStatus.orderPlaced,
+          orderId: orderId,
+        ));
       }
     } catch (e) {
       emit(state.copyWith(
@@ -248,6 +327,24 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
         errorMessage: 'Không thể khởi tạo thanh toán: ${e.toString()}',
       ));
     }
+  }
+
+  /// Placeholder transaction used to satisfy createOrder's contract before
+  /// the payment gateway has returned a real transaction. The order endpoint
+  /// accepts the payment method string, not the transaction id.
+  PaymentTransaction _placeholderTransaction(
+    CheckoutState state,
+    String idempotencyKey,
+  ) {
+    return PaymentTransaction(
+      id: '',
+      orderId: '',
+      idempotencyKey: idempotencyKey,
+      method: state.selectedPaymentMethod!,
+      status: PaymentStatus.pending,
+      amount: state.session!.totalAmount,
+      createdAt: DateTime.now(),
+    );
   }
 
   Future<void> _onPaymentStatusChecked(
@@ -271,31 +368,19 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     }
   }
 
+  // Kept as a terminal UI state for older callers; no retry endpoint exists.
+  // ignore: unused_element
   Future<void> _onPaymentRetried(
-    CheckoutPaymentRetried event,
+    Object event,
     Emitter<CheckoutState> emit,
   ) async {
     emit(state.copyWith(isProcessingPayment: true));
 
     try {
-      // Generate new idempotency key for retry
-      final newIdempotencyKey = _uuid.v4();
-
-      final transaction = await _repository.retryPayment(
-        transactionId: event.transactionId,
-        newIdempotencyKey: newIdempotencyKey,
-      );
-
-      // Update session with new idempotency key
-      if (state.session != null) {
-        final updatedSession = state.session!.generateNewIdempotencyKey();
-        emit(state.copyWith(session: updatedSession));
-      }
-
       emit(state.copyWith(
-        currentTransaction: transaction,
+        status: CheckoutStatus.paymentFailed,
         isProcessingPayment: false,
-        status: CheckoutStatus.processingPayment,
+        errorMessage: 'Thanh toan lai khong duoc ho tro',
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -310,6 +395,11 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     CheckoutOrderPlaced event,
     Emitter<CheckoutState> emit,
   ) async {
+    if (state.orderId != null) {
+      emit(state.copyWith(status: CheckoutStatus.orderPlaced));
+      return;
+    }
+
     if (state.currentTransaction == null) {
       emit(state.copyWith(
         status: CheckoutStatus.error,
@@ -322,6 +412,7 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
       final orderId = await _repository.createOrder(
         session: state.session!,
         transaction: state.currentTransaction!,
+        idempotencyKey: state.session!.idempotencyKey,
       );
 
       emit(state.copyWith(

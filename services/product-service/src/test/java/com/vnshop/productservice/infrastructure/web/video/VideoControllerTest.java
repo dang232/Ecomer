@@ -91,7 +91,7 @@ class VideoControllerTest {
 
         assertThat(response.getStatusCode().value()).isEqualTo(201);
         assertThat(response.getHeaders().getFirst("Location"))
-                .isEqualTo("/api/v1/videos/upload/" + VIDEO_ID);
+                .isEqualTo("/videos/upload/" + VIDEO_ID);
         assertThat(response.getHeaders().getFirst("Tus-Resumable")).isEqualTo("1.0.0");
     }
 

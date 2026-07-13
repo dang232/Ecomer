@@ -22,7 +22,7 @@ vi.mock("react-i18next", () => ({
  * via a cast (the CartItem type doesn't carry these fields). Test items are
  * constructed as plain objects and passed as cartItems.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 type TestCartItem = any;
 
 const baseProps = {
@@ -51,7 +51,9 @@ function makeItem(extra: Record<string, unknown>): TestCartItem {
 describe("CheckoutReviewStep", () => {
   describe("variant display (P2-3)", () => {
     it("shows variant name under product name when variant is present", () => {
-      render(<CheckoutReviewStep {...baseProps} cartItems={[makeItem({ variant: "Size M / Blue" })]} />);
+      render(
+        <CheckoutReviewStep {...baseProps} cartItems={[makeItem({ variant: "Size M / Blue" })]} />,
+      );
       expect(screen.getByText("Blue T-Shirt")).toBeInTheDocument();
       expect(screen.getByText("Size M / Blue")).toBeInTheDocument();
     });
@@ -66,7 +68,12 @@ describe("CheckoutReviewStep", () => {
 
   describe("seller name display (P2-3)", () => {
     it("shows seller name under product name", () => {
-      render(<CheckoutReviewStep {...baseProps} cartItems={[makeItem({ sellerName: "VNShop Store" })]} />);
+      render(
+        <CheckoutReviewStep
+          {...baseProps}
+          cartItems={[makeItem({ sellerName: "VNShop Store" })]}
+        />,
+      );
       expect(screen.getByText("VNShop Store")).toBeInTheDocument();
     });
 
@@ -80,14 +87,18 @@ describe("CheckoutReviewStep", () => {
   describe("low-stock warning (P2-3)", () => {
     it("shows low-stock warning when stock < quantity", () => {
       // quantity=3, stock=2 → low stock
-      render(<CheckoutReviewStep {...baseProps} cartItems={[makeItem({ quantity: 3, stock: 2 })]} />);
+      render(
+        <CheckoutReviewStep {...baseProps} cartItems={[makeItem({ quantity: 3, stock: 2 })]} />,
+      );
       // The mock returns the defaultValue "Low stock — only 2 left"
       expect(screen.getByText(/Low stock.*2 left/)).toBeInTheDocument();
     });
 
     it("does NOT show low-stock warning when stock >= quantity", () => {
       // quantity=2, stock=5 → fine
-      render(<CheckoutReviewStep {...baseProps} cartItems={[makeItem({ quantity: 2, stock: 5 })]} />);
+      render(
+        <CheckoutReviewStep {...baseProps} cartItems={[makeItem({ quantity: 2, stock: 5 })]} />,
+      );
       expect(screen.queryByText(/Low stock/)).not.toBeInTheDocument();
     });
 

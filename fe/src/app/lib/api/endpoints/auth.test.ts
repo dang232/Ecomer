@@ -9,8 +9,9 @@ vi.mock("../../auth/native-auth", () => ({
   refreshTokens: vi.fn(),
 }));
 
-import { registerUser } from "./auth";
 import { ApiError } from "../envelope";
+
+import { registerUser } from "./auth";
 
 const fetchSpy = vi.spyOn(global, "fetch");
 

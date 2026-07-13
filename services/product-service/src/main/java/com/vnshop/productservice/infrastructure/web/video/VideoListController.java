@@ -14,7 +14,7 @@ import com.vnshop.productservice.infrastructure.persistence.video.VideoJpaEntity
 import com.vnshop.productservice.infrastructure.persistence.video.VideoJpaSpringDataRepository;
 
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping
 public class VideoListController {
 
     private final VideoJpaSpringDataRepository videoRepo;

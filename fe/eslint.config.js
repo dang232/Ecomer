@@ -19,6 +19,7 @@ export default tseslint.config(
       "test-results",
       "e2e",
       "src/imports",
+      "scripts",
     ],
   },
 
@@ -103,6 +104,7 @@ export default tseslint.config(
       "jsx-a11y/label-has-associated-control": "warn",
       "jsx-a11y/click-events-have-key-events": "warn",
       "jsx-a11y/no-static-element-interactions": "warn",
+      "jsx-a11y/no-noninteractive-element-interactions": "off",
       "jsx-a11y/no-autofocus": "warn",
 
       "import/order": [
@@ -136,6 +138,7 @@ export default tseslint.config(
       "@typescript-eslint/no-floating-promises": "off",
       "@typescript-eslint/no-misused-promises": "off",
       "@typescript-eslint/no-base-to-string": "off",
+      "@typescript-eslint/no-empty-function": "off",
       "@typescript-eslint/require-await": "off",
       "jsx-a11y/aria-role": "off",
       "jsx-a11y/label-has-associated-control": "off",

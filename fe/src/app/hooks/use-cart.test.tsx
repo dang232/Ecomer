@@ -1,6 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, act, waitFor } from "@testing-library/react";
-import { type ReactNode } from "react";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 const useAuthMock = vi.fn();
@@ -21,9 +19,9 @@ vi.mock("../lib/api/endpoints/cart", () => ({
   clearCart: (...args: unknown[]) => clearCartMock(...args),
 }));
 
-import { useCart } from "./use-cart";
 import { makeWrapper } from "../test-utils/render-with-query-client";
 
+import { useCart } from "./use-cart";
 
 beforeEach(() => {
   useAuthMock.mockReturnValue({ ready: true, authenticated: true });
@@ -222,10 +220,7 @@ describe("useCart (guest mode)", () => {
   });
 
   it("updateItem with quantity<=0 removes the item", () => {
-    localStorage.setItem(
-      "vnshop:guest-cart",
-      JSON.stringify([{ productId: "p1", quantity: 5 }]),
-    );
+    localStorage.setItem("vnshop:guest-cart", JSON.stringify([{ productId: "p1", quantity: 5 }]));
     const { Wrapper } = makeWrapper();
     const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
 

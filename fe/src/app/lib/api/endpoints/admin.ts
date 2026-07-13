@@ -16,7 +16,6 @@ import {
   disputeSchema,
   reviewSchema,
   sellerSummarySchema,
-  type AdminVideoModerationQueueItem,
   type DashboardSummary,
 } from "../../../types/api";
 import type { COUPON_TYPES } from "../../domain-enums";
@@ -32,7 +31,10 @@ export const adminBanUser = (id: string) =>
 export const adminUnbanUser = (id: string) =>
   api.post(`/admin/users/${encodeURIComponent(id)}/unban`, adminUserSchema);
 export const adminUserOrders = (buyerId: string) =>
-  api.get(`/admin/orders/by-buyer/${encodeURIComponent(buyerId)}`, z.array(adminOrderSummarySchema));
+  api.get(
+    `/admin/orders/by-buyer/${encodeURIComponent(buyerId)}`,
+    z.array(adminOrderSummarySchema),
+  );
 
 // Order management
 export const adminListOrders = (params: { status?: string } = {}) =>

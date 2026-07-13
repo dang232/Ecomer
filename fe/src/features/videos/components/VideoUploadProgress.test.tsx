@@ -1,8 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { VideoUploadProgress } from "./VideoUploadProgress";
+import type { VideoStatusResponse } from "../../../app/types/api/video";
 import type { UseVideoStatusResult } from "../hooks/useVideoStatus";
+import { useVideoStatus } from "../hooks/useVideoStatus";
+
+import { VideoUploadProgress } from "./VideoUploadProgress";
 
 // i18next mock — returns the key so assertions are key-based
 vi.mock("react-i18next", () => ({
@@ -18,9 +21,7 @@ vi.mock("../hooks/useVideoStatus", () => ({
   useVideoStatus: vi.fn(),
 }));
 
-// Import after mocking so we get the mocked version
-import { useVideoStatus } from "../hooks/useVideoStatus";
-
+// Use the mocked version
 const mockUseVideoStatus = vi.mocked(useVideoStatus);
 
 function makeStatus(overrides: Partial<UseVideoStatusResult> = {}): UseVideoStatusResult {
@@ -90,7 +91,7 @@ describe("VideoUploadProgress", () => {
         data: {
           status: "REJECTED",
           rejectionReason: "Inappropriate content",
-        } as import("../../../app/types/api/video").VideoStatusResponse,
+        } as VideoStatusResponse,
       }),
     );
 
@@ -108,22 +109,18 @@ describe("VideoUploadProgress", () => {
         status: "REJECTED",
         data: {
           status: "REJECTED",
-        } as import("../../../app/types/api/video").VideoStatusResponse,
+        } as VideoStatusResponse,
       }),
     );
 
     render(<VideoUploadProgress videoId="vid-1" />);
 
     expect(screen.getByText("video.pipeline.errorTitle")).toBeInTheDocument();
-    expect(
-      screen.queryByText(/video\.pipeline\.rejectionReason/),
-    ).toBeNull();
+    expect(screen.queryByText(/video\.pipeline\.rejectionReason/)).toBeNull();
   });
 
   it("shows stuck message when isStuck is true", () => {
-    mockUseVideoStatus.mockReturnValue(
-      makeStatus({ status: "TRANSCODING", isStuck: true }),
-    );
+    mockUseVideoStatus.mockReturnValue(makeStatus({ status: "TRANSCODING", isStuck: true }));
 
     render(<VideoUploadProgress videoId="vid-1" />);
 
@@ -132,9 +129,7 @@ describe("VideoUploadProgress", () => {
   });
 
   it("renders loading state when isLoading is true", () => {
-    mockUseVideoStatus.mockReturnValue(
-      makeStatus({ status: "UPLOADING", isLoading: true }),
-    );
+    mockUseVideoStatus.mockReturnValue(makeStatus({ status: "UPLOADING", isLoading: true }));
 
     const { container } = render(<VideoUploadProgress videoId="vid-1" />);
 

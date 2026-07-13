@@ -350,7 +350,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
     );
 
     if (isEditing) {
-      // TODO: Add update address event
+      context.read<CheckoutBloc>().add(CheckoutAddressUpdated(address));
       context.pop();
     } else {
       context.read<CheckoutBloc>().add(CheckoutAddressAdded(address));

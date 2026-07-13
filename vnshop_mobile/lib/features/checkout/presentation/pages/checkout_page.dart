@@ -38,7 +38,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   void _initializeCheckout() {
     final cartState = context.read<CartBloc>().state;
+    final lineItems = cartState.cart?.items.map((item) => LineItemData(
+          productId: item.productId,
+          variantSku: item.sku,
+          quantity: item.quantity,
+        )).toList() ?? [];
     context.read<CheckoutBloc>().add(CheckoutStarted(
+          lineItems: lineItems,
           subtotal: cartState.subtotal,
           discountAmount: cartState.discountAmount,
           couponCode: cartState.appliedCouponCode,
@@ -551,7 +557,7 @@ class _AddressSection extends StatelessWidget {
           ),
           TextButton(
             onPressed: () {
-              // TODO: Add delete address event
+              context.read<CheckoutBloc>().add(CheckoutAddressDeleted(address.id));
               Navigator.pop(dialogContext);
             },
             style: TextButton.styleFrom(foregroundColor: AppColors.error),

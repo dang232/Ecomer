@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/auth/session_controller.dart';
 import '../../domain/repositories/auth_repository.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
@@ -10,7 +11,9 @@ import 'auth_state.dart';
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   AuthBloc({
     required AuthRepository authRepository,
+    SessionController? sessionController,
   })  : _authRepository = authRepository,
+        _sessionController = sessionController,
         super(const AuthState()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<AuthLoginRequested>(_onAuthLoginRequested);
@@ -26,10 +29,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     // Listen to auth state changes from repository
     _authSubscription = _authRepository.authStateChanges.listen(_onRepositoryAuthStateChange);
+    _sessionSubscription = _sessionController?.onSessionExpired.listen((_) {
+      if (!isClosed) add(const AuthSessionExpired());
+    });
   }
 
   final AuthRepository _authRepository;
+  final SessionController? _sessionController;
   late final StreamSubscription<AuthState> _authSubscription;
+  late final StreamSubscription<void>? _sessionSubscription;
 
   /// Handle auth state changes from repository
   void _onRepositoryAuthStateChange(AuthState authState) {
@@ -95,7 +103,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         errorMessage: failure.message,
         errorCode: failure.code,
       )),
-      (user) => emit(AuthState.authenticated(user: user)),
+      (user) {
+        _sessionController?.reset();
+        emit(AuthState.authenticated(user: user));
+      },
     );
   }
 
@@ -119,7 +130,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         errorMessage: failure.message,
         errorCode: failure.code,
       )),
-      (user) => emit(AuthState.authenticated(user: user)),
+      (user) {
+        // If the repository emitted needsVerification before returning right,
+        // honour that — otherwise (token was returned) flip to authenticated.
+        emit(AuthState.needsVerification(user: user));
+      },
     );
   }
 
@@ -160,7 +175,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthSessionExpired event,
     Emitter<AuthState> emit,
   ) async {
-    emit(state.copyWith(status: AuthStatus.expired));
+    emit(state.copyWith(status: AuthStatus.expired, clearUser: true));
   }
 
   /// Handle forgot password request
@@ -284,8 +299,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   @override
-  Future<void> close() {
-    _authSubscription.cancel();
+  Future<void> close() async {
+    await _authSubscription.cancel();
+    await _sessionSubscription?.cancel();
     return super.close();
   }
 }

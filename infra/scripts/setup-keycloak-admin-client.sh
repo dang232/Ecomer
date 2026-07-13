@@ -100,6 +100,44 @@ else
   echo "  = client-roles mapper already present"
 fi
 
+configure_identity_provider() {
+  local alias="$1"
+  local provider_id="$2"
+  local enabled="$3"
+  local client_id="$4"
+  local client_secret="$5"
+  local effective_enabled=false
+
+  if [ "${enabled}" = "true" ] && [ -n "${client_id}" ] && [ -n "${client_secret}" ]; then
+    effective_enabled=true
+  fi
+
+  echo "==> configuring ${alias} identity provider (enabled=${effective_enabled})"
+  if kcadm get "identity-provider/instances/${alias}" -r "${KC_REALM}" >/dev/null 2>&1; then
+    kcadm update "identity-provider/instances/${alias}" -r "${KC_REALM}" \
+      -s "enabled=${effective_enabled}" \
+      -s "config.clientId=${client_id}" \
+      -s "config.clientSecret=${client_secret}" >/dev/null
+  else
+    kcadm create identity-provider/instances -r "${KC_REALM}" \
+      -s "alias=${alias}" \
+      -s "providerId=${provider_id}" \
+      -s "displayName=${alias}" \
+      -s "enabled=${effective_enabled}" \
+      -s "config.clientId=${client_id}" \
+      -s "config.clientSecret=${client_secret}" >/dev/null
+  fi
+}
+
+configure_identity_provider google google \
+  "${GOOGLE_OAUTH_ENABLED:-false}" \
+  "${GOOGLE_OAUTH_CLIENT_ID:-}" \
+  "${GOOGLE_OAUTH_CLIENT_SECRET:-}"
+configure_identity_provider facebook facebook \
+  "${FACEBOOK_OAUTH_ENABLED:-false}" \
+  "${FACEBOOK_OAUTH_CLIENT_ID:-}" \
+  "${FACEBOOK_OAUTH_CLIENT_SECRET:-}"
+
 echo "==> restarting user-service so it picks up a fresh admin token"
 docker compose restart user-service >/dev/null
 echo "==> done. Verify with:"

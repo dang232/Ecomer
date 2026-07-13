@@ -39,19 +39,24 @@ export interface SellerVariant {
   sku: string;
   name: string;
   priceAmount: number;
+  priceCurrency?: string;
+  imageUrl?: string;
   stockQuantity: number;
+}
+
+export interface SellerImage {
+  url: string;
+  alt?: string;
+  sortOrder?: number;
 }
 
 export interface SellerProductWriteBody {
   name: string;
   description?: string;
-  price: number;
-  originalPrice?: number;
-  stock: number;
-  category?: string;
-  images?: string[];
-  image?: string;
+  categoryId?: string;
+  brand?: string;
   variants?: SellerVariant[];
+  images?: SellerImage[];
 }
 
 export const sellerProductCreate = (body: SellerProductWriteBody) =>

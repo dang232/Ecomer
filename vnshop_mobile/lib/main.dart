@@ -1,11 +1,18 @@
+import 'dart:async';
+
+import 'package:cookie_jar/cookie_jar.dart';
 import 'package:flutter/material.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'app/app.dart';
 import 'core/config/env_config.dart';
+import 'core/auth/session_controller.dart';
 import 'core/notifications/onesignal_handler.dart';
 import 'core/notifications/local_notification_service.dart';
+import 'core/network/dio_client.dart';
 import 'core/storage/hive_storage.dart';
+import 'features/auth/data/datasources/auth_local_datasource.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,7 +29,32 @@ Future<void> main() async {
   // Initialize OneSignal
   await _initializeOneSignal();
 
-  runApp(const VnShopApp());
+  // Initialize DioClient BEFORE runApp
+  // This must happen before any repository that uses DioClient.instance.dio
+  final authLocalDataSource = AuthLocalDataSourceImpl();
+  final appDirectory = await getApplicationSupportDirectory();
+  final cookieJar = PersistCookieJar(
+    storage: FileStorage('${appDirectory.path}/vnshop_cookies'),
+  );
+  final sessionController = SessionController(
+    clearTokens: authLocalDataSource.clearAuthData,
+  );
+  DioClient.instance.initialize(
+    getAccessToken: authLocalDataSource.getAccessToken,
+    getRefreshToken: authLocalDataSource.getRefreshToken,
+    saveTokens: (accessToken, refreshToken) => authLocalDataSource.saveTokens(
+      accessToken: accessToken,
+      refreshToken: refreshToken,
+      accessTokenExpiry: DateTime.now().add(const Duration(hours: 1)),
+    ),
+    clearTokens: authLocalDataSource.clearAuthData,
+    cookieJar: cookieJar,
+    onSessionExpired: () {
+      unawaited(sessionController.expireSession());
+    },
+  );
+
+  runApp(VnShopApp(sessionController: sessionController));
 }
 
 Future<void> _initializeOneSignal() async {

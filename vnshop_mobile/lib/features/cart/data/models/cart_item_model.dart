@@ -66,14 +66,32 @@ class CartItemModel extends Equatable {
   }
 
   factory CartItemModel.fromJson(Map<String, dynamic> json) {
+    final productId = json['productId'] as String? ??
+        json['product_id'] as String? ??
+        '';
+    final variantId = json['variantId'] as String? ??
+        json['variant_id'] as String? ??
+        json['sku'] as String?;
+    final unitPrice = json['unitPrice'];
+    final price = json['price'] as num? ??
+        (unitPrice is Map ? unitPrice['amount'] as num? : null);
+
     return CartItemModel(
-      cartItemId: json['cartItemId'] as String? ?? json['cart_item_id'] as String? ?? '',
-      productId: json['productId'] as String? ?? json['product_id'] as String? ?? '',
-      name: json['name'] as String? ?? '',
-      imageUrl: Validators.sanitizeImageUrl(json['imageUrl'] as String? ?? json['image_url'] as String?),
-      price: (json['price'] as num?)?.toDouble() ?? 0.0,
+      cartItemId: json['cartItemId'] as String? ??
+          json['cart_item_id'] as String? ??
+          (variantId == null ? productId : '$productId:$variantId'),
+      productId: productId,
+      name: json['name'] as String? ??
+          json['productName'] as String? ??
+          '',
+      imageUrl: Validators.sanitizeImageUrl(
+        json['imageUrl'] as String? ??
+            json['image_url'] as String? ??
+            json['productImage'] as String?,
+      ),
+      price: price?.toDouble() ?? 0.0,
       quantity: json['quantity'] as int? ?? 1,
-      sku: json['sku'] as String?,
+      sku: variantId,
       optionName: json['optionName'] as String? ?? json['option_name'] as String?,
     );
   }

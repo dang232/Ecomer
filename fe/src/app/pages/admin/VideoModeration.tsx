@@ -32,7 +32,10 @@ function NsfwBadge({ score }: { score: number | undefined }) {
       ? { bg: "bg-red-100 dark:bg-red-900/30", text: "text-red-700 dark:text-red-400" }
       : pct >= 40
         ? { bg: "bg-amber-100 dark:bg-amber-900/30", text: "text-amber-700 dark:text-amber-400" }
-        : { bg: "bg-emerald-100 dark:bg-emerald-900/30", text: "text-emerald-700 dark:text-emerald-400" };
+        : {
+            bg: "bg-emerald-100 dark:bg-emerald-900/30",
+            text: "text-emerald-700 dark:text-emerald-400",
+          };
   return (
     <span
       className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${color.bg} ${color.text}`}
@@ -81,10 +84,13 @@ function VideoPreviewModal({
       aria-label={t("admin.videoModeration.previewTitle")}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.75)" }}
+
       onClick={onClose}
+      onKeyDown={(e) => e.key === "Escape" && onClose()}
     >
       <div
         className="bg-card rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden"
+
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
@@ -367,7 +373,7 @@ export function VideoModeration() {
   const reject = useRejectVideo();
 
   const items = queueQuery.data?.content ?? [];
-  const previewItem = previewId ? items.find((i) => i.videoId === previewId) ?? null : null;
+  const previewItem = previewId ? (items.find((i) => i.videoId === previewId) ?? null) : null;
   const totalPages = queueQuery.data?.totalPages ?? 1;
   const totalElements = queueQuery.data?.totalElements ?? 0;
 
@@ -429,9 +435,7 @@ export function VideoModeration() {
 
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h2 className="text-xl font-bold text-foreground">
-            {t("admin.videoModeration.title")}
-          </h2>
+          <h2 className="text-xl font-bold text-foreground">{t("admin.videoModeration.title")}</h2>
           {!queueQuery.isLoading && totalElements > 0 ? (
             <p className="text-xs text-muted-foreground mt-0.5">
               {t("admin.videoModeration.totalCount", { count: totalElements })}

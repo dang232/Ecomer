@@ -4,15 +4,13 @@
  * All user-facing strings must come from t() — the mock returns the key itself,
  * so English-locale rendering never contains Vietnamese characters.
  */
-import { render, screen, waitFor } from "@testing-library/react";
-import type { ReactElement } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // --- Stripe SDK stubs ---
 const mockConfirmPayment = vi.fn();
-const mockRetrievePaymentIntent = vi.fn();
 vi.mock("@stripe/react-stripe-js", () => ({
   Elements: ({ children }: { children: ReactNode }) => <>{children}</>,
   PaymentElement: () => <div data-testid="payment-element" />,
@@ -72,7 +70,9 @@ describe("StripePaymentSection i18n (P0-6)", () => {
 
     // Must be the i18n key, not "Đang khởi tạo Stripe…"
     expect(screen.getByTestId("stripe-loading").textContent).toBe("stripe.initializing");
-    expect(container.textContent).not.toMatch(/[àáảãạăằắẳẵặâầấậẩẫèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i);
+    expect(container.textContent).not.toMatch(
+      /[àáảãạăằắẳẵặâầấậẩẫèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i,
+    );
   });
 
   it("submit button: polling state renders t('stripe.confirming') key", async () => {

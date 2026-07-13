@@ -32,8 +32,18 @@ public class Order {
     private Instant fxRateAt;
 
     public Order(UUID id, String buyerId, Address shippingAddress, List<SubOrder> subOrders, String idempotencyKey) {
+        this(id, buyerId, shippingAddress, subOrders, "COD", idempotencyKey);
+    }
+
+    public Order(
+            UUID id,
+            String buyerId,
+            Address shippingAddress,
+            List<SubOrder> subOrders,
+            String paymentMethod,
+            String idempotencyKey) {
         this(id, generateOrderNumber(), buyerId, shippingAddress, subOrders, Money.ZERO, Money.ZERO, Money.ZERO,
-                Money.ZERO, "COD", PaymentStatus.PENDING, idempotencyKey);
+                Money.ZERO, paymentMethod, PaymentStatus.PENDING, idempotencyKey);
     }
 
     public Order(

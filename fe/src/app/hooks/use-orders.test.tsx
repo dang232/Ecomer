@@ -13,9 +13,9 @@ vi.mock("../lib/api/endpoints/orders", () => ({
   cancelOrder: (...args: unknown[]) => cancelOrderMock(...args),
 }));
 
-import { useCancelOrder, useMyOrders, useOrder } from "./use-orders";
 import { makeWrapper } from "../test-utils/render-with-query-client";
 
+import { useCancelOrder, useMyOrders, useOrder } from "./use-orders";
 
 beforeEach(() => {
   myOrdersMock.mockReset();

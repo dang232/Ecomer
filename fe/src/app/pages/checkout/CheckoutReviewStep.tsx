@@ -117,11 +117,14 @@ export function CheckoutReviewStep({
         </h3>
         <div className="space-y-3">
           {cartItems.map((item) => {
-            // These fields may arrive from the cart API (P2-3 audit)
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            /* These fields may arrive from the cart API (P2-3 audit) */
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
             const extra = item as any;
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             const variant = extra.variant as string | undefined;
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             const sellerName = extra.sellerName as string | undefined;
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             const stock = extra.stock as number | undefined;
             const isLowStock = stock !== undefined && stock < item.quantity;
             return (
@@ -144,11 +147,15 @@ export function CheckoutReviewStep({
                     <p className="text-xs text-muted-foreground truncate">{variant}</p>
                   ) : null}
                   <p className="text-xs text-muted-foreground">
-                    {sellerName ?? t("checkout.review.sellerFallback", { defaultValue: "Unknown seller" })}
+                    {sellerName ??
+                      t("checkout.review.sellerFallback", { defaultValue: "Unknown seller" })}
                   </p>
                   {isLowStock ? (
                     <p className="text-xs text-orange-600 dark:text-orange-400 mt-0.5">
-                      {t("checkout.review.lowStock", { count: stock, defaultValue: `Low stock — only ${stock} left` })}
+                      {t("checkout.review.lowStock", {
+                        count: stock,
+                        defaultValue: `Low stock — only ${stock} left`,
+                      })}
                     </p>
                   ) : null}
                   <p className="text-xs text-muted-foreground">x{item.quantity}</p>

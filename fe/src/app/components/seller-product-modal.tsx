@@ -106,21 +106,31 @@ function SellerProductModalBody({
   const [originalPrice, setOriginalPrice] = useState(() =>
     product?.originalPrice ? String(product.originalPrice) : "",
   );
-  const [stock, setStock] = useState(() => (product?.stock ? String(product.stock) : "1"));
-  const [category, setCategory] = useState(() => product?.category ?? "");
+  const [stock, _setStock] = useState(() => (product?.stock ? String(product.stock) : "1"));
+  const [categoryId, setCategoryId] = useState(() => product?.categoryId ?? "");
+  const [brand, setBrand] = useState(() => product?.brand ?? "");
 
   // ── Variant matrix ─────────────────────────────────────────────────────────
   // Grid: rows = sizes, cols = colors. Each cell holds { sku, price, stock }.
-  const [variants, setVariants] = useState<Record<string, Record<string, { sku: string; price: number; stock: number }>>>(() => {
+  const [variants, setVariants] = useState<
+    Record<string, Record<string, { sku: string; price: number; stock: number }>>
+  >(() => {
     if (product?.variants) {
-      const grid: Record<string, Record<string, { sku: string; price: number; stock: number }>> = {};
+      const grid: Record<
+        string,
+        Record<string, { sku: string; price: number; stock: number }>
+      > = {};
       for (const v of product.variants) {
         const parts = (v.name ?? "").split(" / ").map((p) => p.trim());
         if (parts.length >= 2) {
           const color = parts[parts.length - 2];
           const size = parts[parts.length - 1];
           if (!grid[size]) grid[size] = {};
-          grid[size][color] = { sku: v.sku ?? "", price: v.priceAmount ?? product.price, stock: v.stockQuantity ?? product.stock };
+          grid[size][color] = {
+            sku: v.sku ?? "",
+            price: v.priceAmount ?? product.price,
+            stock: v.stockQuantity ?? product.stock,
+          };
         }
       }
       return grid;
@@ -170,7 +180,7 @@ function SellerProductModalBody({
     upload: startVideoUpload,
     cancel: cancelVideoUpload,
     reset: resetVideoUpload,
-    retry: retryVideoUpload,
+    retry: _retryVideoUpload,
   } = useVideoUpload({
     entityId: productId ?? "",
     context: "PRODUCT",
@@ -294,24 +304,24 @@ function SellerProductModalBody({
   const saveMutation = useMutation({
     mutationFn: async (): Promise<{ id: string; isNew: boolean }> => {
       const priceNum = parsePriceInput(price);
-      const originalPriceNum = originalPrice ? parsePriceInput(originalPrice) : undefined;
+      const _originalPriceNum = originalPrice ? parsePriceInput(originalPrice) : undefined;
       const stockNum = parsePriceInput(stock);
 
       const baseBody = {
         name: name.trim(),
         description: description.trim() || undefined,
-        price: priceNum,
-        originalPrice: originalPriceNum,
-        stock: stockNum,
-        category: category.trim() || undefined,
+        categoryId: categoryId.trim() || undefined,
+        brand: brand.trim() || undefined,
       };
 
       // Build flat variants array from the matrix grid.
       const flatVariants = Object.entries(variants).flatMap(([size, colorMap]) =>
         Object.entries(colorMap).map(([color, cell]) => ({
-          sku: cell.sku.trim() || `${name.trim().replace(/\s+/g, "-")}-${color}-${size}`.toLowerCase(),
+          sku:
+            cell.sku.trim() || `${name.trim().replace(/\s+/g, "-")}-${color}-${size}`.toLowerCase(),
           name: `${name.trim()} ${color} / ${size}`,
           priceAmount: cell.price || priceNum,
+          priceCurrency: "VND",
           stockQuantity: cell.stock ?? stockNum,
         })),
       );
@@ -323,7 +333,11 @@ function SellerProductModalBody({
         productId = product.id;
       } else {
         setPhase("creating");
-        const created = await sellerProductCreate({ ...baseBody, variants: flatVariants, images: [], image: undefined });
+        const created = await sellerProductCreate({
+          ...baseBody,
+          variants: flatVariants,
+          images: [],
+        });
         productId = created.id;
         isNew = true;
       }
@@ -367,8 +381,7 @@ function SellerProductModalBody({
         setPhase("finalising");
         await sellerProductUpdate(productId, {
           ...baseBody,
-          images: allImages,
-          image: allImages[0],
+          images: allImages.map((url, index) => ({ url, sortOrder: index })),
           variants: flatVariants,
         });
       }
@@ -435,555 +448,600 @@ function SellerProductModalBody({
 
   return (
     <>
-    <Modal
-      open
-      onClose={handleClose}
-      dismissDisabled={isBusy}
-      size="lg"
-      scrollable
-      title={isEdit ? t("seller.productModal.titleEdit") : t("seller.productModal.titleAdd")}
-      footer={
-        <>
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={isBusy}
-            className="flex-1 py-2.5 rounded-xl border border-border text-sm font-semibold text-muted-foreground disabled:opacity-50"
-          >
-            {t("seller.productModal.cancel")}
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={isBusy}
-            className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
-            style={{ background: "var(--accent)" }}
-          >
-            {isBusy ? (
-              <>
-                <IconLoader2 size={14} className="animate-spin" /> {submitLabel}
-              </>
-            ) : (
-              <>
-                <IconPlus size={14} /> {submitLabel}
-              </>
-            )}
-          </button>
-        </>
-      }
-    >
-      <div className="space-y-5">
-        <div>
-          <label className="block text-sm font-semibold text-foreground mb-2">
-            {t("seller.productModal.imagesLabel")}{" "}
-            <span className="text-muted-foreground font-normal">
-              ({totalImageCount}/{MAX_IMAGES})
-            </span>
-          </label>
-          <div className="grid grid-cols-4 gap-3">
-            {existingImages.map((url) => (
-              <div
-                key={url}
-                className="relative aspect-square rounded-xl overflow-hidden bg-muted border border-border"
-              >
-                <ImageWithFallback src={url} alt="" className="w-full h-full object-cover" />
-                <button
-                  type="button"
-                  onClick={() => removeExistingImage(url)}
-                  disabled={isBusy}
-                  className="absolute top-1 right-1 w-6 h-6 rounded-full bg-white/90 flex items-center justify-center hover:bg-card disabled:opacity-50"
-                  aria-label={t("seller.productModal.removeImage")}
-                >
-                  <IconTrash size={12} className="text-red-500" />
-                </button>
-              </div>
-            ))}
-            {staged.map((s) => (
-              <div
-                key={s.id}
-                className="relative aspect-square rounded-xl overflow-hidden bg-muted border border-border"
-              >
-                <img src={s.previewUrl} alt={s.file.name} className="w-full h-full object-cover" />
-                {phase === "uploading" ? (
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                    <IconLoader2 size={20} className="text-white animate-spin" />
-                  </div>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => removeStaged(s.id)}
-                  disabled={isBusy}
-                  className="absolute top-1 right-1 w-6 h-6 rounded-full bg-white/90 flex items-center justify-center hover:bg-card disabled:opacity-50"
-                  aria-label={t("seller.productModal.removeImageStaged")}
-                >
-                  <IconTrash size={12} className="text-red-500" />
-                </button>
-              </div>
-            ))}
-            {totalImageCount < MAX_IMAGES ? (
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isBusy}
-                className="aspect-square rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-1.5 text-muted-foreground hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors disabled:opacity-50"
-              >
-                <IconPhoto size={20} />
-                <span className="text-[11px] font-medium">{t("seller.productModal.addImage")}</span>
-              </button>
-            ) : null}
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept="image/jpeg,image/png,image/webp"
-            className="hidden"
-            onChange={(e) => {
-              enqueueFiles(e.target.files);
-              e.target.value = "";
-            }}
-          />
-          <p className="text-[11px] text-muted-foreground mt-2">
-            {t("seller.productModal.imageHint", {
-              maxMb: MAX_IMAGE_BYTES / (1024 * 1024),
-              maxCount: MAX_IMAGES,
-            })}
-          </p>
-        </div>
-
-        {/* ── Video Upload Section ──────────────────────────────────────── */}
-        <div>
-          <label className="block text-sm font-semibold text-foreground mb-2">
-            <span className="inline-flex items-center gap-1.5">
-              <IconVideo size={15} />
-              {t("seller.productModal.videosLabel")}{" "}
+      <Modal
+        open
+        onClose={handleClose}
+        dismissDisabled={isBusy}
+        size="lg"
+        scrollable
+        title={isEdit ? t("seller.productModal.titleEdit") : t("seller.productModal.titleAdd")}
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={isBusy}
+              className="flex-1 py-2.5 rounded-xl border border-border text-sm font-semibold text-muted-foreground disabled:opacity-50"
+            >
+              {t("seller.productModal.cancel")}
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isBusy}
+              className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+              style={{ background: "var(--accent)" }}
+            >
+              {isBusy ? (
+                <>
+                  <IconLoader2 size={14} className="animate-spin" /> {submitLabel}
+                </>
+              ) : (
+                <>
+                  <IconPlus size={14} /> {submitLabel}
+                </>
+              )}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-5">
+          <div>
+            <label className="block text-sm font-semibold text-foreground mb-2">
+              {t("seller.productModal.imagesLabel")}{" "}
               <span className="text-muted-foreground font-normal">
-                ({existingVideos.length}/3)
+                ({totalImageCount}/{MAX_IMAGES})
               </span>
-            </span>
-          </label>
-
-          {/* Existing videos list */}
-          {existingVideos.length > 0 ? <ul className="space-y-2 mb-3">
-              {existingVideos.map((video) => (
-                <li
-                  key={video.id}
-                  className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2"
+            </label>
+            <div className="grid grid-cols-4 gap-3">
+              {existingImages.map((url) => (
+                <div
+                  key={url}
+                  className="relative aspect-square rounded-xl overflow-hidden bg-muted border border-border"
                 >
-                  <IconVideo size={16} className="text-muted-foreground shrink-0" />
-                  <span className="flex-1 text-xs text-foreground truncate">
-                    {video.originalFilename ?? video.id}
-                  </span>
-                  {/* Status badge — P2-7: map enum to translated label */}
-                  <span
-                    className={[
-                      "text-[10px] font-semibold px-2 py-0.5 rounded-full",
-                      video.status === "PUBLISHED"
-                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                        : video.status === "REJECTED" || video.status === "FAILED"
-                          ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                          : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-                    ].join(" ")}
-                  >
-                    {t(`video.pipeline.${video.status.toLowerCase()}`, {
-                      defaultValue: video.status,
-                    })}
-                  </span>
+                  <ImageWithFallback src={url} alt="" className="w-full h-full object-cover" />
                   <button
                     type="button"
+                    onClick={() => removeExistingImage(url)}
                     disabled={isBusy}
-                    onClick={() => setRemoveVideoId(video.id)}
-                    aria-label={t("seller.productModal.removeVideo")}
-                    className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-surface-elevated text-muted-foreground hover:text-foreground disabled:opacity-50 transition-colors shrink-0"
+                    className="absolute top-1 right-1 w-6 h-6 rounded-full bg-white/90 flex items-center justify-center hover:bg-card disabled:opacity-50"
+                    aria-label={t("seller.productModal.removeImage")}
                   >
-                    <IconXClose size={13} />
+                    <IconTrash size={12} className="text-red-500" />
                   </button>
-                </li>
+                </div>
               ))}
-            </ul> : null}
-
-          {/* Active upload progress */}
-          {videoUploadState.videoId && videoUploading ? <div className="mb-3 space-y-2">
-              <VideoUploadProgress videoId={videoUploadState.videoId} enabled={videoUploading} />
-              <button
-                type="button"
-                onClick={cancelVideoUpload}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors min-h-[44px] min-w-[44px] px-2 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-              >
-                {t("video.upload.dropzone.cancelAria")}
-              </button>
-            </div> : null}
-
-          {/* Dropzone — only shown in edit mode when slots are free and not uploading */}
-          {isEdit && videoSlotsFree > 0 && !videoUploading ? (
-            <VideoUploadDropzone
-              uploadState={videoUploadState}
-              onFileSelected={startVideoUpload}
-              onCancel={resetVideoUpload}
-              disabled={isBusy}
+              {staged.map((s) => (
+                <div
+                  key={s.id}
+                  className="relative aspect-square rounded-xl overflow-hidden bg-muted border border-border"
+                >
+                  <img
+                    src={s.previewUrl}
+                    alt={s.file.name}
+                    className="w-full h-full object-cover"
+                  />
+                  {phase === "uploading" ? (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                      <IconLoader2 size={20} className="text-white animate-spin" />
+                    </div>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => removeStaged(s.id)}
+                    disabled={isBusy}
+                    className="absolute top-1 right-1 w-6 h-6 rounded-full bg-white/90 flex items-center justify-center hover:bg-card disabled:opacity-50"
+                    aria-label={t("seller.productModal.removeImageStaged")}
+                  >
+                    <IconTrash size={12} className="text-red-500" />
+                  </button>
+                </div>
+              ))}
+              {totalImageCount < MAX_IMAGES ? (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isBusy}
+                  className="aspect-square rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-1.5 text-muted-foreground hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors disabled:opacity-50"
+                >
+                  <IconPhoto size={20} />
+                  <span className="text-[11px] font-medium">
+                    {t("seller.productModal.addImage")}
+                  </span>
+                </button>
+              ) : null}
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                enqueueFiles(e.target.files);
+                e.target.value = "";
+              }}
             />
-          ) : !isEdit ? (
-            <p className="text-[11px] text-muted-foreground">
-              {t("seller.productModal.videoCreateHint")}
+            <p className="text-[11px] text-muted-foreground mt-2">
+              {t("seller.productModal.imageHint", {
+                maxMb: MAX_IMAGE_BYTES / (1024 * 1024),
+                maxCount: MAX_IMAGES,
+              })}
             </p>
-          ) : null}
-        </div>
-
-        <div>
-          <label
-            htmlFor="seller-product-name"
-            className="block text-sm font-semibold text-foreground mb-1.5"
-          >
-            {t("seller.productModal.nameLabel")}
-          </label>
-          <input
-            id="seller-product-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={t("seller.productModal.namePlaceholder")}
-            className="w-full px-4 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--primary)]"
-            disabled={isBusy}
-          />
-        </div>
-
-        <div>
-          <label
-            htmlFor="seller-product-description"
-            className="block text-sm font-semibold text-foreground mb-1.5"
-          >
-            {t("seller.productModal.descriptionLabel")}
-          </label>
-          <textarea
-            id="seller-product-description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={3}
-            placeholder={t("seller.productModal.descriptionPlaceholder")}
-            className="w-full px-4 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--primary)] resize-none"
-            disabled={isBusy}
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label
-              htmlFor="seller-product-price"
-              className="block text-sm font-semibold text-foreground mb-1.5"
-            >
-              {t("seller.productModal.priceLabel")}
-            </label>
-            <input
-              id="seller-product-price"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              placeholder="990000"
-              inputMode="numeric"
-              className="w-full px-4 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--primary)]"
-              disabled={isBusy}
-            />
           </div>
-          <div>
-            <label
-              htmlFor="seller-product-original-price"
-              className="block text-sm font-semibold text-foreground mb-1.5"
-            >
-              {t("seller.productModal.originalPriceLabel")}
-            </label>
-            <input
-              id="seller-product-original-price"
-              value={originalPrice}
-              onChange={(e) => setOriginalPrice(e.target.value)}
-              placeholder="1290000"
-              inputMode="numeric"
-              className="w-full px-4 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--primary)]"
-              disabled={isBusy}
-            />
-          </div>
-        </div>
 
-        <div className="grid grid-cols-2 gap-3">
+          {/* ── Video Upload Section ──────────────────────────────────────── */}
           <div>
-            <label
-              htmlFor="seller-product-stock"
-              className="block text-sm font-semibold text-foreground mb-1.5"
-            >
-              {t("seller.productModal.stockLabel")}
+            <label className="block text-sm font-semibold text-foreground mb-2">
+              <span className="inline-flex items-center gap-1.5">
+                <IconVideo size={15} />
+                {t("seller.productModal.videosLabel")}{" "}
+                <span className="text-muted-foreground font-normal">
+                  ({existingVideos.length}/3)
+                </span>
+              </span>
             </label>
-            <input
-              id="seller-product-stock"
-              value={stock}
-              onChange={(e) => setStock(e.target.value)}
-              placeholder="100"
-              inputMode="numeric"
-              className="w-full px-4 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--primary)]"
-              disabled={isBusy}
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="seller-product-category"
-              className="block text-sm font-semibold text-foreground mb-1.5"
-            >
-              {t("seller.productModal.categoryLabel")}
-            </label>
-            <input
-              id="seller-product-category"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              placeholder="electronics"
-              className="w-full px-4 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--primary)]"
-              disabled={isBusy}
-            />
-          </div>
-        </div>
 
-        {/* ── Variant Matrix ─────────────────────────────────────────────── */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-semibold text-foreground">
-              {t("seller.productModal.variantsLabel") ?? "Phân loại (Biến thể)"}
-            </label>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  const newSize = `Kích thước ${matrixSizes.length + 1}`;
-                  setMatrixSizes((prev) => [...prev, newSize]);
-                  setVariants((prev) => ({ ...prev, [newSize]: {} }));
-                }}
+            {/* Existing videos list */}
+            {existingVideos.length > 0 ? (
+              <ul className="space-y-2 mb-3">
+                {existingVideos.map((video) => (
+                  <li
+                    key={video.id}
+                    className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2"
+                  >
+                    <IconVideo size={16} className="text-muted-foreground shrink-0" />
+                    <span className="flex-1 text-xs text-foreground truncate">
+                      {video.originalFilename ?? video.id}
+                    </span>
+                    {/* Status badge — P2-7: map enum to translated label */}
+                    <span
+                      className={[
+                        "text-[10px] font-semibold px-2 py-0.5 rounded-full",
+                        video.status === "PUBLISHED"
+                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                          : video.status === "REJECTED" || video.status === "FAILED"
+                            ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                            : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+                      ].join(" ")}
+                    >
+                      {t(`video.pipeline.${video.status.toLowerCase()}`, {
+                        defaultValue: video.status,
+                      })}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={isBusy}
+                      onClick={() => setRemoveVideoId(video.id)}
+                      aria-label={t("seller.productModal.removeVideo")}
+                      className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-surface-elevated text-muted-foreground hover:text-foreground disabled:opacity-50 transition-colors shrink-0"
+                    >
+                      <IconXClose size={13} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+
+            {/* Active upload progress */}
+            {videoUploadState.videoId && videoUploading ? (
+              <div className="mb-3 space-y-2">
+                <VideoUploadProgress videoId={videoUploadState.videoId} enabled={videoUploading} />
+                <button
+                  type="button"
+                  onClick={cancelVideoUpload}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors min-h-[44px] min-w-[44px] px-2 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                >
+                  {t("video.upload.dropzone.cancelAria")}
+                </button>
+              </div>
+            ) : null}
+
+            {/* Dropzone — only shown in edit mode when slots are free and not uploading */}
+            {isEdit && videoSlotsFree > 0 && !videoUploading ? (
+              <VideoUploadDropzone
+                uploadState={videoUploadState}
+                onFileSelected={startVideoUpload}
+                onCancel={resetVideoUpload}
                 disabled={isBusy}
-                className="text-xs px-2 py-1 rounded border border-border hover:border-[var(--primary)] text-muted-foreground hover:text-[var(--primary)] transition-colors disabled:opacity-50"
+              />
+            ) : !isEdit ? (
+              <p className="text-[11px] text-muted-foreground">
+                {t("seller.productModal.videoCreateHint")}
+              </p>
+            ) : null}
+          </div>
+
+          <div>
+            <label
+              htmlFor="seller-product-name"
+              className="block text-sm font-semibold text-foreground mb-1.5"
+            >
+              {t("seller.productModal.nameLabel")}
+            </label>
+            <input
+              id="seller-product-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t("seller.productModal.namePlaceholder")}
+              className="w-full px-4 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--primary)]"
+              disabled={isBusy}
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="seller-product-description"
+              className="block text-sm font-semibold text-foreground mb-1.5"
+            >
+              {t("seller.productModal.descriptionLabel")}
+            </label>
+            <textarea
+              id="seller-product-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              placeholder={t("seller.productModal.descriptionPlaceholder")}
+              className="w-full px-4 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--primary)] resize-none"
+              disabled={isBusy}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label
+                htmlFor="seller-product-price"
+                className="block text-sm font-semibold text-foreground mb-1.5"
               >
-                + Kích thước
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const newColor = `Màu ${matrixColors.length + 1}`;
-                  setMatrixColors((prev) => [...prev, newColor]);
-                  setVariants((prev) => {
-                    const next = { ...prev };
-                    for (const size of Object.keys(next)) {
-                      if (!next[size][newColor]) next[size][newColor] = { sku: "", price: defaultVariantPrice, stock: defaultVariantStock };
-                    }
-                    return next;
-                  });
-                }}
+                {t("seller.productModal.priceLabel")}
+              </label>
+              <input
+                id="seller-product-price"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                placeholder="990000"
+                inputMode="numeric"
+                className="w-full px-4 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--primary)]"
                 disabled={isBusy}
-                className="text-xs px-2 py-1 rounded border border-border hover:border-[var(--primary)] text-muted-foreground hover:text-[var(--primary)] transition-colors disabled:opacity-50"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="seller-product-original-price"
+                className="block text-sm font-semibold text-foreground mb-1.5"
               >
-                + Màu
-              </button>
+                {t("seller.productModal.originalPriceLabel")}
+              </label>
+              <input
+                id="seller-product-original-price"
+                value={originalPrice}
+                onChange={(e) => setOriginalPrice(e.target.value)}
+                placeholder="1290000"
+                inputMode="numeric"
+                className="w-full px-4 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--primary)]"
+                disabled={isBusy}
+              />
             </div>
           </div>
 
-          <div className="border border-border rounded-xl overflow-hidden">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="bg-muted">
-                  <th className="px-2 py-1.5 text-left font-semibold text-foreground w-20">Size</th>
-                  {matrixColors.map((color) => (
-                    <th key={color} className="px-2 py-1.5 text-center font-semibold text-foreground min-w-[120px]">
-                      <div className="flex flex-col items-center gap-1">
-                        <div className="flex items-center gap-1">
-                          {matrixEditCol === color ? (
-                            <input
-                              value={color}
-                              onChange={(e) => {
-                                const old = color;
-                                setMatrixColors((prev) => prev.map((c) => (c === old ? e.target.value : c)));
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label
+                htmlFor="seller-product-category"
+                className="block text-sm font-semibold text-foreground mb-1.5"
+              >
+                {t("seller.productModal.categoryLabel")}
+              </label>
+              <input
+                id="seller-product-category"
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                placeholder="electronics"
+                className="w-full px-4 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--primary)]"
+                disabled={isBusy}
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="seller-product-brand"
+                className="block text-sm font-semibold text-foreground mb-1.5"
+              >
+                {t("seller.productModal.brandLabel") ?? "Thương hiệu"}
+              </label>
+              <input
+                id="seller-product-brand"
+                value={brand}
+                onChange={(e) => setBrand(e.target.value)}
+                placeholder="Samsung"
+                className="w-full px-4 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--primary)]"
+                disabled={isBusy}
+              />
+            </div>
+          </div>
+
+          {/* ── Variant Matrix ─────────────────────────────────────────────── */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-semibold text-foreground">
+                {t("seller.productModal.variantsLabel") ?? "Phân loại (Biến thể)"}
+              </label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newSize = `Kích thước ${matrixSizes.length + 1}`;
+                    setMatrixSizes((prev) => [...prev, newSize]);
+                    setVariants((prev) => ({ ...prev, [newSize]: {} }));
+                  }}
+                  disabled={isBusy}
+                  className="text-xs px-2 py-1 rounded border border-border hover:border-[var(--primary)] text-muted-foreground hover:text-[var(--primary)] transition-colors disabled:opacity-50"
+                >
+                  + Kích thước
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newColor = `Màu ${matrixColors.length + 1}`;
+                    setMatrixColors((prev) => [...prev, newColor]);
+                    setVariants((prev) => {
+                      const next = { ...prev };
+                      for (const size of Object.keys(next)) {
+                        if (!next[size][newColor])
+                          next[size][newColor] = {
+                            sku: "",
+                            price: defaultVariantPrice,
+                            stock: defaultVariantStock,
+                          };
+                      }
+                      return next;
+                    });
+                  }}
+                  disabled={isBusy}
+                  className="text-xs px-2 py-1 rounded border border-border hover:border-[var(--primary)] text-muted-foreground hover:text-[var(--primary)] transition-colors disabled:opacity-50"
+                >
+                  + Màu
+                </button>
+              </div>
+            </div>
+
+            <div className="border border-border rounded-xl overflow-hidden">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-muted">
+                    <th className="px-2 py-1.5 text-left font-semibold text-foreground w-20">
+                      Size
+                    </th>
+                    {matrixColors.map((color) => (
+                      <th
+                        key={color}
+                        className="px-2 py-1.5 text-center font-semibold text-foreground min-w-[120px]"
+                      >
+                        <div className="flex flex-col items-center gap-1">
+                          <div className="flex items-center gap-1">
+                            {matrixEditCol === color ? (
+                              <input
+                                value={color}
+                                onChange={(e) => {
+                                  const old = color;
+                                  setMatrixColors((prev) =>
+                                    prev.map((c) => (c === old ? e.target.value : c)),
+                                  );
+                                  setVariants((prev) => {
+                                    const next: Record<
+                                      string,
+                                      Record<string, { sku: string; price: number; stock: number }>
+                                    > = {};
+                                    for (const [sz, cmap] of Object.entries(prev)) {
+                                      next[sz] = {};
+                                      for (const [cl, cell] of Object.entries(cmap)) {
+                                        next[sz][cl === old ? e.target.value : cl] = cell;
+                                      }
+                                    }
+                                    return next;
+                                  });
+                                  if (e.target.value !== old) setMatrixEditCol(null);
+                                }}
+                                onBlur={() => setMatrixEditCol(null)}
+                                onKeyDown={(e) => e.key === "Enter" && setMatrixEditCol(null)}
+                                className="w-20 px-1 py-0.5 border border-border rounded text-center text-xs"
+                                autoFocus
+                              />
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setMatrixEditCol(color)}
+                                disabled={isBusy}
+                                className="hover:text-[var(--primary)] transition-colors disabled:opacity-50"
+                              >
+                                {color}
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMatrixColors((prev) => prev.filter((c) => c !== color));
                                 setVariants((prev) => {
-                                  const next: Record<string, Record<string, { sku: string; price: number; stock: number }>> = {};
+                                  const next: Record<
+                                    string,
+                                    Record<string, { sku: string; price: number; stock: number }>
+                                  > = {};
                                   for (const [sz, cmap] of Object.entries(prev)) {
                                     next[sz] = {};
                                     for (const [cl, cell] of Object.entries(cmap)) {
-                                      next[sz][cl === old ? e.target.value : cl] = cell;
+                                      if (cl !== color) next[sz][cl] = cell;
                                     }
                                   }
                                   return next;
                                 });
-                                if (e.target.value !== old) setMatrixEditCol(null);
                               }}
-                              onBlur={() => setMatrixEditCol(null)}
-                              onKeyDown={(e) => e.key === "Enter" && setMatrixEditCol(null)}
-                              className="w-20 px-1 py-0.5 border border-border rounded text-center text-xs"
-                              autoFocus
-                            />
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => setMatrixEditCol(color)}
-                              disabled={isBusy}
-                              className="hover:text-[var(--primary)] transition-colors disabled:opacity-50"
+                              disabled={isBusy || matrixColors.length <= 1}
+                              className="text-muted-foreground hover:text-red-500 disabled:opacity-30 transition-colors leading-none"
+                              aria-label={`Remove color ${color}`}
                             >
-                              {color}
+                              ×
                             </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setMatrixColors((prev) => prev.filter((c) => c !== color));
+                          </div>
+                        </div>
+                      </th>
+                    ))}
+                    <th className="w-8" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {matrixSizes.map((size) => (
+                    <tr key={size} className="border-t border-border">
+                      <td className="px-2 py-1.5 font-medium text-foreground">
+                        {matrixEditRow === size ? (
+                          <input
+                            value={size}
+                            onChange={(e) => {
+                              const old = size;
+                              setMatrixSizes((prev) =>
+                                prev.map((s) => (s === old ? e.target.value : s)),
+                              );
                               setVariants((prev) => {
-                                const next: Record<string, Record<string, { sku: string; price: number; stock: number }>> = {};
+                                const next: Record<
+                                  string,
+                                  Record<string, { sku: string; price: number; stock: number }>
+                                > = {};
                                 for (const [sz, cmap] of Object.entries(prev)) {
-                                  next[sz] = {};
-                                  for (const [cl, cell] of Object.entries(cmap)) {
-                                    if (cl !== color) next[sz][cl] = cell;
-                                  }
+                                  next[sz === old ? e.target.value : sz] = cmap;
                                 }
                                 return next;
                               });
+                              if (e.target.value !== old) setMatrixEditRow(null);
                             }}
-                            disabled={isBusy || matrixColors.length <= 1}
-                            className="text-muted-foreground hover:text-red-500 disabled:opacity-30 transition-colors leading-none"
-                            aria-label={`Remove color ${color}`}
+                            onBlur={() => setMatrixEditRow(null)}
+                            onKeyDown={(e) => e.key === "Enter" && setMatrixEditRow(null)}
+                            className="w-full px-1 py-0.5 border border-border rounded text-xs"
+                            autoFocus
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setMatrixEditRow(size)}
+                            disabled={isBusy}
+                            className="hover:text-[var(--primary)] transition-colors disabled:opacity-50 inline-flex items-center gap-1"
                           >
-                            ×
+                            {size} <IconEdit size={10} />
                           </button>
-                        </div>
-                      </div>
-                    </th>
-                  ))}
-                  <th className="w-8" />
-                </tr>
-              </thead>
-              <tbody>
-                {matrixSizes.map((size) => (
-                  <tr key={size} className="border-t border-border">
-                    <td className="px-2 py-1.5 font-medium text-foreground">
-                      {matrixEditRow === size ? (
-                        <input
-                          value={size}
-                          onChange={(e) => {
-                            const old = size;
-                            setMatrixSizes((prev) => prev.map((s) => (s === old ? e.target.value : s)));
-                            setVariants((prev) => {
-                              const next: Record<string, Record<string, { sku: string; price: number; stock: number }>> = {};
-                              for (const [sz, cmap] of Object.entries(prev)) {
-                                next[sz === old ? e.target.value : sz] = cmap;
-                              }
-                              return next;
-                            });
-                            if (e.target.value !== old) setMatrixEditRow(null);
-                          }}
-                          onBlur={() => setMatrixEditRow(null)}
-                          onKeyDown={(e) => e.key === "Enter" && setMatrixEditRow(null)}
-                          className="w-full px-1 py-0.5 border border-border rounded text-xs"
-                          autoFocus
-                        />
-                      ) : (
+                        )}
+                      </td>
+                      {matrixColors.map((color) => {
+                        const cell = variants[size]?.[color] ?? {
+                          sku: "",
+                          price: defaultVariantPrice,
+                          stock: defaultVariantStock,
+                        };
+                        return (
+                          <td key={color} className="px-1 py-1 border-l border-border">
+                            <div className="flex flex-col gap-0.5 p-1">
+                              <input
+                                value={cell.sku}
+                                onChange={(e) =>
+                                  setVariants((prev) => ({
+                                    ...prev,
+                                    [size]: {
+                                      ...prev[size],
+                                      [color]: { ...cell, sku: e.target.value },
+                                    },
+                                  }))
+                                }
+                                placeholder="SKU"
+                                className="w-full px-1.5 py-0.5 border border-border rounded text-[10px] outline-none focus:border-[var(--primary)]"
+                                disabled={isBusy}
+                              />
+                              <input
+                                value={cell.price || ""}
+                                onChange={(e) =>
+                                  setVariants((prev) => ({
+                                    ...prev,
+                                    [size]: {
+                                      ...prev[size],
+                                      [color]: { ...cell, price: parsePriceInput(e.target.value) },
+                                    },
+                                  }))
+                                }
+                                placeholder="Giá"
+                                inputMode="numeric"
+                                className="w-full px-1.5 py-0.5 border border-border rounded text-[10px] outline-none focus:border-[var(--primary)]"
+                                disabled={isBusy}
+                              />
+                              <input
+                                value={cell.stock ?? ""}
+                                onChange={(e) =>
+                                  setVariants((prev) => ({
+                                    ...prev,
+                                    [size]: {
+                                      ...prev[size],
+                                      [color]: { ...cell, stock: parseInt(e.target.value) || 0 },
+                                    },
+                                  }))
+                                }
+                                placeholder="Tồn"
+                                inputMode="numeric"
+                                className="w-full px-1.5 py-0.5 border border-border rounded text-[10px] outline-none focus:border-[var(--primary)]"
+                                disabled={isBusy}
+                              />
+                            </div>
+                          </td>
+                        );
+                      })}
+                      <td className="border-l border-border">
                         <button
                           type="button"
-                          onClick={() => setMatrixEditRow(size)}
+                          onClick={() => {
+                            setMatrixSizes((prev) => prev.filter((s) => s !== size));
+                            setVariants((prev) => {
+                              const next = { ...prev };
+                              delete next[size];
+                              return next;
+                            });
+                          }}
                           disabled={isBusy}
-                          className="hover:text-[var(--primary)] transition-colors disabled:opacity-50 inline-flex items-center gap-1"
+                          className="w-full h-full px-1 flex items-center justify-center text-muted-foreground hover:text-red-500 disabled:opacity-50 transition-colors"
+                          aria-label={`Remove size ${size}`}
                         >
-                          {size} <IconEdit size={10} />
+                          <IconTrash size={12} />
                         </button>
-                      )}
-                    </td>
-                    {matrixColors.map((color) => {
-                      const cell = variants[size]?.[color] ?? { sku: "", price: defaultVariantPrice, stock: defaultVariantStock };
-                      return (
-                        <td key={color} className="px-1 py-1 border-l border-border">
-                          <div className="flex flex-col gap-0.5 p-1">
-                            <input
-                              value={cell.sku}
-                              onChange={(e) =>
-                                setVariants((prev) => ({
-                                  ...prev,
-                                  [size]: { ...prev[size], [color]: { ...cell, sku: e.target.value } },
-                                }))
-                              }
-                              placeholder="SKU"
-                              className="w-full px-1.5 py-0.5 border border-border rounded text-[10px] outline-none focus:border-[var(--primary)]"
-                              disabled={isBusy}
-                            />
-                            <input
-                              value={cell.price || ""}
-                              onChange={(e) =>
-                                setVariants((prev) => ({
-                                  ...prev,
-                                  [size]: { ...prev[size], [color]: { ...cell, price: parsePriceInput(e.target.value) } },
-                                }))
-                              }
-                              placeholder="Giá"
-                              inputMode="numeric"
-                              className="w-full px-1.5 py-0.5 border border-border rounded text-[10px] outline-none focus:border-[var(--primary)]"
-                              disabled={isBusy}
-                            />
-                            <input
-                              value={cell.stock ?? ""}
-                              onChange={(e) =>
-                                setVariants((prev) => ({
-                                  ...prev,
-                                  [size]: { ...prev[size], [color]: { ...cell, stock: parseInt(e.target.value) || 0 } },
-                                }))
-                              }
-                              placeholder="Tồn"
-                              inputMode="numeric"
-                              className="w-full px-1.5 py-0.5 border border-border rounded text-[10px] outline-none focus:border-[var(--primary)]"
-                              disabled={isBusy}
-                            />
-                          </div>
-                        </td>
-                      );
-                    })}
-                    <td className="border-l border-border">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMatrixSizes((prev) => prev.filter((s) => s !== size));
-                          setVariants((prev) => {
-                            const next = { ...prev };
-                            delete next[size];
-                            return next;
-                          });
-                        }}
-                        disabled={isBusy}
-                        className="w-full h-full px-1 flex items-center justify-center text-muted-foreground hover:text-red-500 disabled:opacity-50 transition-colors"
-                        aria-label={`Remove size ${size}`}
-                      >
-                        <IconTrash size={12} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1.5">
+              Nhấn vào tên cột/hàng để sửa. Để trống SKU → tự động tạo từ tên sản phẩm.
+            </p>
           </div>
-          <p className="text-[11px] text-muted-foreground mt-1.5">
-            Nhấn vào tên cột/hàng để sửa. Để trống SKU → tự động tạo từ tên sản phẩm.
-          </p>
         </div>
-      </div>
 
-      {/* P2-5: replaces window.confirm() at the upload-cancel exit path. */}
-      <ConfirmDialog
-        open={cancelUploadConfirmOpen}
-        onClose={() => setCancelUploadConfirmOpen(false)}
-        onConfirm={confirmCancelUpload}
-        title={t("video.seller.cancelUpload")}
-        description={t("video.upload.cancelConfirm")}
-        confirmLabel={t("common.confirm")}
-        cancelLabel={t("common.cancel")}
-      />
+        {/* P2-5: replaces window.confirm() at the upload-cancel exit path. */}
+        <ConfirmDialog
+          open={cancelUploadConfirmOpen}
+          onClose={() => setCancelUploadConfirmOpen(false)}
+          onConfirm={confirmCancelUpload}
+          title={t("video.seller.cancelUpload")}
+          description={t("video.upload.cancelConfirm")}
+          confirmLabel={t("common.confirm")}
+          cancelLabel={t("common.cancel")}
+        />
 
-      {/* P2-5: destructive confirm for the per-row "Remove video" action. */}
-      <ConfirmDialog
-        open={removeVideoId !== null}
-        onClose={() => setRemoveVideoId(null)}
-        onConfirm={() => {
-          if (removeVideoId) void handleRemoveVideo(removeVideoId);
-          setRemoveVideoId(null);
-        }}
-        title={t("seller.productModal.removeVideoTitle")}
-        description={t("seller.productModal.removeVideoDescription")}
-        confirmLabel={t("seller.productModal.removeVideo")}
-        cancelLabel={t("common.cancel")}
-        variant="danger"
-      />
-    </Modal>
+        {/* P2-5: destructive confirm for the per-row "Remove video" action. */}
+        <ConfirmDialog
+          open={removeVideoId !== null}
+          onClose={() => setRemoveVideoId(null)}
+          onConfirm={() => {
+            if (removeVideoId) void handleRemoveVideo(removeVideoId);
+            setRemoveVideoId(null);
+          }}
+          title={t("seller.productModal.removeVideoTitle")}
+          description={t("seller.productModal.removeVideoDescription")}
+          confirmLabel={t("seller.productModal.removeVideo")}
+          cancelLabel={t("common.cancel")}
+          variant="danger"
+        />
+      </Modal>
     </>
   );
 }
@@ -993,19 +1051,15 @@ function baseFieldsChanged(
   body: {
     name: string;
     description: string | undefined;
-    price: number;
-    originalPrice: number | undefined;
-    stock: number;
-    category: string | undefined;
+    categoryId: string | undefined;
+    brand: string | undefined;
   },
 ): boolean {
   if (!product) return true;
   return (
     product.name !== body.name ||
     (product.description ?? "") !== (body.description ?? "") ||
-    product.price !== body.price ||
-    (product.originalPrice ?? undefined) !== body.originalPrice ||
-    product.stock !== body.stock ||
-    (product.category ?? undefined) !== body.category
+    (product.categoryId ?? undefined) !== body.categoryId ||
+    (product.brand ?? undefined) !== body.brand
   );
 }

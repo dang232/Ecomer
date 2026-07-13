@@ -89,9 +89,9 @@ class CartRepositoryImpl implements CartRepository {
 
     // Merge local items (local takes precedence for conflicts)
     for (final localItem in localCart.items) {
-      final key = '${localItem.productId}_${localItem.optionName ?? ''}';
+      final key = '${localItem.productId}_${localItem.sku ?? ''}';
       final existingIndex = remoteCart.items.indexWhere(
-        (item) => '${item.productId}_${item.optionName ?? ''}' == key,
+        (item) => '${item.productId}_${item.sku ?? ''}' == key,
       );
 
       if (existingIndex == -1) {
@@ -139,7 +139,9 @@ class CartRepositoryImpl implements CartRepository {
 
     if (_isOnline) {
       try {
-        await _remoteDataSource.addItem(_userId, cartItemWithId);
+        final remoteCart = await _remoteDataSource.addItem(_userId, cartItemWithId);
+        await _localDataSource.saveCart(remoteCart);
+        return remoteCart;
       } catch (e) {
         await _localDataSource.addPendingOperation(
           PendingOperation.addItem(
@@ -203,7 +205,13 @@ class CartRepositoryImpl implements CartRepository {
 
     if (_isOnline) {
       try {
-        await _remoteDataSource.updateQuantity(_userId, cartItemId, quantity);
+        final remoteCart = await _remoteDataSource.updateQuantity(
+          _userId,
+          cartItemId,
+          quantity,
+        );
+        await _localDataSource.saveCart(remoteCart);
+        return remoteCart;
       } catch (e) {
         await _localDataSource.addPendingOperation(
           PendingOperation.updateQuantity(

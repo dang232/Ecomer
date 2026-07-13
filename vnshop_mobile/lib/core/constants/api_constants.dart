@@ -14,7 +14,8 @@ class ApiConstants {
   /// Full base URL with version
   static String get baseUrlWithVersion => EnvConfig.apiBaseUrlWithVersion;
 
-  // Authentication endpoints
+  // Gateway routes are rooted at the configured host. Dio owns the host, so
+  // endpoint constants stay relative and never accidentally add /v1.
   static const String login = '/auth/login';
   static const String register = '/auth/register';
   static const String refreshToken = '/auth/refresh';
@@ -25,9 +26,11 @@ class ApiConstants {
   static const String resendVerification = '/auth/resend-verification';
 
   // User endpoints
-  static const String profile = '/users/profile';
-  static const String updateProfile = '/users/profile';
-  static const String changePassword = '/users/change-password';
+  static const String profile = '/users/me';
+  static const String updateProfile = '/users/me';
+  // P1: backend exposes password change on the same /users/me resource, not a
+  // top-level /users/change-password route (which doesn't exist on the gateway)
+  static const String changePassword = '/users/me/password';
 
   // Product endpoints
   static const String products = '/products';
@@ -47,8 +50,8 @@ class ApiConstants {
   static const String cancelOrder = '/orders';
 
   // Address endpoints
-  static const String addresses = '/addresses';
-  static const String defaultAddress = '/addresses/default';
+  static const String addresses = '/users/me/addresses';
+  static const String defaultAddress = '/users/me/addresses/default';
 
   // Review endpoints
   static const String reviews = '/reviews';
@@ -81,4 +84,5 @@ class ApiConstants {
   static const String authorization = 'Authorization';
   static const String bearer = 'Bearer';
   static const String idempotencyKey = 'Idempotency-Key';
+  static const String csrfToken = 'X-CSRF-Token';
 }

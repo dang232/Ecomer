@@ -29,10 +29,8 @@ vi.mock("react-i18next", () => ({
     t: (key: string, opts?: Record<string, unknown>) => {
       if (typeof opts?.defaultValue === "string") return opts.defaultValue;
       const FIXTURES: Record<string, string> = {
-        "register.form.phoneHelper":
-          "Select your country and enter your number",
-        "register.form.errorPhoneInvalid":
-          "Phone must be a valid international number.",
+        "register.form.phoneHelper": "Select your country and enter your number",
+        "register.form.errorPhoneInvalid": "Phone must be a valid international number.",
         "register.form.errorEmailInvalid": "Enter a valid email address.",
         "register.form.errorPasswordShort": "Password must be at least 8 characters.",
         "register.form.errorMismatch": "Passwords don't match.",
@@ -49,6 +47,7 @@ vi.mock("react-i18next", () => ({
 }));
 
 import { MemoryRouter } from "react-router";
+
 import { RegisterPage } from "./RegisterPage";
 
 const renderPage = () =>
@@ -65,10 +64,7 @@ const PHONE_ERROR_ID = "phone-error";
 const PHONE_ERROR_RE = /(too short|too long|not valid)/i;
 
 const setInputValue = (input: HTMLInputElement, value: string) => {
-  const setter = Object.getOwnPropertyDescriptor(
-    window.HTMLInputElement.prototype,
-    "value",
-  )?.set;
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
   setter?.call(input, value);
   input.dispatchEvent(new Event("input", { bubbles: true }));
 };
@@ -80,9 +76,7 @@ const setInputValue = (input: HTMLInputElement, value: string) => {
  */
 const pickCountry = async (matcher: RegExp) => {
   // The CountryDropdown's trigger has aria-haspopup="listbox".
-  const trigger = document.querySelector<HTMLButtonElement>(
-    'button[aria-haspopup="listbox"]',
-  );
+  const trigger = document.querySelector<HTMLButtonElement>('button[aria-haspopup="listbox"]');
   if (!trigger) throw new Error("country trigger not found");
   fireEvent.click(trigger);
   // Wait for the dialog to appear.
@@ -135,9 +129,7 @@ describe("RegisterPage phone field (CountryPhoneInput)", () => {
 
   it("shows the country picker pre-set to Vietnam (with a flag and dial code)", () => {
     renderPage();
-    const trigger = document.querySelector<HTMLButtonElement>(
-      'button[aria-haspopup="listbox"]',
-    );
+    const trigger = document.querySelector<HTMLButtonElement>('button[aria-haspopup="listbox"]');
     expect(trigger).not.toBeNull();
     // The trigger should show the Vietnam flag, the +84 dial code, and be
     // labelled with "Country code" for screen readers.
@@ -196,9 +188,7 @@ describe("RegisterPage phone field (CountryPhoneInput)", () => {
     fillRequiredFields({ phone: "912345678" });
     fireEvent.click(screen.getByRole("button", { name: /create account/i }));
     await waitFor(() => {
-      expect(registerMock).toHaveBeenCalledWith(
-        expect.objectContaining({ phone: "+84912345678" }),
-      );
+      expect(registerMock).toHaveBeenCalledWith(expect.objectContaining({ phone: "+84912345678" }));
     });
   });
 
@@ -224,9 +214,7 @@ describe("RegisterPage phone field (CountryPhoneInput)", () => {
     await pickCountry(/United States/);
     fireEvent.click(screen.getByRole("button", { name: /create account/i }));
     await waitFor(() => {
-      expect(registerMock).toHaveBeenCalledWith(
-        expect.objectContaining({ phone: "+12025551234" }),
-      );
+      expect(registerMock).toHaveBeenCalledWith(expect.objectContaining({ phone: "+12025551234" }));
     });
   });
 
@@ -235,9 +223,7 @@ describe("RegisterPage phone field (CountryPhoneInput)", () => {
     fillRequiredFields(); // no phone
     fireEvent.click(screen.getByRole("button", { name: /create account/i }));
     await waitFor(() => {
-      expect(registerMock).toHaveBeenCalledWith(
-        expect.objectContaining({ phone: undefined }),
-      );
+      expect(registerMock).toHaveBeenCalledWith(expect.objectContaining({ phone: undefined }));
     });
   });
 
@@ -250,11 +236,8 @@ describe("RegisterPage phone field (CountryPhoneInput)", () => {
     fillRequiredFields({ phone: "912345678" });
     fireEvent.click(screen.getByRole("button", { name: /create account/i }));
     await waitFor(() => {
-      expect(document.getElementById(PHONE_ERROR_ID)?.getAttribute("role"))
-        .toBe("alert");
+      expect(document.getElementById(PHONE_ERROR_ID)?.getAttribute("role")).toBe("alert");
     });
-    expect(
-      screen.queryByText(/phone: phone must be in E\.164/),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/phone: phone must be in E\.164/)).not.toBeInTheDocument();
   });
 });

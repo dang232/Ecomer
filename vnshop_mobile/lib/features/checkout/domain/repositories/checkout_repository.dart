@@ -16,6 +16,7 @@ abstract class CheckoutRepository {
   Future<List<ShippingQuote>> getShippingQuotes(VietnamAddress address);
   Future<CheckoutSession> createSession({
     required String userId,
+    required List<LineItem> lineItems,
     required double subtotal,
     double discountAmount = 0,
     String? couponCode,
@@ -27,13 +28,10 @@ abstract class CheckoutRepository {
     required String idempotencyKey,
   });
   Future<PaymentTransaction> getPaymentStatus(String transactionId);
-  Future<PaymentTransaction> retryPayment({
-    required String transactionId,
-    required String newIdempotencyKey,
-  });
   Future<String> createOrder({
     required CheckoutSession session,
     required PaymentTransaction transaction,
+    required String idempotencyKey,
   });
   Future<void> cancelOrder(String orderId);
 }

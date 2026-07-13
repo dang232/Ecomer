@@ -12,18 +12,33 @@ abstract class CheckoutEvent extends Equatable {
 }
 
 class CheckoutStarted extends CheckoutEvent {
+  final List<LineItemData> lineItems;
   final double subtotal;
   final double discountAmount;
   final String? couponCode;
 
   const CheckoutStarted({
+    required this.lineItems,
     required this.subtotal,
     this.discountAmount = 0,
     this.couponCode,
   });
 
   @override
-  List<Object?> get props => [subtotal, discountAmount, couponCode];
+  List<Object?> get props => [lineItems, subtotal, discountAmount, couponCode];
+}
+
+/// Data class for line items passed from cart
+class LineItemData {
+  final String productId;
+  final String? variantSku;
+  final int quantity;
+
+  const LineItemData({
+    required this.productId,
+    this.variantSku,
+    required this.quantity,
+  });
 }
 
 class CheckoutAddressesLoaded extends CheckoutEvent {
@@ -46,6 +61,24 @@ class CheckoutAddressAdded extends CheckoutEvent {
 
   @override
   List<Object?> get props => [address];
+}
+
+class CheckoutAddressUpdated extends CheckoutEvent {
+  final VietnamAddress address;
+
+  const CheckoutAddressUpdated(this.address);
+
+  @override
+  List<Object?> get props => [address];
+}
+
+class CheckoutAddressDeleted extends CheckoutEvent {
+  final String addressId;
+
+  const CheckoutAddressDeleted(this.addressId);
+
+  @override
+  List<Object?> get props => [addressId];
 }
 
 class CheckoutShippingQuotesRequested extends CheckoutEvent {
@@ -83,15 +116,6 @@ class CheckoutPaymentStatusChecked extends CheckoutEvent {
   final String transactionId;
 
   const CheckoutPaymentStatusChecked(this.transactionId);
-
-  @override
-  List<Object?> get props => [transactionId];
-}
-
-class CheckoutPaymentRetried extends CheckoutEvent {
-  final String transactionId;
-
-  const CheckoutPaymentRetried(this.transactionId);
 
   @override
   List<Object?> get props => [transactionId];

@@ -22,7 +22,6 @@ class OrderRepositoryImpl implements OrderRepository {
     OrderStatus? status,
     bool forceRefresh = false,
   }) async {
-    // Nếu force refresh hoặc trang đầu tiên, lấy từ server
     if (forceRefresh || page == 1) {
       try {
         final orders = await _remoteDataSource.getOrders(
@@ -30,23 +29,14 @@ class OrderRepositoryImpl implements OrderRepository {
           limit: limit,
           status: status,
         );
-
-        // Cache orders nếu là trang đầu
-        if (page == 1) {
-          await _localDataSource.cacheOrders(orders);
-        }
-
+        if (page == 1) await _localDataSource.cacheOrders(orders);
         return orders;
       } on DioException {
-        // Nếu có lỗi mạng, trả về cache
-        if (page == 1) {
-          return _localDataSource.getCachedOrders();
-        }
+        if (page == 1) return _localDataSource.getCachedOrders();
         rethrow;
       }
     }
 
-    // Các trang tiếp theo lấy từ server
     return _remoteDataSource.getOrders(
       page: page,
       limit: limit,
@@ -57,25 +47,15 @@ class OrderRepositoryImpl implements OrderRepository {
   @override
   Future<OrderModel> getOrderById(String orderId) async {
     try {
-      // Thử lấy từ cache trước
       final cachedOrder = await _localDataSource.getCachedOrder(orderId);
-      if (cachedOrder != null) {
-        return cachedOrder;
-      }
+      if (cachedOrder != null) return cachedOrder;
 
-      // Lấy từ server
       final order = await _remoteDataSource.getOrderById(orderId);
-
-      // Cache order
       await _localDataSource.cacheOrder(order);
-
       return order;
     } on DioException {
-      // Nếu có lỗi mạng, thử lấy từ cache
       final cachedOrder = await _localDataSource.getCachedOrder(orderId);
-      if (cachedOrder != null) {
-        return cachedOrder;
-      }
+      if (cachedOrder != null) return cachedOrder;
       rethrow;
     }
   }
@@ -105,30 +85,14 @@ class OrderRepositoryImpl implements OrderRepository {
     };
 
     final order = await _remoteDataSource.createOrder(orderData);
-
-    // Cache order mới
     await _localDataSource.cacheOrder(order);
-
     return order;
   }
 
   @override
   Future<OrderModel> cancelOrder(String orderId) async {
     final order = await _remoteDataSource.cancelOrder(orderId);
-
-    // Cập nhật cache
     await _localDataSource.updateCachedOrder(order);
-
-    return order;
-  }
-
-  @override
-  Future<OrderModel> updateOrderStatus(String orderId, OrderStatus status) async {
-    final order = await _remoteDataSource.updateOrderStatus(orderId, status);
-
-    // Cập nhật cache
-    await _localDataSource.updateCachedOrder(order);
-
     return order;
   }
 
