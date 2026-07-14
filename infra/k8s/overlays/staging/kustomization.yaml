@@ -33,30 +33,43 @@ replicas:
   count: 2
 images:
 - name: vnshop/api-gateway
-  newTag: staging
+  newName: ghcr.io/dang232/vnshop-api-gateway
+  newTag: sha-4939162
 - name: vnshop/user-service
-  newTag: staging
+  newName: ghcr.io/dang232/vnshop-user-service
+  newTag: sha-4939162
 - name: vnshop/product-service
-  newTag: staging
+  newName: ghcr.io/dang232/vnshop-product-service
+  newTag: sha-4939162
 - name: vnshop/inventory-service
+  newName: ghcr.io/dang232/vnshop-inventory-service
   newTag: staging
 - name: vnshop/search-service
+  newName: ghcr.io/dang232/vnshop-search-service
   newTag: staging
 - name: vnshop/cart-service
+  newName: ghcr.io/dang232/vnshop-cart-service
   newTag: staging
 - name: vnshop/order-service
-  newTag: staging
+  newName: ghcr.io/dang232/vnshop-order-service
+  newTag: sha-4939162
 - name: vnshop/payment-service
-  newTag: staging
+  newName: ghcr.io/dang232/vnshop-payment-service
+  newTag: sha-4939162
 - name: vnshop/shipping-service
+  newName: ghcr.io/dang232/vnshop-shipping-service
   newTag: staging
 - name: vnshop/notification-service
+  newName: ghcr.io/dang232/vnshop-notification-service
   newTag: staging
 - name: vnshop/coupon-service
+  newName: ghcr.io/dang232/vnshop-coupon-service
   newTag: staging
 - name: vnshop/review-service
+  newName: ghcr.io/dang232/vnshop-review-service
   newTag: staging
 - name: vnshop/seller-finance-service
+  newName: ghcr.io/dang232/vnshop-seller-finance-service
   newTag: staging
 patchesStrategicMerge:
 - configmap-env.yaml
@@ -152,13 +165,3 @@ patches:
     - op: replace
       path: /spec/maxReplicas
       value: 6
-  - name: ghcr.io/dang232/vnshop-api-gateway
-    newTag: sha-4939162 # api-gateway
-  - name: ghcr.io/dang232/vnshop-order-service
-    newTag: sha-4939162 # order-service
-  - name: ghcr.io/dang232/vnshop-payment-service
-    newTag: sha-4939162 # payment-service
-  - name: ghcr.io/dang232/vnshop-product-service
-    newTag: sha-4939162 # product-service
-  - name: ghcr.io/dang232/vnshop-user-service
-    newTag: sha-4939162 # user-service
