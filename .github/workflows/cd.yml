@@ -127,19 +127,28 @@ jobs:
         run: |
           SHA_SHORT=$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-7)
           SERVICES='${{ needs.detect-changes.outputs.services }}'
+          MANIFEST=infra/k8s/overlays/staging/kustomization.yaml
 
           for SERVICE in $(echo "$SERVICES" | jq -r '.[]'); do
-            IMAGE="${{ env.IMAGE_PREFIX }}-${SERVICE}"
-            # Update image tag in staging kustomization
-            cd infra/k8s/overlays/staging
-            if grep -q "name: ${IMAGE}" kustomization.yaml 2>/dev/null; then
-              sed -i "s|newTag:.*# ${SERVICE}|newTag: sha-${SHA_SHORT} # ${SERVICE}|" kustomization.yaml
-            else
-              echo "  - name: ${IMAGE}" >> kustomization.yaml
-              echo "    newTag: sha-${SHA_SHORT} # ${SERVICE}" >> kustomization.yaml
+            BASE_IMAGE="vnshop/${SERVICE}"
+
+            # The base workload uses vnshop/<service>; the overlay maps that
+            # stable name to the GHCR image and owns the deployment tag.
+            if ! grep -Fqx -- "- name: ${BASE_IMAGE}" "$MANIFEST"; then
+              echo "::notice::Skipping ${SERVICE}: no staging workload mapping"
+              continue
             fi
-            cd ../../../..
+
+            awk -v image="$BASE_IMAGE" -v tag="sha-${SHA_SHORT}" '
+              $0 == "- name: " image { in_image=1; print; next }
+              in_image && $1 == "newTag:" { print "  newTag: " tag; in_image=0; next }
+              { print }
+            ' "$MANIFEST" > "${MANIFEST}.tmp"
+            mv "${MANIFEST}.tmp" "$MANIFEST"
           done
+
+      - name: Validate staging manifests
+        run: kubectl kustomize infra/k8s/overlays/staging >/dev/null
 
       - name: Commit manifest updates
         run: |
