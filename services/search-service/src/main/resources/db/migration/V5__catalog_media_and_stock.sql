@@ -1,0 +1,3 @@
+ALTER TABLE search_svc.product_read_models
+    ADD COLUMN IF NOT EXISTS image_url VARCHAR(2048),
+    ADD COLUMN IF NOT EXISTS stock INTEGER NOT NULL DEFAULT 0;

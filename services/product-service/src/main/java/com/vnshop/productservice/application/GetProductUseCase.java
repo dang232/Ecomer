@@ -21,6 +21,13 @@ public class GetProductUseCase {
                 .orElseThrow(() -> new IllegalArgumentException("product not found"));
     }
 
+    public ProductResponse findPublicById(UUID productId) {
+        return productRepositoryPort.findById(productId)
+                .filter(product -> product.status().name().equals("ACTIVE"))
+                .map(ProductResponse::fromDomain)
+                .orElseThrow(() -> new IllegalArgumentException("product not found"));
+    }
+
     public List<ProductResponse> findBySeller(String sellerId) {
         return productRepositoryPort.findBySellerId(sellerId).stream().map(ProductResponse::fromDomain).toList();
     }

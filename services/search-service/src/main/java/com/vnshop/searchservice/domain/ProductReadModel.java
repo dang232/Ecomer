@@ -13,6 +13,8 @@ public class ProductReadModel {
     private BigDecimal minPrice;
     private BigDecimal maxPrice;
     private int variantCount;
+    private String imageUrl;
+    private int stock;
     private Instant createdAt;
     private boolean sameDayDelivery;
     private boolean verified;
@@ -21,7 +23,7 @@ public class ProductReadModel {
     public ProductReadModel() {
     }
 
-    public ProductReadModel(String productId, String name, String description, String categoryId, String brand, String status, BigDecimal minPrice, BigDecimal maxPrice, int variantCount, Instant createdAt, boolean sameDayDelivery, boolean verified, boolean isOfficial) {
+    public ProductReadModel(String productId, String name, String description, String categoryId, String brand, String status, BigDecimal minPrice, BigDecimal maxPrice, int variantCount, String imageUrl, int stock, Instant createdAt, boolean sameDayDelivery, boolean verified, boolean isOfficial) {
         this.productId = productId;
         this.name = name;
         this.description = description;
@@ -31,6 +33,8 @@ public class ProductReadModel {
         this.minPrice = minPrice;
         this.maxPrice = maxPrice;
         this.variantCount = variantCount;
+        this.imageUrl = imageUrl;
+        this.stock = stock;
         this.createdAt = createdAt;
         this.sameDayDelivery = sameDayDelivery;
         this.verified = verified;
@@ -71,6 +75,14 @@ public class ProductReadModel {
 
     public int variantCount() {
         return variantCount;
+    }
+
+    public String imageUrl() {
+        return imageUrl;
+    }
+
+    public int stock() {
+        return stock;
     }
 
     public Instant createdAt() {

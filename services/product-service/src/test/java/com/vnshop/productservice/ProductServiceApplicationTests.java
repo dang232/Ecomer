@@ -14,6 +14,7 @@ import com.vnshop.productservice.domain.port.out.ObjectMetadataRepositoryPort;
 import com.vnshop.productservice.domain.port.out.ObjectStoragePort;
 import com.vnshop.productservice.domain.port.out.ProductRepositoryPort;
 import com.vnshop.productservice.domain.review.port.out.BuyerProfileLookupPort;
+import com.vnshop.productservice.domain.review.port.out.PurchaseVerificationPort;
 import com.vnshop.productservice.domain.review.port.out.ReviewRepositoryPort;
 import com.vnshop.productservice.domain.video.port.out.VideoEventPublisherPort;
 import com.vnshop.productservice.domain.video.port.out.VideoRepositoryPort;
@@ -48,6 +49,9 @@ class ProductServiceApplicationTests {
 
     @MockitoBean
     private ReviewRepositoryPort reviewRepositoryPort;
+
+    @MockitoBean
+    private PurchaseVerificationPort purchaseVerificationPort;
 
     // The real adapter wires up an HTTP client + ObjectMapper, neither of
     // which we need (or have) in the slimmed test context. Mocking the

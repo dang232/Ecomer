@@ -4,8 +4,10 @@ import com.vnshop.productservice.application.CountSellerProductsUseCase;
 import com.vnshop.productservice.application.CreateProductUseCase;
 import com.vnshop.productservice.application.DeleteProductUseCase;
 import com.vnshop.productservice.application.GetProductUseCase;
+import com.vnshop.productservice.application.GetCategoriesUseCase;
 import com.vnshop.productservice.application.UpdateProductUseCase;
 import com.vnshop.productservice.application.UpdateProductEligibilityUseCase;
+import com.vnshop.productservice.application.PublishProductUseCase;
 import com.vnshop.productservice.application.image.ProductImageUploadService;
 import com.vnshop.productservice.application.review.AnswerQuestionUseCase;
 import com.vnshop.productservice.application.review.AskQuestionUseCase;
@@ -28,7 +30,10 @@ import com.vnshop.productservice.domain.port.out.ContentSanitizerPort;
 import com.vnshop.productservice.domain.port.out.ProductEventPublisherPort;
 import com.vnshop.productservice.domain.port.out.ProductRepositoryPort;
 import com.vnshop.productservice.domain.review.port.out.BuyerProfileLookupPort;
+import com.vnshop.productservice.domain.review.port.out.PurchaseVerificationPort;
+import com.vnshop.productservice.domain.review.port.out.ReviewModerationPort;
 import com.vnshop.productservice.domain.review.port.out.ReviewRepositoryPort;
+import com.vnshop.productservice.domain.port.out.CategoryRepositoryPort;
 import com.vnshop.productservice.domain.storage.ObjectStorageClass;
 import com.vnshop.productservice.domain.video.port.out.VideoEventPublisherPort;
 import com.vnshop.productservice.domain.video.port.out.VideoRepositoryPort;
@@ -61,6 +66,12 @@ public class UseCaseConfig {
     }
 
     @Bean
+    PublishProductUseCase publishProductUseCase(ProductRepositoryPort productRepositoryPort,
+            ProductEventPublisherPort productEventPublisherPort) {
+        return new PublishProductUseCase(productRepositoryPort, productEventPublisherPort);
+    }
+
+    @Bean
     DeleteProductUseCase deleteProductUseCase(ProductRepositoryPort productRepositoryPort,
             ProductEventPublisherPort productEventPublisherPort) {
         return new DeleteProductUseCase(productRepositoryPort, productEventPublisherPort);
@@ -69,6 +80,11 @@ public class UseCaseConfig {
     @Bean
     GetProductUseCase getProductUseCase(ProductRepositoryPort productRepositoryPort) {
         return new GetProductUseCase(productRepositoryPort);
+    }
+
+    @Bean
+    GetCategoriesUseCase getCategoriesUseCase(CategoryRepositoryPort categoryRepositoryPort) {
+        return new GetCategoriesUseCase(categoryRepositoryPort);
     }
 
     @Bean
@@ -96,8 +112,16 @@ public class UseCaseConfig {
     }
 
     @Bean
-    CreateReviewUseCase createReviewUseCase(ReviewRepositoryPort reviewRepositoryPort, ContentSanitizerPort contentSanitizer) {
-        return new CreateReviewUseCase(reviewRepositoryPort, contentSanitizer);
+    CreateReviewUseCase createReviewUseCase(
+            ReviewRepositoryPort reviewRepositoryPort,
+            ContentSanitizerPort contentSanitizer,
+            PurchaseVerificationPort purchaseVerificationPort,
+            ReviewModerationPort reviewModerationPort) {
+        return new CreateReviewUseCase(
+                reviewRepositoryPort,
+                contentSanitizer,
+                purchaseVerificationPort,
+                reviewModerationPort);
     }
 
     @Bean

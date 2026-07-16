@@ -15,7 +15,8 @@ import java.util.List;
 public interface ProductReadModelRepository extends JpaRepository<ProductReadModelJpaEntity, String> {
     @Query("""
             select product from ProductReadModelJpaEntity product
-            where (:query is null or lower(product.name) like lower(concat('%', cast(:query as string), '%')) or lower(product.description) like lower(concat('%', cast(:query as string), '%')))
+            where product.status = 'ACTIVE'
+              and (:query is null or lower(product.name) like lower(concat('%', cast(:query as string), '%')) or lower(product.description) like lower(concat('%', cast(:query as string), '%')))
               and (:categoryId is null or product.categoryId = cast(:categoryId as string))
               and (:brand is null or product.brand = cast(:brand as string))
               and (:minPrice is null or product.maxPrice >= :minPrice)
@@ -36,13 +37,14 @@ public interface ProductReadModelRepository extends JpaRepository<ProductReadMod
             Pageable pageable
     );
 
-    @Query("select distinct product.categoryId from ProductReadModelJpaEntity product where product.categoryId is not null")
+    @Query("select distinct product.categoryId from ProductReadModelJpaEntity product where product.status = 'ACTIVE' and product.categoryId is not null")
     List<String> findDistinctCategories();
 
     /** Prefix-match on name for header autocomplete. Uses idx_product_read_models_name_lower. */
     @Query("""
             select product.name from ProductReadModelJpaEntity product
-            where lower(product.name) like lower(concat(cast(:prefix as string), '%'))
+            where product.status = 'ACTIVE'
+              and lower(product.name) like lower(concat(cast(:prefix as string), '%'))
             order by product.name asc
             """)
     List<String> findSuggestions(@Param("prefix") String prefix, Pageable pageable);
@@ -59,7 +61,8 @@ public interface ProductReadModelRepository extends JpaRepository<ProductReadMod
      */
     @Query("""
             select product.categoryId, count(product) from ProductReadModelJpaEntity product
-            where (:query is null or lower(product.name) like lower(concat('%', cast(:query as string), '%')) or lower(product.description) like lower(concat('%', cast(:query as string), '%')))
+            where product.status = 'ACTIVE'
+              and (:query is null or lower(product.name) like lower(concat('%', cast(:query as string), '%')) or lower(product.description) like lower(concat('%', cast(:query as string), '%')))
               and (:brand is null or product.brand = cast(:brand as string))
               and (:minPrice is null or product.maxPrice >= :minPrice)
               and (:maxPrice is null or product.minPrice <= :maxPrice)
@@ -82,7 +85,8 @@ public interface ProductReadModelRepository extends JpaRepository<ProductReadMod
 
     @Query("""
             select product.brand, count(product) from ProductReadModelJpaEntity product
-            where (:query is null or lower(product.name) like lower(concat('%', cast(:query as string), '%')) or lower(product.description) like lower(concat('%', cast(:query as string), '%')))
+            where product.status = 'ACTIVE'
+              and (:query is null or lower(product.name) like lower(concat('%', cast(:query as string), '%')) or lower(product.description) like lower(concat('%', cast(:query as string), '%')))
               and (:categoryId is null or product.categoryId = cast(:categoryId as string))
               and (:minPrice is null or product.maxPrice >= :minPrice)
               and (:maxPrice is null or product.minPrice <= :maxPrice)

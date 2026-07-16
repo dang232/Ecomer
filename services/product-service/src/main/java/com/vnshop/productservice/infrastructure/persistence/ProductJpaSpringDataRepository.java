@@ -16,21 +16,21 @@ public interface ProductJpaSpringDataRepository extends JpaRepository<ProductJpa
     @Query("select product from ProductJpaEntity product where lower(product.name) like lower(concat('%', :name, '%'))")
     List<ProductJpaEntity> searchByName(@Param("name") String name);
 
-    @Query("select distinct product.categoryId from ProductJpaEntity product where product.categoryId is not null")
+    @Query("select distinct product.categoryId from ProductJpaEntity product where product.status = 'ACTIVE' and product.categoryId is not null")
     List<String> findDistinctCategories();
 
     /**
      * Paged catalog query. Both filters are optional — pass null to skip.
      * The {@code :q} clause uses the same lower-LIKE pattern as searchByName so
      * the matching semantics stay consistent.
-     * DELETED products are excluded from catalog results.
+     * Only ACTIVE products are visible in the buyer catalog.
      */
     @Query("""
             select product from ProductJpaEntity product
             where (:categoryId is null or product.categoryId = cast(:categoryId as string))
               and (:q is null or lower(product.name) like lower(concat('%', cast(:q as string), '%')))
               and (:sellerId is null or product.sellerId = cast(:sellerId as string))
-              and product.status <> 'DELETED'
+              and product.status = 'ACTIVE'
             """)
     Page<ProductJpaEntity> findCatalog(
             @Param("categoryId") String categoryId,

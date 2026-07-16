@@ -28,7 +28,8 @@ class SearchProductsUseCaseTest {
     void searchPaged_delegatesToRepositoryAndMapsToResponse() {
         ProductReadModel model = new ProductReadModel(
                 "p1", "Phone", "desc", "electronics", "Acme", "ACTIVE",
-                BigDecimal.valueOf(100), BigDecimal.valueOf(200), 3, Instant.now(),
+                BigDecimal.valueOf(100), BigDecimal.valueOf(200), 3,
+                "https://cdn.example/phone.jpg", 12, Instant.now(),
                 false, false, false
         );
         Page<ProductReadModel> page = new PageImpl<>(List.of(model));
@@ -41,6 +42,8 @@ class SearchProductsUseCaseTest {
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().getFirst().id()).isEqualTo("p1");
         assertThat(result.getContent().getFirst().name()).isEqualTo("Phone");
+        assertThat(result.getContent().getFirst().imageUrl()).isEqualTo("https://cdn.example/phone.jpg");
+        assertThat(result.getContent().getFirst().stock()).isEqualTo(12);
     }
 
     @Test

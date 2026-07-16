@@ -38,7 +38,9 @@ public class ReviewJpaRepository implements ReviewRepositoryPort {
 
     @Override
     public List<Review> findByProductId(String productId) {
-        return reviewRepository.findByProductId(productId).stream().map(ReviewJpaEntity::toDomain).toList();
+        return reviewRepository.findByProductIdAndStatus(productId, ReviewStatus.APPROVED).stream()
+                .map(ReviewJpaEntity::toDomain)
+                .toList();
     }
 
     @Override

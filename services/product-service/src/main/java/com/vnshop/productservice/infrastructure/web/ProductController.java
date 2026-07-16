@@ -10,6 +10,7 @@ import com.vnshop.productservice.application.GetProductUseCase;
 import com.vnshop.productservice.application.ProductResponse;
 import com.vnshop.productservice.application.UpdateProductUseCase;
 import com.vnshop.productservice.application.UpdateProductEligibilityUseCase;
+import com.vnshop.productservice.application.PublishProductUseCase;
 import com.vnshop.productservice.infrastructure.config.JwtPrincipalUtil;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -36,6 +37,7 @@ public class ProductController {
     private final CreateProductUseCase createProductUseCase;
     private final UpdateProductUseCase updateProductUseCase;
     private final UpdateProductEligibilityUseCase updateProductEligibilityUseCase;
+    private final PublishProductUseCase publishProductUseCase;
     private final DeleteProductUseCase deleteProductUseCase;
     private final GetProductUseCase getProductUseCase;
     private final CountSellerProductsUseCase countSellerProductsUseCase;
@@ -43,11 +45,13 @@ public class ProductController {
 
     public ProductController(CreateProductUseCase createProductUseCase, UpdateProductUseCase updateProductUseCase,
             UpdateProductEligibilityUseCase updateProductEligibilityUseCase,
+            PublishProductUseCase publishProductUseCase,
             DeleteProductUseCase deleteProductUseCase, GetProductUseCase getProductUseCase,
             CountSellerProductsUseCase countSellerProductsUseCase, GetCategoriesUseCase getCategoriesUseCase) {
         this.createProductUseCase = createProductUseCase;
         this.updateProductUseCase = updateProductUseCase;
         this.updateProductEligibilityUseCase = updateProductEligibilityUseCase;
+        this.publishProductUseCase = publishProductUseCase;
         this.deleteProductUseCase = deleteProductUseCase;
         this.getProductUseCase = getProductUseCase;
         this.countSellerProductsUseCase = countSellerProductsUseCase;
@@ -117,7 +121,13 @@ public class ProductController {
 
     @GetMapping("/products/{id}")
     public ApiResponse<ProductResponse> findProduct(@PathVariable UUID id) {
-        return ApiResponse.ok(getProductUseCase.findById(id));
+        return ApiResponse.ok(getProductUseCase.findPublicById(id));
+    }
+
+    @PutMapping("/sellers/me/products/{id}/publish")
+    @PreAuthorize("hasRole('SELLER') or hasRole('ADMIN')")
+    public ApiResponse<ProductResponse> publish(@PathVariable UUID id) {
+        return ApiResponse.ok(publishProductUseCase.publish(JwtPrincipalUtil.currentSellerId(), id));
     }
 
     @GetMapping("/categories")

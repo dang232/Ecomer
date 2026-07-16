@@ -2,29 +2,51 @@ package com.vnshop.productservice.infrastructure.event;
 
 import com.vnshop.productservice.domain.ProductEvent;
 import com.vnshop.productservice.domain.port.out.ProductEventPublisherPort;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.concurrent.CompletableFuture;
+import org.springframework.kafka.support.SendResult;
+
 @Service
 public class ProductEventPublisher implements ProductEventPublisherPort {
     private static final Logger LOGGER = LoggerFactory.getLogger(ProductEventPublisher.class);
     private static final String TOPIC = "product-events";
+    private static final String ALERT_MARKER = "[PRODUCT-EVENT-PUBLISH-FAILED]";
 
     private final KafkaTemplate<String, ProductEvent> kafkaTemplate;
+    private final Counter publishFailureCounter;
 
-    public ProductEventPublisher(KafkaTemplate<String, ProductEvent> kafkaTemplate) {
+    public ProductEventPublisher(KafkaTemplate<String, ProductEvent> kafkaTemplate, MeterRegistry meterRegistry) {
         this.kafkaTemplate = kafkaTemplate;
+        this.publishFailureCounter = Counter.builder("product.event.publish.failed")
+                .description("Count of product events that failed to publish to Kafka")
+                .register(meterRegistry);
     }
 
     @Override
     public void publish(ProductEvent event) {
         LOGGER.info("Publishing product event {} for product {}", event.eventType(), event.productId());
         try {
-            kafkaTemplate.send(TOPIC, event.productId(), event);
+            CompletableFuture<SendResult<String, ProductEvent>> send =
+                    kafkaTemplate.send(TOPIC, event.productId(), event);
+            send.whenComplete((result, error) -> {
+                if (error != null) {
+                    recordFailure(event, error);
+                }
+            });
         } catch (RuntimeException exception) {
-            LOGGER.warn("Product event logged but Kafka publish failed for product {}", event.productId(), exception);
+            recordFailure(event, exception);
         }
+    }
+
+    private void recordFailure(ProductEvent event, Throwable error) {
+        publishFailureCounter.increment();
+        LOGGER.error("{} productId={} eventType={} error={}",
+                ALERT_MARKER, event.productId(), event.eventType(), error.getMessage(), error);
     }
 }
