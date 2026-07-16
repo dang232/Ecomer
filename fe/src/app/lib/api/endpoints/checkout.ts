@@ -27,10 +27,17 @@ export const calculateCheckout = (body: CheckoutCalculateInput) =>
 export const paymentMethods = () =>
   api.get("/checkout/payment-methods", z.array(paymentMethodSchema));
 
-export const shippingOptions = (body: {
-  items: { productId: string; quantity: number }[];
-  addressId?: number;
-}) => api.post("/checkout/shipping-options", z.array(shippingOptionSchema), body);
+export interface ShippingOptionsRequest {
+  address: {
+    street: string;
+    ward?: string;
+    district: string;
+    city: string;
+  };
+}
+
+export const shippingOptions = (body: ShippingOptionsRequest) =>
+  api.post("/checkout/shipping-options", z.array(shippingOptionSchema), body);
 
 export const validateCoupon = (body: { code: string; subtotal?: number }) =>
   api.post("/checkout/validate-coupon", validateCouponResponseSchema, body);

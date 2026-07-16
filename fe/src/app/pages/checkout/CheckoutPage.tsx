@@ -47,16 +47,6 @@ export function CheckoutPage() {
   });
   const addresses: Address[] = profileQuery.data?.addresses ?? [];
 
-  const shippingQuery = useQuery({
-    queryKey: ["checkout", "shipping-options", cartItems.map((i) => i.productId).join(",")],
-    queryFn: () =>
-      fetchShippingOptions({
-        items: cartItems.map((i) => ({ productId: i.productId, quantity: i.quantity })),
-      }),
-    enabled: cartItems.length > 0,
-    retry: false,
-  });
-
   const paymentQuery = useQuery({
     queryKey: ["checkout", "payment-methods"],
     queryFn: fetchPaymentMethods,
@@ -162,6 +152,35 @@ export function CheckoutPage() {
   const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
 
   const selectedAddress = addresses[selectedAddressIndex];
+  const shippingAddress =
+    selectedAddress?.street && selectedAddress.district && selectedAddress.city
+      ? {
+          street: selectedAddress.street,
+          ward: selectedAddress.ward ?? undefined,
+          district: selectedAddress.district,
+          city: selectedAddress.city,
+        }
+      : undefined;
+
+  const shippingQuery = useQuery({
+    queryKey: [
+      "checkout",
+      "shipping-options",
+      shippingAddress?.street,
+      shippingAddress?.ward,
+      shippingAddress?.district,
+      shippingAddress?.city,
+    ],
+    queryFn: () => {
+      if (!shippingAddress) {
+        throw new Error("A delivery address is required before loading shipping options");
+      }
+      return fetchShippingOptions({ address: shippingAddress });
+    },
+    enabled: cartItems.length > 0 && Boolean(shippingAddress),
+    retry: false,
+  });
+
   const ratesQuery = useQuery({
     queryKey: [
       "checkout",
