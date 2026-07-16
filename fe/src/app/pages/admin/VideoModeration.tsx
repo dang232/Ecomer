@@ -84,13 +84,11 @@ function VideoPreviewModal({
       aria-label={t("admin.videoModeration.previewTitle")}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.75)" }}
-
       onClick={onClose}
       onKeyDown={(e) => e.key === "Escape" && onClose()}
     >
       <div
         className="bg-card rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden"
-
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">

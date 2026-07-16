@@ -242,7 +242,8 @@ export function ProductPage() {
 
   // ── Video-first gallery with discriminated union ──
   type GalleryItem =
-    { type: "image"; url: string } | { type: "video"; playbackUrl: string; thumbnailUrl: string };
+    | { type: "image"; url: string }
+    | { type: "video"; playbackUrl: string; thumbnailUrl: string };
 
   const {
     videos: productVideos,

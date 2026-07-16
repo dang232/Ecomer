@@ -14,7 +14,12 @@
 
 /** UI-facing order status. Multiple backend strings collapse to one of these. */
 export type OrderStatusUi =
-  "pending" | "confirmed" | "shipping" | "delivered" | "cancelled" | "returned";
+  | "pending"
+  | "confirmed"
+  | "shipping"
+  | "delivered"
+  | "cancelled"
+  | "returned";
 
 /**
  * Map any backend order status string to one of the known UI values. Unknown
