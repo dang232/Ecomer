@@ -4,13 +4,11 @@ import {
   ChevronRight,
   Search,
   SlidersHorizontal,
-  Star,
   X,
 } from "lucide-react";
-import { motion } from "motion/react";
-import { useState, useMemo, useEffect, memo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useSearchParams } from "react-router";
+import { useSearchParams } from "react-router";
 
 import { SearchFilters } from "../../features/catalog/components/search-filters";
 import {
@@ -28,130 +26,19 @@ import { Button } from "../../shared/ui/button";
 import { Dialog } from "../../shared/ui/dialog";
 import { Skeleton } from "../../shared/ui/skeleton";
 import { Surface } from "../../shared/ui/surface";
-import { ImageWithFallback } from "../components/image-with-fallback";
-import { useVNShop } from "../components/vnshop-context";
+import { ProductCard } from "../components/product-card";
 import { categoryDisplayLabel, useCategories } from "../hooks/use-categories";
 import { useProducts } from "../hooks/use-products";
 import { useSearch } from "../hooks/use-search";
 import { useSearchFacets } from "../hooks/use-search-facets";
 import { flattenCategoryTree } from "../lib/api/endpoints/categories";
-import { formatPrice } from "../lib/format";
 import {
   requiresBackendSearch,
   validatePriceRange,
   type PriceRangeError,
 } from "../lib/search-view";
-import type { Product } from "../types/ui";
 
 const getScrollKey = () => `scroll:${window.location.pathname}${window.location.search}`;
-
-const ProductCard = memo(function ProductCard({
-  product,
-  index,
-}: {
-  product: Product;
-  index: number;
-}) {
-  const navigate = useNavigate();
-  const { t } = useTranslation();
-  const { toggleWishlist, isWishlisted } = useVNShop();
-  const [hovered, setHovered] = useState(false);
-  const loved = isWishlisted(product.id);
-
-  const handleNav = () => {
-    sessionStorage.setItem(getScrollKey(), String(window.scrollY));
-    void navigate(`/product/${product.id}`);
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: Math.min(index * 0.04, 0.5) }}
-      role="link"
-      tabIndex={0}
-      aria-label={product.name}
-      className="bg-card border border-border rounded-[var(--radius-lg)] overflow-hidden cursor-pointer hover:border-border-hover hover:shadow-lg hover:-translate-y-1 transition-all group"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onClick={handleNav}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          handleNav();
-        }
-      }}
-    >
-      {/* Image area */}
-      <div className="relative aspect-square bg-surface-elevated overflow-hidden flex items-center justify-center">
-        <ImageWithFallback
-          src={product.image}
-          alt={product.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-        />
-
-        {/* Badge top-left */}
-        {product.discount ? (
-          <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-error text-white text-[10px] font-bold">
-            -{product.discount}%
-          </span>
-        ) : product.badge === "new" ? (
-          <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold">
-            New
-          </span>
-        ) : null}
-
-        {/* Wishlist top-right */}
-        <button
-          aria-label={loved ? "Remove from wishlist" : "Add to wishlist"}
-          className={`absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center shadow transition-all ${
-            hovered || loved ? "opacity-100" : "opacity-0"
-          } ${loved ? "bg-error text-white" : "bg-card/90 text-muted-foreground hover:bg-error hover:text-white"}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleWishlist(product.id);
-          }}
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill={loved ? "currentColor" : "none"}
-            stroke="currentColor"
-            strokeWidth="2.5"
-          >
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-          </svg>
-        </button>
-      </div>
-
-      {/* Body */}
-      <div className="p-3">
-        <h3 className="text-sm font-medium text-foreground line-clamp-2 mb-1.5">{product.name}</h3>
-        <div className="flex items-center gap-1 mb-1.5">
-          <Star size={11} fill="var(--warning)" className="text-amber-400 shrink-0" />
-          <span className="text-xs text-foreground">{product.rating}</span>
-          <span className="text-xs text-muted-foreground">·</span>
-          <span className="text-xs text-muted-foreground">
-            {(() => {
-              const s: number = product.sold ?? 0;
-              const formatted = s > 999 ? `${(s / 1000).toFixed(1)}k` : `${s}`;
-              return t("product.soldCountShort", { count: formatted });
-            })()}
-          </span>
-        </div>
-        <div className="flex items-end gap-1.5">
-          <p className="text-sm font-bold text-primary">{formatPrice(product.price)}</p>
-          {product.originalPrice ? (
-            <p className="text-[11px] text-muted-foreground line-through">
-              {formatPrice(product.originalPrice)}
-            </p>
-          ) : null}
-        </div>
-      </div>
-    </motion.div>
-  );
-});
 
 const PAGE_SIZE = 20;
 const PRODUCT_SKELETON_IDS = Array.from({ length: 8 }, (_, index) => `product-skeleton-${index}`);
@@ -427,7 +314,7 @@ export function SearchPage() {
   }
   if (appliedPriceMin || appliedPriceMax) {
     activeFilters.push({
-      label: `${appliedPriceMin ? `${appliedPriceMin}k` : "0"} – ${appliedPriceMax ? `${appliedPriceMax}k` : "∞"}`,
+      label: `${appliedPriceMin ? `${appliedPriceMin}k` : "0"} â€“ ${appliedPriceMax ? `${appliedPriceMax}k` : "âˆž"}`,
       onRemove: () => setPriceFromUrl("", ""),
     });
   }
@@ -561,7 +448,7 @@ export function SearchPage() {
           </Surface>
         </aside>
 
-        {/* ── Results Area ── */}
+        {/* â”€â”€ Results Area â”€â”€ */}
         <div className="min-w-0">
           {activeFilters.length > 0 ? (
             <div
@@ -593,7 +480,7 @@ export function SearchPage() {
               className="min-w-0 text-sm text-muted-foreground"
             >
               {displayState.status === "loading"
-                ? t("search.loading", { defaultValue: "Loading products…" })
+                ? t("search.loading", { defaultValue: "Loading productsâ€¦" })
                 : displayState.status === "error"
                   ? t("search.resultsUnavailable", { defaultValue: "Results unavailable" })
                   : query && totalCount > 0
@@ -603,7 +490,7 @@ export function SearchPage() {
                         total: totalCount,
                         query,
                         defaultValue:
-                          "Showing {{start}}–{{end}} of {{total}} results for '{{query}}'",
+                          "Showing {{start}}â€“{{end}} of {{total}} results for '{{query}}'",
                       })
                     : query
                       ? t("search.noResultsFor", {
@@ -718,7 +605,14 @@ export function SearchPage() {
           >
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-[repeat(auto-fill,minmax(200px,1fr))]">
               {paginated.map((product, index) => (
-                <ProductCard key={product.id} product={product} index={index} />
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  index={index}
+                  onNavigate={() => {
+                    sessionStorage.setItem(getScrollKey(), String(window.scrollY));
+                  }}
+                />
               ))}
             </div>
           </AsyncState>
@@ -741,7 +635,7 @@ export function SearchPage() {
                     key={`ellipsis-${idx}`} // eslint-disable-line react/no-array-index-key
                     className="w-9 h-9 flex items-center justify-center text-sm text-muted-foreground"
                   >
-                    …
+                    â€¦
                   </span>
                 ) : (
                   <button

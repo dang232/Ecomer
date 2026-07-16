@@ -1302,8 +1302,10 @@
       "return": "Return",
       "review": "Review",
       "cancel": "Cancel",
-      "chat": "Chat"
+      "chat": "Chat",
+      "viewDetails": "View order"
     },
+    "viewProduct": "View {{name}}",
     "tabs": {
       "all": "All",
       "pending": "Pending",
@@ -1369,6 +1371,7 @@
       "createdAt": "Placed on {{date}}",
       "items": "Items",
       "quantity": "Quantity: {{count}}",
+      "unitPrice": "Unit price:",
       "productFallback": "Product",
       "noItems": "Product information is still being updated.",
       "deliveryAddress": "Delivery address",
@@ -1469,6 +1472,19 @@
     "reload": "Reload page",
     "retry": "Try again",
     "retrying": "Retrying…"
+  },
+  "productCard": {
+    "reviewsCount": "{{count}} reviews",
+    "addToWishlist": "Add {{name}} to wishlist",
+    "removeFromWishlist": "Remove {{name}} from wishlist"
+  },
+  "routeError": {
+    "title": "Something went wrong",
+    "chunkTitle": "A newer version is ready",
+    "description": "We could not load this page. Please try again or return to the storefront.",
+    "chunkDescription": "This page was using an older app version. We are refreshing it now so the latest product and catalog code can load.",
+    "reload": "Reload page",
+    "home": "Back to home"
   },
   "context": {
     "loginToAddCart": "Please log in to add items to your cart",

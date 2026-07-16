@@ -10,6 +10,7 @@ import { sellerDetailOptions, sellerProductsOptions } from "./hooks/use-sellers"
 import { RequireAuth, RequireRole } from "./lib/auth/role-guard";
 import { queryClient } from "./lib/query-client";
 import { Root } from "./pages/Root";
+import { RouteErrorPage } from "./pages/RouteErrorPage";
 
 const HomePage = lazy(() => import("./pages/HomePage").then((m) => ({ default: m.HomePage })));
 const LoginPage = lazy(() => import("./pages/LoginPage").then((m) => ({ default: m.LoginPage })));
@@ -103,6 +104,7 @@ export const router = createBrowserRouter([
   {
     path: "/",
     Component: Root,
+    errorElement: createElement(RouteErrorPage),
     children: [
       { index: true, element: lazyRoute(createElement(HomePage)) },
       { path: "search", element: suspenseWithBoundary(createElement(SearchPage)) },

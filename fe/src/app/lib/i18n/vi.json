@@ -1293,10 +1293,12 @@
     "empty": "Không có đơn hàng nào",
     "orderId": "Mã đơn:",
     "orderNumber": "Đơn {{id}}",
+    "viewProduct": "Xem {{name}}",
     "itemCountSummary": "{{count}} sản phẩm",
     "loadingItems": "Đang tải chi tiết sản phẩm...",
     "totalLabel": "Tổng:",
     "actions": {
+      "viewDetails": "Xem đơn hàng",
       "track": "Theo dõi đơn hàng",
       "reorder": "Mua lại",
       "return": "Trả hàng",
@@ -1368,6 +1370,7 @@
       "orderNumber": "Đơn hàng",
       "createdAt": "Đặt ngày {{date}}",
       "items": "Sản phẩm",
+      "unitPrice": "Đơn giá:",
       "quantity": "Số lượng: {{count}}",
       "productFallback": "Sản phẩm",
       "noItems": "Thông tin sản phẩm đang được cập nhật.",
@@ -1469,6 +1472,19 @@
     "reload": "Tải lại trang",
     "retry": "Thử lại",
     "retrying": "Đang thử lại…"
+  },
+  "productCard": {
+    "reviewsCount": "{{count}} đánh giá",
+    "addToWishlist": "Thêm {{name}} vào yêu thích",
+    "removeFromWishlist": "Xóa {{name}} khỏi yêu thích"
+  },
+  "routeError": {
+    "title": "Có lỗi xảy ra",
+    "chunkTitle": "Đã có phiên bản mới",
+    "description": "Không thể tải trang này. Hãy thử lại hoặc quay về trang mua sắm.",
+    "chunkDescription": "Trang này đang dùng phiên bản cũ. Hệ thống đang tải lại để hiển thị danh mục và chi tiết sản phẩm mới nhất.",
+    "reload": "Tải lại trang",
+    "home": "Về trang chủ"
   },
   "context": {
     "loginToAddCart": "Vui lòng đăng nhập để thêm vào giỏ hàng",

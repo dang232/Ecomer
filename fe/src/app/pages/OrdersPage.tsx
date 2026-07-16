@@ -7,8 +7,8 @@ import {
   IconRefresh,
   IconMapPin,
   IconMessage,
-  IconStar,
   IconRotate,
+  IconStar,
   IconAlertCircle,
   IconLogin,
   IconArrowsLeftRight,
@@ -17,7 +17,7 @@ import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tansta
 import { motion } from "motion/react";
 import { useCallback, useMemo, useRef, useState, memo } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 
 import { ImageWithFallback } from "../components/image-with-fallback";
@@ -25,7 +25,7 @@ import { ConfirmDialog } from "../components/ui/confirm-dialog";
 import { Modal } from "../components/ui/modal";
 import { useAuth } from "../hooks/use-auth";
 import { useCart } from "../hooks/use-cart";
-import { useCancelOrder, myOrdersOptions } from "../hooks/use-orders";
+import { useCancelOrder, myOrdersOptions, orderDetailOptions } from "../hooks/use-orders";
 import { ApiError } from "../lib/api";
 import { requestReturn } from "../lib/api/endpoints/orders";
 import { getTracking } from "../lib/api/endpoints/shipping";
@@ -386,6 +386,9 @@ const OrderCard = memo(function OrderCard({
   const qc = useQueryClient();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const detailQuery = useQuery(orderDetailOptions(order.id));
+  const detailedOrder = detailQuery.data ? fromServer(detailQuery.data) : null;
+  const displayItems = detailedOrder?.items ?? order.items;
   const [showTracking, setShowTracking] = useState(false);
   const [showReturn, setShowReturn] = useState(false);
   const [cancelId, setCancelId] = useState<string | null>(null);
@@ -436,15 +439,21 @@ const OrderCard = memo(function OrderCard({
       >
         {/* Top row: order ID + date | status pill */}
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <span className="text-[13px] font-semibold text-foreground">
-              {t("orders.orderNumber", { defaultValue: "Order" })} #
-              {order.id.slice(0, 8).toUpperCase()}
-            </span>
+          <div className="flex min-w-0 items-center gap-2">
+            <Link
+              to={`/orders/${order.id}`}
+              className="min-w-0 rounded text-[13px] font-semibold text-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <span>{t("orders.orderId")}</span>{" "}
+              <span className="font-mono">#{order.id.slice(0, 8).toUpperCase()}</span>
+            </Link>
             {order.date ? (
-              <span className="text-xs text-muted-foreground">
-                {new Date(order.date).toLocaleDateString()}
-              </span>
+              <>
+                <span aria-hidden="true">/</span>
+                <span className="text-xs text-muted-foreground">
+                  {new Date(order.date).toLocaleDateString()}
+                </span>
+              </>
             ) : null}
           </div>
           <div
@@ -459,27 +468,48 @@ const OrderCard = memo(function OrderCard({
         </div>
 
         {/* Items */}
-        {order.items.length === 0 && order.itemCount && order.itemCount > 0 ? (
+        {displayItems.length === 0 && order.itemCount && order.itemCount > 0 ? (
           <p className="text-sm text-muted-foreground italic mb-3">
-            {t("orders.itemCountSummary", {
-              count: order.itemCount,
-              defaultValue: `${order.itemCount} sản phẩm`,
-            })}
+            {detailQuery.isLoading
+              ? t("orders.loadingItems")
+              : t("orders.itemCountSummary", {
+                  count: order.itemCount,
+                  defaultValue: `${order.itemCount} sản phẩm`,
+                })}
           </p>
         ) : null}
-        {order.items.map((item) => (
+        {displayItems.map((item) => (
           <div
             key={`${item.productId}-${item.variant ?? ""}`}
             className="flex items-center gap-3 mb-3"
           >
-            <ImageWithFallback
-              src={item.image ?? ""}
-              alt={item.name}
-              className="w-14 h-14 rounded-[var(--radius-md)] object-cover border border-border flex-shrink-0"
-            />
+            <Link
+              to={`/product/${item.productId}`}
+              aria-label={t("orders.viewProduct", { name: item.name })}
+              className="shrink-0 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <ImageWithFallback
+                src={item.image ?? ""}
+                alt={item.name}
+                className="w-14 h-14 rounded-[var(--radius-md)] object-cover border border-border"
+              />
+            </Link>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground line-clamp-2">{item.name}</p>
-              <span className="text-xs text-muted-foreground">x{item.quantity}</span>
+              <Link
+                to={`/product/${item.productId}`}
+                className="block rounded text-sm font-medium text-foreground line-clamp-2 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {item.name}
+              </Link>
+              <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
+                <span>x{item.quantity}</span>
+                {item.price ? (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <span>{formatPrice(item.price)}</span>
+                  </>
+                ) : null}
+              </div>
             </div>
           </div>
         ))}
@@ -487,7 +517,13 @@ const OrderCard = memo(function OrderCard({
         {/* Bottom row: total + actions */}
         <div className="flex items-center justify-between pt-3 border-t border-border">
           <span className="text-[15px] font-bold text-primary">{formatPrice(order.total)}</span>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
+            <Link
+              to={`/orders/${order.id}`}
+              className="inline-flex items-center rounded-[var(--radius-md)] border border-border px-3.5 py-1.5 text-xs font-medium text-text-secondary hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {t("orders.actions.viewDetails")}
+            </Link>
             {order.status === "shipping" ? (
               <button
                 ref={trackingBtnRef}
@@ -500,7 +536,7 @@ const OrderCard = memo(function OrderCard({
             {order.status === "delivered" ? (
               <>
                 <button
-                  onClick={() => onReorder(order.items)}
+                  onClick={() => onReorder(displayItems)}
                   className="px-3.5 py-1.5 rounded-[var(--radius-md)] text-xs font-medium border border-border text-text-secondary hover:bg-muted flex items-center gap-1.5"
                 >
                   <IconRefresh size={13} /> {t("orders.actions.reorder")}
@@ -514,7 +550,7 @@ const OrderCard = memo(function OrderCard({
                 </button>
                 <button
                   onClick={() => {
-                    const firstProduct = order.items[0]?.productId;
+                    const firstProduct = displayItems[0]?.productId;
                     if (firstProduct) onReview(firstProduct);
                     else toast.info(t("orders.noReviewableProduct"));
                   }}

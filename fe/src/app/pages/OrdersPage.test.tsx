@@ -43,6 +43,11 @@ vi.mock("../hooks/use-orders", () => ({
     queryKey: ["orders"],
     queryFn: () => Promise.resolve(ordersData),
   })),
+  orderDetailOptions: vi.fn((id: string) => ({
+    queryKey: ["orders", "detail", id],
+    queryFn: () => Promise.resolve(undefined),
+    enabled: true,
+  })),
 }));
 
 vi.mock("../hooks/use-cart", () => ({

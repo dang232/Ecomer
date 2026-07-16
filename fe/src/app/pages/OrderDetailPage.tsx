@@ -1,6 +1,6 @@
 import { ArrowLeft, CreditCard, MapPin, Package, RefreshCw, Truck } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 
 import { ImageWithFallback } from "../components/image-with-fallback";
 import { useAuth } from "../hooks/use-auth";
@@ -160,17 +160,31 @@ export function OrderDetailPage() {
                     key={`${subOrderId}-${item.productId}-${item.variantId ?? ""}`}
                     className="flex gap-3 py-3 first:pt-0 last:pb-0"
                   >
-                    <ImageWithFallback
-                      src={item.image ?? ""}
-                      alt={item.name ?? t("orders.detail.productFallback")}
-                      className="h-16 w-16 shrink-0 rounded-[var(--radius-md)] border border-border object-cover"
-                    />
+                    <Link
+                      to={`/product/${item.productId}`}
+                      aria-label={t("orders.viewProduct", {
+                        name: item.name ?? t("orders.detail.productFallback"),
+                      })}
+                      className="shrink-0 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <ImageWithFallback
+                        src={item.image ?? ""}
+                        alt={item.name ?? t("orders.detail.productFallback")}
+                        className="h-16 w-16 rounded-[var(--radius-md)] border border-border object-cover"
+                      />
+                    </Link>
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-foreground break-words">
+                      <Link
+                        to={`/product/${item.productId}`}
+                        className="block rounded font-medium text-foreground break-words hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
                         {item.name ?? t("orders.detail.productFallback")}
-                      </p>
+                      </Link>
                       <p className="mt-1 text-sm text-muted-foreground">
                         {t("orders.detail.quantity", { count: item.quantity })}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {t("orders.detail.unitPrice")} {formatPrice(item.price)}
                       </p>
                     </div>
                     <p className="shrink-0 text-sm font-semibold text-foreground">

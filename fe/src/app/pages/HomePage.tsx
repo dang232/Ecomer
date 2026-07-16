@@ -1,13 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   ChevronRight,
-  Star,
   Zap,
   Truck,
   ShieldCheck,
   BadgeCheck,
   Lock,
-  Heart,
   ArrowRight,
   Sparkles,
   Smartphone,
@@ -22,8 +20,8 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import { ImageWithFallback } from "../components/image-with-fallback";
+import { ProductCard } from "../components/product-card";
 import { RecentlyViewedGrid } from "../components/RecentlyViewedGrid";
-import { useVNShop } from "../components/vnshop-context";
 import { categoryDisplayLabel, useCategories } from "../hooks/use-categories";
 import { useCountdown } from "../hooks/use-countdown";
 import { useFlashSaleWithProducts } from "../hooks/use-flash-sale";
@@ -32,7 +30,7 @@ import { useRecentlyViewed } from "../hooks/use-recently-viewed";
 import { formatPrice } from "../lib/format";
 import type { Product } from "../types/ui";
 
-// ─── Section Header ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Section Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const SectionHeader = memo(function SectionHeader({
   title,
   ctaLabel,
@@ -63,103 +61,7 @@ const SectionHeader = memo(function SectionHeader({
   );
 });
 
-// ─── Product Card ─────────────────────────────────────────────────────────────
-const ProductCard = memo(function ProductCard({
-  product,
-  index = 0,
-}: {
-  product: Product;
-  index?: number;
-}) {
-  const { t } = useTranslation();
-  const { toggleWishlist, isWishlisted } = useVNShop();
-  const loved = isWishlisted(product.id);
-
-  return (
-    <Link
-      to={`/product/${product.id}`}
-      className="block"
-      aria-label={product.name}
-      data-testid="product-card"
-    >
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: Math.min(index * 0.05, 0.4), duration: 0.3 }}
-        className="group bg-card border border-border rounded-[var(--radius-lg)] overflow-hidden cursor-pointer transition-all duration-[var(--duration-base)] hover:border-border-hover hover:shadow-lg hover:-translate-y-1"
-      >
-        {/* Image */}
-        <div className="relative aspect-square bg-surface-elevated overflow-hidden flex items-center justify-center">
-          <ImageWithFallback
-            src={product.image}
-            alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[var(--duration-base)]"
-          />
-          {/* Badge */}
-          {product.discount ? (
-            <span className="absolute top-2 left-2 px-2 py-0.5 rounded-[var(--radius-sm)] bg-error text-white text-[11px] font-semibold">
-              -{product.discount}%
-            </span>
-          ) : product.badge === "new" ? (
-            <span className="absolute top-2 left-2 px-2 py-0.5 rounded-[var(--radius-sm)] bg-primary text-white text-[11px] font-semibold">
-              New
-            </span>
-          ) : null}
-          {/* Wishlist */}
-          <button
-            className={`absolute top-2 right-2 w-8 h-8 rounded-full border flex items-center justify-center opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 scale-80 group-hover:scale-100 [@media(hover:none)]:scale-100 transition-all duration-[var(--duration-base)] ${
-              loved
-                ? "bg-error-light border-error text-error"
-                : "bg-card border-border text-muted-foreground hover:text-error hover:border-error hover:bg-error-light"
-            }`}
-            aria-label={loved ? "Remove from wishlist" : "Add to wishlist"}
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleWishlist(product.id);
-            }}
-          >
-            <Heart className="w-4 h-4" fill={loved ? "currentColor" : "none"} aria-hidden="true" />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="p-3">
-          <h3 className="text-sm font-medium text-foreground leading-snug line-clamp-2 mb-1.5 min-h-[2.5rem]">
-            {product.name}
-          </h3>
-          <div className="flex items-baseline gap-1.5 flex-wrap mb-1.5">
-            <span className="text-[var(--text-base)] font-bold text-primary">
-              {formatPrice(product.price)}
-            </span>
-            {product.originalPrice ? (
-              <span className="text-xs text-muted-foreground line-through">
-                {formatPrice(product.originalPrice)}
-              </span>
-            ) : null}
-            {product.discount ? (
-              <span className="text-[11px] font-semibold text-error bg-error-light px-1.5 py-0.5 rounded">
-                -{product.discount}%
-              </span>
-            ) : null}
-          </div>
-          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <Star className="w-3 h-3 text-accent fill-accent" aria-hidden="true" />
-              <span className="text-foreground font-medium">{product.rating}</span>
-            </div>
-            <span>·</span>
-            <span>
-              {product.sold >= 1000 ? `${(product.sold / 1000).toFixed(1)}k` : product.sold}{" "}
-              {t("product.sold")}
-            </span>
-          </div>
-        </div>
-      </motion.div>
-    </Link>
-  );
-});
-
-// ─── Product Card Skeleton ────────────────────────────────────────────────────
+// â”€â”€â”€ Product Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function ProductCardSkeleton() {
   return (
     <div className="rounded-[var(--radius-lg)] overflow-hidden bg-card border border-border">
@@ -173,7 +75,7 @@ function ProductCardSkeleton() {
   );
 }
 
-// ─── Hero Section ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Hero Section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function HeroSection() {
   const { t } = useTranslation();
 
@@ -196,7 +98,7 @@ function HeroSection() {
         <p className="text-[var(--text-base)] text-white/[0.78] leading-relaxed mb-6 max-w-md">
           {t("home.hero.subtitle", {
             defaultValue:
-              "Thousands of deals across all categories. Electronics, fashion, software — everything ships free over ₫500,000.",
+              "Thousands of deals across all categories. Electronics, fashion, software â€” everything ships free over â‚«500,000.",
           })}
         </p>
         <Link
@@ -214,7 +116,7 @@ function HeroSection() {
   );
 }
 
-// ─── Category icon map ────────────────────────────────────────────────────────
+// â”€â”€â”€ Category icon map â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const CATEGORY_ICONS: Record<string, React.ElementType> = {
   electronics: Smartphone,
   fashion: Shirt,
@@ -232,7 +134,7 @@ function getCategoryIcon(slug: string): React.ElementType {
   return Sparkles;
 }
 
-// ─── Categories Grid ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Categories Grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function CategoriesSection() {
   const { t } = useTranslation();
   const { data: categories = [], isLoading } = useCategories();
@@ -278,7 +180,7 @@ function CategoriesSection() {
   );
 }
 
-// ─── Flash Sale ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Flash Sale â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function pctOff(originalPrice: number, salePrice: number): number {
   if (originalPrice <= 0 || salePrice >= originalPrice) return 0;
   return Math.round(((originalPrice - salePrice) / originalPrice) * 100);
@@ -411,7 +313,7 @@ function FlashSaleSection() {
   );
 }
 
-// ─── Trust Bar ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Trust Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Static configuration outside component to avoid recreation on every render
 const TRUST_ITEMS_CONFIG = [
   { icon: Truck, titleKey: "trust.freeShipping", subKey: "trust.freeShippingSub" },
@@ -453,7 +355,7 @@ function TrustBar() {
   );
 }
 
-// ─── Products Section ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Products Section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function ProductsSection() {
   const { t } = useTranslation();
   const {
@@ -496,7 +398,7 @@ function ProductsSection() {
   );
 }
 
-// ─── Seller Showcase Section ──────────────────────────────────────────────────
+// â”€â”€â”€ Seller Showcase Section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function SellerShowcaseSection() {
   const { t } = useTranslation();
   const { data: sellers = [], isLoading } = useQuery({
@@ -568,7 +470,7 @@ function SellerShowcaseSection() {
   );
 }
 
-// ─── Homepage ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Homepage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function HomePage() {
   const { t } = useTranslation();
   const { items: recentlyViewed } = useRecentlyViewed();
@@ -578,7 +480,7 @@ export function HomePage() {
       {/* Hero */}
       <HeroSection />
 
-      {/* Flash Sale — full-bleed with own horizontal margins */}
+      {/* Flash Sale â€” full-bleed with own horizontal margins */}
       <div className="max-w-[var(--content-max)] mx-auto mt-8">
         <FlashSaleSection />
       </div>
@@ -602,7 +504,7 @@ export function HomePage() {
         <SellerShowcaseSection />
       </div>
 
-      {/* Trust Bar — full-bleed with own horizontal margins */}
+      {/* Trust Bar â€” full-bleed with own horizontal margins */}
       <div className="max-w-[var(--content-max)] mx-auto">
         <TrustBar />
       </div>
