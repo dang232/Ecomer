@@ -19,9 +19,16 @@ final class ProductEventPayload {
         putIfNotNull(payload, "brand", product.brand());
         payload.put("status", product.status().name());
         payload.put("variantCount", product.variants().size());
+        payload.put("stock", product.variants().stream()
+                .mapToInt(variant -> variant.stockQuantity())
+                .sum());
         payload.put("sameDayDelivery", product.sameDayDelivery());
         payload.put("verified", product.verified());
         payload.put("isOfficial", product.isOfficial());
+
+        product.images().stream()
+                .min((left, right) -> Integer.compare(left.sortOrder(), right.sortOrder()))
+                .ifPresent(image -> payload.put("imageUrl", image.url()));
 
         product.variants().stream()
                 .map(variant -> variant.price().amount())

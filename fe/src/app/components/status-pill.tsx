@@ -37,12 +37,7 @@ function inferTone(status: string): StatusTone {
   ) {
     return "success";
   }
-  if (
-    s.includes("FAIL") ||
-    s.includes("REJECT") ||
-    s.includes("CANCEL") ||
-    s.includes("REFUND")
-  ) {
+  if (s.includes("FAIL") || s.includes("REJECT") || s.includes("CANCEL") || s.includes("REFUND")) {
     return "danger";
   }
   if (s.includes("PENDING") || s.includes("PACK") || s.includes("IN_PROGRESS")) {
@@ -66,10 +61,7 @@ export function StatusPill({
   size?: "xs" | "sm";
 }) {
   const resolved = TONE_PALETTE[tone ?? inferTone(status)];
-  const sizeClass =
-    size === "xs"
-      ? "px-2 py-0.5 text-[10px]"
-      : "px-2.5 py-1 text-xs";
+  const sizeClass = size === "xs" ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-xs";
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full font-semibold ${sizeClass}`}

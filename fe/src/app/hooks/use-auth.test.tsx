@@ -183,13 +183,15 @@ describe("useAuth + useHasRole", () => {
 
       await waitFor(() => expect(result.current.ready).toBe(true));
 
+      let roles: string[] = [];
       await act(async () => {
-        await result.current.loginWithCredentials("alice@test.com", "Secret123");
+        roles = await result.current.loginWithCredentials("alice@test.com", "Secret123");
       });
 
       expect(passwordLoginMock).toHaveBeenCalledWith("alice@test.com", "Secret123");
       expect(result.current.authenticated).toBe(true);
       expect(result.current.token).toBe("login-token-xyz");
+      expect(roles).toEqual(["BUYER", "SELLER"]);
     });
 
     it("B2. propagates passwordLogin errors and leaves state unchanged", async () => {

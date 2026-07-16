@@ -1,4 +1,4 @@
-﻿import { RouterProvider } from "react-router";
+import { RouterProvider } from "react-router";
 import { Toaster } from "sonner";
 
 import { ErrorBoundary } from "./components/error-boundary";
@@ -33,10 +33,14 @@ export default function App() {
             style: { fontFamily: "'Be Vietnam Pro', sans-serif" },
             classNames: {
               info: "!bg-white dark:!bg-[#0F3460] !text-foreground !border-[#EE4D2D]/20",
-              success: "!bg-white dark:!bg-[#0F3460] !text-foreground !border-green-200 dark:!border-green-800",
-              error: "!bg-white dark:!bg-[#0F3460] !text-foreground !border-red-200 dark:!border-red-800",
-              warning: "!bg-white dark:!bg-[#0F3460] !text-foreground !border-amber-200 dark:!border-amber-800",
-              actionButton: "!bg-[#EE4D2D] !text-white !rounded-lg !font-semibold !text-xs !px-3 !py-1.5",
+              success:
+                "!bg-white dark:!bg-[#0F3460] !text-foreground !border-green-200 dark:!border-green-800",
+              error:
+                "!bg-white dark:!bg-[#0F3460] !text-foreground !border-red-200 dark:!border-red-800",
+              warning:
+                "!bg-white dark:!bg-[#0F3460] !text-foreground !border-amber-200 dark:!border-amber-800",
+              actionButton:
+                "!bg-[#EE4D2D] !text-white !rounded-lg !font-semibold !text-xs !px-3 !py-1.5",
               cancelButton: "!bg-muted !text-muted-foreground !rounded-lg !font-medium !text-xs",
             },
           }}

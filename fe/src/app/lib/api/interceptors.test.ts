@@ -388,9 +388,7 @@ describe("retryInterceptor", () => {
   it("throws UnauthorizedError when a retry fetch returns 401 mid-sequence", async () => {
     fetchSpy.mockResolvedValueOnce(new Response("expired", { status: 401 }));
     const ctx = errCtx();
-    await expect(retryInterceptor(apiErr(503), ctx)).rejects.toBeInstanceOf(
-      UnauthorizedError,
-    );
+    await expect(retryInterceptor(apiErr(503), ctx)).rejects.toBeInstanceOf(UnauthorizedError);
   });
 
   it("does not throw UnauthorizedError for a 401 retry on an auth:false request", async () => {

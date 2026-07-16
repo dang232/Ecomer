@@ -31,9 +31,18 @@ export function Footer() {
             </h4>
             <ul className="space-y-2">
               {[
-                { label: t("footer.allCategories", { defaultValue: "All Categories" }), path: "/search" },
-                { label: t("footer.flashDeals", { defaultValue: "Flash Deals" }), path: "/search?flash=true" },
-                { label: t("footer.newArrivals", { defaultValue: "New Arrivals" }), path: "/search" },
+                {
+                  label: t("footer.allCategories", { defaultValue: "All Categories" }),
+                  path: "/search",
+                },
+                {
+                  label: t("footer.flashDeals", { defaultValue: "Flash Deals" }),
+                  path: "/search?flash=true",
+                },
+                {
+                  label: t("footer.newArrivals", { defaultValue: "New Arrivals" }),
+                  path: "/search",
+                },
                 { label: t("footer.topSellers", { defaultValue: "Top Sellers" }), path: "/search" },
               ].map((link) => (
                 <li key={link.label}>
@@ -55,9 +64,18 @@ export function Footer() {
             </h4>
             <ul className="space-y-2">
               {[
-                { label: t("footer.startSelling", { defaultValue: "Start Selling" }), path: "/seller" },
-                { label: t("footer.sellerCenter", { defaultValue: "Seller Center" }), path: "/seller" },
-                { label: t("footer.sellerTools", { defaultValue: "Seller Tools" }), path: "/seller" },
+                {
+                  label: t("footer.startSelling", { defaultValue: "Start Selling" }),
+                  path: "/seller",
+                },
+                {
+                  label: t("footer.sellerCenter", { defaultValue: "Seller Center" }),
+                  path: "/seller",
+                },
+                {
+                  label: t("footer.sellerTools", { defaultValue: "Seller Tools" }),
+                  path: "/seller",
+                },
                 { label: t("footer.fees", { defaultValue: "Fees" }), path: "/seller" },
               ].map((link) => (
                 <li key={link.label}>
@@ -125,11 +143,17 @@ export function Footer() {
         <div className="pt-6 border-t border-border flex flex-col sm:flex-row justify-between items-center gap-2 text-xs text-muted-foreground">
           <span>{t("footer.copyright")}</span>
           <div className="flex items-center gap-4">
-            <button onClick={() => comingSoon("Privacy policy", t)} className="hover:text-primary transition-colors">
+            <button
+              onClick={() => comingSoon("Privacy policy", t)}
+              className="hover:text-primary transition-colors"
+            >
               {t("footer.privacy", { defaultValue: "Privacy" })}
             </button>
             <span>·</span>
-            <button onClick={() => comingSoon("Terms of service", t)} className="hover:text-primary transition-colors">
+            <button
+              onClick={() => comingSoon("Terms of service", t)}
+              className="hover:text-primary transition-colors"
+            >
               {t("footer.terms", { defaultValue: "Terms" })}
             </button>
             <span>·</span>

@@ -187,7 +187,6 @@ export async function copyArtifacts(chapterId: ChapterId): Promise<void> {
   }
 }
 
-
 interface AcStatus {
   code: string;
   outcome: string;
@@ -287,7 +286,11 @@ export async function finalizeChapterReport(chapterId: ChapterId): Promise<void>
   lines.push("- `video.webm` — full session recording (gitignored)");
   lines.push("- `screenshots/` — one `NN-slug.png` per step, regenerated each run");
 
-  await fs.writeFile(path.join(chapterDir(chapterId), "REPORT.md"), `${lines.join("\n")}\n`, "utf8");
+  await fs.writeFile(
+    path.join(chapterDir(chapterId), "REPORT.md"),
+    `${lines.join("\n")}\n`,
+    "utf8",
+  );
   await fs.writeFile(
     path.join(chapterDir(chapterId), "report.json"),
     `${JSON.stringify({ meta: safeMeta, rows, acStatuses, verdict, generatedAt: new Date().toISOString() }, null, 2)}\n`,

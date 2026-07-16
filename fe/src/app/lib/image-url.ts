@@ -25,8 +25,7 @@ const PRESETS: Record<ImagePreset, PresetConfig> = {
 
 type CdnMode = "imgproxy" | "cloudflare" | "none";
 
-const CDN_MODE: CdnMode =
-  (import.meta.env.VITE_IMAGE_CDN_MODE as CdnMode | undefined) ?? "none";
+const CDN_MODE: CdnMode = (import.meta.env.VITE_IMAGE_CDN_MODE as CdnMode | undefined) ?? "none";
 const IMGPROXY_URL: string =
   (import.meta.env.VITE_IMGPROXY_URL as string | undefined) ?? "http://localhost:8081";
 

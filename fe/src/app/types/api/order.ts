@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { parseOrderStatus, type OrderStatusUi } from "../../lib/domain-enums";
 import { orderIdSchema, sellerIdSchema } from "./branded-ids";
 import { cartItemSchema } from "./cart";
 import { PAYMENT_METHOD_VALUES, PAYMENT_STATUS_VALUES } from "./payment";
@@ -11,17 +12,13 @@ export const FULFILLMENT_STATUS_VALUES = [
   "ACCEPTED",
   "PACKED",
   "SHIPPED",
+  "DELIVERED",
   "REJECTED",
   "CANCELLED",
 ] as const;
 
 /** Wire values emitted by order-service ReturnStatus.name() */
-export const RETURN_STATUS_VALUES = [
-  "REQUESTED",
-  "APPROVED",
-  "REJECTED",
-  "COMPLETED",
-] as const;
+export const RETURN_STATUS_VALUES = ["REQUESTED", "APPROVED", "REJECTED", "COMPLETED"] as const;
 
 // BE returns Money as { amount: BigDecimal, currency: String }. FE works with
 // bare numbers in VND. Accept both shapes.
@@ -76,15 +73,14 @@ export const subOrderSchema = z
 // work without rewriting every consumer.
 function deriveOrderStatus(
   subStatuses: readonly (typeof FULFILLMENT_STATUS_VALUES)[number][],
-  paymentStatus: (typeof PAYMENT_STATUS_VALUES)[number] | undefined,
-): "pending" | "confirmed" | "shipping" | "delivered" | "cancelled" | "returned" {
+): OrderStatusUi {
   if (subStatuses.length === 0) return "pending";
-  if (subStatuses.every((s) => s === "CANCELLED" || s === "REJECTED")) return "cancelled";
-  if (subStatuses.every((s) => s === "SHIPPED")) {
-    return paymentStatus === "COMPLETED" ? "delivered" : "shipping";
-  }
-  if (subStatuses.some((s) => s === "SHIPPED" || s === "PACKED")) return "shipping";
-  if (subStatuses.some((s) => s === "ACCEPTED")) return "confirmed";
+  const active = subStatuses.map(parseOrderStatus).filter((status) => status !== "cancelled");
+  if (active.length === 0) return "cancelled";
+  if (active.includes("pending")) return "pending";
+  if (active.includes("confirmed")) return "confirmed";
+  if (active.includes("shipping")) return "shipping";
+  if (active.every((status) => status === "delivered")) return "delivered";
   return "pending";
 }
 
@@ -123,28 +119,13 @@ export const orderSchema = z
   .passthrough()
   .transform((raw) => {
     const subOrders = raw.subOrders ?? [];
-    // For the list endpoint, status is a raw BE string we normalize via the
-    // same derivation function with a single-element subStatus array. For the
-    // detail endpoint it derives from sub-orders. Either way the output is
-    // one of the UI status values.
+    // The list read model exposes a canonical status. Detail responses expose
+    // sub-order fulfillment states, which collapse to the least advanced
+    // active state so mixed-seller orders remain actionable.
     const rawStatus = raw.status;
-    const isUiStatus = (
-      ["pending", "confirmed", "shipping", "delivered", "cancelled", "returned"] as const
-    ).includes(rawStatus as never);
-    const derivedStatus = isUiStatus
-      ? (rawStatus as ReturnType<typeof deriveOrderStatus>)
-      : rawStatus
-        ? deriveOrderStatus(
-            // single-element subStatus from the list endpoint's flat status
-            ([rawStatus] as readonly string[]).filter((s): s is (typeof FULFILLMENT_STATUS_VALUES)[number] =>
-              (FULFILLMENT_STATUS_VALUES as readonly string[]).includes(s),
-            ),
-            raw.paymentStatus,
-          )
-        : deriveOrderStatus(
-            subOrders.map((s) => s.status),
-            raw.paymentStatus,
-          );
+    const derivedStatus = rawStatus
+      ? parseOrderStatus(rawStatus)
+      : deriveOrderStatus(subOrders.map((subOrder) => subOrder.status));
     return {
       id: (raw.id ?? raw.orderId ?? "") as ReturnType<typeof orderIdSchema.parse>,
       orderNumber: raw.orderNumber,

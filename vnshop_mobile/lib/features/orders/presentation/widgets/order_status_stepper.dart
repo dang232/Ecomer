@@ -1,345 +1,139 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../data/models/order_model.dart';
+import '../mappers/order_presentation_mapper.dart';
 
-/// Visual stepper showing order status progression
-/// Steps: Đặt hàng → Xác nhận → Đang giao → Đã giao
 class OrderStatusStepper extends StatelessWidget {
+  const OrderStatusStepper({required this.currentStatus, super.key});
+
   final OrderStatus currentStatus;
 
-  const OrderStatusStepper({
-    super.key,
-    required this.currentStatus,
-  });
+  static const _steps = <OrderStatus>[
+    OrderStatus.pending,
+    OrderStatus.confirmed,
+    OrderStatus.shipped,
+    OrderStatus.delivered,
+  ];
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-      ),
-      child: Column(
-        children: [
-          // Step indicators row
-          Row(
-            children: [
-              _buildStep(
-                context,
-                index: 0,
-                icon: Icons.shopping_cart_outlined,
-                label: 'Đặt hàng',
-                isCompleted: _isStepCompleted(0),
-                isActive: _isStepActive(0),
-              ),
-              _buildConnector(
-                context,
-                isCompleted: _isStepCompleted(0) && _isStepCompleted(1),
-              ),
-              _buildStep(
-                context,
-                index: 1,
-                icon: Icons.check_circle_outline,
-                label: 'Xác nhận',
-                isCompleted: _isStepCompleted(1),
-                isActive: _isStepActive(1),
-              ),
-              _buildConnector(
-                context,
-                isCompleted: _isStepCompleted(1) && _isStepCompleted(2),
-              ),
-              _buildStep(
-                context,
-                index: 2,
-                icon: Icons.local_shipping_outlined,
-                label: 'Đang giao',
-                isCompleted: _isStepCompleted(2),
-                isActive: _isStepActive(2),
-              ),
-              _buildConnector(
-                context,
-                isCompleted: _isStepCompleted(2) && _isStepCompleted(3),
-              ),
-              _buildStep(
-                context,
-                index: 3,
-                icon: Icons.home_outlined,
-                label: 'Đã giao',
-                isCompleted: _isStepCompleted(3),
-                isActive: _isStepActive(3),
-              ),
-            ],
-          ),
-          // Cancelled state
-          if (currentStatus == OrderStatus.cancelled) ...[
-            const SizedBox(height: AppSpacing.md),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-              decoration: BoxDecoration(
-                color: AppColors.errorContainer,
-                borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.cancel_outlined,
-                    color: AppColors.error,
-                    size: 20,
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Text(
-                    'Đơn hàng đã bị hủy',
-                    style: TextStyle(
-                      color: AppColors.error,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+    final localizations = AppLocalizations.of(context);
+    if (currentStatus == OrderStatus.cancelled) {
+      return Semantics(
+        liveRegion: true,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(currentStatus.icon, color: currentStatus.color),
+            const SizedBox(width: AppSpacing.xs),
+            Expanded(
+              child: Text(
+                currentStatus.localizedLabel(localizations),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(color: currentStatus.color),
               ),
             ),
           ],
-        ],
-      ),
-    );
-  }
-
-  int _getStepIndex(OrderStatus status) {
-    switch (status) {
-      case OrderStatus.pending:
-        return 0;
-      case OrderStatus.confirmed:
-      case OrderStatus.processing:
-        return 1;
-      case OrderStatus.shipped:
-        return 2;
-      case OrderStatus.delivered:
-        return 3;
-      case OrderStatus.cancelled:
-        return -1;
-    }
-  }
-
-  int get _currentStepIndex => _getStepIndex(currentStatus);
-
-  bool _isStepCompleted(int stepIndex) {
-    if (currentStatus == OrderStatus.cancelled) return false;
-    return stepIndex < _currentStepIndex;
-  }
-
-  bool _isStepActive(int stepIndex) {
-    if (currentStatus == OrderStatus.cancelled) return false;
-    return stepIndex == _currentStepIndex;
-  }
-
-  Widget _buildStep(
-    BuildContext context, {
-    required int index,
-    required IconData icon,
-    required String label,
-    required bool isCompleted,
-    required bool isActive,
-  }) {
-    final primaryColor = Theme.of(context).colorScheme.primary;
-    final successColor = AppColors.success;
-
-    Color backgroundColor;
-    Color iconColor;
-    Color textColor;
-
-    if (isCompleted) {
-      backgroundColor = successColor;
-      iconColor = AppColors.onSuccess;
-      textColor = successColor;
-    } else if (isActive) {
-      backgroundColor = primaryColor;
-      iconColor = AppColors.onPrimary;
-      textColor = primaryColor;
-    } else {
-      backgroundColor = Theme.of(context).colorScheme.surfaceContainerHighest;
-      iconColor = Theme.of(context).colorScheme.onSurfaceVariant;
-      textColor = Theme.of(context).colorScheme.onSurfaceVariant;
-    }
-
-    return Expanded(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              shape: BoxShape.circle,
-              boxShadow: isActive
-                  ? [
-                      BoxShadow(
-                        color: primaryColor.withValues(alpha: 0.3),
-                        blurRadius: 8,
-                        spreadRadius: 2,
-                      ),
-                    ]
-                  : null,
-            ),
-            child: Center(
-              child: isCompleted
-                  ? Icon(
-                      Icons.check,
-                      color: AppColors.onSuccess,
-                      size: 20,
-                    )
-                  : Icon(
-                      icon,
-                      color: iconColor,
-                      size: 20,
-                    ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: isActive || isCompleted ? FontWeight.w600 : FontWeight.normal,
-              color: textColor,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildConnector(BuildContext context, {required bool isCompleted}) {
-    final primaryColor = Theme.of(context).colorScheme.primary;
-    final successColor = AppColors.success;
-    final connectorColor = isCompleted ? successColor : Theme.of(context).colorScheme.outlineVariant;
-
-    return Expanded(
-      child: Container(
-        height: 3,
-        margin: const EdgeInsets.only(bottom: 24),
-        decoration: BoxDecoration(
-          color: connectorColor,
-          borderRadius: BorderRadius.circular(2),
         ),
-        child: isCompleted
-            ? LayoutBuilder(
-                builder: (context, constraints) {
-                  return Stack(
-                    children: [
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        width: constraints.maxWidth,
-                        height: 3,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [primaryColor, successColor],
-                          ),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              )
-            : null,
-      ),
+      );
+    }
+
+    final currentIndex = currentStatus.progressIndex;
+    return Column(
+      children: [
+        for (var index = 0; index < _steps.length; index++)
+          _ProgressStep(
+            label: _steps[index].localizedLabel(localizations),
+            icon: _steps[index].icon,
+            completed: index < currentIndex,
+            active: index == currentIndex,
+            showConnector: index < _steps.length - 1,
+          ),
+      ],
     );
   }
 }
 
-/// Compact horizontal stepper for use in cards
-class OrderStatusStepperCompact extends StatelessWidget {
-  final OrderStatus currentStatus;
-
-  const OrderStatusStepperCompact({
-    super.key,
-    required this.currentStatus,
+class _ProgressStep extends StatelessWidget {
+  const _ProgressStep({
+    required this.label,
+    required this.icon,
+    required this.completed,
+    required this.active,
+    required this.showConnector,
   });
+
+  final String label;
+  final IconData icon;
+  final bool completed;
+  final bool active;
+  final bool showConnector;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = completed
+        ? theme.colorScheme.tertiary
+        : active
+        ? theme.colorScheme.primary
+        : theme.colorScheme.outline;
+    final foreground = completed || active
+        ? theme.colorScheme.onPrimary
+        : theme.colorScheme.onSurfaceVariant;
+
     return Row(
-      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildDot(context, isCompleted: true, isActive: false),
-        _buildLine(context, 0),
-        _buildDot(context, isCompleted: _isStepCompleted(1), isActive: _isStepActive(1)),
-        _buildLine(context, 1),
-        _buildDot(context, isCompleted: _isStepCompleted(2), isActive: _isStepActive(2)),
-        _buildLine(context, 2),
-        _buildDot(context, isCompleted: _isStepCompleted(3), isActive: _isStepActive(3)),
+        SizedBox(
+          width: 40,
+          child: Column(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: completed || active
+                      ? color
+                      : theme.colorScheme.surfaceContainerHighest,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: color),
+                ),
+                child: Icon(
+                  completed ? Icons.check : icon,
+                  size: 18,
+                  color: foreground,
+                ),
+              ),
+              if (showConnector)
+                Container(
+                  width: 2,
+                  height: AppSpacing.lg,
+                  color: completed
+                      ? theme.colorScheme.tertiary
+                      : theme.colorScheme.outlineVariant,
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(width: AppSpacing.xs),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: AppSpacing.md),
+            child: Text(
+              label,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: active || completed
+                    ? theme.colorScheme.onSurface
+                    : theme.colorScheme.onSurfaceVariant,
+                fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ),
+        ),
       ],
-    );
-  }
-
-  int _getStepIndex(OrderStatus status) {
-    switch (status) {
-      case OrderStatus.pending:
-        return 0;
-      case OrderStatus.confirmed:
-      case OrderStatus.processing:
-        return 1;
-      case OrderStatus.shipped:
-        return 2;
-      case OrderStatus.delivered:
-        return 3;
-      case OrderStatus.cancelled:
-        return -1;
-    }
-  }
-
-  int get _currentStepIndex => _getStepIndex(currentStatus);
-
-  bool _isStepCompleted(int stepIndex) {
-    if (currentStatus == OrderStatus.cancelled) return false;
-    return stepIndex < _currentStepIndex;
-  }
-
-  bool _isStepActive(int stepIndex) {
-    if (currentStatus == OrderStatus.cancelled) return false;
-    return stepIndex == _currentStepIndex;
-  }
-
-  Widget _buildDot(
-    BuildContext context, {
-    required bool isCompleted,
-    required bool isActive,
-  }) {
-    final primaryColor = Theme.of(context).colorScheme.primary;
-    final successColor = AppColors.success;
-
-    Color dotColor;
-    if (isCompleted) {
-      dotColor = successColor;
-    } else if (isActive) {
-      dotColor = primaryColor;
-    } else {
-      dotColor = Theme.of(context).colorScheme.surfaceContainerHighest;
-    }
-
-    return Container(
-      width: 8,
-      height: 8,
-      decoration: BoxDecoration(
-        color: dotColor,
-        shape: BoxShape.circle,
-      ),
-    );
-  }
-
-  Widget _buildLine(BuildContext context, int beforeStep) {
-    final isCompleted = _isStepCompleted(beforeStep + 1);
-    return Container(
-      width: 20,
-      height: 2,
-      color: isCompleted ? AppColors.success : Theme.of(context).colorScheme.surfaceContainerHighest,
     );
   }
 }

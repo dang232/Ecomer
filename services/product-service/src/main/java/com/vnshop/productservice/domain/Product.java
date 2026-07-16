@@ -1,5 +1,7 @@
 package com.vnshop.productservice.domain;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -50,13 +52,32 @@ public class Product {
             boolean verified,
             boolean isOfficial
     ) {
+        this(productId, sellerId, name, description, categoryId, brand, ProductStatus.DRAFT,
+                variants, images, sameDayDelivery, verified, isOfficial);
+    }
+
+    @JsonCreator
+    public Product(
+            @JsonProperty("productId") UUID productId,
+            @JsonProperty("sellerId") String sellerId,
+            @JsonProperty("name") String name,
+            @JsonProperty("description") String description,
+            @JsonProperty("categoryId") String categoryId,
+            @JsonProperty("brand") String brand,
+            @JsonProperty("status") ProductStatus status,
+            @JsonProperty("variants") List<ProductVariant> variants,
+            @JsonProperty("images") List<ProductImage> images,
+            @JsonProperty("sameDayDelivery") boolean sameDayDelivery,
+            @JsonProperty("verified") boolean verified,
+            @JsonProperty("isOfficial") boolean isOfficial
+    ) {
         this.productId = productId == null ? UUID.randomUUID() : productId;
         this.sellerId = sellerId;
         this.name = requireValidName(name);
         this.description = requireValidDescription(description);
         this.categoryId = categoryId;
         this.brand = brand;
-        this.status = ProductStatus.DRAFT;
+        this.status = status == null ? ProductStatus.DRAFT : status;
         this.variants = new ArrayList<>();
         this.images = new ArrayList<>();
         this.sameDayDelivery = sameDayDelivery;
@@ -76,50 +97,62 @@ public class Product {
         }
     }
 
+    @JsonProperty("productId")
     public UUID productId() {
         return productId;
     }
 
+    @JsonProperty("sellerId")
     public String sellerId() {
         return sellerId;
     }
 
+    @JsonProperty("name")
     public String name() {
         return name;
     }
 
+    @JsonProperty("description")
     public String description() {
         return description;
     }
 
+    @JsonProperty("categoryId")
     public String categoryId() {
         return categoryId;
     }
 
+    @JsonProperty("brand")
     public String brand() {
         return brand;
     }
 
+    @JsonProperty("status")
     public ProductStatus status() {
         return status;
     }
 
+    @JsonProperty("variants")
     public List<ProductVariant> variants() {
         return List.copyOf(variants);
     }
 
+    @JsonProperty("images")
     public List<ProductImage> images() {
         return List.copyOf(images);
     }
 
+    @JsonProperty("sameDayDelivery")
     public boolean sameDayDelivery() {
         return sameDayDelivery;
     }
 
+    @JsonProperty("verified")
     public boolean verified() {
         return verified;
     }
 
+    @JsonProperty("isOfficial")
     public boolean isOfficial() {
         return isOfficial;
     }

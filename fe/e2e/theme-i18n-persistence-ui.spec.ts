@@ -14,7 +14,6 @@ import { expectNoGlobalError } from "./_helpers";
  * No backend or auth needed.
  */
 
-
 async function isDarkClassPresent(page: Page): Promise<boolean> {
   return page.evaluate(() => document.documentElement.classList.contains("dark"));
 }
@@ -22,9 +21,9 @@ async function isDarkClassPresent(page: Page): Promise<boolean> {
 test.describe("theme + i18n persistence UI", () => {
   test("Switching language to EN survives a hard reload", async ({ page }) => {
     await page.goto("/");
-    await expect(
-      page.getByRole("button", { name: /^(Log in|Đăng nhập)$/i }).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("link", { name: /^(Log in|Đăng nhập)$/i }).first()).toBeVisible({
+      timeout: 20_000,
+    });
 
     // Force VI as the starting point so the test is deterministic.
     await page.evaluate(() => {
@@ -35,24 +34,25 @@ test.describe("theme + i18n persistence UI", () => {
       }
     });
     await page.reload();
-    await expect(
-      page.getByText(/Trang Chủ|Đăng nhập/).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/Trang Chủ|Đăng nhập/).first()).toBeVisible({ timeout: 20_000 });
 
     // Click the switcher to flip VI → EN.
-    await page.getByRole("button", { name: /^Switch language to EN$/i }).first().click();
+    await page
+      .getByRole("button", { name: /^Switch language to EN$/i })
+      .first()
+      .click();
 
     // English nav copy appears.
-    await expect(
-      page.getByText(/All Categories|Sign in|Log in/i).first(),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/All Categories|Sign in|Log in/i).first()).toBeVisible({
+      timeout: 10_000,
+    });
 
     // Hard-reload — the SPA re-mounts; the language detector should
     // restore EN from localStorage.
     await page.reload();
-    await expect(
-      page.getByText(/All Categories|Sign in|Log in/i).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/All Categories|Sign in|Log in/i).first()).toBeVisible({
+      timeout: 20_000,
+    });
 
     // The Vietnamese nav copy must NOT have come back.
     await expect(page.getByText(/Trang Chủ/)).toHaveCount(0);
@@ -84,7 +84,10 @@ test.describe("theme + i18n persistence UI", () => {
     const lightBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
 
     // Toggle to dark.
-    await page.getByRole("button", { name: /switch to dark mode/i }).first().click();
+    await page
+      .getByRole("button", { name: /switch to dark mode/i })
+      .first()
+      .click();
     await expect.poll(() => isDarkClassPresent(page), { timeout: 5_000 }).toBe(true);
 
     const darkBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);

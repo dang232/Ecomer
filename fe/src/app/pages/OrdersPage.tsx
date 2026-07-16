@@ -1,9 +1,23 @@
-import { IconPackage, IconTruck, IconCircleCheck, IconCircleX, IconClock, IconRefresh, IconMapPin, IconMessage, IconStar, IconRotate, IconAlertCircle, IconLogin, IconArrowsLeftRight } from "@tabler/icons-react";
+import {
+  IconPackage,
+  IconTruck,
+  IconCircleCheck,
+  IconCircleX,
+  IconClock,
+  IconRefresh,
+  IconMapPin,
+  IconMessage,
+  IconRotate,
+  IconStar,
+  IconAlertCircle,
+  IconLogin,
+  IconArrowsLeftRight,
+} from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { motion } from "motion/react";
 import { useCallback, useMemo, useRef, useState, memo } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 
 import { ImageWithFallback } from "../components/image-with-fallback";
@@ -11,7 +25,7 @@ import { ConfirmDialog } from "../components/ui/confirm-dialog";
 import { Modal } from "../components/ui/modal";
 import { useAuth } from "../hooks/use-auth";
 import { useCart } from "../hooks/use-cart";
-import { useCancelOrder, myOrdersOptions } from "../hooks/use-orders";
+import { useCancelOrder, myOrdersOptions, orderDetailOptions } from "../hooks/use-orders";
 import { ApiError } from "../lib/api";
 import { requestReturn } from "../lib/api/endpoints/orders";
 import { getTracking } from "../lib/api/endpoints/shipping";
@@ -27,7 +41,12 @@ const STATUS_CONFIG: Record<
   UIOrder["status"],
   { labelKey: string; icon: typeof IconPackage; color: string; bg: string }
 > = {
-  pending: { labelKey: "orders.status.pending", icon: IconClock, color: "var(--warning)", bg: "var(--warning-light)" },
+  pending: {
+    labelKey: "orders.status.pending",
+    icon: IconClock,
+    color: "var(--warning)",
+    bg: "var(--warning-light)",
+  },
   confirmed: {
     labelKey: "orders.status.confirmed",
     icon: IconCircleCheck,
@@ -92,7 +111,11 @@ function fromServer(o: ServerOrder): UIOrder {
   };
 }
 
-function TrackingModal({ order, onClose, triggerRef }: {
+function TrackingModal({
+  order,
+  onClose,
+  triggerRef,
+}: {
   order: UIOrder;
   onClose: () => void;
   triggerRef?: React.RefObject<Element | null>;
@@ -129,7 +152,12 @@ function TrackingModal({ order, onClose, triggerRef }: {
       subtitle={<span className="font-mono">{order.trackingCode ?? order.id}</span>}
     >
       {canFetch && tracking.isLoading ? (
-        <div className="space-y-3" role="status" aria-busy="true" aria-label={t("orders.tracking.loadingAria")}>
+        <div
+          className="space-y-3"
+          role="status"
+          aria-busy="true"
+          aria-label={t("orders.tracking.loadingAria")}
+        >
           {Array.from({ length: 4 }).map((_, i) => (
             // eslint-disable-next-line react/no-array-index-key -- decorative skeleton placeholders, no stable id
             <div key={i} className="flex gap-4">
@@ -156,7 +184,9 @@ function TrackingModal({ order, onClose, triggerRef }: {
                 <p className="text-sm font-medium text-foreground">
                   {ev.status ?? t("orders.tracking.stepFallback")}
                 </p>
-                {ev.location ? <p className="text-xs text-muted-foreground mt-0.5">{ev.location}</p> : null}
+                {ev.location ? (
+                  <p className="text-xs text-muted-foreground mt-0.5">{ev.location}</p>
+                ) : null}
                 {ev.note ? <p className="text-xs text-muted-foreground mt-0.5">{ev.note}</p> : null}
                 {ev.at ? <p className="text-[11px] text-muted-foreground mt-1">{ev.at}</p> : null}
               </div>
@@ -188,7 +218,9 @@ function TrackingModal({ order, onClose, triggerRef }: {
                   ) : null}
                 </div>
                 <div className="pb-4">
-                  <p className={`text-sm font-medium ${done ? "text-foreground" : "text-muted-foreground"}`}>
+                  <p
+                    className={`text-sm font-medium ${done ? "text-foreground" : "text-muted-foreground"}`}
+                  >
                     {label}
                   </p>
                 </div>
@@ -322,7 +354,11 @@ function ReturnModal({
         className="w-full px-3 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--primary)] resize-none bg-card"
         aria-describedby="orders-return-reason-counter"
       />
-      <p id="orders-return-reason-counter" aria-live="polite" className="mt-1 text-xs text-muted-foreground text-right">
+      <p
+        id="orders-return-reason-counter"
+        aria-live="polite"
+        className="mt-1 text-xs text-muted-foreground text-right"
+      >
         {reason.length}/500
       </p>
 
@@ -350,6 +386,9 @@ const OrderCard = memo(function OrderCard({
   const qc = useQueryClient();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const detailQuery = useQuery(orderDetailOptions(order.id));
+  const detailedOrder = detailQuery.data ? fromServer(detailQuery.data) : null;
+  const displayItems = detailedOrder?.items ?? order.items;
   const [showTracking, setShowTracking] = useState(false);
   const [showReturn, setShowReturn] = useState(false);
   const [cancelId, setCancelId] = useState<string | null>(null);
@@ -378,7 +417,11 @@ const OrderCard = memo(function OrderCard({
   return (
     <>
       {showTracking ? (
-        <TrackingModal order={order} onClose={() => setShowTracking(false)} triggerRef={trackingBtnRef} />
+        <TrackingModal
+          order={order}
+          onClose={() => setShowTracking(false)}
+          triggerRef={trackingBtnRef}
+        />
       ) : null}
       {showReturn ? (
         <ReturnModal
@@ -396,14 +439,21 @@ const OrderCard = memo(function OrderCard({
       >
         {/* Top row: order ID + date | status pill */}
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <span className="text-[13px] font-semibold text-foreground">
-              {t("orders.orderNumber", { defaultValue: "Order" })} #{order.id.slice(0, 8).toUpperCase()}
-            </span>
+          <div className="flex min-w-0 items-center gap-2">
+            <Link
+              to={`/orders/${order.id}`}
+              className="min-w-0 rounded text-[13px] font-semibold text-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <span>{t("orders.orderId")}</span>{" "}
+              <span className="font-mono">#{order.id.slice(0, 8).toUpperCase()}</span>
+            </Link>
             {order.date ? (
-              <span className="text-xs text-muted-foreground">
-                {new Date(order.date).toLocaleDateString()}
-              </span>
+              <>
+                <span aria-hidden="true">/</span>
+                <span className="text-xs text-muted-foreground">
+                  {new Date(order.date).toLocaleDateString()}
+                </span>
+              </>
             ) : null}
           </div>
           <div
@@ -418,27 +468,48 @@ const OrderCard = memo(function OrderCard({
         </div>
 
         {/* Items */}
-        {order.items.length === 0 && order.itemCount && order.itemCount > 0 ? (
+        {displayItems.length === 0 && order.itemCount && order.itemCount > 0 ? (
           <p className="text-sm text-muted-foreground italic mb-3">
-            {t("orders.itemCountSummary", {
-              count: order.itemCount,
-              defaultValue: `${order.itemCount} sản phẩm`,
-            })}
+            {detailQuery.isLoading
+              ? t("orders.loadingItems")
+              : t("orders.itemCountSummary", {
+                  count: order.itemCount,
+                  defaultValue: `${order.itemCount} sản phẩm`,
+                })}
           </p>
         ) : null}
-        {order.items.map((item) => (
+        {displayItems.map((item) => (
           <div
             key={`${item.productId}-${item.variant ?? ""}`}
             className="flex items-center gap-3 mb-3"
           >
-            <ImageWithFallback
-              src={item.image ?? ""}
-              alt={item.name}
-              className="w-14 h-14 rounded-[var(--radius-md)] object-cover border border-border flex-shrink-0"
-            />
+            <Link
+              to={`/product/${item.productId}`}
+              aria-label={t("orders.viewProduct", { name: item.name })}
+              className="shrink-0 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <ImageWithFallback
+                src={item.image ?? ""}
+                alt={item.name}
+                className="w-14 h-14 rounded-[var(--radius-md)] object-cover border border-border"
+              />
+            </Link>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground line-clamp-2">{item.name}</p>
-              <span className="text-xs text-muted-foreground">x{item.quantity}</span>
+              <Link
+                to={`/product/${item.productId}`}
+                className="block rounded text-sm font-medium text-foreground line-clamp-2 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {item.name}
+              </Link>
+              <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
+                <span>x{item.quantity}</span>
+                {item.price ? (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <span>{formatPrice(item.price)}</span>
+                  </>
+                ) : null}
+              </div>
             </div>
           </div>
         ))}
@@ -446,7 +517,13 @@ const OrderCard = memo(function OrderCard({
         {/* Bottom row: total + actions */}
         <div className="flex items-center justify-between pt-3 border-t border-border">
           <span className="text-[15px] font-bold text-primary">{formatPrice(order.total)}</span>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
+            <Link
+              to={`/orders/${order.id}`}
+              className="inline-flex items-center rounded-[var(--radius-md)] border border-border px-3.5 py-1.5 text-xs font-medium text-text-secondary hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {t("orders.actions.viewDetails")}
+            </Link>
             {order.status === "shipping" ? (
               <button
                 ref={trackingBtnRef}
@@ -459,7 +536,7 @@ const OrderCard = memo(function OrderCard({
             {order.status === "delivered" ? (
               <>
                 <button
-                  onClick={() => onReorder(order.items)}
+                  onClick={() => onReorder(displayItems)}
                   className="px-3.5 py-1.5 rounded-[var(--radius-md)] text-xs font-medium border border-border text-text-secondary hover:bg-muted flex items-center gap-1.5"
                 >
                   <IconRefresh size={13} /> {t("orders.actions.reorder")}
@@ -473,7 +550,7 @@ const OrderCard = memo(function OrderCard({
                 </button>
                 <button
                   onClick={() => {
-                    const firstProduct = order.items[0]?.productId;
+                    const firstProduct = displayItems[0]?.productId;
                     if (firstProduct) onReview(firstProduct);
                     else toast.info(t("orders.noReviewableProduct"));
                   }}
@@ -513,7 +590,10 @@ const OrderCard = memo(function OrderCard({
         onConfirm={() => {
           if (cancelId) onCancel(cancelId);
         }}
-        title={t("orders.cancelDialog.title", { defaultValue: "Cancel order?" })}
+        title={t("orders.cancelDialog.title", {
+          id: cancelId ? cancelId.slice(0, 8).toUpperCase() : "",
+          defaultValue: "Cancel order #{{id}}?",
+        })}
         description={t("orders.cancelDialog.description", {
           defaultValue: "This will cancel your order. You won't be able to undo this.",
         })}
@@ -536,54 +616,58 @@ export function OrdersPage() {
   const { addItemAsync } = useCart();
   const { t } = useTranslation();
 
-  const handleReorder = useCallback(async (items: UIOrder["items"]) => {
-    if (items.length === 0) {
-      toast.info(t("orders.reorder.noItems"));
-      return;
-    }
-    let added = 0;
-    let failed = 0;
-    for (const item of items) {
-      try {
-        await addItemAsync({ productId: item.productId, quantity: item.quantity });
-        added += 1;
-      } catch (err) {
-        // Continue trying remaining items so we get a full count.
-        if (added === 0 && failed === 0) {
-          // All items failed -- surface the first error immediately.
-          toast.error(err instanceof ApiError ? err.message : t("orders.reorder.addError"));
-          return;
-        }
-        failed += 1;
+  const handleReorder = useCallback(
+    async (items: UIOrder["items"]) => {
+      if (items.length === 0) {
+        toast.info(t("orders.reorder.noItems"));
+        return;
       }
-    }
-    if (added === 0) return; // all failed; error toast already shown above
-    if (failed > 0) {
-      // Partial success: tell the user how many landed vs. how many didn't.
-      toast.success(
-        t("orders.reorder.partialSuccess", {
-          added,
-          total: items.length,
-          failed,
-          defaultValue: "Added " + added + " of " + items.length + " items -- " + failed + " unavailable.",
-        }),
-        {
+      let added = 0;
+      let failed = 0;
+      for (const item of items) {
+        try {
+          await addItemAsync({ productId: item.productId, quantity: item.quantity });
+          added += 1;
+        } catch (err) {
+          // Continue trying remaining items so we get a full count.
+          if (added === 0 && failed === 0) {
+            // All items failed -- surface the first error immediately.
+            toast.error(err instanceof ApiError ? err.message : t("orders.reorder.addError"));
+            return;
+          }
+          failed += 1;
+        }
+      }
+      if (added === 0) return; // all failed; error toast already shown above
+      if (failed > 0) {
+        // Partial success: tell the user how many landed vs. how many didn't.
+        toast.success(
+          t("orders.reorder.partialSuccess", {
+            added,
+            total: items.length,
+            failed,
+            defaultValue:
+              "Added " + added + " of " + items.length + " items -- " + failed + " unavailable.",
+          }),
+          {
+            action: {
+              label: t("orders.reorder.viewCart", { defaultValue: "View cart" }),
+              onClick: () => void navigate("/cart"),
+            },
+          },
+        );
+      } else {
+        // Full success: offer an optional cart CTA instead of auto-navigating.
+        toast(t("orders.reorder.added", { count: added }), {
           action: {
             label: t("orders.reorder.viewCart", { defaultValue: "View cart" }),
             onClick: () => void navigate("/cart"),
           },
-        },
-      );
-    } else {
-      // Full success: offer an optional cart CTA instead of auto-navigating.
-      toast(t("orders.reorder.added", { count: added }), {
-        action: {
-          label: t("orders.reorder.viewCart", { defaultValue: "View cart" }),
-          onClick: () => void navigate("/cart"),
-        },
-      });
-    }
-  }, [addItemAsync, t, navigate]);
+        });
+      }
+    },
+    [addItemAsync, t, navigate],
+  );
 
   const allOrders = useMemo(() => {
     const content = ordersQuery.data?.content ?? [];
@@ -606,12 +690,16 @@ export function OrdersPage() {
     [],
   );
 
-  const handleCancel = useCallback((id: string) => {
-    cancelOrder.mutate(id, {
-      onSuccess: () => toast.success(t("orders.cancelOk")),
-      onError: (err) => toast.error(err instanceof ApiError ? err.message : t("orders.cancelErr")),
-    });
-  }, [cancelOrder, t]);
+  const handleCancel = useCallback(
+    (id: string) => {
+      cancelOrder.mutate(id, {
+        onSuccess: () => toast.success(t("orders.cancelOk")),
+        onError: (err) =>
+          toast.error(err instanceof ApiError ? err.message : t("orders.cancelErr")),
+      });
+    },
+    [cancelOrder, t],
+  );
 
   const tabCounts = useMemo(() => {
     const counts: Partial<Record<OrderTab, number>> = {};
@@ -634,7 +722,9 @@ export function OrdersPage() {
     return (
       <div className="max-w-3xl mx-auto px-4 py-24 text-center">
         <IconPackage size={64} className="mx-auto mb-6 text-gray-200" />
-        <h2 className="text-xl font-bold text-muted-foreground mb-3">{t("orders.loginPromptTitle")}</h2>
+        <h2 className="text-xl font-bold text-muted-foreground mb-3">
+          {t("orders.loginPromptTitle")}
+        </h2>
         <button
           onClick={() => login("/orders")}
           className="px-8 py-3 rounded-xl text-white font-semibold inline-flex items-center gap-2"
@@ -650,7 +740,11 @@ export function OrdersPage() {
     <div className="max-w-[1100px] mx-auto py-8 px-8">
       <h1 className="text-2xl font-bold text-foreground mb-6">{t("orders.pageTitle")}</h1>
 
-      <div role="tablist" aria-label="Order status" className="flex gap-1 overflow-x-auto pb-1 mb-6 scrollbar-hide">
+      <div
+        role="tablist"
+        aria-label="Order status"
+        className="flex gap-1 overflow-x-auto pb-1 mb-6 scrollbar-hide"
+      >
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           const count = tab.id === "all" ? allOrders.length : (tabCounts[tab.id] ?? 0);

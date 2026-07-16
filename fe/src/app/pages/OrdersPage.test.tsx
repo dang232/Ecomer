@@ -43,6 +43,11 @@ vi.mock("../hooks/use-orders", () => ({
     queryKey: ["orders"],
     queryFn: () => Promise.resolve(ordersData),
   })),
+  orderDetailOptions: vi.fn((id: string) => ({
+    queryKey: ["orders", "detail", id],
+    queryFn: () => Promise.resolve(undefined),
+    enabled: true,
+  })),
 }));
 
 vi.mock("../hooks/use-cart", () => ({
@@ -52,8 +57,13 @@ vi.mock("../hooks/use-cart", () => ({
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) => {
-      if (typeof opts?.defaultValue === "string") return opts.defaultValue;
-      return key;
+      let value = typeof opts?.defaultValue === "string" ? opts.defaultValue : key;
+      for (const [name, replacement] of Object.entries(opts ?? {})) {
+        if (name !== "defaultValue") {
+          value = value.replaceAll(`{{${name}}}`, String(replacement));
+        }
+      }
+      return value;
     },
     i18n: { resolvedLanguage: "en" },
   }),
@@ -132,6 +142,7 @@ describe("OrdersPage — P0-9 cancel confirm dialog", () => {
     fireEvent.click(screen.getByRole("button", { name: /orders.actions.cancel/i }));
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toBeInTheDocument();
+    expect(dialog).toHaveTextContent("Cancel order #ORD-CANC?");
   });
 
   it("does NOT call cancelOrder until the confirm button in the dialog is clicked", async () => {

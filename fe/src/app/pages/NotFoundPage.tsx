@@ -1,4 +1,4 @@
-﻿import { Home, Search } from "lucide-react";
+import { Home, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 

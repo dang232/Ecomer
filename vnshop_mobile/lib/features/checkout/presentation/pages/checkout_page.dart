@@ -1,716 +1,952 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_spacing.dart';
+import '../../../../app/router/app_routes.dart';
+import '../../../../app/router/checkout_route_args.dart';
 import '../../../../common/widgets/buttons/vn_button.dart';
+import '../../../../common/widgets/images/safe_network_image.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../cart/presentation/bloc/cart_bloc.dart';
 import '../../../cart/presentation/bloc/cart_event.dart';
 import '../../data/models/address_model.dart';
 import '../../data/models/payment_transaction.dart';
+import '../../data/models/shipping_quote.dart';
 import '../bloc/checkout_bloc.dart';
 import '../bloc/checkout_event.dart';
 import '../bloc/checkout_state.dart';
+import '../mappers/checkout_presentation_mapper.dart';
+import '../models/checkout_cart_input.dart';
 import '../widgets/address_card.dart';
 import '../widgets/checkout_bottom_bar.dart';
 import '../widgets/order_summary_sheet.dart';
 import '../widgets/payment_method_card.dart';
-import '../widgets/payment_trust_signals.dart';
+import '../widgets/payment_method_selector.dart';
 import '../widgets/shipping_method_card.dart';
 
-/// Main checkout page with all checkout steps
 class CheckoutPage extends StatefulWidget {
-  const CheckoutPage({super.key});
+  const CheckoutPage({super.key, this.routeArgs});
+
+  final CheckoutRouteArgs? routeArgs;
 
   @override
   State<CheckoutPage> createState() => _CheckoutPageState();
 }
 
 class _CheckoutPageState extends State<CheckoutPage> {
-  int _currentStep = 0;
+  late final CheckoutCartInput _cartInput;
+  bool _didCleanPurchasedItems = false;
+  String? _presentedOrderId;
 
   @override
   void initState() {
     super.initState();
-    _initializeCheckout();
+    final cartState = context.read<CartBloc>().state;
+    _cartInput = CheckoutCartInput.fromCart(
+      cartState.cart,
+      args: widget.routeArgs,
+    );
+    _startCheckout();
   }
 
-  void _initializeCheckout() {
-    final cartState = context.read<CartBloc>().state;
-    final lineItems = cartState.cart?.items.map((item) => LineItemData(
-          productId: item.productId,
-          variantSku: item.sku,
-          quantity: item.quantity,
-        )).toList() ?? [];
-    context.read<CheckoutBloc>().add(CheckoutStarted(
-          lineItems: lineItems,
-          subtotal: cartState.subtotal,
-          discountAmount: cartState.discountAmount,
-          couponCode: cartState.appliedCouponCode,
-        ));
+  void _startCheckout() {
+    if (_cartInput.isEmpty) return;
+    context.read<CheckoutBloc>().add(
+      CheckoutStarted(
+        lineItems: _cartInput.items
+            .map(
+              (item) => LineItemData(
+                productId: item.productId,
+                variantSku: item.sku,
+                quantity: item.quantity,
+              ),
+            )
+            .toList(growable: false),
+        subtotal: _cartInput.subtotal,
+        discountAmount: _cartInput.discountAmount,
+        couponCode: _cartInput.couponCode,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Thanh toán'),
-        centerTitle: true,
-        backgroundColor: AppColors.surface,
-        foregroundColor: AppColors.onSurface,
-        elevation: 0,
+        title: Text(localizations.checkout),
+        centerTitle: false,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
           onPressed: () => context.pop(),
+          icon: const Icon(Icons.arrow_back),
         ),
       ),
-      body: BlocConsumer<CheckoutBloc, CheckoutState>(
-        listener: (context, state) {
-          if (state.status == CheckoutStatus.orderPlaced) {
-            _showOrderSuccessBottomSheet(context, state.orderId);
-          } else if (state.status == CheckoutStatus.error &&
-              state.errorMessage != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.errorMessage!),
-                backgroundColor: AppColors.error,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          if (state.status == CheckoutStatus.loading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: _cartInput.isEmpty
+          ? const _EmptyCheckoutState()
+          : BlocConsumer<CheckoutBloc, CheckoutState>(
+              listenWhen: (previous, current) =>
+                  previous.status != current.status ||
+                  previous.failure != current.failure ||
+                  previous.orderId != current.orderId,
+              listener: _handleStateChange,
+              builder: (context, state) {
+                if (state.status == CheckoutStatus.loading &&
+                    state.session == null) {
+                  return const _CheckoutLoadingView();
+                }
 
-          return Column(
-            children: [
-              // Step indicators
-              _StepIndicator(currentStep: _currentStep),
+                if (state.failure == CheckoutFailure.initialize &&
+                    state.session == null) {
+                  return _BlockingCheckoutError(onRetry: _startCheckout);
+                }
 
-              // Content
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.only(bottom: 120),
-                  children: [
-                    // Step 1: Address
-                    _buildStepSection(
-                      step: 0,
-                      title: 'Địa chỉ giao hàng',
-                      icon: Icons.location_on_outlined,
-                      child: _AddressSection(state: state),
-                    ),
+                return _CheckoutContent(
+                  state: state,
+                  cartInput: _cartInput,
+                  onAddAddress: () =>
+                      context.push(AppRoutes.checkoutAddressNew),
+                  onEditAddress: (address) =>
+                      context.push(AppRoutes.checkoutAddress(address.id)),
+                  onDeleteAddress: _confirmDeleteAddress,
+                  onRetryAddresses: () => context.read<CheckoutBloc>().add(
+                    const CheckoutAddressesLoaded(),
+                  ),
+                  onRetryShipping: (address) => context
+                      .read<CheckoutBloc>()
+                      .add(CheckoutShippingQuotesRequested(address)),
+                  onRetryPaymentMethods: () => context.read<CheckoutBloc>().add(
+                    const CheckoutPaymentMethodsRequested(),
+                  ),
+                  onAddressSelected: (address) => context
+                      .read<CheckoutBloc>()
+                      .add(CheckoutAddressSelected(address)),
+                  onShippingSelected: (shipping) => context
+                      .read<CheckoutBloc>()
+                      .add(CheckoutShippingSelected(shipping)),
+                  onPaymentSelected: (method) => context
+                      .read<CheckoutBloc>()
+                      .add(CheckoutPaymentMethodSelected(method)),
+                  onRetryPayment: () => context.read<CheckoutBloc>().add(
+                    const CheckoutPaymentInitiated(),
+                  ),
+                  onOpenPaymentUrl: _openPaymentUrl,
+                  onCheckPayment: (transactionId) => context
+                      .read<CheckoutBloc>()
+                      .add(CheckoutPaymentStatusChecked(transactionId)),
+                );
+              },
+            ),
+      bottomNavigationBar: _cartInput.isEmpty
+          ? null
+          : BlocBuilder<CheckoutBloc, CheckoutState>(
+              buildWhen: (previous, current) =>
+                  previous.totalAmount != current.totalAmount ||
+                  previous.canPlaceOrder != current.canPlaceOrder ||
+                  previous.isProcessingPayment != current.isProcessingPayment ||
+                  previous.selectedPaymentMethod !=
+                      current.selectedPaymentMethod ||
+                  previous.status != current.status,
+              builder: (context, state) {
+                final hideAction =
+                    state.session == null ||
+                    state.status == CheckoutStatus.awaitingPayment ||
+                    state.status == CheckoutStatus.orderPlaced ||
+                    state.status == CheckoutStatus.paymentFailed;
+                if (hideAction) return const SizedBox.shrink();
 
-                    // Step 2: Shipping
-                    _buildStepSection(
-                      step: 1,
-                      title: 'Phương thức vận chuyển',
-                      icon: Icons.local_shipping_outlined,
-                      child: _ShippingSection(state: state),
-                    ),
-
-                    // Step 3: Payment
-                    _buildStepSection(
-                      step: 2,
-                      title: 'Phương thức thanh toán',
-                      icon: Icons.payment_outlined,
-                      child: _PaymentSection(state: state),
-                    ),
-
-                    // Step 4: Order Summary
-                    _buildStepSection(
-                      step: 3,
-                      title: 'Tóm tắt đơn hàng',
-                      icon: Icons.receipt_long_outlined,
-                      child: _OrderSummarySection(state: state),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-      bottomSheet: BlocBuilder<CheckoutBloc, CheckoutState>(
-        builder: (context, state) {
-          return CheckoutBottomBar(
-            totalAmount: state.totalAmount,
-            isEnabled: state.canPlaceOrder,
-            isLoading: state.isProcessingPayment,
-            paymentMethod: state.selectedPaymentMethod,
-            onPlaceOrder: () {
-              context.read<CheckoutBloc>().add(const CheckoutPaymentInitiated());
-            },
-          );
-        },
-      ),
+                return CheckoutBottomBar(
+                  totalAmount: state.totalAmount,
+                  isEnabled: state.canPlaceOrder,
+                  isLoading: state.isProcessingPayment,
+                  paymentMethod: state.selectedPaymentMethod,
+                  onPlaceOrder: () => context.read<CheckoutBloc>().add(
+                    const CheckoutPaymentInitiated(),
+                  ),
+                );
+              },
+            ),
     );
   }
 
-  Widget _buildStepSection({
-    required int step,
-    required String title,
-    required IconData icon,
-    required Widget child,
-  }) {
-    final isActive = _currentStep >= step;
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      decoration: BoxDecoration(
-        color: isActive ? AppColors.surface : AppColors.surfaceVariant.withAlpha(128),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Section header
-          InkWell(
-            onTap: () {
-              setState(() {
-                _currentStep = step;
-              });
-            },
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: _currentStep == step
-                          ? AppColors.primary
-                          : AppColors.primary.withAlpha(25),
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
-                    ),
-                    child: Icon(
-                      icon,
-                      size: 20,
-                      color: _currentStep == step
-                          ? AppColors.onPrimary
-                          : AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: _currentStep == step
-                            ? AppColors.onSurface
-                            : AppColors.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                  if (_currentStep == step)
-                    const Icon(
-                      Icons.expand_less,
-                      color: AppColors.primary,
-                    )
-                  else
-                    const Icon(
-                      Icons.expand_more,
-                      color: AppColors.onSurfaceVariant,
-                    ),
-                ],
-              ),
-            ),
+  void _handleStateChange(BuildContext context, CheckoutState state) {
+    final failure = state.failure;
+    if (failure != null && !_isInlineFailure(failure)) {
+      final localizations = AppLocalizations.of(context);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(failure.localizedMessage(localizations)),
+            behavior: SnackBarBehavior.floating,
           ),
+        );
+      context.read<CheckoutBloc>().add(const CheckoutFailureDismissed());
+    }
 
-          // Section content (only show if this step is active)
-          AnimatedCrossFade(
-            duration: const Duration(milliseconds: 300),
-            crossFadeState: _currentStep == step
-                ? CrossFadeState.showFirst
-                : CrossFadeState.showSecond,
-            firstChild: child,
-            secondChild: const SizedBox.shrink(),
+    if (state.status != CheckoutStatus.orderPlaced) return;
+    final presentationId = state.orderId ?? 'placed';
+    if (_presentedOrderId == presentationId) return;
+    _presentedOrderId = presentationId;
+
+    if (!_didCleanPurchasedItems) {
+      _didCleanPurchasedItems = true;
+      context.read<CartBloc>().add(
+        CartCheckoutCompleted(_cartInput.selectedCartItemIds),
+      );
+    }
+    _showOrderSuccess(state.orderId);
+  }
+
+  bool _isInlineFailure(CheckoutFailure failure) {
+    return failure == CheckoutFailure.initialize ||
+        failure == CheckoutFailure.loadAddresses ||
+        failure == CheckoutFailure.loadShipping ||
+        failure == CheckoutFailure.loadPaymentMethods;
+  }
+
+  Future<void> _confirmDeleteAddress(VietnamAddress address) async {
+    final localizations = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(localizations.deleteAddress),
+        content: Text(
+          localizations.deleteAddressConfirmation(address.recipientName),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(localizations.cancel),
           ),
-
-          const Divider(height: 1),
+          FilledButton.tonalIcon(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            icon: const Icon(Icons.delete_outline),
+            label: Text(localizations.remove),
+          ),
         ],
       ),
     );
+    if (confirmed == true && mounted) {
+      context.read<CheckoutBloc>().add(CheckoutAddressDeleted(address.id));
+    }
   }
 
-  void _showOrderSuccessBottomSheet(BuildContext context, String? orderId) {
-    showModalBottomSheet(
+  Future<void> _openPaymentUrl(String rawUrl) async {
+    final uri = Uri.tryParse(rawUrl);
+    final isSupported =
+        uri != null && (uri.scheme == 'https' || uri.scheme == 'http');
+    final launched = isSupported
+        ? await launchUrl(uri, mode: LaunchMode.externalApplication)
+        : false;
+    if (!launched && mounted) {
+      final message = AppLocalizations.of(context).checkoutPaymentStartError;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+      );
+    }
+  }
+
+  Future<void> _showOrderSuccess(String? orderId) async {
+    if (!mounted) return;
+    final localizations = AppLocalizations.of(context);
+    await showModalBottomSheet<void>(
       context: context,
       isDismissible: false,
       enableDrag: false,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(AppSpacing.radiusBottomSheet),
-          ),
-        ),
-        child: Column(
-          children: [
-            // Handle
-            Container(
-              margin: const EdgeInsets.only(top: 12),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.outlineVariant,
-                borderRadius: BorderRadius.circular(2),
-              ),
+      builder: (sheetContext) => PopScope(
+        canPop: false,
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.lg + MediaQuery.viewInsetsOf(sheetContext).bottom,
             ),
-
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Success icon
-                    Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: AppColors.success.withAlpha(25),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.check_circle,
-                        size: 80,
-                        color: AppColors.success,
-                      ),
-                    ),
-
-                    const SizedBox(height: AppSpacing.lg),
-
-                    // Title
-                    Text(
-                      'Đặt hàng thành công!',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-
-                    const SizedBox(height: AppSpacing.sm),
-
-                    // Message
-                    Text(
-                      'Cảm ơn bạn đã đặt hàng tại VNShop',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: AppColors.onSurfaceVariant,
-                          ),
-                      textAlign: TextAlign.center,
-                    ),
-
-                    if (orderId != null) ...[
-                      const SizedBox(height: AppSpacing.md),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.md,
-                          vertical: AppSpacing.sm,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryContainer,
-                          borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text(
-                              'Mã đơn hàng: ',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            Text(
-                              orderId,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-
-                    const SizedBox(height: AppSpacing.xl),
-
-                    // Info card
-                    Container(
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      decoration: BoxDecoration(
-                        color: AppColors.info.withAlpha(25),
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-                        border: Border.all(
-                          color: AppColors.info.withAlpha(77),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.info_outline,
-                            color: AppColors.info,
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: Text(
-                              'Bạn sẽ nhận được email xác nhận đơn hàng trong giây lát',
-                              style: TextStyle(
-                                color: AppColors.info,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const Spacer(),
-
-                    // Buttons
-                    Row(
-                      children: [
-                        Expanded(
-                          child: VnSecondaryButton(
-                            onPressed: () {
-                              Navigator.of(sheetContext).pop();
-                              context.go('/orders');
-                            },
-                            label: 'Xem đơn hàng',
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: VnPrimaryButton(
-                            onPressed: () {
-                              Navigator.of(sheetContext).pop();
-                              context.read<CartBloc>().add(const CartCleared());
-                              context.read<CheckoutBloc>().add(const CheckoutReset());
-                              context.go('/');
-                            },
-                            label: 'Tiếp tục mua sắm',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Step indicator widget
-class _StepIndicator extends StatelessWidget {
-  final int currentStep;
-
-  const _StepIndicator({required this.currentStep});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      color: AppColors.surface,
-      child: Row(
-        children: List.generate(4, (index) {
-          final isCompleted = index < currentStep;
-          final isCurrent = index == currentStep;
-
-          return Expanded(
-            child: Row(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Step circle
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: isCompleted || isCurrent
-                        ? AppColors.primary
-                        : AppColors.outlineVariant,
-                  ),
-                  child: Center(
-                    child: isCompleted
-                        ? const Icon(
-                            Icons.check,
-                            size: 16,
-                            color: AppColors.onPrimary,
-                          )
-                        : Text(
-                            '${index + 1}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: isCurrent
-                                  ? AppColors.onPrimary
-                                  : AppColors.onSurfaceVariant,
-                            ),
-                          ),
-                  ),
+                Icon(
+                  Icons.check_circle_outline,
+                  size: 64,
+                  color: Theme.of(sheetContext).colorScheme.tertiary,
                 ),
-
-                // Connecting line
-                if (index < 3)
-                  Expanded(
-                    child: Container(
-                      height: 2,
-                      color: isCompleted
-                          ? AppColors.primary
-                          : AppColors.outlineVariant,
-                    ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  localizations.orderPlacedTitle,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(sheetContext).textTheme.headlineSmall
+                      ?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  localizations.orderPlacedHelp,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(sheetContext).textTheme.bodyLarge,
+                ),
+                if (orderId != null) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  SelectableText(
+                    localizations.orderNumber(orderId),
+                    textAlign: TextAlign.center,
                   ),
+                ],
+                const SizedBox(height: AppSpacing.lg),
+                VnPrimaryButton(
+                  onPressed: () {
+                    Navigator.of(sheetContext).pop();
+                    context.go(AppRoutes.orders);
+                  },
+                  label: localizations.viewOrders,
+                  icon: const Icon(Icons.receipt_long_outlined),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                VnSecondaryButton(
+                  onPressed: () {
+                    Navigator.of(sheetContext).pop();
+                    context.go(AppRoutes.home);
+                  },
+                  label: localizations.continueShopping,
+                  icon: const Icon(Icons.storefront_outlined),
+                ),
               ],
             ),
-          );
-        }),
+          ),
+        ),
       ),
     );
   }
 }
 
-/// Address section widget
-class _AddressSection extends StatelessWidget {
-  final CheckoutState state;
+class _CheckoutContent extends StatelessWidget {
+  const _CheckoutContent({
+    required this.state,
+    required this.cartInput,
+    required this.onAddAddress,
+    required this.onEditAddress,
+    required this.onDeleteAddress,
+    required this.onRetryAddresses,
+    required this.onRetryShipping,
+    required this.onRetryPaymentMethods,
+    required this.onAddressSelected,
+    required this.onShippingSelected,
+    required this.onPaymentSelected,
+    required this.onRetryPayment,
+    required this.onOpenPaymentUrl,
+    required this.onCheckPayment,
+  });
 
-  const _AddressSection({required this.state});
+  final CheckoutState state;
+  final CheckoutCartInput cartInput;
+  final VoidCallback onAddAddress;
+  final ValueChanged<VietnamAddress> onEditAddress;
+  final ValueChanged<VietnamAddress> onDeleteAddress;
+  final VoidCallback onRetryAddresses;
+  final ValueChanged<VietnamAddress> onRetryShipping;
+  final VoidCallback onRetryPaymentMethods;
+  final ValueChanged<VietnamAddress> onAddressSelected;
+  final ValueChanged<ShippingQuote> onShippingSelected;
+  final ValueChanged<PaymentMethod> onPaymentSelected;
+  final VoidCallback onRetryPayment;
+  final ValueChanged<String> onOpenPaymentUrl;
+  final ValueChanged<String> onCheckPayment;
 
   @override
   Widget build(BuildContext context) {
-    if (state.isLoadingAddresses) {
-      return const Padding(
-        padding: EdgeInsets.all(AppSpacing.md),
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (state.addresses.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          children: [
-            Icon(
-              Icons.location_off_outlined,
-              size: 48,
-              color: AppColors.outline,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'Chưa có địa chỉ giao hàng',
-              style: TextStyle(color: AppColors.onSurfaceVariant),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            VnSecondaryButton(
-              onPressed: () => context.push('/checkout/address/new'),
-              label: 'Thêm địa chỉ mới',
-              isFullWidth: false,
-              height: 40,
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Column(
-      children: [
-        ...state.addresses.map((address) => AddressCard(
-              address: address,
-              isSelected: state.selectedAddress?.id == address.id,
-              onTap: () {
-                context.read<CheckoutBloc>().add(CheckoutAddressSelected(address));
-              },
-              onEdit: () => context.push('/checkout/address/${address.id}'),
-              onDelete: () => _showDeleteConfirmation(context, address),
-            )),
-        Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: TextButton.icon(
-            onPressed: () => context.push('/checkout/address/new'),
-            icon: const Icon(Icons.add, size: 18),
-            label: const Text('Thêm địa chỉ mới'),
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _showDeleteConfirmation(BuildContext context, VietnamAddress address) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Xóa địa chỉ'),
-        content: Text('Bạn có chắc muốn xóa địa chỉ của ${address.recipientName}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Hủy'),
-          ),
-          TextButton(
-            onPressed: () {
-              context.read<CheckoutBloc>().add(CheckoutAddressDeleted(address.id));
-              Navigator.pop(dialogContext);
-            },
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: const Text('Xóa'),
-          ),
-        ],
+    final localizations = AppLocalizations.of(context);
+    return ListView(
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.responsiveSpacing(context, mobile: AppSpacing.md),
+        AppSpacing.md,
+        AppSpacing.responsiveSpacing(context, mobile: AppSpacing.md),
+        AppSpacing.xl,
       ),
-    );
-  }
-}
-
-/// Shipping section widget
-class _ShippingSection extends StatelessWidget {
-  final CheckoutState state;
-
-  const _ShippingSection({required this.state});
-
-  @override
-  Widget build(BuildContext context) {
-    if (state.selectedAddress == null) {
-      return Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Text(
-          'Vui lòng chọn địa chỉ giao hàng trước',
-          style: TextStyle(color: AppColors.onSurfaceVariant),
-        ),
-      );
-    }
-
-    if (state.isLoadingShipping) {
-      return const Padding(
-        padding: EdgeInsets.all(AppSpacing.md),
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (state.shippingQuotes.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          children: [
-            Icon(
-              Icons.local_shipping_outlined,
-              size: 48,
-              color: AppColors.outline,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'Không có phương thức vận chuyển khả dụng',
-              style: TextStyle(color: AppColors.onSurfaceVariant),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            VnSecondaryButton(
-              onPressed: () {
-                context.read<CheckoutBloc>().add(
-                      CheckoutShippingQuotesRequested(state.selectedAddress!),
-                    );
-              },
-              label: 'Tải lại',
-              isFullWidth: false,
-              height: 40,
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Column(
-      children: state.shippingQuotes.map((quote) {
-        return ShippingMethodCard(
-          shipping: quote,
-          isSelected: state.selectedShipping?.id == quote.id,
-          onTap: () {
-            context.read<CheckoutBloc>().add(CheckoutShippingSelected(quote));
-          },
-        );
-      }).toList(),
-    );
-  }
-}
-
-/// Payment section widget
-class _PaymentSection extends StatelessWidget {
-  final CheckoutState state;
-
-  const _PaymentSection({required this.state});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
       children: [
-        PaymentMethodCard(
-          method: PaymentMethod.vnpay,
-          isSelected: state.selectedPaymentMethod == PaymentMethod.vnpay,
-          onTap: () => context
-              .read<CheckoutBloc>()
-              .add(CheckoutPaymentMethodSelected(PaymentMethod.vnpay)),
-        ),
-        PaymentMethodCard(
-          method: PaymentMethod.momo,
-          isSelected: state.selectedPaymentMethod == PaymentMethod.momo,
-          onTap: () => context
-              .read<CheckoutBloc>()
-              .add(CheckoutPaymentMethodSelected(PaymentMethod.momo)),
-        ),
-        PaymentMethodCard(
-          method: PaymentMethod.vietqr,
-          isSelected: state.selectedPaymentMethod == PaymentMethod.vietqr,
-          onTap: () => context
-              .read<CheckoutBloc>()
-              .add(CheckoutPaymentMethodSelected(PaymentMethod.vietqr)),
-        ),
-        PaymentMethodCard(
-          method: PaymentMethod.cod,
-          isSelected: state.selectedPaymentMethod == PaymentMethod.cod,
-          onTap: () => context
-              .read<CheckoutBloc>()
-              .add(CheckoutPaymentMethodSelected(PaymentMethod.cod)),
-        ),
-        // Trust signals after payment methods
-        const Padding(
-          padding: EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.md),
-          child: PaymentTrustSignals(),
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 760),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _CheckoutSection(
+                  icon: Icons.location_on_outlined,
+                  title: localizations.checkoutDeliveryAddress,
+                  action: IconButton(
+                    onPressed: onAddAddress,
+                    tooltip: localizations.addNewAddress,
+                    icon: const Icon(Icons.add),
+                  ),
+                  child: _AddressSection(
+                    state: state,
+                    onAddAddress: onAddAddress,
+                    onEditAddress: onEditAddress,
+                    onDeleteAddress: onDeleteAddress,
+                    onRetry: onRetryAddresses,
+                    onSelected: onAddressSelected,
+                  ),
+                ),
+                _CheckoutSection(
+                  icon: Icons.local_shipping_outlined,
+                  title: localizations.checkoutDeliveryMethod,
+                  child: _ShippingSection(
+                    state: state,
+                    onRetry: onRetryShipping,
+                    onSelected: onShippingSelected,
+                  ),
+                ),
+                _CheckoutSection(
+                  icon: Icons.payment_outlined,
+                  title: localizations.checkoutPaymentMethod,
+                  child: _PaymentSection(
+                    state: state,
+                    onRetry: onRetryPaymentMethods,
+                    onSelected: onPaymentSelected,
+                  ),
+                ),
+                if (state.status == CheckoutStatus.awaitingPayment &&
+                    state.currentTransaction != null)
+                  _PendingPaymentPanel(
+                    transaction: state.currentTransaction!,
+                    onOpenPaymentUrl: onOpenPaymentUrl,
+                    onCheckPayment: onCheckPayment,
+                  ),
+                if (state.status == CheckoutStatus.paymentFailed)
+                  _PaymentFailedPanel(onRetry: onRetryPayment),
+                _CheckoutSection(
+                  icon: Icons.receipt_long_outlined,
+                  title: localizations.checkoutReviewOrder,
+                  showDivider: false,
+                  child: OrderSummarySheet(
+                    cartItems: cartInput.items,
+                    subtotal: state.session?.subtotal ?? cartInput.subtotal,
+                    shippingFee: state.shippingFee,
+                    discountAmount:
+                        state.session?.discountAmount ??
+                        cartInput.discountAmount,
+                    couponCode:
+                        state.session?.couponCode ?? cartInput.couponCode,
+                    isShippingCalculated: state.selectedShipping != null,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ],
     );
   }
 }
 
-/// Order summary section widget
-class _OrderSummarySection extends StatelessWidget {
-  final CheckoutState state;
+class _CheckoutSection extends StatelessWidget {
+  const _CheckoutSection({
+    required this.icon,
+    required this.title,
+    required this.child,
+    this.action,
+    this.showDivider = true,
+  });
 
-  const _OrderSummarySection({required this.state});
+  final IconData icon;
+  final String title;
+  final Widget child;
+  final Widget? action;
+  final bool showDivider;
 
   @override
   Widget build(BuildContext context) {
-    final cartItems = context.read<CartBloc>().state.cart?.items ?? [];
+    final heading = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 24, color: Theme.of(context).colorScheme.primary),
+        const SizedBox(width: AppSpacing.sm),
+        Flexible(
+          child: Text(
+            title,
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+          ),
+        ),
+      ],
+    );
 
     return Padding(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Product list (collapsed by default)
-          OrderSummarySheet(
-            cartItems: cartItems,
-            subtotal: state.subtotal,
-            shippingFee: state.shippingFee,
-            discountAmount: state.discountAmount,
-            couponCode: state.session?.couponCode,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final stackHeader =
+                  action != null &&
+                  (constraints.maxWidth < 380 ||
+                      MediaQuery.textScalerOf(context).scale(1) > 1.4);
+              if (action == null) return heading;
+              if (stackHeader) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    heading,
+                    const SizedBox(height: AppSpacing.xs),
+                    action!,
+                  ],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: heading),
+                  const SizedBox(width: AppSpacing.sm),
+                  action!,
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          child,
+          if (showDivider) ...[
+            const SizedBox(height: AppSpacing.lg),
+            const Divider(height: 1),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _AddressSection extends StatelessWidget {
+  const _AddressSection({
+    required this.state,
+    required this.onAddAddress,
+    required this.onEditAddress,
+    required this.onDeleteAddress,
+    required this.onRetry,
+    required this.onSelected,
+  });
+
+  final CheckoutState state;
+  final VoidCallback onAddAddress;
+  final ValueChanged<VietnamAddress> onEditAddress;
+  final ValueChanged<VietnamAddress> onDeleteAddress;
+  final VoidCallback onRetry;
+  final ValueChanged<VietnamAddress> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+    if (state.isLoadingAddresses && state.addresses.isEmpty) {
+      return const Column(
+        children: [AddressCardSkeleton(), AddressCardSkeleton()],
+      );
+    }
+    if (state.failure == CheckoutFailure.loadAddresses &&
+        state.addresses.isEmpty) {
+      return _InlineState(
+        icon: Icons.cloud_off_outlined,
+        title: localizations.checkoutAddressesLoadError,
+        actionLabel: localizations.retry,
+        onAction: onRetry,
+      );
+    }
+    if (state.addresses.isEmpty) {
+      return _InlineState(
+        icon: Icons.add_location_alt_outlined,
+        title: localizations.noAddressTitle,
+        message: localizations.noAddressHelp,
+        actionLabel: localizations.addNewAddress,
+        actionIcon: Icons.add,
+        onAction: onAddAddress,
+      );
+    }
+
+    return Column(
+      children: [
+        if (state.isLoadingAddresses) const LinearProgressIndicator(),
+        if (state.failure == CheckoutFailure.loadAddresses)
+          _InlineState(
+            icon: Icons.cloud_off_outlined,
+            title: localizations.checkoutAddressesLoadError,
+            actionLabel: localizations.retry,
+            onAction: onRetry,
+            compact: true,
+          ),
+        RadioGroup<VietnamAddress>(
+          groupValue: state.selectedAddress,
+          onChanged: (address) {
+            if (address != null) onSelected(address);
+          },
+          child: Column(
+            children: [
+              for (final address in state.addresses)
+                AddressCard(
+                  address: address,
+                  isSelected: address.id == state.selectedAddress?.id,
+                  onTap: () => onSelected(address),
+                  onEdit: () => onEditAddress(address),
+                  onDelete: () => onDeleteAddress(address),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ShippingSection extends StatelessWidget {
+  const _ShippingSection({
+    required this.state,
+    required this.onRetry,
+    required this.onSelected,
+  });
+
+  final CheckoutState state;
+  final ValueChanged<VietnamAddress> onRetry;
+  final ValueChanged<ShippingQuote> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+    final selectedAddress = state.selectedAddress;
+    if (selectedAddress == null) {
+      return _InlineState(
+        icon: Icons.location_searching_outlined,
+        title: localizations.selectAddressFirst,
+      );
+    }
+    if (state.isLoadingShipping) {
+      return const Column(
+        children: [ShippingMethodCardSkeleton(), ShippingMethodCardSkeleton()],
+      );
+    }
+    if (state.failure == CheckoutFailure.loadShipping) {
+      return _InlineState(
+        icon: Icons.local_shipping_outlined,
+        title: localizations.shippingMethodsLoadError,
+        actionLabel: localizations.retry,
+        onAction: () => onRetry(selectedAddress),
+      );
+    }
+
+    final availableQuotes = state.shippingQuotes
+        .where((quote) => quote.isAvailable)
+        .toList(growable: false);
+    if (availableQuotes.isEmpty) {
+      return _InlineState(
+        icon: Icons.wrong_location_outlined,
+        title: localizations.noShippingMethods,
+      );
+    }
+
+    return RadioGroup<ShippingQuote>(
+      groupValue: state.selectedShipping,
+      onChanged: (quote) {
+        if (quote != null) onSelected(quote);
+      },
+      child: Column(
+        children: [
+          for (final quote in availableQuotes)
+            ShippingMethodCard(
+              shipping: quote,
+              isSelected: quote.id == state.selectedShipping?.id,
+              onTap: () => onSelected(quote),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaymentSection extends StatelessWidget {
+  const _PaymentSection({
+    required this.state,
+    required this.onRetry,
+    required this.onSelected,
+  });
+
+  final CheckoutState state;
+  final VoidCallback onRetry;
+  final ValueChanged<PaymentMethod> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+    if (state.isLoadingPaymentMethods) {
+      return const Column(
+        children: [PaymentMethodCardSkeleton(), PaymentMethodCardSkeleton()],
+      );
+    }
+    if (state.failure == CheckoutFailure.loadPaymentMethods) {
+      return _InlineState(
+        icon: Icons.credit_card_off_outlined,
+        title: localizations.paymentMethodsLoadError,
+        actionLabel: localizations.retry,
+        onAction: onRetry,
+      );
+    }
+    if (state.availablePaymentMethods.isEmpty) {
+      return _InlineState(
+        icon: Icons.credit_card_off_outlined,
+        title: localizations.noPaymentMethods,
+      );
+    }
+
+    return PaymentMethodSelector(
+      methods: state.availablePaymentMethods,
+      selectedMethod: state.selectedPaymentMethod,
+      onMethodSelected: onSelected,
+    );
+  }
+}
+
+class _PendingPaymentPanel extends StatelessWidget {
+  const _PendingPaymentPanel({
+    required this.transaction,
+    required this.onOpenPaymentUrl,
+    required this.onCheckPayment,
+  });
+
+  final PaymentTransaction transaction;
+  final ValueChanged<String> onOpenPaymentUrl;
+  final ValueChanged<String> onCheckPayment;
+
+  @override
+  Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+    final colors = Theme.of(context).colorScheme;
+    final qrCodeUrl = transaction.qrCodeUrl;
+    final paymentUrl = transaction.paymentUrl;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: colors.primaryContainer.withAlpha(80),
+        border: Border.all(color: colors.primary),
+        borderRadius: AppSpacing.borderRadiusSmall,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            localizations.completePayment,
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(localizations.paymentQrInstruction),
+          if (qrCodeUrl != null && qrCodeUrl.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final size = math.min(constraints.maxWidth, 240.0);
+                return Center(
+                  child: Semantics(
+                    label: localizations.paymentQrCode,
+                    image: true,
+                    child: SafeNetworkImage(
+                      url: qrCodeUrl,
+                      width: size,
+                      height: size,
+                      fit: BoxFit.contain,
+                      borderRadius: AppSpacing.borderRadiusSmall,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+          const SizedBox(height: AppSpacing.md),
+          if (paymentUrl != null && paymentUrl.isNotEmpty) ...[
+            VnSecondaryButton(
+              onPressed: () => onOpenPaymentUrl(paymentUrl),
+              label: localizations.openPaymentApp,
+              icon: const Icon(Icons.open_in_new),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+          VnPrimaryButton(
+            onPressed: () => onCheckPayment(transaction.id),
+            label: localizations.checkPaymentStatus,
+            icon: const Icon(Icons.refresh),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PaymentFailedPanel extends StatelessWidget {
+  const _PaymentFailedPanel({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+      child: _InlineState(
+        icon: Icons.error_outline,
+        title: localizations.checkoutPaymentFailed,
+        actionLabel: localizations.payNow,
+        onAction: onRetry,
+      ),
+    );
+  }
+}
+
+class _InlineState extends StatelessWidget {
+  const _InlineState({
+    required this.icon,
+    required this.title,
+    this.message,
+    this.actionLabel,
+    this.actionIcon = Icons.refresh,
+    this.onAction,
+    this.compact = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? message;
+  final String? actionLabel;
+  final IconData actionIcon;
+  final VoidCallback? onAction;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        width: double.infinity,
+        margin: compact
+            ? const EdgeInsets.only(bottom: AppSpacing.xs)
+            : EdgeInsets.zero,
+        padding: EdgeInsets.all(compact ? AppSpacing.sm : AppSpacing.md),
+        decoration: BoxDecoration(
+          color: colors.surfaceContainerLow,
+          border: Border.all(color: colors.outlineVariant),
+          borderRadius: AppSpacing.borderRadiusSmall,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: compact ? 28 : 36, color: colors.onSurfaceVariant),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            if (message != null) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                message!,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+            ],
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              OutlinedButton.icon(
+                onPressed: onAction,
+                icon: Icon(actionIcon),
+                label: Text(actionLabel!),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CheckoutLoadingView extends StatelessWidget {
+  const _CheckoutLoadingView();
+
+  @override
+  Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      children: [
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 760),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  localizations.loading,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                const AddressCardSkeleton(),
+                const SizedBox(height: AppSpacing.lg),
+                const ShippingMethodCardSkeleton(),
+                const SizedBox(height: AppSpacing.lg),
+                const PaymentMethodCardSkeleton(),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BlockingCheckoutError extends StatelessWidget {
+  const _BlockingCheckoutError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: _InlineState(
+          icon: Icons.error_outline,
+          title: localizations.checkoutInitializeError,
+          actionLabel: localizations.retry,
+          onAction: onRetry,
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyCheckoutState extends StatelessWidget {
+  const _EmptyCheckoutState();
+
+  @override
+  Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: _InlineState(
+          icon: Icons.shopping_cart_outlined,
+          title: localizations.checkoutEmptyTitle,
+          message: localizations.checkoutEmptyHelp,
+          actionLabel: localizations.backToCart,
+          actionIcon: Icons.arrow_back,
+          onAction: () => context.go(AppRoutes.cart),
+        ),
       ),
     );
   }

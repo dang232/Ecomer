@@ -62,6 +62,9 @@ public class ProductDocument {
     @Field(type = FieldType.Keyword)
     private List<String> imageUrls;
 
+    @Field(type = FieldType.Integer)
+    private Integer stock;
+
     @Field(type = FieldType.Date)
     private Instant createdAt;
 
@@ -124,6 +127,9 @@ public class ProductDocument {
     public List<String> getImageUrls() { return imageUrls; }
     public void setImageUrls(List<String> imageUrls) { this.imageUrls = imageUrls; }
 
+    public Integer getStock() { return stock; }
+    public void setStock(Integer stock) { this.stock = stock; }
+
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
 
@@ -159,6 +165,9 @@ public class ProductDocument {
         doc.setSellerId(stringValue(payload.get("sellerId")));
         doc.setSellerName(stringValue(payload.get("sellerName")));
         doc.setStatus(stringValue(payload.getOrDefault("status", "DRAFT")));
+        String imageUrl = stringValue(payload.get("imageUrl"));
+        doc.setImageUrls(imageUrl == null ? List.of() : List.of(imageUrl));
+        doc.setStock(intValue(payload.get("stock")));
         doc.setTotalSold(intValue(payload.get("totalSold")));
         doc.setSameDayDelivery(booleanValue(payload.get("sameDayDelivery")));
         doc.setVerified(booleanValue(payload.get("verified")));

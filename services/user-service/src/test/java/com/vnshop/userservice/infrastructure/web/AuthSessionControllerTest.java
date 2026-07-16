@@ -189,6 +189,10 @@ class AuthSessionControllerTest {
 
         assertThat(response.getCookie("vnshop_csrf")).isNotNull();
         assertThat(response.getCookie("vnshop_csrf").getValue()).isNotBlank();
+        assertThat(response.getHeaderValues("Set-Cookie"))
+                .anySatisfy(header -> assertThat(String.valueOf(header))
+                        .contains("vnshop_csrf=")
+                        .contains("Path=/;"));
 
         // Verify redirect to return path on the SPA
         assertThat(response.getRedirectedUrl()).isEqualTo("http://localhost:3000/profile");

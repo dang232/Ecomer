@@ -78,10 +78,9 @@ export function CountryPhoneInput({
   // We strip the active dial code from the front; if the user typed a
   // different country code, the picker would have to change first.
   const dialCode = dialCodeForCountry(country);
-  const nationalDigits =
-    value.startsWith(dialCode)
-      ? digitsOnly(value.slice(dialCode.length))
-      : digitsOnly(value);
+  const nationalDigits = value.startsWith(dialCode)
+    ? digitsOnly(value.slice(dialCode.length))
+    : digitsOnly(value);
 
   // Format the digits for display per the country's conventions
   // (e.g. VN: "912 345 678"; US: "(202) 555-1234").
@@ -92,8 +91,7 @@ export function CountryPhoneInput({
   const status = livePhoneStatus(nationalDigits, country);
   const liveError = STATUS_MESSAGES[status];
   const error = externalError ?? liveError;
-  const isValid =
-    isValidPhone(value, country) || (nationalDigits === "" && value === "");
+  const isValid = isValidPhone(value, country) || (nationalDigits === "" && value === "");
 
   const handleInputChange = (raw: string) => {
     // Strip everything but digits. The picker owns the country code.

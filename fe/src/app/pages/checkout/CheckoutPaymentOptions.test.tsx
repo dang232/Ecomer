@@ -20,12 +20,8 @@ describe("mapPaymentOptions (extracted from CheckoutPage)", () => {
 
     // Two unknown codes -> two warnings
     expect(warnSpy).toHaveBeenCalledTimes(2);
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("UNKNOWN_GATEWAY_XYZ"),
-    );
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("ANOTHER_UNKNOWN"),
-    );
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("UNKNOWN_GATEWAY_XYZ"));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("ANOTHER_UNKNOWN"));
 
     // Unknown codes still produce a PaymentOption with generic fallback
     const unknownOption = result.find((o) => o.id === ("UNKNOWN_GATEWAY_XYZ" as string));

@@ -137,7 +137,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
           'password': password,
           'firstName': firstName,
           'lastName': lastName,
-          if (phone != null) 'phone': phone,
+          'phone': ?phone,
         },
       );
 
@@ -288,8 +288,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       final response = await _dioClient.put(
         ApiConstants.updateProfile,
         data: {
-          if (fullName != null) 'name': fullName,
-          if (phone != null) 'phone': phone,
+          'name': ?fullName,
+          'phone': ?phone,
         },
         options: Options(
           headers: {

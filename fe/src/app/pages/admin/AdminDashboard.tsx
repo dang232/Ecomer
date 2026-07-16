@@ -1,4 +1,12 @@
-import { IconAlertCircle, IconChartBar, IconPackage, IconRefresh, IconTrendingUp, IconUsers, IconWallet } from "@tabler/icons-react";
+import {
+  IconAlertCircle,
+  IconChartBar,
+  IconPackage,
+  IconRefresh,
+  IconTrendingUp,
+  IconUsers,
+  IconWallet,
+} from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
@@ -23,7 +31,6 @@ import {
 } from "../../lib/api/endpoints/admin";
 import { formatPrice } from "../../lib/format";
 import { comingSoon } from "../../lib/ui/coming-soon";
-
 
 export function AdminDashboard() {
   const { t } = useTranslation();
@@ -194,7 +201,9 @@ export function AdminDashboard() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-sm text-muted-foreground text-center py-8">{t("admin.dashboard.noData")}</p>
+            <p className="text-sm text-muted-foreground text-center py-8">
+              {t("admin.dashboard.noData")}
+            </p>
           )}
         </div>
 
@@ -222,7 +231,9 @@ export function AdminDashboard() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground text-center py-8">{t("admin.dashboard.noData")}</p>
+            <p className="text-sm text-muted-foreground text-center py-8">
+              {t("admin.dashboard.noData")}
+            </p>
           )}
         </div>
       </div>

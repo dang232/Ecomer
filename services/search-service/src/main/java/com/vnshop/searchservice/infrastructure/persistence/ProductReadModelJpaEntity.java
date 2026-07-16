@@ -44,6 +44,12 @@ public class ProductReadModelJpaEntity {
     @Column(name = "variant_count", nullable = false)
     private int variantCount;
 
+    @Column(name = "image_url")
+    private String imageUrl;
+
+    @Column(name = "stock", nullable = false)
+    private int stock;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -59,7 +65,7 @@ public class ProductReadModelJpaEntity {
     protected ProductReadModelJpaEntity() {
     }
 
-    public ProductReadModelJpaEntity(String productId, String name, String description, String categoryId, String brand, String status, BigDecimal minPrice, BigDecimal maxPrice, int variantCount, Instant createdAt, boolean sameDayDelivery, boolean verified, boolean isOfficial) {
+    public ProductReadModelJpaEntity(String productId, String name, String description, String categoryId, String brand, String status, BigDecimal minPrice, BigDecimal maxPrice, int variantCount, String imageUrl, int stock, Instant createdAt, boolean sameDayDelivery, boolean verified, boolean isOfficial) {
         this.productId = productId;
         this.name = name;
         this.description = description;
@@ -69,6 +75,8 @@ public class ProductReadModelJpaEntity {
         this.minPrice = minPrice;
         this.maxPrice = maxPrice;
         this.variantCount = variantCount;
+        this.imageUrl = imageUrl;
+        this.stock = stock;
         this.createdAt = createdAt;
         this.sameDayDelivery = sameDayDelivery;
         this.verified = verified;
@@ -86,6 +94,8 @@ public class ProductReadModelJpaEntity {
                 model.minPrice(),
                 model.maxPrice(),
                 model.variantCount(),
+                model.imageUrl(),
+                model.stock(),
                 model.createdAt(),
                 model.sameDayDelivery(),
                 model.verified(),
@@ -104,6 +114,8 @@ public class ProductReadModelJpaEntity {
                 decimalValue(payload.get("minPrice")),
                 decimalValue(payload.get("maxPrice")),
                 intValue(payload.get("variantCount")),
+                stringValue(payload.get("imageUrl")),
+                intValue(payload.get("stock")),
                 Instant.now(),
                 booleanValue(payload.get("sameDayDelivery")),
                 booleanValue(payload.get("verified")),
@@ -112,7 +124,7 @@ public class ProductReadModelJpaEntity {
     }
 
     public ProductReadModel toDomain() {
-        return new ProductReadModel(productId, name, description, categoryId, brand, status, minPrice, maxPrice, variantCount, createdAt, sameDayDelivery, verified, isOfficial);
+        return new ProductReadModel(productId, name, description, categoryId, brand, status, minPrice, maxPrice, variantCount, imageUrl, stock, createdAt, sameDayDelivery, verified, isOfficial);
     }
 
     private static String stringValue(Object value) {

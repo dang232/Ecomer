@@ -10,10 +10,7 @@ import {
   startTrace,
   stopTrace,
 } from "./_journey-evidence";
-import {
-  loginAsSeededUser,
-  logoutViaUserMenu,
-} from "../_workday-evidence";
+import { loginAsSeededUser, logoutViaUserMenu } from "../_workday-evidence";
 import { requireJourneyState } from "./_journey-state";
 
 /**
@@ -60,8 +57,7 @@ test.describe.serial("Chapter 6 — Admin closes the loop", () => {
         },
         {
           code: "AC-6.2",
-          outcome:
-            "Admin can mark the payout complete and the payout leaves the pending queue",
+          outcome: "Admin can mark the payout complete and the payout leaves the pending queue",
         },
         {
           code: "AC-6.3",
@@ -103,10 +99,7 @@ test.describe.serial("Chapter 6 — Admin closes the loop", () => {
         "AC-6.1",
         "Predecessor chapter 5 left a PENDING payoutId in state.json",
         async () => {
-          const state = await requireJourneyState([
-            "payoutId",
-            "payoutAmountVnd",
-          ]);
+          const state = await requireJourneyState(["payoutId", "payoutAmountVnd"]);
           payoutId = state.payoutId;
           payoutAmountVnd = Number(state.payoutAmountVnd);
         },
@@ -132,14 +125,11 @@ test.describe.serial("Chapter 6 — Admin closes the loop", () => {
           await expect
             .poll(
               async () => {
-                const r = await page.request.get(
-                  `${apiURL}/sellers/me/finance/wallet`,
-                  { headers: { Authorization: `Bearer ${token}` } },
-                );
+                const r = await page.request.get(`${apiURL}/sellers/me/finance/wallet`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
                 if (!r.ok()) return -1;
-                const pending = Number(
-                  (await r.json())?.data?.pendingBalance ?? -1,
-                );
+                const pending = Number((await r.json())?.data?.pendingBalance ?? -1);
                 if (pending >= payoutAmountVnd) {
                   pendingBeforeVnd = pending;
                 }
@@ -171,15 +161,15 @@ test.describe.serial("Chapter 6 — Admin closes the loop", () => {
             .getByRole("button", { name: /^(Payouts|Rút tiền)/i })
             .first()
             .click();
-          await expect(
-            page.getByText(/Payout requests|Yêu cầu rút tiền/i).first(),
-          ).toBeVisible({ timeout: 15_000 });
+          await expect(page.getByText(/Payout requests|Yêu cầu rút tiền/i).first()).toBeVisible({
+            timeout: 15_000,
+          });
 
           // Chapter 5 wrote payoutId to state.json; the admin row renders
           // p.id in a font-mono span so a substring match is enough.
-          await expect(
-            page.getByText(payoutId, { exact: false }).first(),
-          ).toBeVisible({ timeout: 10_000 });
+          await expect(page.getByText(payoutId, { exact: false }).first()).toBeVisible({
+            timeout: 10_000,
+          });
           await expectNoGlobalError(page);
         },
       );
@@ -193,9 +183,7 @@ test.describe.serial("Chapter 6 — Admin closes the loop", () => {
           // PayoutsQueue renders one row per payout under .divide-y > div with
           // the id in a font-mono span — narrow to the row whose hasText
           // matches the chapter-5 payoutId, then click Complete inside.
-          const row = page
-            .locator(".divide-y > div", { hasText: payoutId })
-            .first();
+          const row = page.locator(".divide-y > div", { hasText: payoutId }).first();
           await expect(row).toBeVisible({ timeout: 10_000 });
           await row
             .getByRole("button", { name: /^(Complete|Hoàn tất|Hoàn thành)$/i })
@@ -233,16 +221,13 @@ test.describe.serial("Chapter 6 — Admin closes the loop", () => {
           await expect
             .poll(
               async () => {
-                const r = await page.request.get(
-                  `${apiURL}/admin/finance/payouts/pending`,
-                  { headers: { Authorization: `Bearer ${adminToken}` } },
-                );
+                const r = await page.request.get(`${apiURL}/admin/finance/payouts/pending`, {
+                  headers: { Authorization: `Bearer ${adminToken}` },
+                });
                 if (!r.ok()) return -1;
                 const list: Array<{ payoutId?: string; status?: string }> =
                   (await r.json())?.data ?? [];
-                return list.filter(
-                  (p) => p.payoutId === payoutId && p.status === "PENDING",
-                ).length;
+                return list.filter((p) => p.payoutId === payoutId && p.status === "PENDING").length;
               },
               {
                 timeout: 15_000,
@@ -273,10 +258,9 @@ test.describe.serial("Chapter 6 — Admin closes the loop", () => {
           await expect
             .poll(
               async () => {
-                const r = await page.request.get(
-                  `${apiURL}/sellers/me/finance/wallet`,
-                  { headers: { Authorization: `Bearer ${token}` } },
-                );
+                const r = await page.request.get(`${apiURL}/sellers/me/finance/wallet`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
                 if (!r.ok()) return -1;
                 return Number((await r.json())?.data?.pendingBalance ?? -1);
               },
@@ -304,17 +288,15 @@ test.describe.serial("Chapter 6 — Admin closes the loop", () => {
             .getByRole("tab", { name: /^(Completed|Đã hoàn tất)$/i })
             .first()
             .click();
-          const completedRow = page
-            .locator(".divide-y > div", { hasText: payoutId })
-            .first();
+          const completedRow = page.locator(".divide-y > div", { hasText: payoutId }).first();
           await expect(completedRow).toBeVisible({ timeout: 15_000 });
           // The "Completed by ..." label is what proves the audit trail
           // landed in the FE. The exact admin id is whatever the auth
           // service stamps as the JWT sub for admin1, so we just assert
           // the localized prefix is rendered.
-          await expect(
-            completedRow.getByText(/Completed by|Hoàn tất bởi/i).first(),
-          ).toBeVisible({ timeout: 5_000 });
+          await expect(completedRow.getByText(/Completed by|Hoàn tất bởi/i).first()).toBeVisible({
+            timeout: 5_000,
+          });
 
           // BE: the /completed endpoint must echo the same row with
           // completedBy + completedAt populated. This is the source-of-
@@ -328,10 +310,7 @@ test.describe.serial("Chapter 6 — Admin closes the loop", () => {
             `${apiURL}/admin/finance/payouts/completed`,
             { headers: { Authorization: `Bearer ${adminToken}` } },
           );
-          expect(
-            completedResp.ok(),
-            `GET /completed: ${completedResp.status()}`,
-          ).toBeTruthy();
+          expect(completedResp.ok(), `GET /completed: ${completedResp.status()}`).toBeTruthy();
           const completedList: Array<{
             payoutId?: string;
             status?: string;
@@ -342,13 +321,11 @@ test.describe.serial("Chapter 6 — Admin closes the loop", () => {
           expect(auditRow, `payout ${payoutId} not in /completed`).toBeTruthy();
           expect(auditRow?.status).toBe("COMPLETED");
           expect(
-            typeof auditRow?.completedBy === "string" &&
-              (auditRow?.completedBy ?? "").length > 0,
+            typeof auditRow?.completedBy === "string" && (auditRow?.completedBy ?? "").length > 0,
             "completedBy should be a non-empty string",
           ).toBeTruthy();
           expect(
-            typeof auditRow?.completedAt === "string" &&
-              (auditRow?.completedAt ?? "").length > 0,
+            typeof auditRow?.completedAt === "string" && (auditRow?.completedAt ?? "").length > 0,
             "completedAt should be a non-empty ISO timestamp",
           ).toBeTruthy();
           await expectNoGlobalError(page);

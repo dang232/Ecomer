@@ -38,15 +38,16 @@ async function seedBuyer(request: APIRequestContext): Promise<SeededBuyer> {
   return { email, accessToken };
 }
 
-
 test.describe("messages + notifications UI", () => {
   test("/messages as guest redirects to /login (route guard)", async ({ page }) => {
     await page.goto("/messages");
 
-    await expect.poll(() => new URL(page.url()).pathname, {
-      timeout: 20_000,
-      message: "expected /messages to redirect to /login for guests",
-    }).toMatch(/^\/login/);
+    await expect
+      .poll(() => new URL(page.url()).pathname, {
+        timeout: 20_000,
+        message: "expected /messages to redirect to /login for guests",
+      })
+      .toMatch(/^\/login/);
 
     await expectNoGlobalError(page);
   });
@@ -75,9 +76,7 @@ test.describe("messages + notifications UI", () => {
     await expectNoGlobalError(page);
   });
 
-  test("Notification bell button is visible in the header for authed buyers", async ({
-    page,
-  }) => {
+  test("Notification bell button is visible in the header for authed buyers", async ({ page }) => {
     await seedBuyer(page.request);
     await page.goto("/");
 

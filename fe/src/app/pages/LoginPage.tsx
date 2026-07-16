@@ -15,15 +15,16 @@ import { Navigate, useNavigate, useSearchParams } from "react-router";
 
 import { useAppConfig } from "../hooks/use-app-config";
 import { useAuth } from "../hooks/use-auth";
-import { sanitizeRedirect } from "../lib/auth/sanitize-redirect";
+import { resolvePostLoginRedirect, sanitizeRedirect } from "../lib/auth/sanitize-redirect";
 
 export function LoginPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { ready, authenticated, loginWithCredentials, beginOAuthLogin } = useAuth();
+  const { ready, authenticated, roles, loginWithCredentials, beginOAuthLogin } = useAuth();
   const config = useAppConfig();
   const { t } = useTranslation();
-  const next = sanitizeRedirect(params.get("next"));
+  const rawNext = params.get("next");
+  const next = sanitizeRedirect(rawNext);
 
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -82,7 +83,7 @@ export function LoginPage() {
   };
 
   if (ready && authenticated) {
-    return <Navigate to={next} replace />;
+    return <Navigate to={resolvePostLoginRedirect(rawNext, roles)} replace />;
   }
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -92,13 +93,13 @@ export function LoginPage() {
     setSubmitting(true);
     void (async () => {
       try {
-        await loginWithCredentials(identifier.trim(), password);
+        const rolesAfterLogin = await loginWithCredentials(identifier.trim(), password);
         if (rememberMe) localStorage.setItem("rememberMe", "true");
         // Yield one macrotask so React can flush the AuthProvider state update.
         // Route guards read `authenticated` from context — navigating synchronously
         // would hit them before the provider re-renders.
         await new Promise((resolve) => setTimeout(resolve, 0));
-        void navigate(next, { replace: true });
+        void navigate(resolvePostLoginRedirect(rawNext, rolesAfterLogin), { replace: true });
       } catch (err) {
         const errorCode =
           err && typeof err === "object" && "errorCode" in err

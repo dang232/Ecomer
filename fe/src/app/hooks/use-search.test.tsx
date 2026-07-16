@@ -2,16 +2,15 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../lib/api";
+import { makeWrapper } from "../test-utils/render-with-query-client";
+
+import { useSearch } from "./use-search";
 
 const searchProductsMock = vi.fn();
 
 vi.mock("../lib/api/endpoints/search", () => ({
   searchProducts: (...args: unknown[]) => searchProductsMock(...args),
 }));
-
-import { makeWrapper } from "../test-utils/render-with-query-client";
-
-import { useSearch } from "./use-search";
 
 beforeEach(() => {
   searchProductsMock.mockReset();
@@ -91,5 +90,18 @@ describe("useSearch", () => {
     const { result } = renderHook(() => useSearch({ q: "x" }), { wrapper: Wrapper });
     await waitFor(() => expect(result.current.products).toHaveLength(2));
     expect(result.current.totalElements).toBe(2);
+  });
+
+  it("exposes a retry action that refetches the active search", async () => {
+    searchProductsMock.mockResolvedValue({ content: [], totalElements: 0, totalPages: 0 });
+    const { Wrapper } = makeWrapper();
+    const params = { q: "tai nghe" };
+    const { result } = renderHook(() => useSearch(params), { wrapper: Wrapper });
+
+    await waitFor(() => expect(searchProductsMock).toHaveBeenCalledTimes(1));
+    await result.current.refetch();
+
+    expect(searchProductsMock).toHaveBeenCalledTimes(2);
+    expect(searchProductsMock).toHaveBeenLastCalledWith(params);
   });
 });

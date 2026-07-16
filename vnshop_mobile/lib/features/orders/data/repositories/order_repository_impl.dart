@@ -4,19 +4,19 @@ import '../../domain/repositories/order_repository.dart';
 import '../datasources/order_local_datasource.dart';
 import '../datasources/order_remote_datasource.dart';
 import '../models/order_model.dart';
+import '../models/order_page_result.dart';
 
 class OrderRepositoryImpl implements OrderRepository {
   final OrderRemoteDataSource _remoteDataSource;
   final OrderLocalDataSource _localDataSource;
 
   OrderRepositoryImpl({
-    required OrderRemoteDataSource remoteDataSource,
-    required OrderLocalDataSource localDataSource,
-  })  : _remoteDataSource = remoteDataSource,
-        _localDataSource = localDataSource;
+    required this._remoteDataSource,
+    required this._localDataSource,
+  });
 
   @override
-  Future<List<OrderModel>> getOrders({
+  Future<OrderPageResult> getOrders({
     int page = 1,
     int limit = 20,
     OrderStatus? status,
@@ -24,15 +24,21 @@ class OrderRepositoryImpl implements OrderRepository {
   }) async {
     if (forceRefresh || page == 1) {
       try {
-        final orders = await _remoteDataSource.getOrders(
+        final result = await _remoteDataSource.getOrders(
           page: page,
           limit: limit,
           status: status,
         );
-        if (page == 1) await _localDataSource.cacheOrders(orders);
-        return orders;
+        if (page == 1) await _localDataSource.cacheOrders(result.orders);
+        return result;
       } on DioException {
-        if (page == 1) return _localDataSource.getCachedOrders();
+        if (page == 1) {
+          final cached = await _localDataSource.getCachedOrders();
+          final filtered = status == null
+              ? cached
+              : cached.where((order) => order.status == status).toList();
+          return OrderPageResult.singlePage(filtered);
+        }
         rethrow;
       }
     }
@@ -46,15 +52,13 @@ class OrderRepositoryImpl implements OrderRepository {
 
   @override
   Future<OrderModel> getOrderById(String orderId) async {
+    final cachedOrder = await _localDataSource.getCachedOrder(orderId);
     try {
-      final cachedOrder = await _localDataSource.getCachedOrder(orderId);
-      if (cachedOrder != null) return cachedOrder;
-
-      final order = await _remoteDataSource.getOrderById(orderId);
+      final remoteOrder = await _remoteDataSource.getOrderById(orderId);
+      final order = remoteOrder.mergeSummaryMetadata(cachedOrder);
       await _localDataSource.cacheOrder(order);
       return order;
     } on DioException {
-      final cachedOrder = await _localDataSource.getCachedOrder(orderId);
       if (cachedOrder != null) return cachedOrder;
       rethrow;
     }
@@ -77,11 +81,11 @@ class OrderRepositoryImpl implements OrderRepository {
       'shipping_name': shippingName,
       'shipping_phone': shippingPhone,
       'shipping_address': shippingAddress,
-      if (shippingCity != null) 'shipping_city': shippingCity,
-      if (shippingDistrict != null) 'shipping_district': shippingDistrict,
-      if (shippingWard != null) 'shipping_ward': shippingWard,
-      if (note != null) 'note': note,
-      if (paymentMethod != null) 'payment_method': paymentMethod,
+      'shipping_city': ?shippingCity,
+      'shipping_district': ?shippingDistrict,
+      'shipping_ward': ?shippingWard,
+      'note': ?note,
+      'payment_method': ?paymentMethod,
     };
 
     final order = await _remoteDataSource.createOrder(orderData);
@@ -91,7 +95,10 @@ class OrderRepositoryImpl implements OrderRepository {
 
   @override
   Future<OrderModel> cancelOrder(String orderId) async {
-    final order = await _remoteDataSource.cancelOrder(orderId);
+    final cachedOrder = await _localDataSource.getCachedOrder(orderId);
+    final order = (await _remoteDataSource.cancelOrder(
+      orderId,
+    )).mergeSummaryMetadata(cachedOrder);
     await _localDataSource.updateCachedOrder(order);
     return order;
   }

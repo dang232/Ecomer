@@ -67,10 +67,7 @@ async function snap(page: Page, captured: Captured, slug: string) {
   }
   const pngPath = path.join(SHEET_DIR, `${slug}.png`);
   await page.screenshot({ path: pngPath, fullPage: true });
-  fs.writeFileSync(
-    path.join(SHEET_DIR, `${slug}.console.json`),
-    JSON.stringify(captured, null, 2),
-  );
+  fs.writeFileSync(path.join(SHEET_DIR, `${slug}.console.json`), JSON.stringify(captured, null, 2));
 }
 
 async function login(page: Page, identifier: string, password: string) {
@@ -196,13 +193,22 @@ test.describe("UX sweep — authenticated buyer", () => {
     await page.goto("/profile");
     await snap(page, c, "24-profile-info");
 
-    await page.getByRole("button", { name: /^addresses$|^địa chỉ$/i }).click().catch(() => {});
+    await page
+      .getByRole("button", { name: /^addresses$|^địa chỉ$/i })
+      .click()
+      .catch(() => {});
     await snap(page, c, "25-profile-addresses");
 
-    await page.getByRole("button", { name: /payment methods|phương thức thanh toán/i }).click().catch(() => {});
+    await page
+      .getByRole("button", { name: /payment methods|phương thức thanh toán/i })
+      .click()
+      .catch(() => {});
     await snap(page, c, "26-profile-payment");
 
-    await page.getByRole("button", { name: /security|bảo mật/i }).click().catch(() => {});
+    await page
+      .getByRole("button", { name: /security|bảo mật/i })
+      .click()
+      .catch(() => {});
     await snap(page, c, "27-profile-security");
   });
 
@@ -227,9 +233,7 @@ test.describe("UX sweep — authenticated buyer", () => {
       return;
     }
     await page.goto(`/product/${productId}`);
-    const addBtn = page
-      .getByRole("button", { name: /add to cart|thêm vào giỏ/i })
-      .first();
+    const addBtn = page.getByRole("button", { name: /add to cart|thêm vào giỏ/i }).first();
     await addBtn.click().catch(() => {});
 
     await page.goto("/checkout");

@@ -1,4 +1,4 @@
-﻿import { useQueries } from "@tanstack/react-query";
+import { useQueries } from "@tanstack/react-query";
 import { Heart, ShoppingCart, Star, Trash2, Share2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useMemo } from "react";
@@ -97,8 +97,12 @@ export function WishlistPage() {
           className="py-24 text-center bg-card rounded-[var(--radius-lg)] border border-border"
         >
           <Heart size={64} className="mx-auto mb-5 text-gray-200" />
-          <h2 className="text-xl font-bold text-muted-foreground mb-3">{t("wishlist.emptyTitle")}</h2>
-          <p className="text-sm text-muted-foreground mb-8 max-w-xs mx-auto">{t("wishlist.emptySub")}</p>
+          <h2 className="text-xl font-bold text-muted-foreground mb-3">
+            {t("wishlist.emptyTitle")}
+          </h2>
+          <p className="text-sm text-muted-foreground mb-8 max-w-xs mx-auto">
+            {t("wishlist.emptySub")}
+          </p>
           <button
             onClick={() => navigate("/")}
             className="px-8 py-3 rounded-[var(--radius-lg)] bg-primary text-white font-semibold hover:opacity-90 transition-opacity"
@@ -222,7 +226,9 @@ export function WishlistPage() {
           </AnimatePresence>
 
           {queries.some((q) => q.isLoading) ? (
-            <p className="text-xs text-muted-foreground text-center mt-6">{t("wishlist.loadingItems")}</p>
+            <p className="text-xs text-muted-foreground text-center mt-6">
+              {t("wishlist.loadingItems")}
+            </p>
           ) : null}
           {queries.some((q) => q.error instanceof ApiError && q.error.status === 404) ? (
             <p className="text-xs text-amber-600 text-center mt-6">{t("wishlist.stalePrompt")}</p>

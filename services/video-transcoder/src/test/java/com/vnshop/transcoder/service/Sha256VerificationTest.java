@@ -17,7 +17,7 @@ class Sha256VerificationTest {
 
     /** Thin subclass to expose package-private helpers without mocking S3 */
     private final TranscodeService service = new TranscodeService(
-            mock(software.amazon.awssdk.services.s3.S3Client.class),
+            mock(software.amazon.awssdk.services.s3.S3AsyncClient.class),
             new FfmpegCommandBuilder()
     );
 

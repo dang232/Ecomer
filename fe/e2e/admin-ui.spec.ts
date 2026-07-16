@@ -30,7 +30,6 @@ async function loginAsAdmin(request: APIRequestContext): Promise<AuthResult> {
   return { accessToken };
 }
 
-
 async function expectTabRenders(page: Page, tabName: RegExp, contentSignal: RegExp) {
   const tab = page.getByRole("button", { name: tabName }).first();
   await expect(tab).toBeVisible({ timeout: 10_000 });
@@ -46,9 +45,9 @@ test.describe("admin console UI", () => {
     await loginAsAdmin(page.request);
     await page.goto("/admin");
 
-    await expect(
-      page.getByText(/Admin Dashboard|Tổng quan|Admin Console/i).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/Admin Dashboard|Tổng quan|Admin Console/i).first()).toBeVisible({
+      timeout: 20_000,
+    });
 
     await expectNoGlobalError(page);
   });
@@ -57,9 +56,9 @@ test.describe("admin console UI", () => {
     await loginAsAdmin(page.request);
     await page.goto("/admin");
     // Wait for shell.
-    await expect(
-      page.getByText(/Admin Dashboard|Tổng quan|Admin Console/i).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/Admin Dashboard|Tổng quan|Admin Console/i).first()).toBeVisible({
+      timeout: 20_000,
+    });
 
     // The pre-pt28 sellerSummarySchema demanded a `status: string` field that
     // BE doesn't return (it returns `approved: boolean` instead). Hitting
@@ -76,9 +75,9 @@ test.describe("admin console UI", () => {
   }) => {
     await loginAsAdmin(page.request);
     await page.goto("/admin");
-    await expect(
-      page.getByText(/Admin Dashboard|Tổng quan|Admin Console/i).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/Admin Dashboard|Tổng quan|Admin Console/i).first()).toBeVisible({
+      timeout: 20_000,
+    });
 
     await expectTabRenders(
       page,
@@ -90,9 +89,9 @@ test.describe("admin console UI", () => {
   test("Disputes tab loads (locks in disputeSchema disputeId→id alias)", async ({ page }) => {
     await loginAsAdmin(page.request);
     await page.goto("/admin");
-    await expect(
-      page.getByText(/Admin Dashboard|Tổng quan|Admin Console/i).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/Admin Dashboard|Tổng quan|Admin Console/i).first()).toBeVisible({
+      timeout: 20_000,
+    });
 
     await expectTabRenders(
       page,
@@ -104,9 +103,9 @@ test.describe("admin console UI", () => {
   test("Payouts tab loads (locks in adminPayoutSchema payoutId→id alias)", async ({ page }) => {
     await loginAsAdmin(page.request);
     await page.goto("/admin");
-    await expect(
-      page.getByText(/Admin Dashboard|Tổng quan|Admin Console/i).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/Admin Dashboard|Tổng quan|Admin Console/i).first()).toBeVisible({
+      timeout: 20_000,
+    });
 
     await expectTabRenders(
       page,

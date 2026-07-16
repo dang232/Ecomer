@@ -9,10 +9,13 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
+import software.amazon.awssdk.core.async.AsyncResponseTransformer;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
@@ -86,7 +89,10 @@ class TranscodeServiceTest {
 
     @Test
     void transcode_s3DownloadFailure_throwsTranscodeException() {
-        when(s3AsyncClient.getObject(any(GetObjectRequest.class), any()))
+        when(s3AsyncClient.getObject(
+                any(GetObjectRequest.class),
+                org.mockito.ArgumentMatchers
+                        .<AsyncResponseTransformer<GetObjectResponse, ResponseBytes<GetObjectResponse>>>any()))
                 .thenReturn(CompletableFuture.failedFuture(new RuntimeException("S3 connection refused")));
 
         UUID videoId   = UUID.randomUUID();
@@ -116,10 +122,13 @@ class TranscodeServiceTest {
 
         // S3 download writes actual bytes to the destination path
         byte[] actualContent = "real video content".getBytes();
-        doAnswer(invocation -> {
-            return CompletableFuture.completedFuture(
-                    software.amazon.awssdk.core.Bytes.fromByteArray(actualContent));
-        }).when(s3AsyncClient).getObject(any(GetObjectRequest.class), any());
+        ResponseBytes<GetObjectResponse> responseBytes = ResponseBytes.fromByteArray(
+                GetObjectResponse.builder().build(), actualContent);
+        when(s3AsyncClient.getObject(
+                any(GetObjectRequest.class),
+                org.mockito.ArgumentMatchers
+                        .<AsyncResponseTransformer<GetObjectResponse, ResponseBytes<GetObjectResponse>>>any()))
+                .thenReturn(CompletableFuture.completedFuture(responseBytes));
 
         TranscodeJob job = TranscodeJob.builder()
                 .videoId(videoId)

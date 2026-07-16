@@ -53,7 +53,10 @@ export interface UseVideoStatusResult {
  * true} so the UI can render a clear "this is taking longer than expected"
  * state instead of polling silently forever.
  */
-export function useVideoStatus(videoId: string | null, options: UseVideoStatusOptions = {}): UseVideoStatusResult {
+export function useVideoStatus(
+  videoId: string | null,
+  options: UseVideoStatusOptions = {},
+): UseVideoStatusResult {
   const enabled = options.enabled !== false && !!videoId;
 
   const query = useQuery({
@@ -82,9 +85,10 @@ export function useVideoStatus(videoId: string | null, options: UseVideoStatusOp
     }
   }, [enabled, status, pollStartedAt]);
 
-  const isStuck = !!pollStartedAt
-    && Date.now() - pollStartedAt > STUCK_THRESHOLD_MINUTES * 60_000
-    && !isTerminal(status);
+  const isStuck =
+    !!pollStartedAt &&
+    Date.now() - pollStartedAt > STUCK_THRESHOLD_MINUTES * 60_000 &&
+    !isTerminal(status);
 
   return {
     status,
@@ -94,4 +98,3 @@ export function useVideoStatus(videoId: string | null, options: UseVideoStatusOp
     isLoading: query.isLoading,
   };
 }
-

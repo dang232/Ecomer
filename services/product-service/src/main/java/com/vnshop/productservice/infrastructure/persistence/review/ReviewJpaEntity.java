@@ -85,6 +85,7 @@ public class ReviewJpaEntity extends BaseJpaEntity {
         entity.helpfulVotes = review.helpfulVotes();
         entity.helpfulVoterIds = new HashSet<>(review.helpfulVoterIds());
         entity.status = review.status();
+        entity.restoreCreatedAt(review.createdAt());
         return entity;
     }
 

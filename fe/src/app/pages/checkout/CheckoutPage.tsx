@@ -31,12 +31,7 @@ import { CheckoutShippingStep } from "./CheckoutShippingStep";
 import { CheckoutStepper } from "./CheckoutStepper";
 import { CheckoutSuccess } from "./CheckoutSuccess";
 import { CheckoutSummary } from "./CheckoutSummary";
-import {
-  makeFallbackShipping,
-  mapPaymentOptions,
-  type PaymentOption,
-  type Step,
-} from "./types";
+import { makeFallbackShipping, mapPaymentOptions, type PaymentOption, type Step } from "./types";
 
 export function CheckoutPage() {
   const navigate = useNavigate();
@@ -51,16 +46,6 @@ export function CheckoutPage() {
     enabled: ready && authenticated,
   });
   const addresses: Address[] = profileQuery.data?.addresses ?? [];
-
-  const shippingQuery = useQuery({
-    queryKey: ["checkout", "shipping-options", cartItems.map((i) => i.productId).join(",")],
-    queryFn: () =>
-      fetchShippingOptions({
-        items: cartItems.map((i) => ({ productId: i.productId, quantity: i.quantity })),
-      }),
-    enabled: cartItems.length > 0,
-    retry: false,
-  });
 
   const paymentQuery = useQuery({
     queryKey: ["checkout", "payment-methods"],
@@ -83,7 +68,9 @@ export function CheckoutPage() {
         const s = (JSON.parse(raw) as Record<string, unknown>).step;
         if (typeof s === "string") return s as Step;
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     return "address";
   });
   const [selectedAddressIndex, setSelectedAddressIndex] = useState<number>(() => {
@@ -93,7 +80,9 @@ export function CheckoutPage() {
         const v = (JSON.parse(raw) as Record<string, unknown>).selectedAddressIndex;
         if (typeof v === "number") return v;
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     return 0;
   });
   // The user's explicit shipping pick. Empty string means "use default" — we resolve
@@ -106,7 +95,9 @@ export function CheckoutPage() {
         const v = (JSON.parse(raw) as Record<string, unknown>).shippingChoice;
         if (typeof v === "string") return v;
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     return "";
   });
   const selectedShippingId = shippingChoice || "";
@@ -117,7 +108,9 @@ export function CheckoutPage() {
         const v = (JSON.parse(raw) as Record<string, unknown>).selectedPaymentId;
         if (typeof v === "string") return v as PaymentOption["id"];
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     return "VNPAY";
   });
   const [note, setNote] = useState<string>(() => {
@@ -127,7 +120,9 @@ export function CheckoutPage() {
         const v = (JSON.parse(raw) as Record<string, unknown>).note;
         if (typeof v === "string") return v;
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     return "";
   });
   const [couponInput, setCouponInput] = useState<string>("");
@@ -135,7 +130,11 @@ export function CheckoutPage() {
   // Persist checkout progress so a page refresh doesn't lose the user's place.
   useEffect(() => {
     if (step === "success") {
-      try { sessionStorage.removeItem("vnshop:checkout-state"); } catch { /* ignore */ }
+      try {
+        sessionStorage.removeItem("vnshop:checkout-state");
+      } catch {
+        /* ignore */
+      }
       return;
     }
     try {
@@ -143,14 +142,47 @@ export function CheckoutPage() {
         "vnshop:checkout-state",
         JSON.stringify({ step, selectedAddressIndex, shippingChoice, selectedPaymentId, note }),
       );
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [step, selectedAddressIndex, shippingChoice, selectedPaymentId, note]);
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [showCouponPicker, setShowCouponPicker] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
+  // Preserve the server-authoritative total after the cart is cleared.
+  const [placedOrderTotal, setPlacedOrderTotal] = useState<number | null>(null);
 
   const selectedAddress = addresses[selectedAddressIndex];
+  const shippingAddress =
+    selectedAddress?.street && selectedAddress.district && selectedAddress.city
+      ? {
+          street: selectedAddress.street,
+          ward: selectedAddress.ward ?? undefined,
+          district: selectedAddress.district,
+          city: selectedAddress.city,
+        }
+      : undefined;
+
+  const shippingQuery = useQuery({
+    queryKey: [
+      "checkout",
+      "shipping-options",
+      shippingAddress?.street,
+      shippingAddress?.ward,
+      shippingAddress?.district,
+      shippingAddress?.city,
+    ],
+    queryFn: () => {
+      if (!shippingAddress) {
+        throw new Error("A delivery address is required before loading shipping options");
+      }
+      return fetchShippingOptions({ address: shippingAddress });
+    },
+    enabled: cartItems.length > 0 && Boolean(shippingAddress),
+    retry: false,
+  });
+
   const ratesQuery = useQuery({
     queryKey: [
       "checkout",
@@ -175,17 +207,20 @@ export function CheckoutPage() {
   const shippingOptions = useMemo(() => {
     const ratesData = ratesQuery.data?.options;
     if (ratesData && ratesData.length > 0) {
-      return ratesData.map((r: { serviceCode: string; feeVnd: number; estimatedDeliveryTime: string }) => ({
-        id: r.serviceCode,
-        name: r.serviceCode === "STANDARD"
-          ? t("checkout.shipping.standardName")
-          : r.serviceCode === "EXPRESS"
-            ? t("checkout.shipping.expressName")
-            : r.serviceCode,
-        desc: r.estimatedDeliveryTime,
-        fee: r.feeVnd,
-        eta: r.estimatedDeliveryTime,
-      }));
+      return ratesData.map(
+        (r: { serviceCode: string; feeVnd: number; estimatedDeliveryTime: string }) => ({
+          id: r.serviceCode,
+          name:
+            r.serviceCode === "STANDARD"
+              ? t("checkout.shipping.standardName")
+              : r.serviceCode === "EXPRESS"
+                ? t("checkout.shipping.expressName")
+                : r.serviceCode,
+          desc: r.estimatedDeliveryTime,
+          fee: r.feeVnd,
+          eta: r.estimatedDeliveryTime,
+        }),
+      );
     }
     const checkoutData = shippingQuery.data;
     if (checkoutData && checkoutData.length > 0) {
@@ -321,7 +356,9 @@ export function CheckoutPage() {
   if (!authenticated) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-24 text-center">
-        <h2 className="text-xl font-bold text-muted-foreground mb-3">{t("checkout.loginPromptTitle")}</h2>
+        <h2 className="text-xl font-bold text-muted-foreground mb-3">
+          {t("checkout.loginPromptTitle")}
+        </h2>
         <button
           onClick={() => login("/checkout")}
           className="px-8 py-3 rounded-[var(--radius-lg)] bg-primary text-white font-semibold inline-flex items-center gap-2"
@@ -344,7 +381,9 @@ export function CheckoutPage() {
     return (
       <div className="max-w-3xl mx-auto px-4 py-24 text-center">
         <Package size={56} className="mx-auto mb-4 text-muted-foreground/30" />
-        <h2 className="text-xl font-bold text-muted-foreground mb-3">{t("checkout.emptyCartTitle")}</h2>
+        <h2 className="text-xl font-bold text-muted-foreground mb-3">
+          {t("checkout.emptyCartTitle")}
+        </h2>
         <button
           onClick={() => navigate("/")}
           className="px-6 py-2.5 rounded-[var(--radius-lg)] bg-primary text-white font-medium"
@@ -389,6 +428,7 @@ export function CheckoutPage() {
       );
 
       setPlacedOrderId(order.id);
+      setPlacedOrderTotal(order.total);
       // Clear cart on the client — server typically clears too. Refetch to reconcile.
       void refetchCart();
 
@@ -419,7 +459,8 @@ export function CheckoutPage() {
           // Stay on review step so the buyer can retry instead of landing on success.
           toast.error(t("checkout.payment.initFailedShort"), {
             description: t("checkout.payment.retryHint", {
-              defaultValue: "Your order was placed. You can retry payment or pay later from Orders.",
+              defaultValue:
+                "Your order was placed. You can retry payment or pay later from Orders.",
             }),
           });
           setPlacedOrderId(order.id);
@@ -471,7 +512,11 @@ export function CheckoutPage() {
 
   const handleNext = () => {
     if (step === "address") {
-      if (addresses.length === 0 || selectedAddressIndex < 0 || selectedAddressIndex >= addresses.length) {
+      if (
+        addresses.length === 0 ||
+        selectedAddressIndex < 0 ||
+        selectedAddressIndex >= addresses.length
+      ) {
         toast.error(t("checkout.address.missingValidation"), {
           description: t("checkout.address.addAddressHint"),
           action: {
@@ -538,7 +583,7 @@ export function CheckoutPage() {
         <CheckoutSuccess
           placedOrderId={placedOrderId}
           selectedPaymentId={selectedPaymentId}
-          finalTotal={finalTotal}
+          finalTotal={placedOrderTotal ?? finalTotal}
         />
       </div>
     );

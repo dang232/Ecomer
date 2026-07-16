@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../design_system/generated/design_tokens.dart';
 import 'app_colors.dart';
 import 'app_spacing.dart';
 
@@ -33,30 +34,30 @@ class AppTheme {
       // COLOR SCHEME
       // --------------------------------------------------------------------
       colorScheme: const ColorScheme.light(
-        primary: AppColors.primary,
-        onPrimary: AppColors.onPrimary,
-        primaryContainer: AppColors.primaryContainer,
-        onPrimaryContainer: AppColors.onPrimaryContainer,
-        
+        primary: DesignColorsLight.actionPrimary,
+        onPrimary: DesignColorsLight.onActionPrimary,
+        primaryContainer: DesignColorsLight.actionPrimarySubtle,
+        onPrimaryContainer: DesignColorsLight.text,
+
         secondary: AppColors.secondary,
         onSecondary: AppColors.onSecondary,
         secondaryContainer: AppColors.secondaryContainer,
         onSecondaryContainer: AppColors.onSecondaryContainer,
-        
+
         tertiary: AppColors.tertiary,
         onTertiary: AppColors.onTertiary,
         tertiaryContainer: AppColors.tertiaryContainer,
         onTertiaryContainer: AppColors.onTertiaryContainer,
-        
+
         error: AppColors.error,
         onError: AppColors.onError,
         errorContainer: AppColors.errorContainer,
         onErrorContainer: AppColors.onErrorContainer,
-        
+
         surface: AppColors.surface,
         onSurface: AppColors.onSurface,
         surfaceContainerHighest: AppColors.surfaceContainerHigh,
-        
+
         outline: AppColors.outline,
         outlineVariant: AppColors.outlineVariant,
       ),
@@ -453,9 +454,7 @@ class AppTheme {
         }),
         checkColor: WidgetStateProperty.all(AppColors.onPrimary),
         side: const BorderSide(color: AppColors.outline, width: 2),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(4),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),
 
       // --------------------------------------------------------------------
@@ -526,30 +525,30 @@ class AppTheme {
       // COLOR SCHEME
       // --------------------------------------------------------------------
       colorScheme: const ColorScheme.dark(
-        primary: AppColors.primaryLight,
-        onPrimary: AppColors.primaryDark,
-        primaryContainer: AppColors.primaryDark,
-        onPrimaryContainer: AppColors.primaryContainer,
-        
+        primary: DesignColorsDark.actionPrimary,
+        onPrimary: DesignColorsDark.onActionPrimary,
+        primaryContainer: DesignColorsDark.actionPrimarySubtle,
+        onPrimaryContainer: DesignColorsDark.text,
+
         secondary: AppColors.secondary,
         onSecondary: AppColors.onSecondary,
         secondaryContainer: AppColors.secondaryDark,
         onSecondaryContainer: AppColors.secondaryContainer,
-        
+
         tertiary: AppColors.tertiaryLight,
         onTertiary: AppColors.tertiaryDark,
         tertiaryContainer: AppColors.tertiaryDark,
         onTertiaryContainer: AppColors.tertiaryContainer,
-        
+
         error: AppColors.errorLight,
         onError: AppColors.onError,
         errorContainer: AppColors.error,
         onErrorContainer: AppColors.errorContainer,
-        
+
         surface: AppColors.surfaceDark,
         onSurface: AppColors.onSurfaceDark,
         surfaceContainerHighest: AppColors.surfaceContainerHighDark,
-        
+
         outline: AppColors.outlineDark,
         outlineVariant: AppColors.outlineVariantDark,
       ),
@@ -945,9 +944,7 @@ class AppTheme {
         }),
         checkColor: WidgetStateProperty.all(AppColors.primaryDark),
         side: const BorderSide(color: AppColors.outlineDark, width: 2),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(4),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),
 
       // --------------------------------------------------------------------
@@ -1011,9 +1008,11 @@ class AppTheme {
 
   static TextTheme _buildTextTheme(Brightness brightness) {
     final bool isDark = brightness == Brightness.dark;
-    final Color textColor = isDark ? AppColors.onSurfaceDark : AppColors.onSurface;
-    final Color secondaryTextColor = isDark 
-        ? AppColors.onSurfaceVariantDark 
+    final Color textColor = isDark
+        ? AppColors.onSurfaceDark
+        : AppColors.onSurface;
+    final Color secondaryTextColor = isDark
+        ? AppColors.onSurfaceVariantDark
         : AppColors.onSurfaceVariant;
 
     return TextTheme(

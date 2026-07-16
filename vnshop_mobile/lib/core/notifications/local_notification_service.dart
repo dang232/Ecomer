@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 /// Local Notification Service for VNShop Mobile
-/// 
+///
 /// Handles:
 /// - Android notification channel setup
 /// - Foreground notifications
@@ -28,7 +28,9 @@ class LocalNotificationService {
   Future<void> initialize() async {
     if (_isInitialized) return;
 
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: false,
       requestBadgePermission: false,
@@ -72,7 +74,8 @@ class LocalNotificationService {
 
     await _plugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(channel);
 
     // Create order-specific channel
@@ -87,7 +90,8 @@ class LocalNotificationService {
 
     await _plugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(orderChannel);
 
     if (kDebugMode) {
@@ -117,7 +121,8 @@ class LocalNotificationService {
     }
 
     // Use default Android details if not provided
-    final android = androidDetails ??
+    final android =
+        androidDetails ??
         const AndroidNotificationDetails(
           'vnshop_default',
           'VNShop Notifications',
@@ -153,7 +158,8 @@ class LocalNotificationService {
     final title = 'Cập nhật đơn hàng #$orderNumber';
     final body = message ?? _getStatusMessage(status);
 
-    final payload = '{"order_id": "$orderId", "status": "$status", "type": "order_update"}';
+    final payload =
+        '{"order_id": "$orderId", "status": "$status", "type": "order_update"}';
 
     await show(
       id: orderId.hashCode,
@@ -214,7 +220,8 @@ class LocalNotificationService {
     if (Platform.isAndroid) {
       final androidPlugin = _plugin
           .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       return await androidPlugin?.areNotificationsEnabled() ?? false;
     }
     // For iOS, we'd need to check settings
@@ -226,7 +233,8 @@ class LocalNotificationService {
     if (Platform.isAndroid) {
       final androidPlugin = _plugin
           .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       return await androidPlugin?.requestNotificationsPermission() ?? false;
     }
     return true;
@@ -245,30 +253,11 @@ class LocalNotificationService {
       await initialize();
     }
 
-    const androidDetails = AndroidNotificationDetails(
-      'vnshop_default',
-      'VNShop Notifications',
-      importance: Importance.high,
-      priority: Priority.high,
-    );
-
-    const iosDetails = DarwinNotificationDetails();
-
     // Note: zonedSchedule requires timezone package
     // For basic scheduling without timezone, we skip scheduling for now
     // In production, add timezone package and use proper TZDateTime
     if (kDebugMode) {
       print('🔔 Schedule notification requires timezone package');
     }
-  }
-
-  /// Convert DateTime to TZDateTime
-  /// For production, use timezone package:
-  /// import 'package:timezone/timezone.dart' as tz;
-  /// return tz.TZDateTime.from(dateTime, tz.local);
-  dynamic _toTZDateTime(DateTime dateTime) {
-    // Return DateTime directly - works for basic scheduling
-    // For accurate timezone handling, add timezone package
-    return dateTime;
   }
 }

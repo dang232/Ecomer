@@ -88,7 +88,8 @@ export function SellerWallet({
             validate: (v) => {
               const n = Number(v.replace(/\D/g, ""));
               if (!n || n <= 0) return t("seller.wallet.payoutDialog.invalidAmount");
-              if (balance !== null && n > balance) return t("seller.wallet.payoutDialog.exceedsBalance");
+              if (balance !== null && n > balance)
+                return t("seller.wallet.payoutDialog.exceedsBalance");
               return undefined;
             },
           },
@@ -145,9 +146,7 @@ export function SellerWallet({
 
       <div className="bg-card rounded-2xl shadow-sm overflow-hidden">
         <div className="px-5 py-4 flex items-center justify-between gap-3 border-b border-border">
-          <h3 className="font-bold text-foreground">
-            {t("seller.wallet.historyTitle")}
-          </h3>
+          <h3 className="font-bold text-foreground">{t("seller.wallet.historyTitle")}</h3>
           <div className="flex items-center gap-1.5">
             {(["all", "completed", "pending", "failed"] as const).map((f) => (
               <button
@@ -183,11 +182,11 @@ export function SellerWallet({
                   className="px-5 py-4 flex items-center justify-between border-t border-gray-50 first:border-t-0"
                 >
                   <div>
-                    <p className="text-sm font-semibold text-foreground">
-                      {formatPrice(p.amount)}
-                    </p>
+                    <p className="text-sm font-semibold text-foreground">{formatPrice(p.amount)}</p>
                     <p className="text-xs text-muted-foreground">
-                      {p.requestedAt ? formatDate(p.requestedAt) : t("common.unavailable", { defaultValue: "—" })}
+                      {p.requestedAt
+                        ? formatDate(p.requestedAt)
+                        : t("common.unavailable", { defaultValue: "—" })}
                     </p>
                   </div>
                   <StatusPill status={p.status} />

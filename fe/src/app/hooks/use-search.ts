@@ -15,7 +15,7 @@ export interface SearchParams {
   sameDay?: boolean;
   verifiedOnly?: boolean;
   officialOnly?: boolean;
-  /** 1-indexed page — caller is responsible for omitting when not paginating */
+  /** 0-indexed Spring Pageable page. */
   page?: number;
 }
 
@@ -36,6 +36,7 @@ export interface UseSearchResult {
   isLoading: boolean;
   /** Raw error from the search endpoint, if any. Callers decide whether to fall back. */
   error: unknown;
+  refetch: () => Promise<unknown>;
 }
 
 /** Backend-driven search. Caller is responsible for any local fallback when error is set. */
@@ -53,5 +54,6 @@ export function useSearch(params: SearchParams, enabled = true): UseSearchResult
     totalPages,
     isLoading: query.isLoading,
     error: query.error,
+    refetch: query.refetch,
   };
 }

@@ -2,7 +2,10 @@ import { useSearchParams } from "react-router";
 
 const TABS = [
   { label: "Tất cả", value: "" },
-  { label: "Đơn hàng", value: "ORDER_CREATED,ORDER_CANCELLED,ORDER_SHIPPED,ORDER_DELIVERED,SELLER_NEW_ORDER" },
+  {
+    label: "Đơn hàng",
+    value: "ORDER_CREATED,ORDER_CANCELLED,ORDER_SHIPPED,ORDER_DELIVERED,SELLER_NEW_ORDER",
+  },
   { label: "Thanh toán", value: "PAYMENT_COMPLETED,PAYMENT_REFUNDED,PAYOUT_COMPLETED" },
   { label: "Vận chuyển", value: "ORDER_SHIPPED" },
   { label: "Đánh giá", value: "REVIEW_REPLIED" },

@@ -14,7 +14,10 @@ const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
 test.describe("public sellers", () => {
   test("API: GET /sellers responds with the paged shape", async ({ request }) => {
     const res = await request.get(`${apiURL}/sellers?page=0&size=5`);
-    expect(res.status(), `expected 200 from /sellers, body: ${(await res.text()).slice(0, 200)}`).toBe(200);
+    expect(
+      res.status(),
+      `expected 200 from /sellers, body: ${(await res.text()).slice(0, 200)}`,
+    ).toBe(200);
     const body = await res.json();
     const data = body?.data;
     expect(data, `unexpected envelope: ${JSON.stringify(body).slice(0, 200)}`).toBeTruthy();
@@ -39,19 +42,24 @@ test.describe("public sellers", () => {
     }
   });
 
-  test("HomePage SellerShowcase renders (real cards or graceful fallback)", async ({ page, request }) => {
+  test("HomePage SellerShowcase renders (real cards or graceful fallback)", async ({
+    page,
+    request,
+  }) => {
     await page.goto("/");
 
     // Pre-fetch the list so the test branches deterministically on
     // "we have approved sellers" vs "fallback to coming-soon".
     const listRes = await request.get(`${apiURL}/sellers?page=0&size=8`);
-    const list = listRes.ok() ? (await listRes.json())?.data?.content ?? [] : [];
+    const list = listRes.ok() ? ((await listRes.json())?.data?.content ?? []) : [];
 
     if (list.length > 0) {
       // Real cards path — the first seller's shop name should be visible
       // on the home page. Allow generous timeout for cold-start fetches.
       const shopName = list[0].shopName;
-      await expect(page.getByText(shopName, { exact: false }).first()).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByText(shopName, { exact: false }).first()).toBeVisible({
+        timeout: 20_000,
+      });
     } else {
       // Fallback path — the section title still renders, even though the
       // body is the ComingSoonCard. Verify the page didn't crash.
@@ -66,7 +74,9 @@ test.describe("public sellers", () => {
     if (first?.id) {
       await page.goto(`/sellers/${first.id}`);
       // Shop name is the most reliable signal that the header rendered.
-      await expect(page.getByText(first.shopName, { exact: false }).first()).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByText(first.shopName, { exact: false }).first()).toBeVisible({
+        timeout: 20_000,
+      });
       // Ensure the visit-shop CTA / banner area landed (page didn't crash).
       await expect(page.locator("main, [role='main'], body").first()).toBeVisible();
     } else {

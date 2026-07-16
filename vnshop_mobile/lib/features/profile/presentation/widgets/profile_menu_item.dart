@@ -205,7 +205,7 @@ class ProfileMenuSection extends StatelessWidget {
               letterSpacing: 0.5,
             ),
           ),
-          if (trailing != null) trailing!,
+          ?trailing,
         ],
       ),
     );

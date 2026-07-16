@@ -152,9 +152,7 @@ test.describe("orders page UI — cancel flow", () => {
     await expect(row).toBeVisible();
   });
 
-  test("Cancel button click round-trips to BE and shows the success toast", async ({
-    page,
-  }) => {
+  test("Cancel button click round-trips to BE and shows the success toast", async ({ page }) => {
     const buyer = await seedBuyer(page.request);
     await placePendingCodOrder(page.request, buyer);
     await loadOrdersAuthenticated(page);
@@ -170,9 +168,9 @@ test.describe("orders page UI — cancel flow", () => {
     // This is the contract the user actually cares about (the visible bug
     // surfaced as a permanent "Loading product details..." with no toast at
     // all, suggesting the click never round-tripped).
-    await expect(
-      page.getByText(/Order cancelled|Đã huỷ đơn hàng/i),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Order cancelled|Đã huỷ đơn hàng/i)).toBeVisible({
+      timeout: 15_000,
+    });
   });
 
   /**

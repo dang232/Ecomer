@@ -494,7 +494,7 @@ services:
         mc anonymous set download local/vnshop-avatars &&
         mc anonymous set download local/vnshop-videos &&
         # Auto-expire raw uploads after 24 h
-        mc ilm rule add --days 1 --delete local/vnshop-video-uploads-tmp &&
+        mc ilm rule add --expire-days 1 local/vnshop-video-uploads-tmp &&
         echo "minio buckets ready"
 
   video-transcoder:

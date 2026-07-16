@@ -12,10 +12,30 @@ enum CheckoutStatus {
   shippingQuotesLoaded,
   ready,
   processingPayment,
+  awaitingPayment,
   paymentSuccess,
   paymentFailed,
   orderPlaced,
   error,
+}
+
+enum CheckoutFailure {
+  initialize,
+  loadAddresses,
+  addAddress,
+  updateAddress,
+  deleteAddress,
+  loadShipping,
+  loadPaymentMethods,
+  paymentMethodUnavailable,
+  incomplete,
+  updateSession,
+  initiatePayment,
+  paymentStatus,
+  paymentFailed,
+  transactionMissing,
+  createOrder,
+  cancelOrder,
 }
 
 class CheckoutState extends Equatable {
@@ -28,9 +48,11 @@ class CheckoutState extends Equatable {
   final PaymentMethod? selectedPaymentMethod;
   final PaymentTransaction? currentTransaction;
   final String? orderId;
-  final String? errorMessage;
   final bool isLoadingAddresses;
   final bool isLoadingShipping;
+  final List<PaymentMethod> availablePaymentMethods;
+  final bool isLoadingPaymentMethods;
+  final CheckoutFailure? failure;
   final bool isProcessingPayment;
 
   const CheckoutState({
@@ -43,9 +65,11 @@ class CheckoutState extends Equatable {
     this.selectedPaymentMethod,
     this.currentTransaction,
     this.orderId,
-    this.errorMessage,
     this.isLoadingAddresses = false,
     this.isLoadingShipping = false,
+    this.availablePaymentMethods = const [],
+    this.isLoadingPaymentMethods = false,
+    this.failure,
     this.isProcessingPayment = false,
   });
 
@@ -57,7 +81,8 @@ class CheckoutState extends Equatable {
   bool get canPlaceOrder =>
       selectedAddress != null &&
       selectedShipping != null &&
-      selectedPaymentMethod != null;
+      selectedPaymentMethod != null &&
+      availablePaymentMethods.contains(selectedPaymentMethod);
 
   bool get hasCompletedPayment =>
       currentTransaction?.status == PaymentStatus.completed;
@@ -72,43 +97,60 @@ class CheckoutState extends Equatable {
     PaymentMethod? selectedPaymentMethod,
     PaymentTransaction? currentTransaction,
     String? orderId,
-    String? errorMessage,
     bool? isLoadingAddresses,
     bool? isLoadingShipping,
+    List<PaymentMethod>? availablePaymentMethods,
+    bool? isLoadingPaymentMethods,
+    CheckoutFailure? failure,
+    bool clearFailure = false,
     bool? isProcessingPayment,
     bool clearSelectedAddress = false,
+    bool clearSelectedShipping = false,
+    bool clearSelectedPaymentMethod = false,
   }) {
     return CheckoutState(
       status: status ?? this.status,
       session: session ?? this.session,
       addresses: addresses ?? this.addresses,
-      selectedAddress: clearSelectedAddress ? null : (selectedAddress ?? this.selectedAddress),
+      selectedAddress: clearSelectedAddress
+          ? null
+          : (selectedAddress ?? this.selectedAddress),
       shippingQuotes: shippingQuotes ?? this.shippingQuotes,
-      selectedShipping: selectedShipping ?? this.selectedShipping,
-      selectedPaymentMethod: selectedPaymentMethod ?? this.selectedPaymentMethod,
+      selectedShipping: clearSelectedShipping
+          ? null
+          : selectedShipping ?? this.selectedShipping,
+      selectedPaymentMethod: clearSelectedPaymentMethod
+          ? null
+          : selectedPaymentMethod ?? this.selectedPaymentMethod,
       currentTransaction: currentTransaction ?? this.currentTransaction,
       orderId: orderId ?? this.orderId,
-      errorMessage: errorMessage ?? this.errorMessage,
       isLoadingAddresses: isLoadingAddresses ?? this.isLoadingAddresses,
       isLoadingShipping: isLoadingShipping ?? this.isLoadingShipping,
+      availablePaymentMethods:
+          availablePaymentMethods ?? this.availablePaymentMethods,
+      isLoadingPaymentMethods:
+          isLoadingPaymentMethods ?? this.isLoadingPaymentMethods,
+      failure: clearFailure ? null : failure ?? this.failure,
       isProcessingPayment: isProcessingPayment ?? this.isProcessingPayment,
     );
   }
 
   @override
   List<Object?> get props => [
-        status,
-        session,
-        addresses,
-        selectedAddress,
-        shippingQuotes,
-        selectedShipping,
-        selectedPaymentMethod,
-        currentTransaction,
-        orderId,
-        errorMessage,
-        isLoadingAddresses,
-        isLoadingShipping,
-        isProcessingPayment,
-      ];
+    status,
+    session,
+    addresses,
+    selectedAddress,
+    shippingQuotes,
+    selectedShipping,
+    selectedPaymentMethod,
+    currentTransaction,
+    orderId,
+    isLoadingAddresses,
+    isLoadingShipping,
+    availablePaymentMethods,
+    isLoadingPaymentMethods,
+    failure,
+    isProcessingPayment,
+  ];
 }

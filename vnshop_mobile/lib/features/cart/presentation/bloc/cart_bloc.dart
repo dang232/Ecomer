@@ -8,9 +8,8 @@ import 'cart_state.dart';
 class CartBloc extends Bloc<CartEvent, CartState> {
   final CartRepository _repository;
 
-  CartBloc({required CartRepository repository})
-      : _repository = repository,
-        super(const CartState()) {
+  CartBloc({required this._repository})
+    : super(const CartState()) {
     on<CartStarted>(_onCartStarted);
     on<CartItemAdded>(_onCartItemAdded);
     on<CartItemRemoved>(_onCartItemRemoved);
@@ -20,6 +19,8 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     on<CartCouponApplied>(_onCartCouponApplied);
     on<CartCouponRemoved>(_onCartCouponRemoved);
     on<CartCleared>(_onCartCleared);
+    on<CartCheckoutCompleted>(_onCartCheckoutCompleted);
+    on<CartFailureDismissed>(_onCartFailureDismissed);
     on<CartSyncRequested>(_onCartSyncRequested);
     on<CartConnectivityChanged>(_onConnectivityChanged);
   }
@@ -28,20 +29,20 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     CartStarted event,
     Emitter<CartState> emit,
   ) async {
-    emit(state.copyWith(status: CartStatus.loading));
+    emit(state.copyWith(status: CartStatus.loading, clearFailure: true));
 
     try {
       final cart = await _repository.getCart();
-      emit(state.copyWith(
-        status: CartStatus.loaded,
-        cart: cart,
-        isOnline: _repository.isOnline,
-      ));
-    } catch (e) {
-      emit(state.copyWith(
-        status: CartStatus.error,
-        errorMessage: 'Không thể tải giỏ hàng: ${e.toString()}',
-      ));
+      emit(
+        state.copyWith(
+          status: CartStatus.loaded,
+          cart: cart,
+          isOnline: _repository.isOnline,
+          clearFailure: true,
+        ),
+      );
+    } catch (_) {
+      emit(state.copyWith(status: CartStatus.error, failure: CartFailure.load));
     }
   }
 
@@ -52,17 +53,20 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     // Optimistic update
     final currentCart = state.cart ?? CartModel.empty('guest');
     final optimisticCart = currentCart.addItem(event.item);
-    emit(state.copyWith(cart: optimisticCart, status: CartStatus.loaded));
+    emit(
+      state.copyWith(
+        cart: optimisticCart,
+        status: CartStatus.loaded,
+        clearFailure: true,
+      ),
+    );
 
     try {
       final updatedCart = await _repository.addItem(event.item);
-      emit(state.copyWith(cart: updatedCart));
-    } catch (e) {
+      emit(state.copyWith(cart: updatedCart, clearFailure: true));
+    } catch (_) {
       // Revert on error
-      emit(state.copyWith(
-        cart: currentCart,
-        errorMessage: 'Không thể thêm sản phẩm: ${e.toString()}',
-      ));
+      emit(state.copyWith(cart: currentCart, failure: CartFailure.addItem));
     }
   }
 
@@ -75,17 +79,14 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     if (currentCart == null) return;
 
     final optimisticCart = currentCart.removeItem(event.cartItemId);
-    emit(state.copyWith(cart: optimisticCart));
+    emit(state.copyWith(cart: optimisticCart, clearFailure: true));
 
     try {
       final updatedCart = await _repository.removeItem(event.cartItemId);
-      emit(state.copyWith(cart: updatedCart));
-    } catch (e) {
+      emit(state.copyWith(cart: updatedCart, clearFailure: true));
+    } catch (_) {
       // Revert on error
-      emit(state.copyWith(
-        cart: currentCart,
-        errorMessage: 'Không thể xóa sản phẩm: ${e.toString()}',
-      ));
+      emit(state.copyWith(cart: currentCart, failure: CartFailure.removeItem));
     }
   }
 
@@ -101,20 +102,19 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       event.cartItemId,
       event.quantity,
     );
-    emit(state.copyWith(cart: optimisticCart));
+    emit(state.copyWith(cart: optimisticCart, clearFailure: true));
 
     try {
       final updatedCart = await _repository.updateItemQuantity(
         event.cartItemId,
         event.quantity,
       );
-      emit(state.copyWith(cart: updatedCart));
-    } catch (e) {
+      emit(state.copyWith(cart: updatedCart, clearFailure: true));
+    } catch (_) {
       // Revert on error
-      emit(state.copyWith(
-        cart: currentCart,
-        errorMessage: 'Không thể cập nhật số lượng: ${e.toString()}',
-      ));
+      emit(
+        state.copyWith(cart: currentCart, failure: CartFailure.updateQuantity),
+      );
     }
   }
 
@@ -125,15 +125,18 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     final currentCart = state.cart;
     if (currentCart == null) return;
 
-    final item = currentCart.items.firstWhere(
-      (i) => i.cartItemId == event.cartItemId,
-      orElse: () => throw Exception('Item not found'),
+    final matchingItems = currentCart.items.where(
+      (item) => item.cartItemId == event.cartItemId,
     );
+    if (matchingItems.isEmpty) return;
+    final item = matchingItems.first;
 
-    add(CartItemQuantityUpdated(
-      cartItemId: event.cartItemId,
-      quantity: item.quantity + 1,
-    ));
+    add(
+      CartItemQuantityUpdated(
+        cartItemId: event.cartItemId,
+        quantity: item.quantity + 1,
+      ),
+    );
   }
 
   Future<void> _onCartItemDecremented(
@@ -143,18 +146,21 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     final currentCart = state.cart;
     if (currentCart == null) return;
 
-    final item = currentCart.items.firstWhere(
-      (i) => i.cartItemId == event.cartItemId,
-      orElse: () => throw Exception('Item not found'),
+    final matchingItems = currentCart.items.where(
+      (item) => item.cartItemId == event.cartItemId,
     );
+    if (matchingItems.isEmpty) return;
+    final item = matchingItems.first;
 
     if (item.quantity <= 1) {
       add(CartItemRemoved(event.cartItemId));
     } else {
-      add(CartItemQuantityUpdated(
-        cartItemId: event.cartItemId,
-        quantity: item.quantity - 1,
-      ));
+      add(
+        CartItemQuantityUpdated(
+          cartItemId: event.cartItemId,
+          quantity: item.quantity - 1,
+        ),
+      );
     }
   }
 
@@ -162,20 +168,22 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     CartCouponApplied event,
     Emitter<CartState> emit,
   ) async {
-    emit(state.copyWith(isSyncing: true));
+    emit(state.copyWith(isSyncing: true, clearFailure: true));
 
     try {
       final updatedCart = await _repository.applyCoupon(event.couponCode);
-      emit(state.copyWith(
-        cart: updatedCart,
-        isSyncing: false,
-        lastAppliedCoupon: event.couponCode,
-      ));
-    } catch (e) {
-      emit(state.copyWith(
-        isSyncing: false,
-        errorMessage: 'Mã giảm giá không hợp lệ: ${e.toString()}',
-      ));
+      emit(
+        state.copyWith(
+          cart: updatedCart,
+          isSyncing: false,
+          lastAppliedCoupon: event.couponCode,
+          clearFailure: true,
+        ),
+      );
+    } catch (_) {
+      emit(
+        state.copyWith(isSyncing: false, failure: CartFailure.invalidCoupon),
+      );
     }
   }
 
@@ -183,19 +191,15 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     CartCouponRemoved event,
     Emitter<CartState> emit,
   ) async {
-    emit(state.copyWith(isSyncing: true));
+    emit(state.copyWith(isSyncing: true, clearFailure: true));
 
     try {
       final updatedCart = await _repository.removeCoupon();
-      emit(state.copyWith(
-        cart: updatedCart,
-        isSyncing: false,
-      ));
-    } catch (e) {
-      emit(state.copyWith(
-        isSyncing: false,
-        errorMessage: 'Không thể xóa mã giảm giá: ${e.toString()}',
-      ));
+      emit(
+        state.copyWith(cart: updatedCart, isSyncing: false, clearFailure: true),
+      );
+    } catch (_) {
+      emit(state.copyWith(isSyncing: false, failure: CartFailure.removeCoupon));
     }
   }
 
@@ -205,25 +209,93 @@ class CartBloc extends Bloc<CartEvent, CartState> {
   ) async {
     // Optimistic update
     final currentCart = state.cart;
-    emit(state.copyWith(
-      cart: state.cart?.clearItems(),
-      isSyncing: true,
-    ));
+    emit(
+      state.copyWith(
+        cart: state.cart?.clearItems(),
+        isSyncing: true,
+        clearFailure: true,
+      ),
+    );
 
     try {
       await _repository.clearCart();
-      emit(state.copyWith(
-        cart: state.cart?.clearItems(),
-        isSyncing: false,
-      ));
-    } catch (e) {
+      emit(
+        state.copyWith(
+          cart: state.cart?.clearItems(),
+          isSyncing: false,
+          clearFailure: true,
+        ),
+      );
+    } catch (_) {
       // Revert on error
-      emit(state.copyWith(
-        cart: currentCart,
-        isSyncing: false,
-        errorMessage: 'Không thể xóa giỏ hàng: ${e.toString()}',
-      ));
+      emit(
+        state.copyWith(
+          cart: currentCart,
+          isSyncing: false,
+          failure: CartFailure.clearCart,
+        ),
+      );
     }
+  }
+
+  Future<void> _onCartCheckoutCompleted(
+    CartCheckoutCompleted event,
+    Emitter<CartState> emit,
+  ) async {
+    final currentCart = state.cart;
+    if (currentCart == null || currentCart.isEmpty) return;
+
+    final currentIds = currentCart.items.map((item) => item.cartItemId).toSet();
+    final purchasedIds = currentIds.intersection(event.cartItemIds);
+    if (purchasedIds.isEmpty) return;
+
+    final isEntireCart = purchasedIds.length == currentCart.items.length;
+    final optimisticCart = isEntireCart
+        ? currentCart.clearItems()
+        : currentCart.copyWith(
+            items: currentCart.items
+                .where((item) => !purchasedIds.contains(item.cartItemId))
+                .toList(),
+            clearAppliedCouponCode: true,
+            discountAmount: 0,
+            updatedAt: DateTime.now(),
+          );
+
+    emit(
+      state.copyWith(cart: optimisticCart, isSyncing: true, clearFailure: true),
+    );
+
+    try {
+      var updatedCart = optimisticCart;
+      if (isEntireCart) {
+        await _repository.clearCart();
+      } else {
+        for (final cartItemId in purchasedIds) {
+          updatedCart = await _repository.removeItem(cartItemId);
+        }
+        if (currentCart.appliedCouponCode != null) {
+          updatedCart = await _repository.removeCoupon();
+        }
+      }
+      emit(
+        state.copyWith(cart: updatedCart, isSyncing: false, clearFailure: true),
+      );
+    } catch (_) {
+      emit(
+        state.copyWith(
+          cart: currentCart,
+          isSyncing: false,
+          failure: CartFailure.checkoutCleanup,
+        ),
+      );
+    }
+  }
+
+  void _onCartFailureDismissed(
+    CartFailureDismissed event,
+    Emitter<CartState> emit,
+  ) {
+    emit(state.copyWith(clearFailure: true));
   }
 
   Future<void> _onCartSyncRequested(
@@ -232,20 +304,14 @@ class CartBloc extends Bloc<CartEvent, CartState> {
   ) async {
     if (!state.isOnline) return;
 
-    emit(state.copyWith(isSyncing: true));
+    emit(state.copyWith(isSyncing: true, clearFailure: true));
 
     try {
       await _repository.syncPendingOperations();
       final cart = await _repository.getCart();
-      emit(state.copyWith(
-        cart: cart,
-        isSyncing: false,
-      ));
-    } catch (e) {
-      emit(state.copyWith(
-        isSyncing: false,
-        errorMessage: 'Không thể đồng bộ giỏ hàng: ${e.toString()}',
-      ));
+      emit(state.copyWith(cart: cart, isSyncing: false, clearFailure: true));
+    } catch (_) {
+      emit(state.copyWith(isSyncing: false, failure: CartFailure.sync));
     }
   }
 

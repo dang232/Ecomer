@@ -12,9 +12,7 @@ vi.mock("react-i18next", () => ({
 
 describe("VideoPlayer", () => {
   it("renders a loading skeleton when loading prop is true", () => {
-    const { container } = render(
-      <VideoPlayer src="http://example.com/video.mp4" loading />,
-    );
+    const { container } = render(<VideoPlayer src="http://example.com/video.mp4" loading />);
     // Skeleton has animate-pulse, no <video> element
     expect(container.querySelector("video")).toBeNull();
     expect(container.querySelector(".animate-pulse")).not.toBeNull();
@@ -29,10 +27,7 @@ describe("VideoPlayer", () => {
 
   it("sets the poster attribute when provided", () => {
     const { container } = render(
-      <VideoPlayer
-        src="http://example.com/video.mp4"
-        poster="http://example.com/thumb.jpg"
-      />,
+      <VideoPlayer src="http://example.com/video.mp4" poster="http://example.com/thumb.jpg" />,
     );
     const video = container.querySelector("video") as HTMLVideoElement;
     expect(video.getAttribute("poster")).toBe("http://example.com/thumb.jpg");

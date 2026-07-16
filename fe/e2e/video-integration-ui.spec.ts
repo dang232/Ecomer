@@ -39,7 +39,6 @@ async function loginViaUI(page: Page, username: string) {
   // No monkey-patch required — verify the real header is being sent.
 }
 
-
 // ─── Admin: Video Moderation tab renders ───────────────────────────────────
 
 test.describe("video integration — admin", () => {
@@ -48,9 +47,9 @@ test.describe("video integration — admin", () => {
     await page.goto("/admin");
 
     // Confirm admin page loaded
-    await expect(
-      page.getByText(/Admin Dashboard|Tổng quan|Admin Console/i).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/Admin Dashboard|Tổng quan|Admin Console/i).first()).toBeVisible({
+      timeout: 20_000,
+    });
 
     await screenshot(page, "admin-dashboard-loaded");
 
@@ -64,9 +63,9 @@ test.describe("video integration — admin", () => {
     await videoModNav.click();
 
     // Verify the panel renders (look for sub-tab text)
-    await expect(
-      page.getByText(/Video Appeals|Kháng cáo Video/i).first(),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/Video Appeals|Kháng cáo Video/i).first()).toBeVisible({
+      timeout: 10_000,
+    });
 
     await screenshot(page, "admin-video-moderation-panel-rendered");
     await expectNoGlobalError(page);
@@ -81,9 +80,9 @@ test.describe("video integration — seller", () => {
     await page.goto("/seller");
 
     // Wait for seller page to render
-    await expect(
-      page.getByText(/Dashboard|Tổng quan|Seller|Cửa hàng/i).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/Dashboard|Tổng quan|Seller|Cửa hàng/i).first()).toBeVisible({
+      timeout: 20_000,
+    });
 
     await screenshot(page, "seller-dashboard-loaded");
 
@@ -116,7 +115,9 @@ test.describe("video integration — buyer", () => {
     await page.goto("/");
 
     // Wait for the SPA shell + product cards to render
-    await expect(page.locator("[data-testid='product-card']").first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator("[data-testid='product-card']").first()).toBeVisible({
+      timeout: 30_000,
+    });
 
     await screenshot(page, "homepage-loaded");
 
@@ -128,9 +129,9 @@ test.describe("video integration — buyer", () => {
       await productLink.click();
 
       // Gallery region should render
-      await expect(
-        page.locator("[aria-label='Product media gallery']").first(),
-      ).toBeVisible({ timeout: 15_000 });
+      await expect(page.locator("[aria-label='Product media gallery']").first()).toBeVisible({
+        timeout: 15_000,
+      });
 
       await screenshot(page, "product-page-gallery-rendered");
       await expectNoGlobalError(page);

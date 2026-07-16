@@ -10,10 +10,7 @@ import {
   startTrace,
   stopTrace,
 } from "./_journey-evidence";
-import {
-  loginAsSeededUser,
-  logoutViaUserMenu,
-} from "../_workday-evidence";
+import { loginAsSeededUser, logoutViaUserMenu } from "../_workday-evidence";
 import { resetJourneyState, writeJourneyState } from "./_journey-state";
 
 /**
@@ -116,14 +113,10 @@ test.describe.serial("Chapter 1 — Admin onboards the marketplace", () => {
           // timestamp so we can disambiguate from other Journey leftovers.
           const stamp = pendingSellerEmail.match(/_(\d+)@/)?.[1] ?? "";
           await expect
-            .poll(
-              async () =>
-                page.getByText(new RegExp(`Journey Pending Shop ${stamp}`)).count(),
-              {
-                timeout: 30_000,
-                message: "seeded pending seller never appeared in the queue",
-              },
-            )
+            .poll(async () => page.getByText(new RegExp(`Journey Pending Shop ${stamp}`)).count(), {
+              timeout: 30_000,
+              message: "seeded pending seller never appeared in the queue",
+            })
             .toBeGreaterThan(0);
           await expectNoGlobalError(page);
         },
@@ -142,17 +135,15 @@ test.describe.serial("Chapter 1 — Admin onboards the marketplace", () => {
           // match nested ancestors.
           const stamp = pendingSellerEmail.match(/_(\d+)@/)?.[1] ?? "";
           const shopName = `Journey Pending Shop ${stamp}`;
-          const row = page
-            .locator(".divide-y > div", { hasText: shopName })
-            .first();
+          const row = page.locator(".divide-y > div", { hasText: shopName }).first();
           await expect(row).toBeVisible({ timeout: 10_000 });
           await row
             .getByRole("button", { name: /Approve|Duyệt/i })
             .first()
             .click();
-          await expect(
-            page.getByText(/Seller approved|Đã duyệt seller/i).first(),
-          ).toBeVisible({ timeout: 15_000 });
+          await expect(page.getByText(/Seller approved|Đã duyệt seller/i).first()).toBeVisible({
+            timeout: 15_000,
+          });
           await expectNoGlobalError(page);
         },
       );
@@ -171,16 +162,12 @@ test.describe.serial("Chapter 1 — Admin onboards the marketplace", () => {
               async () => {
                 const r = await page.request.get(`${apiURL}/sellers?size=50`);
                 if (!r.ok()) return false;
-                const list: Array<{ shopName?: string }> =
-                  (await r.json())?.data?.content ?? [];
-                return list.some((s) =>
-                  /Journey Pending Shop/i.test(s.shopName ?? ""),
-                );
+                const list: Array<{ shopName?: string }> = (await r.json())?.data?.content ?? [];
+                return list.some((s) => /Journey Pending Shop/i.test(s.shopName ?? ""));
               },
               {
                 timeout: 30_000,
-                message:
-                  "approved seller did not appear in the public sellers list within 30 s",
+                message: "approved seller did not appear in the public sellers list within 30 s",
               },
             )
             .toBe(true);
@@ -197,9 +184,9 @@ test.describe.serial("Chapter 1 — Admin onboards the marketplace", () => {
             .getByRole("button", { name: /^(Coupons|Coupon)/i })
             .first()
             .click();
-          await expect(
-            page.getByText(/Coupon management|Quản lý coupon/i).first(),
-          ).toBeVisible({ timeout: 15_000 });
+          await expect(page.getByText(/Coupon management|Quản lý coupon/i).first()).toBeVisible({
+            timeout: 15_000,
+          });
 
           await page
             .getByRole("button", {
@@ -207,9 +194,9 @@ test.describe.serial("Chapter 1 — Admin onboards the marketplace", () => {
             })
             .first()
             .click();
-          await expect(
-            page.getByText(/Create new coupon|Tạo coupon mới/i).first(),
-          ).toBeVisible({ timeout: 10_000 });
+          await expect(page.getByText(/Create new coupon|Tạo coupon mới/i).first()).toBeVisible({
+            timeout: 10_000,
+          });
 
           await page.locator("#admin-coupon-code").fill(couponCode.toLowerCase());
           await page
@@ -217,21 +204,19 @@ test.describe.serial("Chapter 1 — Admin onboards the marketplace", () => {
               name: /^(Fixed amount \(₫\)|Số tiền cố định)/i,
             })
             .click();
-          await page
-            .locator("#admin-coupon-value")
-            .fill(String(COUPON_DISCOUNT_VND));
+          await page.locator("#admin-coupon-value").fill(String(COUPON_DISCOUNT_VND));
 
           await page
             .getByRole("button", { name: /^(Create coupon|Tạo coupon)$/i })
             .last()
             .click();
 
-          await expect(
-            page.getByText(/Coupon created|Đã tạo coupon/i).first(),
-          ).toBeVisible({ timeout: 15_000 });
-          await expect(
-            page.getByText(couponCode, { exact: false }).first(),
-          ).toBeVisible({ timeout: 10_000 });
+          await expect(page.getByText(/Coupon created|Đã tạo coupon/i).first()).toBeVisible({
+            timeout: 15_000,
+          });
+          await expect(page.getByText(couponCode, { exact: false }).first()).toBeVisible({
+            timeout: 10_000,
+          });
           await expectNoGlobalError(page);
         },
       );
@@ -296,10 +281,7 @@ async function seedPendingSeller(
   const login = await request.post(`${apiURL}/auth/login`, {
     data: { username: email, password: PASSWORD },
   });
-  expect(
-    login.ok(),
-    `journey: login seller-to-be: ${login.status()}`,
-  ).toBeTruthy();
+  expect(login.ok(), `journey: login seller-to-be: ${login.status()}`).toBeTruthy();
   const accessToken = (await login.json())?.data?.accessToken;
   expect(accessToken, "no access token after login").toBeTruthy();
 

@@ -34,7 +34,6 @@ import {
 import { comingSoon } from "../lib/ui/coming-soon";
 import type { Address, UserProfile } from "../types/api";
 
-
 type ProfileTab = "info" | "addresses" | "notifications" | "reviews" | "payment" | "security";
 
 const EMPTY_ADDRESS: Address = {
@@ -151,9 +150,9 @@ export function ProfilePage() {
       toast.error(err instanceof ApiError ? err.message : t("profile.addresses.addedErr")),
   });
 
-// Spec U-9: pass the stable key (not array index). The API takes both
+  // Spec U-9: pass the stable key (not array index). The API takes both
   // the key and the current address list so it can resolve the index
-// against the live data right before the request.
+  // against the live data right before the request.
   const setDefaultMutation = useMutation({
     mutationFn: (key: string) => {
       const fresh = qc.getQueryData<UserProfile>(["users", "me"])?.addresses ?? [];
@@ -195,7 +194,9 @@ export function ProfilePage() {
   if (!authenticated) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-24 text-center">
-        <h2 className="text-xl font-bold text-muted-foreground mb-3">{t("profile.loginRequired")}</h2>
+        <h2 className="text-xl font-bold text-muted-foreground mb-3">
+          {t("profile.loginRequired")}
+        </h2>
         <button
           onClick={() => navigate("/login?next=%2Fprofile")}
           className="px-6 py-2.5 rounded-[var(--radius-md)] bg-primary text-white font-medium"
@@ -268,7 +269,11 @@ export function ProfilePage() {
           </div>
 
           {/* Nav items */}
-          <div role="tablist" aria-label="Profile sections" className="flex flex-col gap-0.5 mt-5">
+          <div
+            role="tablist"
+            aria-label={t("profile.sectionsLabel")}
+            className="flex flex-col gap-0.5 mt-5"
+          >
             {NAV_ITEMS.map((item) => {
               const isNav = item.id === "notifications" || item.id === "reviews";
               const isActive = activeTab === item.id;
@@ -287,7 +292,7 @@ export function ProfilePage() {
                       return;
                     }
                     if (item.id === "reviews") {
-                      comingSoon("Reviews", t);
+                      comingSoon(t("profile.tabs.reviews"), t);
                       return;
                     }
                     setActiveTab(item.id);
@@ -309,7 +314,7 @@ export function ProfilePage() {
               className="flex items-center gap-2.5 px-3 py-2.5 rounded-[var(--radius-md)] text-[13px] font-medium cursor-pointer transition-colors w-full text-left text-text-secondary hover:bg-background hover:text-foreground"
             >
               <Store size={16} />
-              Become a Seller
+              {t("profile.becomeSeller")}
             </button>
           </div>
 
@@ -441,7 +446,9 @@ export function ProfilePage() {
           {activeTab === "addresses" ? (
             <div>
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-bold text-foreground">{t("profile.addresses.title")}</h2>
+                <h2 className="text-lg font-bold text-foreground">
+                  {t("profile.addresses.title")}
+                </h2>
                 <button
                   onClick={() => setShowAddForm((v) => !v)}
                   className="flex items-center gap-2 px-4 py-2 rounded-[var(--radius-md)] text-sm font-medium bg-primary text-white"
@@ -517,11 +524,16 @@ export function ProfilePage() {
 
               <div className="space-y-3">
                 {addresses.map((addr, i) => (
-                  <div key={`${addr.street}|${addr.city}|${String(i)}`} className="border border-border rounded-[var(--radius-lg)] p-4">
+                  <div
+                    key={`${addr.street}|${addr.city}|${String(i)}`}
+                    className="border border-border rounded-[var(--radius-lg)] p-4"
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="font-semibold text-sm text-foreground">{displayName}</span>
+                          <span className="font-semibold text-sm text-foreground">
+                            {displayName}
+                          </span>
                           {addr.phone ? (
                             <>
                               <span className="text-gray-300">|</span>
@@ -570,7 +582,9 @@ export function ProfilePage() {
 
           {activeTab === "payment" ? (
             <div>
-              <h2 className="text-lg font-bold text-foreground mb-6">{t("profile.payment.title")}</h2>
+              <h2 className="text-lg font-bold text-foreground mb-6">
+                {t("profile.payment.title")}
+              </h2>
               <div className="rounded-[var(--radius-lg)] bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800 flex items-start gap-2">
                 <AlertCircle size={14} className="shrink-0 mt-0.5" />
                 <p>{t("profile.payment.comingSoonBanner")}</p>
@@ -580,7 +594,9 @@ export function ProfilePage() {
 
           {activeTab === "security" ? (
             <div>
-              <h2 className="text-lg font-bold text-foreground mb-6">{t("profile.security.title")}</h2>
+              <h2 className="text-lg font-bold text-foreground mb-6">
+                {t("profile.security.title")}
+              </h2>
               <p className="text-sm text-muted-foreground mb-4">{t("profile.security.subtitle")}</p>
               <button
                 onClick={() => {

@@ -41,8 +41,9 @@ spring:
       # the wire. Spring Kafka's default StringSerializer (and did) threw
       # ClassCastException on every product create/update before this.
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-      properties:
-        spring.json.add.type.headers: false
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
     listener:
       observation-enabled: true
     template:
@@ -101,6 +102,12 @@ otel:
   exporter:
     jaeger:
       endpoint: http://localhost:14250
+
+review:
+  purchase-events:
+    enabled: ${REVIEW_PURCHASE_EVENTS_ENABLED:true}
+    topic: ${REVIEW_PURCHASE_EVENTS_TOPIC:order.delivered}
+    group-id: ${REVIEW_PURCHASE_EVENTS_GROUP_ID:product-service-review-purchases}
 ---
 spring:
   config:

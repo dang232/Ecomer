@@ -10,14 +10,8 @@ import {
   startTrace,
   stopTrace,
 } from "./_journey-evidence";
-import {
-  loginAsSeededUser,
-  logoutViaUserMenu,
-} from "../_workday-evidence";
-import {
-  requireJourneyState,
-  writeJourneyState,
-} from "./_journey-state";
+import { loginAsSeededUser, logoutViaUserMenu } from "../_workday-evidence";
+import { requireJourneyState, writeJourneyState } from "./_journey-state";
 
 /**
  * Chapter 5 — Seller cashes out.
@@ -62,13 +56,11 @@ test.describe.serial("Chapter 5 — Seller cashes out", () => {
       acceptanceCriteria: [
         {
           code: "AC-5.1",
-          outcome:
-            "Seller with positive wallet balance can submit a payout request",
+          outcome: "Seller with positive wallet balance can submit a payout request",
         },
         {
           code: "AC-5.2",
-          outcome:
-            "Submitted payout immediately appears in admin's pending payout queue",
+          outcome: "Submitted payout immediately appears in admin's pending payout queue",
         },
       ],
     });
@@ -119,14 +111,11 @@ test.describe.serial("Chapter 5 — Seller cashes out", () => {
                 if (!login.ok()) return 0;
                 const token = (await login.json())?.data?.accessToken;
                 if (!token) return 0;
-                const r = await page.request.get(
-                  `${apiURL}/sellers/me/finance/wallet`,
-                  { headers: { Authorization: `Bearer ${token}` } },
-                );
+                const r = await page.request.get(`${apiURL}/sellers/me/finance/wallet`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
                 if (!r.ok()) return 0;
-                const balance = Number(
-                  (await r.json())?.data?.availableBalance ?? 0,
-                );
+                const balance = Number((await r.json())?.data?.availableBalance ?? 0);
                 if (balance > 0) {
                   payoutAmountVnd = balance;
                 }
@@ -152,24 +141,20 @@ test.describe.serial("Chapter 5 — Seller cashes out", () => {
           await loginAsSeededUser(page, "seller1");
           await page.goto("/seller");
           await expect(
-            page
-              .getByText(/Dashboard|Tổng quan|Seller Hub|Kênh Người Bán/i)
-              .first(),
+            page.getByText(/Dashboard|Tổng quan|Seller Hub|Kênh Người Bán/i).first(),
           ).toBeVisible({ timeout: 20_000 });
 
           await page
             .getByRole("button", { name: /^(Wallet|Ví tiền)$/i })
             .first()
             .click();
-          await expect(
-            page.getByText(/Wallet & Payouts|Ví & Thanh toán/i).first(),
-          ).toBeVisible({ timeout: 15_000 });
+          await expect(page.getByText(/Wallet & Payouts|Ví & Thanh toán/i).first()).toBeVisible({
+            timeout: 15_000,
+          });
 
           // Withdraw button is enabled iff balance > 0 — that's the
           // canonical UI signal that the credit landed end-to-end.
-          const withdraw = page
-            .getByRole("button", { name: /^(Withdraw|Rút tiền)$/i })
-            .first();
+          const withdraw = page.getByRole("button", { name: /^(Withdraw|Rút tiền)$/i }).first();
           await expect(withdraw).toBeVisible({ timeout: 10_000 });
           await expect(withdraw).toBeEnabled({ timeout: 10_000 });
           await expectNoGlobalError(page);
@@ -189,16 +174,12 @@ test.describe.serial("Chapter 5 — Seller cashes out", () => {
           // FormDialog renders both fields as type="text" (the number
           // type is just an inputMode hint). Match the inputs by their
           // declared placeholders from SellerWallet.tsx.
-          const amountInput = page
-            .getByPlaceholder(/^1000000$|VND/i)
-            .first();
+          const amountInput = page.getByPlaceholder(/^1000000$|VND/i).first();
           await expect(amountInput).toBeVisible({ timeout: 10_000 });
           await amountInput.fill(String(payoutAmountVnd));
 
           const bankInput = page
-            .getByPlaceholder(
-              /Số tài khoản|Bank account|0123456789|tài khoản ngân hàng/i,
-            )
+            .getByPlaceholder(/Số tài khoản|Bank account|0123456789|tài khoản ngân hàng/i)
             .first();
           await expect(bankInput).toBeVisible({ timeout: 10_000 });
           await bankInput.fill("0123456789-VCB");
@@ -212,7 +193,9 @@ test.describe.serial("Chapter 5 — Seller cashes out", () => {
 
           await expect(
             page
-              .getByText(/Withdrawal request submitted|Đã gửi yêu cầu rút tiền|Yêu cầu rút tiền đã gửi/i)
+              .getByText(
+                /Withdrawal request submitted|Đã gửi yêu cầu rút tiền|Yêu cầu rút tiền đã gửi/i,
+              )
               .first(),
           ).toBeVisible({ timeout: 15_000 });
           await expectNoGlobalError(page);
@@ -238,10 +221,9 @@ test.describe.serial("Chapter 5 — Seller cashes out", () => {
           await expect
             .poll(
               async () => {
-                const r = await page.request.get(
-                  `${apiURL}/admin/finance/payouts/pending`,
-                  { headers: { Authorization: `Bearer ${adminToken}` } },
-                );
+                const r = await page.request.get(`${apiURL}/admin/finance/payouts/pending`, {
+                  headers: { Authorization: `Bearer ${adminToken}` },
+                });
                 if (!r.ok()) return null;
                 const list: Array<{
                   payoutId?: string;
@@ -253,9 +235,7 @@ test.describe.serial("Chapter 5 — Seller cashes out", () => {
                 // against. Find the most recent PENDING payout for that
                 // seller — it's the one chapter 5 just submitted.
                 const match = list.find(
-                  (p) =>
-                    Number(p.amount) === payoutAmountVnd &&
-                    p.status === "PENDING",
+                  (p) => Number(p.amount) === payoutAmountVnd && p.status === "PENDING",
                 );
                 if (match?.payoutId) {
                   resolvedPayoutId = match.payoutId;
@@ -265,8 +245,7 @@ test.describe.serial("Chapter 5 — Seller cashes out", () => {
               },
               {
                 timeout: 30_000,
-                message:
-                  `admin's pending payout queue never showed a ${payoutAmountVnd} ₫ PENDING payout — cross-persona handoff broken`,
+                message: `admin's pending payout queue never showed a ${payoutAmountVnd} ₫ PENDING payout — cross-persona handoff broken`,
               },
             )
             .not.toBeNull();

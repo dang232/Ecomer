@@ -20,16 +20,13 @@ class CartRepositoryImpl implements CartRepository {
   bool _isOnline = true;
   StreamSubscription<void>? _connectivitySubscription;
 
-  static const String _guestUserId = 'guest';
   static const int _maxRetryCount = 3;
 
   CartRepositoryImpl({
-    required CartLocalDataSource localDataSource,
-    required CartRemoteDataSource remoteDataSource,
+    required this._localDataSource,
+    required this._remoteDataSource,
     Uuid? uuid,
-  })  : _localDataSource = localDataSource,
-        _remoteDataSource = remoteDataSource,
-        _uuid = uuid ?? const Uuid();
+  }) : _uuid = uuid ?? const Uuid();
 
   void setUserId(String userId) {
     _userId = userId;
@@ -96,9 +93,7 @@ class CartRepositoryImpl implements CartRepository {
 
       if (existingIndex == -1) {
         // Item doesn't exist in remote, add it
-        final newItem = localItem.copyWith(
-          cartItemId: _uuid.v4(),
-        );
+        final newItem = localItem.copyWith(cartItemId: _uuid.v4());
         mergedItems[newItem.cartItemId] = newItem;
       } else {
         // Keep the one with more quantity (assume local changes are newer intent)
@@ -139,7 +134,10 @@ class CartRepositoryImpl implements CartRepository {
 
     if (_isOnline) {
       try {
-        final remoteCart = await _remoteDataSource.addItem(_userId, cartItemWithId);
+        final remoteCart = await _remoteDataSource.addItem(
+          _userId,
+          cartItemWithId,
+        );
         await _localDataSource.saveCart(remoteCart);
         return remoteCart;
       } catch (e) {
@@ -238,7 +236,10 @@ class CartRepositoryImpl implements CartRepository {
 
     if (_isOnline) {
       try {
-        final updatedCart = await _remoteDataSource.applyCoupon(_userId, couponCode);
+        final updatedCart = await _remoteDataSource.applyCoupon(
+          _userId,
+          couponCode,
+        );
         await _localDataSource.saveCart(updatedCart);
         return updatedCart;
       } catch (e) {
@@ -272,7 +273,7 @@ class CartRepositoryImpl implements CartRepository {
   Future<CartModel> removeCoupon() async {
     final currentCart = _getOrCreateLocalCart();
     final updatedCart = currentCart.copyWith(
-      appliedCouponCode: null,
+      clearAppliedCouponCode: true,
       discountAmount: 0,
       updatedAt: DateTime.now(),
     );
@@ -308,9 +309,7 @@ class CartRepositoryImpl implements CartRepository {
         );
       }
     } else {
-      await _localDataSource.addPendingOperation(
-        PendingOperation.clearCart(),
-      );
+      await _localDataSource.addPendingOperation(PendingOperation.clearCart());
     }
   }
 
@@ -331,9 +330,7 @@ class CartRepositoryImpl implements CartRepository {
         await _processOperation(operation);
         await _localDataSource.removePendingOperation(operation.id);
       } catch (e) {
-        await _localDataSource.addPendingOperation(
-          operation.incrementRetry(),
-        );
+        await _localDataSource.addPendingOperation(operation.incrementRetry());
       }
     }
   }

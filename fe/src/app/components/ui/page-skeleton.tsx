@@ -1,15 +1,8 @@
 export function PageSkeleton() {
   return (
-    <div
-      className="grid grid-cols-4 gap-4 p-6"
-      aria-busy="true"
-      aria-label="Loading content"
-    >
+    <div className="grid grid-cols-4 gap-4 p-6" aria-busy="true" aria-label="Loading content">
       {(["a", "b", "c", "d"] as const).map((id) => (
-        <div
-          key={id}
-          className="bg-card border border-border rounded-[var(--radius-lg)] p-3"
-        >
+        <div key={id} className="bg-card border border-border rounded-[var(--radius-lg)] p-3">
           <div className="aspect-square rounded-[var(--radius-md)] bg-surface-elevated animate-pulse mb-3" />
           <div className="h-3 rounded-md bg-surface-elevated animate-pulse mb-2 w-3/4" />
           <div className="h-3 rounded-md bg-surface-elevated animate-pulse mb-2 w-1/2" />
@@ -30,7 +23,10 @@ export function ProductDetailSkeleton() {
           <div className="aspect-square bg-surface-elevated rounded-[var(--radius-xl)] border border-border animate-pulse" />
           <div className="flex gap-2 overflow-x-auto pb-1">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="shrink-0 w-[72px] h-[72px] rounded-[var(--radius-md)] bg-surface-elevated animate-pulse" />
+              <div
+                key={i}
+                className="shrink-0 w-[72px] h-[72px] rounded-[var(--radius-md)] bg-surface-elevated animate-pulse"
+              />
             ))}
           </div>
         </div>

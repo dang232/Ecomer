@@ -8,6 +8,8 @@ import com.vnshop.orderservice.infrastructure.product.ProductCatalogUnavailableE
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -22,6 +24,13 @@ public class ApiExceptionHandler {
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public ApiResponse<Void> forbidden(InvoiceAccessDeniedException exception) {
         return ApiResponse.error(exception.getMessage(), "INVOICE_ACCESS_DENIED");
+    }
+
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ApiResponse<Void> authorizationDenied(AuthorizationDeniedException exception) {
+        log.warn("authorization-denied: {}", exception.getMessage());
+        return ApiResponse.error("Not authorized", "FORBIDDEN");
     }
 
     @ExceptionHandler(OrderAccessDeniedException.class)
@@ -55,6 +64,16 @@ public class ApiExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiResponse<Void> badRequest(IllegalArgumentException exception) {
         return ApiResponse.error(exception.getMessage(), "BAD_REQUEST");
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiResponse<Void> validationFailure(MethodArgumentNotValidException exception) {
+        var messages = exception.getBindingResult().getFieldErrors().stream()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .toList();
+        String message = messages.isEmpty() ? "Request validation failed" : String.join(", ", messages);
+        return ApiResponse.error(message, "VALIDATION_ERROR");
     }
 
     /**

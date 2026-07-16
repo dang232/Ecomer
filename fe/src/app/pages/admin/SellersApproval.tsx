@@ -6,7 +6,11 @@ import { toast } from "sonner";
 
 import { FormDialog } from "../../components/form-dialog";
 import { ApiError } from "../../lib/api";
-import { adminApproveSeller, adminListSellers, adminRejectSeller } from "../../lib/api/endpoints/admin";
+import {
+  adminApproveSeller,
+  adminListSellers,
+  adminRejectSeller,
+} from "../../lib/api/endpoints/admin";
 import { formatRelativeTime } from "../../lib/format";
 
 import { SellerApplicationDetail } from "./SellerApplicationDetail";
@@ -51,7 +55,7 @@ export function SellersApproval() {
   );
 
   const detailSeller = detailFor
-    ? (sellersQuery.data ?? []).find((s) => s.id === detailFor) ?? null
+    ? ((sellersQuery.data ?? []).find((s) => s.id === detailFor) ?? null)
     : null;
 
   return (
@@ -65,7 +69,9 @@ export function SellersApproval() {
       <FormDialog
         open={!!rejectFor}
         title={t("admin.sellers.rejectDialog.title")}
-        description={rejectFor ? t("admin.sellers.rejectDialog.subtitle", { id: rejectFor }) : undefined}
+        description={
+          rejectFor ? t("admin.sellers.rejectDialog.subtitle", { id: rejectFor }) : undefined
+        }
         submitLabel={t("admin.sellers.rejectDialog.submitLabel")}
         submitColor="var(--error)"
         fields={[

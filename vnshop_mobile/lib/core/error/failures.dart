@@ -2,11 +2,7 @@ import 'package:equatable/equatable.dart';
 
 /// Base failure class following Either/Result pattern
 abstract class Failure extends Equatable {
-  const Failure({
-    required this.message,
-    this.code,
-    this.details,
-  });
+  const Failure({required this.message, this.code, this.details});
 
   final String message;
   final String? code;
@@ -18,11 +14,7 @@ abstract class Failure extends Equatable {
 
 /// Server-side failure (API errors)
 class ServerFailure extends Failure {
-  const ServerFailure({
-    required super.message,
-    super.code,
-    super.details,
-  });
+  const ServerFailure({required super.message, super.code, super.details});
 
   factory ServerFailure.fromStatusCode(int statusCode, [String? message]) {
     switch (statusCode) {
@@ -98,11 +90,7 @@ class CacheFailure extends Failure {
 
 /// Authentication failure
 class AuthFailure extends Failure {
-  const AuthFailure({
-    required super.message,
-    super.code,
-    super.details,
-  });
+  const AuthFailure({required super.message, super.code, super.details});
 
   factory AuthFailure.invalidCredentials() {
     return const AuthFailure(
@@ -156,24 +144,15 @@ class ValidationFailure extends Failure {
   });
 
   factory ValidationFailure.email(String message) {
-    return ValidationFailure(
-      message: message,
-      code: 'INVALID_EMAIL',
-    );
+    return ValidationFailure(message: message, code: 'INVALID_EMAIL');
   }
 
   factory ValidationFailure.password(String message) {
-    return ValidationFailure(
-      message: message,
-      code: 'INVALID_PASSWORD',
-    );
+    return ValidationFailure(message: message, code: 'INVALID_PASSWORD');
   }
 
   factory ValidationFailure.phone(String message) {
-    return ValidationFailure(
-      message: message,
-      code: 'INVALID_PHONE',
-    );
+    return ValidationFailure(message: message, code: 'INVALID_PHONE');
   }
 
   factory ValidationFailure.required(String field) {
@@ -194,8 +173,8 @@ class UnknownFailure extends Failure {
 }
 
 /// Result type alias for cleaner code
-/// Usage: Future<Result<User>> login(...)
-/// 
+/// Usage: `Future<Result<User>> login(...)`
+///
 /// Returns either Left(Failure) on error or Right(T) on success
 typedef Result<T> = Future<Either<Failure, T>>;
 

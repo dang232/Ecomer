@@ -46,9 +46,7 @@ function makeFile(opts: { name?: string; type?: string; size?: number } = {}): F
   });
 }
 
-function renderVideoUploadHook(
-  overrides: Partial<Parameters<typeof useVideoUpload>[0]> = {},
-) {
+function renderVideoUploadHook(overrides: Partial<Parameters<typeof useVideoUpload>[0]> = {}) {
   return renderHook(() =>
     useVideoUpload({
       entityId: "prod-1",
@@ -84,7 +82,9 @@ beforeEach(() => {
         onerror: null as (() => void) | null,
       };
       // Fire the metadata event on next microtask so estimateDuration resolves
-      Promise.resolve().then(() => stub.onloadedmetadata?.()).catch(() => undefined);
+      Promise.resolve()
+        .then(() => stub.onloadedmetadata?.())
+        .catch(() => undefined);
       return stub as unknown as HTMLElement;
     }
     return realCreateElement(tag, ...(rest as []));
@@ -162,9 +162,7 @@ describe("useVideoUpload", () => {
 
     expect(result.current.state.phase).toBe("error");
     expect(result.current.state.error).toBe("video:wrong-type");
-    expect(onError).toHaveBeenCalledWith(
-      expect.objectContaining({ message: "video:wrong-type" }),
-    );
+    expect(onError).toHaveBeenCalledWith(expect.objectContaining({ message: "video:wrong-type" }));
     expect(videoUploadInitMock).not.toHaveBeenCalled();
   });
 
@@ -229,10 +227,7 @@ describe("useVideoUpload", () => {
     const instance = tusMockInstances[0];
 
     await act(async () => {
-      (instance.options.onProgress as (uploaded: number, total: number) => void)(
-        5_000,
-        10_000,
-      );
+      (instance.options.onProgress as (uploaded: number, total: number) => void)(5_000, 10_000);
     });
 
     expect(result.current.state.progress).toBe(50);

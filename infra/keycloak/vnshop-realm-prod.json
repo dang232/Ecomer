@@ -425,12 +425,10 @@
   "resetCredentialsFlow": "reset credentials",
   "clientAuthenticationFlow": "clients",
   "dockerAuthenticationFlow": "docker auth",
-  "identityProviderMappings": [],
   "identityProviders": [
     {
       "alias": "google",
       "providerId": "google",
-      "name": "Google",
       "enabled": "${GOOGLE_OAUTH_ENABLED:false}",
       "displayName": "Google",
       "trustEmail": true,
@@ -446,7 +444,6 @@
     {
       "alias": "facebook",
       "providerId": "facebook",
-      "name": "Facebook",
       "enabled": "${FACEBOOK_OAUTH_ENABLED:false}",
       "displayName": "Facebook",
       "trustEmail": false,

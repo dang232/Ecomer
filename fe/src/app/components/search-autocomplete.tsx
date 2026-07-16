@@ -126,7 +126,9 @@ export function SearchAutocomplete({
                 }}
                 onMouseEnter={() => setActiveIndex(idx)}
                 className={`w-full px-3 py-2.5 text-left text-sm flex items-center gap-2.5 rounded-[var(--radius-md)] ${
-                  idx === activeIndex ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  idx === activeIndex
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 } transition-colors`}
               >
                 <Search className="w-3.5 h-3.5 shrink-0" />

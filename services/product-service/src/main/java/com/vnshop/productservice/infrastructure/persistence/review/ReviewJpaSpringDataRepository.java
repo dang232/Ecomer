@@ -12,6 +12,8 @@ public interface ReviewJpaSpringDataRepository extends JpaRepository<ReviewJpaEn
 
     List<ReviewJpaEntity> findByProductId(String productId);
 
+    List<ReviewJpaEntity> findByProductIdAndStatus(String productId, ReviewStatus status);
+
     List<ReviewJpaEntity> findByBuyerId(String buyerId);
 
     List<ReviewJpaEntity> findByStatus(ReviewStatus status);
@@ -29,6 +31,7 @@ public interface ReviewJpaSpringDataRepository extends JpaRepository<ReviewJpaEn
             FROM product_svc.reviews r
             JOIN product_svc.products p ON r.product_id = CAST(p.id AS VARCHAR)
             WHERE p.seller_id = :sellerId
+              AND r.status = 'APPROVED'
             """, nativeQuery = true)
     List<Object[]> findSellerReviewStats(@Param("sellerId") String sellerId);
 
@@ -37,6 +40,7 @@ public interface ReviewJpaSpringDataRepository extends JpaRepository<ReviewJpaEn
             FROM product_svc.reviews r
             JOIN product_svc.products p ON r.product_id = CAST(p.id AS VARCHAR)
             WHERE p.seller_id IN (:sellerIds)
+              AND r.status = 'APPROVED'
             GROUP BY p.seller_id
             """, nativeQuery = true)
     List<Object[]> findSellerReviewStatsBatch(@Param("sellerIds") java.util.Collection<String> sellerIds);

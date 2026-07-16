@@ -60,15 +60,17 @@ test.describe("Authentication Flows", () => {
     await page.getByRole("button", { name: /create account|tạo tài khoản/i }).click();
 
     // Provider auto-logs in and navigates to /
-    await expect.poll(() => new URL(page.url()).pathname, {
-      timeout: 30_000,
-      message: "register did not navigate to /",
-    }).toBe("/");
+    await expect
+      .poll(() => new URL(page.url()).pathname, {
+        timeout: 30_000,
+        message: "register did not navigate to /",
+      })
+      .toBe("/");
 
     // Login button should be gone — replaced by user avatar/username
-    await expect(
-      page.getByRole("button", { name: /^(Log in|Đăng nhập)$/i }).first(),
-    ).toHaveCount(0, { timeout: 10_000 });
+    await expect(page.getByRole("link", { name: /^(Log in|Đăng nhập)$/i }).first()).toHaveCount(0, {
+      timeout: 10_000,
+    });
 
     await expectNoGlobalError(page);
   });
@@ -79,9 +81,9 @@ test.describe("Authentication Flows", () => {
     await loginViaUI(page, user.email);
 
     // Verify authenticated state: login button absent, user greeting present
-    await expect(
-      page.getByRole("button", { name: /^(Log in|Đăng nhập)$/i }).first(),
-    ).toHaveCount(0, { timeout: 10_000 });
+    await expect(page.getByRole("link", { name: /^(Log in|Đăng nhập)$/i }).first()).toHaveCount(0, {
+      timeout: 10_000,
+    });
 
     await expectNoGlobalError(page);
   });
@@ -134,7 +136,9 @@ test.describe("Authentication Flows", () => {
     );
 
     // Find and click the user menu / avatar to trigger logout
-    const userMenuTrigger = page.locator("[data-testid='user-menu-button'], [aria-label*='user' i]").first();
+    const userMenuTrigger = page
+      .locator("[data-testid='user-menu-button'], [aria-label*='user' i]")
+      .first();
     await expect(userMenuTrigger).toBeVisible({ timeout: 10_000 });
     await userMenuTrigger.click();
 
@@ -143,9 +147,9 @@ test.describe("Authentication Flows", () => {
     await logoutBtn.click();
 
     // After logout, login button should reappear
-    await expect(
-      page.getByRole("button", { name: /^(Log in|Đăng nhập)$/i }).first(),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("link", { name: /^(Log in|Đăng nhập)$/i }).first()).toBeVisible({
+      timeout: 15_000,
+    });
 
     // Auth token should be cleared
     const token = await page.evaluate(() => localStorage.getItem("vnshop_access_token"));

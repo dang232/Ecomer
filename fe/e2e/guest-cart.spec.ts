@@ -25,10 +25,7 @@ test.describe("guest cart", () => {
     await page.goto("/");
     await page.evaluate(
       ({ id }) => {
-        localStorage.setItem(
-          "vnshop:guest-cart",
-          JSON.stringify([{ productId: id, quantity: 2 }]),
-        );
+        localStorage.setItem("vnshop:guest-cart", JSON.stringify([{ productId: id, quantity: 2 }]));
       },
       { id: product.id },
     );
@@ -65,4 +62,3 @@ test.describe("guest cart", () => {
 // transition but the polling window vs the React render+effect cycle is
 // non-deterministic across CI runs. The unit tests give us the same
 // confidence with deterministic timing.
-

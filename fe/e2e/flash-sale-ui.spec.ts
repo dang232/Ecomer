@@ -17,15 +17,14 @@ import { expectNoGlobalError } from "./_helpers";
  * No backend or auth needed. Runs on the public home page.
  */
 
-
 test.describe("flash sale strip UI", () => {
   test("Flash sale section header renders", async ({ page }) => {
     await page.goto("/");
 
     // Wait for the home page to mount (Login CTA is the canonical signal).
-    await expect(
-      page.getByRole("button", { name: /^(Log in|Đăng nhập)$/i }).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("link", { name: /^(Log in|Đăng nhập)$/i }).first()).toBeVisible({
+      timeout: 20_000,
+    });
 
     // The Flash sale title — anchor on the localized label, not the emoji.
     // (The label includes a ⚡ emoji prefix in the translation; matching
@@ -44,9 +43,9 @@ test.describe("flash sale strip UI", () => {
     page,
   }) => {
     await page.goto("/");
-    await expect(
-      page.getByRole("button", { name: /^(Log in|Đăng nhập)$/i }).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("link", { name: /^(Log in|Đăng nhập)$/i }).first()).toBeVisible({
+      timeout: 20_000,
+    });
 
     // The body has three render modes:
     //   - hasCampaigns: countdown timer + product strip
@@ -56,7 +55,7 @@ test.describe("flash sale strip UI", () => {
     await expect(
       page
         .getByText(
-          /Hot deals|Giảm sốc|Loading flash sale|Đang tải flash sale|Coming soon|Sắp ra mắt|Ends in|Kết thúc sau|Flash sale ended|Hết flash sale/i,
+          /Hot deals|Giảm sốc|Loading flash sale|Đang tải flash sale|Coming soon|Sắp ra mắt|Ends in|Kết thúc sau|Flash sale ended|Hết flash sale|No flash sale running right now|Chưa có flash sale đang diễn ra/i,
         )
         .first(),
     ).toBeVisible({ timeout: 15_000 });

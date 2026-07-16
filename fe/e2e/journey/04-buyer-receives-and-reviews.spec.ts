@@ -60,18 +60,15 @@ test.describe.serial("Chapter 4 — Buyer reviews the ordered product", () => {
       acceptanceCriteria: [
         {
           code: "AC-4.1",
-          outcome:
-            "Buyer who placed the order can return to their /orders history and see it",
+          outcome: "Buyer who placed the order can return to their /orders history and see it",
         },
         {
           code: "AC-4.2",
-          outcome:
-            "Buyer can submit a 5-star written review on the ordered product",
+          outcome: "Buyer can submit a 5-star written review on the ordered product",
         },
         {
           code: "AC-4.3",
-          outcome:
-            "Newly submitted review is visible on the public product page within 30 s",
+          outcome: "Newly submitted review is visible on the public product page within 30 s",
         },
       ],
     });
@@ -88,9 +85,7 @@ test.describe.serial("Chapter 4 — Buyer reviews the ordered product", () => {
 
   test.setTimeout(15 * 60 * 1000);
 
-  test("Buyer logs in, leaves a 5-star review, sees it on the product page", async ({
-    page,
-  }) => {
+  test("Buyer logs in, leaves a 5-star review, sees it on the product page", async ({ page }) => {
     await startTrace("04-buyer-reviews", page);
     try {
       const reviewBody = `Journey review run ${Date.now()} — solid product, fast delivery, would buy again.`;
@@ -101,12 +96,7 @@ test.describe.serial("Chapter 4 — Buyer reviews the ordered product", () => {
         "AC-4.1",
         "Predecessor chapters left the buyer + product + order in state.json",
         async () => {
-          await requireJourneyState([
-            "buyerEmail",
-            "buyerPassword",
-            "productId",
-            "orderId",
-          ]);
+          await requireJourneyState(["buyerEmail", "buyerPassword", "productId", "orderId"]);
         },
       );
 
@@ -116,23 +106,18 @@ test.describe.serial("Chapter 4 — Buyer reviews the ordered product", () => {
         "AC-4.1",
         "Buyer logs back in and reaches /orders showing chapter 2's order",
         async () => {
-          const state = await requireJourneyState([
-            "buyerEmail",
-            "buyerPassword",
-          ]);
+          const state = await requireJourneyState(["buyerEmail", "buyerPassword"]);
           // Clear any session cookies left over from chapter 3's seller
           // login so /login actually shows its form.
           await page.context().clearCookies();
 
           await page.goto("/login");
-          await expect(
-            page.getByText(/Sign in to VNShop|Đăng nhập VNShop/i).first(),
-          ).toBeVisible({ timeout: 20_000 });
+          await expect(page.getByText(/Sign in to VNShop|Đăng nhập VNShop/i).first()).toBeVisible({
+            timeout: 20_000,
+          });
           await page.locator("#identifier").fill(state.buyerEmail);
           await page.locator("#password").fill(state.buyerPassword);
-          await page
-            .getByRole("button", { name: /^(Sign in|Đăng nhập)$/i })
-            .click();
+          await page.getByRole("button", { name: /^(Sign in|Đăng nhập)$/i }).click();
           await expect
             .poll(() => new URL(page.url()).pathname, {
               timeout: 30_000,
@@ -143,9 +128,7 @@ test.describe.serial("Chapter 4 — Buyer reviews the ordered product", () => {
           await page.goto("/orders");
           await expect(
             page
-              .getByText(
-                /Mã đơn|Order ID|Đăng nhập để xem đơn hàng|Log in to view your orders/i,
-              )
+              .getByText(/Mã đơn|Order ID|Đăng nhập để xem đơn hàng|Log in to view your orders/i)
               .first(),
           ).toBeVisible({ timeout: 20_000 });
           await expectNoGlobalError(page);
@@ -203,9 +186,7 @@ test.describe.serial("Chapter 4 — Buyer reviews the ordered product", () => {
             .click();
 
           await expect(
-            page
-              .getByText(/Review submitted|Đã gửi đánh giá|Review posted/i)
-              .first(),
+            page.getByText(/Review submitted|Đã gửi đánh giá|Review posted/i).first(),
           ).toBeVisible({ timeout: 15_000 });
           await expectNoGlobalError(page);
         },
@@ -235,14 +216,10 @@ test.describe.serial("Chapter 4 — Buyer reviews the ordered product", () => {
           // substring is enough.
           const stamp = reviewBody.match(/run (\d+)/)?.[1] ?? "";
           await expect
-            .poll(
-              async () => page.getByText(stamp).count(),
-              {
-                timeout: 30_000,
-                message:
-                  `review with stamp ${stamp} never appeared on the product page within 30 s`,
-              },
-            )
+            .poll(async () => page.getByText(stamp).count(), {
+              timeout: 30_000,
+              message: `review with stamp ${stamp} never appeared on the product page within 30 s`,
+            })
             .toBeGreaterThan(0);
           await expectNoGlobalError(page);
         },

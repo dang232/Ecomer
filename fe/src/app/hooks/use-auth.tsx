@@ -51,7 +51,7 @@ interface AuthState {
    * desired `next=` so the native form takes over.
    */
   login: (redirectTo?: string) => void;
-  loginWithCredentials: (username: string, password: string) => Promise<void>;
+  loginWithCredentials: (username: string, password: string) => Promise<Role[]>;
   beginOAuthLogin: (provider: "google" | "facebook", next?: string) => void;
   register: (input: RegisterInput) => Promise<void>;
   logout: () => void;
@@ -178,6 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (username: string, password: string) => {
       const next = await passwordLogin(username, password);
       applyTokenSet(next);
+      return parseRoles(decodeJwt(next.accessToken));
     },
     [applyTokenSet],
   );
@@ -188,11 +189,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await registerUser(input);
       } catch (err) {
         if (err instanceof ApiError) {
-          throw new AuthError(
-            err.status,
-            err.errorCode ?? "register_failed",
-            err.message,
-          );
+          throw new AuthError(err.status, err.errorCode ?? "register_failed", err.message);
         }
         throw err;
       }

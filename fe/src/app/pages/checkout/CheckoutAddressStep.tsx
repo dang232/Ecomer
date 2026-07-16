@@ -67,9 +67,8 @@ export function CheckoutAddressStep({
     });
   };
 
-  const setField =
-    (field: keyof AddressFormState) => (e: React.ChangeEvent<HTMLInputElement>) =>
-      setForm((prev) => ({ ...prev, [field]: e.target.value }));
+  const setField = (field: keyof AddressFormState) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
   return (
     <div className="space-y-4">
@@ -81,7 +80,9 @@ export function CheckoutAddressStep({
         <div className="bg-card rounded-[var(--radius-lg)] p-5 text-sm text-muted-foreground flex items-start gap-3">
           <AlertCircle size={18} className="text-orange-500 shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold text-foreground">{t("checkout.address.noAddressesTitle")}</p>
+            <p className="font-semibold text-foreground">
+              {t("checkout.address.noAddressesTitle")}
+            </p>
             <p className="mt-1">{t("checkout.address.noAddressesSub")}</p>
           </div>
         </div>
@@ -118,9 +119,7 @@ export function CheckoutAddressStep({
                   isSelected ? "border-primary" : "border-border",
                 ].join(" ")}
               >
-                {isSelected ? (
-                  <div className="w-2.5 h-2.5 rounded-full bg-primary" />
-                ) : null}
+                {isSelected ? <div className="w-2.5 h-2.5 rounded-full bg-primary" /> : null}
               </div>
 
               {/* Content */}

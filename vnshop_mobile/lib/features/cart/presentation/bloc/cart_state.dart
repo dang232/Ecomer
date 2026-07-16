@@ -2,17 +2,24 @@ import 'package:equatable/equatable.dart';
 
 import '../../data/models/cart_model.dart';
 
-enum CartStatus {
-  initial,
-  loading,
-  loaded,
-  error,
+enum CartStatus { initial, loading, loaded, error }
+
+enum CartFailure {
+  load,
+  addItem,
+  removeItem,
+  updateQuantity,
+  invalidCoupon,
+  removeCoupon,
+  clearCart,
+  sync,
+  checkoutCleanup,
 }
 
 class CartState extends Equatable {
   final CartStatus status;
   final CartModel? cart;
-  final String? errorMessage;
+  final CartFailure? failure;
   final bool isOnline;
   final bool isSyncing;
   final String? lastAppliedCoupon;
@@ -20,7 +27,7 @@ class CartState extends Equatable {
   const CartState({
     this.status = CartStatus.initial,
     this.cart,
-    this.errorMessage,
+    this.failure,
     this.isOnline = true,
     this.isSyncing = false,
     this.lastAppliedCoupon,
@@ -37,7 +44,8 @@ class CartState extends Equatable {
   CartState copyWith({
     CartStatus? status,
     CartModel? cart,
-    String? errorMessage,
+    CartFailure? failure,
+    bool clearFailure = false,
     bool? isOnline,
     bool? isSyncing,
     String? lastAppliedCoupon,
@@ -45,7 +53,7 @@ class CartState extends Equatable {
     return CartState(
       status: status ?? this.status,
       cart: cart ?? this.cart,
-      errorMessage: errorMessage ?? this.errorMessage,
+      failure: clearFailure ? null : failure ?? this.failure,
       isOnline: isOnline ?? this.isOnline,
       isSyncing: isSyncing ?? this.isSyncing,
       lastAppliedCoupon: lastAppliedCoupon ?? this.lastAppliedCoupon,
@@ -54,11 +62,11 @@ class CartState extends Equatable {
 
   @override
   List<Object?> get props => [
-        status,
-        cart,
-        errorMessage,
-        isOnline,
-        isSyncing,
-        lastAppliedCoupon,
-      ];
+    status,
+    cart,
+    failure,
+    isOnline,
+    isSyncing,
+    lastAppliedCoupon,
+  ];
 }

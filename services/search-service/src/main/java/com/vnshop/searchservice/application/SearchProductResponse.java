@@ -18,6 +18,8 @@ public record SearchProductResponse(
         BigDecimal price,
         BigDecimal maxPrice,
         int variantCount,
+        String imageUrl,
+        int stock,
         boolean sameDayDelivery,
         boolean verified,
         boolean isOfficial
@@ -33,6 +35,8 @@ public record SearchProductResponse(
                 model.minPrice(),
                 model.maxPrice(),
                 model.variantCount(),
+                model.imageUrl(),
+                model.stock(),
                 model.sameDayDelivery(),
                 model.verified(),
                 model.isOfficial()

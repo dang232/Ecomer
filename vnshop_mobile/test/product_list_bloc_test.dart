@@ -67,13 +67,15 @@ void main() {
       blocTest<ProductListBloc, ProductListState>(
         'emits [loading, success] with products when load succeeds',
         build: () {
-          when(() => mockRepository.getProducts(
-                page: any(named: 'page'),
-                limit: any(named: 'limit'),
-                categoryId: any(named: 'categoryId'),
-                searchQuery: any(named: 'searchQuery'),
-                forceRefresh: any(named: 'forceRefresh'),
-              )).thenAnswer((_) async => testProducts);
+          when(
+            () => mockRepository.getProducts(
+              page: any(named: 'page'),
+              limit: any(named: 'limit'),
+              categoryId: any(named: 'categoryId'),
+              searchQuery: any(named: 'searchQuery'),
+              forceRefresh: any(named: 'forceRefresh'),
+            ),
+          ).thenAnswer((_) async => testProducts);
           return ProductListBloc(repository: mockRepository);
         },
         act: (bloc) => bloc.add(const LoadProducts()),
@@ -88,32 +90,39 @@ void main() {
               .having((s) => s.hasReachedMax, 'hasReachedMax', false),
         ],
         verify: (_) {
-          verify(() => mockRepository.getProducts(
-                page: 1,
-                limit: 20,
-                categoryId: null,
-                searchQuery: null,
-                forceRefresh: false,
-              )).called(1);
+          verify(
+            () => mockRepository.getProducts(
+              page: 1,
+              limit: 20,
+              categoryId: null,
+              searchQuery: null,
+              forceRefresh: false,
+            ),
+          ).called(1);
         },
       );
 
       blocTest<ProductListBloc, ProductListState>(
         'emits [loading, success with hasReachedMax=true] when fewer products returned than page size',
         build: () {
-          when(() => mockRepository.getProducts(
-                page: any(named: 'page'),
-                limit: any(named: 'limit'),
-                categoryId: any(named: 'categoryId'),
-                searchQuery: any(named: 'searchQuery'),
-                forceRefresh: any(named: 'forceRefresh'),
-              )).thenAnswer((_) async => testProducts.take(10).toList());
+          when(
+            () => mockRepository.getProducts(
+              page: any(named: 'page'),
+              limit: any(named: 'limit'),
+              categoryId: any(named: 'categoryId'),
+              searchQuery: any(named: 'searchQuery'),
+              forceRefresh: any(named: 'forceRefresh'),
+            ),
+          ).thenAnswer((_) async => testProducts.take(10).toList());
           return ProductListBloc(repository: mockRepository);
         },
         act: (bloc) => bloc.add(const LoadProducts()),
         expect: () => [
-          isA<ProductListState>()
-              .having((s) => s.status, 'status', ProductStatus.loading),
+          isA<ProductListState>().having(
+            (s) => s.status,
+            'status',
+            ProductStatus.loading,
+          ),
           isA<ProductListState>()
               .having((s) => s.status, 'status', ProductStatus.success)
               .having((s) => s.products.length, 'products.length', 10)
@@ -124,19 +133,24 @@ void main() {
       blocTest<ProductListBloc, ProductListState>(
         'emits [loading, failure] when load fails',
         build: () {
-          when(() => mockRepository.getProducts(
-                page: any(named: 'page'),
-                limit: any(named: 'limit'),
-                categoryId: any(named: 'categoryId'),
-                searchQuery: any(named: 'searchQuery'),
-                forceRefresh: any(named: 'forceRefresh'),
-              )).thenThrow(Exception('Network error'));
+          when(
+            () => mockRepository.getProducts(
+              page: any(named: 'page'),
+              limit: any(named: 'limit'),
+              categoryId: any(named: 'categoryId'),
+              searchQuery: any(named: 'searchQuery'),
+              forceRefresh: any(named: 'forceRefresh'),
+            ),
+          ).thenThrow(Exception('Network error'));
           return ProductListBloc(repository: mockRepository);
         },
         act: (bloc) => bloc.add(const LoadProducts()),
         expect: () => [
-          isA<ProductListState>()
-              .having((s) => s.status, 'status', ProductStatus.loading),
+          isA<ProductListState>().having(
+            (s) => s.status,
+            'status',
+            ProductStatus.loading,
+          ),
           isA<ProductListState>()
               .having((s) => s.status, 'status', ProductStatus.failure)
               .having((s) => s.errorMessage, 'errorMessage', isNotNull),
@@ -148,13 +162,15 @@ void main() {
       blocTest<ProductListBloc, ProductListState>(
         'emits [loadingMore, success] with more products when load more succeeds',
         build: () {
-          when(() => mockRepository.getProducts(
-                page: any(named: 'page'),
-                limit: any(named: 'limit'),
-                categoryId: any(named: 'categoryId'),
-                searchQuery: any(named: 'searchQuery'),
-                forceRefresh: any(named: 'forceRefresh'),
-              )).thenAnswer((_) async => testProductsPage2);
+          when(
+            () => mockRepository.getProducts(
+              page: any(named: 'page'),
+              limit: any(named: 'limit'),
+              categoryId: any(named: 'categoryId'),
+              searchQuery: any(named: 'searchQuery'),
+              forceRefresh: any(named: 'forceRefresh'),
+            ),
+          ).thenAnswer((_) async => testProductsPage2);
           return ProductListBloc(repository: mockRepository);
         },
         seed: () => ProductListState(
@@ -165,21 +181,26 @@ void main() {
         ),
         act: (bloc) => bloc.add(const LoadMoreProducts()),
         expect: () => [
-          isA<ProductListState>()
-              .having((s) => s.status, 'status', ProductStatus.loadingMore),
+          isA<ProductListState>().having(
+            (s) => s.status,
+            'status',
+            ProductStatus.loadingMore,
+          ),
           isA<ProductListState>()
               .having((s) => s.status, 'status', ProductStatus.success)
               .having((s) => s.products.length, 'products.length', 30)
               .having((s) => s.currentPage, 'currentPage', 2),
         ],
         verify: (_) {
-          verify(() => mockRepository.getProducts(
-                page: 2,
-                limit: 20,
-                categoryId: null,
-                searchQuery: null,
-                forceRefresh: false,
-              )).called(1);
+          verify(
+            () => mockRepository.getProducts(
+              page: 2,
+              limit: 20,
+              categoryId: null,
+              searchQuery: null,
+              forceRefresh: false,
+            ),
+          ).called(1);
         },
       );
 
@@ -195,13 +216,15 @@ void main() {
         act: (bloc) => bloc.add(const LoadMoreProducts()),
         expect: () => [],
         verify: (_) {
-          verifyNever(() => mockRepository.getProducts(
-                page: any(named: 'page'),
-                limit: any(named: 'limit'),
-                categoryId: any(named: 'categoryId'),
-                searchQuery: any(named: 'searchQuery'),
-                forceRefresh: any(named: 'forceRefresh'),
-              ));
+          verifyNever(
+            () => mockRepository.getProducts(
+              page: any(named: 'page'),
+              limit: any(named: 'limit'),
+              categoryId: any(named: 'categoryId'),
+              searchQuery: any(named: 'searchQuery'),
+              forceRefresh: any(named: 'forceRefresh'),
+            ),
+          );
         },
       );
 
@@ -223,13 +246,15 @@ void main() {
       blocTest<ProductListBloc, ProductListState>(
         'emits [loading, success] with search results after debounce',
         build: () {
-          when(() => mockRepository.getProducts(
-                page: any(named: 'page'),
-                limit: any(named: 'limit'),
-                categoryId: any(named: 'categoryId'),
-                searchQuery: any(named: 'searchQuery'),
-                forceRefresh: any(named: 'forceRefresh'),
-              )).thenAnswer((_) async => testProducts.take(5).toList());
+          when(
+            () => mockRepository.getProducts(
+              page: any(named: 'page'),
+              limit: any(named: 'limit'),
+              categoryId: any(named: 'categoryId'),
+              searchQuery: any(named: 'searchQuery'),
+              forceRefresh: any(named: 'forceRefresh'),
+            ),
+          ).thenAnswer((_) async => testProducts.take(5).toList());
           return ProductListBloc(repository: mockRepository);
         },
         act: (bloc) async {
@@ -246,56 +271,69 @@ void main() {
               .having((s) => s.products.length, 'products.length', 5),
         ],
         verify: (_) {
-          verify(() => mockRepository.getProducts(
-                page: 1,
-                limit: 20,
-                categoryId: null,
-                searchQuery: 'test',
-                forceRefresh: false,
-              )).called(1);
+          verify(
+            () => mockRepository.getProducts(
+              page: 1,
+              limit: 20,
+              categoryId: null,
+              searchQuery: 'test',
+              forceRefresh: false,
+            ),
+          ).called(1);
         },
       );
 
-      test('debounce cancellation - rapid searches only trigger last one', () async {
-        var callCount = 0;
-        when(() => mockRepository.getProducts(
+      test(
+        'processes dispatched searches while the UI owns input debounce',
+        () async {
+          var callCount = 0;
+          when(
+            () => mockRepository.getProducts(
               page: any(named: 'page'),
               limit: any(named: 'limit'),
               categoryId: any(named: 'categoryId'),
               searchQuery: any(named: 'searchQuery'),
               forceRefresh: any(named: 'forceRefresh'),
-            )).thenAnswer((_) async {
-          callCount++;
-          return testProducts.take(5).toList();
-        });
+            ),
+          ).thenAnswer((_) async {
+            callCount++;
+            return testProducts.take(5).toList();
+          });
 
-        final bloc = ProductListBloc(repository: mockRepository);
+          final bloc = ProductListBloc(repository: mockRepository);
 
-        // Simulate rapid search inputs
-        bloc.add(const SearchProducts('a'));
-        await Future.delayed(const Duration(milliseconds: 100));
-        bloc.add(const SearchProducts('ab'));
-        await Future.delayed(const Duration(milliseconds: 100));
-        bloc.add(const SearchProducts('abc'));
-        await Future.delayed(const Duration(milliseconds: 400)); // Wait for debounce
+          // A search field debounces user input before dispatching these intents.
+          bloc.add(const SearchProducts('a'));
+          await Future.delayed(const Duration(milliseconds: 100));
+          bloc.add(const SearchProducts('ab'));
+          await Future.delayed(const Duration(milliseconds: 100));
+          bloc.add(const SearchProducts('abc'));
+          await Future.delayed(
+            const Duration(milliseconds: 400),
+          ); // Wait for debounce
 
-        expect(callCount, 1);
+          expect(callCount, 3);
+          expect(bloc.state.searchQuery, 'abc');
+          expect(bloc.state.status, ProductStatus.success);
 
-        await bloc.close();
-      });
+          await bloc.close();
+        },
+      );
     });
 
     group('Filter by Category', () {
       blocTest<ProductListBloc, ProductListState>(
         'emits [loading, success] with filtered products when filter succeeds',
         build: () {
-          when(() => mockRepository.getProducts(
-                page: any(named: 'page'),
-                limit: any(named: 'limit'),
-                categoryId: any(named: 'categoryId'),
-                searchQuery: any(named: 'searchQuery'),
-                forceRefresh: any(named: 'forceRefresh'),
-              )).thenAnswer((_) async => testProducts.take(10).toList());
+          when(
+            () => mockRepository.getProducts(
+              page: any(named: 'page'),
+              limit: any(named: 'limit'),
+              categoryId: any(named: 'categoryId'),
+              searchQuery: any(named: 'searchQuery'),
+              forceRefresh: any(named: 'forceRefresh'),
+            ),
+          ).thenAnswer((_) async => testProducts.take(10).toList());
           return ProductListBloc(repository: mockRepository);
         },
         seed: () => ProductListState(
@@ -306,35 +344,47 @@ void main() {
         act: (bloc) => bloc.add(const FilterByCategory('cat_1')),
         expect: () => [
           isA<ProductListState>()
-              .having((s) => s.selectedCategoryId, 'selectedCategoryId', 'cat_1')
+              .having(
+                (s) => s.selectedCategoryId,
+                'selectedCategoryId',
+                'cat_1',
+              )
               .having((s) => s.searchQuery, 'searchQuery', '')
               .having((s) => s.status, 'status', ProductStatus.loading),
           isA<ProductListState>()
               .having((s) => s.status, 'status', ProductStatus.success)
-              .having((s) => s.selectedCategoryId, 'selectedCategoryId', 'cat_1')
+              .having(
+                (s) => s.selectedCategoryId,
+                'selectedCategoryId',
+                'cat_1',
+              )
               .having((s) => s.products.length, 'products.length', 10),
         ],
         verify: (_) {
-          verify(() => mockRepository.getProducts(
-                page: 1,
-                limit: 20,
-                categoryId: 'cat_1',
-                searchQuery: null,
-                forceRefresh: false,
-              )).called(1);
+          verify(
+            () => mockRepository.getProducts(
+              page: 1,
+              limit: 20,
+              categoryId: 'cat_1',
+              searchQuery: null,
+              forceRefresh: false,
+            ),
+          ).called(1);
         },
       );
 
       blocTest<ProductListBloc, ProductListState>(
-        'clears search query when filtering by category',
+        'preserves search query when filtering by category',
         build: () {
-          when(() => mockRepository.getProducts(
-                page: any(named: 'page'),
-                limit: any(named: 'limit'),
-                categoryId: any(named: 'categoryId'),
-                searchQuery: any(named: 'searchQuery'),
-                forceRefresh: any(named: 'forceRefresh'),
-              )).thenAnswer((_) async => testProducts);
+          when(
+            () => mockRepository.getProducts(
+              page: any(named: 'page'),
+              limit: any(named: 'limit'),
+              categoryId: any(named: 'categoryId'),
+              searchQuery: any(named: 'searchQuery'),
+              forceRefresh: any(named: 'forceRefresh'),
+            ),
+          ).thenAnswer((_) async => testProducts);
           return ProductListBloc(repository: mockRepository);
         },
         seed: () => ProductListState(
@@ -345,24 +395,33 @@ void main() {
         act: (bloc) => bloc.add(const FilterByCategory('cat_1')),
         expect: () => [
           isA<ProductListState>()
-              .having((s) => s.searchQuery, 'searchQuery', '')
-              .having((s) => s.selectedCategoryId, 'selectedCategoryId', 'cat_1')
+              .having((s) => s.searchQuery, 'searchQuery', 'previous search')
+              .having(
+                (s) => s.selectedCategoryId,
+                'selectedCategoryId',
+                'cat_1',
+              )
               .having((s) => s.status, 'status', ProductStatus.loading),
-          isA<ProductListState>()
-              .having((s) => s.status, 'status', ProductStatus.success),
+          isA<ProductListState>().having(
+            (s) => s.status,
+            'status',
+            ProductStatus.success,
+          ),
         ],
       );
 
       blocTest<ProductListBloc, ProductListState>(
         'clears category filter when null category passed',
         build: () {
-          when(() => mockRepository.getProducts(
-                page: any(named: 'page'),
-                limit: any(named: 'limit'),
-                categoryId: any(named: 'categoryId'),
-                searchQuery: any(named: 'searchQuery'),
-                forceRefresh: any(named: 'forceRefresh'),
-              )).thenAnswer((_) async => testProducts);
+          when(
+            () => mockRepository.getProducts(
+              page: any(named: 'page'),
+              limit: any(named: 'limit'),
+              categoryId: any(named: 'categoryId'),
+              searchQuery: any(named: 'searchQuery'),
+              forceRefresh: any(named: 'forceRefresh'),
+            ),
+          ).thenAnswer((_) async => testProducts);
           return ProductListBloc(repository: mockRepository);
         },
         seed: () => ProductListState(
@@ -375,8 +434,11 @@ void main() {
           isA<ProductListState>()
               .having((s) => s.selectedCategoryId, 'selectedCategoryId', isNull)
               .having((s) => s.status, 'status', ProductStatus.loading),
-          isA<ProductListState>()
-              .having((s) => s.status, 'status', ProductStatus.success),
+          isA<ProductListState>().having(
+            (s) => s.status,
+            'status',
+            ProductStatus.success,
+          ),
         ],
       );
     });
@@ -385,28 +447,38 @@ void main() {
       blocTest<ProductListBloc, ProductListState>(
         'emits [success] with categories when load succeeds',
         build: () {
-          when(() => mockRepository.getCategories(
-                forceRefresh: any(named: 'forceRefresh'),
-              )).thenAnswer((_) async => testCategories);
+          when(
+            () => mockRepository.getCategories(
+              forceRefresh: any(named: 'forceRefresh'),
+            ),
+          ).thenAnswer((_) async => testCategories);
           return ProductListBloc(repository: mockRepository);
         },
         act: (bloc) => bloc.add(const LoadCategories()),
         expect: () => [
           isA<ProductListState>()
               .having((s) => s.categories.length, 'categories.length', 2)
-              .having((s) => s.categories.first.name, 'first category name', 'Category 1'),
+              .having(
+                (s) => s.categories.first.name,
+                'first category name',
+                'Category 1',
+              ),
         ],
         verify: (_) {
-          verify(() => mockRepository.getCategories(forceRefresh: false)).called(1);
+          verify(
+            () => mockRepository.getCategories(forceRefresh: false),
+          ).called(1);
         },
       );
 
       blocTest<ProductListBloc, ProductListState>(
         'does not emit error state when categories load fails (non-critical)',
         build: () {
-          when(() => mockRepository.getCategories(
-                forceRefresh: any(named: 'forceRefresh'),
-              )).thenThrow(Exception('Categories error'));
+          when(
+            () => mockRepository.getCategories(
+              forceRefresh: any(named: 'forceRefresh'),
+            ),
+          ).thenThrow(Exception('Categories error'));
           return ProductListBloc(repository: mockRepository);
         },
         act: (bloc) => bloc.add(const LoadCategories()),
@@ -416,36 +488,44 @@ void main() {
 
     group('RefreshProducts', () {
       blocTest<ProductListBloc, ProductListState>(
-        'emits [success] with refreshed products when refresh succeeds',
+        'keeps stale content while refreshed products load',
         build: () {
-          when(() => mockRepository.getProducts(
-                page: any(named: 'page'),
-                limit: any(named: 'limit'),
-                categoryId: any(named: 'categoryId'),
-                searchQuery: any(named: 'searchQuery'),
-                forceRefresh: any(named: 'forceRefresh'),
-              )).thenAnswer((_) async => testProducts);
+          when(
+            () => mockRepository.getProducts(
+              page: any(named: 'page'),
+              limit: any(named: 'limit'),
+              categoryId: any(named: 'categoryId'),
+              searchQuery: any(named: 'searchQuery'),
+              forceRefresh: any(named: 'forceRefresh'),
+            ),
+          ).thenAnswer((_) async => testProducts);
           return ProductListBloc(repository: mockRepository);
         },
         seed: () => ProductListState(
           status: ProductStatus.success,
-          products: [],
+          products: testProducts.take(2).toList(),
         ),
         act: (bloc) => bloc.add(const RefreshProducts()),
         expect: () => [
+          isA<ProductListState>()
+              .having((s) => s.status, 'status', ProductStatus.loading)
+              .having((s) => s.products.length, 'products.length', 2)
+              .having((s) => s.errorMessage, 'errorMessage', isNull),
           isA<ProductListState>()
               .having((s) => s.status, 'status', ProductStatus.success)
               .having((s) => s.products.length, 'products.length', 20)
               .having((s) => s.errorMessage, 'errorMessage', isNull),
         ],
         verify: (_) {
-          verify(() => mockRepository.getProducts(
-                page: 1,
-                limit: 20,
-                categoryId: null,
-                searchQuery: null,
-                forceRefresh: true,
-              )).called(1);
+          verify(
+            () => mockRepository.getProducts(
+              page: 1,
+              limit: 20,
+              categoryId: null,
+              searchQuery: null,
+              forceRefresh: true,
+            ),
+          ).called(1);
         },
       );
     });
@@ -454,13 +534,15 @@ void main() {
       blocTest<ProductListBloc, ProductListState>(
         'emits [loading, success] with all products when clear search succeeds',
         build: () {
-          when(() => mockRepository.getProducts(
-                page: any(named: 'page'),
-                limit: any(named: 'limit'),
-                categoryId: any(named: 'categoryId'),
-                searchQuery: any(named: 'searchQuery'),
-                forceRefresh: any(named: 'forceRefresh'),
-              )).thenAnswer((_) async => testProducts);
+          when(
+            () => mockRepository.getProducts(
+              page: any(named: 'page'),
+              limit: any(named: 'limit'),
+              categoryId: any(named: 'categoryId'),
+              searchQuery: any(named: 'searchQuery'),
+              forceRefresh: any(named: 'forceRefresh'),
+            ),
+          ).thenAnswer((_) async => testProducts);
           return ProductListBloc(repository: mockRepository);
         },
         seed: () => ProductListState(
@@ -478,13 +560,15 @@ void main() {
               .having((s) => s.products.length, 'products.length', 20),
         ],
         verify: (_) {
-          verify(() => mockRepository.getProducts(
-                page: 1,
-                limit: 20,
-                categoryId: null,
-                searchQuery: null,
-                forceRefresh: false,
-              )).called(1);
+          verify(
+            () => mockRepository.getProducts(
+              page: 1,
+              limit: 20,
+              categoryId: null,
+              searchQuery: null,
+              forceRefresh: false,
+            ),
+          ).called(1);
         },
       );
     });

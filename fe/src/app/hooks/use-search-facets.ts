@@ -26,10 +26,25 @@ const EMPTY: SearchFacets = { categories: [], brands: [] };
  * doesn't have a query yet and is rendering the static welcome state).
  */
 export function useSearchFacets(params: UseSearchFacetsParams) {
-  const { enabled = true, q, category, brand, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly } = params;
+  const {
+    enabled = true,
+    q,
+    category,
+    brand,
+    minPrice,
+    maxPrice,
+    sameDay,
+    verifiedOnly,
+    officialOnly,
+  } = params;
   const result = useQuery({
-    queryKey: ["search", "facets", { q, category, brand, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly }],
-    queryFn: () => searchFacets({ q, category, brand, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly }),
+    queryKey: [
+      "search",
+      "facets",
+      { q, category, brand, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly },
+    ],
+    queryFn: () =>
+      searchFacets({ q, category, brand, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly }),
     enabled,
     staleTime: 30_000,
     retry: false,

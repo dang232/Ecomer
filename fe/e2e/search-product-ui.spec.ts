@@ -28,7 +28,6 @@ async function firstProduct(request: APIRequestContext): Promise<SeededProduct> 
   return { id: p.id, name: p.name };
 }
 
-
 test.describe("search + product detail UI", () => {
   test("/search renders without the global error fallback and shows product cards", async ({
     page,
@@ -54,9 +53,9 @@ test.describe("search + product detail UI", () => {
 
     // The product name appears in both the breadcrumb chip and the H1 — match
     // the heading specifically to avoid strict-mode violations.
-    await expect(
-      page.getByRole("heading", { name: product.name, level: 1 }),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("heading", { name: product.name, level: 1 })).toBeVisible({
+      timeout: 20_000,
+    });
 
     // Add to cart button is the canonical interactive element on detail.
     await expect(
@@ -66,15 +65,11 @@ test.describe("search + product detail UI", () => {
     await expectNoGlobalError(page);
   });
 
-  test("Clicking 'Add to cart' as guest surfaces the login-required toast", async ({
-    page,
-  }) => {
+  test("Clicking 'Add to cart' as guest surfaces the login-required toast", async ({ page }) => {
     const product = await firstProduct(page.request);
     await page.goto(`/product/${product.id}`);
 
-    const addBtn = page
-      .getByRole("button", { name: /add to cart|thêm vào giỏ/i })
-      .first();
+    const addBtn = page.getByRole("button", { name: /add to cart|thêm vào giỏ/i }).first();
     await expect(addBtn).toBeVisible({ timeout: 15_000 });
     await addBtn.click();
 
@@ -83,9 +78,7 @@ test.describe("search + product detail UI", () => {
     // guest cart for the buyer-cart hook, but the product-card add path
     // routes through the auth-gated provider — match the live behaviour.)
     await expect(
-      page.getByText(
-        /Vui lòng đăng nhập|please log in|please sign in|log in to add/i,
-      ),
+      page.getByText(/Vui lòng đăng nhập|please log in|please sign in|log in to add/i),
     ).toBeVisible({ timeout: 10_000 });
   });
 });

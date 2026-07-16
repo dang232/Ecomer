@@ -99,6 +99,9 @@ $ACL --add --allow-principal User:svc-inventory --operation Write --topic invent
 
 # product-service (svc-product): produces product-events
 $ACL --add --allow-principal User:svc-product --operation Write --topic product-events
+# product-service: consumes delivered-order evidence for verified reviews
+$ACL --add --allow-principal User:svc-product --operation Read --topic order.delivered
+$ACL --add --allow-principal User:svc-product --operation Read --group product-service-review-purchases
 
 # shipping-service (svc-shipping): produces shipping.cancelled
 $ACL --add --allow-principal User:svc-shipping --operation Write --topic shipping.cancelled
@@ -136,6 +139,30 @@ $ACL --add --allow-principal User:svc-invoice --operation Read --group invoice-s
 # notification topic: order-service produces notification.events
 $ACL --add --allow-principal User:svc-order --operation Read --topic notification.events
 $ACL --add --allow-principal User:svc-order --operation Write --topic notification.events
+
+# notification-service uses the svc-order principal in local Compose and consumes
+# each topic declared by KafkaEventConsumer. Nest appends "-server" to its group.
+NOTIFICATION_CONSUMER_TOPICS=(
+  "order.created"
+  "order.cancelled"
+  "order.shipped"
+  "order.delivered"
+  "payment.completed"
+  "payment.refunded"
+  "product.approved"
+  "product.rejected"
+  "review.replied"
+  "return.requested"
+  "payout.completed"
+  "user.registered"
+  "user.password-reset"
+  "video.published"
+  "video.rejected"
+)
+for topic in "${NOTIFICATION_CONSUMER_TOPICS[@]}"; do
+  $ACL --add --allow-principal User:svc-order --operation Read --topic "$topic"
+done
+$ACL --add --allow-principal User:svc-order --operation Read --group notification-service --resource-pattern-type prefixed
 
 # order-service: consumes gdpr.*-requested; produces gdpr.export-fragment / gdpr.deletion-completed
 $ACL --add --allow-principal User:svc-order --operation Read --topic gdpr.export-requested

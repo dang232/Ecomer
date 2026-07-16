@@ -43,9 +43,9 @@ test.describe("dark-mode toggle UI", () => {
   }) => {
     await page.goto("/");
     // Wait for the SPA to mount.
-    await expect(
-      page.getByRole("button", { name: /switch to (dark|light) mode/i }),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("button", { name: /switch to (dark|light) mode/i })).toBeVisible({
+      timeout: 20_000,
+    });
 
     // localStorage may carry over a previous "dark" preference between test
     // runs (the FE persists toggle state). Force light first so we have a
@@ -65,10 +65,12 @@ test.describe("dark-mode toggle UI", () => {
     await toggle.click();
 
     // Class flips to dark.
-    await expect.poll(() => isDarkClassPresent(page), {
-      timeout: 5_000,
-      message: ".dark class never landed on <html>",
-    }).toBe(true);
+    await expect
+      .poll(() => isDarkClassPresent(page), {
+        timeout: 5_000,
+        message: ".dark class never landed on <html>",
+      })
+      .toBe(true);
 
     // Background actually re-resolves through the token system. The light
     // bg token is `#f4f6f9`, the dark bg token is `#0b0e14` — they SHOULD
@@ -83,10 +85,12 @@ test.describe("dark-mode toggle UI", () => {
     await expect(toggleBack).toBeVisible();
     await toggleBack.click();
 
-    await expect.poll(() => isDarkClassPresent(page), {
-      timeout: 5_000,
-      message: ".dark class never came off <html> after second click",
-    }).toBe(false);
+    await expect
+      .poll(() => isDarkClassPresent(page), {
+        timeout: 5_000,
+        message: ".dark class never came off <html> after second click",
+      })
+      .toBe(false);
 
     const restoredBg = await getThemeBackground(page);
     expect(restoredBg).toBe(lightBg);
@@ -94,9 +98,9 @@ test.describe("dark-mode toggle UI", () => {
 
   test("dark mode is readable: foreground text contrast is light, not gray", async ({ page }) => {
     await page.goto("/");
-    await expect(
-      page.getByRole("button", { name: /switch to (dark|light) mode/i }),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("button", { name: /switch to (dark|light) mode/i })).toBeVisible({
+      timeout: 20_000,
+    });
 
     // Force dark.
     await page.evaluate(() => document.documentElement.classList.add("dark"));

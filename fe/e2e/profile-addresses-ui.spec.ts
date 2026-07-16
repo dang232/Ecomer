@@ -40,7 +40,6 @@ async function seedBuyer(request: APIRequestContext): Promise<SeededBuyer> {
   return { email, accessToken };
 }
 
-
 async function seedAddressViaApi(
   request: APIRequestContext,
   buyer: SeededBuyer,
@@ -80,16 +79,20 @@ test.describe("profile addresses UI", () => {
     await streetField.fill("42 QA Test Street");
 
     // District + city are required by the FE validator.
-    await page.getByLabel(/District|Quận/i).first().fill("District 1");
-    await page.getByLabel(/City|Tỉnh/i).first().fill("Ho Chi Minh");
+    await page
+      .getByLabel(/District|Quận/i)
+      .first()
+      .fill("District 1");
+    await page
+      .getByLabel(/City|Tỉnh/i)
+      .first()
+      .fill("Ho Chi Minh");
 
     // Submit.
     await page.getByRole("button", { name: /Save address|Lưu địa chỉ/i }).click();
 
     // Success toast appears.
-    await expect(
-      page.getByText(/Address added|Đã thêm địa chỉ/i),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Address added|Đã thêm địa chỉ/i)).toBeVisible({ timeout: 15_000 });
 
     // The new address row is visible by its street.
     await expect(page.getByText("42 QA Test Street").first()).toBeVisible({
@@ -114,19 +117,17 @@ test.describe("profile addresses UI", () => {
     await page.getByRole("button", { name: /Save address|Lưu địa chỉ/i }).click();
 
     // The validate-missing toast surfaces in either language.
-    await expect(
-      page.getByText(/Please enter the street|Vui lòng nhập số nhà/i),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/Please enter the street|Vui lòng nhập số nhà/i)).toBeVisible({
+      timeout: 10_000,
+    });
 
     // No success toast for "Address added" should appear (proves the
     // mutation didn't run). The form is still open with the Save button
     // still visible — that's the canonical "submission was blocked" signal.
-    await expect(
-      page.getByText(/Address added|Đã thêm địa chỉ/i),
-    ).toHaveCount(0);
-    await expect(
-      page.getByRole("button", { name: /Save address|Lưu địa chỉ/i }),
-    ).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText(/Address added|Đã thêm địa chỉ/i)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /Save address|Lưu địa chỉ/i })).toBeVisible({
+      timeout: 5_000,
+    });
 
     await expectNoGlobalError(page);
   });
@@ -161,29 +162,33 @@ test.describe("profile addresses UI", () => {
     await expect(page.getByText("2 Secondary Street")).toBeVisible();
 
     // The non-default row carries the "Set as default" link. Click it.
-    const setDefault = page.getByRole("button", { name: /Set as default|Đặt làm địa chỉ mặc định/i }).first();
+    const setDefault = page
+      .getByRole("button", { name: /Set as default|Đặt làm địa chỉ mặc định/i })
+      .first();
     await expect(setDefault).toBeVisible({ timeout: 10_000 });
     await setDefault.click();
 
     // Success toast.
-    await expect(
-      page.getByText(/Set as default address|Đã đặt làm địa chỉ mặc định/i),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Set as default address|Đã đặt làm địa chỉ mặc định/i)).toBeVisible(
+      { timeout: 15_000 },
+    );
 
     // After invalidation, the secondary row carries the Default badge AND
     // its set-default button is gone. Use a poll because React Query
     // invalidation re-renders asynchronously.
-    await expect.poll(
-      async () =>
-        page
-          .locator("div", { hasText: "2 Secondary Street" })
-          .filter({ hasText: /Default|Mặc định/i })
-          .count(),
-      {
-        timeout: 15_000,
-        message: "Secondary address never picked up the Default badge",
-      },
-    ).toBeGreaterThan(0);
+    await expect
+      .poll(
+        async () =>
+          page
+            .locator("div", { hasText: "2 Secondary Street" })
+            .filter({ hasText: /Default|Mặc định/i })
+            .count(),
+        {
+          timeout: 15_000,
+          message: "Secondary address never picked up the Default badge",
+        },
+      )
+      .toBeGreaterThan(0);
 
     await expectNoGlobalError(page);
   });
@@ -222,18 +227,17 @@ test.describe("profile addresses UI", () => {
     await trash.click();
 
     // Success toast.
-    await expect(
-      page.getByText(/Address removed|Đã xoá địa chỉ/i),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Address removed|Đã xoá địa chỉ/i)).toBeVisible({
+      timeout: 15_000,
+    });
 
     // Row is gone after the React Query invalidation re-renders the list.
-    await expect.poll(
-      () => page.getByText("99 Delete Me Street").count(),
-      {
+    await expect
+      .poll(() => page.getByText("99 Delete Me Street").count(), {
         timeout: 15_000,
         message: "Removed address never disappeared from the list",
-      },
-    ).toBe(0);
+      })
+      .toBe(0);
 
     // Default row stuck around.
     await expect(page.getByText("1 Keep Me Street")).toBeVisible();

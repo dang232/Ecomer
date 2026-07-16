@@ -55,7 +55,10 @@ class OrderNotificationService {
     try {
       final data = jsonDecode(payload) as Map<String, dynamic>;
       if (data['type'] == 'order_update') {
-        _navigateToOrder(data['order_id'] as String?, data['status'] as String?);
+        _navigateToOrder(
+          data['order_id'] as String?,
+          data['status'] as String?,
+        );
       }
     } catch (e) {
       if (kDebugMode) {
@@ -65,7 +68,9 @@ class OrderNotificationService {
   }
 
   /// Handle OneSignal notification tap
-  void _handleOneSignalNotification(OneSignalReceivedNotification notification) {
+  void _handleOneSignalNotification(
+    OneSignalReceivedNotification notification,
+  ) {
     if (notification.orderId != null) {
       _navigateToOrder(notification.orderId, notification.status);
     }
@@ -145,7 +150,7 @@ class OrderNotificationService {
     );
 
     if (kDebugMode) {
-      print('📱 Order status notification shown: $orderNumber - ${status.label}');
+      print('Order status notification shown: $orderNumber - ${status.value}');
     }
   }
 
@@ -248,7 +253,7 @@ class OrderNotificationService {
     }
 
     try {
-      return await OneSignalHandler.instance.isPermissionGranted();
+      return OneSignalHandler.instance.isPermissionGranted();
     } catch (e) {
       return false;
     }

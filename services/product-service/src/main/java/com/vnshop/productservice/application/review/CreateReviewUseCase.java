@@ -1,7 +1,12 @@
 package com.vnshop.productservice.application.review;
 
 import com.vnshop.productservice.domain.review.Review;
+import com.vnshop.productservice.domain.review.ReviewModerationDecision;
+import com.vnshop.productservice.domain.review.ReviewModerationRequest;
+import com.vnshop.productservice.domain.review.ReviewStatus;
 import com.vnshop.productservice.domain.port.out.ContentSanitizerPort;
+import com.vnshop.productservice.domain.review.port.out.PurchaseVerificationPort;
+import com.vnshop.productservice.domain.review.port.out.ReviewModerationPort;
 import com.vnshop.productservice.domain.review.port.out.ReviewRepositoryPort;
 
 import java.util.Objects;
@@ -9,10 +14,18 @@ import java.util.Objects;
 public class CreateReviewUseCase {
     private final ReviewRepositoryPort reviewRepositoryPort;
     private final ContentSanitizerPort contentSanitizer;
+    private final PurchaseVerificationPort purchaseVerification;
+    private final ReviewModerationPort reviewModeration;
 
-    public CreateReviewUseCase(ReviewRepositoryPort reviewRepositoryPort, ContentSanitizerPort contentSanitizer) {
+    public CreateReviewUseCase(
+            ReviewRepositoryPort reviewRepositoryPort,
+            ContentSanitizerPort contentSanitizer,
+            PurchaseVerificationPort purchaseVerification,
+            ReviewModerationPort reviewModeration) {
         this.reviewRepositoryPort = Objects.requireNonNull(reviewRepositoryPort, "reviewRepositoryPort is required");
         this.contentSanitizer = Objects.requireNonNull(contentSanitizer, "contentSanitizer is required");
+        this.purchaseVerification = Objects.requireNonNull(purchaseVerification, "purchaseVerification is required");
+        this.reviewModeration = Objects.requireNonNull(reviewModeration, "reviewModeration is required");
     }
 
     public Review create(CreateReviewCommand command) {
@@ -20,21 +33,28 @@ public class CreateReviewUseCase {
             throw new IllegalStateException("You have already reviewed this product");
         }
 
-        // TODO: Call order-service to verify buyer purchased this product
-        // For now, mark as unverified until cross-service check is implemented
-        boolean verifiedPurchase = false;
-        return reviewRepositoryPort.save(Review.pending(
+        boolean verifiedPurchase = purchaseVerification.hasDeliveredPurchase(
+                command.buyerId(), command.productId(), command.orderId());
+        String sanitizedText = contentSanitizer.sanitize(command.text());
+        ReviewModerationDecision decision = Objects.requireNonNull(reviewModeration.assess(
+                new ReviewModerationRequest(sanitizedText, command.rating(), verifiedPurchase, command.images())),
+                "review moderation decision is required");
+        ReviewStatus initialStatus = switch (decision) {
+            case APPROVE -> ReviewStatus.APPROVED;
+            case REVIEW -> ReviewStatus.PENDING;
+            case REJECT -> ReviewStatus.REJECTED;
+        };
+        Review review = Review.pending(
                 command.productId(),
                 command.buyerId(),
                 command.orderId(),
                 command.rating(),
-                contentSanitizer.sanitize(command.text()),
+                sanitizedText,
                 command.images(),
                 verifiedPurchase
-        ));
+        );
+        return reviewRepositoryPort.save(
+                initialStatus == ReviewStatus.PENDING ? review : review.withStatus(initialStatus));
     }
 
-    private boolean buyerIdMatchesOrderHistory(String buyerId, String orderId) {
-        return false;
-    }
 }

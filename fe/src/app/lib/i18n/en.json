@@ -41,7 +41,11 @@
     "settings": "Settings",
     "loginRequired": "Please sign in to continue",
     "noAccess": "You don't have access to this page",
-    "accessDenied": "Access denied"
+    "accessDenied": "Access denied",
+    "forbiddenTitle": "Access denied",
+    "forbiddenDescription": "You do not have permission to view this page. Please return to the storefront or sign in with an authorized account.",
+    "forbiddenBack": "Go back",
+    "forbiddenHome": "Back to home"
   },
   "cart": {
     "title": "Cart",
@@ -64,7 +68,7 @@
     "couponApplying": "Checking...",
     "couponApply": "Apply",
     "couponInvalid": "Coupon is invalid or expired",
-    "couponApplied": "🎉 Applied: {{code}}",
+    "couponApplied": "Applied: {{code}}",
     "couponRemove": "Remove",
     "couponHint": "Final value is re-checked at checkout.",
     "summaryTitle": "Order summary",
@@ -146,10 +150,29 @@
     "shippingHeader": "Shipping",
     "freeShippingTag": "Free shipping",
     "sameDayDelivery": "Same-day delivery",
-    "priceApply": "Apply"
+    "priceApply": "Apply",
+    "priceMinNegative": "Minimum price cannot be negative.",
+    "priceMaxNegative": "Maximum price cannot be negative.",
+    "priceOrderInvalid": "Minimum price cannot be greater than maximum price.",
+    "priceMinInvalid": "Enter a valid minimum price.",
+    "priceMaxInvalid": "Enter a valid maximum price.",
+    "openFilters": "Open filters",
+    "closeFilters": "Close filters",
+    "showResults": "Show results",
+    "activeFilters": "Active filters",
+    "loading": "Loading products...",
+    "resultsUnavailable": "Search results are unavailable",
+    "productCount": "{{count}} products",
+    "sortLabel": "Sort products",
+    "fallbackUnavailable": "Live search is temporarily unavailable.",
+    "fallbackIndexing": "Showing catalog results while search catches up.",
+    "errorTitle": "Couldn't load products",
+    "errorDescription": "Search is temporarily unavailable. Try again.",
+    "sellerTitle": "Seller",
+    "allBrands": "All brands"
   },
   "flashSale": {
-    "title": "⚡ FLASH SALE",
+    "title": "FLASH SALE",
     "subtitle": "Hot deals — Limited stock!",
     "endsIn": "Ends in",
     "viewAll": "View all",
@@ -176,7 +199,7 @@
     "back": "Go back",
     "breadcrumbHome": "Home",
     "badge": {
-      "flash": "⚡ Flash",
+      "flash": "Flash",
       "new": "New",
       "bestseller": "Bestseller",
       "hot": "Hot"
@@ -187,9 +210,9 @@
     "quantityLabel": "Quantity:",
     "stockAvailable": "({{count}} in stock)",
     "totalLabel": "Total:",
-    "addToCart": "🛒 Add to cart",
-    "buyNow": "⚡ Buy now",
-    "savings": "🎉 You save {{amount}}",
+    "addToCart": "Add to cart",
+    "buyNow": "Buy now",
+    "savings": "You save {{amount}}",
     "colorsLabel": "Color",
     "sizesLabel": "Size",
     "sizeGuide": "Size guide",
@@ -227,15 +250,38 @@
     "reviews": {
       "writeTitle": "Write your review",
       "placeholder": "Share your experience with this product...",
+      "commentRequired": "Add a comment before submitting your review.",
+      "ratingSelected": "Rating: {{count}} out of 5",
       "submit": "Submit review",
       "submitting": "Submitting...",
-      "submitOk": "Review submitted",
+      "submitOk": "Review submitted for moderation",
+      "publishedNotice": "Your review is now published.",
+      "rejectedNotice": "Your review could not be published.",
+      "pendingTitle": "Your review is waiting for approval",
+      "pendingSubtitle": "You can see it here now. Other shoppers will see it after moderation.",
+      "pendingBadge": "Pending moderation",
+      "publishedLabel": "Published",
+      "pendingLabel": "Waiting for moderation",
+      "rejectedLabel": "Review not published",
       "submitErr": "Couldn't submit review",
       "voteErr": "Couldn't vote",
-      "loginToWrite": "Sign in to write a review →",
+      "loginToWrite": "Sign in to share your experience.",
+      "signIn": "Sign in",
       "loading": "Loading reviews...",
       "anonGuest": "Customer",
       "helpful": "Helpful ({{count}})",
+      "voting": "Saving...",
+      "ratingLabel": "Rating",
+      "ratingOption": "{{count}} stars",
+      "ratingBreakdown": "{{count}}-star reviews",
+      "commentLabel": "Your review",
+      "verifiedPurchase": "Verified purchase",
+      "imageAlt": "Review image {{count}}",
+      "sectionTitle": "Customer reviews",
+      "sectionSubtitle": "Ratings and feedback from shoppers who bought this product.",
+      "errorTitle": "Reviews could not be loaded",
+      "errorSubtitle": "Check your connection and try again.",
+      "retry": "Try again",
       "empty": "No reviews yet. Be the first!",
       "beFirstTitle": "Be the first to review this product",
       "beFirstSubtitle": "Share your experience to help other shoppers."
@@ -593,7 +639,7 @@
       "termsNotice": "By placing this order you agree to VNShop's terms."
     },
     "success": {
-      "title": "Order placed! 🎉",
+      "title": "Order placed!",
       "gatewayTitle": "Redirecting to payment gateway...",
       "orderIdLabel": "Your order ID:",
       "codNotice": "You'll pay <1>{{amount}}</1> on delivery.",
@@ -1079,6 +1125,7 @@
       "phaseCreating": "Creating product...",
       "phaseUploading": "Uploading {{count}} images...",
       "phaseFinalising": "Saving...",
+      "phasePublishing": "Publishing product...",
       "maxImagesReached": "Maximum {{max}} images per product",
       "invalidType": "{{name}}: Only JPG, PNG, or WebP accepted",
       "fileTooLarge": "{{name}}: Exceeds {{maxMb}}MB",
@@ -1109,6 +1156,8 @@
     "logout": "Log out",
     "initSession": "Initialising your session...",
     "loginRequired": "Please sign in",
+    "sectionsLabel": "Profile sections",
+    "becomeSeller": "Become a seller",
     "avatar": {
       "uploadCta": "Upload avatar",
       "uploading": "Uploading…",
@@ -1125,6 +1174,8 @@
     "tabs": {
       "info": "Account info",
       "addresses": "Addresses",
+      "notifications": "Notifications",
+      "reviews": "Reviews",
       "payment": "Payment methods",
       "security": "Security"
     },
@@ -1220,7 +1271,7 @@
     "pageTitle": "My Wishlist",
     "countLabel": "{{count}} items",
     "emptyTitle": "No favourites yet",
-    "emptySub": "Tap ❤️ on any product to save it to your wishlist",
+    "emptySub": "Tap the heart on any product to save it to your wishlist",
     "discover": "Start exploring",
     "addAll": "Add all to cart",
     "clearAll": "Clear all",
@@ -1255,8 +1306,10 @@
       "return": "Return",
       "review": "Review",
       "cancel": "Cancel",
-      "chat": "Chat"
+      "chat": "Chat",
+      "viewDetails": "View order"
     },
+    "viewProduct": "View {{name}}",
     "tabs": {
       "all": "All",
       "pending": "Pending",
@@ -1315,6 +1368,35 @@
     "cancelDialog": {
       "title": "Cancel order #{{id}}?",
       "description": "This action cannot be undone."
+    },
+    "detail": {
+      "back": "Back to orders",
+      "orderNumber": "Order",
+      "createdAt": "Placed on {{date}}",
+      "items": "Items",
+      "quantity": "Quantity: {{count}}",
+      "unitPrice": "Unit price:",
+      "productFallback": "Product",
+      "noItems": "Product information is still being updated.",
+      "deliveryAddress": "Delivery address",
+      "addressUnavailable": "Address information is unavailable.",
+      "payment": "Payment",
+      "paymentMethod": "Method",
+      "paymentStatus": "Payment status",
+      "paymentPending": "Pending",
+      "paymentCompleted": "Paid",
+      "paymentFailed": "Payment failed",
+      "unknownPayment": "Not available",
+      "totals": "Order summary",
+      "subtotal": "Subtotal",
+      "shipping": "Shipping",
+      "discount": "Discount",
+      "total": "Total",
+      "notFound": "Order not found",
+      "notFoundDescription": "This order does not exist or is not available to your account.",
+      "loadError": "Couldn't load this order",
+      "loadErrorDescription": "Check your connection and try again.",
+      "retry": "Try again"
     }
   },
   "notFound": {
@@ -1342,12 +1424,13 @@
     "cancel": "Cancel",
     "confirm": "Confirm",
     "unavailable": "—",
-    "cancel": "Cancel",
     "save": "Save",
     "saving": "Saving...",
     "next": "Next",
     "prev": "Previous",
-    "retry": "Retry"
+    "retry": "Retry",
+    "refresh": "Refresh",
+    "tryAgain": "Try again"
   },
   "sellerDetail": {
     "notFound": "Shop not found",
@@ -1366,7 +1449,7 @@
       "body": "Keep this page open. We're checking your payment status with {{provider}}."
     },
     "completed": {
-      "title": "Payment successful 🎉",
+      "title": "Payment successful",
       "amountPaid": "Amount paid:",
       "orderIdLabel": "Order ID:",
       "viewOrders": "View orders",
@@ -1394,6 +1477,19 @@
     "retry": "Try again",
     "retrying": "Retrying…"
   },
+  "productCard": {
+    "reviewsCount": "{{count}} reviews",
+    "addToWishlist": "Add {{name}} to wishlist",
+    "removeFromWishlist": "Remove {{name}} from wishlist"
+  },
+  "routeError": {
+    "title": "Something went wrong",
+    "chunkTitle": "A newer version is ready",
+    "description": "We could not load this page. Please try again or return to the storefront.",
+    "chunkDescription": "This page was using an older app version. We are refreshing it now so the latest product and catalog code can load.",
+    "reload": "Reload page",
+    "home": "Back to home"
+  },
   "context": {
     "loginToAddCart": "Please log in to add items to your cart",
     "addedToCart": "Added \"{{name}}\" to your cart",
@@ -1401,7 +1497,7 @@
     "addedToCartQty": "Qty: {{quantity}}",
     "loginToSave": "Please log in to save products",
     "loginLabel": "Log in",
-    "addedToWishlist": "Added to wishlist ❤️",
+    "addedToWishlist": "Added to wishlist",
     "removedFromWishlist": "Removed from wishlist",
     "loggedOut": "You've been signed out"
   },

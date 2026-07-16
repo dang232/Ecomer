@@ -10,24 +10,25 @@ import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/cart/presentation/pages/cart_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
+import '../../features/orders/domain/repositories/order_repository.dart';
+import '../../features/orders/presentation/bloc/order_list_bloc.dart';
+import '../../features/orders/presentation/bloc/order_detail_cubit.dart';
 import '../../features/orders/presentation/pages/order_detail_page.dart';
 import '../../features/orders/presentation/pages/order_list_page.dart';
-import '../../features/orders/data/datasources/order_local_datasource.dart';
-import '../../features/orders/data/datasources/order_remote_datasource.dart';
-import '../../features/orders/data/repositories/order_repository_impl.dart';
-import '../../features/orders/presentation/bloc/order_list_bloc.dart';
 import '../../features/products/data/models/product_model.dart';
 import '../../features/products/presentation/pages/product_list_page.dart';
-import '../../features/products/presentation/pages/product_detail_page.dart';
+import '../../features/products/presentation/pages/product_detail_route_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile/presentation/pages/settings_page.dart';
+import '../../features/wishlist/presentation/pages/favorites_page.dart';
 import '../../features/checkout/presentation/pages/checkout_page.dart';
 import '../../features/checkout/presentation/pages/address_form_page.dart';
 import '../../features/checkout/presentation/bloc/checkout_bloc.dart';
 import '../../features/checkout/domain/repositories/checkout_repository.dart';
-import '../../core/network/dio_client.dart';
 import '../../core/notifications/onesignal_handler.dart';
 import '../shell/main_shell.dart';
+import 'app_routes.dart';
+import 'checkout_route_args.dart';
 
 /// Listenable wrapper for AuthBloc to work with GoRouter's refreshListenable
 class AuthBlocListenable extends ChangeNotifier {
@@ -53,19 +54,10 @@ GoRouter buildAppRouter(BuildContext context) {
     refreshListenable: AuthBlocListenable(authBloc),
     redirect: (context, state) {
       final authState = context.read<AuthBloc>().state;
-      final authenticated = authState.isAuthenticated;
-      final isGoingToLogin = state.matchedLocation == '/login';
-
-      // ponytail: real session state is wired in Phase 2 auth work.
-      if (!authenticated && state.matchedLocation == '/checkout') {
-        return '/login';
-      }
-
-      if (authenticated && isGoingToLogin) {
-        return '/';
-      }
-
-      return null;
+      return AppRoutes.redirectFor(
+        location: state.uri,
+        isAuthenticated: authState.isAuthenticated,
+      );
     },
     routes: [
       StatefulShellRoute.indexedStack(
@@ -82,12 +74,10 @@ GoRouter buildAppRouter(BuildContext context) {
                 pageBuilder: (context, state) => CustomTransitionPage(
                   key: state.pageKey,
                   child: const HomePage(),
-                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                    return FadeTransition(
-                      opacity: animation,
-                      child: child,
-                    );
-                  },
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                        return FadeTransition(opacity: animation, child: child);
+                      },
                 ),
                 routes: [
                   GoRoute(
@@ -99,13 +89,12 @@ GoRouter buildAppRouter(BuildContext context) {
                         path: ':productId',
                         name: 'productDetail',
                         builder: (context, state) {
-                          final product = state.extra as ProductModel?;
-                          if (product != null) {
-                            return ProductDetailPage(product: product);
-                          }
-                          // Fallback if no product passed
-                          return const Scaffold(
-                            body: Center(child: CircularProgressIndicator()),
+                          final extra = state.extra;
+                          return ProductDetailRoutePage(
+                            productId: state.pathParameters['productId'] ?? '',
+                            initialProduct: extra is ProductModel
+                                ? extra
+                                : null,
                           );
                         },
                       ),
@@ -124,12 +113,10 @@ GoRouter buildAppRouter(BuildContext context) {
                 pageBuilder: (context, state) => CustomTransitionPage(
                   key: state.pageKey,
                   child: const PlaceholderPage(title: 'Danh mục'),
-                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                    return FadeTransition(
-                      opacity: animation,
-                      child: child,
-                    );
-                  },
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                        return FadeTransition(opacity: animation, child: child);
+                      },
                 ),
               ),
             ],
@@ -143,12 +130,10 @@ GoRouter buildAppRouter(BuildContext context) {
                 pageBuilder: (context, state) => CustomTransitionPage(
                   key: state.pageKey,
                   child: const CartPage(),
-                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                    return FadeTransition(
-                      opacity: animation,
-                      child: child,
-                    );
-                  },
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                        return FadeTransition(opacity: animation, child: child);
+                      },
                 ),
               ),
             ],
@@ -162,12 +147,10 @@ GoRouter buildAppRouter(BuildContext context) {
                 pageBuilder: (context, state) => CustomTransitionPage(
                   key: state.pageKey,
                   child: const ProfilePage(),
-                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                    return FadeTransition(
-                      opacity: animation,
-                      child: child,
-                    );
-                  },
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                        return FadeTransition(opacity: animation, child: child);
+                      },
                 ),
               ),
             ],
@@ -188,13 +171,18 @@ GoRouter buildAppRouter(BuildContext context) {
       GoRoute(
         path: '/checkout',
         name: 'checkout',
-        builder: (context, state) => BlocProvider(
-          create: (context) {
-            final checkoutRepository = context.read<CheckoutRepository>();
-            return CheckoutBloc(repository: checkoutRepository);
-          },
-          child: const CheckoutPage(),
-        ),
+        builder: (context, state) {
+          final extra = state.extra;
+          return BlocProvider(
+            create: (context) {
+              final checkoutRepository = context.read<CheckoutRepository>();
+              return CheckoutBloc(repository: checkoutRepository);
+            },
+            child: CheckoutPage(
+              routeArgs: extra is CheckoutRouteArgs ? extra : null,
+            ),
+          );
+        },
         routes: [
           GoRoute(
             path: 'address/new',
@@ -222,14 +210,8 @@ GoRouter buildAppRouter(BuildContext context) {
         path: '/orders',
         name: 'orders',
         builder: (context, state) => BlocProvider(
-          create: (context) {
-            // Use DioClient.instance instead of raw unconfigured Dio
-            final orderRepository = OrderRepositoryImpl(
-              remoteDataSource: OrderRemoteDataSourceImpl(dio: DioClient.instance.dio),
-              localDataSource: OrderLocalDataSourceImpl(),
-            );
-            return OrderListBloc(orderRepository: orderRepository);
-          },
+          create: (context) =>
+              OrderListBloc(orderRepository: context.read<OrderRepository>()),
           child: const OrderListPage(),
         ),
       ),
@@ -238,7 +220,13 @@ GoRouter buildAppRouter(BuildContext context) {
         name: 'orderDetail',
         builder: (context, state) {
           final orderId = state.pathParameters['orderId'] ?? '';
-          return OrderDetailPage(orderId: orderId);
+          return BlocProvider(
+            create: (context) => OrderDetailCubit(
+              orderId: orderId,
+              repository: context.read<OrderRepository>(),
+            ),
+            child: OrderDetailPage(orderId: orderId),
+          );
         },
       ),
       GoRoute(
@@ -251,12 +239,10 @@ GoRouter buildAppRouter(BuildContext context) {
         path: '/product/:productId',
         name: 'productDetailDeep',
         builder: (context, state) {
-          final product = state.extra as ProductModel?;
-          if (product != null) {
-            return ProductDetailPage(product: product);
-          }
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+          final extra = state.extra;
+          return ProductDetailRoutePage(
+            productId: state.pathParameters['productId'] ?? '',
+            initialProduct: extra is ProductModel ? extra : null,
           );
         },
       ),
@@ -270,7 +256,7 @@ GoRouter buildAppRouter(BuildContext context) {
       GoRoute(
         path: '/favorites',
         name: 'favorites',
-        builder: (context, state) => const PlaceholderPage(title: 'Yêu thích'),
+        builder: (context, state) => const FavoritesPage(),
       ),
       // Addresses route
       GoRoute(

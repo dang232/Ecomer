@@ -256,6 +256,20 @@ async function main() {
     if (!ctx.sellerProductId) throw new Error(`no product id in response: ${truncate(res.raw, 240)}`);
   });
 
+  await record("seller", "PUT /sellers/me/products/{id}/publish", async () => {
+    if (!ctx.sellerProductId) throw new Error("missing seller product id");
+    const res = await http("PUT", `/sellers/me/products/${ctx.sellerProductId}/publish`, {
+      token: ctx.sellerToken,
+      expect: [200, 204],
+    });
+    if (res.status === 200) {
+      const published = unwrap(res.body);
+      if (published?.status && published.status !== "ACTIVE") {
+        throw new Error(`expected ACTIVE product after publish, got ${published.status}`);
+      }
+    }
+  });
+
   await record("seller", "GET /sellers/me visible profile", async () => {
     // seller1 has no domain seller-profile until they POST /sellers/register.
     // 400 (bad_request "seller profile not found") is acceptable here.

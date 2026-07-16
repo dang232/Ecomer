@@ -79,7 +79,6 @@ export function SystemHealth() {
 
   useEffect(() => {
     void runChecks();
-     
   }, []);
 
   const upCount = results.filter((r) => r.status === "up").length;

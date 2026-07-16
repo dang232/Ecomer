@@ -63,6 +63,10 @@ class CheckoutAddressAdded extends CheckoutEvent {
   List<Object?> get props => [address];
 }
 
+class CheckoutPaymentMethodsRequested extends CheckoutEvent {
+  const CheckoutPaymentMethodsRequested();
+}
+
 class CheckoutAddressUpdated extends CheckoutEvent {
   final VietnamAddress address;
 
@@ -132,6 +136,10 @@ class CheckoutOrderCancelled extends CheckoutEvent {
 
   @override
   List<Object?> get props => [orderId];
+}
+
+class CheckoutFailureDismissed extends CheckoutEvent {
+  const CheckoutFailureDismissed();
 }
 
 class CheckoutReset extends CheckoutEvent {

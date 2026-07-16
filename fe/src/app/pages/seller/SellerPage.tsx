@@ -1,4 +1,4 @@
-﻿import {
+import {
   IconLayoutDashboard,
   IconPackage,
   IconSettings,
@@ -57,6 +57,7 @@ function NavItem({
     <button
       type="button"
       onClick={onClick}
+      aria-label={t(item.labelKey)}
       aria-current={active ? "page" : undefined}
       className={[
         "w-full flex items-center gap-2.5 px-3 py-2.5 rounded-[var(--radius-md)] text-[13px] font-medium transition-colors cursor-pointer text-left",
@@ -128,7 +129,8 @@ export function SellerPage() {
       >
         {/* Logo */}
         <div className="text-lg font-extrabold text-primary px-3 py-2 mb-5">
-          {sellerName.charAt(0).toUpperCase()}{sellerName.slice(1)}
+          {sellerName.charAt(0).toUpperCase()}
+          {sellerName.slice(1)}
         </div>
 
         {/* MAIN section */}
@@ -184,6 +186,7 @@ export function SellerPage() {
               key={item.id}
               type="button"
               onClick={() => setActiveTab(item.id)}
+              aria-label={t(item.labelKey)}
               aria-current={activeTab === item.id ? "page" : undefined}
               className={[
                 "shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-md)] text-xs font-medium transition-colors",
@@ -238,10 +241,7 @@ export function SellerPage() {
               />
             ) : null}
             {activeTab === "settings" ? (
-              <SellerSettings
-                profileData={profileQuery.data}
-                profileError={profileQuery.error}
-              />
+              <SellerSettings profileData={profileQuery.data} profileError={profileQuery.error} />
             ) : null}
           </motion.div>
         </main>

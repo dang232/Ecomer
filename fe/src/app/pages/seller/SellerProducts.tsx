@@ -1,4 +1,4 @@
-﻿import {
+import {
   IconAlertCircle,
   IconChevronLeft,
   IconChevronRight,
@@ -55,10 +55,12 @@ export function SellerProducts() {
       </div>
 
       {/* Info banner – dev only */}
-      {import.meta.env.DEV ? <div className="rounded-[var(--radius-md)] bg-warning/10 border border-warning/30 p-3 text-xs text-foreground flex items-start gap-2">
+      {import.meta.env.DEV ? (
+        <div className="rounded-[var(--radius-md)] bg-warning/10 border border-warning/30 p-3 text-xs text-foreground flex items-start gap-2">
           <IconAlertCircle size={14} className="shrink-0 mt-0.5 text-warning" aria-hidden="true" />
           <p>{t("seller.products.fallbackBanner")}</p>
-        </div> : null}
+        </div>
+      ) : null}
 
       {/* Search + filter row */}
       <div className="flex gap-3">
@@ -121,16 +123,17 @@ export function SellerProducts() {
                         loading="lazy"
                       />
                     ) : (
-                      <div className="w-10 h-10 rounded-[var(--radius-md)] bg-muted shrink-0" aria-hidden="true" />
+                      <div
+                        className="w-10 h-10 rounded-[var(--radius-md)] bg-muted shrink-0"
+                        aria-hidden="true"
+                      />
                     )}
                     <p className="text-sm font-medium text-foreground max-w-[280px] truncate">
                       {p.name}
                     </p>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-sm font-bold text-primary">
-                  {formatPrice(p.price)}
-                </td>
+                <td className="px-4 py-3 text-sm font-bold text-primary">{formatPrice(p.price)}</td>
                 <td className="px-4 py-3 text-sm text-text-secondary">{p.stock}</td>
                 <td className="px-4 py-3 text-sm text-text-secondary">{p.sold.toLocaleString()}</td>
                 <td className="px-4 py-3">

@@ -9,13 +9,7 @@ enum PaymentStatus {
   refunded,
 }
 
-enum PaymentMethod {
-  vnpay,
-  momo,
-  vietqr,
-  cod,
-  bankTransfer,
-}
+enum PaymentMethod { vnpay, momo, vietqr, cod, bankTransfer }
 
 class PaymentTransaction extends Equatable {
   final String id;
@@ -128,45 +122,50 @@ class PaymentTransaction extends Equatable {
     return PaymentTransaction(
       id: json['id'] as String? ?? json['paymentId'] as String? ?? '',
       orderId: json['orderId'] as String? ?? json['order_id'] as String? ?? '',
-      idempotencyKey: json['idempotencyKey'] as String? ??
+      idempotencyKey:
+          json['idempotencyKey'] as String? ??
           json['idempotency_key'] as String? ??
           '',
       method: _parsePaymentMethod(json['method'] as String?),
       status: _parsePaymentStatus(json['status'] as String?),
       amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
-      transactionRef: json['transactionRef'] as String? ??
+      transactionRef:
+          json['transactionRef'] as String? ??
           json['transaction_ref'] as String? ??
           json['transactionRef'] as String?,
-      paymentUrl: json['paymentUrl'] as String? ??
+      paymentUrl:
+          json['paymentUrl'] as String? ??
           json['payment_url'] as String? ??
           json['redirectUrl'] as String?,
-      qrCodeUrl: json['qrCodeUrl'] as String? ??
+      qrCodeUrl:
+          json['qrCodeUrl'] as String? ??
           json['qr_code_url'] as String? ??
           json['qrImageUrl'] as String?,
-      errorCode: json['errorCode'] as String? ??
+      errorCode:
+          json['errorCode'] as String? ??
           json['error_code'] as String? ??
           json['errorCode'] as String?,
-      errorMessage: json['errorMessage'] as String? ??
+      errorMessage:
+          json['errorMessage'] as String? ??
           json['error_message'] as String? ??
           json['errorMessage'] as String?,
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'] as String)
           : json['created_at'] != null
-              ? DateTime.parse(json['created_at'] as String)
-              : DateTime.now(),
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
       completedAt: json['completedAt'] != null
           ? DateTime.parse(json['completedAt'] as String)
           : json['completed_at'] != null
-              ? DateTime.parse(json['completed_at'] as String)
-              : null,
-      attemptCount: json['attemptCount'] as int? ??
-          json['attempt_count'] as int? ??
-          1,
+          ? DateTime.parse(json['completed_at'] as String)
+          : null,
+      attemptCount:
+          json['attemptCount'] as int? ?? json['attempt_count'] as int? ?? 1,
       metadata: json['metadata'] as Map<String, dynamic>?,
     );
   }
 
-  /// Decode both ApiResponse<PaymentResponse> and the nested VietQR response.
+  /// Decode both `ApiResponse<PaymentResponse>` and the nested VietQR response.
   factory PaymentTransaction.fromApiResponse(Map<String, dynamic> response) {
     final rawData = response['data'];
     if (rawData is! Map) {
@@ -256,20 +255,20 @@ class PaymentTransaction extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        orderId,
-        idempotencyKey,
-        method,
-        status,
-        amount,
-        transactionRef,
-        paymentUrl,
-        qrCodeUrl,
-        errorCode,
-        errorMessage,
-        createdAt,
-        completedAt,
-        attemptCount,
-        metadata,
-      ];
+    id,
+    orderId,
+    idempotencyKey,
+    method,
+    status,
+    amount,
+    transactionRef,
+    paymentUrl,
+    qrCodeUrl,
+    errorCode,
+    errorMessage,
+    createdAt,
+    completedAt,
+    attemptCount,
+    metadata,
+  ];
 }

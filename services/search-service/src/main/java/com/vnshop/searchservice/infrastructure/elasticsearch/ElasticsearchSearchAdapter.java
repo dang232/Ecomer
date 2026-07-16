@@ -11,6 +11,7 @@ import com.vnshop.searchservice.domain.ProductReadModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Primary;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -56,9 +57,13 @@ public class ElasticsearchSearchAdapter implements SearchRepository {
     private static final String STATUS_ACTIVE = "ACTIVE";
 
     private final ElasticsearchOperations elasticsearchOperations;
+    private final SearchRepository fallbackRepository;
 
-    public ElasticsearchSearchAdapter(ElasticsearchOperations elasticsearchOperations) {
+    public ElasticsearchSearchAdapter(
+            ElasticsearchOperations elasticsearchOperations,
+            @Qualifier("jpaSearchAdapter") SearchRepository fallbackRepository) {
         this.elasticsearchOperations = elasticsearchOperations;
+        this.fallbackRepository = fallbackRepository;
     }
 
     // -------------------------------------------------------------------------
@@ -83,10 +88,17 @@ public class ElasticsearchSearchAdapter implements SearchRepository {
                     .map(SearchHit::getContent)
                     .map(ElasticsearchSearchAdapter::toReadModel)
                     .toList();
+            if (hits.getTotalHits() == 0) {
+                return fallbackRepository.searchPaged(
+                        query, categoryId, brand, minPrice, maxPrice,
+                        sameDay, verifiedOnly, officialOnly, pageable);
+            }
             return new PageImpl<>(results, pageable, hits.getTotalHits());
         } catch (Exception ex) {
-            LOGGER.warn("Elasticsearch searchPaged failed, returning empty page. Cause: {}", ex.getMessage());
-            return Page.empty(pageable);
+            LOGGER.warn("Elasticsearch searchPaged failed, using JPA read-model fallback. Cause: {}", ex.getMessage());
+            return fallbackRepository.searchPaged(
+                    query, categoryId, brand, minPrice, maxPrice,
+                    sameDay, verifiedOnly, officialOnly, pageable);
         }
     }
 
@@ -102,13 +114,14 @@ public class ElasticsearchSearchAdapter implements SearchRepository {
                     .build();
 
             SearchHits<ProductDocument> hits = elasticsearchOperations.search(nativeQuery, ProductDocument.class);
-            return extractStringTermsBuckets(hits, "categories").stream()
+            List<String> categories = extractStringTermsBuckets(hits, "categories").stream()
                     .map(b -> b.key().stringValue())
                     .sorted()
                     .toList();
+            return categories.isEmpty() ? fallbackRepository.findDistinctCategories() : categories;
         } catch (Exception ex) {
-            LOGGER.warn("Elasticsearch findDistinctCategories failed, returning empty list. Cause: {}", ex.getMessage());
-            return List.of();
+            LOGGER.warn("Elasticsearch findDistinctCategories failed, using JPA read-model fallback. Cause: {}", ex.getMessage());
+            return fallbackRepository.findDistinctCategories();
         }
     }
 
@@ -130,14 +143,15 @@ public class ElasticsearchSearchAdapter implements SearchRepository {
                     .build();
 
             SearchHits<ProductDocument> hits = elasticsearchOperations.search(nativeQuery, ProductDocument.class);
-            return hits.getSearchHits().stream()
+            List<String> suggestions = hits.getSearchHits().stream()
                     .map(hit -> hit.getContent().getName())
                     .filter(name -> name != null)
                     .distinct()
                     .toList();
+            return suggestions.isEmpty() ? fallbackRepository.suggestions(prefix, pageable) : suggestions;
         } catch (Exception ex) {
-            LOGGER.warn("Elasticsearch suggestions failed, returning empty list. Cause: {}", ex.getMessage());
-            return List.of();
+            LOGGER.warn("Elasticsearch suggestions failed, using JPA read-model fallback. Cause: {}", ex.getMessage());
+            return fallbackRepository.suggestions(prefix, pageable);
         }
     }
 
@@ -146,7 +160,11 @@ public class ElasticsearchSearchAdapter implements SearchRepository {
             String query, String brand, BigDecimal minPrice, BigDecimal maxPrice,
             Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly) {
         // Relax categoryId filter, apply brand/price filters
-        return runTermsFacet("categoryId", buildSearchQuery(query, null, brand, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly));
+        List<SearchFacetsResponse.FacetEntry> facets = runTermsFacet(
+                "categoryId", buildSearchQuery(query, null, brand, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly));
+        return facets.isEmpty()
+                ? fallbackRepository.categoryFacetsFor(query, brand, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly)
+                : facets;
     }
 
     @Override
@@ -154,7 +172,11 @@ public class ElasticsearchSearchAdapter implements SearchRepository {
             String query, String categoryId, BigDecimal minPrice, BigDecimal maxPrice,
             Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly) {
         // Relax brand filter, apply categoryId/price filters
-        return runTermsFacet("brand", buildSearchQuery(query, categoryId, null, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly));
+        List<SearchFacetsResponse.FacetEntry> facets = runTermsFacet(
+                "brand", buildSearchQuery(query, categoryId, null, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly));
+        return facets.isEmpty()
+                ? fallbackRepository.brandFacetsFor(query, categoryId, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly)
+                : facets;
     }
 
     // -------------------------------------------------------------------------
@@ -301,6 +323,10 @@ public class ElasticsearchSearchAdapter implements SearchRepository {
                 doc.getPrice(),    // ES stores a single price; map to both min and max
                 doc.getPrice(),
                 0,                 // variantCount not stored in ES document
+                doc.getImageUrls() == null || doc.getImageUrls().isEmpty()
+                        ? null
+                        : doc.getImageUrls().getFirst(),
+                doc.getStock() == null ? 0 : doc.getStock(),
                 doc.getCreatedAt(),
                 Boolean.TRUE.equals(doc.getSameDayDelivery()),
                 Boolean.TRUE.equals(doc.getVerified()),

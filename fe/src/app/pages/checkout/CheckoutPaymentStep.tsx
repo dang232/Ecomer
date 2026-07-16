@@ -65,9 +65,7 @@ export function CheckoutPaymentStep({
                   isSelected ? "border-primary" : "border-border",
                 ].join(" ")}
               >
-                {isSelected ? (
-                  <div className="w-2.5 h-2.5 rounded-full bg-primary" />
-                ) : null}
+                {isSelected ? <div className="w-2.5 h-2.5 rounded-full bg-primary" /> : null}
               </div>
             </label>
           );

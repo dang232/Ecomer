@@ -65,6 +65,9 @@ export const sellerProductCreate = (body: SellerProductWriteBody) =>
 export const sellerProductUpdate = (id: string, body: SellerProductWriteBody) =>
   api.put(`/sellers/me/products/${encodeURIComponent(id)}`, productDetailSchema, body);
 
+export const sellerProductPublish = (id: string) =>
+  api.put(`/sellers/me/products/${encodeURIComponent(id)}/publish`, productDetailSchema);
+
 export const sellerProductImageUploadUrl = (
   productId: string,
   body: { contentType: string; size?: number },

@@ -8,25 +8,49 @@ import '../models/shipping_quote.dart';
 
 class CheckoutRepositoryImpl implements CheckoutRepository {
   final Dio _dio;
-  final String _baseUrl;
 
-  static const bool _useMockBackend =
-      bool.fromEnvironment('USE_MOCK_BACKEND', defaultValue: false);
+  static const bool _useMockBackend = bool.fromEnvironment(
+    'USE_MOCK_BACKEND',
+    defaultValue: false,
+  );
 
-  CheckoutRepositoryImpl({
-    required Dio dio,
-    String? baseUrl,
-  })  : _dio = dio,
-        _baseUrl = baseUrl ?? 'https://api.vnshop.example.com';
+  CheckoutRepositoryImpl({required this._dio});
 
   Map<String, String> get _headers => {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      };
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  };
 
   @override
-  List<PaymentMethod> getAvailablePaymentMethods() {
-    return PaymentMethod.values;
+  Future<List<PaymentMethod>> getAvailablePaymentMethods() async {
+    if (_useMockBackend) {
+      return const [PaymentMethod.cod, PaymentMethod.vietqr];
+    }
+
+    final response = await _dio.get(
+      '/payment/methods',
+      options: Options(headers: _headers),
+    );
+    final responseData = response.data as Map<String, dynamic>;
+    final methods = responseData['data'] as List<dynamic>? ?? const [];
+
+    return methods
+        .whereType<Map>()
+        .where((method) => method['enabled'] != false)
+        .map((method) => _paymentMethodFromId(method['id'] as String?))
+        .whereType<PaymentMethod>()
+        .toList(growable: false);
+  }
+
+  PaymentMethod? _paymentMethodFromId(String? id) {
+    return switch (id?.toLowerCase()) {
+      'cod' => PaymentMethod.cod,
+      'vietqr' || 'viet_qr' => PaymentMethod.vietqr,
+      'vnpay' => PaymentMethod.vnpay,
+      'momo' => PaymentMethod.momo,
+      'bank_transfer' => PaymentMethod.bankTransfer,
+      _ => null,
+    };
   }
 
   @override
@@ -48,7 +72,9 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
   Future<VietnamAddress> addAddress(VietnamAddress address) async {
     if (_useMockBackend) {
       await Future.delayed(const Duration(milliseconds: 300));
-      return address.copyWith(id: 'addr_${DateTime.now().millisecondsSinceEpoch}');
+      return address.copyWith(
+        id: 'addr_${DateTime.now().millisecondsSinceEpoch}',
+      );
     }
 
     final response = await _dio.post(
@@ -256,14 +282,9 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
     final response = await _dio.post(
       endpoint,
       options: Options(
-        headers: {
-          ..._headers,
-          'Idempotency-Key': idempotencyKey,
-        },
+        headers: {..._headers, 'Idempotency-Key': idempotencyKey},
       ),
-      data: {
-        'orderId': session.sessionId,
-      },
+      data: {'orderId': session.sessionId},
     );
 
     // Backend returns ApiResponse envelope: { data: { ... } }
@@ -318,10 +339,7 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
     final response = await _dio.post(
       '/orders',
       options: Options(
-        headers: {
-          ..._headers,
-          'Idempotency-Key': idempotencyKey,
-        },
+        headers: {..._headers, 'Idempotency-Key': idempotencyKey},
       ),
       data: {
         'shippingAddress': {
@@ -354,7 +372,9 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
     );
   }
 
-  List<VietnamAddress> _addressesFromProfile(Map<String, dynamic> responseData) {
+  List<VietnamAddress> _addressesFromProfile(
+    Map<String, dynamic> responseData,
+  ) {
     final addresses = responseData['addresses'] as List<dynamic>? ?? const [];
     final name = responseData['name'] as String? ?? '';
     final phone = responseData['phone'] as String? ?? '';
@@ -396,7 +416,9 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
     ];
   }
 
-  Future<List<ShippingQuote>> _mockGetShippingQuotes(VietnamAddress address) async {
+  Future<List<ShippingQuote>> _mockGetShippingQuotes(
+    VietnamAddress address,
+  ) async {
     await Future.delayed(const Duration(milliseconds: 400));
 
     // Calculate base shipping based on city
@@ -456,7 +478,8 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
 
     switch (method) {
       case PaymentMethod.vnpay:
-        paymentUrl = 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?mock=true';
+        paymentUrl =
+            'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?mock=true';
         break;
       case PaymentMethod.momo:
         paymentUrl = 'momo://payment?mock=true';
@@ -496,5 +519,4 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
       createdAt: DateTime.now(),
     );
   }
-
 }

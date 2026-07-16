@@ -13,12 +13,10 @@ import '../../presentation/bloc/auth_state.dart';
 /// Implementation of AuthRepository
 class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl({
-    required AuthLocalDataSource localDataSource,
-    required AuthRemoteDataSource remoteDataSource,
+    required this._localDataSource,
+    required this._remoteDataSource,
     DioClient? dioClient,
-  })  : _localDataSource = localDataSource,
-        _remoteDataSource = remoteDataSource,
-        _dioClient = dioClient ?? DioClient.instance;
+  })  : _dioClient = dioClient ?? DioClient.instance;
 
   final AuthLocalDataSource _localDataSource;
   final AuthRemoteDataSource _remoteDataSource;

@@ -90,9 +90,9 @@ test.describe("Checkout Flow", () => {
     await page.goto("/");
 
     // Wait for page to be ready
-    await expect(
-      page.getByRole("button", { name: /^(Log in|Đăng nhập)$/i }).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("link", { name: /^(Log in|Đăng nhập)$/i }).first()).toBeVisible({
+      timeout: 20_000,
+    });
 
     // Navigate to products/search page
     await page.goto("/products");
@@ -111,9 +111,7 @@ test.describe("Checkout Flow", () => {
     await page.locator("[data-testid='add-to-cart']").click();
 
     // Verify cart badge updates or toast appears
-    await expect(
-      page.getByText(/Added to cart|Đã thêm vào giỏ/i),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/Added to cart|Đã thêm vào giỏ/i)).toBeVisible({ timeout: 10_000 });
 
     await expectNoGlobalError(page);
   });
@@ -127,18 +125,16 @@ test.describe("Checkout Flow", () => {
     await page.goto("/cart");
 
     // Cart should show the product
-    await expect(
-      page.locator("[data-testid='cart-item']").first(),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("[data-testid='cart-item']").first()).toBeVisible({
+      timeout: 15_000,
+    });
 
     // Quantity should reflect 2 items
     const quantityInput = page.locator("[data-testid='cart-item-quantity']").first();
     await expect(quantityInput).toHaveValue("2");
 
     // Total should be visible
-    await expect(
-      page.getByText(/Total|Tổng cộng/i).first(),
-    ).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText(/Total|Tổng cộng/i).first()).toBeVisible({ timeout: 5_000 });
 
     await expectNoGlobalError(page);
   });
@@ -148,9 +144,9 @@ test.describe("Checkout Flow", () => {
     await authenticatePage(page, buyer);
     await page.goto("/checkout");
 
-    await expect(
-      page.getByText(/Your cart is empty|Giỏ hàng trống/i),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Your cart is empty|Giỏ hàng trống/i)).toBeVisible({
+      timeout: 15_000,
+    });
 
     await expectNoGlobalError(page);
   });
@@ -165,9 +161,7 @@ test.describe("Checkout Flow", () => {
 
     // Should show prompt to add address
     await expect(
-      page.getByText(
-        /add a delivery address|add.*address|chưa có địa chỉ/i,
-      ),
+      page.getByText(/add a delivery address|add.*address|chưa có địa chỉ/i),
     ).toBeVisible({ timeout: 15_000 });
 
     await expectNoGlobalError(page);
@@ -199,9 +193,9 @@ test.describe("Checkout Flow", () => {
     await continueBtn.click();
 
     // Step 2: Shipping method selection
-    await expect(
-      page.getByText(/Shipping method|Phương thức vận chuyển/i).first(),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Shipping method|Phương thức vận chuyển/i).first()).toBeVisible({
+      timeout: 15_000,
+    });
 
     // Select standard shipping
     const shippingOption = page.locator("[data-testid='shipping-option']").first();
@@ -210,9 +204,9 @@ test.describe("Checkout Flow", () => {
     await continueBtn.click();
 
     // Step 3: Payment method selection
-    await expect(
-      page.getByText(/Payment method|Phương thức thanh toán/i).first(),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Payment method|Phương thức thanh toán/i).first()).toBeVisible({
+      timeout: 15_000,
+    });
 
     // Select COD (Cash on Delivery) for simplest E2E
     const codOption = page.getByText(/Cash on Delivery|Thanh toán khi nhận hàng|COD/i);
@@ -220,9 +214,9 @@ test.describe("Checkout Flow", () => {
     await continueBtn.click();
 
     // Step 4: Review order before confirmation
-    await expect(
-      page.getByText(/Review your order|Xem lại đơn hàng/i).first(),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Review your order|Xem lại đơn hàng/i).first()).toBeVisible({
+      timeout: 15_000,
+    });
 
     // Place order button
     const placeOrderBtn = page.getByRole("button", { name: /place order|đặt hàng/i });
@@ -230,14 +224,12 @@ test.describe("Checkout Flow", () => {
     await placeOrderBtn.click();
 
     // Step 5: Order confirmation
-    await expect(
-      page.locator("[data-testid='order-confirmation']"),
-    ).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator("[data-testid='order-confirmation']")).toBeVisible({
+      timeout: 30_000,
+    });
 
     // Should show order number
-    await expect(
-      page.getByText(/order.*#|đơn hàng.*#/i),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/order.*#|đơn hàng.*#/i)).toBeVisible({ timeout: 10_000 });
 
     await expectNoGlobalError(page);
   });
@@ -279,9 +271,9 @@ test.describe("Checkout Flow", () => {
     await authenticatePage(page, buyer);
     await page.goto("/cart");
 
-    await expect(
-      page.locator("[data-testid='cart-item']").first(),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("[data-testid='cart-item']").first()).toBeVisible({
+      timeout: 15_000,
+    });
 
     // Increase quantity
     const increaseBtn = page.locator("[data-testid='cart-item-increase']").first();
@@ -302,18 +294,18 @@ test.describe("Checkout Flow", () => {
     await authenticatePage(page, buyer);
     await page.goto("/cart");
 
-    await expect(
-      page.locator("[data-testid='cart-item']").first(),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("[data-testid='cart-item']").first()).toBeVisible({
+      timeout: 15_000,
+    });
 
     // Remove item
     const removeBtn = page.locator("[data-testid='cart-item-remove']").first();
     await removeBtn.click();
 
     // Cart should now be empty or item should be gone
-    await expect(
-      page.locator("[data-testid='cart-item']").first(),
-    ).toHaveCount(0, { timeout: 10_000 });
+    await expect(page.locator("[data-testid='cart-item']").first()).toHaveCount(0, {
+      timeout: 10_000,
+    });
 
     await expectNoGlobalError(page);
   });

@@ -1,13 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   ChevronRight,
-  Star,
   Zap,
   Truck,
   ShieldCheck,
   BadgeCheck,
   Lock,
-  Heart,
   ArrowRight,
   Sparkles,
   Smartphone,
@@ -22,8 +20,8 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import { ImageWithFallback } from "../components/image-with-fallback";
+import { ProductCard } from "../components/product-card";
 import { RecentlyViewedGrid } from "../components/RecentlyViewedGrid";
-import { useVNShop } from "../components/vnshop-context";
 import { categoryDisplayLabel, useCategories } from "../hooks/use-categories";
 import { useCountdown } from "../hooks/use-countdown";
 import { useFlashSaleWithProducts } from "../hooks/use-flash-sale";
@@ -32,7 +30,7 @@ import { useRecentlyViewed } from "../hooks/use-recently-viewed";
 import { formatPrice } from "../lib/format";
 import type { Product } from "../types/ui";
 
-// ─── Section Header ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Section Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const SectionHeader = memo(function SectionHeader({
   title,
   ctaLabel,
@@ -53,103 +51,17 @@ const SectionHeader = memo(function SectionHeader({
           className="group flex items-center gap-1 text-sm font-medium text-primary hover:underline"
         >
           {cta}
-          <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+          <ChevronRight
+            className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform"
+            aria-hidden="true"
+          />
         </Link>
       ) : null}
     </div>
   );
 });
 
-// ─── Product Card ─────────────────────────────────────────────────────────────
-const ProductCard = memo(function ProductCard({ product, index = 0 }: { product: Product; index?: number }) {
-  const { t } = useTranslation();
-  const { toggleWishlist, isWishlisted } = useVNShop();
-  const loved = isWishlisted(product.id);
-
-  return (
-    <Link
-      to={`/product/${product.id}`}
-      className="block"
-      aria-label={product.name}
-      data-testid="product-card"
-    >
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: Math.min(index * 0.05, 0.4), duration: 0.3 }}
-      className="group bg-card border border-border rounded-[var(--radius-lg)] overflow-hidden cursor-pointer transition-all duration-[var(--duration-base)] hover:border-border-hover hover:shadow-lg hover:-translate-y-1"
-    >
-      {/* Image */}
-      <div className="relative aspect-square bg-surface-elevated overflow-hidden flex items-center justify-center">
-        <ImageWithFallback
-          src={product.image}
-          alt={product.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[var(--duration-base)]"
-        />
-        {/* Badge */}
-        {product.discount ? (
-          <span className="absolute top-2 left-2 px-2 py-0.5 rounded-[var(--radius-sm)] bg-error text-white text-[11px] font-semibold">
-            -{product.discount}%
-          </span>
-        ) : product.badge === "new" ? (
-          <span className="absolute top-2 left-2 px-2 py-0.5 rounded-[var(--radius-sm)] bg-primary text-white text-[11px] font-semibold">
-            New
-          </span>
-        ) : null}
-        {/* Wishlist */}
-        <button
-          className={`absolute top-2 right-2 w-8 h-8 rounded-full border flex items-center justify-center opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 scale-80 group-hover:scale-100 [@media(hover:none)]:scale-100 transition-all duration-[var(--duration-base)] ${
-            loved
-              ? "bg-error-light border-error text-error"
-              : "bg-card border-border text-muted-foreground hover:text-error hover:border-error hover:bg-error-light"
-          }`}
-          aria-label={loved ? "Remove from wishlist" : "Add to wishlist"}
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleWishlist(product.id);
-          }}
-        >
-          <Heart className="w-4 h-4" fill={loved ? "currentColor" : "none"} />
-        </button>
-      </div>
-
-      {/* Body */}
-      <div className="p-3">
-        <h3 className="text-sm font-medium text-foreground leading-snug line-clamp-2 mb-1.5 min-h-[2.5rem]">
-          {product.name}
-        </h3>
-        <div className="flex items-baseline gap-1.5 flex-wrap mb-1.5">
-          <span className="text-[var(--text-base)] font-bold text-primary">
-            {formatPrice(product.price)}
-          </span>
-          {product.originalPrice ? (
-            <span className="text-xs text-muted-foreground line-through">
-              {formatPrice(product.originalPrice)}
-            </span>
-          ) : null}
-          {product.discount ? (
-            <span className="text-[11px] font-semibold text-error bg-error-light px-1.5 py-0.5 rounded">
-              -{product.discount}%
-            </span>
-          ) : null}
-        </div>
-        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <Star className="w-3 h-3 text-accent fill-accent" />
-            <span className="text-foreground font-medium">{product.rating}</span>
-          </div>
-          <span>·</span>
-          <span>
-            {product.sold >= 1000 ? `${(product.sold / 1000).toFixed(1)}k` : product.sold} {t("product.sold")}
-          </span>
-        </div>
-      </div>
-    </motion.div>
-    </Link>
-  );
-});
-
-// ─── Product Card Skeleton ────────────────────────────────────────────────────
+// â”€â”€â”€ Product Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function ProductCardSkeleton() {
   return (
     <div className="rounded-[var(--radius-lg)] overflow-hidden bg-card border border-border">
@@ -163,7 +75,7 @@ function ProductCardSkeleton() {
   );
 }
 
-// ─── Hero Section ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Hero Section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function HeroSection() {
   const { t } = useTranslation();
 
@@ -173,12 +85,9 @@ function HeroSection() {
       <div className="absolute -top-[60%] -right-[15%] w-[500px] h-[500px] rounded-full bg-white/[0.04] animate-pulse" />
       <div className="absolute -bottom-[40%] left-[20%] w-[300px] h-[300px] rounded-full bg-white/[0.03] animate-pulse" />
 
-      <div
-        className="relative z-10 max-w-[480px]"
-        style={{ padding: "clamp(32px, 5vw, 56px)" }}
-      >
+      <div className="relative z-10 max-w-[480px]" style={{ padding: "clamp(32px, 5vw, 56px)" }}>
         <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium text-white bg-white/[0.12] border border-white/10 backdrop-blur-sm mb-4">
-          <Zap className="w-3.5 h-3.5" />
+          <Zap className="w-3.5 h-3.5" aria-hidden="true" />
           {t("home.hero.eyebrow", { defaultValue: "Limited Time" })}
         </div>
         <h1 className="text-[var(--text-4xl)] font-extrabold text-white leading-[1.15] tracking-tight mb-3.5">
@@ -189,7 +98,7 @@ function HeroSection() {
         <p className="text-[var(--text-base)] text-white/[0.78] leading-relaxed mb-6 max-w-md">
           {t("home.hero.subtitle", {
             defaultValue:
-              "Thousands of deals across all categories. Electronics, fashion, software — everything ships free over ₫500,000.",
+              "Thousands of deals across all categories. Electronics, fashion, software â€” everything ships free over â‚«500,000.",
           })}
         </p>
         <Link
@@ -197,14 +106,17 @@ function HeroSection() {
           className="group inline-flex items-center gap-2 px-6 py-3 bg-white text-primary font-semibold text-sm rounded-[var(--radius-lg)] shadow-lg hover:-translate-y-0.5 hover:shadow-xl transition-all"
         >
           {t("home.hero.ctaShop", { defaultValue: "Shop Deals" })}
-          <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+          <ArrowRight
+            className="w-4 h-4 group-hover:translate-x-0.5 transition-transform"
+            aria-hidden="true"
+          />
         </Link>
       </div>
     </section>
   );
 }
 
-// ─── Category icon map ────────────────────────────────────────────────────────
+// â”€â”€â”€ Category icon map â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const CATEGORY_ICONS: Record<string, React.ElementType> = {
   electronics: Smartphone,
   fashion: Shirt,
@@ -222,7 +134,7 @@ function getCategoryIcon(slug: string): React.ElementType {
   return Sparkles;
 }
 
-// ─── Categories Grid ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Categories Grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function CategoriesSection() {
   const { t } = useTranslation();
   const { data: categories = [], isLoading } = useCategories();
@@ -245,11 +157,7 @@ function CategoriesSection() {
           {categories.slice(0, 6).map((cat, i) => {
             const Icon = getCategoryIcon(cat.id ?? "");
             return (
-              <Link
-                key={cat.id}
-                to={`/search?cat=${cat.id}`}
-                className="block"
-              >
+              <Link key={cat.id} to={`/search?cat=${cat.id}`} className="block">
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -257,7 +165,7 @@ function CategoriesSection() {
                   className="group flex flex-col items-center gap-2.5 py-5 px-2 bg-card border border-border rounded-[var(--radius-lg)] cursor-pointer transition-all hover:border-primary hover:bg-primary-light hover:-translate-y-0.5 hover:shadow-md"
                 >
                   <div className="w-12 h-12 rounded-[var(--radius-md)] bg-surface-elevated flex items-center justify-center text-text-secondary group-hover:text-primary group-hover:bg-card transition-colors">
-                    <Icon className="w-6 h-6" />
+                    <Icon className="w-6 h-6" aria-hidden="true" />
                   </div>
                   <span className="text-xs font-medium text-foreground text-center leading-tight">
                     {categoryDisplayLabel(cat)}
@@ -272,7 +180,7 @@ function CategoriesSection() {
   );
 }
 
-// ─── Flash Sale ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Flash Sale â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function pctOff(originalPrice: number, salePrice: number): number {
   if (originalPrice <= 0 || salePrice >= originalPrice) return 0;
   return Math.round(((originalPrice - salePrice) / originalPrice) * 100);
@@ -293,15 +201,13 @@ function FlashSaleSection() {
   const { h, m, s, isExpired } = useCountdown(earliestEnd ?? Date.now());
   const hasCampaigns = items.length > 0 && !isExpired;
 
-  if (!hasCampaigns && !isLoading) return null;
-
   return (
     <section className="mx-[var(--content-padding)] mb-6 bg-card border border-border rounded-[var(--radius-xl)] p-6 hover:shadow-sm transition-shadow">
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-[var(--radius-md)] bg-accent-light flex items-center justify-center text-accent">
-            <Zap className="w-5 h-5" />
+            <Zap className="w-5 h-5" aria-hidden="true" />
           </div>
           <h3 className="text-lg font-bold text-foreground">
             {t("flashSale.title", { defaultValue: "Flash Sale" })}
@@ -314,9 +220,7 @@ function FlashSaleSection() {
                 <span className="bg-foreground text-card text-sm font-bold px-2.5 py-1.5 rounded-[var(--radius-sm)] min-w-[34px] text-center tabular-nums">
                   {v}
                 </span>
-                {i < 2 ? (
-                  <span className="text-muted-foreground font-bold text-sm">:</span>
-                ) : null}
+                {i < 2 ? <span className="text-muted-foreground font-bold text-sm">:</span> : null}
               </div>
             ))}
           </div>
@@ -330,74 +234,86 @@ function FlashSaleSection() {
             <ProductCardSkeleton key={i} />
           ))}
         </div>
-      ) : (
+      ) : hasCampaigns ? (
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-4">
-          {items.slice(0, 5).map(({ campaign: c, product, isLoading: productLoading, isError }, i) => {
-            const discount = pctOff(c.originalPrice, c.salePrice);
-            const firstImage = product?.images?.[0];
-            const firstImageUrl = typeof firstImage === "string" ? firstImage : firstImage?.url;
-            const imageSrc = product?.image ?? firstImageUrl ?? "";
-            const productName = product?.name ?? `Product #${c.productId.slice(0, 8)}`;
+          {items
+            .slice(0, 5)
+            .map(({ campaign: c, product, isLoading: productLoading, isError }, i) => {
+              const discount = pctOff(c.originalPrice, c.salePrice);
+              const firstImage = product?.images?.[0];
+              const firstImageUrl = typeof firstImage === "string" ? firstImage : firstImage?.url;
+              const imageSrc = product?.image ?? firstImageUrl ?? "";
+              const productName = product?.name ?? `Product #${c.productId.slice(0, 8)}`;
 
-            return (
-              <Link
-                key={c.id}
-                to={`/product/${c.productId}`}
-                className="block"
-              >
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.06 }}
-                className="group bg-card border border-border rounded-[var(--radius-lg)] overflow-hidden cursor-pointer hover:border-border-hover hover:shadow-lg hover:-translate-y-1 transition-all duration-[var(--duration-base)]"
-              >
-                <div className="relative aspect-square bg-surface-elevated flex items-center justify-center overflow-hidden">
-                  {product && !productLoading && !isError && imageSrc ? (
-                    <ImageWithFallback
-                      src={imageSrc}
-                      alt={productName}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                  ) : (
-                    <Zap className="w-8 h-8 text-muted-foreground opacity-30" />
-                  )}
-                  {discount > 0 ? (
-                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded-[var(--radius-sm)] bg-error text-white text-[11px] font-semibold">
-                      -{discount}%
-                    </span>
-                  ) : null}
-                </div>
-                <div className="p-3">
-                  <p className="text-sm font-medium text-foreground line-clamp-2 mb-1.5 min-h-[2.5rem]">
-                    {productName}
-                  </p>
-                  <div className="flex items-baseline gap-1.5 flex-wrap">
-                    <span className="text-[var(--text-base)] font-bold text-primary">
-                      {formatPrice(c.salePrice)}
-                    </span>
-                    {c.originalPrice > c.salePrice ? (
-                      <span className="text-xs text-muted-foreground line-through">
-                        {formatPrice(c.originalPrice)}
-                      </span>
-                    ) : null}
-                    {discount > 0 ? (
-                      <span className="text-[11px] font-semibold text-error bg-error-light px-1.5 py-0.5 rounded">
-                        -{discount}%
-                      </span>
-                    ) : null}
-                  </div>
-                </div>
-              </motion.div>
-              </Link>
-            );
-          })}
+              return (
+                <Link key={c.id} to={`/product/${c.productId}`} className="block">
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.06 }}
+                    className="group bg-card border border-border rounded-[var(--radius-lg)] overflow-hidden cursor-pointer hover:border-border-hover hover:shadow-lg hover:-translate-y-1 transition-all duration-[var(--duration-base)]"
+                  >
+                    <div className="relative aspect-square bg-surface-elevated flex items-center justify-center overflow-hidden">
+                      {product && !productLoading && !isError && imageSrc ? (
+                        <ImageWithFallback
+                          src={imageSrc}
+                          alt={productName}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <Zap
+                          className="w-8 h-8 text-muted-foreground opacity-30"
+                          aria-hidden="true"
+                        />
+                      )}
+                      {discount > 0 ? (
+                        <span className="absolute top-2 left-2 px-2 py-0.5 rounded-[var(--radius-sm)] bg-error text-white text-[11px] font-semibold">
+                          -{discount}%
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="p-3">
+                      <p className="text-sm font-medium text-foreground line-clamp-2 mb-1.5 min-h-[2.5rem]">
+                        {productName}
+                      </p>
+                      <div className="flex items-baseline gap-1.5 flex-wrap">
+                        <span className="text-[var(--text-base)] font-bold text-primary">
+                          {formatPrice(c.salePrice)}
+                        </span>
+                        {c.originalPrice > c.salePrice ? (
+                          <span className="text-xs text-muted-foreground line-through">
+                            {formatPrice(c.originalPrice)}
+                          </span>
+                        ) : null}
+                        {discount > 0 ? (
+                          <span className="text-[11px] font-semibold text-error bg-error-light px-1.5 py-0.5 rounded">
+                            -{discount}%
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  </motion.div>
+                </Link>
+              );
+            })}
+        </div>
+      ) : (
+        <div className="py-8 text-center">
+          <p className="text-base font-semibold text-foreground">
+            {t("flashSale.emptyTitle", { defaultValue: "No flash sale running right now" })}
+          </p>
+          <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
+            {t("flashSale.emptyBody", {
+              defaultValue: "Flash sales drop weekly. Browse the catalog while you wait.",
+            })}
+          </p>
         </div>
       )}
     </section>
   );
 }
 
-// ─── Trust Bar ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Trust Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Static configuration outside component to avoid recreation on every render
 const TRUST_ITEMS_CONFIG = [
   { icon: Truck, titleKey: "trust.freeShipping", subKey: "trust.freeShippingSub" },
@@ -409,13 +325,14 @@ const TRUST_ITEMS_CONFIG = [
 function TrustBar() {
   const { t } = useTranslation();
 
-  const trustItems = useMemo(() =>
-    TRUST_ITEMS_CONFIG.map((item) => ({
-      icon: item.icon,
-      title: t(item.titleKey, { defaultValue: item.titleKey }),
-      sub: t(item.subKey, { defaultValue: item.subKey }),
-    })),
-    [t]
+  const trustItems = useMemo(
+    () =>
+      TRUST_ITEMS_CONFIG.map((item) => ({
+        icon: item.icon,
+        title: t(item.titleKey, { defaultValue: item.titleKey }),
+        sub: t(item.subKey, { defaultValue: item.subKey }),
+      })),
+    [t],
   );
 
   return (
@@ -426,7 +343,7 @@ function TrustBar() {
           className="flex items-center gap-3 p-4 bg-card border border-border rounded-[var(--radius-lg)] transition-all hover:border-primary hover:-translate-y-0.5 hover:shadow-sm"
         >
           <div className="w-11 h-11 rounded-[var(--radius-md)] bg-primary-light flex items-center justify-center text-primary shrink-0">
-            <item.icon className="w-[22px] h-[22px]" />
+            <item.icon className="w-[22px] h-[22px]" aria-hidden="true" />
           </div>
           <div>
             <h4 className="text-sm font-semibold text-foreground">{item.title}</h4>
@@ -438,11 +355,14 @@ function TrustBar() {
   );
 }
 
-// ─── Products Section ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Products Section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function ProductsSection() {
   const { t } = useTranslation();
-  const { data: catalog = [] as Product[], isLoading: productsLoading, isError: productsError } =
-    useProducts();
+  const {
+    data: catalog = [] as Product[],
+    isLoading: productsLoading,
+    isError: productsError,
+  } = useProducts();
 
   return (
     <section>
@@ -478,7 +398,7 @@ function ProductsSection() {
   );
 }
 
-// ─── Seller Showcase Section ──────────────────────────────────────────────────
+// â”€â”€â”€ Seller Showcase Section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function SellerShowcaseSection() {
   const { t } = useTranslation();
   const { data: sellers = [], isLoading } = useQuery({
@@ -490,10 +410,16 @@ function SellerShowcaseSection() {
       if (!res.ok) return [];
       const body = (await res.json()) as {
         data?: { content?: unknown[] } | unknown[];
+        content?: unknown[];
       };
-      const d = body?.data;
+      const d = body?.data ?? body;
       if (Array.isArray(d)) return d;
-      if (d && typeof d === "object" && "content" in d && Array.isArray((d as { content: unknown[] }).content)) {
+      if (
+        d &&
+        typeof d === "object" &&
+        "content" in d &&
+        Array.isArray((d as { content: unknown[] }).content)
+      ) {
         return (d as { content: unknown[] }).content;
       }
       return [];
@@ -544,7 +470,7 @@ function SellerShowcaseSection() {
   );
 }
 
-// ─── Homepage ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Homepage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function HomePage() {
   const { t } = useTranslation();
   const { items: recentlyViewed } = useRecentlyViewed();
@@ -554,7 +480,7 @@ export function HomePage() {
       {/* Hero */}
       <HeroSection />
 
-      {/* Flash Sale — full-bleed with own horizontal margins */}
+      {/* Flash Sale â€” full-bleed with own horizontal margins */}
       <div className="max-w-[var(--content-max)] mx-auto mt-8">
         <FlashSaleSection />
       </div>
@@ -578,7 +504,7 @@ export function HomePage() {
         <SellerShowcaseSection />
       </div>
 
-      {/* Trust Bar — full-bleed with own horizontal margins */}
+      {/* Trust Bar â€” full-bleed with own horizontal margins */}
       <div className="max-w-[var(--content-max)] mx-auto">
         <TrustBar />
       </div>

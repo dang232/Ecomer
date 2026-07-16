@@ -60,18 +60,13 @@ export const listAllCountries = (locale = "en"): CountryOption[] => {
  * alphabetically by display name in the active locale. This avoids surprising
  * the user with a random country at the top of a 245-item list.
  */
-export const sortedCountriesForPicker = (
-  locale = "en",
-): CountryOption[] => {
+export const sortedCountriesForPicker = (locale = "en"): CountryOption[] => {
   const all = listAllCountries(locale);
   const primary = all.filter((c) => c.code === "VN");
   const rest = all
     .filter((c) => c.code !== "VN")
     .sort((a, b) => a.name.localeCompare(b.name, locale));
-  return [
-    ...primary.map((c) => ({ ...c, isPrimary: true })),
-    ...rest,
-  ];
+  return [...primary.map((c) => ({ ...c, isPrimary: true })), ...rest];
 };
 
 /**
@@ -79,10 +74,7 @@ export const sortedCountriesForPicker = (
  * dial code (case-insensitive). Used by the search box at the top of the
  * dropdown.
  */
-export const filterCountries = (
-  countries: CountryOption[],
-  query: string,
-): CountryOption[] => {
+export const filterCountries = (countries: CountryOption[], query: string): CountryOption[] => {
   const q = query.trim().toLowerCase();
   if (!q) return countries;
   return countries.filter(

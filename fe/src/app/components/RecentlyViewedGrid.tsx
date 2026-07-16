@@ -63,9 +63,9 @@ export function RecentlyViewedGrid({
 
   return (
     <section>
-      {title ? <h2 className="text-xl font-bold text-foreground tracking-tight mb-5">
-          {title}
-        </h2> : null}
+      {title ? (
+        <h2 className="text-xl font-bold text-foreground tracking-tight mb-5">{title}</h2>
+      ) : null}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
         {items.map((item) => (
           <RecentlyViewedCard key={item.productId} item={item} />

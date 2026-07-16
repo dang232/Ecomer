@@ -28,14 +28,14 @@ export function CheckoutSuccess({ placedOrderId, selectedPaymentId, finalTotal }
   return (
     <div className="max-w-[500px] mx-auto py-16 px-6 text-center relative overflow-hidden">
       {/* Confetti */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-40 overflow-hidden" aria-hidden>
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-40 overflow-hidden"
+        aria-hidden
+      >
         {CONFETTI_PIECES.map((p) => (
           <span
             key={p.id}
-            className={[
-              "absolute top-0 w-2 h-2 rounded-sm opacity-0",
-              p.color,
-            ].join(" ")}
+            className={["absolute top-0 w-2 h-2 rounded-sm opacity-0", p.color].join(" ")}
             style={{
               left: p.left,
               animation: `confettiFall ${p.duration} ${p.delay} ease-in forwards`,
@@ -79,7 +79,9 @@ export function CheckoutSuccess({ placedOrderId, selectedPaymentId, finalTotal }
 
         {placedOrderId ? (
           <>
-            <p className="text-muted-foreground text-sm mb-2">{t("checkout.success.orderIdLabel")}</p>
+            <p className="text-muted-foreground text-sm mb-2">
+              {t("checkout.success.orderIdLabel")}
+            </p>
             <code className="inline-block px-5 py-2.5 rounded-[var(--radius-lg)] mb-6 font-mono font-semibold text-base bg-surface-elevated text-primary">
               {placedOrderId}
             </code>

@@ -1,199 +1,131 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/utils/localized_formatters.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../data/models/order_model.dart';
 import 'order_status_badge.dart';
 
 class OrderCard extends StatelessWidget {
+  const OrderCard({
+    required this.order,
+    required this.onTap,
+    this.isCancelling = false,
+    super.key,
+  });
+
   final OrderModel order;
   final VoidCallback onTap;
   final bool isCancelling;
 
-  const OrderCard({
-    super.key,
-    required this.order,
-    required this.onTap,
-    this.isCancelling = false,
-  });
-
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
+    final localizations = AppLocalizations.of(context);
+    final theme = Theme.of(context);
 
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      elevation: 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+      margin: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.screenPadding,
+        vertical: AppSpacing.xs,
       ),
-      child: InkWell(
-        onTap: isCancelling ? null : onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header: Order number and status
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Đơn hàng #${order.orderNumber}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          dateFormat.format(order.createdAt),
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  OrderStatusBadge(status: order.status),
-                ],
-              ),
-
-              const Divider(height: 24),
-
-              // Items preview
-              if (order.items.isNotEmpty) ...[
+      elevation: 0,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: AppSpacing.borderRadiusSmall,
+        side: BorderSide(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Semantics(
+        button: true,
+        label: localizations.orderNumber(order.orderNumber),
+        child: InkWell(
+          onTap: isCancelling ? null : onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Show up to 3 item images
-                    ...order.items.take(3).map((item) {
-                      return Container(
-                        margin: const EdgeInsets.only(right: 8),
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: item.productImage.isNotEmpty
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.network(
-                                  item.productImage,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const Icon(
-                                    Icons.shopping_bag_outlined,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              )
-                            : const Icon(
-                                Icons.shopping_bag_outlined,
-                                color: Colors.grey,
-                              ),
-                      );
-                    }),
-                    if (order.items.length > 3)
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Center(
-                          child: Text(
-                            '+${order.items.length - 3}',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
+                    Expanded(
+                      child: Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: OrderStatusBadge(status: order.status),
                       ),
-                    const Spacer(),
-                    Text(
-                      '${order.itemCount} sản phẩm',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                        fontSize: 12,
-                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Icon(
+                      Icons.chevron_right,
+                      color: theme.colorScheme.onSurfaceVariant,
+                      semanticLabel: localizations.orderDetailTitle,
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-              ],
-
-              // Footer: Total amount
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  if (isCancelling)
-                    Row(
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  localizations.orderNumber(order.orderNumber),
+                  style: theme.textTheme.titleMedium,
+                ),
+                if (order.hasCreatedAt) ...[
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(
+                    LocalizedFormatters.dateTime(context, order.createdAt),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                  child: Divider(height: 1),
+                ),
+                Text(
+                  localizations.orderItemsCount(order.itemCount),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  localizations.total,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  LocalizedFormatters.currency(context, order.totalAmount),
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (isCancelling) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Semantics(
+                    liveRegion: true,
+                    child: Row(
                       children: [
-                        SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
+                        const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Đang hủy đơn...',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontStyle: FontStyle.italic,
+                        const SizedBox(width: AppSpacing.xs),
+                        Expanded(
+                          child: Text(
+                            localizations.cancellingOrder,
+                            style: theme.textTheme.bodyMedium,
                           ),
                         ),
                       ],
-                    )
-                  else
-                    const SizedBox.shrink(),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        _formatCurrency(order.totalAmount),
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                      if (order.discount > 0)
-                        Text(
-                          '(Đã giảm ${_formatCurrency(order.discount)})',
-                          style: TextStyle(
-                            color: Colors.green.shade700,
-                            fontSize: 11,
-                          ),
-                        ),
-                    ],
+                    ),
                   ),
                 ],
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
-  }
-
-  String _formatCurrency(double amount) {
-    final formatter = NumberFormat.currency(
-      locale: 'vi_VN',
-      symbol: '₫',
-      decimalDigits: 0,
-    );
-    return formatter.format(amount);
   }
 }

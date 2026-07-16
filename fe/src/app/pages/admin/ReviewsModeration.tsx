@@ -6,7 +6,11 @@ import { toast } from "sonner";
 
 import { FormDialog } from "../../components/form-dialog";
 import { ApiError } from "../../lib/api";
-import { adminApproveReview, adminPendingReviews, adminRejectReview } from "../../lib/api/endpoints/admin";
+import {
+  adminApproveReview,
+  adminPendingReviews,
+  adminRejectReview,
+} from "../../lib/api/endpoints/admin";
 
 export function ReviewsModeration() {
   const qc = useQueryClient();

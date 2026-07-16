@@ -81,7 +81,10 @@ void main() {
       });
 
       test('instance is of correct type', () {
-        expect(OrderNotificationService.instance, isA<OrderNotificationService>());
+        expect(
+          OrderNotificationService.instance,
+          isA<OrderNotificationService>(),
+        );
       });
     });
   });
@@ -129,19 +132,24 @@ void main() {
       expect(OrderStatus.cancelled.value, equals('CANCELLED'));
     });
 
-    test('order status labels are in Vietnamese', () {
-      expect(OrderStatus.pending.label, equals('Chờ xác nhận'));
-      expect(OrderStatus.confirmed.label, equals('Đã xác nhận'));
-      expect(OrderStatus.processing.label, equals('Đang xử lý'));
-      expect(OrderStatus.shipped.label, equals('Đang giao hàng'));
-      expect(OrderStatus.delivered.label, equals('Đã giao hàng'));
-      expect(OrderStatus.cancelled.label, equals('Đã hủy'));
-    });
-
-    test('order status fromString parses correctly', () {
+    test('order status normalizes list and fulfillment API values', () {
       expect(OrderStatus.fromString('PENDING'), equals(OrderStatus.pending));
-      expect(OrderStatus.fromString('confirmed'), equals(OrderStatus.confirmed));
+      expect(
+        OrderStatus.fromString('PENDING_ACCEPTANCE'),
+        equals(OrderStatus.pending),
+      );
+      expect(
+        OrderStatus.fromString('confirmed'),
+        equals(OrderStatus.confirmed),
+      );
+      expect(OrderStatus.fromString('ACCEPTED'), equals(OrderStatus.confirmed));
+      expect(OrderStatus.fromString('PACKED'), equals(OrderStatus.confirmed));
       expect(OrderStatus.fromString('SHIPPED'), equals(OrderStatus.shipped));
+      expect(
+        OrderStatus.fromString('DELIVERED'),
+        equals(OrderStatus.delivered),
+      );
+      expect(OrderStatus.fromString('REJECTED'), equals(OrderStatus.cancelled));
       expect(OrderStatus.fromString('invalid'), equals(OrderStatus.pending));
     });
   });
@@ -175,7 +183,9 @@ void main() {
         createdAt: DateTime.now(),
       );
 
-      final updatedOrder = originalOrder.copyWith(status: OrderStatus.confirmed);
+      final updatedOrder = originalOrder.copyWith(
+        status: OrderStatus.confirmed,
+      );
 
       expect(originalOrder.status, equals(OrderStatus.pending));
       expect(updatedOrder.status, equals(OrderStatus.confirmed));

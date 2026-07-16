@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -79,8 +79,16 @@ function ShipDialogBody({
                 className="px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors"
                 style={
                   carrier === c
-                    ? { background: "var(--primary)", color: "white", borderColor: "var(--primary)" }
-                    : { background: "white", color: "var(--muted-foreground)", borderColor: "var(--border)" }
+                    ? {
+                        background: "var(--primary)",
+                        color: "white",
+                        borderColor: "var(--primary)",
+                      }
+                    : {
+                        background: "white",
+                        color: "var(--muted-foreground)",
+                        borderColor: "var(--border)",
+                      }
                 }
               >
                 {c}

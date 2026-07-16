@@ -30,7 +30,6 @@ async function loginAsSeller(request: APIRequestContext): Promise<AuthResult> {
   return { accessToken };
 }
 
-
 test.describe("seller orders queue UI", () => {
   test("/seller dashboard renders for seller1 without the global error", async ({ page }) => {
     await loginAsSeller(page.request);
@@ -61,16 +60,12 @@ test.describe("seller orders queue UI", () => {
     await expect(ordersTab).toBeVisible({ timeout: 10_000 });
     await ordersTab.click();
 
-    // The queue header renders unconditionally. Empty-state copy "No orders
-    // to handle" is a valid signal too — both prove the JSON parse landed.
+    // The current shell exposes the tab as the visible Orders heading. Empty-
+    // state copy is a valid signal too — both prove the JSON parse landed.
     // Pre-0a3c0f8a this would have crashed because the FE schema expected a
     // flat sub-order list and the BE returned nested OrderResponse objects.
     await expect(
-      page
-        .getByText(
-          /Order management|Quản lý đơn hàng|No orders to handle|Không có đơn hàng nào cần xử lý/i,
-        )
-        .first(),
+      page.getByRole("heading", { name: /Orders|Order management/i }).first(),
     ).toBeVisible({ timeout: 20_000 });
 
     await expectNoGlobalError(page);

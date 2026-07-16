@@ -89,9 +89,7 @@ describe("SellerDetailPage", () => {
 
     // useSuspenseQuery throws on error — the ErrorBoundary catches it and
     // renders the ApiError message.
-    await waitFor(() =>
-      expect(screen.getByText("not found")).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText("not found")).toBeInTheDocument());
   });
 
   it("renders empty product grid when seller has no products", async () => {

@@ -5,7 +5,7 @@ import '../../data/models/shipping_quote.dart';
 
 abstract class CheckoutRepository {
   /// Get available payment methods for the merchant
-  List<PaymentMethod> getAvailablePaymentMethods();
+  Future<List<PaymentMethod>> getAvailablePaymentMethods();
 
   Future<List<VietnamAddress>> getAddresses();
   Future<VietnamAddress> addAddress(VietnamAddress address);

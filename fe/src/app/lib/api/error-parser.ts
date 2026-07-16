@@ -92,7 +92,8 @@ const ERROR_CODE_LABELS: Record<string, string> = {
   // Order
   ORDER_NOT_FOUND: "Order not found.",
   PRODUCT_NOT_FOUND: "One or more products could not be found.",
-  PRODUCT_CATALOG_UNAVAILABLE: "Product catalog is temporarily unavailable. Please try again shortly.",
+  PRODUCT_CATALOG_UNAVAILABLE:
+    "Product catalog is temporarily unavailable. Please try again shortly.",
   ORDER_NOT_PAYABLE: "This order cannot be paid at this time.",
 
   // Payment

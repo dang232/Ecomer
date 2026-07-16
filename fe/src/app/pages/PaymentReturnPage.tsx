@@ -159,7 +159,8 @@ export function PaymentReturnPage() {
           ) : null}
           {orderId ? (
             <p className="text-sm text-muted-foreground mb-8">
-              {t("paymentReturn.completed.orderIdLabel")} <span className="font-mono font-semibold">{orderId}</span>
+              {t("paymentReturn.completed.orderIdLabel")}{" "}
+              <span className="font-mono font-semibold">{orderId}</span>
             </p>
           ) : null}
           <div className="flex gap-3">
@@ -189,10 +190,10 @@ export function PaymentReturnPage() {
           >
             <IconAlertCircle size={40} style={{ color: "var(--error)" }} />
           </div>
-          <h1 className="text-2xl font-bold text-foreground mb-3">{t("paymentReturn.failed.title")}</h1>
-          <p className="text-sm text-muted-foreground mb-6">
-            {t("paymentReturn.failed.body")}
-          </p>
+          <h1 className="text-2xl font-bold text-foreground mb-3">
+            {t("paymentReturn.failed.title")}
+          </h1>
+          <p className="text-sm text-muted-foreground mb-6">{t("paymentReturn.failed.body")}</p>
           <div className="flex gap-3">
             <button
               onClick={() => navigate("/orders")}
@@ -219,7 +220,9 @@ export function PaymentReturnPage() {
           >
             <IconAlertCircle size={40} style={{ color: "var(--warning)" }} />
           </div>
-          <h1 className="text-2xl font-bold text-foreground mb-3">{t("paymentReturn.error.title")}</h1>
+          <h1 className="text-2xl font-bold text-foreground mb-3">
+            {t("paymentReturn.error.title")}
+          </h1>
           <p className="text-sm text-muted-foreground mb-6">
             {errorMessage || t("paymentReturn.error.fallback")}
           </p>

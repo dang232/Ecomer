@@ -4,6 +4,7 @@ import { FindUserNotificationsUseCase } from '../../../application/query/find-us
 import { FindNotificationThreadsUseCase } from '../../../application/query/find-notification-threads.use-case';
 import { FindThreadNotificationsUseCase } from '../../../application/query/find-thread-notifications.use-case';
 import { CountUnreadUseCase } from '../../../application/query/count-unread.use-case';
+import { GetNotificationUseCase } from '../../../application/query/get-notification.use-case';
 import { MarkNotificationReadUseCase } from '../../../application/command/mark-notification-read.use-case';
 import { MarkAllReadUseCase } from '../../../application/command/mark-all-read.use-case';
 import { SendNotificationUseCase } from '../../../application/command/send-notification.use-case';
@@ -34,6 +35,16 @@ describe('NotificationRestController', () => {
   };
   const mockFindThreadNotifs = { execute: jest.fn().mockResolvedValue([]) };
   const mockCountUnread = { execute: jest.fn().mockResolvedValue(5) };
+  const mockGetNotification = {
+    execute: jest.fn().mockImplementation(() => {
+      return Notification.create({
+        userId: 'u1',
+        type: NotificationType.ORDER_CREATED,
+        title: 'T',
+        body: 'B',
+      });
+    }),
+  };
   const mockMarkRead = {
     execute: jest.fn().mockImplementation(() => {
       return Notification.create({
@@ -73,6 +84,7 @@ describe('NotificationRestController', () => {
           useValue: mockFindThreadNotifs,
         },
         { provide: CountUnreadUseCase, useValue: mockCountUnread },
+        { provide: GetNotificationUseCase, useValue: mockGetNotification },
         { provide: MarkNotificationReadUseCase, useValue: mockMarkRead },
         { provide: MarkAllReadUseCase, useValue: mockMarkAllRead },
         { provide: SendNotificationUseCase, useValue: mockSendNotification },
@@ -112,6 +124,12 @@ describe('NotificationRestController', () => {
     const result = await controller.unreadCount(mockReq);
     expect(result).toEqual({ count: 5 });
     expect(mockCountUnread.execute).toHaveBeenCalledWith('user-1');
+  });
+
+  it('GET /:id returns an owner-scoped notification', async () => {
+    const result = await controller.getNotificationById(mockReq, 'notif-123');
+    expect(result).toHaveProperty('id');
+    expect(mockGetNotification.execute).toHaveBeenCalledWith('notif-123', 'user-1');
   });
 
   it('GET /threads returns paginated threads', async () => {

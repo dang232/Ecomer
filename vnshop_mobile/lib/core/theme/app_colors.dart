@@ -1,29 +1,31 @@
 import 'package:flutter/material.dart';
 
+import '../design_system/generated/design_tokens.dart';
+
 /// App color constants following Material 3 design system
 /// with Vietnamese e-commerce optimizations
 class AppColors {
   AppColors._();
 
   // ==========================================================================
-  // PRIMARY COLORS - Teal 700 (#00796B)
+  // PRIMARY COLORS
   // ==========================================================================
-  static const Color primary = Color(0xFF00796B);
-  static const Color primaryLight = Color(0xFF48A999);
-  static const Color primaryDark = Color(0xFF004C40);
-  static const Color onPrimary = Color(0xFFFFFFFF);
-  static const Color primaryContainer = Color(0xFFB2DFDB);
-  static const Color onPrimaryContainer = Color(0xFF00251A);
+  static const Color primary = DesignColorsLight.actionPrimary;
+  static const Color primaryLight = DesignColorsDark.actionPrimary;
+  static const Color primaryDark = DesignColorsLight.actionPrimaryHover;
+  static const Color onPrimary = DesignColorsLight.onActionPrimary;
+  static const Color primaryContainer = DesignColorsLight.actionPrimarySubtle;
+  static const Color onPrimaryContainer = DesignColorsLight.text;
 
   // ==========================================================================
-  // SECONDARY COLORS - Amber 600 (#FFB300)
+  // COMMERCE ACCENT COLORS
   // ==========================================================================
-  static const Color secondary = Color(0xFFFFB300);
-  static const Color secondaryLight = Color(0xFFFFE54C);
-  static const Color secondaryDark = Color(0xFFC68400);
-  static const Color onSecondary = Color(0xFF000000);
-  static const Color secondaryContainer = Color(0xFFFFE082);
-  static const Color onSecondaryContainer = Color(0xFF261A00);
+  static const Color secondary = DesignColorsLight.commerceAccent;
+  static const Color secondaryLight = DesignColorsDark.commerceAccent;
+  static const Color secondaryDark = DesignColorsLight.warningText;
+  static const Color onSecondary = DesignColorsLight.onCommerceAccent;
+  static const Color secondaryContainer = DesignColorsLight.warningSubtle;
+  static const Color onSecondaryContainer = DesignColorsLight.warningText;
 
   // ==========================================================================
   // TERTIARY COLORS - Deep Orange Accent
@@ -38,89 +40,89 @@ class AppColors {
   // ==========================================================================
   // ERROR COLORS
   // ==========================================================================
-  static const Color error = Color(0xFFB00020);
-  static const Color errorLight = Color(0xFFEF5350);
-  static const Color onError = Color(0xFFFFFFFF);
-  static const Color errorContainer = Color(0xFFFCD8DF);
-  static const Color onErrorContainer = Color(0xFF370617);
+  static const Color error = DesignColorsLight.danger;
+  static const Color errorLight = DesignColorsDark.danger;
+  static const Color onError = DesignColorsLight.onDanger;
+  static const Color errorContainer = DesignColorsLight.dangerSubtle;
+  static const Color onErrorContainer = DesignColorsLight.dangerText;
 
   // ==========================================================================
   // SURFACE COLORS - Light Theme
   // ==========================================================================
-  static const Color surface = Color(0xFFFFFFFF);
-  static const Color surfaceVariant = Color(0xFFF5F5F5);
-  static const Color surfaceContainer = Color(0xFFFAFAFA);
-  static const Color surfaceContainerLow = Color(0xFFF7F7F7);
-  static const Color surfaceContainerHigh = Color(0xFFEEEEEE);
-  static const Color onSurface = Color(0xFF1C1B1F);
-  static const Color onSurfaceVariant = Color(0xFF49454F);
+  static const Color surface = DesignColorsLight.surface;
+  static const Color surfaceVariant = DesignColorsLight.surfaceSubtle;
+  static const Color surfaceContainer = DesignColorsLight.surface;
+  static const Color surfaceContainerLow = DesignColorsLight.canvas;
+  static const Color surfaceContainerHigh = DesignColorsLight.surfaceSubtle;
+  static const Color onSurface = DesignColorsLight.text;
+  static const Color onSurfaceVariant = DesignColorsLight.textMuted;
 
   // ==========================================================================
   // SURFACE COLORS - Dark Theme
   // ==========================================================================
-  static const Color surfaceDark = Color(0xFF1C1B1F);
-  static const Color surfaceVariantDark = Color(0xFF49454F);
-  static const Color surfaceContainerDark = Color(0xFF2B2930);
-  static const Color surfaceContainerLowDark = Color(0xFF252329);
-  static const Color surfaceContainerHighDark = Color(0xFF36343B);
-  static const Color onSurfaceDark = Color(0xFFE6E1E5);
-  static const Color onSurfaceVariantDark = Color(0xFFCAC4D0);
+  static const Color surfaceDark = DesignColorsDark.surface;
+  static const Color surfaceVariantDark = DesignColorsDark.surfaceSubtle;
+  static const Color surfaceContainerDark = DesignColorsDark.surface;
+  static const Color surfaceContainerLowDark = DesignColorsDark.canvas;
+  static const Color surfaceContainerHighDark = DesignColorsDark.surfaceRaised;
+  static const Color onSurfaceDark = DesignColorsDark.text;
+  static const Color onSurfaceVariantDark = DesignColorsDark.textMuted;
 
   // ==========================================================================
   // BACKGROUND COLORS
   // ==========================================================================
-  static const Color background = Color(0xFFFFFFFF);
-  static const Color backgroundDark = Color(0xFF1C1B1F);
-  static const Color onBackground = Color(0xFF1C1B1F);
-  static const Color onBackgroundDark = Color(0xFFE6E1E5);
+  static const Color background = DesignColorsLight.canvas;
+  static const Color backgroundDark = DesignColorsDark.canvas;
+  static const Color onBackground = DesignColorsLight.text;
+  static const Color onBackgroundDark = DesignColorsDark.text;
 
   // ==========================================================================
   // OUTLINE & DIVIDER COLORS
   // ==========================================================================
-  static const Color outline = Color(0xFF79747E);
-  static const Color outlineVariant = Color(0xFFCAC4D0);
-  static const Color outlineDark = Color(0xFF938F99);
-  static const Color outlineVariantDark = Color(0xFF49454F);
+  static const Color outline = DesignColorsLight.borderStrong;
+  static const Color outlineVariant = DesignColorsLight.border;
+  static const Color outlineDark = DesignColorsDark.borderStrong;
+  static const Color outlineVariantDark = DesignColorsDark.border;
 
   // ==========================================================================
   // E-COMMERCE SPECIFIC COLORS
   // ==========================================================================
 
   /// Sale/discount badge - vibrant red for urgency
-  static const Color saleBadge = Color(0xFFE53935);
-  static const Color saleBadgeDark = Color(0xFFFF6F60);
+  static const Color saleBadge = DesignColorsLight.danger;
+  static const Color saleBadgeDark = DesignColorsDark.danger;
 
   /// Success/confirmation - green
-  static const Color success = Color(0xFF43A047);
-  static const Color successLight = Color(0xFF76D275);
-  static const Color onSuccess = Color(0xFFFFFFFF);
+  static const Color success = DesignColorsLight.success;
+  static const Color successLight = DesignColorsDark.success;
+  static const Color onSuccess = DesignColorsLight.onSuccess;
 
   /// Warning/caution
-  static const Color warning = Color(0xFFFFA000);
-  static const Color warningLight = Color(0xFFFFCA28);
-  static const Color onWarning = Color(0xFF000000);
+  static const Color warning = DesignColorsLight.commerceAccent;
+  static const Color warningLight = DesignColorsDark.commerceAccent;
+  static const Color onWarning = DesignColorsLight.onCommerceAccent;
 
   /// Info/notifications
-  static const Color info = Color(0xFF1976D2);
-  static const Color infoLight = Color(0xFF64B5F6);
-  static const Color onInfo = Color(0xFFFFFFFF);
+  static const Color info = DesignColorsLight.info;
+  static const Color infoLight = DesignColorsDark.info;
+  static const Color onInfo = DesignColorsLight.onInfo;
 
   /// Price colors -VNĐ currency display
-  static const Color priceCurrent = Color(0xFFD32F2F);
-  static const Color priceOriginal = Color(0xFF757575);
-  static const Color priceDiscount = Color(0xFF388E3C);
+  static const Color priceCurrent = DesignColorsLight.danger;
+  static const Color priceOriginal = DesignColorsLight.textMuted;
+  static const Color priceDiscount = DesignColorsLight.success;
 
   /// Rating stars
   static const Color starFilled = Color(0xFFFFC107);
   static const Color starEmpty = Color(0xFFE0E0E0);
 
   /// Status indicators
-  static const Color inStock = Color(0xFF4CAF50);
-  static const Color lowStock = Color(0xFFFF9800);
-  static const Color outOfStock = Color(0xFF9E9E9E);
+  static const Color inStock = DesignColorsLight.success;
+  static const Color lowStock = DesignColorsLight.commerceAccent;
+  static const Color outOfStock = DesignColorsLight.textMuted;
 
   /// Cart badge
-  static const Color cartBadge = Color(0xFFE53935);
+  static const Color cartBadge = DesignColorsLight.danger;
 
   // ==========================================================================
   // PAYMENT BRAND COLORS
@@ -136,8 +138,8 @@ class AppColors {
   // ==========================================================================
   static const Color shadow = Color(0x1A000000);
   static const Color shadowDark = Color(0x4D000000);
-  static const Color scrim = Color(0x52000000);
-  static const Color scrimDark = Color(0xB3000000);
+  static const Color scrim = DesignColorsLight.overlay;
+  static const Color scrimDark = DesignColorsDark.overlay;
 
   // ==========================================================================
   // GRADIENT PRESETS

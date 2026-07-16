@@ -18,11 +18,13 @@ export const cartItemSchema = z
     productId: productIdSchema,
     productName: z.string().optional(),
     productImage: z.string().optional(),
+    imageUrl: z.string().optional(),
     unitPrice: moneyToNumber.optional(),
     subtotal: moneyToNumber.optional(),
     quantity: z.number(),
     sellerId: sellerIdSchema.optional(),
     variantId: z.string().nullable().optional(), // BE returns variantId for variant items
+    variantSku: z.string().nullable().optional(),
     // Legacy aliases — keep accepting them in case the BE shape regresses.
     name: z.string().optional(),
     image: z.string().optional(),
@@ -32,11 +34,11 @@ export const cartItemSchema = z
   .transform((raw) => ({
     productId: raw.productId,
     name: raw.name ?? raw.productName,
-    image: raw.image ?? raw.productImage,
+    image: raw.image ?? raw.productImage ?? raw.imageUrl,
     price: raw.price ?? raw.unitPrice ?? 0,
     quantity: raw.quantity,
     sellerId: raw.sellerId,
-    variantId: raw.variantId ?? undefined,
+    variantId: raw.variantId ?? raw.variantSku ?? undefined,
   }));
 
 export const cartSchema = z

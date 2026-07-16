@@ -27,11 +27,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidUpdate(_prevProps: Props, prevState: State): void {
     // If a new, different error arrives, reset the retry counter.
-    if (
-      this.state.error &&
-      prevState.error &&
-      this.state.error !== prevState.error
-    ) {
+    if (this.state.error && prevState.error && this.state.error !== prevState.error) {
       this.setState({ retryCount: 0 });
     }
   }
@@ -64,11 +60,14 @@ export class ErrorBoundary extends Component<Props, State> {
     return (
       <div role="alert" className="min-h-[60vh] flex items-center justify-center px-4">
         <div className="max-w-md w-full bg-card border border-border rounded-2xl shadow-sm p-6 text-center">
-          <h2 className="text-lg font-bold text-foreground mb-2">{i18n.t("errorBoundary.title", { defaultValue: "Something went wrong" })}</h2>
+          <h2 className="text-lg font-bold text-foreground mb-2">
+            {i18n.t("errorBoundary.title", { defaultValue: "Something went wrong" })}
+          </h2>
           <p className="text-sm text-muted-foreground mb-4">{message}</p>
           {apiError?.correlationId ? (
             <p className="text-xs text-muted-foreground mb-4">
-              {i18n.t("errorBoundary.supportCode", { defaultValue: "Support code" })}: <span className="font-mono">{apiError.correlationId}</span>
+              {i18n.t("errorBoundary.supportCode", { defaultValue: "Support code" })}:{" "}
+              <span className="font-mono">{apiError.correlationId}</span>
             </p>
           ) : null}
           {isPermanent ? (
@@ -88,7 +87,9 @@ export class ErrorBoundary extends Component<Props, State> {
               className="px-4 py-2 rounded-xl text-white text-sm font-semibold disabled:opacity-60"
               style={{ background: "var(--primary)" }}
             >
-              {isRetrying ? i18n.t("errorBoundary.retrying", { defaultValue: "Retrying…" }) : i18n.t("errorBoundary.retry", { defaultValue: "Try again" })}
+              {isRetrying
+                ? i18n.t("errorBoundary.retrying", { defaultValue: "Retrying…" })
+                : i18n.t("errorBoundary.retry", { defaultValue: "Try again" })}
             </button>
           )}
         </div>

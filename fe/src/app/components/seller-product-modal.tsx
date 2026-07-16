@@ -21,6 +21,7 @@ import {
   sellerProductCreate,
   sellerProductImageActivate,
   sellerProductImageUploadUrl,
+  sellerProductPublish,
   sellerProductUpdate,
 } from "../lib/api/endpoints/products";
 import { videoDelete } from "../lib/api/endpoints/videos";
@@ -168,7 +169,9 @@ function SellerProductModalBody({
     () => product?.images ?? (product?.image ? [product.image] : []),
   );
   const [staged, setStaged] = useState<StagedFile[]>([]);
-  const [phase, setPhase] = useState<"idle" | "creating" | "uploading" | "finalising">("idle");
+  const [phase, setPhase] = useState<
+    "idle" | "creating" | "uploading" | "finalising" | "publishing"
+  >("idle");
 
   // Video state
   const productId = product?.id ?? null;
@@ -386,6 +389,11 @@ function SellerProductModalBody({
         });
       }
 
+      if (isNew) {
+        setPhase("publishing");
+        await sellerProductPublish(productId);
+      }
+
       return { id: productId, isNew };
     },
     onSuccess: ({ id, isNew }) => {
@@ -441,6 +449,8 @@ function SellerProductModalBody({
         return t("seller.productModal.phaseUploading", { count: staged.length });
       case "finalising":
         return t("seller.productModal.phaseFinalising");
+      case "publishing":
+        return t("seller.productModal.phasePublishing");
       default:
         return isEdit ? t("seller.productModal.save") : t("seller.productModal.publish");
     }

@@ -1,5 +1,6 @@
 package com.vnshop.couponservice.infrastructure.persistence;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -16,7 +17,12 @@ import org.springframework.transaction.annotation.Transactional;
 public interface CouponJpaRepository extends JpaRepository<CouponJpaEntity, Long> {
     Optional<CouponJpaEntity> findByCode(String code);
 
-    List<CouponJpaEntity> findByActiveTrue();
+    @Query("select c from CouponJpaEntity c "
+            + "where c.active = true "
+            + "and c.validFrom <= :now "
+            + "and c.validUntil >= :now "
+            + "and c.currentUses < c.maxUses")
+    List<CouponJpaEntity> findActiveAt(@Param("now") Instant now);
 
     /**
      * Atomically validates remaining capacity and increments {@code currentUses}.

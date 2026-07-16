@@ -1,4 +1,10 @@
-﻿import { IconAlertCircle, IconCircleCheck, IconPackage, IconSearch, IconTruck } from "@tabler/icons-react";
+import {
+  IconAlertCircle,
+  IconCircleCheck,
+  IconPackage,
+  IconSearch,
+  IconTruck,
+} from "@tabler/icons-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -18,11 +24,23 @@ import { ShipDialog } from "./ShipDialog";
 
 const STATUS_TABS = [
   { id: "all", match: () => true },
-  { id: "pending", match: (s: string) => s.toUpperCase().includes("PENDING") || (s.toUpperCase().includes("ACCEPT") && !s.toUpperCase().includes("ACCEPTED")) },
-  { id: "accepted", match: (s: string) => s.toUpperCase().includes("ACCEPTED") && !s.toUpperCase().includes("PACKED") },
+  {
+    id: "pending",
+    match: (s: string) =>
+      s.toUpperCase().includes("PENDING") ||
+      (s.toUpperCase().includes("ACCEPT") && !s.toUpperCase().includes("ACCEPTED")),
+  },
+  {
+    id: "accepted",
+    match: (s: string) =>
+      s.toUpperCase().includes("ACCEPTED") && !s.toUpperCase().includes("PACKED"),
+  },
   { id: "packed", match: (s: string) => s.toUpperCase().includes("PACKED") },
   { id: "shipped", match: (s: string) => s.toUpperCase().includes("SHIPPED") },
-  { id: "cancelled", match: (s: string) => s.toUpperCase().includes("CANCEL") || s.toUpperCase().includes("REJECT") },
+  {
+    id: "cancelled",
+    match: (s: string) => s.toUpperCase().includes("CANCEL") || s.toUpperCase().includes("REJECT"),
+  },
 ] as const;
 
 type TabId = (typeof STATUS_TABS)[number]["id"];
@@ -86,10 +104,7 @@ export function SellerOrders({
     return orders.filter((o) => {
       if (!tabMatcher(o.status)) return false;
       if (term.length === 0) return true;
-      return (
-        o.id.toLowerCase().includes(term) ||
-        String(o.orderId).toLowerCase().includes(term)
-      );
+      return o.id.toLowerCase().includes(term) || String(o.orderId).toLowerCase().includes(term);
     });
   }, [orders, tab, search]);
 
@@ -143,7 +158,11 @@ export function SellerOrders({
 
       {/* Tab pills + search */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        <div className="flex gap-1.5 overflow-x-auto pb-1" role="tablist" aria-label={t("seller.orders.title")}>
+        <div
+          className="flex gap-1.5 overflow-x-auto pb-1"
+          role="tablist"
+          aria-label={t("seller.orders.title")}
+        >
           {STATUS_TABS.map(({ id }) => (
             <button
               key={id}
@@ -185,7 +204,9 @@ export function SellerOrders({
             {t("seller.orders.loadError", { message: error.message })}
           </p>
           <p className="text-xs text-muted-foreground">
-            {t("seller.orders.loadErrorHint", { defaultValue: "This may be temporary. Try refreshing." })}
+            {t("seller.orders.loadErrorHint", {
+              defaultValue: "This may be temporary. Try refreshing.",
+            })}
           </p>
           {onRetry ? (
             <button
@@ -200,7 +221,11 @@ export function SellerOrders({
       ) : null}
       {!isLoading && orders.length === 0 && !error ? (
         <div className="bg-card border border-border rounded-[var(--radius-lg)] p-8 text-center">
-          <IconPackage size={40} className="mx-auto mb-3 text-muted-foreground" aria-hidden="true" />
+          <IconPackage
+            size={40}
+            className="mx-auto mb-3 text-muted-foreground"
+            aria-hidden="true"
+          />
           <p className="text-sm text-muted-foreground">{t("seller.orders.empty")}</p>
         </div>
       ) : null}
@@ -225,8 +250,12 @@ export function SellerOrders({
           <div className="divide-y divide-border">
             {filtered.map((order) => {
               const status = order.status.toUpperCase();
-              const isPending = status.includes("PENDING") || (status.includes("ACCEPT") && !status.includes("ACCEPTED"));
-              const isAccepted = status.includes("ACCEPTED") || (status.includes("PACK") && !status.includes("PACKED"));
+              const isPending =
+                status.includes("PENDING") ||
+                (status.includes("ACCEPT") && !status.includes("ACCEPTED"));
+              const isAccepted =
+                status.includes("ACCEPTED") ||
+                (status.includes("PACK") && !status.includes("PACKED"));
               return (
                 <div key={order.id} className="px-5 py-4 flex items-center justify-between gap-4">
                   <div>

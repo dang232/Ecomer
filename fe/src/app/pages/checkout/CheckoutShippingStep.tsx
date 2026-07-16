@@ -107,7 +107,12 @@ export function CheckoutShippingStep({
 
                 {/* Price */}
                 <div className="text-right shrink-0">
-                  <p className={["font-bold text-sm", method.fee === 0 ? "text-success" : "text-foreground"].join(" ")}>
+                  <p
+                    className={[
+                      "font-bold text-sm",
+                      method.fee === 0 ? "text-success" : "text-foreground",
+                    ].join(" ")}
+                  >
                     {method.fee === 0 ? t("checkout.shipping.free") : formatPrice(method.fee)}
                   </p>
                 </div>
@@ -118,10 +123,7 @@ export function CheckoutShippingStep({
       )}
 
       <div className="mt-5">
-        <label
-          htmlFor="checkout-note"
-          className="block text-sm font-semibold text-foreground mb-2"
-        >
+        <label htmlFor="checkout-note" className="block text-sm font-semibold text-foreground mb-2">
           {t("checkout.shipping.noteLabel")}
         </label>
         <textarea

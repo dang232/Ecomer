@@ -79,6 +79,19 @@ class CartCleared extends CartEvent {
   const CartCleared();
 }
 
+class CartCheckoutCompleted extends CartEvent {
+  final Set<String> cartItemIds;
+
+  const CartCheckoutCompleted(this.cartItemIds);
+
+  @override
+  List<Object?> get props => [cartItemIds];
+}
+
+class CartFailureDismissed extends CartEvent {
+  const CartFailureDismissed();
+}
+
 class CartSyncRequested extends CartEvent {
   const CartSyncRequested();
 }

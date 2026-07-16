@@ -29,6 +29,7 @@ public class SecurityConfig {
                 .addFilterBefore(webhookSignatureFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers("/payment/methods").permitAll()
                         // Payment-gateway callbacks (VNPay/MoMo IPN+return, Stripe webhook)
                         // cannot carry a JWT; their integrity is verified by signed payload
                         // + HMAC inside the controller. These specific paths must remain

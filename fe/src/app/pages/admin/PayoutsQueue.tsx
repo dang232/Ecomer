@@ -86,21 +86,19 @@ export function PayoutsQueue() {
   const activeList = activeQuery.data ?? [];
   const completeTarget =
     completeFor && tab === "pending"
-      ? pendingQuery.data?.find((p) => p.id === completeFor) ?? null
+      ? (pendingQuery.data?.find((p) => p.id === completeFor) ?? null)
       : null;
 
   // Completed rows sort on completedAt (when the payout actually settled),
   // pending rows on requestedAt (when the seller filed the request).
   const dateField = (p: AdminPayout) =>
-    tab === "completed" ? p.completedAt ?? p.requestedAt : p.requestedAt;
+    tab === "completed" ? (p.completedAt ?? p.requestedAt) : p.requestedAt;
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     if (term.length === 0) return activeList;
     return activeList.filter(
-      (p) =>
-        p.sellerId.toLowerCase().includes(term) ||
-        p.id.toLowerCase().includes(term),
+      (p) => p.sellerId.toLowerCase().includes(term) || p.id.toLowerCase().includes(term),
     );
   }, [activeList, search]);
 
@@ -137,8 +135,7 @@ export function PayoutsQueue() {
     }
   }
 
-  const isEmptyForTab =
-    !activeQuery.isLoading && activeList.length === 0;
+  const isEmptyForTab = !activeQuery.isLoading && activeList.length === 0;
   const emptyKey = tab === "pending" ? "admin.payouts.empty" : "admin.payouts.emptyCompleted";
 
   return (
@@ -384,15 +381,17 @@ function CompletedPayoutRow({ p }: { p: AdminPayout }) {
           {p.sellerName ?? t("admin.payouts.sellerLabel", { id: p.sellerId })}
         </p>
         <p className="text-xs text-muted-foreground">
-          {p.completedAt ? formatDate(p.completedAt) : p.requestedAt ? formatDate(p.requestedAt) : ""}
+          {p.completedAt
+            ? formatDate(p.completedAt)
+            : p.requestedAt
+              ? formatDate(p.requestedAt)
+              : ""}
         </p>
         <p className="text-xs text-emerald-600 font-medium mt-0.5">{completedLabel}</p>
       </div>
       {/* P2-8: settled/passed amount — positive tone, no line-through */}
       <div className="flex items-center gap-3 shrink-0">
-        <span className="font-bold text-base text-emerald-600">
-          {formatPrice(p.amount)}
-        </span>
+        <span className="font-bold text-base text-emerald-600">{formatPrice(p.amount)}</span>
       </div>
     </div>
   );

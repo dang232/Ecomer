@@ -230,20 +230,14 @@ class DioClient {
 /// Uses single-flight pattern to prevent concurrent refresh requests
 class AuthInterceptor extends Interceptor {
   AuthInterceptor({
-    required Dio dio,
-    required Future<String?> Function() getAccessToken,
-    required Future<String?> Function() getRefreshToken,
-    required Future<void> Function(String, String) saveTokens,
-    required Future<void> Function() clearTokens,
-    required void Function() onSessionExpired,
-    required Future<Map<String, String>> Function() getCsrfHeaders,
-  })  : _dio = dio,
-        _getAccessToken = getAccessToken,
-        _getRefreshToken = getRefreshToken,
-        _saveTokens = saveTokens,
-        _clearTokens = clearTokens,
-        _onSessionExpired = onSessionExpired,
-        _getCsrfHeaders = getCsrfHeaders;
+    required this._dio,
+    required this._getAccessToken,
+    required this._getRefreshToken,
+    required this._saveTokens,
+    required this._clearTokens,
+    required this._onSessionExpired,
+    required this._getCsrfHeaders,
+  });
 
   final Dio _dio;
   final Future<String?> Function() _getAccessToken;

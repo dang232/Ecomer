@@ -43,14 +43,14 @@ abstract class AuthLocalDataSource {
 /// Implementation of AuthLocalDataSource using flutter_secure_storage
 class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   AuthLocalDataSourceImpl({FlutterSecureStorage? secureStorage})
-      : _secureStorage = secureStorage ?? const FlutterSecureStorage(
-          aOptions: AndroidOptions(
-            encryptedSharedPreferences: true,
-          ),
-          iOptions: IOSOptions(
-            accessibility: KeychainAccessibility.first_unlock_this_device,
-          ),
-        );
+    : _secureStorage =
+          secureStorage ??
+          const FlutterSecureStorage(
+            aOptions: AndroidOptions(),
+            iOptions: IOSOptions(
+              accessibility: KeychainAccessibility.first_unlock_this_device,
+            ),
+          );
 
   final FlutterSecureStorage _secureStorage;
 
@@ -75,7 +75,9 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   @override
   Future<DateTime?> getTokenExpiry() async {
     try {
-      final expiryString = await _secureStorage.read(key: StorageKeys.tokenExpiry);
+      final expiryString = await _secureStorage.read(
+        key: StorageKeys.tokenExpiry,
+      );
       if (expiryString == null) return null;
       return DateTime.tryParse(expiryString);
     } catch (e) {
@@ -104,10 +106,7 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   }) async {
     try {
       await Future.wait([
-        _secureStorage.write(
-          key: StorageKeys.accessToken,
-          value: accessToken,
-        ),
+        _secureStorage.write(key: StorageKeys.accessToken, value: accessToken),
         _secureStorage.write(
           key: StorageKeys.refreshToken,
           value: refreshToken,
@@ -134,14 +133,8 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
         key: StorageKeys.userData,
         value: user.toJsonString(),
       );
-      await _secureStorage.write(
-        key: StorageKeys.userId,
-        value: user.id,
-      );
-      await _secureStorage.write(
-        key: StorageKeys.userEmail,
-        value: user.email,
-      );
+      await _secureStorage.write(key: StorageKeys.userId, value: user.id);
+      await _secureStorage.write(key: StorageKeys.userEmail, value: user.email);
     } catch (e) {
       throw CacheException(message: 'Không thể lưu user data: $e');
     }
@@ -204,8 +197,9 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
         accessToken: accessToken,
         refreshToken: refreshToken,
         accessTokenExpiry: expiry,
-        refreshTokenExpiry:
-            refreshExpiryStr != null ? DateTime.tryParse(refreshExpiryStr) : null,
+        refreshTokenExpiry: refreshExpiryStr != null
+            ? DateTime.tryParse(refreshExpiryStr)
+            : null,
       );
     } catch (e) {
       return null;

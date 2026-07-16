@@ -28,4 +28,14 @@ public abstract class BaseJpaEntity {
 
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
+
+    /**
+     * Keeps an audit timestamp when a domain object is converted back into a
+     * detached entity for an update. Spring Data uses merge for entities with
+     * assigned identifiers, so leaving createdAt unset would erase it before
+     * the managed entity is flushed.
+     */
+    protected void restoreCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
 }

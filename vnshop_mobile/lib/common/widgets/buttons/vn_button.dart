@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_spacing.dart';
+
 /// Nút bấm chung của VNShop với animation scale-on-press (0.96)
 /// Tuân thủ nguyên tắc make-interfaces-feel-better
 ///
@@ -60,11 +62,7 @@ class VnButton extends StatefulWidget {
   State<VnButton> createState() => _VnButtonState();
 }
 
-enum VnButtonType {
-  primary,
-  secondary,
-  text,
-}
+enum VnButtonType { primary, secondary, text }
 
 class _VnButtonState extends State<VnButton>
     with SingleTickerProviderStateMixin {
@@ -81,9 +79,7 @@ class _VnButtonState extends State<VnButton>
     _scaleAnimation = TweenSequence<double>([
       TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.96), weight: 50),
       TweenSequenceItem(tween: Tween(begin: 0.96, end: 1.0), weight: 50),
-    ]).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -114,10 +110,13 @@ class _VnButtonState extends State<VnButton>
     switch (widget.type) {
       case VnButtonType.secondary:
         return OutlinedButton.styleFrom(
-          minimumSize: Size(widget.isFullWidth ? double.infinity : 0, widget.height),
+          minimumSize: Size(
+            widget.isFullWidth ? double.infinity : 0,
+            widget.height,
+          ),
           padding: const EdgeInsets.symmetric(horizontal: 24),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: AppSpacing.borderRadiusSmall,
           ),
           side: BorderSide(
             color: widget.backgroundColor ?? theme.colorScheme.primary,
@@ -126,23 +125,28 @@ class _VnButtonState extends State<VnButton>
         );
       case VnButtonType.text:
         return TextButton.styleFrom(
-          minimumSize: Size(widget.isFullWidth ? double.infinity : 0, widget.height),
+          minimumSize: Size(
+            widget.isFullWidth ? double.infinity : 0,
+            widget.height,
+          ),
           padding: const EdgeInsets.symmetric(horizontal: 24),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: AppSpacing.borderRadiusSmall,
           ),
         );
       case VnButtonType.primary:
-      default:
         return ElevatedButton.styleFrom(
-          minimumSize: Size(widget.isFullWidth ? double.infinity : 0, widget.height),
+          minimumSize: Size(
+            widget.isFullWidth ? double.infinity : 0,
+            widget.height,
+          ),
           padding: const EdgeInsets.symmetric(horizontal: 24),
           backgroundColor: widget.backgroundColor,
           foregroundColor: widget.foregroundColor,
           disabledBackgroundColor: widget.disabledColor,
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: AppSpacing.borderRadiusSmall,
           ),
         );
     }
@@ -157,7 +161,6 @@ class _VnButtonState extends State<VnButton>
       case VnButtonType.text:
         return widget.backgroundColor ?? theme.colorScheme.primary;
       case VnButtonType.primary:
-      default:
         return theme.colorScheme.onPrimary;
     }
   }
@@ -175,19 +178,21 @@ class _VnButtonState extends State<VnButton>
     }
 
     if (widget.icon != null) {
+      final label = Text(
+        widget.label,
+        textAlign: TextAlign.center,
+        style: theme.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+          color: _getForegroundColor(theme),
+        ),
+      );
       return Row(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: widget.isFullWidth ? MainAxisSize.max : MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           widget.icon!,
           const SizedBox(width: 8),
-          Text(
-            widget.label,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: _getForegroundColor(theme),
-            ),
-          ),
+          if (widget.isFullWidth) Expanded(child: label) else label,
         ],
       );
     }
@@ -205,7 +210,6 @@ class _VnButtonState extends State<VnButton>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final buttonStyle = _getButtonStyle(theme);
-    final foregroundColor = _getForegroundColor(theme);
     final isDisabled = widget.onPressed == null || widget.isLoading;
 
     Widget button;
@@ -225,7 +229,6 @@ class _VnButtonState extends State<VnButton>
         );
         break;
       case VnButtonType.primary:
-      default:
         button = ElevatedButton(
           onPressed: isDisabled ? null : widget.onPressed,
           style: buttonStyle,
@@ -235,10 +238,8 @@ class _VnButtonState extends State<VnButton>
 
     return AnimatedBuilder(
       animation: _scaleAnimation,
-      builder: (context, child) => Transform.scale(
-        scale: _scaleAnimation.value,
-        child: child,
-      ),
+      builder: (context, child) =>
+          Transform.scale(scale: _scaleAnimation.value, child: child),
       child: GestureDetector(
         onTapDown: !isDisabled ? _onTapDown : null,
         onTapUp: !isDisabled ? _onTapUp : null,

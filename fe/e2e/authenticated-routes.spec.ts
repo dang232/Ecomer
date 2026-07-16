@@ -27,17 +27,17 @@ test.describe("authenticated routes", () => {
     await expect.poll(() => new URL(page.url()).pathname, { timeout: 15_000 }).toBe("/orders");
     // Either the orders list, the empty state, or an inline error renders —
     // any of them proves the route survived auth + the page mounted.
-    await expect(
-      page.getByRole("heading", { name: /orders|đơn hàng/i }).first(),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: /orders|đơn hàng/i }).first()).toBeVisible({
+      timeout: 15_000,
+    });
   });
 
   test("/wishlist renders for an authenticated buyer", async ({ page }) => {
     await page.goto("/wishlist");
     await expect.poll(() => new URL(page.url()).pathname, { timeout: 15_000 }).toBe("/wishlist");
-    await expect(
-      page.getByRole("heading", { name: /wishlist|yêu thích/i }).first(),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: /wishlist|yêu thích/i }).first()).toBeVisible({
+      timeout: 15_000,
+    });
   });
 
   test("/profile renders without bouncing to /login", async ({ page }) => {
@@ -65,6 +65,8 @@ test.describe("search", () => {
     await search.press("Enter");
 
     await expect.poll(() => page.url(), { timeout: 15_000 }).toMatch(/\/search/);
-    await expect.poll(() => page.url(), { timeout: 15_000 }).toContain(`q=${encodeURIComponent(term)}`);
+    await expect
+      .poll(() => page.url(), { timeout: 15_000 })
+      .toContain(`q=${encodeURIComponent(term)}`);
   });
 });

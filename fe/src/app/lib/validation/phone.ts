@@ -19,8 +19,7 @@ import {
 export const DEFAULT_COUNTRY: CountryCode = "VN";
 
 /** "VN" -> "+84". */
-export const dialCodeForCountry = (code: CountryCode): string =>
-  `+${getCountryCallingCode(code)}`;
+export const dialCodeForCountry = (code: CountryCode): string => `+${getCountryCallingCode(code)}`;
 
 /** Strip everything but digits from a partial input. */
 export const digitsOnly = (raw: string): string => raw.replace(/\D/g, "");

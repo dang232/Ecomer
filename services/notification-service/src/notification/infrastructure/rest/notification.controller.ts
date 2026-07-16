@@ -14,6 +14,7 @@ import { FindUserNotificationsUseCase } from '../../application/query/find-user-
 import { FindNotificationThreadsUseCase } from '../../application/query/find-notification-threads.use-case';
 import { FindThreadNotificationsUseCase } from '../../application/query/find-thread-notifications.use-case';
 import { CountUnreadUseCase } from '../../application/query/count-unread.use-case';
+import { GetNotificationUseCase } from '../../application/query/get-notification.use-case';
 import { MarkNotificationReadUseCase } from '../../application/command/mark-notification-read.use-case';
 import { MarkAllReadUseCase } from '../../application/command/mark-all-read.use-case';
 import { SendNotificationUseCase } from '../../application/command/send-notification.use-case';
@@ -35,6 +36,7 @@ export class NotificationRestController {
     private readonly findThreads: FindNotificationThreadsUseCase,
     private readonly findThreadNotifications: FindThreadNotificationsUseCase,
     private readonly countUnread: CountUnreadUseCase,
+    private readonly getNotification: GetNotificationUseCase,
     private readonly markRead: MarkNotificationReadUseCase,
     private readonly markAllRead: MarkAllReadUseCase,
     private readonly sendNotification: SendNotificationUseCase,
@@ -125,6 +127,15 @@ export class NotificationRestController {
     const userId = req.user.sub;
     const items = await this.findThreadNotifications.execute(threadId, userId);
     return items.map((n) => NotificationResponseDto.from(n));
+  }
+
+  @Get(':id')
+  async getNotificationById(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
+    const notification = await this.getNotification.execute(id, req.user.sub);
+    return NotificationResponseDto.from(notification);
   }
 
   @Post(':id/read')

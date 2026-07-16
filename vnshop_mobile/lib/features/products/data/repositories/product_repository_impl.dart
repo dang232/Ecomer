@@ -3,6 +3,7 @@ import '../datasources/product_local_datasource.dart';
 import '../datasources/product_remote_datasource.dart';
 import '../models/product_model.dart';
 import '../models/category_model.dart';
+import '../../domain/models/product_catalog_query.dart';
 
 class ProductRepositoryImpl implements ProductRepository {
   final ProductRemoteDataSource remoteDataSource;
@@ -19,26 +20,23 @@ class ProductRepositoryImpl implements ProductRepository {
     int limit = 20,
     String? categoryId,
     String? searchQuery,
+    ProductCatalogFilters filters = const ProductCatalogFilters(),
+    ProductSort sort = ProductSort.newest,
     bool forceRefresh = false,
   }) async {
     try {
-      if (!forceRefresh && page == 1 && await localDataSource.isCacheValid()) {
+      final canUseUnfilteredCache =
+          !forceRefresh &&
+          page == 1 &&
+          (categoryId == null || categoryId.isEmpty) &&
+          (searchQuery == null || searchQuery.isEmpty) &&
+          !filters.hasActiveFilters &&
+          sort == ProductSort.newest;
+      if (canUseUnfilteredCache && await localDataSource.isCacheValid()) {
         final cachedProducts = await localDataSource.getCachedProducts();
-        
-        List<ProductModel> filtered = cachedProducts;
-        if (categoryId != null && categoryId.isNotEmpty) {
-          filtered = filtered.where((p) => p.categoryId == categoryId).toList();
-        }
-        if (searchQuery != null && searchQuery.isNotEmpty) {
-          final query = searchQuery.toLowerCase();
-          filtered = filtered.where((p) =>
-            p.name.toLowerCase().contains(query) ||
-            p.description.toLowerCase().contains(query)
-          ).toList();
-        }
-        
-        if (filtered.isNotEmpty) {
-          return filtered;
+
+        if (cachedProducts.isNotEmpty) {
+          return cachedProducts;
         }
       }
 
@@ -47,15 +45,21 @@ class ProductRepositoryImpl implements ProductRepository {
         limit: limit,
         categoryId: categoryId,
         searchQuery: searchQuery,
+        filters: filters,
+        sort: sort,
       );
 
-      if (page == 1) {
+      if (canUseUnfilteredCache) {
         await localDataSource.cacheProducts(products);
       }
 
       return products;
     } catch (e) {
-      if (page == 1) {
+      if (page == 1 &&
+          (categoryId == null || categoryId.isEmpty) &&
+          (searchQuery == null || searchQuery.isEmpty) &&
+          !filters.hasActiveFilters &&
+          sort == ProductSort.newest) {
         final cachedProducts = await localDataSource.getCachedProducts();
         if (cachedProducts.isNotEmpty) {
           return cachedProducts;
@@ -108,7 +112,9 @@ class ProductRepositoryImpl implements ProductRepository {
   }
 
   @override
-  Future<List<ProductModel>> getFeaturedProducts({bool forceRefresh = false}) async {
+  Future<List<ProductModel>> getFeaturedProducts({
+    bool forceRefresh = false,
+  }) async {
     try {
       return await remoteDataSource.getFeaturedProducts();
     } catch (e) {
@@ -124,10 +130,13 @@ class ProductRepositoryImpl implements ProductRepository {
     } catch (e) {
       final cachedProducts = await localDataSource.getCachedProducts();
       final queryLower = query.toLowerCase();
-      return cachedProducts.where((p) =>
-        p.name.toLowerCase().contains(queryLower) ||
-        p.description.toLowerCase().contains(queryLower)
-      ).toList();
+      return cachedProducts
+          .where(
+            (p) =>
+                p.name.toLowerCase().contains(queryLower) ||
+                p.description.toLowerCase().contains(queryLower),
+          )
+          .toList();
     }
   }
 

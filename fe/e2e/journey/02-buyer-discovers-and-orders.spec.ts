@@ -11,10 +11,7 @@ import {
   stopTrace,
 } from "./_journey-evidence";
 import { logoutViaUserMenu } from "../_workday-evidence";
-import {
-  requireJourneyState,
-  writeJourneyState,
-} from "./_journey-state";
+import { requireJourneyState, writeJourneyState } from "./_journey-state";
 
 /**
  * Chapter 2 — Buyer discovers and orders.
@@ -67,8 +64,7 @@ test.describe.serial("Chapter 2 — Buyer discovers and orders", () => {
       acceptanceCriteria: [
         {
           code: "AC-2.1",
-          outcome:
-            "A new visitor can register and start shopping in a single browser session",
+          outcome: "A new visitor can register and start shopping in a single browser session",
         },
         {
           code: "AC-2.2",
@@ -135,7 +131,7 @@ test.describe.serial("Chapter 2 — Buyer discovers and orders", () => {
         async () => {
           await page.goto("/");
           await expect(
-            page.getByRole("button", { name: /^(Log in|Đăng nhập)$/i }).first(),
+            page.getByRole("link", { name: /^(Log in|Đăng nhập)$/i }).first(),
           ).toBeVisible({ timeout: 20_000 });
           await expectNoGlobalError(page);
         },
@@ -156,9 +152,7 @@ test.describe.serial("Chapter 2 — Buyer discovers and orders", () => {
           await page.locator("#email").fill(buyerEmail);
           await page.locator("#password").fill(PASSWORD);
           await page.locator("#confirm").fill(PASSWORD);
-          await page
-            .getByRole("button", { name: /create account|tạo tài khoản/i })
-            .click();
+          await page.getByRole("button", { name: /create account|tạo tài khoản/i }).click();
           await expect
             .poll(() => new URL(page.url()).pathname, {
               timeout: 30_000,
@@ -166,7 +160,7 @@ test.describe.serial("Chapter 2 — Buyer discovers and orders", () => {
             })
             .toBe("/");
           await expect(
-            page.getByRole("button", { name: /^(Log in|Đăng nhập)$/i }).first(),
+            page.getByRole("link", { name: /^(Log in|Đăng nhập)$/i }).first(),
           ).toHaveCount(0, { timeout: 10_000 });
         },
       );
@@ -237,8 +231,7 @@ test.describe.serial("Chapter 2 — Buyer discovers and orders", () => {
                 );
                 if (!r.ok()) return [];
                 const body = await r.json();
-                const ids: string[] =
-                  body?.data?.content?.map((p: { id: string }) => p.id) ?? [];
+                const ids: string[] = body?.data?.content?.map((p: { id: string }) => p.id) ?? [];
                 return ids;
               },
               {
@@ -264,10 +257,7 @@ test.describe.serial("Chapter 2 — Buyer discovers and orders", () => {
           const login = await page.request.post(`${apiURL}/auth/login`, {
             data: { username: buyerEmail, password: PASSWORD },
           });
-          expect(
-            login.ok(),
-            `auth/login for ${buyerEmail}: ${login.status()}`,
-          ).toBeTruthy();
+          expect(login.ok(), `auth/login for ${buyerEmail}: ${login.status()}`).toBeTruthy();
           const accessToken = (await login.json())?.data?.accessToken;
           await page.request.post(`${apiURL}/users/me/addresses`, {
             headers: { Authorization: `Bearer ${accessToken}` },
@@ -282,9 +272,7 @@ test.describe.serial("Chapter 2 — Buyer discovers and orders", () => {
 
           await page.goto("/checkout");
           await expect(
-            page
-              .getByText(/Choose a delivery address|Chọn địa chỉ giao hàng/i)
-              .first(),
+            page.getByText(/Choose a delivery address|Chọn địa chỉ giao hàng/i).first(),
           ).toBeVisible({ timeout: 20_000 });
           await expectNoGlobalError(page);
         },
@@ -310,10 +298,7 @@ test.describe.serial("Chapter 2 — Buyer discovers and orders", () => {
         "AC-2.2",
         "Coupon applies and the discount line drops the total by exactly the published amount",
         async () => {
-          const state = await requireJourneyState([
-            "couponCode",
-            "couponDiscountVnd",
-          ]);
+          const state = await requireJourneyState(["couponCode", "couponDiscountVnd"]);
           // The picker is collapsed by default; opening it reveals the code
           // input. Either path (toggle picker or directly typing) reaches the
           // same input via its stable id.
@@ -322,16 +307,14 @@ test.describe.serial("Chapter 2 — Buyer discovers and orders", () => {
           });
           if (await tag.isVisible().catch(() => false)) await tag.click();
           await page.locator("#checkout-coupon-input").fill(state.couponCode);
-          await page
-            .getByRole("button", { name: /^(Apply|Áp dụng)$/i })
-            .click();
+          await page.getByRole("button", { name: /^(Apply|Áp dụng)$/i }).click();
 
           // Applied-toast: i18n carries `Applied: {{code}}` (EN) /
           // `🎉 Applied: {{code}}` (EN inline) / Vietnamese variant. Match
           // the literal code which is unambiguous.
-          await expect(
-            page.getByText(state.couponCode, { exact: false }).first(),
-          ).toBeVisible({ timeout: 10_000 });
+          await expect(page.getByText(state.couponCode, { exact: false }).first()).toBeVisible({
+            timeout: 10_000,
+          });
 
           // Discount line carries a negative VND amount. Wait for the
           // recalculated total to land, then compare.
@@ -386,13 +369,9 @@ test.describe.serial("Chapter 2 — Buyer discovers and orders", () => {
               paymentMethod: "COD",
             },
           });
-          expect(
-            place.ok(),
-            `place order: ${place.status()} ${await place.text()}`,
-          ).toBeTruthy();
+          expect(place.ok(), `place order: ${place.status()} ${await place.text()}`).toBeTruthy();
           const placeBody = await place.json();
-          placedOrderId =
-            placeBody?.data?.id ?? placeBody?.data?.orderId ?? "";
+          placedOrderId = placeBody?.data?.id ?? placeBody?.data?.orderId ?? "";
           expect(placedOrderId, "no orderId on place response").toBeTruthy();
 
           // CQRS lag tolerance: poll the list endpoint until our order id
@@ -400,10 +379,9 @@ test.describe.serial("Chapter 2 — Buyer discovers and orders", () => {
           await expect
             .poll(
               async () => {
-                const list = await page.request.get(
-                  `${apiURL}/orders?size=10`,
-                  { headers: { Authorization: `Bearer ${accessToken}` } },
-                );
+                const list = await page.request.get(`${apiURL}/orders?size=10`, {
+                  headers: { Authorization: `Bearer ${accessToken}` },
+                });
                 if (!list.ok()) return false;
                 const ids = ((await list.json())?.data?.content ?? []).map(
                   (o: { id?: string; orderId?: string }) => o.id ?? o.orderId,
@@ -412,8 +390,7 @@ test.describe.serial("Chapter 2 — Buyer discovers and orders", () => {
               },
               {
                 timeout: 30_000,
-                message:
-                  "placed order never appeared in /orders projection within 30 s",
+                message: "placed order never appeared in /orders projection within 30 s",
               },
             )
             .toBe(true);
@@ -429,9 +406,7 @@ test.describe.serial("Chapter 2 — Buyer discovers and orders", () => {
           await page.goto("/orders");
           await expect(
             page
-              .getByText(
-                /Mã đơn|Order ID|Đăng nhập để xem đơn hàng|Log in to view your orders/i,
-              )
+              .getByText(/Mã đơn|Order ID|Đăng nhập để xem đơn hàng|Log in to view your orders/i)
               .first(),
           ).toBeVisible({ timeout: 20_000 });
 

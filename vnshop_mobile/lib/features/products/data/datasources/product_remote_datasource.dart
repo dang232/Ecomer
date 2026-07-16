@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:vnshop_mobile/core/config/env_config.dart';
+import '../../domain/models/product_catalog_query.dart';
 import '../models/product_model.dart';
 import '../models/category_model.dart';
 
@@ -9,6 +10,8 @@ abstract class ProductRemoteDataSource {
     int limit = 20,
     String? categoryId,
     String? searchQuery,
+    ProductCatalogFilters filters = const ProductCatalogFilters(),
+    ProductSort sort = ProductSort.newest,
   });
   Future<ProductModel> getProductById(String id);
   Future<List<CategoryModel>> getCategories();
@@ -19,11 +22,19 @@ abstract class ProductRemoteDataSource {
 
 class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
   final Dio dio;
-  late final String baseUrl;
+  final String baseUrl;
+  final String searchBaseUrl;
 
-  ProductRemoteDataSourceImpl({required this.dio}) {
-    baseUrl = '${EnvConfig.apiBaseUrl}/products';
-  }
+  ProductRemoteDataSourceImpl({
+    required this.dio,
+    String? baseUrl,
+    String? searchBaseUrl,
+  }) : baseUrl = baseUrl ?? '${EnvConfig.apiBaseUrl}/products',
+       searchBaseUrl =
+           searchBaseUrl ??
+           (baseUrl?.endsWith('/products') == true
+               ? '${baseUrl!.substring(0, baseUrl.length - '/products'.length)}/search'
+               : '${EnvConfig.apiBaseUrl}/search');
 
   List<ProductModel> _parseProducts(dynamic data) {
     if (data == null) return [];
@@ -43,12 +54,12 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
         }
         return _parseProductList(inner);
       }
-      
+
       // Direct content array
       if (data.containsKey('content')) {
         return _parseProductList(data['content']);
       }
-      
+
       // Fallback: try to parse as direct product
       if (data.containsKey('id')) {
         return [ProductModel.fromJson(data)];
@@ -66,7 +77,7 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
   List<ProductModel> _parseProductList(dynamic list) {
     if (list == null) return [];
     if (list is! List) return [];
-    
+
     return list
         .whereType<Map<String, dynamic>>()
         .map((item) => ProductModel.fromJson(item))
@@ -77,7 +88,9 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
     if (data == null) return [];
 
     if (data is List) {
-      return data.map((item) => CategoryModel.fromJson(item as Map<String, dynamic>)).toList();
+      return data
+          .map((item) => CategoryModel.fromJson(item as Map<String, dynamic>))
+          .toList();
     }
 
     if (data is Map<String, dynamic>) {
@@ -86,17 +99,19 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
         final inner = data['data'];
         if (inner is Map<String, dynamic> && inner.containsKey('content')) {
           return (inner['content'] as List)
-              .map((item) => CategoryModel.fromJson(item as Map<String, dynamic>))
+              .map(
+                (item) => CategoryModel.fromJson(item as Map<String, dynamic>),
+              )
               .toList();
         }
       }
-      
+
       if (data.containsKey('content')) {
         return (data['content'] as List)
             .map((item) => CategoryModel.fromJson(item as Map<String, dynamic>))
             .toList();
       }
-      
+
       if (data.containsKey('categories')) {
         return (data['categories'] as List)
             .map((item) => CategoryModel.fromJson(item as Map<String, dynamic>))
@@ -113,23 +128,38 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
     int limit = 20,
     String? categoryId,
     String? searchQuery,
+    ProductCatalogFilters filters = const ProductCatalogFilters(),
+    ProductSort sort = ProductSort.newest,
   }) async {
     try {
       final queryParams = <String, dynamic>{
-        'page': page,
+        'page': page > 0 ? page - 1 : 0,
         'size': limit,
+        'sort': sort.apiValue,
       };
 
-      if (categoryId != null && categoryId.isNotEmpty) {
-        queryParams['categoryId'] = categoryId;
+      final normalizedCategory = categoryId?.trim();
+      if (normalizedCategory != null && normalizedCategory.isNotEmpty) {
+        queryParams['category'] = normalizedCategory;
       }
 
-      if (searchQuery != null && searchQuery.isNotEmpty) {
-        queryParams['search'] = searchQuery;
+      final normalizedSearch = searchQuery?.trim();
+      if (normalizedSearch != null && normalizedSearch.isNotEmpty) {
+        queryParams['q'] = normalizedSearch;
       }
+
+      if (filters.minPrice != null) {
+        queryParams['minPrice'] = filters.minPrice;
+      }
+      if (filters.maxPrice != null) {
+        queryParams['maxPrice'] = filters.maxPrice;
+      }
+      if (filters.sameDayOnly) queryParams['sameDay'] = true;
+      if (filters.verifiedOnly) queryParams['verifiedOnly'] = true;
+      if (filters.officialOnly) queryParams['officialOnly'] = true;
 
       final response = await dio.get(
-        baseUrl,
+        searchBaseUrl,
         queryParameters: queryParams,
       );
 
@@ -149,7 +179,9 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
       final response = await dio.get('$baseUrl/$id');
 
       if (response.statusCode == 200) {
-        return ProductModel.fromJson(response.data);
+        return ProductModel.fromBackendJson(
+          Map<String, dynamic>.from(response.data as Map),
+        );
       }
 
       throw Exception('Không tìm thấy sản phẩm');
@@ -211,20 +243,7 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
 
   @override
   Future<List<ProductModel>> searchProducts(String query) async {
-    try {
-      final response = await dio.get(
-        baseUrl,
-        queryParameters: {'search': query, 'size': 20},
-      );
-
-      if (response.statusCode == 200) {
-        return _parseProducts(response.data);
-      }
-
-      return [];
-    } on DioException catch (e) {
-      throw _handleError(e);
-    }
+    return getProducts(searchQuery: query);
   }
 
   Exception _handleError(DioException e) {

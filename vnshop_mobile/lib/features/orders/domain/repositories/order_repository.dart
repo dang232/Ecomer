@@ -1,8 +1,9 @@
 import '../../data/models/order_model.dart';
+import '../../data/models/order_page_result.dart';
 
 abstract class OrderRepository {
   /// Lấy danh sách đơn hàng với caching
-  Future<List<OrderModel>> getOrders({
+  Future<OrderPageResult> getOrders({
     int page = 1,
     int limit = 20,
     OrderStatus? status,

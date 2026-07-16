@@ -6,6 +6,8 @@ import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'app/app.dart';
+import 'app/bootstrap/app_dependencies.dart';
+import 'app/bootstrap/app_initializer.dart';
 import 'core/config/env_config.dart';
 import 'core/auth/session_controller.dart';
 import 'core/notifications/onesignal_handler.dart';
@@ -54,7 +56,14 @@ Future<void> main() async {
     },
   );
 
-  runApp(VnShopApp(sessionController: sessionController));
+  final dependencies = AppDependencies.production(
+    authLocalDataSource: authLocalDataSource,
+  );
+  await AppInitializer.production().initialize();
+
+  runApp(
+    VnShopApp(sessionController: sessionController, dependencies: dependencies),
+  );
 }
 
 Future<void> _initializeOneSignal() async {

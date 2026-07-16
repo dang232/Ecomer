@@ -34,7 +34,8 @@ export function CartPage() {
   const navigate = useNavigate();
   const { ready, authenticated, login } = useAuth();
   const config = useAppConfig();
-  const { items, itemCount, totalAmount, isLoading, isHydrating, error, updateItem, removeItem } = useCart();
+  const { items, itemCount, totalAmount, isLoading, isHydrating, error, updateItem, removeItem } =
+    useCart();
   const [coupon, setCoupon] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [couponDiscount, setCouponDiscount] = useState(0);
@@ -191,8 +192,12 @@ export function CartPage() {
     <div className="max-w-[1200px] mx-auto py-8 px-[var(--content-padding)]">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <h1 className="text-2xl font-bold text-foreground">{t("cart.title", { defaultValue: "Shopping Cart" })}</h1>
-        <span className="text-sm text-text-secondary">{t("cart.itemCountLabel", { count: itemCount, defaultValue: `${itemCount} items` })}</span>
+        <h1 className="text-2xl font-bold text-foreground">
+          {t("cart.title", { defaultValue: "Shopping Cart" })}
+        </h1>
+        <span className="text-sm text-text-secondary">
+          {t("cart.itemCountLabel", { count: itemCount, defaultValue: `${itemCount} items` })}
+        </span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 items-start">
@@ -250,7 +255,9 @@ export function CartPage() {
                           {formatPrice(item.price * item.quantity)}
                         </span>
                       ) : (
-                        <span className="text-xs text-muted-foreground">{t("cart.priceUnavailable")}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {t("cart.priceUnavailable")}
+                        </span>
                       )}
                     </div>
 
@@ -259,7 +266,9 @@ export function CartPage() {
                       {/* Quantity stepper */}
                       <div className="flex items-center border-[1.5px] border-border rounded-[var(--radius-md)] overflow-hidden">
                         <button
-                          onClick={() => onUpdate(item.productId, item.quantity - 1, item.variantId)}
+                          onClick={() =>
+                            onUpdate(item.productId, item.quantity - 1, item.variantId)
+                          }
                           aria-label="Decrease quantity"
                           className="w-[30px] h-[30px] flex items-center justify-center hover:bg-surface-elevated hover:text-primary transition-colors"
                         >
@@ -269,7 +278,9 @@ export function CartPage() {
                           {item.quantity}
                         </span>
                         <button
-                          onClick={() => onUpdate(item.productId, item.quantity + 1, item.variantId)}
+                          onClick={() =>
+                            onUpdate(item.productId, item.quantity + 1, item.variantId)
+                          }
                           aria-label="Increase quantity"
                           className="w-[30px] h-[30px] flex items-center justify-center hover:bg-surface-elevated hover:text-primary transition-colors"
                         >
@@ -315,7 +326,9 @@ export function CartPage() {
           {/* Summary rows */}
           <div>
             <div className="flex justify-between py-2.5 text-sm">
-              <span className="text-muted-foreground">{t("cart.subtotal", { count: itemCount })}</span>
+              <span className="text-muted-foreground">
+                {t("cart.subtotal", { count: itemCount })}
+              </span>
               <span className="font-semibold">{formatPrice(totalAmount)}</span>
             </div>
 
@@ -368,9 +381,7 @@ export function CartPage() {
 
           {/* Coupon status */}
           <div aria-live="polite" aria-atomic="true">
-            {couponError ? (
-              <p className="text-xs text-error mt-1.5">{couponError}</p>
-            ) : null}
+            {couponError ? <p className="text-xs text-error mt-1.5">{couponError}</p> : null}
             {appliedCoupon ? (
               <div className="mt-2 flex items-center justify-between px-3 py-2 rounded-[var(--radius-md)] text-sm bg-primary-light">
                 <span className="text-primary">
@@ -432,7 +443,9 @@ export function CartPage() {
           <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-border">
             <div className="text-xs text-text-secondary flex items-center gap-1.5">
               <ShieldCheck size={14} className="text-success" />
-              {t("cart.guarantee.buyerProtection", { defaultValue: "Buyer protection on all orders" })}
+              {t("cart.guarantee.buyerProtection", {
+                defaultValue: "Buyer protection on all orders",
+              })}
             </div>
             <div className="text-xs text-text-secondary flex items-center gap-1.5">
               <RefreshCw size={14} className="text-success" />
@@ -440,7 +453,9 @@ export function CartPage() {
             </div>
             <div className="text-xs text-text-secondary flex items-center gap-1.5">
               <CreditCard size={14} className="text-success" />
-              {t("cart.guarantee.securePayment", { defaultValue: "Secure payment via VNPay, MoMo, Stripe" })}
+              {t("cart.guarantee.securePayment", {
+                defaultValue: "Secure payment via VNPay, MoMo, Stripe",
+              })}
             </div>
           </div>
         </div>

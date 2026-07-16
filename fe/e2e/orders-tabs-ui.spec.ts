@@ -38,10 +38,7 @@ async function seedBuyer(request: APIRequestContext): Promise<SeededBuyer> {
   return { email, accessToken };
 }
 
-async function placePendingOrder(
-  request: APIRequestContext,
-  buyer: SeededBuyer,
-): Promise<string> {
+async function placePendingOrder(request: APIRequestContext, buyer: SeededBuyer): Promise<string> {
   const headers = { Authorization: `Bearer ${buyer.accessToken}` };
   const products = await request.get(`${apiURL}/products?size=1`);
   const productId = (await products.json())?.data?.content?.[0]?.id;
@@ -88,7 +85,6 @@ async function placePendingOrder(
   return orderId;
 }
 
-
 test.describe("orders tab filter UI", () => {
   test("All tab and Pending tab both show the freshly placed order", async ({ page }) => {
     const buyer = await seedBuyer(page.request);
@@ -96,9 +92,7 @@ test.describe("orders tab filter UI", () => {
     const idShort = orderId.slice(0, 8);
 
     await page.goto("/orders");
-    await expect(
-      page.getByText(/Order ID|Mã đơn/i).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/Order ID|Mã đơn/i).first()).toBeVisible({ timeout: 20_000 });
 
     // Default "All" tab — order is visible.
     await expect(page.locator("div", { hasText: idShort }).first()).toBeVisible({
@@ -114,16 +108,12 @@ test.describe("orders tab filter UI", () => {
     await expectNoGlobalError(page);
   });
 
-  test("Delivered tab shows empty state when buyer has only pending orders", async ({
-    page,
-  }) => {
+  test("Delivered tab shows empty state when buyer has only pending orders", async ({ page }) => {
     const buyer = await seedBuyer(page.request);
     await placePendingOrder(page.request, buyer);
 
     await page.goto("/orders");
-    await expect(
-      page.getByText(/Order ID|Mã đơn/i).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/Order ID|Mã đơn/i).first()).toBeVisible({ timeout: 20_000 });
 
     // Click "Delivered" — buyer's only order is pending, so this filter
     // hides it. The empty-state copy renders OR the tab body is empty.
@@ -132,9 +122,9 @@ test.describe("orders tab filter UI", () => {
     // After tab switch, the empty-state copy should appear. The page uses
     // "No orders to show" / "Không có đơn hàng nào" for the empty filtered
     // state.
-    await expect(
-      page.getByText(/No orders to show|Không có đơn hàng nào/i).first(),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/No orders to show|Không có đơn hàng nào/i).first()).toBeVisible({
+      timeout: 10_000,
+    });
 
     await expectNoGlobalError(page);
   });

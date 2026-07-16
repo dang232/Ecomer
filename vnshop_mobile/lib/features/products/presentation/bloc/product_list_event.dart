@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../domain/models/product_catalog_query.dart';
 
 abstract class ProductListEvent extends Equatable {
   const ProductListEvent();
@@ -48,4 +49,22 @@ class LoadCategories extends ProductListEvent {
 
 class RefreshProducts extends ProductListEvent {
   const RefreshProducts();
+}
+
+class ApplyProductFilters extends ProductListEvent {
+  const ApplyProductFilters(this.filters);
+
+  final ProductCatalogFilters filters;
+
+  @override
+  List<Object?> get props => [filters];
+}
+
+class ChangeProductSort extends ProductListEvent {
+  const ChangeProductSort(this.sort);
+
+  final ProductSort sort;
+
+  @override
+  List<Object?> get props => [sort];
 }

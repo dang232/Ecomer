@@ -80,14 +80,16 @@ export function useWishlist() {
         // Keep failed items in localStorage so they can be retried next session.
         try {
           localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(failedIds));
-        } catch { /* ignore */ }
-        toast.error(
-          t("wishlist.migrationFailed", { count: failedIds.length }),
-        );
+        } catch {
+          /* ignore */
+        }
+        toast.error(t("wishlist.migrationFailed", { count: failedIds.length }));
       } else {
         try {
           localStorage.removeItem(LEGACY_STORAGE_KEY);
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
       void qc.invalidateQueries({ queryKey: WISHLIST_KEY });
     })();

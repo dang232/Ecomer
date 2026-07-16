@@ -92,13 +92,40 @@ async function main() {
       },
       body: JSON.stringify(body),
     });
-    if (res.ok) {
-      console.log(`  + ${name}`);
-      ok++;
-    } else {
-      console.error(`  ! ${name}: ${res.status} ${await res.text()}`);
+    const responseText = await res.text();
+    if (!res.ok) {
+      console.error(`  ! ${name}: ${res.status} ${responseText}`);
       fail++;
+      continue;
     }
+
+    let created;
+    try {
+      created = JSON.parse(responseText);
+    } catch {
+      console.error(`  ! ${name}: create response was not valid JSON`);
+      fail++;
+      continue;
+    }
+    const productId = created?.data?.id;
+    if (!productId) {
+      console.error(`  ! ${name}: create response did not include a product id`);
+      fail++;
+      continue;
+    }
+
+    const publishRes = await fetch(`${GATEWAY}/sellers/me/products/${productId}/publish`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!publishRes.ok) {
+      console.error(`  ! ${name}: publish failed: ${publishRes.status} ${await publishRes.text()}`);
+      fail++;
+      continue;
+    }
+
+    console.log(`  + ${name}`);
+    ok++;
   }
 
   const after = await fetch(`${GATEWAY}/products?size=1`).then((r) => r.json());

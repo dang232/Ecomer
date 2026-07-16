@@ -14,7 +14,7 @@ function SellerProductCard({ product }: { product: ProductSummary }) {
   const image =
     typeof product.images?.[0] === "string"
       ? product.images[0]
-      : (product.images?.[0] as { url?: string } | undefined)?.url ?? product.image ?? "";
+      : ((product.images?.[0] as { url?: string } | undefined)?.url ?? product.image ?? "");
 
   return (
     <div
@@ -91,7 +91,10 @@ export function SellerDetailPage() {
         style={
           seller.bannerUrl
             ? undefined
-            : { background: "linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-deep) 50%, var(--primary) 100%)" }
+            : {
+                background:
+                  "linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-deep) 50%, var(--primary) 100%)",
+              }
         }
       >
         {seller.bannerUrl ? (
@@ -109,11 +112,22 @@ export function SellerDetailPage() {
           {/* Logo */}
           <div className="w-24 h-24 rounded-2xl border-4 border-white shadow-md overflow-hidden shrink-0 bg-muted flex items-center justify-center -mt-8">
             {seller.logoUrl ? (
-              <img src={seller.logoUrl} alt={seller.shopName} className="w-full h-full object-cover" />
+              <img
+                src={seller.logoUrl}
+                alt={seller.shopName}
+                className="w-full h-full object-cover"
+              />
             ) : (
               <span
                 className="text-3xl font-black text-white"
-                style={{ background: "var(--primary)", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}
+                style={{
+                  background: "var(--primary)",
+                  width: "100%",
+                  height: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
                 {initial}
               </span>
@@ -131,7 +145,9 @@ export function SellerDetailPage() {
               </h1>
               <span
                 className="px-2 py-0.5 rounded-full text-xs font-semibold text-white shrink-0"
-                style={{ background: seller.tier === "PREMIUM" ? "var(--warning)" : "var(--primary)" }}
+                style={{
+                  background: seller.tier === "PREMIUM" ? "var(--warning)" : "var(--primary)",
+                }}
               >
                 {seller.tier}
               </span>
@@ -140,7 +156,9 @@ export function SellerDetailPage() {
               {seller.ratingAvg !== null && seller.ratingAvg !== undefined ? (
                 <span className="flex items-center gap-1">
                   <IconStar size={13} fill="var(--accent)" color="var(--accent)" />
-                  <span className="font-semibold text-foreground">{seller.ratingAvg.toFixed(1)}</span>
+                  <span className="font-semibold text-foreground">
+                    {seller.ratingAvg.toFixed(1)}
+                  </span>
                   <span>({t("sellerDetail.ratingsLabel", { count: seller.ratingCount })})</span>
                 </span>
               ) : null}
