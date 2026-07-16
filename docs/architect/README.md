@@ -11,6 +11,7 @@ VNShop is a Vietnamese e-commerce platform built on a microservices backbone. Th
 | File | What it covers |
 |------|----------------|
 | [SYSTEM-ARCHITECTURE.md](SYSTEM-ARCHITECTURE.md) | Full service map, ports, infrastructure, communication patterns, DDD hexagonal layout, deployment topology |
+| [UI-ARCHITECTURE-OVERHAUL.md](UI-ARCHITECTURE-OVERHAUL.md) | React and Flutter UI architecture, state ownership, design-system rules, migrated slices, and remaining work |
 | [WHAT-WE-DID.md](WHAT-WE-DID.md) | Chronological work log pt27 through pt48 — what changed, when, and why |
 | [SECURITY-AUDIT.md](SECURITY-AUDIT.md) | OWASP Top 10 audit findings (50 total), Phase 1 + 2 fixes, and remaining open items |
 | [TRADE-OFFS.md](TRADE-OFFS.md) | Documented architectural decisions with rationale and known downsides |
