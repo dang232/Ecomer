@@ -474,12 +474,10 @@
   "browserFlow": "browser-conditional-otp",
   "registrationFlow": "registration",
   "directGrantFlow": "direct grant",
-  "identityProviderMappings": [],
   "identityProviders": [
     {
       "alias": "google",
       "providerId": "google",
-      "name": "Google",
         "enabled": false,
       "displayName": "Google",
       "trustEmail": true,
@@ -495,7 +493,6 @@
     {
       "alias": "facebook",
       "providerId": "facebook",
-      "name": "Facebook",
         "enabled": false,
       "displayName": "Facebook",
       "trustEmail": false,
