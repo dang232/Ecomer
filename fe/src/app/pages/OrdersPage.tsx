@@ -590,7 +590,10 @@ const OrderCard = memo(function OrderCard({
         onConfirm={() => {
           if (cancelId) onCancel(cancelId);
         }}
-        title={t("orders.cancelDialog.title", { defaultValue: "Cancel order?" })}
+        title={t("orders.cancelDialog.title", {
+          id: cancelId ? cancelId.slice(0, 8).toUpperCase() : "",
+          defaultValue: "Cancel order #{{id}}?",
+        })}
         description={t("orders.cancelDialog.description", {
           defaultValue: "This will cancel your order. You won't be able to undo this.",
         })}
