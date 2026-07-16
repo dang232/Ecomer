@@ -53,7 +53,7 @@
   },
   "build": {
     "buildCommand": "cd \"C:\\Users\\dangq\\OneDrive\\Documents\\GitHub\\Full-Stack-E-commerce\\fe\" && pnpm build 2>&1 | tail -15",
-    "testCommand": "cd \"C:\\Users\\dangq\\OneDrive\\Documents\\GitHub\\Full-Stack-E-commerce\\fe\" && pnpm lint 2>&1 | tail -3 && echo \"---\" && pnpm test -- --run 2>&1 | tail -10",
+    "testCommand": "cd \"C:\\Users\\dangq\\OneDrive\\Documents\\GitHub\\Full-Stack-E-commerce\\fe\" && npx vitest run src/app/pages/SearchPage.test.tsx --reporter=verbose 2>&1",
     "lintCommand": "pnpm lint",
     "devCommand": "pnpm dev",
     "scripts": {

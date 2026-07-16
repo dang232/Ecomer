@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { type HTMLAttributes, type ReactNode, createElement } from "react";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { makeWrapper } from "../test-utils/render-with-query-client";
 
 const mocks = vi.hoisted(() => ({
   catalogRefetch: vi.fn(),
@@ -62,12 +63,20 @@ vi.mock("../hooks/use-search-facets", () => ({
   useSearchFacets: () => ({ facets: { categories: [], brands: [] } }),
 }));
 
+vi.mock("../hooks/use-product-review-summaries", () => ({
+  useProductReviewSummaries: () => ({ data: {} }),
+}));
+
 import { SearchPage } from "./SearchPage";
+
+const { Wrapper } = makeWrapper();
 
 function renderPage(entry = "/search") {
   return render(
     <MemoryRouter initialEntries={[entry]}>
-      <SearchPage />
+      <Wrapper>
+        <SearchPage />
+      </Wrapper>
     </MemoryRouter>,
   );
 }
