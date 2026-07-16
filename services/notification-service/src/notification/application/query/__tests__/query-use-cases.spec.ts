@@ -3,14 +3,18 @@ import { FindUserNotificationsUseCase } from '../find-user-notifications.use-cas
 import { FindNotificationThreadsUseCase } from '../find-notification-threads.use-case';
 import { FindThreadNotificationsUseCase } from '../find-thread-notifications.use-case';
 import { CountUnreadUseCase } from '../count-unread.use-case';
+import { GetNotificationUseCase } from '../get-notification.use-case';
 import { NOTIFICATION_REPOSITORY } from '../../../domain/port/outbound/notification.repository';
+import { Notification } from '../../../domain/model/notification';
 import { NotificationType } from '../../../domain/model/notification-type.enum';
+import { NotFoundException } from '@nestjs/common';
 
 describe('Query Use Cases', () => {
   const mockRepo = {
     findByUser: jest.fn().mockResolvedValue({ items: [], total: 0 }),
     findThreadsByUser: jest.fn().mockResolvedValue({ threads: [], total: 0 }),
     findByThread: jest.fn().mockResolvedValue([]),
+    findByIdAndUserId: jest.fn(),
     countUnread: jest.fn().mockResolvedValue(5),
   };
 
@@ -18,6 +22,7 @@ describe('Query Use Cases', () => {
   let findThreads: FindNotificationThreadsUseCase;
   let findThreadNotifs: FindThreadNotificationsUseCase;
   let countUnread: CountUnreadUseCase;
+  let getNotification: GetNotificationUseCase;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -27,6 +32,7 @@ describe('Query Use Cases', () => {
         FindNotificationThreadsUseCase,
         FindThreadNotificationsUseCase,
         CountUnreadUseCase,
+        GetNotificationUseCase,
         { provide: NOTIFICATION_REPOSITORY, useValue: mockRepo },
       ],
     }).compile();
@@ -35,6 +41,7 @@ describe('Query Use Cases', () => {
     findThreads = module.get(FindNotificationThreadsUseCase);
     findThreadNotifs = module.get(FindThreadNotificationsUseCase);
     countUnread = module.get(CountUnreadUseCase);
+    getNotification = module.get(GetNotificationUseCase);
   });
 
   describe('FindUserNotificationsUseCase', () => {
@@ -103,6 +110,34 @@ describe('Query Use Cases', () => {
       const count = await countUnread.execute('u1');
       expect(count).toBe(5);
       expect(mockRepo.countUnread).toHaveBeenCalledWith('u1');
+    });
+  });
+
+  describe('GetNotificationUseCase', () => {
+    it('returns an owned notification', async () => {
+      const notification = Notification.create({
+        userId: 'u1',
+        type: NotificationType.ORDER_CREATED,
+        title: 'Order created',
+        body: 'Your order was created.',
+      });
+      mockRepo.findByIdAndUserId.mockResolvedValue(notification);
+
+      await expect(getNotification.execute(notification.id, 'u1')).resolves.toBe(
+        notification,
+      );
+      expect(mockRepo.findByIdAndUserId).toHaveBeenCalledWith(
+        notification.id,
+        'u1',
+      );
+    });
+
+    it('returns not found for a notification owned by another user', async () => {
+      mockRepo.findByIdAndUserId.mockResolvedValue(null);
+
+      await expect(getNotification.execute('notification-1', 'u2')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 

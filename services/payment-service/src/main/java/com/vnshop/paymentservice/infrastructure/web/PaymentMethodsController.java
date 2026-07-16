@@ -23,7 +23,7 @@ import java.util.List;
  * validator would have already crashed startup in that case.
  */
 @RestController
-@RequestMapping("/api/v1/payments")
+@RequestMapping("/payment")
 public class PaymentMethodsController {
 
     @Value("${payment.cod.enabled:true}")

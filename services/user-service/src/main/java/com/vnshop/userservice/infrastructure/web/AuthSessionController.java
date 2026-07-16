@@ -55,6 +55,7 @@ import java.util.Set;
 public class AuthSessionController {
     public static final String REFRESH_COOKIE_NAME = "vnshop_rt";
     private static final String COOKIE_PATH = "/auth";
+    private static final String CSRF_COOKIE_PATH = "/";
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     // OAuth configuration
@@ -288,13 +289,14 @@ public class AuthSessionController {
     /**
      * Writes a non-httpOnly CSRF cookie that the SPA can read via
      * {@code document.cookie} and echo back in the {@code X-CSRF-Token} header.
-     * Scoped to {@code /auth} (same as the refresh cookie) so it is only sent
-     * on auth requests, not on every API call.
+     * It must be scoped to {@code /} so JavaScript running on every SPA route
+     * can read it before sending an auth refresh or logout request. The httpOnly
+     * refresh-token cookie remains scoped to {@code /auth}.
      */
     private void writeCsrfCookie(HttpServletResponse response, String token, int maxAgeSeconds) {
         StringBuilder sb = new StringBuilder();
         sb.append(CsrfProtectionFilter.CSRF_COOKIE_NAME).append('=').append(token);
-        sb.append("; Path=").append(COOKIE_PATH);
+        sb.append("; Path=").append(CSRF_COOKIE_PATH);
         // Intentionally NOT HttpOnly — the SPA must be able to read this value.
         sb.append("; SameSite=").append(cookieSameSite);
         if (cookieSecure) sb.append("; Secure");
@@ -305,7 +307,7 @@ public class AuthSessionController {
     private void clearCsrfCookie(HttpServletResponse response) {
         StringBuilder sb = new StringBuilder();
         sb.append(CsrfProtectionFilter.CSRF_COOKIE_NAME).append('=');
-        sb.append("; Path=").append(COOKIE_PATH);
+        sb.append("; Path=").append(CSRF_COOKIE_PATH);
         sb.append("; SameSite=").append(cookieSameSite);
         if (cookieSecure) sb.append("; Secure");
         sb.append("; Max-Age=0");

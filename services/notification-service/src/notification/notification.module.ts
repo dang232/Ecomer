@@ -58,6 +58,7 @@ import { FindUserNotificationsUseCase } from './application/query/find-user-noti
 import { FindNotificationThreadsUseCase } from './application/query/find-notification-threads.use-case';
 import { FindThreadNotificationsUseCase } from './application/query/find-thread-notifications.use-case';
 import { CountUnreadUseCase } from './application/query/count-unread.use-case';
+import { GetNotificationUseCase } from './application/query/get-notification.use-case';
 import { GetPreferencesUseCase } from './application/query/get-preferences.use-case';
 
 // Application — Event Handlers
@@ -131,6 +132,7 @@ import { SMS_CHANNEL_PORT } from './domain/port/outbound/sms-channel.port';
     FindNotificationThreadsUseCase,
     FindThreadNotificationsUseCase,
     CountUnreadUseCase,
+    GetNotificationUseCase,
     GetPreferencesUseCase,
 
     // Application — Event Handlers
