@@ -76,7 +76,9 @@ function ThreadList({
             <IconLoader2 size={14} className="animate-spin" /> {t("messaging.loading")}
           </div>
         ) : filtered.length === 0 ? (
-          <p className="p-6 text-sm text-muted-foreground text-center">{t("messaging.noThreads")}</p>
+          <p className="p-6 text-sm text-muted-foreground text-center">
+            {t("messaging.noThreads")}
+          </p>
         ) : (
           filtered.map((thread) => {
             const active = thread.id === selectedId;
@@ -96,7 +98,9 @@ function ThreadList({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[13px] font-semibold text-foreground truncate">{name}</span>
+                    <span className="text-[13px] font-semibold text-foreground truncate">
+                      {name}
+                    </span>
                     <span className="text-[11px] text-muted-foreground shrink-0">
                       {relativeTime(thread.lastMessageAt)}
                     </span>
@@ -222,9 +226,13 @@ function MessagePane({
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 p-5 overflow-y-auto flex flex-col gap-3">
         {messagesQuery.isLoading ? (
-          <p className="text-center text-sm text-muted-foreground">{t("messaging.loadingMessages")}</p>
+          <p className="text-center text-sm text-muted-foreground">
+            {t("messaging.loadingMessages")}
+          </p>
         ) : ordered.length === 0 ? (
-          <p className="text-center text-sm text-muted-foreground">{t("messaging.noMessagesYet")}</p>
+          <p className="text-center text-sm text-muted-foreground">
+            {t("messaging.noMessagesYet")}
+          </p>
         ) : (
           ordered.map((m) => (
             <MessageBubble
@@ -322,10 +330,7 @@ export function MessagesPage() {
   // Only treat the URL thread param as selected if it actually exists in the
   // loaded thread list. This prevents the pane from rendering stale/invalid
   // thread content while threads are still loading or after a URL is shared.
-  const threadIds = useMemo(
-    () => new Set(threads.items.map((t) => t.id)),
-    [threads.items],
-  );
+  const threadIds = useMemo(() => new Set(threads.items.map((t) => t.id)), [threads.items]);
   const selectedId: string | null = useMemo(() => {
     if (requestedThreadId && threadIds.has(requestedThreadId)) return requestedThreadId;
     // Fall back to the first available thread only when no explicit param is set.

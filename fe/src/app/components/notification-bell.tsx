@@ -1,4 +1,4 @@
-﻿import { IconBell } from "@tabler/icons-react";
+import { IconBell } from "@tabler/icons-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -10,7 +10,10 @@ import type { Notification } from "../types/api/notification";
 
 import { NotificationIcon } from "./notifications/notification-icon";
 
-function relativeTime(iso: string | null | undefined, t: (key: string, opts?: Record<string, unknown>) => string): string {
+function relativeTime(
+  iso: string | null | undefined,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+): string {
   if (!iso) return "";
   const then = Date.parse(iso);
   if (Number.isNaN(then)) return "";
@@ -35,7 +38,10 @@ function dateGroup(iso: string, t: (key: string) => string): string {
   return t("notificationBell.earlier");
 }
 
-function groupByDate(items: Notification[], t: (key: string) => string): { label: string; items: Notification[] }[] {
+function groupByDate(
+  items: Notification[],
+  t: (key: string) => string,
+): { label: string; items: Notification[] }[] {
   const groups: Record<string, Notification[]> = {};
   for (const item of items) {
     const key = dateGroup(item.createdAt, t);
@@ -87,22 +93,25 @@ export function NotificationBell() {
     };
   }, [open]);
 
-  const handleSelect = useCallback((n: Notification) => {
-    if (!n.read) markRead(n.id);
-    setOpen(false);
-    if (n.deepLink) {
-      try {
-        const url = new URL(n.deepLink, window.location.origin);
-        if (url.origin === window.location.origin) {
-          void navigate(url.pathname + url.search + url.hash);
-          return;
+  const handleSelect = useCallback(
+    (n: Notification) => {
+      if (!n.read) markRead(n.id);
+      setOpen(false);
+      if (n.deepLink) {
+        try {
+          const url = new URL(n.deepLink, window.location.origin);
+          if (url.origin === window.location.origin) {
+            void navigate(url.pathname + url.search + url.hash);
+            return;
+          }
+          window.location.href = n.deepLink;
+        } catch {
+          void navigate(n.deepLink);
         }
-        window.location.href = n.deepLink;
-      } catch {
-        void navigate(n.deepLink);
       }
-    }
-  }, [markRead, navigate]);
+    },
+    [markRead, navigate],
+  );
 
   // Show only top 10, already sorted by createdAt DESC from the API
   const displayed = items.slice(0, 10);
@@ -147,7 +156,9 @@ export function NotificationBell() {
           >
             {/* Header */}
             <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-              <h3 className="font-semibold text-sm text-foreground">{t("notificationBell.title")}</h3>
+              <h3 className="font-semibold text-sm text-foreground">
+                {t("notificationBell.title")}
+              </h3>
               {unreadCount > 0 ? (
                 <button
                   onClick={() => markAllRead()}
@@ -162,7 +173,9 @@ export function NotificationBell() {
             {/* Content */}
             <div className="max-h-96 overflow-y-auto">
               {isLoading ? (
-                <p className="px-4 py-6 text-sm text-muted-foreground text-center">{t("notificationBell.loading")}</p>
+                <p className="px-4 py-6 text-sm text-muted-foreground text-center">
+                  {t("notificationBell.loading")}
+                </p>
               ) : null}
 
               {!isLoading && groups.length === 0 ? (

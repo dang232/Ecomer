@@ -15,24 +15,23 @@ import {
 import type { AdminOrderSummary } from "../../types/api";
 
 const STATUS_OPTIONS = [
-  { value: "", labelKey: "admin.orders.filterAll" },
-  { value: "PENDING_ACCEPTANCE", labelKey: "admin.orders.filterPending" },
-  { value: "ACCEPTED", labelKey: "admin.orders.filterAccepted" },
-  { value: "PACKED", labelKey: "admin.orders.filterPacked" },
-  { value: "SHIPPED", labelKey: "admin.orders.filterShipped" },
-  { value: "CANCELLED", labelKey: "admin.orders.filterCancelled" },
+  { value: "", labelKey: "seller.orders.tabs.all" },
+  { value: "PENDING_ACCEPTANCE", labelKey: "seller.orders.tabs.pending" },
+  { value: "ACCEPTED", labelKey: "seller.orders.tabs.accepted" },
+  { value: "PACKED", labelKey: "seller.orders.tabs.packed" },
+  { value: "SHIPPED", labelKey: "seller.orders.tabs.shipped" },
+  { value: "CANCELLED", labelKey: "seller.orders.tabs.cancelled" },
 ];
 
 /** Maps raw BE status strings to human-readable i18n keys (P3-5). */
 const STATUS_LABEL_KEY: Record<string, string> = {
-  PENDING_ACCEPTANCE: "admin.orders.status.pendingAcceptance",
-  ACCEPTED: "admin.orders.status.accepted",
-  PACKED: "admin.orders.status.packed",
-  SHIPPED: "admin.orders.status.shipped",
-  DELIVERED: "admin.orders.status.delivered",
-  CANCELLED: "admin.orders.status.cancelled",
-  REJECTED: "admin.orders.status.rejected",
-  REFUNDED: "admin.orders.status.refunded",
+  PENDING_ACCEPTANCE: "seller.orders.tabs.pending",
+  ACCEPTED: "seller.orders.tabs.accepted",
+  PACKED: "seller.orders.tabs.packed",
+  SHIPPED: "seller.orders.tabs.shipped",
+  DELIVERED: "orders.status.delivered",
+  CANCELLED: "seller.orders.tabs.cancelled",
+  REJECTED: "seller.orders.tabs.cancelled",
 };
 
 function statusColor(status: string): string {
@@ -59,7 +58,12 @@ export function OrderManagement() {
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
   const [refundOrderId, setRefundOrderId] = useState<string | null>(null);
 
-  const { data: orders = [], isLoading, isError } = useQuery({
+  const {
+    data: orders = [],
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
     queryKey: ["admin", "orders", statusFilter],
     queryFn: () => adminListOrders({ status: statusFilter || undefined }),
     retry: false,
@@ -112,7 +116,11 @@ export function OrderManagement() {
               style={
                 statusFilter === opt.value
                   ? { background: "var(--admin-primary)", color: "white" }
-                  : { background: "white", color: "var(--admin-muted)", border: "1px solid var(--admin-border)" }
+                  : {
+                      background: "white",
+                      color: "var(--admin-muted)",
+                      border: "1px solid var(--admin-border)",
+                    }
               }
             >
               {t(opt.labelKey)}
@@ -127,7 +135,11 @@ export function OrderManagement() {
         </div>
       ) : isError ? (
         <div className="bg-card rounded-2xl p-8 text-center shadow-sm">
-          <p className="text-sm text-red-600">{t("admin.orders.loadErr")}</p>
+          <p className="text-sm text-red-600">
+            {t("admin.orders.loadErr", {
+              message: error instanceof Error ? error.message : "unknown error",
+            })}
+          </p>
         </div>
       ) : orders.length === 0 ? (
         <div className="bg-card rounded-2xl p-8 text-center shadow-sm">
@@ -165,7 +177,10 @@ export function OrderManagement() {
                   </span>
                   {/* P1-10: WCAG 2.5.5 minimum target size — p-2.5 ≈ 40px */}
                   <button
-                    onClick={() => { setRefundOrderId(o.orderId); setRefundDialogOpen(true); }}
+                    onClick={() => {
+                      setRefundOrderId(o.orderId);
+                      setRefundDialogOpen(true);
+                    }}
                     disabled={isMutating}
                     title={t("admin.orders.refund")}
                     aria-label={t("admin.orders.refund")}
@@ -200,8 +215,13 @@ export function OrderManagement() {
 
       <ConfirmDialog
         open={refundDialogOpen}
-        onClose={() => { setRefundDialogOpen(false); setRefundOrderId(null); }}
-        onConfirm={(_reason) => { if (refundOrderId) refund.mutate(refundOrderId); }}
+        onClose={() => {
+          setRefundDialogOpen(false);
+          setRefundOrderId(null);
+        }}
+        onConfirm={(_reason) => {
+          if (refundOrderId) refund.mutate(refundOrderId);
+        }}
         variant="danger"
         reasonField
         title={t("admin.orders.refundConfirmTitle")}

@@ -20,23 +20,29 @@ export function UserManagement() {
   const [results, setResults] = useState<AdminUser[] | null>(null);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const [orderHistory, setOrderHistory] = useState<{ userId: string; orders: AdminOrderSummary[] } | null>(null);
+  const [orderHistory, setOrderHistory] = useState<{
+    userId: string;
+    orders: AdminOrderSummary[];
+  } | null>(null);
   const [loadingOrders, setLoadingOrders] = useState(false);
 
   const ban = useMutation({
     mutationFn: (id: string) => adminBanUser(id),
     onSuccess: (updated) => {
-      setResults((prev) => prev?.map((u) => (u.keycloakId === updated.keycloakId ? updated : u)) ?? null);
+      setResults(
+        (prev) => prev?.map((u) => (u.keycloakId === updated.keycloakId ? updated : u)) ?? null,
+      );
       toast.success(t("admin.users.banOk"));
     },
-    onError: (err) =>
-      toast.error(err instanceof ApiError ? err.message : t("admin.users.banErr")),
+    onError: (err) => toast.error(err instanceof ApiError ? err.message : t("admin.users.banErr")),
   });
 
   const unban = useMutation({
     mutationFn: (id: string) => adminUnbanUser(id),
     onSuccess: (updated) => {
-      setResults((prev) => prev?.map((u) => (u.keycloakId === updated.keycloakId ? updated : u)) ?? null);
+      setResults(
+        (prev) => prev?.map((u) => (u.keycloakId === updated.keycloakId ? updated : u)) ?? null,
+      );
       toast.success(t("admin.users.unbanOk"));
     },
     onError: (err) =>
@@ -48,7 +54,10 @@ export function UserManagement() {
     setSearching(true);
     setSearchError(null);
     try {
-      const data = await adminSearchUsers({ email: email.trim() || undefined, phone: phone.trim() || undefined });
+      const data = await adminSearchUsers({
+        email: email.trim() || undefined,
+        phone: phone.trim() || undefined,
+      });
       setResults(data);
     } catch (err) {
       setSearchError(err instanceof ApiError ? err.message : t("admin.users.searchErr"));
@@ -117,9 +126,14 @@ export function UserManagement() {
           <div className="bg-card rounded-2xl shadow-sm overflow-hidden">
             <div className="divide-y divide-gray-50">
               {results.map((u) => (
-                <div key={u.keycloakId} className="px-5 py-4 flex items-center justify-between gap-4">
+                <div
+                  key={u.keycloakId}
+                  className="px-5 py-4 flex items-center justify-between gap-4"
+                >
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-foreground truncate">{u.name ?? u.keycloakId}</p>
+                    <p className="text-sm font-semibold text-foreground truncate">
+                      {u.name ?? u.keycloakId}
+                    </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {u.phone ? u.phone : t("admin.users.noPhone")}
                       {u.banned ? (

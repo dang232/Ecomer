@@ -41,12 +41,7 @@ export const videoStatus = (videoId: string) =>
  * Returns all published (and pending) videos attached to a product or review.
  */
 export const videosByEntity = (entityId: string, context: "PRODUCT" | "REVIEW") =>
-  api.get(
-    "/videos",
-    videoListSchema,
-    { entityId, context },
-    { auth: false },
-  );
+  api.get("/videos", videoListSchema, { entityId, context }, { auth: false });
 
 // ─── Delete a video ──────────────────────────────────────────────────────────
 

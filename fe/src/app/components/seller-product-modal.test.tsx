@@ -75,6 +75,7 @@ vi.mock("../lib/api/endpoints/products", () => ({
   sellerProductCreate: vi.fn(),
   sellerProductImageActivate: vi.fn(),
   sellerProductImageUploadUrl: vi.fn(),
+  sellerProductPublish: vi.fn(),
   sellerProductUpdate: vi.fn(),
 }));
 

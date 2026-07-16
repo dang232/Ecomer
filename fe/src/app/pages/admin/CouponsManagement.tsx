@@ -1,4 +1,4 @@
-﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -130,7 +130,9 @@ export function CouponsManagement() {
           </tbody>
         </table>
         {!couponsQuery.isLoading && coupons.length === 0 ? (
-          <p className="px-5 py-8 text-sm text-muted-foreground text-center">{t("admin.coupons.empty")}</p>
+          <p className="px-5 py-8 text-sm text-muted-foreground text-center">
+            {t("admin.coupons.empty")}
+          </p>
         ) : null}
       </div>
     </div>

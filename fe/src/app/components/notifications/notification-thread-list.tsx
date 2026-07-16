@@ -25,7 +25,10 @@ export function NotificationThreadList({ onMarkRead }: NotificationThreadListPro
     return (
       <div className="space-y-3">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={`notification-thread-skeleton-${i}`} className="h-14 rounded-xl bg-muted animate-pulse" />
+          <div
+            key={`notification-thread-skeleton-${i}`}
+            className="h-14 rounded-xl bg-muted animate-pulse"
+          />
         ))}
       </div>
     );
@@ -45,10 +48,7 @@ export function NotificationThreadList({ onMarkRead }: NotificationThreadListPro
       {data.content.map((thread) => (
         <NotificationThread key={thread.threadId} thread={thread} onMarkRead={onMarkRead} />
       ))}
-      <NotificationPagination
-        totalPages={data.totalPages ?? 0}
-        currentPage={data.number ?? 0}
-      />
+      <NotificationPagination totalPages={data.totalPages ?? 0} currentPage={data.number ?? 0} />
     </div>
   );
 }

@@ -91,7 +91,9 @@ function NotificationRow({
           {notification.title}
         </p>
         <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{notification.body}</p>
-        <p className="text-[11px] text-muted-foreground mt-1">{relativeTime(notification.createdAt)}</p>
+        <p className="text-[11px] text-muted-foreground mt-1">
+          {relativeTime(notification.createdAt)}
+        </p>
       </div>
 
       {/* Unread dot */}
@@ -132,7 +134,9 @@ export function NotificationsPageRoute() {
         </div>
       </div>
       <p className="text-sm text-text-secondary mb-6">
-        {unreadCount > 0 ? `You have ${unreadCount} unread notification${unreadCount !== 1 ? "s" : ""}` : "You're all caught up"}
+        {unreadCount > 0
+          ? `You have ${unreadCount} unread notification${unreadCount !== 1 ? "s" : ""}`
+          : "You're all caught up"}
       </p>
 
       {/* List */}
@@ -145,9 +149,7 @@ export function NotificationsPageRoute() {
             <p className="text-muted-foreground font-medium">No notifications yet</p>
           </div>
         ) : (
-          items.map((n) => (
-            <NotificationRow key={n.id} notification={n} onMarkRead={markRead} />
-          ))
+          items.map((n) => <NotificationRow key={n.id} notification={n} onMarkRead={markRead} />)
         )}
       </div>
     </div>

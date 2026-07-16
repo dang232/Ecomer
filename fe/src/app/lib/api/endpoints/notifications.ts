@@ -17,9 +17,7 @@ export const listNotifications = (
     threadId: params.threadId,
   });
 
-export const listThreads = (
-  params: { page?: number; size?: number; type?: string } = {},
-) =>
+export const listThreads = (params: { page?: number; size?: number; type?: string } = {}) =>
   api.get("/notifications/threads", threadPageSchema, {
     page: params.page,
     size: params.size ?? 20,
@@ -27,10 +25,7 @@ export const listThreads = (
   });
 
 export const getThreadNotifications = (threadId: string) =>
-  api.get(
-    `/notifications/threads/${encodeURIComponent(threadId)}`,
-    notificationSchema.array(),
-  );
+  api.get(`/notifications/threads/${encodeURIComponent(threadId)}`, notificationSchema.array());
 
 export const getNotification = (id: string) =>
   api.get(`/notifications/${encodeURIComponent(id)}`, notificationSchema);

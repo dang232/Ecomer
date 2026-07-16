@@ -142,8 +142,16 @@ function CouponDialogBodyView({
                 className="py-2 rounded-xl text-sm font-medium border transition-colors"
                 style={
                   type === opt
-                    ? { background: "var(--admin-primary)", color: "white", borderColor: "var(--admin-primary)" }
-                    : { background: "white", color: "var(--admin-muted)", borderColor: "var(--admin-border)" }
+                    ? {
+                        background: "var(--admin-primary)",
+                        color: "white",
+                        borderColor: "var(--admin-primary)",
+                      }
+                    : {
+                        background: "white",
+                        color: "var(--admin-muted)",
+                        borderColor: "var(--admin-border)",
+                      }
                 }
               >
                 {opt === "PERCENT"

@@ -49,7 +49,11 @@ export function VideoModerationPanel() {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-1 border-b border-border" role="tablist" aria-label="Video moderation views">
+      <div
+        className="flex gap-1 border-b border-border"
+        role="tablist"
+        aria-label="Video moderation views"
+      >
         <button
           ref={queueBtnRef}
           role="tab"
@@ -89,7 +93,9 @@ export function VideoModerationPanel() {
       <div
         id={subTab === "queue" ? "video-moderation-queue-panel" : "video-moderation-appeals-panel"}
         role="tabpanel"
-        aria-labelledby={subTab === "queue" ? "video-moderation-queue-tab" : "video-moderation-appeals-tab"}
+        aria-labelledby={
+          subTab === "queue" ? "video-moderation-queue-tab" : "video-moderation-appeals-tab"
+        }
       >
         {subTab === "queue" ? <VideoModeration /> : <VideoAppeals />}
       </div>

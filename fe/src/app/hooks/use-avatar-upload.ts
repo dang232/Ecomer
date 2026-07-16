@@ -113,8 +113,10 @@ export function avatarUploadErrorMessage(error: unknown, t: (key: string) => str
     if (error.message === "avatar:too-large") return t("profile.avatar.errors.tooLarge");
     if (error.message === "avatar:empty") return t("profile.avatar.errors.empty");
     if (error.message === "avatar:wrong-type") return t("profile.avatar.errors.wrongType");
-    if (error.message === "avatar:wrong-extension") return t("profile.avatar.errors.wrongExtension");
-    if (error.message.startsWith("avatar:put-failed:")) return t("profile.avatar.errors.uploadFailed");
+    if (error.message === "avatar:wrong-extension")
+      return t("profile.avatar.errors.wrongExtension");
+    if (error.message.startsWith("avatar:put-failed:"))
+      return t("profile.avatar.errors.uploadFailed");
   }
   return t("profile.avatar.errors.generic");
 }

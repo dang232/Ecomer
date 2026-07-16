@@ -66,9 +66,7 @@ function KpiCardOD({ icon: Icon, label, value, trend, positive = true }: KpiCard
           <span
             className={[
               "text-[11px] font-semibold px-2 py-0.5 rounded-full",
-              positive
-                ? "bg-success-light text-success"
-                : "bg-error-light text-error",
+              positive ? "bg-success-light text-success" : "bg-error-light text-error",
             ].join(" ")}
           >
             {trend}
@@ -112,16 +110,8 @@ export function SellerDashboard({
           label={t("seller.dashboard.kpi.pending")}
           value={String(pendingOrders.length)}
         />
-        <KpiCardOD
-          icon={IconEye}
-          label={t("seller.dashboard.kpi.views")}
-          value="—"
-        />
-        <KpiCardOD
-          icon={IconStar}
-          label={t("seller.dashboard.kpi.rating")}
-          value="—"
-        />
+        <KpiCardOD icon={IconEye} label={t("seller.dashboard.kpi.views")} value="—" />
+        <KpiCardOD icon={IconStar} label={t("seller.dashboard.kpi.rating")} value="—" />
       </div>
 
       {/* Revenue chart */}
@@ -131,7 +121,9 @@ export function SellerDashboard({
             <IconTrendingUp size={18} className="text-primary" aria-hidden="true" />
             <h3 className="font-bold text-foreground">{t("seller.dashboard.revenue30dTitle")}</h3>
           </div>
-          <span className="text-[11px] text-muted-foreground">{t("seller.dashboard.revenue30dHint")}</span>
+          <span className="text-[11px] text-muted-foreground">
+            {t("seller.dashboard.revenue30dHint")}
+          </span>
         </div>
         {revenueError instanceof ApiError ? (
           <div className="rounded-[var(--radius-md)] bg-error-light border border-error/20 px-4 py-3 text-sm text-error">

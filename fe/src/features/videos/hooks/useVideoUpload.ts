@@ -24,12 +24,7 @@ const LS_RESUME_KEY = "vnshop:video-upload-resume";
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type VideoUploadPhase =
-  | "idle"
-  | "validating"
-  | "initiating"
-  | "uploading"
-  | "complete"
-  | "error";
+  "idle" | "validating" | "initiating" | "uploading" | "complete" | "error";
 
 export interface VideoUploadState {
   phase: VideoUploadPhase;
@@ -284,7 +279,10 @@ export function useVideoUpload(options: VideoUploadOptions) {
 
 // ─── Error message helper ────────────────────────────────────────────────────
 
-export function videoUploadErrorMessage(error: unknown, t: (key: string, opts?: Record<string, unknown>) => string): string {
+export function videoUploadErrorMessage(
+  error: unknown,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+): string {
   if (!(error instanceof Error)) return t("video.upload.errors.generic");
   const msg = error.message;
   if (msg === "video:empty") return t("video.upload.errors.empty");

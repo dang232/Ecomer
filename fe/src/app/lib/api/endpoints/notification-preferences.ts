@@ -10,5 +10,4 @@ export const getNotificationPreferences = () =>
 export const updateNotificationPreferences = (body: {
   muted: boolean;
   typePreferences: TypePreference[];
-}) =>
-  api.put("/notifications/preferences", notificationPreferencesSchema, body);
+}) => api.put("/notifications/preferences", notificationPreferencesSchema, body);

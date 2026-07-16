@@ -9,12 +9,21 @@ const NOTIFICATION_TYPE_LABELS: Record<string, { label: string; description: str
   ORDER_CANCELLED: { label: "Đơn hàng bị hủy", description: "Khi đơn hàng bị hủy" },
   ORDER_SHIPPED: { label: "Đã giao cho vận chuyển", description: "Khi đơn hàng được gửi đi" },
   ORDER_DELIVERED: { label: "Đã giao hàng", description: "Khi đơn hàng giao thành công" },
-  PAYMENT_COMPLETED: { label: "Thanh toán thành công", description: "Khi thanh toán được xác nhận" },
+  PAYMENT_COMPLETED: {
+    label: "Thanh toán thành công",
+    description: "Khi thanh toán được xác nhận",
+  },
   PAYMENT_REFUNDED: { label: "Hoàn tiền", description: "Khi đơn hàng được hoàn tiền" },
-  SELLER_NEW_ORDER: { label: "Đơn hàng mới (Seller)", description: "Khi có đơn hàng mới cần xử lý" },
+  SELLER_NEW_ORDER: {
+    label: "Đơn hàng mới (Seller)",
+    description: "Khi có đơn hàng mới cần xử lý",
+  },
   PRODUCT_APPROVED: { label: "Sản phẩm được duyệt", description: "Khi sản phẩm được admin duyệt" },
   PRODUCT_REJECTED: { label: "Sản phẩm bị từ chối", description: "Khi sản phẩm bị từ chối" },
-  REVIEW_REPLIED: { label: "Phản hồi đánh giá", description: "Khi có phản hồi cho đánh giá của bạn" },
+  REVIEW_REPLIED: {
+    label: "Phản hồi đánh giá",
+    description: "Khi có phản hồi cho đánh giá của bạn",
+  },
   RETURN_REQUESTED: { label: "Yêu cầu trả hàng", description: "Khi có yêu cầu trả hàng" },
   PAYOUT_COMPLETED: { label: "Rút tiền thành công", description: "Khi lệnh rút tiền hoàn tất" },
 };
@@ -43,7 +52,10 @@ export function NotificationPreferencesPage() {
       const existing = prev.find((p) => p.type === type);
       if (!existing) {
         // Type not in prefs yet — add with this channel toggled off (was default on)
-        return [...prev, { type, channels: CHANNELS.map((c) => c.key).filter((c) => c !== channel) }];
+        return [
+          ...prev,
+          { type, channels: CHANNELS.map((c) => c.key).filter((c) => c !== channel) },
+        ];
       }
       const hasChannel = existing.channels.includes(channel);
       const newChannels = hasChannel
