@@ -1362,6 +1362,34 @@
     "cancelDialog": {
       "title": "Cancel order #{{id}}?",
       "description": "This action cannot be undone."
+    },
+    "detail": {
+      "back": "Back to orders",
+      "orderNumber": "Order",
+      "createdAt": "Placed on {{date}}",
+      "items": "Items",
+      "quantity": "Quantity: {{count}}",
+      "productFallback": "Product",
+      "noItems": "Product information is still being updated.",
+      "deliveryAddress": "Delivery address",
+      "addressUnavailable": "Address information is unavailable.",
+      "payment": "Payment",
+      "paymentMethod": "Method",
+      "paymentStatus": "Payment status",
+      "paymentPending": "Pending",
+      "paymentCompleted": "Paid",
+      "paymentFailed": "Payment failed",
+      "unknownPayment": "Not available",
+      "totals": "Order summary",
+      "subtotal": "Subtotal",
+      "shipping": "Shipping",
+      "discount": "Discount",
+      "total": "Total",
+      "notFound": "Order not found",
+      "notFoundDescription": "This order does not exist or is not available to your account.",
+      "loadError": "Couldn't load this order",
+      "loadErrorDescription": "Check your connection and try again.",
+      "retry": "Try again"
     }
   },
   "notFound": {

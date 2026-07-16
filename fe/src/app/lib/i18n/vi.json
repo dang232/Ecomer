@@ -1362,6 +1362,34 @@
     "cancelDialog": {
       "title": "Huỷ đơn #{{id}}?",
       "description": "Hành động này không thể hoàn tác."
+    },
+    "detail": {
+      "back": "Quay lại đơn hàng",
+      "orderNumber": "Đơn hàng",
+      "createdAt": "Đặt ngày {{date}}",
+      "items": "Sản phẩm",
+      "quantity": "Số lượng: {{count}}",
+      "productFallback": "Sản phẩm",
+      "noItems": "Thông tin sản phẩm đang được cập nhật.",
+      "deliveryAddress": "Địa chỉ giao hàng",
+      "addressUnavailable": "Chưa có thông tin địa chỉ.",
+      "payment": "Thanh toán",
+      "paymentMethod": "Phương thức",
+      "paymentStatus": "Trạng thái thanh toán",
+      "paymentPending": "Đang chờ thanh toán",
+      "paymentCompleted": "Đã thanh toán",
+      "paymentFailed": "Thanh toán thất bại",
+      "unknownPayment": "Chưa cập nhật",
+      "totals": "Tóm tắt đơn hàng",
+      "subtotal": "Tạm tính",
+      "shipping": "Phí vận chuyển",
+      "discount": "Giảm giá",
+      "total": "Tổng cộng",
+      "notFound": "Không tìm thấy đơn hàng",
+      "notFoundDescription": "Đơn hàng không tồn tại hoặc không thuộc tài khoản của bạn.",
+      "loadError": "Không thể tải đơn hàng",
+      "loadErrorDescription": "Kiểm tra kết nối và thử lại.",
+      "retry": "Thử lại"
     }
   },
   "notFound": {

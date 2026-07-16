@@ -150,6 +150,8 @@ export function CheckoutPage() {
   const [showCouponPicker, setShowCouponPicker] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
+  // Preserve the server-authoritative total after the cart is cleared.
+  const [placedOrderTotal, setPlacedOrderTotal] = useState<number | null>(null);
 
   const selectedAddress = addresses[selectedAddressIndex];
   const shippingAddress =
@@ -426,6 +428,7 @@ export function CheckoutPage() {
       );
 
       setPlacedOrderId(order.id);
+      setPlacedOrderTotal(order.total);
       // Clear cart on the client — server typically clears too. Refetch to reconcile.
       void refetchCart();
 
@@ -580,7 +583,7 @@ export function CheckoutPage() {
         <CheckoutSuccess
           placedOrderId={placedOrderId}
           selectedPaymentId={selectedPaymentId}
-          finalTotal={finalTotal}
+          finalTotal={placedOrderTotal ?? finalTotal}
         />
       </div>
     );

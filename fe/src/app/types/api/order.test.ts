@@ -44,4 +44,19 @@ describe("orderSchema status boundary", () => {
 
     expect(order.status).toBe(expected);
   });
+
+  it("uses the server finalAmount as the normalized order total", () => {
+    const order = orderSchema.parse({
+      id: "00000000-0000-0000-0000-000000000002",
+      subOrders: [],
+      itemsTotal: { amount: 31_990_000, currency: "VND" },
+      shippingTotal: { amount: 30_000, currency: "VND" },
+      discount: { amount: 0, currency: "VND" },
+      finalAmount: { amount: 32_020_000, currency: "VND" },
+      paymentStatus: "PENDING",
+      paymentMethod: "COD",
+    });
+
+    expect(order.total).toBe(32_020_000);
+  });
 });

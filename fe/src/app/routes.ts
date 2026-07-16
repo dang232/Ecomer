@@ -3,7 +3,7 @@ import { createBrowserRouter } from "react-router";
 
 import { ErrorBoundary } from "./components/error-boundary";
 import { PageSkeleton, ProductDetailSkeleton } from "./components/ui/page-skeleton";
-import { myOrdersOptions } from "./hooks/use-orders";
+import { myOrdersOptions, orderDetailOptions } from "./hooks/use-orders";
 import { productDetailOptions } from "./hooks/use-products";
 import { profileOptions } from "./hooks/use-profile";
 import { sellerDetailOptions, sellerProductsOptions } from "./hooks/use-sellers";
@@ -29,6 +29,9 @@ const CheckoutPage = lazy(() =>
 );
 const OrdersPage = lazy(() =>
   import("./pages/OrdersPage").then((m) => ({ default: m.OrdersPage })),
+);
+const OrderDetailPage = lazy(() =>
+  import("./pages/OrderDetailPage").then((m) => ({ default: m.OrderDetailPage })),
 );
 const ProfilePage = lazy(() =>
   import("./pages/ProfilePage").then((m) => ({ default: m.ProfilePage })),
@@ -120,6 +123,14 @@ export const router = createBrowserRouter([
         element: guardedWithBoundary(createElement(OrdersPage)),
         loader: () => {
           void queryClient.prefetchQuery(myOrdersOptions());
+          return null;
+        },
+      },
+      {
+        path: "orders/:id",
+        element: guardedWithBoundary(createElement(OrderDetailPage)),
+        loader: ({ params }) => {
+          void queryClient.prefetchQuery(orderDetailOptions(params.id));
           return null;
         },
       },
