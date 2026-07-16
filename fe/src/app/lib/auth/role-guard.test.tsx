@@ -16,6 +16,7 @@ function renderRoute(initialEntry: string, element: React.ReactElement) {
       <Routes>
         <Route path="/login" element={<div data-testid="login-page">Login</div>} />
         <Route path="/" element={<div data-testid="home-page">Home</div>} />
+        <Route path="/access-denied" element={<div data-testid="access-denied-page">403</div>} />
         <Route path="/protected" element={element} />
         <Route path="/seller" element={element} />
         <Route path="/admin" element={element} />
@@ -131,5 +132,23 @@ describe("RequireRole", () => {
       </RequireRole>,
     );
     expect(screen.getByTestId("admin-content")).toBeInTheDocument();
+  });
+
+  it("redirects a signed-in buyer from an admin route to the 403 page", () => {
+    useAuthMock.mockReturnValue({
+      ready: true,
+      authenticated: true,
+      roles: ["BUYER"],
+    });
+
+    renderRoute(
+      "/admin",
+      <RequireRole role="ADMIN" fallbackPath="/access-denied">
+        <div data-testid="admin-content">Admin</div>
+      </RequireRole>,
+    );
+
+    expect(screen.getByTestId("access-denied-page")).toBeInTheDocument();
+    expect(screen.queryByTestId("admin-content")).toBeNull();
   });
 });

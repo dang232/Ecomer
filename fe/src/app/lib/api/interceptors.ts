@@ -31,9 +31,7 @@ export interface ResponseContext {
   parsed: unknown;
 }
 
-export type RequestInterceptor = (
-  ctx: RequestContext,
-) => Promise<RequestContext> | RequestContext;
+export type RequestInterceptor = (ctx: RequestContext) => Promise<RequestContext> | RequestContext;
 export type ResponseInterceptor = (
   ctx: ResponseContext,
 ) => Promise<ResponseContext> | ResponseContext;
@@ -290,7 +288,7 @@ export const retryInterceptor: ErrorInterceptor = async (err, ctx) => {
   if (attempts > MAX_ATTEMPTS) {
     recordTelemetry({
       correlationId: ctx.correlationId,
-      method: ctx.meta.method ?? (ctx.init.method) ?? "GET",
+      method: ctx.meta.method ?? ctx.init.method ?? "GET",
       path: safePathFromUrl(ctx.url, ctx.meta.path),
       status: err.status,
       durationMs: Date.now() - (ctx.meta.startedAt ?? Date.now()),
@@ -301,7 +299,7 @@ export const retryInterceptor: ErrorInterceptor = async (err, ctx) => {
     return undefined;
   }
 
-  const method = ctx.meta.method ?? (ctx.init.method) ?? "GET";
+  const method = ctx.meta.method ?? ctx.init.method ?? "GET";
   if (isUnsafeMutation(method, Boolean(ctx.meta.idempotencyKey))) return undefined;
 
   const signal = ctx.init.signal ?? undefined;
@@ -337,13 +335,12 @@ export const retryInterceptor: ErrorInterceptor = async (err, ctx) => {
  * shape.
  */
 export const telemetryInterceptor: ResponseInterceptor = (ctx) => {
-  const correlationId =
-    ctx.response.headers.get("x-correlation-id") ?? ctx.request.correlationId;
+  const correlationId = ctx.response.headers.get("x-correlation-id") ?? ctx.request.correlationId;
   const errorCode = ctx.response.ok ? null : extractErrorCode(ctx.parsed);
   const startedAt = ctx.request.meta.startedAt ?? Date.now();
   recordTelemetry({
     correlationId,
-    method: ctx.request.meta.method ?? (ctx.request.init.method) ?? "GET",
+    method: ctx.request.meta.method ?? ctx.request.init.method ?? "GET",
     path: safePathFromUrl(ctx.request.url, ctx.request.meta.path),
     status: ctx.response.status,
     durationMs: Date.now() - startedAt,

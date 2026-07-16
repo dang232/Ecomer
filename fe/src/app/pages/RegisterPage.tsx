@@ -4,7 +4,11 @@ import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useNavigate, useSearchParams } from "react-router";
 
-import { CountryPhoneInput, DEFAULT_COUNTRY, parseOptionalPhone } from "../components/form/CountryPhoneInput";
+import {
+  CountryPhoneInput,
+  DEFAULT_COUNTRY,
+  parseOptionalPhone,
+} from "../components/form/CountryPhoneInput";
 import { FormField } from "../components/form/FormField";
 import { useAuth } from "../hooks/use-auth";
 import { sanitizeRedirect } from "../lib/auth/sanitize-redirect";
@@ -204,7 +208,9 @@ export function RegisterPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 onFocus={() => setPwFocused(true)}
                 onBlur={() => setPwFocused(false)}
-                placeholder={t("register.form.passwordHint", { defaultValue: "At least 8 characters" })}
+                placeholder={t("register.form.passwordHint", {
+                  defaultValue: "At least 8 characters",
+                })}
                 aria-describedby={errors.password ? "register-error-password" : undefined}
                 className={`w-full py-3 px-3.5 pr-11 border-[1.5px] rounded-[var(--radius-lg)] text-sm bg-card text-foreground placeholder:text-muted-foreground outline-none transition-all ${
                   errors.password
@@ -281,7 +287,8 @@ export function RegisterPage() {
         {/* Terms */}
         <p className="mt-4 text-center text-xs text-muted-foreground">
           {t("login.termsNotice", {
-            defaultValue: "By creating an account you agree to our Terms of Service and Privacy Policy.",
+            defaultValue:
+              "By creating an account you agree to our Terms of Service and Privacy Policy.",
           })}
         </p>
 

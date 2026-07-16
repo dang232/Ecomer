@@ -4,7 +4,15 @@
  * the minimum still consumed by the AI-generated UI; new code should pull from
  * useAuth / useCart / useWishlist directly.
  */
-import { createContext, useContext, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { toast } from "sonner";
 
 import { useAuth } from "../hooks/use-auth";
@@ -25,7 +33,11 @@ interface User {
 interface VNShopContextType {
   // Cart actions still wired through here so the existing product cards keep working.
   cartCount: number;
-  addToCart: (product: Product, quantity?: number, variant?: { color?: string; size?: string; variantId?: string }) => void;
+  addToCart: (
+    product: Product,
+    quantity?: number,
+    variant?: { color?: string; size?: string; variantId?: string },
+  ) => void;
   // Wishlist — backed by /users/me/wishlist (user-service BE-8).
   wishlist: string[];
   toggleWishlist: (productId: string) => void;
@@ -71,7 +83,11 @@ export function VNShopProvider({ children }: { children: ReactNode }) {
   const cartCount = cart.itemCount;
 
   const addToCart = useCallback(
-    (product: Product, quantity = 1, variant?: { color?: string; size?: string; variantId?: string }) => {
+    (
+      product: Product,
+      quantity = 1,
+      variant?: { color?: string; size?: string; variantId?: string },
+    ) => {
       const variantDesc = [variant?.color, variant?.size].filter(Boolean).join(", ");
       cart.addItem(
         { productId: product.id, quantity, variantId: variant?.variantId },
@@ -79,7 +95,11 @@ export function VNShopProvider({ children }: { children: ReactNode }) {
           onSuccess: () =>
             toast.success(
               `Đã thêm "${product.name.slice(0, 30)}${product.name.length > 30 ? "..." : ""}" vào giỏ hàng`,
-              { description: variantDesc ? `${variantDesc} · Số lượng: ${quantity}` : `Số lượng: ${quantity}` },
+              {
+                description: variantDesc
+                  ? `${variantDesc} · Số lượng: ${quantity}`
+                  : `Số lượng: ${quantity}`,
+              },
             ),
         },
       );
@@ -91,7 +111,12 @@ export function VNShopProvider({ children }: { children: ReactNode }) {
     (productId: string) => {
       if (!auth.authenticated) {
         toast.error("Vui lòng đăng nhập để lưu sản phẩm", {
-          action: { label: "Đăng nhập", onClick: () => { window.location.href = "/login"; } },
+          action: {
+            label: "Đăng nhập",
+            onClick: () => {
+              window.location.href = "/login";
+            },
+          },
         });
         return;
       }

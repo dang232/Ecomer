@@ -64,12 +64,13 @@ export function CategoriesBar() {
   const { t } = useTranslation();
   const [active, setActive] = useState("all");
 
-  const categories = useMemo(() =>
-    CATEGORIES_CONFIG.map((cat) => ({
-      id: cat.id,
-      label: t(cat.labelKey, { defaultValue: cat.default }),
-    })),
-    [t]
+  const categories = useMemo(
+    () =>
+      CATEGORIES_CONFIG.map((cat) => ({
+        id: cat.id,
+        label: t(cat.labelKey, { defaultValue: cat.default }),
+      })),
+    [t],
   );
 
   return (
@@ -169,35 +170,32 @@ export function Navbar() {
     [closeUserMenu],
   );
 
-  const handleMobileMenuKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLDivElement>) => {
-      if (e.key === "Escape") {
-        setMenuOpen(false);
-        return;
+  const handleMobileMenuKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Escape") {
+      setMenuOpen(false);
+      return;
+    }
+    if (e.key !== "Tab" || !mobileMenuRef.current) return;
+    const focusable = Array.from(
+      mobileMenuRef.current.querySelectorAll<HTMLElement>(
+        "button, input, a, [tabindex]:not([tabindex='-1'])",
+      ),
+    ).filter((el) => !el.hasAttribute("disabled"));
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
       }
-      if (e.key !== "Tab" || !mobileMenuRef.current) return;
-      const focusable = Array.from(
-        mobileMenuRef.current.querySelectorAll<HTMLElement>(
-          "button, input, a, [tabindex]:not([tabindex='-1'])",
-        ),
-      ).filter((el) => !el.hasAttribute("disabled"));
-      if (focusable.length === 0) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (e.shiftKey) {
-        if (document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        }
-      } else {
-        if (document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
+    } else {
+      if (document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
       }
-    },
-    [],
-  );
+    }
+  }, []);
 
   const submitSearch = (q: string) => {
     void navigate(`/search?q=${encodeURIComponent(q)}`);
@@ -228,7 +226,9 @@ export function Navbar() {
             onValueChange={setSearchQ}
             suggestions={suggestions}
             onSubmit={submitSearch}
-            placeholder={t("search.placeholder", { defaultValue: "Search for products, brands, and categories..." })}
+            placeholder={t("search.placeholder", {
+              defaultValue: "Search for products, brands, and categories...",
+            })}
           />
         </div>
 
@@ -307,11 +307,31 @@ export function Navbar() {
                       <p className="text-xs mt-0.5 text-muted-foreground">{user?.email}</p>
                     </div>
                     {[
-                      { icon: User, label: t("auth.myAccount"), action: () => void navigate("/profile") },
-                      { icon: Package, label: t("auth.myOrders"), action: () => void navigate("/orders") },
-                      { icon: Heart, label: t("auth.wishlist"), action: () => void navigate("/wishlist") },
-                      { icon: Bell, label: t("auth.notifications"), action: () => void navigate("/notifications") },
-                      { icon: Settings, label: t("auth.settings"), action: () => comingSoon("Settings", t) },
+                      {
+                        icon: User,
+                        label: t("auth.myAccount"),
+                        action: () => void navigate("/profile"),
+                      },
+                      {
+                        icon: Package,
+                        label: t("auth.myOrders"),
+                        action: () => void navigate("/orders"),
+                      },
+                      {
+                        icon: Heart,
+                        label: t("auth.wishlist"),
+                        action: () => void navigate("/wishlist"),
+                      },
+                      {
+                        icon: Bell,
+                        label: t("auth.notifications"),
+                        action: () => void navigate("/notifications"),
+                      },
+                      {
+                        icon: Settings,
+                        label: t("auth.settings"),
+                        action: () => comingSoon("Settings", t),
+                      },
                     ].map((item) => (
                       <button
                         key={item.label}

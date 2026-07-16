@@ -28,13 +28,9 @@ const BASE_URL = (
 // Cross-tab token-refresh coordination via BroadcastChannel
 // ---------------------------------------------------------------------------
 const REFRESH_CHANNEL =
-  typeof BroadcastChannel !== "undefined"
-    ? new BroadcastChannel("vnshop:token-refresh")
-    : null;
+  typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("vnshop:token-refresh") : null;
 
-type RefreshMessage =
-  | { type: "refresh-started" }
-  | { type: "refresh-complete"; success: boolean };
+type RefreshMessage = { type: "refresh-started" } | { type: "refresh-complete"; success: boolean };
 
 /** Resolves to true when another tab's refresh succeeds, false on failure. */
 let crossTabRefreshPromise: Promise<boolean> | null = null;
@@ -183,109 +179,109 @@ export async function request<TSchema extends z.ZodType>(
   };
 
   try {
-  const requestCtx = await runRequestChain({
-    url,
-    init,
-    correlationId,
-    meta: {
-      auth,
-      idempotencyKey: opts.idempotencyKey,
-      hasBody,
-      attempts: 1,
-      startedAt: Date.now(),
-      method,
-      path: opts.path,
-    },
-  });
+    const requestCtx = await runRequestChain({
+      url,
+      init,
+      correlationId,
+      meta: {
+        auth,
+        idempotencyKey: opts.idempotencyKey,
+        hasBody,
+        attempts: 1,
+        startedAt: Date.now(),
+        method,
+        path: opts.path,
+      },
+    });
 
-  let response = await fetch(requestCtx.url, requestCtx.init);
+    let response = await fetch(requestCtx.url, requestCtx.init);
 
-  // 401 path: surface a sentinel through the error chain so interceptors can
-  // attempt token refresh + retry. If still 401 after, the unauthorized
-  // interceptor has already cleared local auth state and dispatched
-  // `auth:unauthorized` — surfacing a thrown ApiError lets callers render
-  // their own error UI while AuthProvider redirects.
-  //
-  // Cross-tab coordination: if another tab is already refreshing, park behind
-  // its BroadcastChannel result instead of issuing a duplicate refresh.
-  if (response.status === 401 && auth) {
-    if (crossTabRefreshPromise && !thisTabRefreshing) {
-      // Another tab owns the refresh — wait for its outcome.
-      const succeeded = await crossTabRefreshPromise;
-      if (!succeeded) {
+    // 401 path: surface a sentinel through the error chain so interceptors can
+    // attempt token refresh + retry. If still 401 after, the unauthorized
+    // interceptor has already cleared local auth state and dispatched
+    // `auth:unauthorized` — surfacing a thrown ApiError lets callers render
+    // their own error UI while AuthProvider redirects.
+    //
+    // Cross-tab coordination: if another tab is already refreshing, park behind
+    // its BroadcastChannel result instead of issuing a duplicate refresh.
+    if (response.status === 401 && auth) {
+      if (crossTabRefreshPromise && !thisTabRefreshing) {
+        // Another tab owns the refresh — wait for its outcome.
+        const succeeded = await crossTabRefreshPromise;
+        if (!succeeded) {
+          window.dispatchEvent(new Event("auth:unauthorized"));
+          throw new ApiError(401, "UNAUTHORIZED", "Authentication required", correlationId);
+        }
+        // Retry the original request with the new token. Preserve telemetry meta.
+        const retryCtx = await runRequestChain({
+          url,
+          init: { ...init, headers: {} },
+          correlationId,
+          meta: {
+            ...requestCtx.meta,
+            auth,
+            idempotencyKey: opts.idempotencyKey,
+            hasBody,
+          },
+        });
+        response = await fetch(retryCtx.url, retryCtx.init);
+      } else if (!thisTabRefreshing) {
+        // This tab owns the refresh. Guard with !thisTabRefreshing so a second
+        // 401 arriving while we already hold the lock doesn't start a duplicate.
+        thisTabRefreshing = true;
+        _refreshLockTimestamp = Date.now();
+        REFRESH_CHANNEL?.postMessage({ type: "refresh-started" } satisfies RefreshMessage);
+        let refreshSucceeded = false;
+        try {
+          response = await runErrorChain(new UnauthorizedError(response), requestCtx);
+          refreshSucceeded = response.status !== 401;
+        } catch {
+          refreshSucceeded = false;
+        } finally {
+          thisTabRefreshing = false;
+          REFRESH_CHANNEL?.postMessage({
+            type: "refresh-complete",
+            success: refreshSucceeded,
+          } satisfies RefreshMessage);
+        }
+        if (!refreshSucceeded) {
+          window.dispatchEvent(new Event("auth:unauthorized"));
+          throw new ApiError(401, "UNAUTHORIZED", "Authentication required", correlationId);
+        }
+        // refreshSucceeded === true means runErrorChain returned a Response
+        // whose status was not 401. But unauthorizedInterceptor's refresh path
+        // could have been triggered by an EARLIER 401 mid-retry — if so, we
+        // may have already done a refresh + replay earlier and the replay's
+        // response is still in `response`. Belt-and-suspenders check: if the
+        // post-refresh response is STILL 401, surface it as an unrecoverable
+        // auth failure so the caller sees a clean 401 rather than a 503 (which
+        // would happen if retryInterceptor skipped this 401 mid-retry).
+        if (response.status === 401) {
+          window.dispatchEvent(new Event("auth:unauthorized"));
+          throw new ApiError(401, "UNAUTHORIZED", "Authentication required", correlationId);
+        }
+      } else {
+        // thisTabRefreshing is already true — a concurrent request hit 401 while
+        // this tab's refresh is in-flight. The token will be updated once the
+        // in-flight refresh resolves; treat this as an auth failure since the
+        // original token was already invalid.
         window.dispatchEvent(new Event("auth:unauthorized"));
         throw new ApiError(401, "UNAUTHORIZED", "Authentication required", correlationId);
       }
-      // Retry the original request with the new token. Preserve telemetry meta.
-      const retryCtx = await runRequestChain({
-        url,
-        init: { ...init, headers: {} },
-        correlationId,
-        meta: {
-          ...requestCtx.meta,
-          auth,
-          idempotencyKey: opts.idempotencyKey,
-          hasBody,
-        },
-      });
-      response = await fetch(retryCtx.url, retryCtx.init);
-    } else if (!thisTabRefreshing) {
-      // This tab owns the refresh. Guard with !thisTabRefreshing so a second
-      // 401 arriving while we already hold the lock doesn't start a duplicate.
-      thisTabRefreshing = true;
-      _refreshLockTimestamp = Date.now();
-      REFRESH_CHANNEL?.postMessage({ type: "refresh-started" } satisfies RefreshMessage);
-      let refreshSucceeded = false;
-      try {
-        response = await runErrorChain(new UnauthorizedError(response), requestCtx);
-        refreshSucceeded = response.status !== 401;
-      } catch {
-        refreshSucceeded = false;
-      } finally {
-        thisTabRefreshing = false;
-        REFRESH_CHANNEL?.postMessage({
-          type: "refresh-complete",
-          success: refreshSucceeded,
-        } satisfies RefreshMessage);
-      }
-      if (!refreshSucceeded) {
-        window.dispatchEvent(new Event("auth:unauthorized"));
-        throw new ApiError(401, "UNAUTHORIZED", "Authentication required", correlationId);
-      }
-      // refreshSucceeded === true means runErrorChain returned a Response
-      // whose status was not 401. But unauthorizedInterceptor's refresh path
-      // could have been triggered by an EARLIER 401 mid-retry — if so, we
-      // may have already done a refresh + replay earlier and the replay's
-      // response is still in `response`. Belt-and-suspenders check: if the
-      // post-refresh response is STILL 401, surface it as an unrecoverable
-      // auth failure so the caller sees a clean 401 rather than a 503 (which
-      // would happen if retryInterceptor skipped this 401 mid-retry).
-      if (response.status === 401) {
-        window.dispatchEvent(new Event("auth:unauthorized"));
-        throw new ApiError(401, "UNAUTHORIZED", "Authentication required", correlationId);
-      }
-    } else {
-      // thisTabRefreshing is already true — a concurrent request hit 401 while
-      // this tab's refresh is in-flight. The token will be updated once the
-      // in-flight refresh resolves; treat this as an auth failure since the
-      // original token was already invalid.
-      window.dispatchEvent(new Event("auth:unauthorized"));
-      throw new ApiError(401, "UNAUTHORIZED", "Authentication required", correlationId);
     }
-  }
 
-  const responseChain: readonly ResponseInterceptor[] = [
-    jsonParseInterceptor,
-    telemetryInterceptor,
-    errorStatusInterceptor,
-    envelopeInterceptor(opts.schema),
-  ];
+    const responseChain: readonly ResponseInterceptor[] = [
+      jsonParseInterceptor,
+      telemetryInterceptor,
+      errorStatusInterceptor,
+      envelopeInterceptor(opts.schema),
+    ];
 
-  const finalCtx = await runResponseChain(
-    { request: requestCtx, response, parsed: null },
-    responseChain,
-  );
-  return finalCtx.parsed as z.infer<TSchema>;
+    const finalCtx = await runResponseChain(
+      { request: requestCtx, response, parsed: null },
+      responseChain,
+    );
+    return finalCtx.parsed as z.infer<TSchema>;
   } finally {
     clearTimeout(timeoutId);
   }

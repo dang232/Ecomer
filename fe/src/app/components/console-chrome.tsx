@@ -39,9 +39,7 @@ export function ConsoleChrome({ persona }: { persona: "admin" | "seller" }) {
     persona === "admin" ? t("consoleChrome.adminLabel") : t("consoleChrome.sellerLabel");
 
   return (
-    <header
-      className="sticky top-0 z-50 w-full bg-card border-b border-border shadow-sm"
-    >
+    <header className="sticky top-0 z-50 w-full bg-card border-b border-border shadow-sm">
       <div className="max-w-7xl mx-auto px-4 h-14 flex items-center gap-4">
         <button
           onClick={() => navigate("/")}

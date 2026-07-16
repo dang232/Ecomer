@@ -1,4 +1,33 @@
-import { IconCheck, IconCopy, IconChevronRight, IconStar, IconBolt, IconHeart, IconShoppingCart, IconBell, IconSearch, IconPackage, IconTag, IconShield, IconTruck, IconArrowRight, IconTrendingUp, IconEye, IconAlertCircle, IconInfoCircle, IconCircleCheck, IconCircleX, IconPlus, IconMinus, IconX, IconFilter, IconAdjustmentsHorizontal, IconBuildingStore, IconUser, IconHome } from "@tabler/icons-react";
+import {
+  IconCheck,
+  IconCopy,
+  IconChevronRight,
+  IconStar,
+  IconBolt,
+  IconHeart,
+  IconShoppingCart,
+  IconBell,
+  IconSearch,
+  IconPackage,
+  IconTag,
+  IconShield,
+  IconTruck,
+  IconArrowRight,
+  IconTrendingUp,
+  IconEye,
+  IconAlertCircle,
+  IconInfoCircle,
+  IconCircleCheck,
+  IconCircleX,
+  IconPlus,
+  IconMinus,
+  IconX,
+  IconFilter,
+  IconAdjustmentsHorizontal,
+  IconBuildingStore,
+  IconUser,
+  IconHome,
+} from "@tabler/icons-react";
 import { motion } from "motion/react";
 import { useState } from "react";
 
@@ -1148,7 +1177,8 @@ export function DesignSystemPage() {
                       <span className="font-medium text-green-600">Success</span> cho trạng thái
                       thành công, <span className="font-medium text-yellow-600">Warning</span> cho
                       cảnh báo, <span className="font-medium text-red-500">Error</span> cho lỗi và
-                      xóa, <span className="font-medium text-blue-500">IconInfoCircle</span> cho thông tin.
+                      xóa, <span className="font-medium text-blue-500">IconInfoCircle</span> cho
+                      thông tin.
                     </p>
                   </div>
                 </Card>

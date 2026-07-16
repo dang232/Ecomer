@@ -52,11 +52,7 @@ describe("FormDialog", () => {
 
   it("calls onClose when the close button is clicked", () => {
     const { onClose } = renderDialog();
-    const closeBtn = screen
-      .getAllByRole("button")
-      .find((b) => b.className.includes("rounded-full"));
-    expect(closeBtn).toBeDefined();
-    fireEvent.click(closeBtn!);
+    fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -64,6 +60,22 @@ describe("FormDialog", () => {
     const { onClose } = renderDialog();
     fireEvent.click(screen.getByRole("button", { name: "Huỷ" }));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses dialog semantics and does not close when Enter or Space is typed in a field", () => {
+    const { onClose } = renderDialog();
+    const input = screen.getByRole("textbox", { name: /Lý do từ chối/ });
+
+    expect(screen.getByRole("dialog", { name: "Test dialog" })).toBeInTheDocument();
+    fireEvent.keyDown(input, { key: "Enter" });
+    fireEvent.keyDown(input, { key: " " });
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("cannot be dismissed from the backdrop while submitting", () => {
+    const { onClose } = renderDialog({ isSubmitting: true });
+    fireEvent.mouseDown(screen.getByTestId("dialog-backdrop"));
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it("does not call onSubmit when a required field is empty", () => {

@@ -14,12 +14,7 @@
 
 /** UI-facing order status. Multiple backend strings collapse to one of these. */
 export type OrderStatusUi =
-  | "pending"
-  | "confirmed"
-  | "shipping"
-  | "delivered"
-  | "cancelled"
-  | "returned";
+  "pending" | "confirmed" | "shipping" | "delivered" | "cancelled" | "returned";
 
 /**
  * Map any backend order status string to one of the known UI values. Unknown
@@ -27,11 +22,19 @@ export type OrderStatusUi =
  */
 export function parseOrderStatus(raw: string | null | undefined): OrderStatusUi {
   const v = (raw ?? "").toUpperCase();
-  if (v.includes("CANCEL")) return "cancelled";
+  if (v.includes("CANCEL") || v.includes("REJECT")) return "cancelled";
   if (v.includes("RETURN") || v.includes("REFUND")) return "returned";
+  if (v.includes("PENDING")) return "pending";
   if (v.includes("DELIVER") || v === "COMPLETED") return "delivered";
   if (v.includes("SHIP")) return "shipping";
-  if (v.includes("ACCEPT") || v.includes("CONFIRM") || v.includes("PACK")) return "confirmed";
+  if (
+    v.includes("ACCEPT") ||
+    v.includes("CONFIRM") ||
+    v.includes("PACK") ||
+    v.includes("PROCESS")
+  ) {
+    return "confirmed";
+  }
   return "pending";
 }
 
@@ -62,7 +65,15 @@ export function parsePayoutStatus(raw: string | null | undefined): PayoutStatusU
 // ─── Payment method ─────────────────────────────────────────────────────────
 
 /** Supported checkout payment methods. The backend echoes one of these strings. */
-export const PAYMENT_METHODS = ["COD", "VNPAY", "MOMO", "BANK", "VIETQR", "STRIPE", "PAYPAL"] as const;
+export const PAYMENT_METHODS = [
+  "COD",
+  "VNPAY",
+  "MOMO",
+  "BANK",
+  "VIETQR",
+  "STRIPE",
+  "PAYPAL",
+] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 export function isPaymentMethod(value: string | null | undefined): value is PaymentMethod {

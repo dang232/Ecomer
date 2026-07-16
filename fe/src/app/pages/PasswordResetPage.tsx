@@ -97,10 +97,7 @@ export function PasswordResetPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4 text-left" noValidate>
           <div className="mb-4">
-            <label
-              htmlFor="email"
-              className="block text-[13px] font-medium text-foreground mb-1.5"
-            >
+            <label htmlFor="email" className="block text-[13px] font-medium text-foreground mb-1.5">
               {t("passwordReset.emailLabel", { defaultValue: "Email address" })}
             </label>
             <input
