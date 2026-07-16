@@ -3,9 +3,7 @@ import 'dart:async';
 /// Controller for managing authentication session lifecycle
 /// Provides a centralized place to handle session expiration
 class SessionController {
-  SessionController({
-    required Future<void> Function() clearTokens,
-  }) : _clearTokens = clearTokens;
+  SessionController({required this._clearTokens});
 
   final Future<void> Function() _clearTokens;
 
@@ -16,7 +14,6 @@ class SessionController {
 
   /// Guard to prevent multiple expireSession calls
   bool _sessionExpiredHandled = false;
-  bool get _isExpired => _sessionExpiredHandled;
 
   /// Handle session expiration
   /// Only processes the first call; subsequent calls are no-ops

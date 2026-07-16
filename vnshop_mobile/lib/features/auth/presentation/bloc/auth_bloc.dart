@@ -10,11 +10,9 @@ import 'auth_state.dart';
 /// BLoC for managing authentication state
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   AuthBloc({
-    required AuthRepository authRepository,
-    SessionController? sessionController,
-  })  : _authRepository = authRepository,
-        _sessionController = sessionController,
-        super(const AuthState()) {
+    required this._authRepository,
+    this._sessionController,
+  })  : super(const AuthState()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<AuthLoginRequested>(_onAuthLoginRequested);
     on<AuthRegisterRequested>(_onAuthRegisterRequested);

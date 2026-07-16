@@ -49,6 +49,7 @@ class CartModel extends Equatable {
     String? userId,
     List<CartItemModel>? items,
     String? appliedCouponCode,
+    bool clearAppliedCouponCode = false,
     double? discountAmount,
     DateTime? updatedAt,
   }) {
@@ -56,7 +57,9 @@ class CartModel extends Equatable {
       id: id ?? this.id,
       userId: userId ?? this.userId,
       items: items ?? this.items,
-      appliedCouponCode: appliedCouponCode ?? this.appliedCouponCode,
+      appliedCouponCode: clearAppliedCouponCode
+          ? null
+          : appliedCouponCode ?? this.appliedCouponCode,
       discountAmount: discountAmount ?? this.discountAmount,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -75,10 +78,7 @@ class CartModel extends Equatable {
       return copyWith(items: updatedItems, updatedAt: DateTime.now());
     }
 
-    return copyWith(
-      items: [...items, item],
-      updatedAt: DateTime.now(),
-    );
+    return copyWith(items: [...items, item], updatedAt: DateTime.now());
   }
 
   CartModel updateItemQuantity(String cartItemId, int quantity) {
@@ -106,7 +106,7 @@ class CartModel extends Equatable {
   CartModel clearItems() {
     return copyWith(
       items: [],
-      appliedCouponCode: null,
+      clearAppliedCouponCode: true,
       discountAmount: 0.0,
       updatedAt: DateTime.now(),
     );
@@ -125,11 +125,13 @@ class CartModel extends Equatable {
     return CartModel(
       id: json['id'] as String? ?? json['_id'] as String? ?? '',
       userId: json['userId'] as String? ?? json['user_id'] as String? ?? '',
-      items: (json['items'] as List<dynamic>?)
+      items:
+          (json['items'] as List<dynamic>?)
               ?.map((e) => CartItemModel.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
-      appliedCouponCode: json['appliedCouponCode'] as String? ??
+      appliedCouponCode:
+          json['appliedCouponCode'] as String? ??
           json['applied_coupon_code'] as String?,
       discountAmount:
           (json['discountAmount'] as num?)?.toDouble() ??
@@ -138,8 +140,8 @@ class CartModel extends Equatable {
       updatedAt: json['updatedAt'] != null
           ? DateTime.parse(json['updatedAt'] as String)
           : json['updated_at'] != null
-              ? DateTime.parse(json['updated_at'] as String)
-              : DateTime.now(),
+          ? DateTime.parse(json['updated_at'] as String)
+          : DateTime.now(),
     );
   }
 
@@ -156,11 +158,11 @@ class CartModel extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        userId,
-        items,
-        appliedCouponCode,
-        discountAmount,
-        updatedAt,
-      ];
+    id,
+    userId,
+    items,
+    appliedCouponCode,
+    discountAmount,
+    updatedAt,
+  ];
 }

@@ -33,6 +33,7 @@ class VnTextField extends StatelessWidget {
     this.initialValue,
     this.focusNode,
     this.onEditingComplete,
+    this.autofillHints,
   });
 
   /// Controller cho text field
@@ -110,6 +111,9 @@ class VnTextField extends StatelessWidget {
   /// Callback khi hoàn thành edit
   final VoidCallback? onEditingComplete;
 
+  /// Platform autofill hints for address, contact, and identity fields.
+  final Iterable<String>? autofillHints;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -118,24 +122,21 @@ class VnTextField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Label
-        Row(
-          children: [
-            Text(
-              labelText,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
-            if (isRequired)
-              Text(
-                ' *',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w500,
-                  color: theme.colorScheme.error,
+        Text.rich(
+          TextSpan(
+            text: labelText,
+            children: [
+              if (isRequired)
+                TextSpan(
+                  text: ' *',
+                  style: TextStyle(color: theme.colorScheme.error),
                 ),
-              ),
-          ],
+            ],
+          ),
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w500,
+            color: theme.colorScheme.onSurface,
+          ),
         ),
         const SizedBox(height: AppSpacing.xs),
 
@@ -155,6 +156,7 @@ class VnTextField extends StatelessWidget {
           onFieldSubmitted: onSubmitted,
           onTap: onTap,
           onEditingComplete: onEditingComplete,
+          autofillHints: autofillHints,
           readOnly: readOnly,
           maxLines: maxLines,
           minLines: minLines,
@@ -167,36 +169,30 @@ class VnTextField extends StatelessWidget {
             filled: true,
             fillColor: theme.colorScheme.surfaceContainerHighest.withAlpha(77),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+              borderRadius: AppSpacing.borderRadiusSmall,
               borderSide: BorderSide.none,
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+              borderRadius: AppSpacing.borderRadiusSmall,
               borderSide: BorderSide.none,
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+              borderRadius: AppSpacing.borderRadiusSmall,
               borderSide: BorderSide(
                 color: theme.colorScheme.primary,
                 width: 2,
               ),
             ),
             errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-              borderSide: BorderSide(
-                color: theme.colorScheme.error,
-                width: 1,
-              ),
+              borderRadius: AppSpacing.borderRadiusSmall,
+              borderSide: BorderSide(color: theme.colorScheme.error, width: 1),
             ),
             focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-              borderSide: BorderSide(
-                color: theme.colorScheme.error,
-                width: 2,
-              ),
+              borderRadius: AppSpacing.borderRadiusSmall,
+              borderSide: BorderSide(color: theme.colorScheme.error, width: 2),
             ),
             disabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+              borderRadius: AppSpacing.borderRadiusSmall,
               borderSide: BorderSide(
                 color: theme.colorScheme.outline.withAlpha(77),
                 width: 1,

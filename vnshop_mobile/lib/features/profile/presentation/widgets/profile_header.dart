@@ -63,7 +63,7 @@ class ProfileHeader extends StatelessWidget {
                           ? Image.network(
                               avatarUrl!,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => _buildPlaceholderAvatar(),
+                              errorBuilder: (_, _, _) => _buildPlaceholderAvatar(),
                             )
                           : _buildPlaceholderAvatar(),
                     ),
@@ -183,7 +183,7 @@ class ProfileHeaderCompact extends StatelessWidget {
                 ? Image.network(
                     avatarUrl!,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _buildPlaceholderAvatar(),
+                    errorBuilder: (_, _, _) => _buildPlaceholderAvatar(),
                   )
                 : _buildPlaceholderAvatar(),
           ),

@@ -1,138 +1,496 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
+import '../../../../app/router/app_routes.dart';
+import '../../../../common/widgets/buttons/vn_button.dart';
+import '../../../../common/widgets/images/safe_network_image.dart';
+import '../../../../core/design_system/components/async_state_view.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/utils/localized_formatters.dart';
+import '../../../../l10n/generated/app_localizations.dart';
+import '../../data/models/order_item_model.dart';
 import '../../data/models/order_model.dart';
+import '../bloc/order_detail_cubit.dart';
+import '../mappers/order_presentation_mapper.dart';
+import '../models/order_failure.dart';
 import '../widgets/order_status_badge.dart';
 import '../widgets/order_status_stepper.dart';
 
-class OrderDetailPage extends StatelessWidget {
+class OrderDetailPage extends StatefulWidget {
+  const OrderDetailPage({required this.orderId, super.key});
+
   final String orderId;
 
-  const OrderDetailPage({
-    super.key,
-    required this.orderId,
-  });
+  @override
+  State<OrderDetailPage> createState() => _OrderDetailPageState();
+}
+
+class _OrderDetailPageState extends State<OrderDetailPage> {
+  @override
+  void initState() {
+    super.initState();
+    context.read<OrderDetailCubit>().load();
+  }
 
   @override
   Widget build(BuildContext context) {
-    // TODO: Load order detail from repository
-    // For now, show a placeholder with the status stepper
+    final localizations = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Chi tiết đơn hàng'),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.share_outlined),
-            onPressed: () {
-              // TODO: Share order
-            },
-          ),
-        ],
+      restorationId: 'order-detail-${widget.orderId}',
+      appBar: AppBar(title: Text(localizations.orderDetailTitle)),
+      body: BlocConsumer<OrderDetailCubit, OrderDetailState>(
+        listenWhen: (previous, current) =>
+            previous.status != current.status ||
+            previous.failure != current.failure,
+        listener: (context, state) {
+          if (state.status == OrderDetailStatus.cancelled) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(localizations.orderCancelledSuccess)),
+            );
+          } else if (state.failure != null && state.order != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.failure!.localizedMessage(localizations)),
+              ),
+            );
+          }
+        },
+        builder: (context, state) {
+          if (state.order != null) {
+            return _OrderDetailContent(order: state.order!);
+          }
+          final status = resolveAsyncViewStatus(
+            isLoading:
+                state.status == OrderDetailStatus.initial ||
+                state.status == OrderDetailStatus.loading,
+            hasError: state.status == OrderDetailStatus.error,
+            isEmpty: false,
+            hasData: false,
+          );
+          return AsyncStateView(
+            status: status,
+            loading: const _OrderDetailSkeleton(),
+            error: _DetailMessage(
+              icon: state.failure == OrderFailure.notFound
+                  ? Icons.receipt_long_outlined
+                  : Icons.cloud_off_outlined,
+              title: state.failure == OrderFailure.notFound
+                  ? localizations.orderNotFoundError
+                  : localizations.ordersLoadError,
+              message: (state.failure ?? OrderFailure.unknown).localizedMessage(
+                localizations,
+              ),
+            ),
+            empty: const SizedBox.shrink(),
+            retryLabel: localizations.retry,
+            onRetry: context.read<OrderDetailCubit>().load,
+            child: const SizedBox.shrink(),
+          );
+        },
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Status Stepper
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: OrderStatusStepper(
-                currentStatus: OrderStatus.pending,
-              ),
-            ),
-
-            // Placeholder content
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              padding: const EdgeInsets.all(32),
+      bottomNavigationBar: BlocBuilder<OrderDetailCubit, OrderDetailState>(
+        builder: (context, state) {
+          final order = state.order;
+          if (order == null || !order.canCancel) return const SizedBox.shrink();
+          return SafeArea(
+            top: false,
+            child: Container(
+              padding: const EdgeInsets.all(AppSpacing.screenPadding),
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(12),
+                color: Theme.of(context).colorScheme.surface,
+                border: Border(
+                  top: BorderSide(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                  ),
+                ),
               ),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.receipt_long_outlined,
-                    size: 64,
-                    color: Colors.grey.shade400,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Order ID: $orderId',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Đang tải chi tiết đơn hàng...',
-                    style: TextStyle(
-                      color: Colors.grey.shade500,
-                    ),
-                  ),
-                ],
+              child: VnButton(
+                key: const Key('order-detail-cancel'),
+                onPressed: state.status == OrderDetailStatus.cancelling
+                    ? null
+                    : () => _confirmCancellation(context),
+                label: state.status == OrderDetailStatus.cancelling
+                    ? localizations.cancellingOrder
+                    : localizations.cancelOrder,
+                type: VnButtonType.secondary,
+                icon: const Icon(Icons.cancel_outlined),
+                isLoading: state.status == OrderDetailStatus.cancelling,
+                backgroundColor: Theme.of(context).colorScheme.error,
               ),
             ),
-
-            // Action buttons
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _showContactDialog(context),
-                      icon: const Icon(Icons.chat_outlined),
-                      label: const Text('Liên hệ'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        // TODO: Reorder
-                        context.pop();
-                      },
-                      icon: const Icon(Icons.replay),
-                      label: const Text('Mua lại'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 
-  void _showContactDialog(BuildContext context) {
-    showDialog(
+  Future<void> _confirmCancellation(BuildContext context) async {
+    final localizations = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Liên hệ hỗ trợ'),
-        content: const Text(
-          'Bạn có thể liên hệ qua:\n\n'
-          '📞 Hotline: 1900 1234\n'
-          '💬 Chat: 24/7\n'
-          '📧 Email: support@vnshop.com',
-        ),
+      builder: (dialogContext) => AlertDialog(
+        title: Text(localizations.cancelOrderTitle),
+        content: Text(localizations.cancelOrderConfirmation),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Đóng'),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(localizations.keepOrder),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
+            child: Text(localizations.confirmCancelOrder),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      await context.read<OrderDetailCubit>().cancel();
+    }
+  }
+}
+
+class _OrderDetailContent extends StatelessWidget {
+  const _OrderDetailContent({required this.order});
+
+  final OrderModel order;
+
+  @override
+  Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+    return SingleChildScrollView(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _DetailSection(
+                title: localizations.orderStatusSection,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    OrderStatusBadge(status: order.status, large: true),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      order.orderNumber,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    OrderStatusStepper(currentStatus: order.status),
+                    if (order.trackingNumber != null ||
+                        order.carrier != null ||
+                        order.shippingMethod != null) ...[
+                      const Divider(height: AppSpacing.xl),
+                      if (order.trackingNumber != null)
+                        _InfoBlock(
+                          label: localizations.trackingNumber,
+                          value: order.trackingNumber!,
+                        ),
+                      if (order.carrier != null)
+                        _InfoBlock(
+                          label: localizations.carrier,
+                          value: order.carrier!,
+                        ),
+                      if (order.shippingMethod != null)
+                        _InfoBlock(
+                          label: localizations.shippingMethod,
+                          value: order.shippingMethod!,
+                        ),
+                    ],
+                  ],
+                ),
+              ),
+              if (order.fullShippingAddress.isNotEmpty)
+                _DetailSection(
+                  title: localizations.deliveryAddress,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.location_on_outlined,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      Expanded(
+                        child: Text(
+                          order.fullShippingAddress,
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              _DetailSection(
+                title: localizations.orderProducts,
+                child: order.items.isEmpty
+                    ? Text(
+                        localizations.orderProductsUnavailable,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      )
+                    : Column(
+                        children: [
+                          for (
+                            var index = 0;
+                            index < order.items.length;
+                            index++
+                          ) ...[
+                            if (index > 0) const Divider(height: AppSpacing.lg),
+                            _OrderItemLine(item: order.items[index]),
+                          ],
+                        ],
+                      ),
+              ),
+              _DetailSection(
+                title: localizations.orderSummary,
+                child: Column(
+                  children: [
+                    _AmountRow(
+                      label: localizations.subtotal,
+                      amount: order.subtotal,
+                    ),
+                    _AmountRow(
+                      label: localizations.shipping,
+                      amount: order.shippingFee,
+                    ),
+                    if (order.discount > 0)
+                      _AmountRow(
+                        label: localizations.discount,
+                        amount: -order.discount,
+                        accent: Theme.of(context).colorScheme.tertiary,
+                      ),
+                    const Divider(height: AppSpacing.lg),
+                    _AmountRow(
+                      label: localizations.total,
+                      amount: order.totalAmount,
+                      emphasized: true,
+                    ),
+                  ],
+                ),
+              ),
+              _DetailSection(
+                title: localizations.paymentInformation,
+                child: Column(
+                  children: [
+                    _InfoBlock(
+                      label: localizations.paymentMethod,
+                      value: localizedPaymentMethod(
+                        order.paymentMethod,
+                        localizations,
+                      ),
+                    ),
+                    _InfoBlock(
+                      label: localizations.paymentStatus,
+                      value: order.isPaid
+                          ? localizations.paid
+                          : localizations.unpaid,
+                      valueColor: order.isPaid
+                          ? Theme.of(context).colorScheme.tertiary
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ],
+                ),
+              ),
+              _DetailSection(
+                title: localizations.orderInformation,
+                showBottomBorder: false,
+                child: Column(
+                  children: [
+                    _InfoBlock(
+                      label: localizations.orderCode,
+                      value: order.orderNumber,
+                    ),
+                    if (order.hasCreatedAt)
+                      _InfoBlock(
+                        label: localizations.placedAt,
+                        value: LocalizedFormatters.dateTime(
+                          context,
+                          order.createdAt,
+                        ),
+                      ),
+                    if (order.updatedAt != null)
+                      _InfoBlock(
+                        label: localizations.updatedAt,
+                        value: LocalizedFormatters.dateTime(
+                          context,
+                          order.updatedAt!,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailSection extends StatelessWidget {
+  const _DetailSection({
+    required this.title,
+    required this.child,
+    this.showBottomBorder = true,
+  });
+
+  final String title;
+  final Widget child;
+  final bool showBottomBorder;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.screenPadding),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: showBottomBorder
+            ? Border(
+                bottom: BorderSide(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                ),
+              )
+            : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: AppSpacing.md),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _OrderItemLine extends StatelessWidget {
+  const _OrderItemLine({required this.item});
+
+  final OrderItemModel item;
+
+  @override
+  Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+    final content = Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxs),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SafeNetworkImage(
+            url: item.productImage,
+            width: 72,
+            height: 72,
+            borderRadius: AppSpacing.borderRadiusSmall,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.productName,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                if (item.variantSku != null) ...[
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(
+                    item.variantSku!,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  localizations.quantityShort(item.quantity),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  LocalizedFormatters.currency(context, item.totalPrice),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (item.productId.isNotEmpty)
+            const Padding(
+              padding: EdgeInsets.only(top: AppSpacing.xs),
+              child: Icon(Icons.chevron_right),
+            ),
+        ],
+      ),
+    );
+
+    if (item.productId.isEmpty) return content;
+    return Semantics(
+      button: true,
+      child: InkWell(
+        onTap: () => context.push(AppRoutes.productDetail(item.productId)),
+        borderRadius: AppSpacing.borderRadiusSmall,
+        child: content,
+      ),
+    );
+  }
+}
+
+class _AmountRow extends StatelessWidget {
+  const _AmountRow({
+    required this.label,
+    required this.amount,
+    this.accent,
+    this.emphasized = false,
+  });
+
+  final String label;
+  final double amount;
+  final Color? accent;
+  final bool emphasized;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: emphasized
+                  ? theme.textTheme.titleMedium
+                  : theme.textTheme.bodyMedium,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              LocalizedFormatters.currency(context, amount),
+              textAlign: TextAlign.end,
+              style:
+                  (emphasized
+                          ? theme.textTheme.titleLarge
+                          : theme.textTheme.bodyMedium)
+                      ?.copyWith(
+                        color:
+                            accent ??
+                            (emphasized ? theme.colorScheme.primary : null),
+                        fontWeight: emphasized
+                            ? FontWeight.w700
+                            : FontWeight.w600,
+                      ),
+            ),
           ),
         ],
       ),
@@ -140,455 +498,110 @@ class OrderDetailPage extends StatelessWidget {
   }
 }
 
-class OrderDetailContent extends StatelessWidget {
-  final OrderModel order;
-  final VoidCallback? onCancel;
-  final bool isCancelling;
+class _InfoBlock extends StatelessWidget {
+  const _InfoBlock({required this.label, required this.value, this.valueColor});
 
-  const OrderDetailContent({
-    super.key,
-    required this.order,
-    this.onCancel,
-    this.isCancelling = false,
-  });
+  final String label;
+  final String value;
+  final Color? valueColor;
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
-    final currencyFormat = NumberFormat.currency(
-      locale: 'vi_VN',
-      symbol: '₫',
-      decimalDigits: 0,
-    );
-
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Status Section
-          _buildSection(
-            context,
-            title: 'Trạng thái',
-            child: Row(
-              children: [
-                OrderStatusBadge(status: order.status, large: true),
-                const Spacer(),
-                if (order.estimatedDelivery != null)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      const Text(
-                        'Dự kiến giao:',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      Text(
-                        dateFormat.format(order.estimatedDelivery!),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
-            ),
-          ),
-
-          // Shipping Address
-          if (order.shippingAddress != null ||
-              order.shippingName != null) ...[
-            _buildSection(
-              context,
-              title: 'Địa chỉ giao hàng',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (order.shippingName != null)
-                    Text(
-                      order.shippingName!,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  if (order.shippingPhone != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        order.shippingPhone!,
-                        style: TextStyle(
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                    ),
-                  if (order.fullShippingAddress.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        order.fullShippingAddress,
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
-
-          // Order Items
-          _buildSection(
-            context,
-            title: 'Sản phẩm (${order.itemCount})',
-            child: Column(
-              children: order.items.map((item) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: item.productImage.isNotEmpty
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.network(
-                                  item.productImage,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const Icon(
-                                    Icons.image_not_supported_outlined,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              )
-                            : const Icon(
-                                Icons.image_not_supported_outlined,
-                                color: Colors.grey,
-                              ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item.productName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w500,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'x${item.quantity}',
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            currencyFormat.format(item.totalPrice),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          if (item.quantity > 1)
-                            Text(
-                              currencyFormat.format(item.price),
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontSize: 12,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-
-          // Order Summary
-          _buildSection(
-            context,
-            title: 'Tổng cộng',
-            child: Column(
-              children: [
-                _buildSummaryRow(
-                  context,
-                  'Tạm tính',
-                  currencyFormat.format(order.subtotal),
-                ),
-                const SizedBox(height: 8),
-                _buildSummaryRow(
-                  context,
-                  'Phí vận chuyển',
-                  currencyFormat.format(order.shippingFee),
-                ),
-                if (order.discount > 0) ...[
-                  const SizedBox(height: 8),
-                  _buildSummaryRow(
-                    context,
-                    'Giảm giá',
-                    '-${currencyFormat.format(order.discount)}',
-                    valueColor: Colors.green.shade700,
-                  ),
-                ],
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Divider(),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Thành tiền',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                    ),
-                    Text(
-                      currencyFormat.format(order.totalAmount),
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // Order Info
-          _buildSection(
-            context,
-            title: 'Thông tin đơn hàng',
-            child: Column(
-              children: [
-                _buildInfoRow(context, 'Mã đơn hàng', '#${order.orderNumber}'),
-                _buildInfoRow(
-                  context,
-                  'Ngày đặt',
-                  dateFormat.format(order.createdAt),
-                ),
-                if (order.updatedAt != null)
-                  _buildInfoRow(
-                    context,
-                    'Cập nhật lần cuối',
-                    dateFormat.format(order.updatedAt!),
-                  ),
-                if (order.paymentMethod != null)
-                  _buildInfoRow(
-                    context,
-                    'Phương thức thanh toán',
-                    _getPaymentMethodLabel(order.paymentMethod!),
-                  ),
-                _buildInfoRow(
-                  context,
-                  'Thanh toán',
-                  order.isPaid ? 'Đã thanh toán' : 'Chưa thanh toán',
-                  valueColor: order.isPaid ? Colors.green : Colors.orange,
-                ),
-                if (order.note != null && order.note!.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Ghi chú: ${order.note}',
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-
-          // Cancel button
-          if (_canCancel(order) && onCancel != null)
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: isCancelling
-                      ? null
-                      : () => _showCancelDialog(context),
-                  icon: isCancelling
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.cancel_outlined),
-                  label: Text(isCancelling ? 'Đang hủy...' : 'Hủy đơn hàng'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red,
-                    side: const BorderSide(color: Colors.red),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-            ),
-
-          const SizedBox(height: 32),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSection(
-    BuildContext context, {
-    required String title,
-    required Widget child,
-  }) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.grey.shade200,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
-          ),
-          const SizedBox(height: 12),
-          child,
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryRow(
-    BuildContext context,
-    String label,
-    String value, {
-    Color? valueColor,
-  }) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.grey.shade600,
-          ),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            fontWeight: FontWeight.w500,
-            color: valueColor,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildInfoRow(
-    BuildContext context,
-    String label,
-    String value, {
-    Color? valueColor,
-  }) {
+    final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
             label,
-            style: TextStyle(
-              color: Colors.grey.shade600,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
+          const SizedBox(height: AppSpacing.xxs),
           Text(
             value,
-            style: TextStyle(
-              fontWeight: FontWeight.w500,
+            style: theme.textTheme.bodyLarge?.copyWith(
               color: valueColor,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  bool _canCancel(OrderModel order) {
-    return order.status == OrderStatus.pending ||
-        order.status == OrderStatus.confirmed;
-  }
+class _DetailMessage extends StatelessWidget {
+  const _DetailMessage({
+    required this.icon,
+    required this.title,
+    required this.message,
+  });
 
-  String _getPaymentMethodLabel(String method) {
-    switch (method.toLowerCase()) {
-      case 'cod':
-        return 'Thanh toán khi nhận hàng (COD)';
-      case 'bank_transfer':
-        return 'Chuyển khoản ngân hàng';
-      case 'momo':
-        return 'Ví MoMo';
-      case 'vnpay':
-        return 'VNPay';
-      case 'credit_card':
-        return 'Thẻ tín dụng';
-      default:
-        return method;
-    }
-  }
+  final IconData icon;
+  final String title;
+  final String message;
 
-  void _showCancelDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Hủy đơn hàng'),
-        content: const Text(
-          'Bạn có chắc chắn muốn hủy đơn hàng này không?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Không'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              onCancel?.call();
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red,
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 48,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
-            child: const Text('Có, hủy đơn'),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OrderDetailSkeleton extends StatelessWidget {
+  const _OrderDetailSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.surfaceContainerHighest;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppSpacing.screenPadding),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: Column(
+            children: [
+              for (final height in <double>[220, 120, 240, 180]) ...[
+                Container(
+                  height: height,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: AppSpacing.borderRadiusSmall,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+              ],
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

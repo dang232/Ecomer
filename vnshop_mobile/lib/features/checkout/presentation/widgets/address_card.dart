@@ -1,17 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../data/models/address_model.dart';
 
-/// Address display card widget
 class AddressCard extends StatelessWidget {
-  final VietnamAddress address;
-  final bool isSelected;
-  final VoidCallback? onTap;
-  final VoidCallback? onEdit;
-  final VoidCallback? onDelete;
-
   const AddressCard({
     super.key,
     required this.address,
@@ -21,195 +14,135 @@ class AddressCard extends StatelessWidget {
     this.onDelete,
   });
 
+  final VietnamAddress address;
+  final bool isSelected;
+  final VoidCallback? onTap;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
+
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xs,
-      ),
-      elevation: isSelected ? 2 : 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-        side: BorderSide(
-          color: isSelected
-              ? AppColors.primary
-              : AppColors.outlineVariant,
-          width: isSelected ? 2 : 1,
+    final colors = Theme.of(context).colorScheme;
+    final localizations = AppLocalizations.of(context);
+
+    return Semantics(
+      selected: isSelected,
+      button: onTap != null,
+      child: Card(
+        margin: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+        shape: RoundedRectangleBorder(
+          borderRadius: AppSpacing.borderRadiusSmall,
+          side: BorderSide(
+            color: isSelected ? colors.primary : colors.outlineVariant,
+            width: isSelected ? 2 : 1,
+          ),
         ),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Selection indicator
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: isSelected
-                        ? AppColors.primary
-                        : AppColors.outline,
-                    width: isSelected ? 2 : 1.5,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: AppSpacing.borderRadiusSmall,
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox.square(
+                  dimension: 48,
+                  child: Radio<VietnamAddress>(
+                    value: address,
+                    enabled: onTap != null,
                   ),
-                  color: isSelected
-                      ? AppColors.primary
-                      : Colors.transparent,
                 ),
-                child: isSelected
-                    ? const Icon(
-                        Icons.check,
-                        size: 16,
-                        color: AppColors.onPrimary,
-                      )
-                    : null,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-
-              // Address info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Name and badge
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
+                const SizedBox(width: AppSpacing.xs),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: AppSpacing.xs,
+                        runSpacing: AppSpacing.xxs,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(
                             address.recipientName,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w700),
                           ),
-                        ),
-                        if (address.isDefault) ...[
-                          const SizedBox(width: AppSpacing.xs),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withAlpha(25),
-                              borderRadius: BorderRadius.circular(
-                                AppSpacing.radiusMicro,
+                          if (address.isDefault)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.xs,
+                                vertical: AppSpacing.xxs,
+                              ),
+                              decoration: BoxDecoration(
+                                color: colors.primaryContainer,
+                                borderRadius: AppSpacing.borderRadiusSmall,
+                              ),
+                              child: Text(
+                                localizations.defaultLabel,
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(
+                                      color: colors.onPrimaryContainer,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                               ),
                             ),
-                            child: const Text(
-                              'Mặc định',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
                         ],
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-
-                    // Phone number
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.phone_outlined,
-                          size: 14,
-                          color: AppColors.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          address.phoneNumber,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: AppColors.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-
-                    // Full address
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.location_on_outlined,
-                          size: 14,
-                          color: AppColors.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            address.fullAddress,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: AppColors.onSurfaceVariant,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              // Action menu
-              if (onEdit != null || onDelete != null)
-                PopupMenuButton<String>(
-                  icon: Icon(
-                    Icons.more_vert,
-                    size: 20,
-                    color: AppColors.onSurfaceVariant,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      _IconText(
+                        icon: Icons.phone_outlined,
+                        text: address.phoneNumber,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      _IconText(
+                        icon: Icons.location_on_outlined,
+                        text: address.fullAddress,
+                      ),
+                    ],
                   ),
-                  itemBuilder: (context) => [
-                    if (onEdit != null)
-                      const PopupMenuItem(
-                        value: 'edit',
-                        child: Row(
-                          children: [
-                            Icon(Icons.edit_outlined, size: 20),
-                            SizedBox(width: AppSpacing.xs),
-                            Text('Sửa'),
-                          ],
-                        ),
-                      ),
-                    if (onDelete != null)
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.delete_outline,
-                              size: 20,
-                              color: AppColors.error,
-                            ),
-                            SizedBox(width: AppSpacing.xs),
-                            Text(
-                              'Xóa',
-                              style: TextStyle(color: AppColors.error),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                  onSelected: (value) {
-                    if (value == 'edit') {
-                      onEdit?.call();
-                    } else if (value == 'delete') {
-                      onDelete?.call();
-                    }
-                  },
                 ),
-            ],
+                if (onEdit != null || onDelete != null)
+                  PopupMenuButton<_AddressAction>(
+                    tooltip: MaterialLocalizations.of(context).showMenuTooltip,
+                    onSelected: (action) {
+                      switch (action) {
+                        case _AddressAction.edit:
+                          onEdit?.call();
+                          break;
+                        case _AddressAction.delete:
+                          onDelete?.call();
+                          break;
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      if (onEdit != null)
+                        PopupMenuItem(
+                          value: _AddressAction.edit,
+                          child: ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(Icons.edit_outlined),
+                            title: Text(localizations.edit),
+                          ),
+                        ),
+                      if (onDelete != null)
+                        PopupMenuItem(
+                          value: _AddressAction.delete,
+                          child: ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: Icon(
+                              Icons.delete_outline,
+                              color: colors.error,
+                            ),
+                            title: Text(
+                              localizations.remove,
+                              style: TextStyle(color: colors.error),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -217,68 +150,88 @@ class AddressCard extends StatelessWidget {
   }
 }
 
-/// Skeleton loader for address card
+enum _AddressAction { edit, delete }
+
+class _IconText extends StatelessWidget {
+  const _IconText({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: colors.onSurfaceVariant),
+        const SizedBox(width: AppSpacing.xs),
+        Expanded(
+          child: Text(
+            text,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class AddressCardSkeleton extends StatelessWidget {
   const AddressCardSkeleton({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.surfaceContainerHighest;
     return Card(
-      margin: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xs,
-      ),
+      margin: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Selection indicator placeholder
-            Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                color: AppColors.surfaceContainerHigh,
-                shape: BoxShape.circle,
-              ),
-            ),
+            _SkeletonBox(width: 48, height: 48, color: color),
             const SizedBox(width: AppSpacing.sm),
-
-            // Content placeholder
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    height: 16,
-                    width: 120,
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceContainerHigh,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
+                  _SkeletonBox(width: 160, height: 18, color: color),
+                  const SizedBox(height: AppSpacing.sm),
+                  _SkeletonBox(width: 120, height: 14, color: color),
                   const SizedBox(height: AppSpacing.xs),
-                  Container(
-                    height: 14,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceContainerHigh,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Container(
-                    height: 14,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceContainerHigh,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
+                  _SkeletonBox(height: 14, color: color),
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _SkeletonBox extends StatelessWidget {
+  const _SkeletonBox({
+    this.width = double.infinity,
+    required this.height,
+    required this.color,
+  });
+
+  final double width;
+  final double height;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: AppSpacing.borderRadiusSmall,
       ),
     );
   }

@@ -1,18 +1,23 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../data/models/product_model.dart';
+import '../../../../app/router/app_routes.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../l10n/generated/app_localizations.dart';
+import '../../../home/presentation/widgets/category_chips.dart';
+import '../../../home/presentation/widgets/search_bar.dart';
+import '../../data/models/category_model.dart';
+import '../../domain/models/product_catalog_query.dart';
 import '../../domain/repositories/product_repository.dart';
 import '../bloc/product_list_bloc.dart';
 import '../bloc/product_list_event.dart';
 import '../bloc/product_list_state.dart';
-import '../widgets/product_grid_item.dart';
 import '../widgets/product_filters.dart';
+import '../widgets/product_card_skeleton.dart';
+import '../widgets/product_grid_item.dart';
+import '../widgets/product_grid_layout.dart';
 
-/// Product listing page with search, filters, and grid view
 class ProductListPage extends StatefulWidget {
   const ProductListPage({super.key});
 
@@ -20,485 +25,332 @@ class ProductListPage extends StatefulWidget {
   State<ProductListPage> createState() => _ProductListPageState();
 }
 
-class _ProductListPageState extends State<ProductListPage>
-    with TickerProviderStateMixin {
-  late final ProductListBloc _bloc;
+class _ProductListPageState extends State<ProductListPage> {
+  late final ProductListBloc _products;
   late final ScrollController _scrollController;
-  late final TextEditingController _searchController;
-
-  // Debounce timer for search
-  Timer? _debounceTimer;
-
-  // Animation controllers
-  late AnimationController _staggerController;
-  late Animation<double> _staggerAnimation;
-
-  // Sort options
-  static const List<Map<String, String>> _sortOptions = [
-    {'value': 'newest', 'label': 'Mới nhất'},
-    {'value': 'price_asc', 'label': 'Giá thấp - cao'},
-    {'value': 'price_desc', 'label': 'Giá cao - thấp'},
-    {'value': 'bestseller', 'label': 'Bán chạy'},
-    {'value': 'rating', 'label': 'Đánh giá cao'},
-  ];
-
-  String _currentSort = 'newest';
-  ProductFilterOptions _filters = const ProductFilterOptions();
 
   @override
   void initState() {
     super.initState();
-    _bloc = ProductListBloc(
-      repository: context.read<ProductRepository>(),
-    );
-    _bloc.add(const LoadCategories());
-    _bloc.add(const LoadProducts());
-    
-    _scrollController = ScrollController()..addListener(_onScroll);
-    _searchController = TextEditingController();
-
-    // Initialize stagger animation
-    _staggerController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
-    _staggerAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _staggerController,
-        curve: const Interval(0.0, 0.8, curve: Curves.easeOut),
-      ),
-    );
-
-    // Start animation
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (mounted) {
-        _staggerController.forward();
-      }
-    });
+    _products = ProductListBloc(repository: context.read<ProductRepository>())
+      ..add(const LoadCategories())
+      ..add(const LoadProducts());
+    _scrollController = ScrollController()..addListener(_loadNextPage);
   }
 
   @override
   void dispose() {
-    _debounceTimer?.cancel();
-    _scrollController.dispose();
-    _searchController.dispose();
-    _staggerController.dispose();
-    _bloc.close();
+    _scrollController
+      ..removeListener(_loadNextPage)
+      ..dispose();
+    _products.close();
     super.dispose();
   }
 
-  void _onScroll() {
-    if (_isBottom) {
-      _bloc.add(const LoadMoreProducts());
+  void _loadNextPage() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 320) {
+      _products.add(const LoadMoreProducts());
     }
   }
 
-  bool get _isBottom {
-    if (!_scrollController.hasClients) return false;
-    final maxScroll = _scrollController.position.maxScrollExtent;
-    final currentScroll = _scrollController.offset;
-    return currentScroll >= (maxScroll * 0.9);
+  Future<void> _refresh() async {
+    final completed = _products.stream.firstWhere(
+      (state) =>
+          state.status == ProductStatus.success ||
+          state.status == ProductStatus.failure,
+    );
+    _products.add(const RefreshProducts());
+    await completed;
   }
 
-  void _onSearchChanged(String query) {
-    _debounceTimer?.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
-      _bloc.add(SearchProducts(query));
-    });
-  }
-
-  void _onClearSearch() {
-    _searchController.clear();
-    _bloc.add(const ClearSearch());
-  }
-
-  void _onSortChanged(String? value) {
-    if (value != null) {
-      setState(() {
-        _currentSort = value;
-      });
-      // Trigger reload with sort
-      _bloc.add(const RefreshProducts());
-    }
-  }
-
-  void _showFilters() {
+  void _showFilters(ProductCatalogFilters filters) {
     ProductFiltersSheet.show(
       context,
-      initialFilters: _filters,
-      onApply: (filters) {
-        setState(() {
-          _filters = filters;
-        });
-        // Trigger reload with filters
-        _bloc.add(const RefreshProducts());
-      },
+      initialFilters: filters,
+      onApply: (value) => _products.add(ApplyProductFilters(value)),
     );
-  }
-
-  void _navigateToDetail(ProductModel product) {
-    context.push('/products/${product.id}', extra: product);
-  }
-
-  Future<void> _onRefresh() async {
-    _staggerController.reset();
-    _bloc.add(const RefreshProducts());
-    await Future.delayed(const Duration(milliseconds: 500));
-    _staggerController.forward();
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
+    final localizations = AppLocalizations.of(context);
     return BlocProvider.value(
-      value: _bloc,
+      value: _products,
       child: Scaffold(
-        backgroundColor: theme.colorScheme.surface,
-        appBar: AppBar(
-          title: const Text('Sản phẩm'),
-          centerTitle: true,
-          elevation: 0,
-          scrolledUnderElevation: 1,
-        ),
-        body: Column(
-          children: [
-            // Search and filter bar
-            _buildSearchBar(),
-
-            // Category chips
-            _buildCategoryChips(),
-
-            // Sort bar
-            _buildSortBar(),
-
-            // Product grid
-            Expanded(
-              child: BlocBuilder<ProductListBloc, ProductListState>(
-                builder: (context, state) {
-                  if (state.status == ProductStatus.initial ||
-                      (state.status == ProductStatus.loading &&
-                          state.products.isEmpty)) {
-                    return const Center(
-                      child: CircularProgressIndicator(),
-                    );
-                  }
-
-                  if (state.hasError && state.products.isEmpty) {
-                    return _buildErrorWidget(state.errorMessage);
-                  }
-
-                  if (state.isEmpty) {
-                    return _buildEmptyWidget();
-                  }
-
-                  return AnimatedBuilder(
-                    animation: _staggerAnimation,
-                    builder: (context, child) => Opacity(
-                      opacity: _staggerAnimation.value,
-                      child: child,
-                    ),
-                    child: RefreshIndicator(
-                      onRefresh: _onRefresh,
-                      child: GridView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.all(16),
-                        physics: const AlwaysScrollableScrollPhysics(
-                          parent: BouncingScrollPhysics(),
-                        ),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 0.6,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                        ),
-                        itemCount:
-                            state.products.length + (state.isLoadingMore ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (index >= state.products.length) {
-                            return const Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(16),
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                            );
-                          }
-
-                          final product = state.products[index];
-                          return ProductGridItem(
-                            product: product,
-                            onTap: () => _navigateToDetail(product),
-                          );
-                        },
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSearchBar() {
-    final theme = Theme.of(context);
-
-    return AnimatedBuilder(
-      animation: _staggerAnimation,
-      builder: (context, child) => Opacity(
-        opacity: _staggerAnimation.value,
-        child: Transform.translate(
-          offset: Offset(0, 12 * (1 - _staggerAnimation.value)),
-          child: child,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-        child: Row(
-          children: [
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withAlpha(128),
-                  borderRadius: BorderRadius.circular(12),
+        appBar: AppBar(title: Text(localizations.products)),
+        body: BlocBuilder<ProductListBloc, ProductListState>(
+          builder: (context, state) => RefreshIndicator(
+            onRefresh: _refresh,
+            child: CustomScrollView(
+              key: const PageStorageKey('product-catalog'),
+              controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                _CatalogSearch(
+                  query: state.searchQuery,
+                  onSearch: (query) => _products.add(SearchProducts(query)),
                 ),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: _onSearchChanged,
-                  decoration: InputDecoration(
-                    hintText: 'Tìm kiếm sản phẩm...',
-                    prefixIcon: Icon(
-                      Icons.search,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                    suffixIcon: BlocBuilder<ProductListBloc, ProductListState>(
-                      buildWhen: (prev, curr) =>
-                          prev.searchQuery != curr.searchQuery,
-                      builder: (context, state) {
-                        if (state.searchQuery.isNotEmpty) {
-                          return IconButton(
-                            icon: Icon(
-                              Icons.clear,
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                            onPressed: _onClearSearch,
-                          );
-                        }
-                        return const SizedBox.shrink();
-                      },
-                    ),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
+                if (state.categories.isNotEmpty)
+                  _CatalogCategories(
+                    categories: state.categories,
+                    selectedCategoryId: state.selectedCategoryId,
+                    onSelected: (categoryId) =>
+                        _products.add(FilterByCategory(categoryId)),
+                  ),
+                _CatalogControls(
+                  state: state,
+                  onSortChanged: (sort) =>
+                      _products.add(ChangeProductSort(sort)),
+                  onShowFilters: () => _showFilters(state.filters),
+                  onClearFilters: () => _products.add(
+                    const ApplyProductFilters(ProductCatalogFilters()),
                   ),
                 ),
-              ),
+                ..._resultSlivers(state),
+                const SliverPadding(
+                  padding: EdgeInsets.only(bottom: AppSpacing.xxl),
+                ),
+              ],
             ),
-            const SizedBox(width: 8),
-            // Filter button with badge
-            BlocBuilder<ProductListBloc, ProductListState>(
-              buildWhen: (prev, curr) => prev.status != curr.status,
-              builder: (context, state) {
-                return _FilterButton(
-                  hasFilters: _filters.hasActiveFilters,
-                  onTap: _showFilters,
-                );
-              },
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildCategoryChips() {
-    return BlocBuilder<ProductListBloc, ProductListState>(
-      buildWhen: (previous, current) =>
-          previous.categories != current.categories ||
-          previous.selectedCategoryId != current.selectedCategoryId ||
-          previous.status != current.status,
-      builder: (context, state) {
-        if (state.categories.isEmpty &&
-            state.status == ProductStatus.loading) {
-          return const SizedBox(
-            height: 40,
-            child: Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
+  List<Widget> _resultSlivers(ProductListState state) {
+    final localizations = AppLocalizations.of(context);
+    if (state.products.isEmpty &&
+        (state.status == ProductStatus.initial ||
+            state.status == ProductStatus.loading)) {
+      return const [_CatalogSkeleton()];
+    }
+
+    if (state.products.isEmpty && state.status == ProductStatus.failure) {
+      return [
+        _CatalogStateSliver(
+          icon: Icons.cloud_off_outlined,
+          title: localizations.homeProductsLoadError,
+          message: localizations.homeProductsLoadHelp,
+          actionLabel: localizations.retry,
+          onAction: () => _products.add(const LoadProducts(forceRefresh: true)),
+        ),
+      ];
+    }
+
+    if (state.products.isEmpty && state.status == ProductStatus.success) {
+      return [
+        _CatalogStateSliver(
+          icon: Icons.search_off_outlined,
+          title: localizations.noProductsTitle,
+          message: localizations.noProductsSubtitle,
+          actionLabel: state.filters.hasActiveFilters
+              ? localizations.clearFilters
+              : null,
+          onAction: state.filters.hasActiveFilters
+              ? () => _products.add(
+                  const ApplyProductFilters(ProductCatalogFilters()),
+                )
+              : null,
+        ),
+      ];
+    }
+
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.screenPadding,
+          AppSpacing.sm,
+          AppSpacing.screenPadding,
+          AppSpacing.lg,
+        ),
+        sliver: SliverGrid.builder(
+          gridDelegate: productGridDelegate(context),
+          itemCount: state.products.length,
+          itemBuilder: (context, index) {
+            final product = state.products[index];
+            return ProductGridItem(
+              product: product,
+              onTap: () => context.push(
+                AppRoutes.productDetail(product.id),
+                extra: product,
               ),
-            ),
-          );
-        }
-
-        return SizedBox(
-          height: 44,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: state.categories.length + 1,
-            separatorBuilder: (context, index) => const SizedBox(width: 8),
-            itemBuilder: (context, index) {
-              if (index == 0) {
-                return _CategoryChip(
-                  label: 'Tất cả',
-                  isSelected: state.selectedCategoryId == null,
-                  onTap: () => _bloc.add(const FilterByCategory(null)),
-                );
-              }
-
-              final category = state.categories[index - 1];
-              return _CategoryChip(
-                label: category.name,
-                isSelected: state.selectedCategoryId == category.id,
-                onTap: () => _bloc.add(FilterByCategory(category.id)),
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildSortBar() {
-    final theme = Theme.of(context);
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          BlocBuilder<ProductListBloc, ProductListState>(
-            builder: (context, state) {
-              return Text(
-                '${state.products.length} sản phẩm',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              );
-            },
-          ),
-          DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _currentSort,
-              isDense: true,
-              icon: Icon(
-                Icons.sort,
-                size: 20,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              items: _sortOptions.map((option) {
-                return DropdownMenuItem<String>(
-                  value: option['value'],
-                  child: Text(
-                    option['label']!,
-                    style: theme.textTheme.bodyMedium,
-                  ),
-                );
-              }).toList(),
-              onChanged: _onSortChanged,
-            ),
-          ),
-        ],
+            );
+          },
+        ),
       ),
-    );
+      if (state.status == ProductStatus.failure)
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.screenPadding,
+            ),
+            child: _CatalogRetryBanner(
+              onRetry: () => _products.add(const RefreshProducts()),
+            ),
+          ),
+        ),
+      if (state.status == ProductStatus.loadingMore)
+        const SliverToBoxAdapter(
+          child: Center(
+            child: Padding(
+              padding: EdgeInsets.all(AppSpacing.md),
+              child: CircularProgressIndicator(),
+            ),
+          ),
+        ),
+    ];
   }
+}
 
-  Widget _buildErrorWidget(String? message) {
-    return Center(
+class _CatalogSearch extends StatelessWidget {
+  const _CatalogSearch({required this.query, required this.onSearch});
+
+  final String query;
+  final ValueChanged<String> onSearch;
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Đã xảy ra lỗi',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[700],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message ?? 'Vui lòng thử lại sau',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () => _bloc.add(const LoadProducts(forceRefresh: true)),
-              icon: const Icon(Icons.refresh),
-              label: const Text('Thử lại'),
-            ),
-          ],
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.screenPadding,
+          AppSpacing.md,
+          AppSpacing.screenPadding,
+          AppSpacing.sm,
+        ),
+        child: HomeSearchBar(
+          initialValue: query,
+          hintText: AppLocalizations.of(context).searchProducts,
+          onSearch: onSearch,
         ),
       ),
     );
   }
+}
 
-  Widget _buildEmptyWidget() {
-    return Center(
+class _CatalogCategories extends StatelessWidget {
+  const _CatalogCategories({
+    required this.categories,
+    required this.selectedCategoryId,
+    required this.onSelected,
+  });
+
+  final List<CategoryModel> categories;
+  final String? selectedCategoryId;
+  final ValueChanged<String?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      CategoryChipData(
+        id: '',
+        name: AppLocalizations.of(context).allCategories,
+        icon: Icons.apps_outlined,
+      ),
+      ...categories
+          .where((category) => category.isActive && category.name.isNotEmpty)
+          .map(
+            (category) =>
+                CategoryChipData(id: category.id, name: category.name),
+          ),
+    ];
+    final selectedIndex = selectedCategoryId == null
+        ? 0
+        : items.indexWhere((category) => category.id == selectedCategoryId);
+
+    return SliverToBoxAdapter(
+      child: CategoryChips(
+        categories: items,
+        selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
+        onCategorySelected: (index) =>
+            onSelected(index == 0 ? null : items[index].id),
+      ),
+    );
+  }
+}
+
+class _CatalogControls extends StatelessWidget {
+  const _CatalogControls({
+    required this.state,
+    required this.onSortChanged,
+    required this.onShowFilters,
+    required this.onClearFilters,
+  });
+
+  final ProductListState state;
+  final ValueChanged<ProductSort> onSortChanged;
+  final VoidCallback onShowFilters;
+  final VoidCallback onClearFilters;
+
+  @override
+  Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+    return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.screenPadding,
+          AppSpacing.sm,
+          AppSpacing.screenPadding,
+          0,
+        ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              Icons.search_off,
-              size: 64,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
             Text(
-              'Không tìm thấy sản phẩm',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[700],
-              ),
+              localizations.productsFound(state.products.length),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Hãy thử tìm kiếm với từ khóa khác\nhoặc điều chỉnh bộ lọc',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.xs),
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                OutlinedButton(
-                  onPressed: _showFilters,
-                  child: const Text('Điều chỉnh bộ lọc'),
+                Expanded(
+                  child: Text(
+                    _sortLabel(localizations, state.sort),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 12),
-                OutlinedButton(
-                  onPressed: _onClearSearch,
-                  child: const Text('Xóa tìm kiếm'),
+                if (state.filters.hasActiveFilters)
+                  IconButton(
+                    tooltip: localizations.clearFilters,
+                    onPressed: onClearFilters,
+                    icon: const Icon(Icons.filter_alt_off_outlined),
+                  ),
+                PopupMenuButton<ProductSort>(
+                  tooltip: localizations.sortProducts,
+                  initialValue: state.sort,
+                  onSelected: onSortChanged,
+                  icon: const Icon(Icons.sort),
+                  itemBuilder: (context) =>
+                      [
+                            ProductSort.newest,
+                            ProductSort.priceLowToHigh,
+                            ProductSort.priceHighToLow,
+                          ]
+                          .map(
+                            (sort) => PopupMenuItem(
+                              value: sort,
+                              child: Text(_sortLabel(localizations, sort)),
+                            ),
+                          )
+                          .toList(),
+                ),
+                Badge(
+                  isLabelVisible: state.filters.hasActiveFilters,
+                  label: Text('${state.filters.activeFilterCount}'),
+                  child: IconButton(
+                    tooltip: localizations.filters,
+                    onPressed: onShowFilters,
+                    icon: const Icon(Icons.tune),
+                  ),
                 ),
               ],
             ),
@@ -507,47 +359,75 @@ class _ProductListPageState extends State<ProductListPage>
       ),
     );
   }
+
+  String _sortLabel(AppLocalizations localizations, ProductSort sort) {
+    return switch (sort) {
+      ProductSort.newest || ProductSort.popular => localizations.sortNewest,
+      ProductSort.priceLowToHigh => localizations.sortPriceLowToHigh,
+      ProductSort.priceHighToLow => localizations.sortPriceHighToLow,
+    };
+  }
 }
 
-/// Category chip widget
-class _CategoryChip extends StatelessWidget {
-  const _CategoryChip({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
+class _CatalogStateSliver extends StatelessWidget {
+  const _CatalogStateSliver({
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.actionLabel,
+    this.onAction,
   });
 
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
+  final IconData icon;
+  final String title;
+  final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? theme.colorScheme.primary
-              : theme.colorScheme.surfaceContainerHighest.withAlpha(128),
-          borderRadius: BorderRadius.circular(20),
-          border: isSelected
-              ? null
-              : Border.all(
-                  color: theme.colorScheme.outline.withValues(alpha: 0.3),
+    return SliverFillRemaining(
+      hasScrollBody: false,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 48,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
-        ),
-        child: Text(
-          label,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: isSelected
-                ? theme.colorScheme.onPrimary
-                : theme.colorScheme.onSurface,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              ),
+              if (actionLabel != null && onAction != null) ...[
+                const SizedBox(height: AppSpacing.lg),
+                FilledButton.icon(
+                  onPressed: onAction,
+                  icon: Icon(
+                    icon == Icons.cloud_off_outlined
+                        ? Icons.refresh
+                        : Icons.filter_alt_off_outlined,
+                  ),
+                  label: Text(actionLabel!),
+                ),
+              ],
+            ],
           ),
         ),
       ),
@@ -555,102 +435,51 @@ class _CategoryChip extends StatelessWidget {
   }
 }
 
-/// Filter button with animation
-class _FilterButton extends StatefulWidget {
-  const _FilterButton({
-    required this.hasFilters,
-    required this.onTap,
-  });
-
-  final bool hasFilters;
-  final VoidCallback onTap;
-
-  @override
-  State<_FilterButton> createState() => _FilterButtonState();
-}
-
-class _FilterButtonState extends State<_FilterButton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 100),
-    );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.92).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+class _CatalogSkeleton extends StatelessWidget {
+  const _CatalogSkeleton();
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    return SliverPadding(
+      padding: const EdgeInsets.all(AppSpacing.screenPadding),
+      sliver: SliverGrid.builder(
+        gridDelegate: productGridDelegate(context),
+        itemCount: 4,
+        itemBuilder: (context, index) => const ProductCardSkeleton(),
+      ),
+    );
+  }
+}
 
-    return GestureDetector(
-      onTapDown: (_) => _controller.forward(),
-      onTapUp: (_) {
-        _controller.reverse();
-        widget.onTap();
-      },
-      onTapCancel: () => _controller.reverse(),
-      child: AnimatedBuilder(
-        animation: _scaleAnimation,
-        builder: (context, child) => Transform.scale(
-          scale: _scaleAnimation.value,
-          child: child,
-        ),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: widget.hasFilters
-                ? theme.colorScheme.primary.withValues(alpha: 0.1)
-                : theme.colorScheme.surfaceContainerHighest.withAlpha(128),
-            borderRadius: BorderRadius.circular(12),
-            border: widget.hasFilters
-                ? Border.all(
-                    color: theme.colorScheme.primary,
-                    width: 1.5,
-                  )
-                : Border.all(
-                    color: theme.colorScheme.outline.withValues(alpha: 0.3),
-                  ),
-          ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Icon(
-                Icons.tune,
-                color: widget.hasFilters
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.onSurfaceVariant,
+class _CatalogRetryBanner extends StatelessWidget {
+  const _CatalogRetryBanner({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Material(
+      color: colorScheme.errorContainer,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.sm),
+        child: Row(
+          children: [
+            Icon(Icons.error_outline, color: colorScheme.onErrorContainer),
+            const SizedBox(width: AppSpacing.xs),
+            Expanded(
+              child: Text(
+                AppLocalizations.of(context).someProductsLoadError,
+                style: TextStyle(color: colorScheme.onErrorContainer),
               ),
-              if (widget.hasFilters)
-                Positioned(
-                  top: 6,
-                  right: 6,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-            ],
-          ),
+            ),
+            IconButton(
+              tooltip: AppLocalizations.of(context).retry,
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+            ),
+          ],
         ),
       ),
     );

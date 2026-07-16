@@ -2,8 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../data/models/order_model.dart';
+import '../../../../app/router/app_routes.dart';
+import '../../../../common/widgets/buttons/vn_button.dart';
+import '../../../../core/design_system/components/async_state_view.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 import '../bloc/order_list_bloc.dart';
+import '../mappers/order_presentation_mapper.dart';
+import '../models/order_failure.dart';
 import '../widgets/order_card.dart';
 import '../widgets/order_tab_bar.dart';
 
@@ -21,243 +27,244 @@ class _OrderListPageState extends State<OrderListPage> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    // Load orders on init
     context.read<OrderListBloc>().add(const LoadOrdersEvent());
   }
 
   @override
   void dispose() {
-    _scrollController.dispose();
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
     super.dispose();
   }
 
   void _onScroll() {
-    if (_isBottom) {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 240) {
       context.read<OrderListBloc>().add(const LoadMoreOrdersEvent());
     }
   }
 
-  bool get _isBottom {
-    if (!_scrollController.hasClients) return false;
-    final maxScroll = _scrollController.position.maxScrollExtent;
-    final currentScroll = _scrollController.offset;
-    return currentScroll >= (maxScroll * 0.9);
+  Future<void> _refresh(OrderListState state) async {
+    final bloc = context.read<OrderListBloc>();
+    bloc.add(
+      LoadOrdersEvent(forceRefresh: true, statusFilter: state.statusFilter),
+    );
+    await bloc.stream.firstWhere(
+      (next) =>
+          next.status == OrderListStatus.loaded ||
+          next.status == OrderListStatus.error,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Đơn hàng của tôi'),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-      ),
+      appBar: AppBar(title: Text(localizations.myOrders)),
       body: BlocConsumer<OrderListBloc, OrderListState>(
+        listenWhen: (previous, current) =>
+            previous.status != current.status ||
+            previous.failure != current.failure,
         listener: (context, state) {
           if (state.status == OrderListStatus.cancelled) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Đơn hàng đã được hủy thành công'),
-                backgroundColor: Colors.green,
-              ),
+              SnackBar(content: Text(localizations.orderCancelledSuccess)),
             );
-          } else if (state.status == OrderListStatus.error &&
-              state.errorMessage != null) {
+          } else if (state.failure != null && state.orders.isNotEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.errorMessage!),
-                backgroundColor: Colors.red,
+                content: Text(state.failure!.localizedMessage(localizations)),
               ),
             );
           }
         },
         builder: (context, state) {
-          return Column(
-            children: [
-              // Tab bar for filtering
-              OrderTabBar(
-                selectedStatus: state.statusFilter,
-                pendingCount: state.pendingCount,
-                confirmedCount: state.confirmedCount,
-                shippedCount: state.shippedCount,
-                deliveredCount: state.deliveredCount,
-                cancelledCount: state.cancelledCount,
-                onStatusChanged: (status) {
-                  context
-                      .read<OrderListBloc>()
-                      .add(ChangeStatusFilterEvent(status));
-                },
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 760),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.screenPadding,
+                      AppSpacing.sm,
+                      AppSpacing.screenPadding,
+                      0,
+                    ),
+                    child: Text(
+                      localizations.orderListCount(state.totalElements),
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  OrderTabBar(
+                    selectedStatus: state.statusFilter,
+                    onStatusChanged: (status) {
+                      context.read<OrderListBloc>().add(
+                        ChangeStatusFilterEvent(status),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1),
+                  Expanded(child: _buildContent(context, state)),
+                ],
               ),
-
-              // Order list
-              Expanded(
-                child: _buildOrderList(context, state),
-              ),
-            ],
+            ),
           );
         },
       ),
     );
   }
 
-  Widget _buildOrderList(BuildContext context, OrderListState state) {
-    if (state.status == OrderListStatus.loading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
-    }
+  Widget _buildContent(BuildContext context, OrderListState state) {
+    final localizations = AppLocalizations.of(context);
+    final status = resolveAsyncViewStatus(
+      isLoading: state.status == OrderListStatus.loading,
+      hasError: state.status == OrderListStatus.error,
+      isEmpty: state.status == OrderListStatus.loaded && state.orders.isEmpty,
+      hasData: state.orders.isNotEmpty,
+    );
 
-    if (state.status == OrderListStatus.error && state.orders.isEmpty) {
-      return _buildErrorWidget(context, state.errorMessage);
-    }
-
-    final orders = state.filteredOrders;
-
-    if (orders.isEmpty) {
-      return _buildEmptyWidget(context, state.statusFilter);
-    }
-
-    return RefreshIndicator(
-      onRefresh: () async {
-        context
-            .read<OrderListBloc>()
-            .add(LoadOrdersEvent(forceRefresh: true, statusFilter: state.statusFilter));
-      },
-      child: ListView.builder(
-        controller: _scrollController,
-        padding: const EdgeInsets.only(top: 8, bottom: 16),
-        itemCount: orders.length + (state.hasReachedMax ? 0 : 1),
-        itemBuilder: (context, index) {
-          if (index >= orders.length) {
-            return const Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(
-                child: CircularProgressIndicator(),
-              ),
+    return AsyncStateView(
+      status: status,
+      loading: const _OrderListSkeleton(),
+      error: _OrderMessage(
+        icon: Icons.cloud_off_outlined,
+        title: localizations.ordersLoadError,
+        message: (state.failure ?? OrderFailure.unknown).localizedMessage(
+          localizations,
+        ),
+      ),
+      empty: _OrderEmptyState(filtered: state.statusFilter != null),
+      retryLabel: localizations.retry,
+      onRetry: () => context.read<OrderListBloc>().add(
+        LoadOrdersEvent(statusFilter: state.statusFilter),
+      ),
+      child: RefreshIndicator(
+        onRefresh: () => _refresh(state),
+        child: ListView.builder(
+          controller: _scrollController,
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(
+            top: AppSpacing.xs,
+            bottom: AppSpacing.lg,
+          ),
+          itemCount:
+              state.orders.length +
+              (state.status == OrderListStatus.loadingMore ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (index == state.orders.length) {
+              return const Padding(
+                padding: EdgeInsets.all(AppSpacing.md),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            final order = state.orders[index];
+            return OrderCard(
+              order: order,
+              isCancelling: state.cancellingOrderId == order.id,
+              onTap: () => context.push(AppRoutes.orderDetail(order.id)),
             );
-          }
-
-          final order = orders[index];
-          return OrderCard(
-            order: order,
-            isCancelling: state.cancellingOrderId == order.id,
-            onTap: () => context.push('/orders/${order.id}'),
-          );
-        },
+          },
+        ),
       ),
     );
   }
+}
 
-  Widget _buildEmptyWidget(BuildContext context, OrderStatus? statusFilter) {
-    String message;
-    IconData icon;
+class _OrderEmptyState extends StatelessWidget {
+  const _OrderEmptyState({required this.filtered});
 
-    if (statusFilter != null) {
-      switch (statusFilter) {
-        case OrderStatus.pending:
-          message = 'Không có đơn hàng chờ xác nhận';
-          break;
-        case OrderStatus.confirmed:
-          message = 'Không có đơn hàng đã xác nhận';
-          break;
-        case OrderStatus.processing:
-          message = 'Không có đơn hàng đang xử lý';
-          break;
-        case OrderStatus.shipped:
-          message = 'Không có đơn hàng đang giao';
-          break;
-        case OrderStatus.delivered:
-          message = 'Không có đơn hàng đã giao';
-          break;
-        case OrderStatus.cancelled:
-          message = 'Không có đơn hàng đã hủy';
-          break;
-      }
-    } else {
-      message = 'Bạn chưa có đơn hàng nào';
-    }
+  final bool filtered;
 
-    icon = Icons.receipt_long_outlined;
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            size: 80,
-            color: Colors.grey.shade400,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            message,
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey.shade600,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Hãy bắt đầu mua sắm ngay!',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade500,
-            ),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () => context.go('/'),
-            icon: const Icon(Icons.shopping_bag_outlined),
-            label: const Text('Tiếp tục mua sắm'),
-          ),
-        ],
+  @override
+  Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+    return _OrderMessage(
+      icon: Icons.receipt_long_outlined,
+      title: filtered
+          ? localizations.orderEmptyFilteredTitle
+          : localizations.emptyOrders,
+      message: filtered
+          ? localizations.orderEmptyFilteredHelp
+          : localizations.orderEmptyHelp,
+      action: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 280),
+        child: VnButton(
+          onPressed: () => context.go(AppRoutes.home),
+          label: localizations.continueShopping,
+          icon: const Icon(Icons.shopping_bag_outlined),
+        ),
       ),
     );
   }
+}
 
-  Widget _buildErrorWidget(BuildContext context, String? errorMessage) {
+class _OrderMessage extends StatelessWidget {
+  const _OrderMessage({
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.action,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 80,
-              color: Colors.red.shade300,
-            ),
-            const SizedBox(height: 16),
+            Icon(icon, size: 48, color: theme.colorScheme.onSurfaceVariant),
+            const SizedBox(height: AppSpacing.md),
             Text(
-              'Đã xảy ra lỗi',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade800,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              errorMessage ?? 'Vui lòng thử lại sau',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade600,
-              ),
+              title,
               textAlign: TextAlign.center,
+              style: theme.textTheme.titleLarge,
             ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () {
-                context.read<OrderListBloc>().add(const LoadOrdersEvent());
-              },
-              icon: const Icon(Icons.refresh),
-              label: const Text('Thử lại'),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
+            if (action != null) ...[
+              const SizedBox(height: AppSpacing.lg),
+              action!,
+            ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OrderListSkeleton extends StatelessWidget {
+  const _OrderListSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.surfaceContainerHighest;
+    return ListView.builder(
+      padding: const EdgeInsets.all(AppSpacing.screenPadding),
+      itemCount: 3,
+      itemBuilder: (context, index) => Container(
+        height: 180,
+        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: AppSpacing.borderRadiusSmall,
         ),
       ),
     );

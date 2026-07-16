@@ -7,7 +7,11 @@ abstract class CartRemoteDataSource {
   Future<CartModel> getCart(String userId);
   Future<CartModel> addItem(String userId, CartItemModel item);
   Future<void> removeItem(String userId, String cartItemId);
-  Future<CartModel> updateQuantity(String userId, String cartItemId, int quantity);
+  Future<CartModel> updateQuantity(
+    String userId,
+    String cartItemId,
+    int quantity,
+  );
   Future<CartModel> applyCoupon(String userId, String couponCode);
   Future<CartModel> removeCoupon(String userId);
   Future<void> clearCart(String userId);
@@ -16,21 +20,18 @@ abstract class CartRemoteDataSource {
 
 class CartRemoteDataSourceImpl implements CartRemoteDataSource {
   final Dio _dio;
-  final String _baseUrl;
 
-  static const bool _useMockBackend =
-      bool.fromEnvironment('USE_MOCK_BACKEND', defaultValue: false);
+  static const bool _useMockBackend = bool.fromEnvironment(
+    'USE_MOCK_BACKEND',
+    defaultValue: false,
+  );
 
-  CartRemoteDataSourceImpl({
-    required Dio dio,
-    String? baseUrl,
-  })  : _dio = dio,
-        _baseUrl = baseUrl ?? 'https://api.vnshop.example.com';
+  CartRemoteDataSourceImpl({required this._dio});
 
   Map<String, String> get _headers => {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      };
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  };
 
   @override
   Future<CartModel> getCart(String userId) async {
@@ -79,9 +80,7 @@ class CartRemoteDataSourceImpl implements CartRemoteDataSource {
     await _dio.delete(
       '/cart/items/${itemKey.productId}',
       options: Options(headers: _headers),
-      data: {
-        if (itemKey.variantId != null) 'variantId': itemKey.variantId,
-      },
+      data: {if (itemKey.variantId != null) 'variantId': itemKey.variantId},
     );
   }
 
@@ -119,9 +118,7 @@ class CartRemoteDataSourceImpl implements CartRemoteDataSource {
     final response = await _dio.post(
       '/cart/coupon',
       options: Options(headers: _headers),
-      data: {
-        'couponCode': couponCode,
-      },
+      data: {'couponCode': couponCode},
     );
 
     final responseData = response.data as Map<String, dynamic>;
@@ -194,22 +191,23 @@ class CartRemoteDataSourceImpl implements CartRemoteDataSource {
   ) async {
     await Future.delayed(const Duration(milliseconds: 200));
     final itemKey = _itemKeyParts(cartItemId);
-    return CartModel.empty(userId).addItem(CartItemModel(
-      cartItemId: cartItemId,
-      productId: itemKey.productId,
-      name: '',
-      price: 0,
-      quantity: quantity,
-      sku: itemKey.variantId,
-    ));
+    return CartModel.empty(userId).addItem(
+      CartItemModel(
+        cartItemId: cartItemId,
+        productId: itemKey.productId,
+        name: '',
+        price: 0,
+        quantity: quantity,
+        sku: itemKey.variantId,
+      ),
+    );
   }
 
   Future<CartModel> _mockApplyCoupon(String userId, String couponCode) async {
     await Future.delayed(const Duration(milliseconds: 300));
-    return CartModel.empty(userId).copyWith(
-      appliedCouponCode: couponCode,
-      discountAmount: 10000,
-    );
+    return CartModel.empty(
+      userId,
+    ).copyWith(appliedCouponCode: couponCode, discountAmount: 10000);
   }
 
   Future<CartModel> _mockRemoveCoupon(String userId) async {

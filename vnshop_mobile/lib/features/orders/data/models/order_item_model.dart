@@ -26,6 +26,9 @@ class OrderItemModel extends Equatable {
   @HiveField(6)
   final double totalPrice;
 
+  final String? variantSku;
+  final String? sellerId;
+
   const OrderItemModel({
     required this.id,
     required this.productId,
@@ -34,17 +37,44 @@ class OrderItemModel extends Equatable {
     required this.price,
     required this.quantity,
     required this.totalPrice,
+    this.variantSku,
+    this.sellerId,
   });
 
   factory OrderItemModel.fromJson(Map<String, dynamic> json) {
+    final productId = _string(json['productId'] ?? json['product_id']);
+    final variantSku = _nullableString(
+      json['variantSku'] ?? json['variant_sku'],
+    );
+    final sellerId = _nullableString(json['sellerId'] ?? json['seller_id']);
+    final quantity = _integer(json['quantity'], fallback: 1);
+    final price = _moneyAmount(
+      json['unitPrice'] ?? json['unit_price'] ?? json['price'],
+    );
+
     return OrderItemModel(
-      id: json['id'] as String,
-      productId: json['product_id'] as String,
-      productName: json['product_name'] as String,
-      productImage: json['product_image'] as String? ?? '',
-      price: (json['price'] as num).toDouble(),
-      quantity: json['quantity'] as int,
-      totalPrice: (json['total_price'] as num).toDouble(),
+      id:
+          _nullableString(json['id']) ??
+          [
+            productId,
+            variantSku,
+            sellerId,
+          ].whereType<String>().where((value) => value.isNotEmpty).join(':'),
+      productId: productId,
+      productName: _string(
+        json['name'] ?? json['productName'] ?? json['product_name'],
+      ),
+      productImage: _string(
+        json['imageUrl'] ?? json['productImage'] ?? json['product_image'],
+      ),
+      price: price,
+      quantity: quantity,
+      totalPrice: _moneyAmount(
+        json['totalPrice'] ?? json['total_price'],
+        fallback: price * quantity,
+      ),
+      variantSku: variantSku,
+      sellerId: sellerId,
     );
   }
 
@@ -57,17 +87,40 @@ class OrderItemModel extends Equatable {
       'price': price,
       'quantity': quantity,
       'total_price': totalPrice,
+      'variant_sku': variantSku,
+      'seller_id': sellerId,
     };
   }
 
   @override
   List<Object?> get props => [
-        id,
-        productId,
-        productName,
-        productImage,
-        price,
-        quantity,
-        totalPrice,
-      ];
+    id,
+    productId,
+    productName,
+    productImage,
+    price,
+    quantity,
+    totalPrice,
+    variantSku,
+    sellerId,
+  ];
+}
+
+double _moneyAmount(Object? value, {double fallback = 0}) {
+  final raw = value is Map ? value['amount'] : value;
+  if (raw is num) return raw.toDouble();
+  return double.tryParse(raw?.toString() ?? '') ?? fallback;
+}
+
+int _integer(Object? value, {required int fallback}) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  return int.tryParse(value?.toString() ?? '') ?? fallback;
+}
+
+String _string(Object? value) => value?.toString() ?? '';
+
+String? _nullableString(Object? value) {
+  final text = value?.toString().trim();
+  return text == null || text.isEmpty ? null : text;
 }

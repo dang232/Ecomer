@@ -3,6 +3,48 @@
   "appTitle": "VNShop",
   "home": "Trang chủ",
   "products": "Sản phẩm",
+  "browseProducts": "Khám phá sản phẩm",
+  "allCategories": "Tất cả",
+  "productsFound": "{count} sản phẩm",
+  "@productsFound": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "notifications": "Thông báo",
+  "favorites": "Yêu thích",
+  "favoritesCount": "{count, plural, =1 {1 sản phẩm đã lưu} other {{count} sản phẩm đã lưu}}",
+  "@favoritesCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "noFavoritesTitle": "Chưa có sản phẩm yêu thích",
+  "noFavoritesSubtitle": "Lưu sản phẩm để tìm lại nhanh chóng tại đây.",
+  "favoritesLoadError": "Không thể tải sản phẩm yêu thích",
+  "favoritesLoadHelp": "Kiểm tra kết nối rồi thử lại.",
+  "someFavoritesLoadError": "Không thể tải một số sản phẩm đã lưu.",
+  "refresh": "Làm mới",
+  "homeProductsLoadError": "Không thể tải sản phẩm",
+  "homeProductsLoadHelp": "Kiểm tra kết nối và thử lại.",
+  "noProductsTitle": "Không tìm thấy sản phẩm",
+  "noProductsSubtitle": "Hãy thử từ khóa hoặc danh mục khác.",
+  "filters": "Bộ lọc",
+  "sortProducts": "Sắp xếp sản phẩm",
+  "clearFilters": "Xóa bộ lọc",
+  "resetFilters": "Đặt lại",
+  "applyFilters": "Áp dụng bộ lọc",
+  "minimumPrice": "Giá tối thiểu",
+  "maximumPrice": "Giá tối đa",
+  "invalidPrice": "Nhập mức giá hợp lệ.",
+  "invalidPriceRange": "Giá tối thiểu không được lớn hơn giá tối đa.",
+  "sameDayOnly": "Chỉ giao trong ngày",
+  "verifiedProductsOnly": "Chỉ sản phẩm đã xác minh",
+  "officialStoresOnly": "Chỉ gian hàng chính hãng",
+  "sortNewest": "Mới nhất",
+  "sortPriceLowToHigh": "Giá: Thấp đến cao",
+  "sortPriceHighToLow": "Giá: Cao đến thấp",
+  "someProductsLoadError": "Không thể tải kết quả mới. Đang hiển thị sản phẩm trước đó.",
   "cart": "Giỏ hàng",
   "orders": "Đơn hàng",
   "profile": "Tài khoản",
@@ -12,16 +54,201 @@
   "email": "Email",
   "password": "Mật khẩu",
   "phone": "Số điện thoại",
-  "searchProducts": "Tìm kiếm sản phẩm...",
+  "searchProducts": "Tìm kiếm sản phẩm…",
+  "clearSearch": "Xóa tìm kiếm",
   "addToCart": "Thêm vào giỏ",
   "buyNow": "Mua ngay",
+  "viewCart": "Xem giỏ",
+  "itemsAddedToCart": "Đã thêm {count} sản phẩm vào giỏ hàng",
+  "@itemsAddedToCart": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "copyProductLink": "Sao chép liên kết sản phẩm",
+  "productLinkCopied": "Đã sao chép liên kết sản phẩm",
+  "addToFavorites": "Thêm vào yêu thích",
+  "removeFromFavorites": "Xóa khỏi yêu thích",
+  "addedToFavorites": "Đã thêm vào yêu thích",
+  "removedFromFavorites": "Đã xóa khỏi yêu thích",
+  "wishlistUpdateError": "Không thể cập nhật yêu thích. Vui lòng thử lại.",
+  "quantity": "Số lượng",
+  "quantityValue": "Số lượng: {count}",
+  "@quantityValue": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "decreaseQuantity": "Giảm số lượng",
+  "increaseQuantity": "Tăng số lượng",
+  "inStock": "Còn hàng",
+  "lowStock": "Chỉ còn {count} sản phẩm",
+  "@lowStock": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "outOfStock": "Hết hàng",
+  "productDescription": "Mô tả sản phẩm",
+  "noProductDescription": "Không có mô tả cho sản phẩm này.",
+  "expandDescription": "Xem toàn bộ mô tả",
+  "collapseDescription": "Thu gọn mô tả",
   "checkout": "Thanh toán",
+  "checkoutDeliveryAddress": "Địa chỉ giao hàng",
+  "checkoutDeliveryMethod": "Phương thức vận chuyển",
+  "checkoutPaymentMethod": "Phương thức thanh toán",
+  "checkoutReviewOrder": "Kiểm tra đơn hàng",
+  "defaultLabel": "Mặc định",
+  "edit": "Sửa",
+  "addNewAddress": "Thêm địa chỉ mới",
+  "editAddressTitle": "Sửa địa chỉ",
+  "addressDetails": "Chi tiết địa chỉ",
+  "streetAddressLabel": "Địa chỉ đường phố",
+  "streetAddressHint": "Số nhà và tên đường",
+  "wardLabel": "Phường / Xã",
+  "wardHint": "Không bắt buộc",
+  "districtLabel": "Quận / Huyện",
+  "districtHint": "Nhập quận hoặc huyện",
+  "cityProvinceLabel": "Tỉnh / Thành phố",
+  "cityProvinceHint": "Nhập tỉnh hoặc thành phố",
+  "requiredField": "Vui lòng nhập {field}",
+  "@requiredField": {
+    "placeholders": { "field": { "type": "String" } }
+  },
+  "saveAddress": "Lưu địa chỉ",
+  "setDefaultAddress": "Đặt làm địa chỉ mặc định",
+  "defaultAddressHelp": "Ưu tiên địa chỉ này cho các đơn hàng sau.",
+  "addressNotFoundTitle": "Không tìm thấy địa chỉ",
+  "addressNotFoundHelp": "Địa chỉ này có thể đã bị xóa. Hãy quay lại thanh toán và chọn địa chỉ khác.",
+  "addressAddedSuccess": "Đã thêm địa chỉ",
+  "addressUpdatedSuccess": "Đã cập nhật địa chỉ",
+  "discardAddressTitle": "Bỏ thay đổi?",
+  "discardAddressHelp": "Các thay đổi địa chỉ chưa lưu sẽ bị mất.",
+  "discardChanges": "Bỏ thay đổi",
+  "noAddressTitle": "Thêm địa chỉ giao hàng",
+  "noAddressHelp": "Cần có địa chỉ trước khi tính phương thức vận chuyển.",
+  "deleteAddress": "Xóa địa chỉ",
+  "deleteAddressConfirmation": "Xóa địa chỉ của {name}?",
+  "@deleteAddressConfirmation": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "selectAddressFirst": "Vui lòng chọn địa chỉ giao hàng trước.",
+  "shippingMethodsLoadError": "Không thể tải phương thức vận chuyển",
+  "noShippingMethods": "Không có phương thức vận chuyển cho địa chỉ này.",
+  "deliveryToday": "Giao trong ngày",
+  "deliveryDays": "{count, plural, =1 {Giao trong 1 ngày} other {Giao trong {count} ngày}}",
+  "@deliveryDays": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "free": "Miễn phí",
+  "paymentMethodsLoadError": "Không thể tải phương thức thanh toán",
+  "noPaymentMethods": "Hiện không có phương thức thanh toán khả dụng.",
+  "paymentCodName": "Thanh toán khi nhận hàng",
+  "paymentCodDescription": "Thanh toán khi đơn hàng được giao",
+  "paymentVietqrName": "VietQR",
+  "paymentVietqrDescription": "Quét mã QR bằng ứng dụng ngân hàng",
+  "paymentVnpayName": "VNPay",
+  "paymentVnpayDescription": "Thanh toán qua cổng VNPay",
+  "paymentMomoName": "MoMo",
+  "paymentMomoDescription": "Thanh toán bằng ví MoMo",
+  "paymentBankTransferName": "Chuyển khoản ngân hàng",
+  "paymentBankTransferDescription": "Chuyển khoản từ tài khoản ngân hàng",
+  "payNow": "Thanh toán ngay",
+  "orderPlacedTitle": "Đặt hàng thành công",
+  "orderPlacedHelp": "Đơn hàng đã được tiếp nhận và sẵn sàng để theo dõi.",
+  "orderNumber": "Đơn hàng {id}",
+  "@orderNumber": {
+    "placeholders": { "id": { "type": "String" } }
+  },
+  "viewOrders": "Xem đơn hàng",
+  "continueShopping": "Tiếp tục mua sắm",
+  "completePayment": "Hoàn tất thanh toán",
+  "paymentQrInstruction": "Quét mã QR bằng ứng dụng ngân hàng, sau đó kiểm tra trạng thái thanh toán.",
+  "openPaymentApp": "Mở ứng dụng thanh toán",
+  "checkPaymentStatus": "Kiểm tra thanh toán",
+  "paymentQrCode": "Mã QR thanh toán",
+  "checkoutInitializeError": "Không thể bắt đầu thanh toán. Hãy quay lại giỏ hàng và thử lại.",
+  "checkoutAddressesLoadError": "Không thể tải danh sách địa chỉ.",
+  "checkoutAddressAddError": "Không thể thêm địa chỉ.",
+  "checkoutAddressUpdateError": "Không thể cập nhật địa chỉ.",
+  "checkoutAddressDeleteError": "Không thể xóa địa chỉ.",
+  "checkoutPaymentUnavailable": "Phương thức thanh toán này không còn khả dụng.",
+  "checkoutIncompleteError": "Vui lòng chọn địa chỉ, vận chuyển và thanh toán.",
+  "checkoutUpdateError": "Không thể cập nhật tổng tiền thanh toán.",
+  "checkoutPaymentStartError": "Không thể bắt đầu thanh toán. Vui lòng thử lại.",
+  "checkoutPaymentStatusError": "Không thể cập nhật trạng thái thanh toán.",
+  "checkoutPaymentFailed": "Thanh toán chưa hoàn tất. Hãy thử lại hoặc chọn phương thức khác.",
+  "checkoutTransactionMissing": "Không tìm thấy giao dịch thanh toán.",
+  "checkoutOrderCreateError": "Không thể tạo đơn hàng. Vui lòng thử lại.",
+  "checkoutOrderCancelError": "Không thể hủy đơn hàng.",
   "placeOrder": "Đặt hàng ngay",
   "total": "Tổng cộng",
   "subtotal": "Tạm tính",
   "shipping": "Phí giao hàng",
   "discount": "Giảm giá",
   "emptyCart": "Giỏ hàng trống",
+  "cartItemCount": "{count, plural, =1 {1 sản phẩm} other {{count} sản phẩm}}",
+  "@cartItemCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "cartSelectionCount": "Đã chọn {selected}/{total}",
+  "@cartSelectionCount": {
+    "placeholders": {
+      "selected": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "selectAll": "Chọn tất cả",
+  "clearCart": "Xóa giỏ hàng",
+  "clearCartConfirmation": "Xóa toàn bộ sản phẩm khỏi giỏ hàng?",
+  "clearAll": "Xóa tất cả",
+  "emptyCartHelp": "Sản phẩm bạn thêm sẽ xuất hiện tại đây.",
+  "shopNow": "Mua sắm ngay",
+  "cartLoadError": "Không thể tải giỏ hàng",
+  "cartLoadErrorHelp": "Kiểm tra kết nối rồi thử lại.",
+  "cartAddError": "Không thể thêm sản phẩm. Vui lòng thử lại.",
+  "cartRemoveError": "Không thể xóa sản phẩm. Vui lòng thử lại.",
+  "cartQuantityError": "Không thể cập nhật số lượng. Vui lòng thử lại.",
+  "cartInvalidCoupon": "Mã giảm giá không hợp lệ hoặc không khả dụng.",
+  "cartRemoveCouponError": "Không thể xóa mã giảm giá. Vui lòng thử lại.",
+  "cartClearError": "Không thể xóa giỏ hàng. Vui lòng thử lại.",
+  "cartSyncError": "Không thể đồng bộ giỏ hàng. Vui lòng thử lại.",
+  "cartCheckoutCleanupError": "Đơn hàng đã được tạo nhưng giỏ hàng chưa thể cập nhật.",
+  "removeCartItem": "Xóa sản phẩm",
+  "removeCartItemConfirmation": "Xóa {name} khỏi giỏ hàng?",
+  "@removeCartItemConfirmation": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "remove": "Xóa",
+  "couponTitle": "Mã giảm giá",
+  "couponHint": "Nhập mã giảm giá",
+  "applyCoupon": "Áp dụng",
+  "couponApplied": "Đã áp dụng",
+  "couponAppliedCode": "Mã: {code}",
+  "@couponAppliedCode": {
+    "placeholders": {
+      "code": { "type": "String" }
+    }
+  },
+  "orderSummary": "Tóm tắt đơn hàng",
+  "selectedSubtotal": "Tạm tính đã chọn",
+  "shippingCalculatedAtCheckout": "Tính khi thanh toán",
+  "estimatedTotal": "Tổng tạm tính",
+  "vatIncluded": "Đã gồm VAT khi áp dụng",
+  "discountRecalculatedAtCheckout": "Ưu đãi sẽ được tính lại cho các sản phẩm đã chọn khi thanh toán.",
+  "checkoutItemCount": "{count, plural, =1 {Thanh toán (1)} other {Thanh toán ({count})}}",
+  "@checkoutItemCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "checkoutEmptyTitle": "Chưa chọn sản phẩm",
+  "checkoutEmptyHelp": "Quay lại giỏ hàng và chọn ít nhất một sản phẩm để tiếp tục.",
+  "backToCart": "Quay lại giỏ hàng",
   "emptyOrders": "Chưa có đơn hàng",
   "noResults": "Không tìm thấy kết quả",
   "error": "Đã xảy ra lỗi",
@@ -30,5 +257,121 @@
   "confirm": "Xác nhận",
   "success": "Thành công",
   "processing": "Đang xử lý...",
-  "loading": "Đang tải..."
+  "loading": "Đang tải...",
+  "customerReviews": "Đánh giá của khách hàng",
+  "reviewSectionSubtitle": "Điểm số và nhận xét từ những người đã mua sản phẩm này.",
+  "reviewCount": "{count} đánh giá",
+  "@reviewCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "reviewRatingOption": "{count} sao",
+  "@reviewRatingOption": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "reviewRatingBreakdown": "Đánh giá {count} sao",
+  "@reviewRatingBreakdown": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "yourReview": "Nội dung đánh giá",
+  "shareReviewExperience": "Chia sẻ trải nghiệm về sản phẩm...",
+  "submitReview": "Gửi đánh giá",
+  "submittingReview": "Đang gửi...",
+  "signInToReview": "Đăng nhập để chia sẻ trải nghiệm của bạn.",
+  "signIn": "Đăng nhập",
+  "verifiedPurchase": "Đã mua hàng",
+  "anonymousCustomer": "Khách hàng",
+  "helpfulCount": "Hữu ích ({count})",
+  "@helpfulCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "saving": "Đang lưu...",
+  "noReviewsTitle": "Hãy là người đầu tiên đánh giá sản phẩm này",
+  "noReviewsSubtitle": "Chia sẻ trải nghiệm để giúp những người mua khác.",
+  "reviewsLoadError": "Không thể tải đánh giá",
+  "reviewsLoadErrorHelp": "Kiểm tra kết nối và thử lại.",
+  "tryAgain": "Thử lại",
+  "reviewPublished": "Đã đăng",
+  "reviewPending": "Đang chờ kiểm duyệt",
+  "reviewRejected": "Đánh giá không được đăng",
+  "reviewPublishedNotice": "Đánh giá của bạn đã được đăng.",
+  "reviewPendingNotice": "Đánh giá đã được gửi để kiểm duyệt.",
+  "reviewRejectedNotice": "Đánh giá của bạn không thể được đăng.",
+  "reviewSubmitError": "Không thể gửi đánh giá. Vui lòng thử lại.",
+  "reviewVoteError": "Không thể lưu lượt hữu ích. Vui lòng thử lại.",
+  "reviewImageLabel": "Hình ảnh đánh giá {count}",
+  "@reviewImageLabel": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "myOrders": "Đơn hàng của tôi",
+  "orderDetailTitle": "Chi tiết đơn hàng",
+  "orderAll": "Tất cả",
+  "orderStatusPending": "Chờ xác nhận",
+  "orderStatusConfirmed": "Đã xác nhận",
+  "orderStatusProcessing": "Đang xử lý",
+  "orderStatusShipped": "Đang giao",
+  "orderStatusDelivered": "Đã giao",
+  "orderStatusCancelled": "Đã hủy",
+  "orderListCount": "{count} đơn hàng",
+  "@orderListCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "orderItemsCount": "{count} sản phẩm",
+  "@orderItemsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "orderEmptyHelp": "Các đơn hàng bạn đặt sẽ xuất hiện tại đây để theo dõi.",
+  "orderEmptyFilteredTitle": "Không có đơn hàng ở trạng thái này",
+  "orderEmptyFilteredHelp": "Chọn trạng thái khác hoặc xem tất cả đơn hàng.",
+  "continueShopping": "Tiếp tục mua sắm",
+  "ordersLoadError": "Không thể tải đơn hàng",
+  "orderNetworkError": "Kiểm tra kết nối rồi thử lại.",
+  "orderUnauthorizedError": "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
+  "orderForbiddenError": "Bạn không có quyền xem đơn hàng này.",
+  "orderNotFoundError": "Không tìm thấy đơn hàng này.",
+  "orderServerError": "Dịch vụ đơn hàng đang gián đoạn. Vui lòng thử lại sau.",
+  "orderRequestCancelledError": "Yêu cầu đã bị hủy.",
+  "orderUnknownError": "Đã xảy ra lỗi. Vui lòng thử lại.",
+  "orderCancelledSuccess": "Đã hủy đơn hàng",
+  "cancelOrder": "Hủy đơn hàng",
+  "cancellingOrder": "Đang hủy...",
+  "cancelOrderTitle": "Hủy đơn hàng này?",
+  "cancelOrderConfirmation": "Thao tác này không thể hoàn tác.",
+  "keepOrder": "Giữ đơn hàng",
+  "confirmCancelOrder": "Có, hủy đơn hàng",
+  "orderStatusSection": "Trạng thái đơn hàng",
+  "deliveryAddress": "Địa chỉ giao hàng",
+  "orderProducts": "Sản phẩm",
+  "paymentInformation": "Thanh toán",
+  "orderInformation": "Thông tin đơn hàng",
+  "orderCode": "Mã đơn hàng",
+  "placedAt": "Ngày đặt",
+  "updatedAt": "Cập nhật gần nhất",
+  "paymentMethod": "Phương thức thanh toán",
+  "paymentStatus": "Trạng thái thanh toán",
+  "paid": "Đã thanh toán",
+  "unpaid": "Chưa thanh toán",
+  "trackingNumber": "Mã vận đơn",
+  "carrier": "Đơn vị vận chuyển",
+  "shippingMethod": "Phương thức giao hàng",
+  "orderProductsUnavailable": "Thông tin sản phẩm của đơn hàng này hiện không khả dụng.",
+  "quantityShort": "SL {count}",
+  "@quantityShort": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  }
 }

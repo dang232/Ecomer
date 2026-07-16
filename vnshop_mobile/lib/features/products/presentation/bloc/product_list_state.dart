@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import '../../data/models/product_model.dart';
 import '../../data/models/category_model.dart';
+import '../../domain/models/product_catalog_query.dart';
 
 enum ProductStatus { initial, loading, success, failure, loadingMore }
 
@@ -10,6 +11,8 @@ class ProductListState extends Equatable {
   final List<CategoryModel> categories;
   final String? selectedCategoryId;
   final String searchQuery;
+  final ProductCatalogFilters filters;
+  final ProductSort sort;
   final int currentPage;
   final bool hasReachedMax;
   final String? errorMessage;
@@ -20,6 +23,8 @@ class ProductListState extends Equatable {
     this.categories = const [],
     this.selectedCategoryId,
     this.searchQuery = '',
+    this.filters = const ProductCatalogFilters(),
+    this.sort = ProductSort.newest,
     this.currentPage = 1,
     this.hasReachedMax = false,
     this.errorMessage,
@@ -37,6 +42,8 @@ class ProductListState extends Equatable {
     String? selectedCategoryId,
     bool clearSelectedCategory = false,
     String? searchQuery,
+    ProductCatalogFilters? filters,
+    ProductSort? sort,
     int? currentPage,
     bool? hasReachedMax,
     String? errorMessage,
@@ -46,8 +53,12 @@ class ProductListState extends Equatable {
       status: status ?? this.status,
       products: products ?? this.products,
       categories: categories ?? this.categories,
-      selectedCategoryId: clearSelectedCategory ? null : (selectedCategoryId ?? this.selectedCategoryId),
+      selectedCategoryId: clearSelectedCategory
+          ? null
+          : (selectedCategoryId ?? this.selectedCategoryId),
       searchQuery: searchQuery ?? this.searchQuery,
+      filters: filters ?? this.filters,
+      sort: sort ?? this.sort,
       currentPage: currentPage ?? this.currentPage,
       hasReachedMax: hasReachedMax ?? this.hasReachedMax,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
@@ -56,13 +67,15 @@ class ProductListState extends Equatable {
 
   @override
   List<Object?> get props => [
-        status,
-        products,
-        categories,
-        selectedCategoryId,
-        searchQuery,
-        currentPage,
-        hasReachedMax,
-        errorMessage,
-      ];
+    status,
+    products,
+    categories,
+    selectedCategoryId,
+    searchQuery,
+    filters,
+    sort,
+    currentPage,
+    hasReachedMax,
+    errorMessage,
+  ];
 }

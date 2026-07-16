@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vnshop_mobile/core/auth/session_controller.dart';
 
@@ -26,13 +25,12 @@ void main() {
       await controller.expireSession();
       controller.reset();
 
+      expect(cleared, true);
       expect(controller.isExpired, false);
     });
 
     test('onSessionExpired emits when expireSession called', () async {
-      final controller = SessionController(
-        clearTokens: () async {},
-      );
+      final controller = SessionController(clearTokens: () async {});
 
       final events = <void>[];
       final subscription = controller.onSessionExpired.listen(events.add);
@@ -47,9 +45,7 @@ void main() {
     });
 
     test('subsequent expireSession does not emit after first', () async {
-      final controller = SessionController(
-        clearTokens: () async {},
-      );
+      final controller = SessionController(clearTokens: () async {});
 
       final events = <void>[];
       final subscription = controller.onSessionExpired.listen(events.add);

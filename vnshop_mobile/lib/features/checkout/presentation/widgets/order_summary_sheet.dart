@@ -1,406 +1,193 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
+import '../../../../common/widgets/images/safe_network_image.dart';
 import '../../../../core/theme/app_spacing.dart';
-import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/utils/localized_formatters.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../cart/data/models/cart_item_model.dart';
 
-/// Collapsible order summary sheet widget
-class OrderSummarySheet extends StatefulWidget {
-  final List<CartItemModel> cartItems;
-  final double subtotal;
-  final double shippingFee;
-  final double discountAmount;
-  final String? couponCode;
-
+class OrderSummarySheet extends StatelessWidget {
   const OrderSummarySheet({
     super.key,
     required this.cartItems,
     required this.subtotal,
     required this.shippingFee,
     required this.discountAmount,
+    required this.isShippingCalculated,
     this.couponCode,
   });
 
-  @override
-  State<OrderSummarySheet> createState() => _OrderSummarySheetState();
-}
-
-class _OrderSummarySheetState extends State<OrderSummarySheet> {
-  bool _isExpanded = false;
-
-  int get _itemCount => widget.cartItems.fold(
-        0,
-        (sum, item) => sum + item.quantity,
-      );
-
-  double get _totalAmount =>
-      widget.subtotal + widget.shippingFee - widget.discountAmount;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-        border: Border.all(color: AppColors.outlineVariant),
-      ),
-      child: Column(
-        children: [
-          // Header (always visible)
-          InkWell(
-            onTap: () {
-              setState(() => _isExpanded = !_isExpanded);
-            },
-            borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withAlpha(25),
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
-                    ),
-                    child: const Icon(
-                      Icons.receipt_long_outlined,
-                      size: 20,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Tóm tắt đơn hàng',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Text(
-                          '$_itemCount sản phẩm',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: AppColors.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Text(
-                    CurrencyFormatter.format(_totalAmount.toInt()),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  AnimatedRotation(
-                    turns: _isExpanded ? 0.5 : 0,
-                    duration: const Duration(milliseconds: 200),
-                    child: const Icon(
-                      Icons.keyboard_arrow_down,
-                      color: AppColors.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Expanded content
-          AnimatedCrossFade(
-            duration: const Duration(milliseconds: 200),
-            crossFadeState: _isExpanded
-                ? CrossFadeState.showFirst
-                : CrossFadeState.showSecond,
-            firstChild: _ExpandedContent(
-              cartItems: widget.cartItems,
-              subtotal: widget.subtotal,
-              shippingFee: widget.shippingFee,
-              discountAmount: widget.discountAmount,
-              couponCode: widget.couponCode,
-              totalAmount: _totalAmount,
-            ),
-            secondChild: const SizedBox.shrink(),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Expanded content with product list and price breakdown
-class _ExpandedContent extends StatelessWidget {
   final List<CartItemModel> cartItems;
   final double subtotal;
   final double shippingFee;
   final double discountAmount;
+  final bool isShippingCalculated;
   final String? couponCode;
-  final double totalAmount;
 
-  const _ExpandedContent({
-    required this.cartItems,
-    required this.subtotal,
-    required this.shippingFee,
-    required this.discountAmount,
-    this.couponCode,
-    required this.totalAmount,
-  });
+  int get _itemCount =>
+      cartItems.fold(0, (total, item) => total + item.quantity);
+
+  double get _totalAmount => subtotal + shippingFee - discountAmount;
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+    final colors = Theme.of(context).colorScheme;
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Divider(height: 1),
-
-        // Product list
-        Container(
-          constraints: const BoxConstraints(maxHeight: 200),
-          child: ListView.separated(
-            shrinkWrap: true,
-            physics: const ClampingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-            itemCount: cartItems.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (context, index) {
-              final item = cartItems[index];
-              return _ProductItem(item: item);
-            },
-          ),
+        Text(
+          localizations.cartItemCount(_itemCount),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
         ),
-
-        const Divider(height: 1),
-
-        // Price breakdown
-        Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
-            children: [
-              _PriceRow(
-                label: 'Tạm tính',
-                value: CurrencyFormatter.format(subtotal.toInt()),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              _PriceRow(
-                label: 'Phí vận chuyển',
-                value: shippingFee > 0
-                    ? CurrencyFormatter.format(shippingFee.toInt())
-                    : 'Đang tính...',
-                valueColor: shippingFee > 0 ? null : AppColors.onSurfaceVariant,
-              ),
-              if (discountAmount > 0) ...[
-                const SizedBox(height: AppSpacing.xs),
-                _PriceRow(
-                  label: 'Giảm giá',
-                  value: '-${CurrencyFormatter.format(discountAmount.toInt())}',
-                  valueColor: AppColors.success,
-                  suffix: couponCode != null ? ' ($couponCode)' : null,
-                ),
-              ],
-              const SizedBox(height: AppSpacing.sm),
-              const Divider(height: 1),
-              const SizedBox(height: AppSpacing.sm),
-              _PriceRow(
-                label: 'Tổng cộng',
-                value: CurrencyFormatter.format(totalAmount.toInt()),
-                isTotal: true,
-              ),
-            ],
-          ),
+        const SizedBox(height: AppSpacing.sm),
+        for (var index = 0; index < cartItems.length; index++) ...[
+          _ProductSummaryRow(item: cartItems[index]),
+          if (index != cartItems.length - 1)
+            const Divider(height: AppSpacing.lg),
+        ],
+        const SizedBox(height: AppSpacing.md),
+        const Divider(),
+        const SizedBox(height: AppSpacing.xs),
+        _PriceRow(
+          label: localizations.subtotal,
+          value: LocalizedFormatters.currency(context, subtotal),
         ),
-
-        // Free shipping promotion
-        if (totalAmount >= 500000 && discountAmount == 0) ...[
-          Container(
-            margin: const EdgeInsets.only(
-              left: AppSpacing.md,
-              right: AppSpacing.md,
-              bottom: AppSpacing.md,
-            ),
-            padding: const EdgeInsets.all(AppSpacing.sm),
-            decoration: BoxDecoration(
-              color: AppColors.info.withAlpha(25),
-              borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
-              border: Border.all(color: AppColors.info.withAlpha(77)),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.local_shipping_outlined,
-                  size: 18,
-                  color: AppColors.info,
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                Expanded(
-                  child: Text(
-                    'Đơn hàng trên 500.000₫ được miễn phí vận chuyển!',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.info,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+        const SizedBox(height: AppSpacing.xs),
+        _PriceRow(
+          label: localizations.shipping,
+          value: isShippingCalculated
+              ? shippingFee == 0
+                    ? localizations.free
+                    : LocalizedFormatters.currency(context, shippingFee)
+              : localizations.shippingCalculatedAtCheckout,
+        ),
+        if (discountAmount > 0) ...[
+          const SizedBox(height: AppSpacing.xs),
+          _PriceRow(
+            label: couponCode == null
+                ? localizations.discount
+                : '${localizations.discount} ($couponCode)',
+            value: '-${LocalizedFormatters.currency(context, discountAmount)}',
+            valueColor: colors.tertiary,
           ),
         ],
+        const SizedBox(height: AppSpacing.sm),
+        const Divider(),
+        const SizedBox(height: AppSpacing.xs),
+        _PriceRow(
+          label: localizations.total,
+          value: LocalizedFormatters.currency(context, _totalAmount),
+          isTotal: true,
+        ),
       ],
     );
   }
 }
 
-/// Individual product item in the list
-class _ProductItem extends StatelessWidget {
-  final CartItemModel item;
+class _ProductSummaryRow extends StatelessWidget {
+  const _ProductSummaryRow({required this.item});
 
-  const _ProductItem({required this.item});
+  final CartItemModel item;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xs,
-      ),
-      child: Row(
-        children: [
-          // Product image
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: AppColors.surfaceContainerHigh,
-              borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
-            ),
-            child: item.imageUrl != null
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
-                    child: Image.network(
-                      item.imageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Icon(
-                        Icons.image_outlined,
-                        color: AppColors.onSurfaceVariant,
-                      ),
-                    ),
-                  )
-                : const Icon(
-                    Icons.image_outlined,
-                    color: AppColors.onSurfaceVariant,
-                  ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
+    final colors = Theme.of(context).colorScheme;
+    final localizations = AppLocalizations.of(context);
 
-          // Product info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SafeNetworkImage(
+          url: item.imageUrl,
+          width: 56,
+          height: 56,
+          borderRadius: AppSpacing.borderRadiusSmall,
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                item.name,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              if (item.optionName?.isNotEmpty ?? false) ...[
+                const SizedBox(height: AppSpacing.xxs),
                 Text(
-                  item.name,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
+                  item.optionName!,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
-                if (item.optionName != null) ...[
-                  const SizedBox(height: 2),
+              ],
+              const SizedBox(height: AppSpacing.xs),
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.xxs,
+                children: [
                   Text(
-                    item.optionName!,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.onSurfaceVariant,
+                    localizations.cartItemCount(item.quantity),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                  Text(
+                    LocalizedFormatters.currency(context, item.totalPrice),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],
-              ],
-            ),
-          ),
-
-          // Quantity and price
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                CurrencyFormatter.format(item.totalPrice.toInt()),
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Text(
-                'x${item.quantity}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.onSurfaceVariant,
-                ),
               ),
             ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-/// Price row widget
 class _PriceRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final bool isTotal;
-  final Color? valueColor;
-  final String? suffix;
-
   const _PriceRow({
     required this.label,
     required this.value,
     this.isTotal = false,
     this.valueColor,
-    this.suffix,
   });
+
+  final String label;
+  final String value;
+  final bool isTotal;
+  final Color? valueColor;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final style = isTotal
+        ? theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)
+        : theme.textTheme.bodyMedium;
+
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: isTotal ? 15 : 14,
-            fontWeight: isTotal ? FontWeight.w600 : FontWeight.normal,
-          ),
-        ),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (suffix != null)
-              Text(
-                suffix!,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.onSurfaceVariant,
-                ),
-              ),
-            const SizedBox(width: 4),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: isTotal ? 16 : 14,
-                fontWeight: isTotal ? FontWeight.bold : FontWeight.w500,
-                color: valueColor ??
-                    (isTotal ? AppColors.primary : null),
-              ),
+        Expanded(child: Text(label, style: style)),
+        const SizedBox(width: AppSpacing.md),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: style?.copyWith(
+              color: valueColor ?? (isTotal ? theme.colorScheme.primary : null),
+              fontWeight: isTotal ? FontWeight.w800 : FontWeight.w600,
             ),
-          ],
+          ),
         ),
       ],
     );

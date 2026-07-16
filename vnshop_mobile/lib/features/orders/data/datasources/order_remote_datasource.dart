@@ -1,9 +1,10 @@
 import 'package:dio/dio.dart';
 
 import '../models/order_model.dart';
+import '../models/order_page_result.dart';
 
 abstract class OrderRemoteDataSource {
-  Future<List<OrderModel>> getOrders({int page, int limit, OrderStatus? status});
+  Future<OrderPageResult> getOrders({int page, int limit, OrderStatus? status});
   Future<OrderModel> getOrderById(String orderId);
   Future<OrderModel> createOrder(Map<String, dynamic> orderData);
   Future<OrderModel> cancelOrder(String orderId);
@@ -12,10 +13,10 @@ abstract class OrderRemoteDataSource {
 class OrderRemoteDataSourceImpl implements OrderRemoteDataSource {
   final Dio _dio;
 
-  OrderRemoteDataSourceImpl({required Dio dio}) : _dio = dio;
+  OrderRemoteDataSourceImpl({required this._dio});
 
   @override
-  Future<List<OrderModel>> getOrders({
+  Future<OrderPageResult> getOrders({
     int page = 1,
     int limit = 20,
     OrderStatus? status,
@@ -26,10 +27,7 @@ class OrderRemoteDataSourceImpl implements OrderRemoteDataSource {
         'size': limit,
         if (status != null) 'status': status.value,
       };
-      final response = await _dio.get(
-        '/orders',
-        queryParameters: queryParams,
-      );
+      final response = await _dio.get('/orders', queryParameters: queryParams);
 
       if (response.statusCode != 200) {
         throw DioException(
@@ -40,12 +38,24 @@ class OrderRemoteDataSourceImpl implements OrderRemoteDataSource {
 
       final envelope = response.data as Map<String, dynamic>;
       final rawData = envelope['data'] ?? envelope['orders'] ?? const [];
-      final rawOrders = rawData is Map<String, dynamic>
-          ? (rawData['content'] as List<dynamic>? ?? const [])
-          : rawData as List<dynamic>;
-      return rawOrders
-          .map((item) => OrderModel.fromJson(item as Map<String, dynamic>))
-          .toList();
+      if (rawData is Map) {
+        return OrderPageResult.fromJson(
+          Map<String, dynamic>.from(rawData),
+          requestedPage: page,
+          requestedPageSize: limit,
+        );
+      }
+
+      final orders = rawData is List
+          ? rawData
+                .whereType<Map>()
+                .map(
+                  (item) =>
+                      OrderModel.fromJson(Map<String, dynamic>.from(item)),
+                )
+                .toList(growable: false)
+          : const <OrderModel>[];
+      return OrderPageResult.singlePage(orders);
     } on DioException {
       rethrow;
     } catch (e) {

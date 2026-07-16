@@ -3,6 +3,48 @@
   "appTitle": "VNShop",
   "home": "Home",
   "products": "Products",
+  "browseProducts": "Browse products",
+  "allCategories": "All",
+  "productsFound": "{count, plural, =1 {1 product} other {{count} products}}",
+  "@productsFound": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "notifications": "Notifications",
+  "favorites": "Favorites",
+  "favoritesCount": "{count, plural, =1 {1 saved product} other {{count} saved products}}",
+  "@favoritesCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "noFavoritesTitle": "No favorites yet",
+  "noFavoritesSubtitle": "Save products to find them quickly here.",
+  "favoritesLoadError": "Favorites couldn't be loaded",
+  "favoritesLoadHelp": "Check your connection and try again.",
+  "someFavoritesLoadError": "Some saved products couldn't be loaded.",
+  "refresh": "Refresh",
+  "homeProductsLoadError": "Products couldn't be loaded",
+  "homeProductsLoadHelp": "Check your connection and try again.",
+  "noProductsTitle": "No products found",
+  "noProductsSubtitle": "Try another search or category.",
+  "filters": "Filters",
+  "sortProducts": "Sort products",
+  "clearFilters": "Clear filters",
+  "resetFilters": "Reset",
+  "applyFilters": "Apply filters",
+  "minimumPrice": "Minimum price",
+  "maximumPrice": "Maximum price",
+  "invalidPrice": "Enter a valid price.",
+  "invalidPriceRange": "Minimum price cannot exceed maximum price.",
+  "sameDayOnly": "Same-day delivery only",
+  "verifiedProductsOnly": "Verified products only",
+  "officialStoresOnly": "Official stores only",
+  "sortNewest": "Newest",
+  "sortPriceLowToHigh": "Price: Low to high",
+  "sortPriceHighToLow": "Price: High to low",
+  "someProductsLoadError": "New results couldn't be loaded. Showing the previous products.",
   "cart": "Cart",
   "orders": "Orders",
   "profile": "Profile",
@@ -12,16 +54,201 @@
   "email": "Email",
   "password": "Password",
   "phone": "Phone",
-  "searchProducts": "Search products...",
+  "searchProducts": "Search products…",
+  "clearSearch": "Clear search",
   "addToCart": "Add to cart",
   "buyNow": "Buy now",
+  "viewCart": "View cart",
+  "itemsAddedToCart": "{count, plural, =1 {1 item added to your cart} other {{count} items added to your cart}}",
+  "@itemsAddedToCart": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "copyProductLink": "Copy product link",
+  "productLinkCopied": "Product link copied",
+  "addToFavorites": "Add to favorites",
+  "removeFromFavorites": "Remove from favorites",
+  "addedToFavorites": "Added to favorites",
+  "removedFromFavorites": "Removed from favorites",
+  "wishlistUpdateError": "Couldn't update favorites. Try again.",
+  "quantity": "Quantity",
+  "quantityValue": "Quantity: {count}",
+  "@quantityValue": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "decreaseQuantity": "Decrease quantity",
+  "increaseQuantity": "Increase quantity",
+  "inStock": "In stock",
+  "lowStock": "Only {count} left",
+  "@lowStock": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "outOfStock": "Out of stock",
+  "productDescription": "Product description",
+  "noProductDescription": "No description is available for this product.",
+  "expandDescription": "Show full description",
+  "collapseDescription": "Collapse description",
   "checkout": "Checkout",
+  "checkoutDeliveryAddress": "Delivery address",
+  "checkoutDeliveryMethod": "Delivery method",
+  "checkoutPaymentMethod": "Payment method",
+  "checkoutReviewOrder": "Review order",
+  "defaultLabel": "Default",
+  "edit": "Edit",
+  "addNewAddress": "Add new address",
+  "editAddressTitle": "Edit address",
+  "addressDetails": "Address details",
+  "streetAddressLabel": "Street address",
+  "streetAddressHint": "House number and street name",
+  "wardLabel": "Ward / Commune",
+  "wardHint": "Optional",
+  "districtLabel": "District",
+  "districtHint": "Enter district",
+  "cityProvinceLabel": "City / Province",
+  "cityProvinceHint": "Enter city or province",
+  "requiredField": "{field} is required",
+  "@requiredField": {
+    "placeholders": { "field": { "type": "String" } }
+  },
+  "saveAddress": "Save address",
+  "setDefaultAddress": "Set as default address",
+  "defaultAddressHelp": "Use this address first on future orders.",
+  "addressNotFoundTitle": "Address not found",
+  "addressNotFoundHelp": "This address may have been removed. Return to checkout and choose another one.",
+  "addressAddedSuccess": "Address added",
+  "addressUpdatedSuccess": "Address updated",
+  "discardAddressTitle": "Discard changes?",
+  "discardAddressHelp": "Your unsaved address changes will be lost.",
+  "discardChanges": "Discard",
+  "noAddressTitle": "Add a delivery address",
+  "noAddressHelp": "An address is required before delivery options can be calculated.",
+  "deleteAddress": "Delete address",
+  "deleteAddressConfirmation": "Delete the address for {name}?",
+  "@deleteAddressConfirmation": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "selectAddressFirst": "Choose a delivery address first.",
+  "shippingMethodsLoadError": "Delivery methods couldn't be loaded",
+  "noShippingMethods": "No delivery methods are available for this address.",
+  "deliveryToday": "Delivery today",
+  "deliveryDays": "{count, plural, =1 {Delivery in 1 day} other {Delivery in {count} days}}",
+  "@deliveryDays": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "free": "Free",
+  "paymentMethodsLoadError": "Payment methods couldn't be loaded",
+  "noPaymentMethods": "No payment methods are currently available.",
+  "paymentCodName": "Cash on delivery",
+  "paymentCodDescription": "Pay when your order arrives",
+  "paymentVietqrName": "VietQR",
+  "paymentVietqrDescription": "Scan a QR code with your banking app",
+  "paymentVnpayName": "VNPay",
+  "paymentVnpayDescription": "Pay through the VNPay gateway",
+  "paymentMomoName": "MoMo",
+  "paymentMomoDescription": "Pay with your MoMo wallet",
+  "paymentBankTransferName": "Bank transfer",
+  "paymentBankTransferDescription": "Transfer from your bank account",
+  "payNow": "Pay now",
+  "orderPlacedTitle": "Order placed",
+  "orderPlacedHelp": "Your order has been received and is ready to track.",
+  "orderNumber": "Order {id}",
+  "@orderNumber": {
+    "placeholders": { "id": { "type": "String" } }
+  },
+  "viewOrders": "View orders",
+  "continueShopping": "Continue shopping",
+  "completePayment": "Complete payment",
+  "paymentQrInstruction": "Scan this QR code in your banking app, then check the payment status.",
+  "openPaymentApp": "Open payment app",
+  "checkPaymentStatus": "Check payment status",
+  "paymentQrCode": "Payment QR code",
+  "checkoutInitializeError": "Checkout couldn't be started. Return to your cart and try again.",
+  "checkoutAddressesLoadError": "Addresses couldn't be loaded.",
+  "checkoutAddressAddError": "The address couldn't be added.",
+  "checkoutAddressUpdateError": "The address couldn't be updated.",
+  "checkoutAddressDeleteError": "The address couldn't be deleted.",
+  "checkoutPaymentUnavailable": "That payment method is no longer available.",
+  "checkoutIncompleteError": "Choose an address, delivery method, and payment method first.",
+  "checkoutUpdateError": "Checkout totals couldn't be updated.",
+  "checkoutPaymentStartError": "Payment couldn't be started. Try again.",
+  "checkoutPaymentStatusError": "Payment status couldn't be refreshed.",
+  "checkoutPaymentFailed": "Payment was not completed. Try another method or try again.",
+  "checkoutTransactionMissing": "The payment transaction couldn't be found.",
+  "checkoutOrderCreateError": "The order couldn't be created. Try again.",
+  "checkoutOrderCancelError": "The order couldn't be cancelled.",
   "placeOrder": "Place order",
   "total": "Total",
   "subtotal": "Subtotal",
   "shipping": "Shipping",
   "discount": "Discount",
   "emptyCart": "Cart is empty",
+  "cartItemCount": "{count, plural, =1 {1 item} other {{count} items}}",
+  "@cartItemCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "cartSelectionCount": "{selected} of {total} selected",
+  "@cartSelectionCount": {
+    "placeholders": {
+      "selected": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "selectAll": "Select all",
+  "clearCart": "Clear cart",
+  "clearCartConfirmation": "Remove every item from your cart?",
+  "clearAll": "Clear all",
+  "emptyCartHelp": "Products you add will appear here.",
+  "shopNow": "Shop now",
+  "cartLoadError": "We couldn't load your cart",
+  "cartLoadErrorHelp": "Check your connection and try again.",
+  "cartAddError": "Couldn't add that item. Try again.",
+  "cartRemoveError": "Couldn't remove that item. Try again.",
+  "cartQuantityError": "Couldn't update the quantity. Try again.",
+  "cartInvalidCoupon": "That coupon is unavailable or invalid.",
+  "cartRemoveCouponError": "Couldn't remove the coupon. Try again.",
+  "cartClearError": "Couldn't clear your cart. Try again.",
+  "cartSyncError": "Your cart couldn't be synced. Try again.",
+  "cartCheckoutCleanupError": "Your order was placed, but the cart couldn't be refreshed.",
+  "removeCartItem": "Remove item",
+  "removeCartItemConfirmation": "Remove {name} from your cart?",
+  "@removeCartItemConfirmation": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "remove": "Remove",
+  "couponTitle": "Coupon",
+  "couponHint": "Enter coupon code",
+  "applyCoupon": "Apply",
+  "couponApplied": "Applied",
+  "couponAppliedCode": "Code: {code}",
+  "@couponAppliedCode": {
+    "placeholders": {
+      "code": { "type": "String" }
+    }
+  },
+  "orderSummary": "Order summary",
+  "selectedSubtotal": "Selected subtotal",
+  "shippingCalculatedAtCheckout": "Calculated at checkout",
+  "estimatedTotal": "Estimated total",
+  "vatIncluded": "VAT included where applicable",
+  "discountRecalculatedAtCheckout": "Promotions are recalculated for the selected items at checkout.",
+  "checkoutItemCount": "{count, plural, =1 {Checkout (1)} other {Checkout ({count})}}",
+  "@checkoutItemCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "checkoutEmptyTitle": "No items selected",
+  "checkoutEmptyHelp": "Return to your cart and choose at least one item to continue.",
+  "backToCart": "Back to cart",
   "emptyOrders": "No orders yet",
   "noResults": "No results found",
   "error": "An error occurred",
@@ -30,5 +257,121 @@
   "confirm": "Confirm",
   "success": "Success",
   "processing": "Processing...",
-  "loading": "Loading..."
+  "loading": "Loading...",
+  "customerReviews": "Customer reviews",
+  "reviewSectionSubtitle": "Ratings and feedback from shoppers who bought this product.",
+  "reviewCount": "{count, plural, =0 {No reviews} =1 {1 review} other {{count} reviews}}",
+  "@reviewCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "reviewRatingOption": "{count, plural, =1 {1 star} other {{count} stars}}",
+  "@reviewRatingOption": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "reviewRatingBreakdown": "{count, plural, =1 {1-star reviews} other {{count}-star reviews}}",
+  "@reviewRatingBreakdown": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "yourReview": "Your review",
+  "shareReviewExperience": "Share your experience with this product...",
+  "submitReview": "Submit review",
+  "submittingReview": "Submitting...",
+  "signInToReview": "Sign in to share your experience.",
+  "signIn": "Sign in",
+  "verifiedPurchase": "Verified purchase",
+  "anonymousCustomer": "Customer",
+  "helpfulCount": "Helpful ({count})",
+  "@helpfulCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "saving": "Saving...",
+  "noReviewsTitle": "Be the first to review this product",
+  "noReviewsSubtitle": "Share your experience to help other shoppers.",
+  "reviewsLoadError": "Reviews could not be loaded",
+  "reviewsLoadErrorHelp": "Check your connection and try again.",
+  "tryAgain": "Try again",
+  "reviewPublished": "Published",
+  "reviewPending": "Waiting for moderation",
+  "reviewRejected": "Review not published",
+  "reviewPublishedNotice": "Your review is now published.",
+  "reviewPendingNotice": "Your review was submitted for moderation.",
+  "reviewRejectedNotice": "Your review could not be published.",
+  "reviewSubmitError": "Couldn't submit review. Try again.",
+  "reviewVoteError": "Couldn't save your vote. Try again.",
+  "reviewImageLabel": "Review image {count}",
+  "@reviewImageLabel": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "myOrders": "My orders",
+  "orderDetailTitle": "Order details",
+  "orderAll": "All",
+  "orderStatusPending": "Pending",
+  "orderStatusConfirmed": "Confirmed",
+  "orderStatusProcessing": "Processing",
+  "orderStatusShipped": "Shipping",
+  "orderStatusDelivered": "Delivered",
+  "orderStatusCancelled": "Cancelled",
+  "orderListCount": "{count, plural, =0 {No orders} =1 {1 order} other {{count} orders}}",
+  "@orderListCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "orderItemsCount": "{count, plural, =1 {1 item} other {{count} items}}",
+  "@orderItemsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "orderEmptyHelp": "Orders you place will appear here for tracking.",
+  "orderEmptyFilteredTitle": "No orders in this status",
+  "orderEmptyFilteredHelp": "Choose another status or browse all orders.",
+  "continueShopping": "Continue shopping",
+  "ordersLoadError": "Orders couldn't be loaded",
+  "orderNetworkError": "Check your connection and try again.",
+  "orderUnauthorizedError": "Your session has expired. Sign in again.",
+  "orderForbiddenError": "You don't have access to this order.",
+  "orderNotFoundError": "This order could not be found.",
+  "orderServerError": "The order service is unavailable. Try again shortly.",
+  "orderRequestCancelledError": "The request was cancelled.",
+  "orderUnknownError": "Something went wrong. Try again.",
+  "orderCancelledSuccess": "Order cancelled",
+  "cancelOrder": "Cancel order",
+  "cancellingOrder": "Cancelling...",
+  "cancelOrderTitle": "Cancel this order?",
+  "cancelOrderConfirmation": "This action cannot be undone.",
+  "keepOrder": "Keep order",
+  "confirmCancelOrder": "Yes, cancel order",
+  "orderStatusSection": "Order status",
+  "deliveryAddress": "Delivery address",
+  "orderProducts": "Products",
+  "paymentInformation": "Payment",
+  "orderInformation": "Order information",
+  "orderCode": "Order code",
+  "placedAt": "Placed",
+  "updatedAt": "Last updated",
+  "paymentMethod": "Payment method",
+  "paymentStatus": "Payment status",
+  "paid": "Paid",
+  "unpaid": "Not paid",
+  "trackingNumber": "Tracking number",
+  "carrier": "Carrier",
+  "shippingMethod": "Delivery method",
+  "orderProductsUnavailable": "Product details are unavailable for this order.",
+  "quantityShort": "Qty {count}",
+  "@quantityShort": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  }
 }
