@@ -1,24 +1,24 @@
 # VNShop Journey — End-to-End Business Outcome Report
 
-**Generated:** 2026-06-11T23:57:22.536Z
+**Generated:** 2026-07-15T07:46:39.488Z
 
 This report aggregates every chapter of the BA-grade persona journey. Each row is a single business outcome the platform must support; columns map to the chapter and persona that exercises it.
 
 ## Journey verdict: BLOCKED
 
-- **Acceptance criteria passed:** 3 / 18
+- **Acceptance criteria passed:** 0 / 18
 - **Chapters run:** 6 of 6
 - **Blocked:** AC-2.1, AC-3.1, AC-4.1, AC-5.1, AC-6.1
 
-## Chapter 1 — Admin onboards the marketplace — PASS
+## Chapter 1 — Admin onboards the marketplace — PARTIAL
 
 Persona: admin. Detail: [`journey/01-admin-onboards/REPORT.md`](journey/01-admin-onboards/REPORT.md).
 
 | AC | Outcome | Status |
 |---|---|---|
-| AC-1.1 | Admin can review a pending seller's application and approve them | PASS |
-| AC-1.2 | An approved seller appears in the public sellers list within 30 s | PASS |
-| AC-1.3 | Admin can publish a fixed-discount coupon that is immediately redeemable at checkout | PASS |
+| AC-1.1 | Admin can review a pending seller's application and approve them | NOT_RUN |
+| AC-1.2 | An approved seller appears in the public sellers list within 30 s | NOT_RUN |
+| AC-1.3 | Admin can publish a fixed-discount coupon that is immediately redeemable at checkout | NOT_RUN |
 
 ## Chapter 2 — Buyer discovers and orders — BLOCKED
 
