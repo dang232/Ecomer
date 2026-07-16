@@ -17,7 +17,6 @@ import { expectNoGlobalError } from "./_helpers";
  * manual testing per pt22 — see HANDOFF.md.
  */
 
-
 test.describe("payment-return page UI", () => {
   test("/payment/return/vnpay without orderId surfaces the error state", async ({ page }) => {
     await page.goto("/payment/return/vnpay");

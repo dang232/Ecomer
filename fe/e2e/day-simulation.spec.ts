@@ -41,10 +41,16 @@ async function registerBuyer(request: APIRequestContext): Promise<AuthResult> {
   const login = await request.post(`${apiURL}/auth/login`, {
     data: { username: email, password: PASSWORD },
   });
-  expect(login.ok(), `post-register login failed: ${login.status()} ${await login.text()}`).toBeTruthy();
+  expect(
+    login.ok(),
+    `post-register login failed: ${login.status()} ${await login.text()}`,
+  ).toBeTruthy();
   const body = await login.json();
   const token = body?.data?.accessToken ?? body?.accessToken;
-  expect(token, `no accessToken in login response: ${JSON.stringify(body).slice(0, 200)}`).toBeTruthy();
+  expect(
+    token,
+    `no accessToken in login response: ${JSON.stringify(body).slice(0, 200)}`,
+  ).toBeTruthy();
   return { accessToken: token, email };
 }
 
@@ -55,7 +61,10 @@ async function loginByUsername(request: APIRequestContext, username: string): Pr
   expect(r.ok(), `login ${username} failed: ${r.status()} ${await r.text()}`).toBeTruthy();
   const body = await r.json();
   const token = body?.data?.accessToken ?? body?.accessToken;
-  expect(token, `no accessToken for ${username}: ${JSON.stringify(body).slice(0, 200)}`).toBeTruthy();
+  expect(
+    token,
+    `no accessToken for ${username}: ${JSON.stringify(body).slice(0, 200)}`,
+  ).toBeTruthy();
   return { accessToken: token };
 }
 
@@ -63,7 +72,9 @@ function authHeaders(auth: AuthResult): Record<string, string> {
   return { Authorization: `Bearer ${auth.accessToken}` };
 }
 
-async function firstProduct(request: APIRequestContext): Promise<{ id: string; sellerId?: string }> {
+async function firstProduct(
+  request: APIRequestContext,
+): Promise<{ id: string; sellerId?: string }> {
   const r = await request.get(`${apiURL}/products?size=1`);
   expect(r.ok(), `products fetch failed: ${r.status()}`).toBeTruthy();
   const body = await r.json();
@@ -189,7 +200,10 @@ test.describe("day simulation — buyer", () => {
     expect(place.ok()).toBeTruthy();
     const placeBody = await place.json();
     const orderId = placeBody?.data?.id ?? placeBody?.data?.orderId;
-    expect(orderId, `no order id in response: ${JSON.stringify(placeBody).slice(0, 300)}`).toBeTruthy();
+    expect(
+      orderId,
+      `no order id in response: ${JSON.stringify(placeBody).slice(0, 300)}`,
+    ).toBeTruthy();
 
     // 6) Idempotency: replay returns same order
     const replay = await request.post(`${apiURL}/orders`, {
@@ -249,10 +263,13 @@ test.describe("day simulation — buyer", () => {
     const before = await request.get(`${apiURL}/notifications/unread-count`, { headers });
     expect(before.ok()).toBeTruthy();
     const beforeBody = await before.json();
-    const beforeCount = beforeBody?.data?.count ?? 0;
+    const beforeCount = (beforeBody?.data ?? beforeBody)?.count ?? 0;
 
     const trigger = await request.post(`${apiURL}/notifications/test`, { headers });
-    expect(trigger.ok(), `notifications/test: ${trigger.status()} ${await trigger.text()}`).toBeTruthy();
+    expect(
+      trigger.ok(),
+      `notifications/test: ${trigger.status()} ${await trigger.text()}`,
+    ).toBeTruthy();
 
     // Allow the consumer or in-process write a moment to land. /test is
     // synchronous in send-notification.use-case so this should be fast.
@@ -261,13 +278,14 @@ test.describe("day simulation — buyer", () => {
     const after = await request.get(`${apiURL}/notifications/unread-count`, { headers });
     expect(after.ok()).toBeTruthy();
     const afterBody = await after.json();
-    const afterCount = afterBody?.data?.count ?? 0;
+    const afterCount = (afterBody?.data ?? afterBody)?.count ?? 0;
     expect(afterCount).toBeGreaterThanOrEqual(beforeCount + 1);
 
     const list = await request.get(`${apiURL}/notifications?size=5`, { headers });
     expect(list.ok()).toBeTruthy();
     const listBody = await list.json();
-    const items: Array<{ id: string; read?: boolean }> = listBody?.data?.content ?? [];
+    const items: Array<{ id: string; read?: boolean }> =
+      (listBody?.data ?? listBody)?.content ?? [];
     expect(items.length).toBeGreaterThan(0);
 
     const target = items[0]!;
@@ -279,7 +297,7 @@ test.describe("day simulation — buyer", () => {
 
     const tail = await request.get(`${apiURL}/notifications/unread-count`, { headers });
     const tailBody = await tail.json();
-    expect(tailBody?.data?.count ?? 0).toBe(0);
+    expect((tailBody?.data ?? tailBody)?.count ?? 0).toBe(0);
   });
 
   test("buyer UI: register → home → cart → checkout step renders without crash", async ({
@@ -333,7 +351,10 @@ test.describe("day simulation — seller", () => {
     expect(payouts.ok()).toBeTruthy();
 
     const revenue = await request.get(`${apiURL}/sellers/me/revenue?days=30`, { headers });
-    expect(revenue.ok(), `seller revenue: ${revenue.status()} ${await revenue.text()}`).toBeTruthy();
+    expect(
+      revenue.ok(),
+      `seller revenue: ${revenue.status()} ${await revenue.text()}`,
+    ).toBeTruthy();
 
     const pending = await request.get(`${apiURL}/seller/orders/pending`, { headers });
     expect(pending.ok(), `pending orders: ${pending.status()}`).toBeTruthy();
@@ -434,7 +455,9 @@ test.describe("day simulation — payment-method shells", () => {
     expect(codes).toContain("COD");
   });
 
-  test("payment create endpoints reject client-supplied amount (pt12 finding)", async ({ request }) => {
+  test("payment create endpoints reject client-supplied amount (pt12 finding)", async ({
+    request,
+  }) => {
     // Pt12 security gate: PaymentRequest no longer carries amount or buyerId
     // on the wire. The BE looks them both up from order-service. The key
     // assertion is that an unknown orderId can NOT cause a payment to be
@@ -453,7 +476,9 @@ test.describe("day simulation — payment-method shells", () => {
     expect(fakeOrder.ok()).toBeFalsy();
   });
 
-  test("pt15 IDOR: wrong seller cannot approve/reject/complete a return; wrong buyer cannot open a dispute", async ({ request }) => {
+  test("pt15 IDOR: wrong seller cannot approve/reject/complete a return; wrong buyer cannot open a dispute", async ({
+    request,
+  }) => {
     // Locks the four IDOR regressions closed in pt15 (ReturnController):
     //   - POST /returns/{id}/approve  → 403 if caller is not the SubOrder's seller
     //   - POST /returns/{id}/reject   → 403 if caller is not the SubOrder's seller
@@ -483,7 +508,12 @@ test.describe("day simulation — payment-method shells", () => {
     const place = await request.post(`${apiURL}/orders`, {
       headers: { ...headersA, "Idempotency-Key": idem },
       data: {
-        shippingAddress: { street: "1 Return IDOR St", ward: "1442", district: "101", city: "Ho Chi Minh" },
+        shippingAddress: {
+          street: "1 Return IDOR St",
+          ward: "1442",
+          district: "101",
+          city: "Ho Chi Minh",
+        },
         paymentMethod: "COD",
         items: [{ productId: product.id, quantity: 1 }],
       },
@@ -521,7 +551,10 @@ test.describe("day simulation — payment-method shells", () => {
       headers: headersA,
       data: { subOrderId, reason: "Item damaged on arrival" },
     });
-    expect(returnReq.ok(), `request return: ${returnReq.status()} ${await returnReq.text()}`).toBeTruthy();
+    expect(
+      returnReq.ok(),
+      `request return: ${returnReq.status()} ${await returnReq.text()}`,
+    ).toBeTruthy();
     const returnBody = await returnReq.json();
     const returnId: string = returnBody?.data?.returnId;
     expect(returnId, "no returnId in return response").toBeTruthy();
@@ -609,10 +642,9 @@ test.describe("day simulation — payment-method shells", () => {
     // Probe 2: buyer B reads buyer A's payment status. Must NOT succeed.
     // (No payment row exists yet because COD wasn't confirmed; the BE
     // still has to refuse before leaking even the existence of the order.)
-    const idorPaymentStatus = await request.get(
-      `${apiURL}/payment/status/${orderId}`,
-      { headers: headersB },
-    );
+    const idorPaymentStatus = await request.get(`${apiURL}/payment/status/${orderId}`, {
+      headers: headersB,
+    });
     expect(idorPaymentStatus.ok()).toBeFalsy();
 
     // Probe 3: buyer B creates a payment for buyer A's order. The pt12
@@ -643,7 +675,10 @@ test.describe("day simulation — notification IDOR (pt15 fix)", () => {
     const create = await request.post(`${apiURL}/notifications/test`, {
       headers: headersA,
     });
-    expect(create.ok(), `create notification: ${create.status()} ${await create.text()}`).toBeTruthy();
+    expect(
+      create.ok(),
+      `create notification: ${create.status()} ${await create.text()}`,
+    ).toBeTruthy();
 
     // Buyer A reads their own notification list to harvest the id.
     const list = await request.get(`${apiURL}/notifications?size=5`, {
@@ -651,7 +686,7 @@ test.describe("day simulation — notification IDOR (pt15 fix)", () => {
     });
     expect(list.ok(), `list notifications: ${list.status()} ${await list.text()}`).toBeTruthy();
     const listBody = await list.json();
-    const notificationId = listBody?.data?.content?.[0]?.id;
+    const notificationId = (listBody?.data ?? listBody)?.content?.[0]?.id;
     expect(notificationId, "no notification id in list response").toBeTruthy();
 
     // Sanity: buyer A can read their own notification.
@@ -672,7 +707,9 @@ test.describe("day simulation — notification IDOR (pt15 fix)", () => {
 });
 
 test.describe("day simulation — product image activate IDOR (pt19 fix)", () => {
-  test("wrong seller cannot activate another seller's product image (pt19 IDOR fix)", async ({ request }) => {
+  test("wrong seller cannot activate another seller's product image (pt19 IDOR fix)", async ({
+    request,
+  }) => {
     // Locks the pt19 IDOR finding on POST /sellers/me/products/{productId}/images/activate.
     // Pre-fix: the path productId was captured but never passed to the
     // service, and the service looked up only the wire-supplied objectKey
@@ -713,7 +750,9 @@ test.describe("day simulation — product image activate IDOR (pt19 fix)", () =>
 });
 
 test.describe("day simulation — flash-sale buyerId impersonation (pt22 fix)", () => {
-  test("buyer cannot reserve a flash-sale slot under another buyer's id (pt22 wire-field fix)", async ({ request }) => {
+  test("buyer cannot reserve a flash-sale slot under another buyer's id (pt22 wire-field fix)", async ({
+    request,
+  }) => {
     // Locks the pt22 finding on POST /flash-sale/reserve.
     // Pre-fix: ReserveFlashSaleRequest accepted `buyerId` from the wire and
     // ReserveFlashSaleUseCase wrote it to the reservation as the owner.

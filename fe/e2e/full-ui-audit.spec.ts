@@ -85,15 +85,20 @@ test("15 — 404 page", async ({ page }) => {
 test("16 — Dark mode toggle", async ({ page }) => {
   await page.goto("/");
   await page.waitForLoadState("networkidle");
-  const toggle = page.locator("button").filter({ has: page.locator('svg') }).nth(0);
+  const toggle = page
+    .locator("button")
+    .filter({ has: page.locator("svg") })
+    .nth(0);
   // Find the theme toggle in the navbar
-  const themeBtn = page.locator('button[aria-label*="theme"], button[aria-label*="dark"], button[aria-label*="Theme"]');
+  const themeBtn = page.locator(
+    'button[aria-label*="theme"], button[aria-label*="dark"], button[aria-label*="Theme"]',
+  );
   if (await themeBtn.first().isVisible()) {
     await themeBtn.first().click();
     await page.waitForTimeout(500);
   } else {
     // Try the moon/sun icon button in the top bar
-    const moonBtn = page.locator('nav button').nth(2);
+    const moonBtn = page.locator("nav button").nth(2);
     if (await moonBtn.isVisible()) await moonBtn.click();
     await page.waitForTimeout(500);
   }
@@ -103,7 +108,9 @@ test("16 — Dark mode toggle", async ({ page }) => {
 test("17 — Language switch", async ({ page }) => {
   await page.goto("/");
   await page.waitForLoadState("networkidle");
-  const langBtn = page.locator('button:has-text("EN"), button:has-text("VI"), button:has-text("English"), button:has-text("Tiếng Việt")');
+  const langBtn = page.locator(
+    'button:has-text("EN"), button:has-text("VI"), button:has-text("English"), button:has-text("Tiếng Việt")',
+  );
   if (await langBtn.first().isVisible()) {
     await langBtn.first().click();
     await page.waitForTimeout(1000);
@@ -175,7 +182,11 @@ test("26 — Buyer: Add to cart from product detail", async ({ page }) => {
   if (await link.isVisible()) {
     await link.click();
     await page.waitForLoadState("networkidle");
-    const btn = page.locator('button:has-text("Add to cart"), button:has-text("Thêm vào giỏ"), button:has-text("add to cart")').first();
+    const btn = page
+      .locator(
+        'button:has-text("Add to cart"), button:has-text("Thêm vào giỏ"), button:has-text("add to cart")',
+      )
+      .first();
     if (await btn.isVisible()) {
       await btn.click();
       await page.waitForTimeout(2000);
@@ -204,7 +215,7 @@ test("29 — Seller: Products tab", async ({ page }) => {
   await loginAs(page, "seller1@vnshop.local");
   await page.goto("/seller");
   await page.waitForLoadState("networkidle");
-  await page.locator('nav >> text=Products').first().click();
+  await page.locator("nav >> text=Products").first().click();
   await page.waitForTimeout(2000);
   await snap(page, "29-seller-products-tab");
 });
@@ -213,7 +224,7 @@ test("30 — Seller: Orders tab", async ({ page }) => {
   await loginAs(page, "seller1@vnshop.local");
   await page.goto("/seller");
   await page.waitForLoadState("networkidle");
-  await page.locator('nav >> text=Orders').first().click();
+  await page.locator("nav >> text=Orders").first().click();
   await page.waitForTimeout(2000);
   await snap(page, "30-seller-orders-tab");
 });
@@ -222,7 +233,7 @@ test("31 — Seller: Reviews tab", async ({ page }) => {
   await loginAs(page, "seller1@vnshop.local");
   await page.goto("/seller");
   await page.waitForLoadState("networkidle");
-  await page.locator('nav >> text=Reviews').first().click();
+  await page.locator("nav >> text=Reviews").first().click();
   await page.waitForTimeout(2000);
   await snap(page, "31-seller-reviews-tab");
 });
@@ -231,7 +242,7 @@ test("32 — Seller: Wallet tab", async ({ page }) => {
   await loginAs(page, "seller1@vnshop.local");
   await page.goto("/seller");
   await page.waitForLoadState("networkidle");
-  await page.locator('nav >> text=Wallet').first().click();
+  await page.locator("nav >> text=Wallet").first().click();
   await page.waitForTimeout(2000);
   await snap(page, "32-seller-wallet-tab");
 });
@@ -240,7 +251,7 @@ test("33 — Seller: Settings tab", async ({ page }) => {
   await loginAs(page, "seller1@vnshop.local");
   await page.goto("/seller");
   await page.waitForLoadState("networkidle");
-  await page.locator('nav >> text=Settings').first().click();
+  await page.locator("nav >> text=Settings").first().click();
   await page.waitForTimeout(2000);
   await snap(page, "33-seller-settings-tab");
 });
@@ -257,7 +268,7 @@ test("35 — Admin: Approve Sellers", async ({ page }) => {
   await loginAs(page, "admin1@vnshop.local");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
-  await page.locator('nav >> text=/Approve Sellers|admin\\.nav\\.sellers/').first().click();
+  await page.locator("nav >> text=/Approve Sellers|admin\\.nav\\.sellers/").first().click();
   await page.waitForTimeout(2000);
   await snap(page, "35-admin-approve-sellers");
 });
@@ -266,7 +277,7 @@ test("36 — Admin: Moderation", async ({ page }) => {
   await loginAs(page, "admin1@vnshop.local");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
-  await page.locator('nav >> text=Moderation').first().click();
+  await page.locator("nav >> text=Moderation").first().click();
   await page.waitForTimeout(2000);
   await snap(page, "36-admin-moderation");
 });
@@ -275,7 +286,7 @@ test("37 — Admin: Coupons", async ({ page }) => {
   await loginAs(page, "admin1@vnshop.local");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
-  await page.locator('nav >> text=Coupons').first().click();
+  await page.locator("nav >> text=Coupons").first().click();
   await page.waitForTimeout(2000);
   await snap(page, "37-admin-coupons");
 });
@@ -284,7 +295,7 @@ test("38 — Admin: Disputes", async ({ page }) => {
   await loginAs(page, "admin1@vnshop.local");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
-  await page.locator('nav >> text=Disputes').first().click();
+  await page.locator("nav >> text=Disputes").first().click();
   await page.waitForTimeout(2000);
   await snap(page, "38-admin-disputes");
 });
@@ -293,7 +304,7 @@ test("39 — Admin: Payouts", async ({ page }) => {
   await loginAs(page, "admin1@vnshop.local");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
-  await page.locator('nav >> text=Payouts').first().click();
+  await page.locator("nav >> text=Payouts").first().click();
   await page.waitForTimeout(2000);
   await snap(page, "39-admin-payouts");
 });
@@ -302,7 +313,7 @@ test("40 — Admin: Users tab", async ({ page }) => {
   await loginAs(page, "admin1@vnshop.local");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
-  await page.locator('nav >> text=/admin\\.nav\\.users|Users/').first().click();
+  await page.locator("nav >> text=/admin\\.nav\\.users|Users/").first().click();
   await page.waitForTimeout(2000);
   await snap(page, "40-admin-users-tab");
 });
@@ -311,7 +322,7 @@ test("41 — Admin: Orders tab", async ({ page }) => {
   await loginAs(page, "admin1@vnshop.local");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
-  await page.locator('nav >> text=/admin\\.nav\\.orders|Orders/').first().click();
+  await page.locator("nav >> text=/admin\\.nav\\.orders|Orders/").first().click();
   await page.waitForTimeout(2000);
   await snap(page, "41-admin-orders-tab");
 });
@@ -320,7 +331,7 @@ test("42 — Admin: Health tab", async ({ page }) => {
   await loginAs(page, "admin1@vnshop.local");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
-  await page.locator('nav >> text=/admin\\.nav\\.health|System Health/').first().click();
+  await page.locator("nav >> text=/admin\\.nav\\.health|System Health/").first().click();
   await page.waitForTimeout(2000);
   await snap(page, "42-admin-health-tab");
 });
@@ -384,7 +395,11 @@ test("48 — Guest add-to-cart blocked toast", async ({ page }) => {
   if (await link.isVisible()) {
     await link.click();
     await page.waitForLoadState("networkidle");
-    const btn = page.locator('button:has-text("Add to cart"), button:has-text("Thêm vào giỏ"), button:has-text("add to cart")').first();
+    const btn = page
+      .locator(
+        'button:has-text("Add to cart"), button:has-text("Thêm vào giỏ"), button:has-text("add to cart")',
+      )
+      .first();
     if (await btn.isVisible()) {
       await btn.click();
       await page.waitForTimeout(1500);

@@ -94,8 +94,8 @@ test.describe("i18n language switcher UI", () => {
 
     // The English-only nav copy should now be visible. Match either the
     // top-bar nav links OR the header "Home" link.
-    await expect(
-      page.getByText(/All Categories|Sign in|Log in/i).first(),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/All Categories|Sign in|Log in/i).first()).toBeVisible({
+      timeout: 10_000,
+    });
   });
 });

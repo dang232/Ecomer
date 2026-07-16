@@ -31,18 +31,17 @@ async function loginAsAdmin(request: APIRequestContext): Promise<AuthResult> {
   return { accessToken };
 }
 
-
 async function gotoCouponsTab(page: Page): Promise<void> {
   await page.goto("/admin");
-  await expect(
-    page.getByText(/Admin Dashboard|Tổng quan|Admin Console/i).first(),
-  ).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(/Admin Dashboard|Tổng quan|Admin Console/i).first()).toBeVisible({
+    timeout: 20_000,
+  });
   const tab = page.getByRole("button", { name: /^(Coupons|Coupon)$/i }).first();
   await expect(tab).toBeVisible({ timeout: 10_000 });
   await tab.click();
-  await expect(
-    page.getByText(/Coupon management|Quản lý coupon/i).first(),
-  ).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(/Coupon management|Quản lý coupon/i).first()).toBeVisible({
+    timeout: 15_000,
+  });
 }
 
 test.describe("admin coupon CRUD UI", () => {
@@ -51,14 +50,20 @@ test.describe("admin coupon CRUD UI", () => {
     await gotoCouponsTab(page);
 
     // Open the dialog.
-    await page.getByRole("button", { name: /Create coupon|\+ Tạo coupon|Tạo coupon/i }).first().click();
-    await expect(
-      page.getByText(/Create new coupon|Tạo coupon mới/i).first(),
-    ).toBeVisible({ timeout: 10_000 });
+    await page
+      .getByRole("button", { name: /Create coupon|\+ Tạo coupon|Tạo coupon/i })
+      .first()
+      .click();
+    await expect(page.getByText(/Create new coupon|Tạo coupon mới/i).first()).toBeVisible({
+      timeout: 10_000,
+    });
 
     // Click the dialog's submit (anchored on the dialog footer label) without
     // typing anything. The FE blocks with a toast.
-    await page.getByRole("button", { name: /^(Create coupon|Tạo coupon)$/i }).last().click();
+    await page
+      .getByRole("button", { name: /^(Create coupon|Tạo coupon)$/i })
+      .last()
+      .click();
 
     await expect(
       page.getByText(/Please enter a coupon code|Vui lòng nhập mã coupon/i).first(),
@@ -67,9 +72,7 @@ test.describe("admin coupon CRUD UI", () => {
     await expectNoGlobalError(page);
   });
 
-  test("Creating a FIXED coupon round-trips and the row appears in the table", async ({
-    page,
-  }) => {
+  test("Creating a FIXED coupon round-trips and the row appears in the table", async ({ page }) => {
     await loginAsAdmin(page.request);
     await gotoCouponsTab(page);
 
@@ -77,10 +80,13 @@ test.describe("admin coupon CRUD UI", () => {
     // created coupons (the BE rejects duplicates).
     const code = `UICRUD${Date.now() % 1_000_000}`;
 
-    await page.getByRole("button", { name: /Create coupon|\+ Tạo coupon|Tạo coupon/i }).first().click();
-    await expect(
-      page.getByText(/Create new coupon|Tạo coupon mới/i).first(),
-    ).toBeVisible({ timeout: 10_000 });
+    await page
+      .getByRole("button", { name: /Create coupon|\+ Tạo coupon|Tạo coupon/i })
+      .first()
+      .click();
+    await expect(page.getByText(/Create new coupon|Tạo coupon mới/i).first()).toBeVisible({
+      timeout: 10_000,
+    });
 
     // Fill the code input via its id (the field auto-uppercases).
     await page.locator("#admin-coupon-code").fill(code.toLowerCase());
@@ -93,12 +99,15 @@ test.describe("admin coupon CRUD UI", () => {
     await page.locator("#admin-coupon-value").fill("50000");
 
     // Submit.
-    await page.getByRole("button", { name: /^(Create coupon|Tạo coupon)$/i }).last().click();
+    await page
+      .getByRole("button", { name: /^(Create coupon|Tạo coupon)$/i })
+      .last()
+      .click();
 
     // Success toast.
-    await expect(
-      page.getByText(/Coupon created|Đã tạo coupon/i).first(),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Coupon created|Đã tạo coupon/i).first()).toBeVisible({
+      timeout: 15_000,
+    });
 
     // The dialog closes and the new code appears in the list.
     await expect(page.getByText(code, { exact: false }).first()).toBeVisible({
@@ -115,14 +124,20 @@ test.describe("admin coupon CRUD UI", () => {
     // Create a coupon first (mirrors the previous test's setup so this can
     // run in isolation without relying on previously seeded data).
     const code = `UIDEACT${Date.now() % 1_000_000}`;
-    await page.getByRole("button", { name: /Create coupon|\+ Tạo coupon|Tạo coupon/i }).first().click();
+    await page
+      .getByRole("button", { name: /Create coupon|\+ Tạo coupon|Tạo coupon/i })
+      .first()
+      .click();
     await page.locator("#admin-coupon-code").fill(code.toLowerCase());
     await page.getByRole("button", { name: /^(Fixed amount \(₫\)|Số tiền cố định)/i }).click();
     await page.locator("#admin-coupon-value").fill("25000");
-    await page.getByRole("button", { name: /^(Create coupon|Tạo coupon)$/i }).last().click();
-    await expect(
-      page.getByText(/Coupon created|Đã tạo coupon/i).first(),
-    ).toBeVisible({ timeout: 15_000 });
+    await page
+      .getByRole("button", { name: /^(Create coupon|Tạo coupon)$/i })
+      .last()
+      .click();
+    await expect(page.getByText(/Coupon created|Đã tạo coupon/i).first()).toBeVisible({
+      timeout: 15_000,
+    });
     await expect(page.getByText(code, { exact: false }).first()).toBeVisible({
       timeout: 10_000,
     });
@@ -134,23 +149,25 @@ test.describe("admin coupon CRUD UI", () => {
     await row.getByRole("button", { name: /^(Deactivate|Vô hiệu hoá)$/i }).click();
 
     // Success toast confirms the BE round-trip.
-    await expect(
-      page.getByText(/Coupon deactivated|Đã vô hiệu hoá coupon/i).first(),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Coupon deactivated|Đã vô hiệu hoá coupon/i).first()).toBeVisible({
+      timeout: 15_000,
+    });
 
     // The status badge inside the row flips to Paused / Tạm dừng. Re-locate
     // the row by code (the previous handle may be stale after invalidation).
-    await expect.poll(
-      () =>
-        page
-          .locator("tr", { hasText: code })
-          .filter({ hasText: /Paused|Tạm dừng/i })
-          .count(),
-      {
-        timeout: 15_000,
-        message: "deactivated coupon never showed the Paused badge",
-      },
-    ).toBeGreaterThan(0);
+    await expect
+      .poll(
+        () =>
+          page
+            .locator("tr", { hasText: code })
+            .filter({ hasText: /Paused|Tạm dừng/i })
+            .count(),
+        {
+          timeout: 15_000,
+          message: "deactivated coupon never showed the Paused badge",
+        },
+      )
+      .toBeGreaterThan(0);
 
     await expectNoGlobalError(page);
   });

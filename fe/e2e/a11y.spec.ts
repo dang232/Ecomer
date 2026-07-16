@@ -83,7 +83,6 @@ async function installCsrfPatch(page: Page): Promise<void> {
   await page.addInitScript({ content: script });
 }
 
-
 // Build the AxeBuilder once per spec with the project-wide configuration.
 // Each test calls .analyze() on a fresh instance pointed at its page.
 function axeFor(page: Page): AxeBuilder {

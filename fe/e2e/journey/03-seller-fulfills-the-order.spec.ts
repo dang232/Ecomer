@@ -10,14 +10,8 @@ import {
   startTrace,
   stopTrace,
 } from "./_journey-evidence";
-import {
-  loginAsSeededUser,
-  logoutViaUserMenu,
-} from "../_workday-evidence";
-import {
-  requireJourneyState,
-  writeJourneyState,
-} from "./_journey-state";
+import { loginAsSeededUser, logoutViaUserMenu } from "../_workday-evidence";
+import { requireJourneyState, writeJourneyState } from "./_journey-state";
 
 /**
  * Chapter 3 — Seller fulfills the order.
@@ -77,13 +71,11 @@ test.describe.serial("Chapter 3 — Seller fulfills the order", () => {
       acceptanceCriteria: [
         {
           code: "AC-3.1",
-          outcome:
-            "A seller sees the buyer's new order in their pending queue within 30 s",
+          outcome: "A seller sees the buyer's new order in their pending queue within 30 s",
         },
         {
           code: "AC-3.2",
-          outcome:
-            "A seller can accept and ship the order with a tracking number",
+          outcome: "A seller can accept and ship the order with a tracking number",
         },
       ],
     });
@@ -128,10 +120,7 @@ test.describe.serial("Chapter 3 — Seller fulfills the order", () => {
           await expect
             .poll(
               async () => {
-                const subOrderId = await findSubOrderForOrder(
-                  page.request,
-                  state.orderId,
-                );
+                const subOrderId = await findSubOrderForOrder(page.request, state.orderId);
                 if (subOrderId !== null) {
                   resolvedSubOrderId = subOrderId;
                   return true;
@@ -140,8 +129,7 @@ test.describe.serial("Chapter 3 — Seller fulfills the order", () => {
               },
               {
                 timeout: 30_000,
-                message:
-                  "seller's pending queue never showed Chapter 2's order within 30 s",
+                message: "seller's pending queue never showed Chapter 2's order within 30 s",
               },
             )
             .toBe(true);
@@ -161,9 +149,7 @@ test.describe.serial("Chapter 3 — Seller fulfills the order", () => {
           await loginAsSeededUser(page, "seller1");
           await page.goto("/seller");
           await expect(
-            page
-              .getByText(/Dashboard|Tổng quan|Seller Hub|Kênh Người Bán/i)
-              .first(),
+            page.getByText(/Dashboard|Tổng quan|Seller Hub|Kênh Người Bán/i).first(),
           ).toBeVisible({ timeout: 20_000 });
 
           await page
@@ -178,15 +164,10 @@ test.describe.serial("Chapter 3 — Seller fulfills the order", () => {
           const state = await requireJourneyState(["orderId"]);
           const orderIdPrefix = state.orderId.slice(0, 8);
           await expect
-            .poll(
-              async () =>
-                page.getByText(orderIdPrefix, { exact: false }).count(),
-              {
-                timeout: 30_000,
-                message:
-                  `seller's UI never rendered orderId prefix ${orderIdPrefix} in the Orders tab`,
-              },
-            )
+            .poll(async () => page.getByText(orderIdPrefix, { exact: false }).count(), {
+              timeout: 30_000,
+              message: `seller's UI never rendered orderId prefix ${orderIdPrefix} in the Orders tab`,
+            })
             .toBeGreaterThan(0);
           await expectNoGlobalError(page);
         },
@@ -203,9 +184,7 @@ test.describe.serial("Chapter 3 — Seller fulfills the order", () => {
           // SellerOrders row container.
           const state = await requireJourneyState(["orderId"]);
           const orderIdPrefix = state.orderId.slice(0, 8);
-          const row = page
-            .locator(".divide-y > div", { hasText: orderIdPrefix })
-            .first();
+          const row = page.locator(".divide-y > div", { hasText: orderIdPrefix }).first();
           await expect(row).toBeVisible({ timeout: 10_000 });
           await row
             .getByRole("button", { name: /^(Accept|Chấp nhận)/i })
@@ -215,9 +194,7 @@ test.describe.serial("Chapter 3 — Seller fulfills the order", () => {
           // i18n key is `seller.orders.acceptOk` — VI: "Đã chấp nhận đơn",
           // EN: "Order accepted" (approximations; match liberally).
           await expect(
-            page
-              .getByText(/Order accepted|Đã chấp nhận|Accepted order/i)
-              .first(),
+            page.getByText(/Order accepted|Đã chấp nhận|Accepted order/i).first(),
           ).toBeVisible({ timeout: 15_000 });
           await expectNoGlobalError(page);
         },
@@ -243,15 +220,12 @@ test.describe.serial("Chapter 3 — Seller fulfills the order", () => {
             .first()
             .click();
 
-          const row = page
-            .locator(".divide-y > div", { hasText: orderIdPrefix })
-            .first();
+          const row = page.locator(".divide-y > div", { hasText: orderIdPrefix }).first();
           await expect
-            .poll(
-              () =>
-                row.getByRole("button", { name: /^(Ship|Giao hàng)/i }).count(),
-              { timeout: 20_000, message: "Ship button never replaced Accept" },
-            )
+            .poll(() => row.getByRole("button", { name: /^(Ship|Giao hàng)/i }).count(), {
+              timeout: 20_000,
+              message: "Ship button never replaced Accept",
+            })
             .toBeGreaterThan(0);
 
           await row
@@ -263,9 +237,7 @@ test.describe.serial("Chapter 3 — Seller fulfills the order", () => {
           // an Other input only when "Other" is chosen); we click the GHN
           // chip rather than typing into a text input. Tracking number is
           // a stable text input by id.
-          const ghnChip = page
-            .getByRole("button", { name: /^GHN$/i })
-            .first();
+          const ghnChip = page.getByRole("button", { name: /^GHN$/i }).first();
           await expect(ghnChip).toBeVisible({ timeout: 10_000 });
           await ghnChip.click();
 
@@ -279,9 +251,7 @@ test.describe.serial("Chapter 3 — Seller fulfills the order", () => {
             .click();
 
           await expect(
-            page
-              .getByText(/shipped|đã giao|Marked as shipping|Đã chuyển sang giao/i)
-              .first(),
+            page.getByText(/shipped|đã giao|Marked as shipping|Đã chuyển sang giao/i).first(),
           ).toBeVisible({ timeout: 15_000 });
           await expectNoGlobalError(page);
         },

@@ -47,11 +47,8 @@ async function firstProductId(request: APIRequestContext): Promise<string> {
   return id;
 }
 
-
 test.describe("wishlist heart toggle UI", () => {
-  test("Heart click on ProductPage adds to wishlist and shows success toast", async ({
-    page,
-  }) => {
+  test("Heart click on ProductPage adds to wishlist and shows success toast", async ({ page }) => {
     await seedBuyer(page.request);
     const productId = await firstProductId(page.request);
     await page.goto(`/product/${productId}`);
@@ -90,9 +87,7 @@ test.describe("wishlist heart toggle UI", () => {
 
     // First click — add.
     await heart.click();
-    const addToast = page.getByText(
-      /Đã thêm vào danh sách yêu thích|added to (your )?wishlist/i,
-    );
+    const addToast = page.getByText(/Đã thêm vào danh sách yêu thích|added to (your )?wishlist/i);
     await expect(addToast).toBeVisible({ timeout: 10_000 });
     // Wait for the add toast to leave the DOM before the second click —
     // sonner stacks toasts but matching them by text gets ambiguous if

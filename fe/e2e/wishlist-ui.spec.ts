@@ -61,7 +61,6 @@ async function addToWishlist(
   expect(r.ok(), `wishlist add: ${r.status()} ${await r.text()}`).toBeTruthy();
 }
 
-
 test.describe("wishlist page UI", () => {
   test("/wishlist as guest redirects to login (does not crash)", async ({ page }) => {
     await page.goto("/wishlist");
@@ -70,10 +69,12 @@ test.describe("wishlist page UI", () => {
     // the native login screen. The redirect is the page-level signal we care
     // about — proves the route guard is wired and the page didn't render
     // the global error fallback or a blank canvas.
-    await expect.poll(() => new URL(page.url()).pathname, {
-      timeout: 20_000,
-      message: "expected /wishlist to redirect to /login for guests",
-    }).toMatch(/^\/login/);
+    await expect
+      .poll(() => new URL(page.url()).pathname, {
+        timeout: 20_000,
+        message: "expected /wishlist to redirect to /login for guests",
+      })
+      .toMatch(/^\/login/);
 
     await expectNoGlobalError(page);
   });

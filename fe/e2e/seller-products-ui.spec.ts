@@ -30,7 +30,6 @@ async function loginAsSeller(request: APIRequestContext): Promise<AuthResult> {
   return { accessToken };
 }
 
-
 test.describe("seller products UI", () => {
   test("Products tab renders the table chrome (header columns + Add CTA)", async ({ page }) => {
     await loginAsSeller(page.request);
@@ -45,9 +44,9 @@ test.describe("seller products UI", () => {
     await productsTab.click();
 
     // Page heading.
-    await expect(
-      page.getByText(/Product management|Quản lý sản phẩm/i).first(),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Product management|Quản lý sản phẩm/i).first()).toBeVisible({
+      timeout: 15_000,
+    });
 
     // Add CTA.
     await expect(

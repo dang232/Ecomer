@@ -18,18 +18,13 @@ import { expectNoGlobalError } from "./_helpers";
 
 const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
 
-
 async function firstSellerId(request: APIRequestContext): Promise<string | null> {
   const r = await request.get(`${apiURL}/sellers?size=1`);
   if (!r.ok()) return null;
   const body = await r.json();
   // BE returns either { content: [...] } or { data: { content: [...] } }
   // depending on envelope. Try both.
-  return (
-    body?.data?.content?.[0]?.id ??
-    body?.content?.[0]?.id ??
-    null
-  );
+  return body?.data?.content?.[0]?.id ?? body?.content?.[0]?.id ?? null;
 }
 
 test.describe("public sellers UI", () => {
@@ -39,16 +34,16 @@ test.describe("public sellers UI", () => {
     await page.goto("/");
 
     // Wait for home page mount.
-    await expect(
-      page.getByRole("button", { name: /^(Log in|Đăng nhập)$/i }).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("link", { name: /^(Log in|Đăng nhập)$/i }).first()).toBeVisible({
+      timeout: 20_000,
+    });
 
-    // The section title is "Featured Shops" / "Shop Nổi Bật" — match either.
+    // The section title is "Top Sellers" / "Featured Shops" — match either.
     // The empty-state ComingSoonCard uses the same title with a different
     // body, so the title check covers both render modes.
-    await expect(
-      page.getByText(/Featured Shops|Shop Nổi Bật/i).first(),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Top Sellers|Featured Shops|Shop Nổi Bật/i).first()).toBeVisible({
+      timeout: 15_000,
+    });
 
     await expectNoGlobalError(page);
   });
@@ -66,9 +61,9 @@ test.describe("public sellers UI", () => {
     //
     // The "Products" section header is a stable signal across both
     // render modes (with-products and no-products).
-    await expect(
-      page.getByRole("heading", { name: /Products|^Sản phẩm$/i }).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("heading", { name: /Products|^Sản phẩm$/i }).first()).toBeVisible({
+      timeout: 20_000,
+    });
 
     await expectNoGlobalError(page);
   });

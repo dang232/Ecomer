@@ -30,7 +30,6 @@ async function loginAsSeller(request: APIRequestContext): Promise<AuthResult> {
   return { accessToken };
 }
 
-
 test.describe("seller dashboard UI", () => {
   test("Dashboard renders the four KPI cards (Balance, Pending, Views, Rating)", async ({
     page,
@@ -72,13 +71,13 @@ test.describe("seller dashboard UI", () => {
     // The Revenue (30 days) section header is unconditional. Body is one
     // of: chart, empty-state copy, loading text, or error banner. Any of
     // those is a valid signal that the schema parsed without crashing.
-    await expect(
-      page.getByText(/Revenue \(30 days\)|Doanh thu 30 ngày/i).first(),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Revenue \(30 days\)|Doanh thu 30 ngày/i).first()).toBeVisible({
+      timeout: 15_000,
+    });
 
-    await expect(
-      page.getByText(/Orders \(30 days\)|Số đơn 30 ngày/i).first(),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Orders \(30 days\)|Số đơn 30 ngày/i).first()).toBeVisible({
+      timeout: 15_000,
+    });
 
     await expectNoGlobalError(page);
   });

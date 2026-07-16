@@ -69,349 +69,321 @@ test.describe.serial("Workday — buyer (guest → register → shop → order)"
   test("Buyer walks the full discovery → order → cancel journey", async ({ page }) => {
     await startTrace("buyer", page);
     try {
-    const stamp = Date.now();
-    const email = `e2e_workday_${stamp}@vnshop.local`;
-    let productName = "";
-    let productId = "";
-    let accessToken = "";
+      const stamp = Date.now();
+      const email = `e2e_workday_${stamp}@vnshop.local`;
+      let productName = "";
+      let productId = "";
+      let accessToken = "";
 
-    await step(page, "buyer", "Cold-load home page", async () => {
-      await page.goto("/");
-      await expect(
-        page.getByRole("button", { name: /^Switch language to (VI|EN)$/i }),
-      ).toBeVisible({ timeout: 20_000 });
-      await expectNoGlobalError(page);
-    });
-
-    await step(page, "buyer", "Switch language EN to VI", async () => {
-      // Force EN starting state so the toggle below is deterministic.
-      await page.evaluate(() => {
-        try {
-          localStorage.setItem("i18nextLng", "en");
-        } catch {
-          /* ignore */
-        }
+      await step(page, "buyer", "Cold-load home page", async () => {
+        await page.goto("/");
+        await expect(
+          page.getByRole("button", { name: /^Switch language to (VI|EN)$/i }),
+        ).toBeVisible({ timeout: 20_000 });
+        await expectNoGlobalError(page);
       });
-      await page.reload();
-      const toggleToVi = page.getByRole("button", {
-        name: /^Switch language to VI$/i,
-      });
-      await expect(toggleToVi).toBeVisible({ timeout: 20_000 });
-      await toggleToVi.click();
-      await expect(
-        page.getByText(/Trang Chủ|Tất cả danh mục|Đăng nhập/).first(),
-      ).toBeVisible({ timeout: 10_000 });
-      await expectNoGlobalError(page);
-    });
 
-    await step(page, "buyer", "Toggle dark mode on", async () => {
-      const dark = page.getByRole("button", { name: /switch to dark mode/i }).first();
-      await expect(dark).toBeVisible({ timeout: 10_000 });
-      await dark.click();
-      await expect
-        .poll(
-          () => page.evaluate(() => document.documentElement.classList.contains("dark")),
-          { timeout: 5_000, message: ".dark class never landed" },
-        )
-        .toBe(true);
-    });
-
-    await step(page, "buyer", "Pull a real seeded product for the journey", async () => {
-      const r = await page.request.get(`${apiURL}/products?size=1`);
-      expect(r.ok(), `products: ${r.status()}`).toBeTruthy();
-      const p = (await r.json())?.data?.content?.[0];
-      expect(p?.id, "expected at least one seeded product").toBeTruthy();
-      productId = p.id;
-      productName = p.name;
-    });
-
-    await step(page, "buyer", "Open product detail from URL", async () => {
-      await page.goto(`/product/${productId}`);
-      await expect(page.getByRole("heading", { level: 1 })).toBeVisible({
-        timeout: 20_000,
-      });
-      await expect(
-        page
-          .getByRole("button", { name: /add to cart|thêm vào giỏ|mua ngay|buy now/i })
-          .first(),
-      ).toBeVisible({ timeout: 10_000 });
-      await expectNoGlobalError(page);
-    });
-
-    await step(page, "buyer", "Guest add-to-cart blocks with login toast", async () => {
-      const addBtn = page
-        .getByRole("button", { name: /add to cart|thêm vào giỏ/i })
-        .first();
-      await addBtn.click();
-      await expect(
-        page.getByText(
-          /Vui lòng đăng nhập|please log in|please sign in|log in to add/i,
-        ),
-      ).toBeVisible({ timeout: 10_000 });
-    });
-
-    await step(page, "buyer", "Register fresh buyer via /register form", async () => {
-      await page.goto("/register");
-      await expect(
-        page
-          .getByText(/Create your VNShop account|Tạo tài khoản VNShop/i)
-          .first(),
-      ).toBeVisible({ timeout: 20_000 });
-      await page.locator("#firstName").fill("Workday");
-      await page.locator("#lastName").fill("Buyer");
-      await page.locator("#email").fill(email);
-      await page.locator("#password").fill(PASSWORD);
-      await page.locator("#confirm").fill(PASSWORD);
-      await page
-        .getByRole("button", { name: /create account|tạo tài khoản/i })
-        .click();
-      await expect
-        .poll(() => new URL(page.url()).pathname, {
-          timeout: 30_000,
-          message: "register did not navigate to /",
-        })
-        .toBe("/");
-      // Login CTA replaced by user menu = authenticated.
-      await expect(
-        page.getByRole("button", { name: /^(Log in|Đăng nhập)$/i }).first(),
-      ).toHaveCount(0, { timeout: 10_000 });
-    });
-
-    await step(page, "buyer", "Authed add-to-cart from product detail", async () => {
-      await page.goto(`/product/${productId}`);
-      await expect(page.getByRole("heading", { level: 1 })).toBeVisible({
-        timeout: 20_000,
-      });
-      const addBtn = page
-        .getByRole("button", { name: /add to cart|thêm vào giỏ/i })
-        .first();
-      await addBtn.click();
-      // Authed add fires sonner with `Đã thêm "<name>" vào giỏ hàng`
-      // (vnshop-context.tsx hard-codes that copy in VI).
-      await expect(
-        page.getByText(/vào giỏ hàng/i).first(),
-      ).toBeVisible({ timeout: 15_000 });
-    });
-
-    await step(page, "buyer", "Cart shows real product name and non-zero VND total", async () => {
-      await page.goto("/cart");
-      await expect(
-        page.getByText(productName, { exact: false }).first(),
-      ).toBeVisible({ timeout: 20_000 });
-      const totalBefore = await firstNonZeroVnd(page);
-      expect(
-        totalBefore,
-        `expected a non-zero VND total but read 0 — see screenshot for the cart state`,
-      ).toBeGreaterThan(0);
-      const plus = page.getByRole("button", { name: /increase quantity/i }).first();
-      await expect(plus).toBeVisible({ timeout: 10_000 });
-      await plus.click();
-      await expect
-        .poll(async () => firstNonZeroVnd(page), {
-          timeout: 15_000,
-          message: "cart total never increased after clicking +",
-        })
-        .toBeGreaterThan(totalBefore);
-      await expectNoGlobalError(page);
-    });
-
-    await step(page, "buyer", "Toggle wishlist heart on product detail", async () => {
-      await page.goto(`/product/${productId}`);
-      await expect(page.getByRole("heading", { level: 1 })).toBeVisible({
-        timeout: 20_000,
-      });
-      const heart = page
-        .getByRole("button", { name: /wishlist/i })
-        .first();
-      await expect(heart).toBeVisible({ timeout: 10_000 });
-      await heart.click();
-      await expect(
-        page.getByText(
-          /Đã thêm vào danh sách yêu thích|added to (your )?wishlist/i,
-        ),
-      ).toBeVisible({ timeout: 10_000 });
-    });
-
-    await step(page, "buyer", "Add a default address via Profile → Addresses", async () => {
-      await page.goto("/profile");
-      await expect(
-        page
-          .getByRole("heading", { name: /Personal info|Thông tin cá nhân/i }),
-      ).toBeVisible({ timeout: 20_000 });
-      await page
-        .getByRole("button", { name: /^(Addresses|Địa chỉ)$/i })
-        .click();
-      await page
-        .getByRole("button", { name: /Add address|Thêm địa chỉ/i })
-        .click();
-      const street = page.getByLabel(/Street|Số nhà/i).first();
-      await expect(street).toBeVisible({ timeout: 10_000 });
-      await street.fill("1 Workday Street");
-      await page
-        .getByLabel(/District|Quận/i)
-        .first()
-        .fill("District 1");
-      await page
-        .getByLabel(/City|Tỉnh/i)
-        .first()
-        .fill("Ho Chi Minh");
-      await page
-        .getByRole("button", { name: /Save address|Lưu địa chỉ/i })
-        .click();
-      await expect(
-        page.getByText(/Address added|Đã thêm địa chỉ/i),
-      ).toBeVisible({ timeout: 15_000 });
-      await expect(page.getByText("1 Workday Street").first()).toBeVisible({
-        timeout: 10_000,
-      });
-      await expectNoGlobalError(page);
-    });
-
-    await step(page, "buyer", "Checkout 4-step panel renders with new address", async () => {
-      await page.goto("/checkout");
-      await expect(
-        page
-          .getByText(/Choose a delivery address|Chọn địa chỉ giao hàng/i)
-          .first(),
-      ).toBeVisible({ timeout: 20_000 });
-      for (const label of [
-        /Address|Địa chỉ/,
-        /Shipping|Vận chuyển/,
-        /Payment|Thanh toán/,
-        /Review|Xác nhận/,
-      ]) {
-        await expect(page.getByText(label).first()).toBeVisible({
+      await step(page, "buyer", "Switch language EN to VI", async () => {
+        // Force EN starting state so the toggle below is deterministic.
+        await page.evaluate(() => {
+          try {
+            localStorage.setItem("i18nextLng", "en");
+          } catch {
+            /* ignore */
+          }
+        });
+        await page.reload();
+        const toggleToVi = page.getByRole("button", {
+          name: /^Switch language to VI$/i,
+        });
+        await expect(toggleToVi).toBeVisible({ timeout: 20_000 });
+        await toggleToVi.click();
+        await expect(page.getByText(/Trang Chủ|Tất cả danh mục|Đăng nhập/).first()).toBeVisible({
           timeout: 10_000,
         });
-      }
-      await expectNoGlobalError(page);
-    });
+        await expectNoGlobalError(page);
+      });
 
-    await step(page, "buyer", "Place a COD order via the API and view it in /orders", async () => {
-      // Workday continuity: the BE place-order endpoint requires more than the
-      // checkout panel exposes (idempotency key + flat address payload). The
-      // realistic step here is "the buyer placed an order" — the checkout
-      // submit button itself is exercised by checkout-ui.spec.ts. We mint a
-      // token via /auth/login using the same buyer credentials, post the
-      // order, then assert through the SPA that it lands in /orders.
-      if (!accessToken) {
-        const login = await page.request.post(`${apiURL}/auth/login`, {
-          data: { username: email, password: PASSWORD },
+      await step(page, "buyer", "Toggle dark mode on", async () => {
+        const dark = page.getByRole("button", { name: /switch to dark mode/i }).first();
+        await expect(dark).toBeVisible({ timeout: 10_000 });
+        await dark.click();
+        await expect
+          .poll(() => page.evaluate(() => document.documentElement.classList.contains("dark")), {
+            timeout: 5_000,
+            message: ".dark class never landed",
+          })
+          .toBe(true);
+      });
+
+      await step(page, "buyer", "Pull a real seeded product for the journey", async () => {
+        const r = await page.request.get(`${apiURL}/products?size=1`);
+        expect(r.ok(), `products: ${r.status()}`).toBeTruthy();
+        const p = (await r.json())?.data?.content?.[0];
+        expect(p?.id, "expected at least one seeded product").toBeTruthy();
+        productId = p.id;
+        productName = p.name;
+      });
+
+      await step(page, "buyer", "Open product detail from URL", async () => {
+        await page.goto(`/product/${productId}`);
+        await expect(page.getByRole("heading", { level: 1 })).toBeVisible({
+          timeout: 20_000,
         });
+        await expect(
+          page.getByRole("button", { name: /add to cart|thêm vào giỏ|mua ngay|buy now/i }).first(),
+        ).toBeVisible({ timeout: 10_000 });
+        await expectNoGlobalError(page);
+      });
+
+      await step(page, "buyer", "Guest add-to-cart blocks with login toast", async () => {
+        const addBtn = page.getByRole("button", { name: /add to cart|thêm vào giỏ/i }).first();
+        await addBtn.click();
+        await expect(
+          page.getByText(/Vui lòng đăng nhập|please log in|please sign in|log in to add/i),
+        ).toBeVisible({ timeout: 10_000 });
+      });
+
+      await step(page, "buyer", "Register fresh buyer via /register form", async () => {
+        await page.goto("/register");
+        await expect(
+          page.getByText(/Create your VNShop account|Tạo tài khoản VNShop/i).first(),
+        ).toBeVisible({ timeout: 20_000 });
+        await page.locator("#firstName").fill("Workday");
+        await page.locator("#lastName").fill("Buyer");
+        await page.locator("#email").fill(email);
+        await page.locator("#password").fill(PASSWORD);
+        await page.locator("#confirm").fill(PASSWORD);
+        await page.getByRole("button", { name: /create account|tạo tài khoản/i }).click();
+        await expect
+          .poll(() => new URL(page.url()).pathname, {
+            timeout: 30_000,
+            message: "register did not navigate to /",
+          })
+          .toBe("/");
+        // Login CTA replaced by user menu = authenticated.
+        await expect(page.getByRole("link", { name: /^(Log in|Đăng nhập)$/i }).first()).toHaveCount(
+          0,
+          { timeout: 10_000 },
+        );
+      });
+
+      await step(page, "buyer", "Authed add-to-cart from product detail", async () => {
+        await page.goto(`/product/${productId}`);
+        await expect(page.getByRole("heading", { level: 1 })).toBeVisible({
+          timeout: 20_000,
+        });
+        const addBtn = page.getByRole("button", { name: /add to cart|thêm vào giỏ/i }).first();
+        await addBtn.click();
+        // Authed add fires sonner with `Đã thêm "<name>" vào giỏ hàng`
+        // (vnshop-context.tsx hard-codes that copy in VI).
+        await expect(page.getByText(/vào giỏ hàng/i).first()).toBeVisible({ timeout: 15_000 });
+      });
+
+      await step(page, "buyer", "Cart shows real product name and non-zero VND total", async () => {
+        await page.goto("/cart");
+        await expect(page.getByText(productName, { exact: false }).first()).toBeVisible({
+          timeout: 20_000,
+        });
+        const totalBefore = await firstNonZeroVnd(page);
         expect(
-          login.ok(),
-          `auth/login for ${email}: ${login.status()} ${await login.text()}`,
-        ).toBeTruthy();
-        accessToken = (await login.json())?.data?.accessToken;
-        expect(accessToken, "no access token after login").toBeTruthy();
-      }
-      const idem = `qa-workday-${Date.now()}`;
-      const place = await page.request.post(`${apiURL}/orders`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Idempotency-Key": idem,
-        },
-        data: {
-          shippingAddress: {
-            street: "1 Workday Street",
-            ward: "1442",
-            district: "101",
-            city: "Ho Chi Minh",
-          },
-          items: [{ productId, quantity: 1 }],
-          paymentMethod: "COD",
-        },
+          totalBefore,
+          `expected a non-zero VND total but read 0 — see screenshot for the cart state`,
+        ).toBeGreaterThan(0);
+        const plus = page.getByRole("button", { name: /increase quantity/i }).first();
+        await expect(plus).toBeVisible({ timeout: 10_000 });
+        await plus.click();
+        await expect
+          .poll(async () => firstNonZeroVnd(page), {
+            timeout: 15_000,
+            message: "cart total never increased after clicking +",
+          })
+          .toBeGreaterThan(totalBefore);
+        await expectNoGlobalError(page);
       });
-      expect(
-        place.ok(),
-        `place order: ${place.status()} ${await place.text()}`,
-      ).toBeTruthy();
-      const placeBody = await place.json();
-      const orderId = placeBody?.data?.id ?? placeBody?.data?.orderId;
 
-      // CQRS read-model lag: the order_summary projection updates via Kafka
-      // after the write commits. Poll the list endpoint until our orderId
-      // shows up so the SPA's first /orders fetch isn't empty.
-      for (let i = 0; i < 20 && orderId; i += 1) {
-        const list = await page.request.get(`${apiURL}/orders?size=10`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
+      await step(page, "buyer", "Toggle wishlist heart on product detail", async () => {
+        await page.goto(`/product/${productId}`);
+        await expect(page.getByRole("heading", { level: 1 })).toBeVisible({
+          timeout: 20_000,
         });
-        if (list.ok()) {
-          const ids = ((await list.json())?.data?.content ?? []).map(
-            (o: { id?: string; orderId?: string }) => o.id ?? o.orderId,
-          );
-          if (ids.includes(orderId)) break;
-        }
-        await page.waitForTimeout(500);
-      }
-
-      await page.goto("/orders");
-      // Match the rendered "Mã đơn:" / "Order ID:" prefix OR the not-authed
-      // login-prompt copy. Either confirms the page mounted past Suspense.
-      await expect(
-        page
-          .getByText(
-            /Mã đơn|Order ID|Đăng nhập để xem đơn hàng|Log in to view your orders/i,
-          )
-          .first(),
-      ).toBeVisible({ timeout: 20_000 });
-    });
-
-    await step(page, "buyer", "Cancel pending order via the UI button", async () => {
-      const cancelBtn = page.getByRole("button", { name: /^(cancel|hủy đơn)$/i });
-      await expect(cancelBtn).toBeVisible({ timeout: 15_000 });
-      await cancelBtn.click();
-      await expect(
-        page.getByText(/Order cancelled|Đã huỷ đơn hàng/i),
-      ).toBeVisible({ timeout: 15_000 });
-    });
-
-    await step(page, "buyer", "Upload an avatar via the profile camera button", async () => {
-      // Navigate back to /profile from /orders so the camera button is in
-      // the DOM. The hidden file input is the canonical handle — clicking
-      // the camera button opens a real OS file picker, which Playwright
-      // can't drive. setInputFiles bypasses the picker, which mirrors the
-      // user's intent (pick a file) without touching the OS layer.
-      await page.goto("/profile");
-      const fileInput = page.locator('input[type="file"][accept*="image"]').first();
-      await expect(fileInput).toBeAttached({ timeout: 10_000 });
-
-      // 1x1 transparent PNG — the smallest legal PNG. Real bytes (with the
-      // PNG signature) so Content-Type sniffing on the BE side can't tell
-      // it apart from a "real" upload.
-      const pngBytes = Buffer.from(
-        "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da63600000000005000115b13ac20000000049454e44ae426082",
-        "hex",
-      );
-      await fileInput.setInputFiles({
-        name: "avatar.png",
-        mimeType: "image/png",
-        buffer: pngBytes,
+        const heart = page.getByRole("button", { name: /wishlist/i }).first();
+        await expect(heart).toBeVisible({ timeout: 10_000 });
+        await heart.click();
+        await expect(
+          page.getByText(/Đã thêm vào danh sách yêu thích|added to (your )?wishlist/i),
+        ).toBeVisible({ timeout: 10_000 });
       });
 
-      // Success toast lands when /activate completes — same i18n key both
-      // languages (we set lang to VI earlier in the workday so the VI
-      // string is what should render).
-      await expect(
-        page.getByText(/Avatar updated|Đã cập nhật ảnh đại diện/i).first(),
-      ).toBeVisible({ timeout: 30_000 });
+      await step(page, "buyer", "Add a default address via Profile → Addresses", async () => {
+        await page.goto("/profile");
+        await expect(
+          page.getByRole("heading", { name: /Personal info|Thông tin cá nhân/i }),
+        ).toBeVisible({ timeout: 20_000 });
+        await page.getByRole("button", { name: /^(Addresses|Địa chỉ)$/i }).click();
+        await page.getByRole("button", { name: /Add address|Thêm địa chỉ/i }).click();
+        const street = page.getByLabel(/Street|Số nhà/i).first();
+        await expect(street).toBeVisible({ timeout: 10_000 });
+        await street.fill("1 Workday Street");
+        await page
+          .getByLabel(/District|Quận/i)
+          .first()
+          .fill("District 1");
+        await page
+          .getByLabel(/City|Tỉnh/i)
+          .first()
+          .fill("Ho Chi Minh");
+        await page.getByRole("button", { name: /Save address|Lưu địa chỉ/i }).click();
+        await expect(page.getByText(/Address added|Đã thêm địa chỉ/i)).toBeVisible({
+          timeout: 15_000,
+        });
+        await expect(page.getByText("1 Workday Street").first()).toBeVisible({
+          timeout: 10_000,
+        });
+        await expectNoGlobalError(page);
+      });
 
-      // The avatar image element must now point at the vnshop-avatars bucket
-      // (canonical public URL pattern from S3ObjectStorageAdapter#publicUrl).
-      // The camera button replaces the gradient-letter placeholder with an
-      // <img> when avatarUrl is non-empty.
-      const avatar = page.locator('img[alt][class*="rounded-2xl"]').first();
-      await expect(avatar).toBeVisible({ timeout: 10_000 });
-      const src = await avatar.getAttribute("src");
-      expect(src, "avatar img src must point at the avatars path").toMatch(
-        /\/avatars\//,
+      await step(page, "buyer", "Checkout 4-step panel renders with new address", async () => {
+        await page.goto("/checkout");
+        await expect(
+          page.getByText(/Choose a delivery address|Chọn địa chỉ giao hàng/i).first(),
+        ).toBeVisible({ timeout: 20_000 });
+        for (const label of [
+          /Address|Địa chỉ/,
+          /Shipping|Vận chuyển/,
+          /Payment|Thanh toán/,
+          /Review|Xác nhận/,
+        ]) {
+          await expect(page.getByText(label).first()).toBeVisible({
+            timeout: 10_000,
+          });
+        }
+        await expectNoGlobalError(page);
+      });
+
+      await step(
+        page,
+        "buyer",
+        "Place a COD order via the API and view it in /orders",
+        async () => {
+          // Workday continuity: the BE place-order endpoint requires more than the
+          // checkout panel exposes (idempotency key + flat address payload). The
+          // realistic step here is "the buyer placed an order" — the checkout
+          // submit button itself is exercised by checkout-ui.spec.ts. We mint a
+          // token via /auth/login using the same buyer credentials, post the
+          // order, then assert through the SPA that it lands in /orders.
+          if (!accessToken) {
+            const login = await page.request.post(`${apiURL}/auth/login`, {
+              data: { username: email, password: PASSWORD },
+            });
+            expect(
+              login.ok(),
+              `auth/login for ${email}: ${login.status()} ${await login.text()}`,
+            ).toBeTruthy();
+            accessToken = (await login.json())?.data?.accessToken;
+            expect(accessToken, "no access token after login").toBeTruthy();
+          }
+          const idem = `qa-workday-${Date.now()}`;
+          const place = await page.request.post(`${apiURL}/orders`, {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "Idempotency-Key": idem,
+            },
+            data: {
+              shippingAddress: {
+                street: "1 Workday Street",
+                ward: "1442",
+                district: "101",
+                city: "Ho Chi Minh",
+              },
+              items: [{ productId, quantity: 1 }],
+              paymentMethod: "COD",
+            },
+          });
+          expect(place.ok(), `place order: ${place.status()} ${await place.text()}`).toBeTruthy();
+          const placeBody = await place.json();
+          const orderId = placeBody?.data?.id ?? placeBody?.data?.orderId;
+
+          // CQRS read-model lag: the order_summary projection updates via Kafka
+          // after the write commits. Poll the list endpoint until our orderId
+          // shows up so the SPA's first /orders fetch isn't empty.
+          for (let i = 0; i < 20 && orderId; i += 1) {
+            const list = await page.request.get(`${apiURL}/orders?size=10`, {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            });
+            if (list.ok()) {
+              const ids = ((await list.json())?.data?.content ?? []).map(
+                (o: { id?: string; orderId?: string }) => o.id ?? o.orderId,
+              );
+              if (ids.includes(orderId)) break;
+            }
+            await page.waitForTimeout(500);
+          }
+
+          await page.goto("/orders");
+          // Match the rendered "Mã đơn:" / "Order ID:" prefix OR the not-authed
+          // login-prompt copy. Either confirms the page mounted past Suspense.
+          await expect(
+            page
+              .getByText(/Mã đơn|Order ID|Đăng nhập để xem đơn hàng|Log in to view your orders/i)
+              .first(),
+          ).toBeVisible({ timeout: 20_000 });
+        },
       );
-      await expectNoGlobalError(page);
-    });
 
-    await step(page, "buyer", "Logout returns to home with the Login CTA", async () => {
-      await logoutViaUserMenu(page);
-    });
+      await step(page, "buyer", "Cancel pending order via the UI button", async () => {
+        const cancelBtn = page.getByRole("button", { name: /^(cancel|hủy đơn)$/i });
+        await expect(cancelBtn).toBeVisible({ timeout: 15_000 });
+        await cancelBtn.click();
+        await expect(page.getByText(/Order cancelled|Đã huỷ đơn hàng/i)).toBeVisible({
+          timeout: 15_000,
+        });
+      });
+
+      await step(page, "buyer", "Upload an avatar via the profile camera button", async () => {
+        // Navigate back to /profile from /orders so the camera button is in
+        // the DOM. The hidden file input is the canonical handle — clicking
+        // the camera button opens a real OS file picker, which Playwright
+        // can't drive. setInputFiles bypasses the picker, which mirrors the
+        // user's intent (pick a file) without touching the OS layer.
+        await page.goto("/profile");
+        const fileInput = page.locator('input[type="file"][accept*="image"]').first();
+        await expect(fileInput).toBeAttached({ timeout: 10_000 });
+
+        // 1x1 transparent PNG — the smallest legal PNG. Real bytes (with the
+        // PNG signature) so Content-Type sniffing on the BE side can't tell
+        // it apart from a "real" upload.
+        const pngBytes = Buffer.from(
+          "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da63600000000005000115b13ac20000000049454e44ae426082",
+          "hex",
+        );
+        await fileInput.setInputFiles({
+          name: "avatar.png",
+          mimeType: "image/png",
+          buffer: pngBytes,
+        });
+
+        // Success toast lands when /activate completes — same i18n key both
+        // languages (we set lang to VI earlier in the workday so the VI
+        // string is what should render).
+        await expect(
+          page.getByText(/Avatar updated|Đã cập nhật ảnh đại diện/i).first(),
+        ).toBeVisible({ timeout: 30_000 });
+
+        // The avatar image element must now point at the vnshop-avatars bucket
+        // (canonical public URL pattern from S3ObjectStorageAdapter#publicUrl).
+        // The camera button replaces the gradient-letter placeholder with an
+        // <img> when avatarUrl is non-empty.
+        const avatar = page.locator('img[alt][class*="rounded-2xl"]').first();
+        await expect(avatar).toBeVisible({ timeout: 10_000 });
+        const src = await avatar.getAttribute("src");
+        expect(src, "avatar img src must point at the avatars path").toMatch(/\/avatars\//);
+        await expectNoGlobalError(page);
+      });
+
+      await step(page, "buyer", "Logout returns to home with the Login CTA", async () => {
+        await logoutViaUserMenu(page);
+      });
     } finally {
       await stopTrace("buyer", page);
     }
@@ -419,9 +391,7 @@ test.describe.serial("Workday — buyer (guest → register → shop → order)"
 });
 
 async function firstNonZeroVnd(page: Page): Promise<number> {
-  const lines = await page
-    .getByText(/\d{1,3}(?:\.\d{3})+\s*₫/)
-    .allInnerTexts();
+  const lines = await page.getByText(/\d{1,3}(?:\.\d{3})+\s*₫/).allInnerTexts();
   let max = 0;
   for (const line of lines) {
     const m = /(\d{1,3}(?:\.\d{3})+)/.exec(line);

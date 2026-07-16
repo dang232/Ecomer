@@ -56,8 +56,8 @@ test.describe("profile address add", () => {
     await page.getByLabel(/contact phone|số điện thoại liên hệ/i).fill("0901234567");
 
     // Promise the network round-trip resolves before we assert UI state.
-    const addPromise = page.waitForResponse((r) =>
-      r.url().includes("/users/me/addresses") && r.request().method() === "POST",
+    const addPromise = page.waitForResponse(
+      (r) => r.url().includes("/users/me/addresses") && r.request().method() === "POST",
     );
     await page.getByRole("button", { name: /save address|lưu địa chỉ/i }).click();
     const addRes = await addPromise;

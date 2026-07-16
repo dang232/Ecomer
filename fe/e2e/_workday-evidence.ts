@@ -31,10 +31,7 @@ interface StepRow {
 const counters: Record<Persona, number> = { buyer: 0, seller: 0, admin: 0 };
 const reports: Record<Persona, StepRow[]> = { buyer: [], seller: [], admin: [] };
 
-const evidenceRoot = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "evidence",
-);
+const evidenceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "evidence");
 
 function evidenceDir(persona: Persona): string {
   return path.join(evidenceRoot, persona);
@@ -45,11 +42,13 @@ function shotDir(persona: Persona): string {
 }
 
 function slugify(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60) || "step";
+  return (
+    title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60) || "step"
+  );
 }
 
 export async function resetPersona(persona: Persona): Promise<void> {
@@ -232,14 +231,12 @@ export async function loginAsSeededUser(
   password = "test",
 ): Promise<void> {
   await page.goto("/login");
-  await expect(
-    page.getByText(/Sign in to VNShop|Đăng nhập VNShop/i).first(),
-  ).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(/Sign in to VNShop|Đăng nhập VNShop/i).first()).toBeVisible({
+    timeout: 20_000,
+  });
   await page.locator("#identifier").fill(username);
   await page.locator("#password").fill(password);
-  await page
-    .getByRole("button", { name: /^(Sign in|Đăng nhập)$/i })
-    .click();
+  await page.getByRole("button", { name: /^(Sign in|Đăng nhập)$/i }).click();
   await expect
     .poll(() => new URL(page.url()).pathname, {
       timeout: 30_000,
@@ -253,16 +250,14 @@ export async function loginAsSeededUser(
  * so we don't depend on icon implementation details.
  */
 export async function logoutViaUserMenu(page: Page): Promise<void> {
-  const menuTrigger = page
-    .getByRole("button", { name: /account menu/i })
-    .first();
+  const menuTrigger = page.getByRole("button", { name: /account menu|user menu/i }).first();
   await expect(menuTrigger).toBeVisible({ timeout: 10_000 });
   await menuTrigger.click();
   await page
     .getByRole("button", { name: /^(Log out|Đăng xuất)$/i })
     .first()
     .click();
-  await expect(
-    page.getByRole("button", { name: /^(Log in|Đăng nhập)$/i }).first(),
-  ).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("link", { name: /^(Log in|Đăng nhập)$/i }).first()).toBeVisible({
+    timeout: 15_000,
+  });
 }

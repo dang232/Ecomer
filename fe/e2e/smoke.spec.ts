@@ -32,7 +32,10 @@ test.describe("smoke", () => {
     expect(res.ok()).toBeTruthy();
     const body = await res.json();
     const id = body?.data?.content?.[0]?.id;
-    expect(id, `expected at least one product in the catalog: ${JSON.stringify(body).slice(0, 200)}`).toBeTruthy();
+    expect(
+      id,
+      `expected at least one product in the catalog: ${JSON.stringify(body).slice(0, 200)}`,
+    ).toBeTruthy();
 
     await page.goto(`/product/${id}`);
     await expect(page).toHaveURL(/\/product\//);

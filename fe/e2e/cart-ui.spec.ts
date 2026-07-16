@@ -99,17 +99,13 @@ test.describe("cart page UI — buyer flow", () => {
     // the product line item title. (The page may show the full id elsewhere
     // — order id chips, debug strings — so we scope this to product cards.)
     const uuidPattern = /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i;
-    const productNameLine = page
-      .getByText(product.name, { exact: false })
-      .first();
+    const productNameLine = page.getByText(product.name, { exact: false }).first();
     const productNameText = await productNameLine.innerText();
     expect(productNameText).not.toMatch(uuidPattern);
 
     // A non-zero VND price — Vietnamese formatPrice emits "1.234.567 ₫".
     // Match the dot-separated thousands followed by ₫ symbol.
-    const priceLines = await page
-      .getByText(/\d{1,3}(?:\.\d{3})+\s*₫/)
-      .allInnerTexts();
+    const priceLines = await page.getByText(/\d{1,3}(?:\.\d{3})+\s*₫/).allInnerTexts();
     expect(
       priceLines.some((s) => !/^0\s*₫/.test(s)),
       `expected a non-zero VND price; saw: ${JSON.stringify(priceLines).slice(0, 200)}`,
@@ -135,10 +131,12 @@ test.describe("cart page UI — buyer flow", () => {
     await expect(plusBtn).toBeVisible({ timeout: 10_000 });
     await plusBtn.click();
 
-    await expect.poll(async () => firstNonZeroVnd(page), {
-      timeout: 15_000,
-      message: "cart total never increased after clicking +",
-    }).toBeGreaterThan(totalBefore);
+    await expect
+      .poll(async () => firstNonZeroVnd(page), {
+        timeout: 15_000,
+        message: "cart total never increased after clicking +",
+      })
+      .toBeGreaterThan(totalBefore);
   });
 
   test("remove button drops the item and shows the empty-cart copy", async ({ page }) => {
@@ -155,9 +153,9 @@ test.describe("cart page UI — buyer flow", () => {
     await expect(removeBtn).toBeVisible({ timeout: 10_000 });
     await removeBtn.click();
 
-    await expect(
-      page.getByText(/Your cart is empty|Giỏ hàng trống/i),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Your cart is empty|Giỏ hàng trống/i)).toBeVisible({
+      timeout: 15_000,
+    });
   });
 });
 
@@ -167,9 +165,7 @@ test.describe("cart page UI — buyer flow", () => {
  * Returns 0 if no price is found.
  */
 async function firstNonZeroVnd(page: Page): Promise<number> {
-  const lines = await page
-    .getByText(/\d{1,3}(?:\.\d{3})+\s*₫/)
-    .allInnerTexts();
+  const lines = await page.getByText(/\d{1,3}(?:\.\d{3})+\s*₫/).allInnerTexts();
   let max = 0;
   for (const line of lines) {
     const m = /(\d{1,3}(?:\.\d{3})+)/.exec(line);

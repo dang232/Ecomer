@@ -69,7 +69,9 @@ export async function requireJourneyState<K extends keyof JourneyState>(
   keys: K[],
 ): Promise<Required<Pick<JourneyState, K>> & JourneyState> {
   const state = await readJourneyState();
-  const missing = keys.filter((k) => state[k] === undefined || state[k] === null || state[k] === "");
+  const missing = keys.filter(
+    (k) => state[k] === undefined || state[k] === null || state[k] === "",
+  );
   if (missing.length > 0) {
     throw new Error(
       `journey state missing required keys: ${missing.join(", ")} — a previous chapter must run first`,

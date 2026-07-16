@@ -36,9 +36,9 @@ test.describe("auth forms UI — register / login / password reset", () => {
 
     // The form blocks the submit and surfaces a localized inline error.
     // Match either VI or EN copy.
-    await expect(
-      page.getByText(/Passwords don't match|Mật khẩu xác nhận không khớp/i),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/Passwords don't match|Mật khẩu xác nhận không khớp/i)).toBeVisible(
+      { timeout: 10_000 },
+    );
 
     // URL stays on /register (no navigation on validation failure).
     await expect(page).toHaveURL(/\/register/);
@@ -56,9 +56,9 @@ test.describe("auth forms UI — register / login / password reset", () => {
     await page.getByRole("button", { name: /create account|tạo tài khoản/i }).click();
 
     // FE checks for >= 8 characters before submitting.
-    await expect(
-      page.getByText(/at least 8 characters|ít nhất 8 ký tự/i),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/at least 8 characters|ít nhất 8 ký tự/i)).toBeVisible({
+      timeout: 10_000,
+    });
     await expect(page).toHaveURL(/\/register/);
   });
 
@@ -76,22 +76,22 @@ test.describe("auth forms UI — register / login / password reset", () => {
 
     // Provider auto-logs the user in and navigates to /. No load event
     // fires on a SPA navigation, so poll the path.
-    await expect.poll(() => new URL(page.url()).pathname, {
-      timeout: 30_000,
-      message: "register did not navigate to /",
-    }).toBe("/");
+    await expect
+      .poll(() => new URL(page.url()).pathname, {
+        timeout: 30_000,
+        message: "register did not navigate to /",
+      })
+      .toBe("/");
 
     // The home Login button is replaced by the user avatar / username when
     // authenticated. Asserting the Login CTA is gone is the cleanest "I'm
     // authenticated" check that doesn't depend on which language is active.
-    await expect(
-      page.getByRole("button", { name: /^(Log in|Đăng nhập)$/i }).first(),
-    ).toHaveCount(0, { timeout: 10_000 });
+    await expect(page.getByRole("link", { name: /^(Log in|Đăng nhập)$/i }).first()).toHaveCount(0, {
+      timeout: 10_000,
+    });
   });
 
-  test("Login form rejects invalid credentials with an inline error (no nav)", async ({
-    page,
-  }) => {
+  test("Login form rejects invalid credentials with an inline error (no nav)", async ({ page }) => {
     await gotoAndWait(page, "/login", /Sign in to VNShop|Đăng nhập VNShop/i);
 
     await page.locator("#identifier").fill("does-not-exist@vnshop.local");
@@ -109,9 +109,7 @@ test.describe("auth forms UI — register / login / password reset", () => {
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test("Password reset submit button is disabled until an email is entered", async ({
-    page,
-  }) => {
+  test("Password reset submit button is disabled until an email is entered", async ({ page }) => {
     await gotoAndWait(page, "/password-reset", /Reset your password|Đặt lại mật khẩu/i);
 
     // The submit button starts disabled — proves the form's validation gate
@@ -127,21 +125,17 @@ test.describe("auth forms UI — register / login / password reset", () => {
     await expect(submit).toBeEnabled({ timeout: 5_000 });
   });
 
-  test("Password reset request happy path shows the success confirmation", async ({
-    page,
-  }) => {
+  test("Password reset request happy path shows the success confirmation", async ({ page }) => {
     await gotoAndWait(page, "/password-reset", /Reset your password|Đặt lại mật khẩu/i);
 
     await page.locator("input[type='email']").fill(`reset_${Date.now()}@vnshop.local`);
-    await page
-      .getByRole("button", { name: /^(Send reset link|Gửi liên kết đặt lại)$/i })
-      .click();
+    await page.getByRole("button", { name: /^(Send reset link|Gửi liên kết đặt lại)$/i }).click();
 
     // The success confirmation renders regardless of whether the email
     // exists (security: don't leak account existence). This is the FE
     // contract — assert the success copy lands.
-    await expect(
-      page.getByText(/Check your inbox|Kiểm tra hộp thư/i),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Check your inbox|Kiểm tra hộp thư/i)).toBeVisible({
+      timeout: 15_000,
+    });
   });
 });

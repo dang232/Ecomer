@@ -26,7 +26,6 @@ const PUBLIC_ROUTES: { path: string; mountSignal: RegExp }[] = [
   { path: "/design-system", mountSignal: /Design System|VNShop Design/i },
 ];
 
-
 test.describe("public route breadth smoke", () => {
   for (const { path, mountSignal } of PUBLIC_ROUTES) {
     test(`${path} mounts past Suspense without a Zod parse failure`, async ({ page }) => {

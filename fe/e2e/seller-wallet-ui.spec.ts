@@ -31,7 +31,6 @@ async function loginAsSeller(request: APIRequestContext): Promise<AuthResult> {
   return { accessToken };
 }
 
-
 test.describe("seller wallet UI", () => {
   test("Wallet tab renders the balance card and history section", async ({ page }) => {
     await loginAsSeller(page.request);
@@ -48,25 +47,34 @@ test.describe("seller wallet UI", () => {
 
     // The wallet title and balance card render unconditionally; pre-pt28
     // walletSchema rejected the BE shape and the page errored out.
-    await expect(
-      page.getByText(/Wallet & Payouts|Ví & Thanh toán/i).first(),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Wallet & Payouts|Ví & Thanh toán/i).first()).toBeVisible({
+      timeout: 15_000,
+    });
 
     // Available balance label is on the gradient card.
-    await expect(
-      page.getByText(/Available balance|Số dư khả dụng/i).first(),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/Available balance|Số dư khả dụng/i).first()).toBeVisible({
+      timeout: 10_000,
+    });
 
     // History section header.
-    await expect(
-      page.getByText(/Withdrawal history|Lịch sử rút tiền/i).first(),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/Withdrawal history|Lịch sử rút tiền/i).first()).toBeVisible({
+      timeout: 10_000,
+    });
 
     await expectNoGlobalError(page);
   });
 
-  test("Withdraw button is correctly disabled when balance is 0", async ({ page }) => {
-    await loginAsSeller(page.request);
+  test("Withdraw button follows the live seller balance", async ({ page }) => {
+    const { accessToken } = await loginAsSeller(page.request);
+    const walletResponse = await page.request.get(`${apiURL}/sellers/me/finance/wallet`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    expect(walletResponse.ok(), `wallet: ${walletResponse.status()}`).toBeTruthy();
+    const walletBody = await walletResponse.json();
+    const wallet = walletBody?.data ?? walletBody;
+    const balance = wallet?.balance ?? wallet?.availableBalance ?? 0;
+    expect(typeof balance).toBe("number");
+
     await page.goto("/seller");
     await expect(
       page.getByText(/Dashboard|Tổng quan|Seller Hub|Kênh Người Bán/i).first(),
@@ -74,19 +82,20 @@ test.describe("seller wallet UI", () => {
 
     const walletTab = page.getByRole("button", { name: /^(Wallet|Ví tiền)$/i }).first();
     await walletTab.click();
-    await expect(
-      page.getByText(/Wallet & Payouts|Ví & Thanh toán/i).first(),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Wallet & Payouts|Ví & Thanh toán/i).first()).toBeVisible({
+      timeout: 15_000,
+    });
 
-    // seller1 starts with 0 VND balance, so the Withdraw button is correctly
-    // disabled. This proves the FE schema parsed walletSchema fine (got a
-    // numeric balance) AND the disabled-when-zero logic is wired.
-    //
-    // If we ever seed seller earnings, this assertion flips: button is
-    // enabled. Update the test then.
+    // The seeded seller can accumulate earnings across the day simulation, so
+    // derive the expected state from the live wallet rather than assuming 0.
     const withdraw = page.getByRole("button", { name: /^(Withdraw|Rút tiền)$/i }).first();
     await expect(withdraw).toBeVisible({ timeout: 10_000 });
-    await expect(withdraw).toBeDisabled();
+    if (balance <= 0) {
+      await expect(withdraw).toBeDisabled();
+    } else {
+      await expect(withdraw).toBeEnabled();
+    }
+    expect(await withdraw.isDisabled()).toBe(balance <= 0);
 
     await expectNoGlobalError(page);
   });

@@ -17,15 +17,14 @@ import { expectNoGlobalError } from "./_helpers";
  * No backend or auth needed. Runs on / as a guest.
  */
 
-
 test.describe("home page UI", () => {
   test("Home renders without the global error fallback (guest)", async ({ page }) => {
     await page.goto("/");
 
     // The header Login CTA is the canonical guest-state signal.
-    await expect(
-      page.getByRole("button", { name: /^(Log in|Đăng nhập)$/i }).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("link", { name: /^(Log in|Đăng nhập)$/i }).first()).toBeVisible({
+      timeout: 20_000,
+    });
     await expectNoGlobalError(page);
   });
 
@@ -47,9 +46,9 @@ test.describe("home page UI", () => {
 
   test("Major home sections all render their headers", async ({ page }) => {
     await page.goto("/");
-    await expect(
-      page.getByRole("button", { name: /^(Log in|Đăng nhập)$/i }).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("link", { name: /^(Log in|Đăng nhập)$/i }).first()).toBeVisible({
+      timeout: 20_000,
+    });
 
     // Each section header should appear at least once. We use a tolerant
     // regex per section so this works in either language.
@@ -72,9 +71,9 @@ test.describe("home page UI", () => {
 
   test("Footer renders with Design System link (Tabler IconPalette)", async ({ page }) => {
     await page.goto("/");
-    await expect(
-      page.getByRole("button", { name: /^(Log in|Đăng nhập)$/i }).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("link", { name: /^(Log in|Đăng nhập)$/i }).first()).toBeVisible({
+      timeout: 20_000,
+    });
 
     // Scroll to footer to trigger any lazy mounts.
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));

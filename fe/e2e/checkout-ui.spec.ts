@@ -61,10 +61,7 @@ async function addToCart(
   expect(r.ok(), `cart add: ${r.status()}`).toBeTruthy();
 }
 
-async function addAddress(
-  request: APIRequestContext,
-  buyer: SeededBuyer,
-): Promise<void> {
+async function addAddress(request: APIRequestContext, buyer: SeededBuyer): Promise<void> {
   const r = await request.post(`${apiURL}/users/me/addresses`, {
     headers: { Authorization: `Bearer ${buyer.accessToken}` },
     data: {
@@ -78,15 +75,14 @@ async function addAddress(
   expect(r.ok()).toBeTruthy();
 }
 
-
 test.describe("checkout flow UI", () => {
   test("Empty cart on /checkout shows the empty-state CTA", async ({ page }) => {
     await seedBuyer(page.request);
     await page.goto("/checkout");
 
-    await expect(
-      page.getByText(/Your cart is empty|Giỏ hàng trống/i),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/Your cart is empty|Giỏ hàng trống/i)).toBeVisible({
+      timeout: 20_000,
+    });
     await expectNoGlobalError(page);
   });
 
