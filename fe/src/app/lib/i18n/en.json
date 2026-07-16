@@ -1156,6 +1156,8 @@
     "logout": "Log out",
     "initSession": "Initialising your session...",
     "loginRequired": "Please sign in",
+    "sectionsLabel": "Profile sections",
+    "becomeSeller": "Become a seller",
     "avatar": {
       "uploadCta": "Upload avatar",
       "uploading": "Uploading…",
@@ -1172,6 +1174,8 @@
     "tabs": {
       "info": "Account info",
       "addresses": "Addresses",
+      "notifications": "Notifications",
+      "reviews": "Reviews",
       "payment": "Payment methods",
       "security": "Security"
     },

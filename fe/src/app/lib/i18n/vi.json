@@ -1156,6 +1156,8 @@
     "logout": "Đăng xuất",
     "initSession": "Đang khởi tạo phiên đăng nhập...",
     "loginRequired": "Vui lòng đăng nhập",
+    "sectionsLabel": "Các mục hồ sơ",
+    "becomeSeller": "Trở thành người bán",
     "avatar": {
       "uploadCta": "Tải ảnh đại diện",
       "uploading": "Đang tải lên…",
@@ -1172,6 +1174,8 @@
     "tabs": {
       "info": "Thông tin tài khoản",
       "addresses": "Địa chỉ",
+      "notifications": "Thông báo",
+      "reviews": "Đánh giá",
       "payment": "Phương thức thanh toán",
       "security": "Bảo mật"
     },

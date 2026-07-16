@@ -269,7 +269,11 @@ export function ProfilePage() {
           </div>
 
           {/* Nav items */}
-          <div role="tablist" aria-label="Profile sections" className="flex flex-col gap-0.5 mt-5">
+          <div
+            role="tablist"
+            aria-label={t("profile.sectionsLabel")}
+            className="flex flex-col gap-0.5 mt-5"
+          >
             {NAV_ITEMS.map((item) => {
               const isNav = item.id === "notifications" || item.id === "reviews";
               const isActive = activeTab === item.id;
@@ -288,7 +292,7 @@ export function ProfilePage() {
                       return;
                     }
                     if (item.id === "reviews") {
-                      comingSoon("Reviews", t);
+                      comingSoon(t("profile.tabs.reviews"), t);
                       return;
                     }
                     setActiveTab(item.id);
@@ -310,7 +314,7 @@ export function ProfilePage() {
               className="flex items-center gap-2.5 px-3 py-2.5 rounded-[var(--radius-md)] text-[13px] font-medium cursor-pointer transition-colors w-full text-left text-text-secondary hover:bg-background hover:text-foreground"
             >
               <Store size={16} />
-              Become a Seller
+              {t("profile.becomeSeller")}
             </button>
           </div>
 
