@@ -8,6 +8,7 @@ import com.vnshop.productservice.application.image.FakeObjectMetadataRepository;
 import com.vnshop.productservice.application.storage.ObjectValidationPolicy;
 import com.vnshop.productservice.application.storage.ObjectValidationService;
 import com.vnshop.productservice.domain.review.ProductQuestion;
+import com.vnshop.productservice.domain.review.ProductReviewSummary;
 import com.vnshop.productservice.domain.review.Review;
 import com.vnshop.productservice.domain.review.ReviewStatus;
 import com.vnshop.productservice.domain.review.SellerReviewSummary;
@@ -126,6 +127,7 @@ class ReviewImageUploadServiceTest {
         @Override public Optional<ProductQuestion> findQuestionById(UUID questionId) { return Optional.empty(); }
         @Override public SellerReviewSummary getSellerReviewSummary(String sellerId) { return null; }
         @Override public Map<String, SellerReviewSummary> getSellerReviewSummaries(Set<String> sellerIds) { return Map.of(); }
+        @Override public Map<String, ProductReviewSummary> getProductReviewSummaries(Set<String> productIds) { return Map.of(); }
     }
 
     private static final class FakeObjectStorage implements ObjectStoragePort {

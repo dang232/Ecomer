@@ -28,6 +28,7 @@ import { Skeleton } from "../../shared/ui/skeleton";
 import { Surface } from "../../shared/ui/surface";
 import { ProductCard } from "../components/product-card";
 import { categoryDisplayLabel, useCategories } from "../hooks/use-categories";
+import { useProductReviewSummaries } from "../hooks/use-product-review-summaries";
 import { useProducts } from "../hooks/use-products";
 import { useSearch } from "../hooks/use-search";
 import { useSearchFacets } from "../hooks/use-search-facets";
@@ -215,6 +216,11 @@ export function SearchPage() {
   });
   const usedBackend = sourceState.source === "search";
   const catalog = usedBackend ? search.products : localCatalog;
+  const reviewSummariesQuery = useProductReviewSummaries(catalog.map((product) => product.id));
+  const reviewSummaries = useMemo(
+    () => reviewSummariesQuery.data ?? {},
+    [reviewSummariesQuery.data],
+  );
 
   const filtered = useMemo(() => {
     let list = [...catalog];
@@ -234,7 +240,9 @@ export function SearchPage() {
     }
     if (appliedPriceMin) list = list.filter((p) => p.price >= Number(appliedPriceMin) * 1000);
     if (appliedPriceMax) list = list.filter((p) => p.price <= Number(appliedPriceMax) * 1000);
-    if (minRating > 0) list = list.filter((p) => p.rating >= minRating);
+    if (minRating > 0) {
+      list = list.filter((p) => (reviewSummaries[p.id]?.average ?? p.rating) >= minRating);
+    }
     if (freeShipOnly) list = list.filter((p) => p.shippingFee === 0);
     if (sameDay) list = list.filter((p) => p.sameDayDelivery);
     if (verifiedOnly) list = list.filter((p) => p.verified);
@@ -250,7 +258,7 @@ export function SearchPage() {
         list.sort((a, b) => (b.badge === "new" ? 1 : 0) - (a.badge === "new" ? 1 : 0));
         break;
       default:
-        list.sort((a, b) => b.sold - a.sold);
+        list.sort((a, b) => (b.sold ?? 0) - (a.sold ?? 0));
     }
     return list;
   }, [
@@ -268,6 +276,7 @@ export function SearchPage() {
     officialOnly,
     sortBy,
     isFlash,
+    reviewSummaries,
   ]);
 
   // Backend handles its own pagination; only slice locally for the fallback catalog.
@@ -609,6 +618,7 @@ export function SearchPage() {
                   key={product.id}
                   product={product}
                   index={index}
+                  reviewSummary={reviewSummaries[product.id]}
                   onNavigate={() => {
                     sessionStorage.setItem(getScrollKey(), String(window.scrollY));
                   }}

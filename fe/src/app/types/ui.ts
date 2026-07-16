@@ -27,7 +27,8 @@ export interface Product {
   sellerName: string;
   rating: number;
   reviewCount: number;
-  sold: number;
+  /** Optional because the public catalog payload does not expose sales totals. */
+  sold?: number;
   stock: number;
   description: string;
   badge?: "flash" | "new" | "bestseller" | "hot";

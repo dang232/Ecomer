@@ -107,7 +107,7 @@ export function fromServer(p: ProductSummary | ProductDetail): Product {
     sellerName: p.sellerName ?? "",
     rating: p.rating ?? 0,
     reviewCount: p.reviewCount ?? 0,
-    sold: p.sold ?? 0,
+    sold: p.sold,
     stock,
     description: detail.description ?? "",
     colors: detail.colors ?? parsedAttributes?.colors, // BE value wins; parsed fallback if absent

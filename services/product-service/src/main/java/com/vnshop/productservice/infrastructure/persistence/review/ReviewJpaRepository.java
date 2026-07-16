@@ -1,6 +1,7 @@
 package com.vnshop.productservice.infrastructure.persistence.review;
 
 import com.vnshop.productservice.domain.review.ProductQuestion;
+import com.vnshop.productservice.domain.review.ProductReviewSummary;
 import com.vnshop.productservice.domain.review.Review;
 import com.vnshop.productservice.domain.review.ReviewStatus;
 import com.vnshop.productservice.domain.review.SellerReviewSummary;
@@ -106,6 +107,25 @@ public class ReviewJpaRepository implements ReviewRepositoryPort {
             long count = row[2] == null ? 0L : ((Number) row[2]).longValue();
             Double avg = (count == 0 || row[1] == null) ? null : ((Number) row[1]).doubleValue();
             result.put(sellerId, new SellerReviewSummary(avg, count));
+        }
+        return result;
+    }
+
+    @Override
+    public Map<String, ProductReviewSummary> getProductReviewSummaries(Set<String> productIds) {
+        Map<String, ProductReviewSummary> result = new HashMap<>();
+        for (String id : productIds) {
+            result.put(id, new ProductReviewSummary(id, null, 0L));
+        }
+        if (productIds.isEmpty()) {
+            return result;
+        }
+        List<Object[]> rows = reviewRepository.findProductReviewStatsBatch(productIds);
+        for (Object[] row : rows) {
+            String productId = (String) row[0];
+            long count = row[2] == null ? 0L : ((Number) row[2]).longValue();
+            Double avg = (count == 0 || row[1] == null) ? null : ((Number) row[1]).doubleValue();
+            result.put(productId, new ProductReviewSummary(productId, avg, count));
         }
         return result;
     }

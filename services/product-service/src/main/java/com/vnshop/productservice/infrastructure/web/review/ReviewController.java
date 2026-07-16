@@ -4,6 +4,7 @@ import com.vnshop.productservice.infrastructure.web.ApiResponse;
 import com.vnshop.productservice.application.review.CreateReviewCommand;
 import com.vnshop.productservice.application.review.CreateReviewUseCase;
 import com.vnshop.productservice.application.review.GetProductReviewsUseCase;
+import com.vnshop.productservice.application.review.ProductReviewSummaryUseCase;
 import com.vnshop.productservice.application.review.SellerReviewSummaryUseCase;
 import com.vnshop.productservice.application.review.VoteHelpfulUseCase;
 import com.vnshop.productservice.domain.review.SellerReviewSummary;
@@ -30,13 +31,16 @@ public class ReviewController {
     private final GetProductReviewsUseCase getProductReviewsUseCase;
     private final VoteHelpfulUseCase voteHelpfulUseCase;
     private final SellerReviewSummaryUseCase sellerReviewSummaryUseCase;
+    private final ProductReviewSummaryUseCase productReviewSummaryUseCase;
 
     public ReviewController(CreateReviewUseCase createReviewUseCase, GetProductReviewsUseCase getProductReviewsUseCase,
-            VoteHelpfulUseCase voteHelpfulUseCase, SellerReviewSummaryUseCase sellerReviewSummaryUseCase) {
+            VoteHelpfulUseCase voteHelpfulUseCase, SellerReviewSummaryUseCase sellerReviewSummaryUseCase,
+            ProductReviewSummaryUseCase productReviewSummaryUseCase) {
         this.createReviewUseCase = createReviewUseCase;
         this.getProductReviewsUseCase = getProductReviewsUseCase;
         this.voteHelpfulUseCase = voteHelpfulUseCase;
         this.sellerReviewSummaryUseCase = sellerReviewSummaryUseCase;
+        this.productReviewSummaryUseCase = productReviewSummaryUseCase;
     }
 
     @GetMapping("/product/{productId}")
@@ -52,6 +56,12 @@ public class ReviewController {
     @PostMapping("/seller-summaries")
     public ApiResponse<SellerSummariesResponse> sellerSummaries(@Valid @RequestBody SellerSummariesRequest request) {
         return ApiResponse.ok(new SellerSummariesResponse(sellerReviewSummaryUseCase.getSummaries(request.sellerIds())));
+    }
+
+    @PostMapping("/product-summaries")
+    public ApiResponse<ProductSummariesResponse> productSummaries(@Valid @RequestBody ProductSummariesRequest request) {
+        return ApiResponse.ok(ProductSummariesResponse.fromDomain(
+                productReviewSummaryUseCase.getSummaries(request.productIds())));
     }
 
     @PostMapping

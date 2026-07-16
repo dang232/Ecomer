@@ -44,4 +44,13 @@ public interface ReviewJpaSpringDataRepository extends JpaRepository<ReviewJpaEn
             GROUP BY p.seller_id
             """, nativeQuery = true)
     List<Object[]> findSellerReviewStatsBatch(@Param("sellerIds") java.util.Collection<String> sellerIds);
+
+    @Query(value = """
+            SELECT r.product_id, AVG(r.rating), COUNT(r.review_id)
+            FROM product_svc.reviews r
+            WHERE r.product_id IN (:productIds)
+              AND r.status = 'APPROVED'
+            GROUP BY r.product_id
+            """, nativeQuery = true)
+    List<Object[]> findProductReviewStatsBatch(@Param("productIds") java.util.Collection<String> productIds);
 }

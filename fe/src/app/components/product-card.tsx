@@ -4,6 +4,7 @@ import { memo, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
+import type { ProductReviewSummary } from "../hooks/use-product-review-summaries";
 import { formatPrice } from "../lib/format";
 import type { Product } from "../types/ui";
 
@@ -14,6 +15,7 @@ interface ProductCardProps {
   product: Product;
   index?: number;
   onNavigate?: () => void;
+  reviewSummary?: ProductReviewSummary;
 }
 
 function formatSoldCount(sold: number): string {
@@ -24,10 +26,13 @@ export const ProductCard = memo(function ProductCard({
   product,
   index = 0,
   onNavigate,
+  reviewSummary,
 }: ProductCardProps) {
   const { t } = useTranslation();
   const { toggleWishlist, isWishlisted } = useVNShop();
   const loved = isWishlisted(product.id);
+  const reviewCount = reviewSummary?.count ?? product.reviewCount;
+  const rating = reviewSummary?.average ?? (product.reviewCount > 0 ? product.rating : null);
 
   const handleWishlistClick = (event: MouseEvent<HTMLButtonElement>) => {
     // Keep this control outside the product links so it never triggers navigation.
@@ -113,12 +118,16 @@ export const ProductCard = memo(function ProductCard({
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
             <span className="flex items-center gap-1">
               <Star className="h-3 w-3 fill-accent text-accent" aria-hidden="true" />
-              <span className="font-medium text-foreground">{product.rating}</span>
+              <span className="font-medium text-foreground">{rating === null ? "—" : rating}</span>
             </span>
             <span aria-hidden="true">·</span>
-            <span>{t("productCard.reviewsCount", { count: product.reviewCount })}</span>
-            <span aria-hidden="true">·</span>
-            <span>{t("product.soldCountShort", { count: formatSoldCount(product.sold) })}</span>
+            <span>{t("productCard.reviewsCount", { count: reviewCount })}</span>
+            {product.sold !== undefined ? (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>{t("product.soldCountShort", { count: formatSoldCount(product.sold) })}</span>
+              </>
+            ) : null}
           </div>
         </Link>
       </div>

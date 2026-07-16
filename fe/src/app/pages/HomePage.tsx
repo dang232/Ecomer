@@ -25,6 +25,7 @@ import { RecentlyViewedGrid } from "../components/RecentlyViewedGrid";
 import { categoryDisplayLabel, useCategories } from "../hooks/use-categories";
 import { useCountdown } from "../hooks/use-countdown";
 import { useFlashSaleWithProducts } from "../hooks/use-flash-sale";
+import { useProductReviewSummaries } from "../hooks/use-product-review-summaries";
 import { useProducts } from "../hooks/use-products";
 import { useRecentlyViewed } from "../hooks/use-recently-viewed";
 import { formatPrice } from "../lib/format";
@@ -363,6 +364,8 @@ function ProductsSection() {
     isLoading: productsLoading,
     isError: productsError,
   } = useProducts();
+  const products = catalog.slice(0, 10);
+  const reviewSummariesQuery = useProductReviewSummaries(products.map((product) => product.id));
 
   return (
     <section>
@@ -389,8 +392,13 @@ function ProductsSection() {
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
-          {catalog.slice(0, 10).map((p, i) => (
-            <ProductCard key={p.id} product={p} index={i} />
+          {products.map((p, i) => (
+            <ProductCard
+              key={p.id}
+              product={p}
+              index={i}
+              reviewSummary={reviewSummariesQuery.data?.[p.id]}
+            />
           ))}
         </div>
       )}

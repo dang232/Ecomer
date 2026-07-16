@@ -4,6 +4,7 @@ import com.vnshop.productservice.domain.review.ProductQuestion;
 import com.vnshop.productservice.domain.review.Review;
 import com.vnshop.productservice.domain.review.ReviewStatus;
 import com.vnshop.productservice.domain.review.SellerReviewSummary;
+import com.vnshop.productservice.domain.review.ProductReviewSummary;
 
 import java.util.List;
 import java.util.Map;
@@ -35,4 +36,6 @@ public interface ReviewRepositoryPort {
     SellerReviewSummary getSellerReviewSummary(String sellerId);
 
     Map<String, SellerReviewSummary> getSellerReviewSummaries(Set<String> sellerIds);
+
+    Map<String, ProductReviewSummary> getProductReviewSummaries(Set<String> productIds);
 }

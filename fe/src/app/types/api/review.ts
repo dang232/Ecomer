@@ -54,6 +54,15 @@ export const reviewSchema = z
   }));
 export type Review = z.infer<typeof reviewSchema>;
 
+export const productReviewSummarySchema = z
+  .object({
+    productId: productIdSchema,
+    ratingAvg: z.number().nullable(),
+    ratingCount: z.number(),
+  })
+  .passthrough();
+export type ProductReviewSummaryResponse = z.infer<typeof productReviewSummarySchema>;
+
 export const questionSchema = z
   .object({
     id: z.string(),

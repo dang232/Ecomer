@@ -563,10 +563,14 @@ export function ProductPage() {
             <div className="flex items-center gap-2 mt-2 flex-wrap">
               <StarRating value={reviewRating} size={14} />
               <span className="text-sm font-semibold text-foreground">{reviewRating}</span>
-              <span className="text-muted-foreground">·</span>
-              <span className="text-sm text-muted-foreground">
-                {t("product.soldCount", { count: product.sold })}
-              </span>
+              {product.sold !== undefined ? (
+                <>
+                  <span className="text-muted-foreground">·</span>
+                  <span className="text-sm text-muted-foreground">
+                    {t("product.soldCount", { count: product.sold })}
+                  </span>
+                </>
+              ) : null}
               <span className="text-muted-foreground">·</span>
               <button
                 className="text-sm text-muted-foreground underline"

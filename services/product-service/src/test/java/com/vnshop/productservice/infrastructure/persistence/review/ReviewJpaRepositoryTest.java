@@ -47,6 +47,27 @@ class ReviewJpaRepositoryTest {
         assertThat(queryFor("findSellerReviewStatsBatch")).contains("r.status = 'APPROVED'");
     }
 
+    @Test
+    void productAggregatesReturnZeroDefaultsForProductsWithoutApprovedReviews() {
+        ReviewJpaSpringDataRepository springData = mock(ReviewJpaSpringDataRepository.class);
+        QuestionJpaSpringDataRepository questions = mock(QuestionJpaSpringDataRepository.class);
+        when(springData.findProductReviewStatsBatch(Set.of("product-1", "product-2")))
+                .thenReturn(List.<Object[]>of(new Object[] { "product-1", 4.5d, 2L }));
+
+        var summaries = new ReviewJpaRepository(springData, questions)
+                .getProductReviewSummaries(Set.of("product-1", "product-2"));
+
+        assertThat(summaries.get("product-1").ratingAvg()).isEqualTo(4.5d);
+        assertThat(summaries.get("product-1").ratingCount()).isEqualTo(2L);
+        assertThat(summaries.get("product-2").ratingAvg()).isNull();
+        assertThat(summaries.get("product-2").ratingCount()).isZero();
+    }
+
+    @Test
+    void productAggregatesFilterOutUnapprovedReviews() throws NoSuchMethodException {
+        assertThat(queryFor("findProductReviewStatsBatch")).contains("r.status = 'APPROVED'");
+    }
+
     private static String queryFor(String methodName) throws NoSuchMethodException {
         Method method = List.of(ReviewJpaSpringDataRepository.class.getMethods()).stream()
                 .filter(candidate -> candidate.getName().equals(methodName))

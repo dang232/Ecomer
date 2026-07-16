@@ -135,7 +135,9 @@ export function SellerProducts() {
                 </td>
                 <td className="px-4 py-3 text-sm font-bold text-primary">{formatPrice(p.price)}</td>
                 <td className="px-4 py-3 text-sm text-text-secondary">{p.stock}</td>
-                <td className="px-4 py-3 text-sm text-text-secondary">{p.sold.toLocaleString()}</td>
+                <td className="px-4 py-3 text-sm text-text-secondary">
+                  {p.sold === undefined ? "—" : p.sold.toLocaleString()}
+                </td>
                 <td className="px-4 py-3">
                   <button
                     type="button"

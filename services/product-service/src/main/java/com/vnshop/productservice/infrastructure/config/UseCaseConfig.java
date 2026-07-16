@@ -15,6 +15,7 @@ import com.vnshop.productservice.application.review.CreateReviewUseCase;
 import com.vnshop.productservice.application.review.GetProductReviewsUseCase;
 import com.vnshop.productservice.application.review.GetQuestionsUseCase;
 import com.vnshop.productservice.application.review.ModerateReviewUseCase;
+import com.vnshop.productservice.application.review.ProductReviewSummaryUseCase;
 import com.vnshop.productservice.application.review.SellerReviewSummaryUseCase;
 import com.vnshop.productservice.application.review.VoteHelpfulUseCase;
 import com.vnshop.productservice.application.review.image.ReviewImageUploadService;
@@ -159,6 +160,11 @@ public class UseCaseConfig {
     @Bean
     SellerReviewSummaryUseCase sellerReviewSummaryUseCase(ReviewRepositoryPort reviewRepositoryPort) {
         return new SellerReviewSummaryUseCase(reviewRepositoryPort);
+    }
+
+    @Bean
+    ProductReviewSummaryUseCase productReviewSummaryUseCase(ReviewRepositoryPort reviewRepositoryPort) {
+        return new ProductReviewSummaryUseCase(reviewRepositoryPort);
     }
 
     @Bean
