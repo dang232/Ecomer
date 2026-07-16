@@ -50,7 +50,7 @@ const shippingRatesResponseSchema = z.object({
       serviceCode: z.string(),
       feeVnd: z.number(),
       estimatedDeliveryTime: z.string(),
-    })
+    }),
   ),
 });
 

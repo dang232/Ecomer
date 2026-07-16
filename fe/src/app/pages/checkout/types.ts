@@ -1,13 +1,5 @@
 import type { TFunction } from "i18next";
-import {
-  Banknote,
-  CheckCircle,
-  CreditCard,
-  MapPin,
-  QrCode,
-  Truck,
-  Wallet,
-} from "lucide-react";
+import { Banknote, CheckCircle, CreditCard, MapPin, QrCode, Truck, Wallet } from "lucide-react";
 
 export type Step = "address" | "shipping" | "payment" | "review" | "success";
 
@@ -95,12 +87,14 @@ export function mapPaymentOptions(
           `[CheckoutPage] Unknown payment code "${p.code}" — using generic CreditCard icon. Consider adding it to codeToFallback.`,
         );
       }
-      return mapped ?? {
-        id: p.code as PaymentOption["id"],
-        name: p.name,
-        Icon: CreditCard,
-        desc: p.description ?? "",
-      };
+      return (
+        mapped ?? {
+          id: p.code as PaymentOption["id"],
+          name: p.name,
+          Icon: CreditCard,
+          desc: p.description ?? "",
+        }
+      );
     });
 }
 
@@ -116,8 +110,17 @@ export function makeFallbackPayment(t: TFunction): PaymentOption[] {
       desc: "Visa, Mastercard, Amex via Stripe",
     },
     { id: "PAYPAL", name: "PayPal", Icon: Wallet, desc: t("checkout.payment.paypalDesc") },
-    { id: "BANK", name: t("checkout.payment.bankName"), Icon: CreditCard, desc: "Visa, Mastercard, JCB" },
-    { id: "COD", name: t("checkout.payment.codName"), Icon: Banknote, desc: t("checkout.payment.codDesc") },
+    {
+      id: "BANK",
+      name: t("checkout.payment.bankName"),
+      Icon: CreditCard,
+      desc: "Visa, Mastercard, JCB",
+    },
+    {
+      id: "COD",
+      name: t("checkout.payment.codName"),
+      Icon: Banknote,
+      desc: t("checkout.payment.codDesc"),
+    },
   ];
 }
-

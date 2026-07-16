@@ -31,12 +31,7 @@ import { CheckoutShippingStep } from "./CheckoutShippingStep";
 import { CheckoutStepper } from "./CheckoutStepper";
 import { CheckoutSuccess } from "./CheckoutSuccess";
 import { CheckoutSummary } from "./CheckoutSummary";
-import {
-  makeFallbackShipping,
-  mapPaymentOptions,
-  type PaymentOption,
-  type Step,
-} from "./types";
+import { makeFallbackShipping, mapPaymentOptions, type PaymentOption, type Step } from "./types";
 
 export function CheckoutPage() {
   const navigate = useNavigate();
@@ -83,7 +78,9 @@ export function CheckoutPage() {
         const s = (JSON.parse(raw) as Record<string, unknown>).step;
         if (typeof s === "string") return s as Step;
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     return "address";
   });
   const [selectedAddressIndex, setSelectedAddressIndex] = useState<number>(() => {
@@ -93,7 +90,9 @@ export function CheckoutPage() {
         const v = (JSON.parse(raw) as Record<string, unknown>).selectedAddressIndex;
         if (typeof v === "number") return v;
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     return 0;
   });
   // The user's explicit shipping pick. Empty string means "use default" — we resolve
@@ -106,7 +105,9 @@ export function CheckoutPage() {
         const v = (JSON.parse(raw) as Record<string, unknown>).shippingChoice;
         if (typeof v === "string") return v;
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     return "";
   });
   const selectedShippingId = shippingChoice || "";
@@ -117,7 +118,9 @@ export function CheckoutPage() {
         const v = (JSON.parse(raw) as Record<string, unknown>).selectedPaymentId;
         if (typeof v === "string") return v as PaymentOption["id"];
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     return "VNPAY";
   });
   const [note, setNote] = useState<string>(() => {
@@ -127,7 +130,9 @@ export function CheckoutPage() {
         const v = (JSON.parse(raw) as Record<string, unknown>).note;
         if (typeof v === "string") return v;
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     return "";
   });
   const [couponInput, setCouponInput] = useState<string>("");
@@ -135,7 +140,11 @@ export function CheckoutPage() {
   // Persist checkout progress so a page refresh doesn't lose the user's place.
   useEffect(() => {
     if (step === "success") {
-      try { sessionStorage.removeItem("vnshop:checkout-state"); } catch { /* ignore */ }
+      try {
+        sessionStorage.removeItem("vnshop:checkout-state");
+      } catch {
+        /* ignore */
+      }
       return;
     }
     try {
@@ -143,7 +152,9 @@ export function CheckoutPage() {
         "vnshop:checkout-state",
         JSON.stringify({ step, selectedAddressIndex, shippingChoice, selectedPaymentId, note }),
       );
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [step, selectedAddressIndex, shippingChoice, selectedPaymentId, note]);
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [showCouponPicker, setShowCouponPicker] = useState(false);
@@ -175,17 +186,20 @@ export function CheckoutPage() {
   const shippingOptions = useMemo(() => {
     const ratesData = ratesQuery.data?.options;
     if (ratesData && ratesData.length > 0) {
-      return ratesData.map((r: { serviceCode: string; feeVnd: number; estimatedDeliveryTime: string }) => ({
-        id: r.serviceCode,
-        name: r.serviceCode === "STANDARD"
-          ? t("checkout.shipping.standardName")
-          : r.serviceCode === "EXPRESS"
-            ? t("checkout.shipping.expressName")
-            : r.serviceCode,
-        desc: r.estimatedDeliveryTime,
-        fee: r.feeVnd,
-        eta: r.estimatedDeliveryTime,
-      }));
+      return ratesData.map(
+        (r: { serviceCode: string; feeVnd: number; estimatedDeliveryTime: string }) => ({
+          id: r.serviceCode,
+          name:
+            r.serviceCode === "STANDARD"
+              ? t("checkout.shipping.standardName")
+              : r.serviceCode === "EXPRESS"
+                ? t("checkout.shipping.expressName")
+                : r.serviceCode,
+          desc: r.estimatedDeliveryTime,
+          fee: r.feeVnd,
+          eta: r.estimatedDeliveryTime,
+        }),
+      );
     }
     const checkoutData = shippingQuery.data;
     if (checkoutData && checkoutData.length > 0) {
@@ -321,7 +335,9 @@ export function CheckoutPage() {
   if (!authenticated) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-24 text-center">
-        <h2 className="text-xl font-bold text-muted-foreground mb-3">{t("checkout.loginPromptTitle")}</h2>
+        <h2 className="text-xl font-bold text-muted-foreground mb-3">
+          {t("checkout.loginPromptTitle")}
+        </h2>
         <button
           onClick={() => login("/checkout")}
           className="px-8 py-3 rounded-[var(--radius-lg)] bg-primary text-white font-semibold inline-flex items-center gap-2"
@@ -344,7 +360,9 @@ export function CheckoutPage() {
     return (
       <div className="max-w-3xl mx-auto px-4 py-24 text-center">
         <Package size={56} className="mx-auto mb-4 text-muted-foreground/30" />
-        <h2 className="text-xl font-bold text-muted-foreground mb-3">{t("checkout.emptyCartTitle")}</h2>
+        <h2 className="text-xl font-bold text-muted-foreground mb-3">
+          {t("checkout.emptyCartTitle")}
+        </h2>
         <button
           onClick={() => navigate("/")}
           className="px-6 py-2.5 rounded-[var(--radius-lg)] bg-primary text-white font-medium"
@@ -419,7 +437,8 @@ export function CheckoutPage() {
           // Stay on review step so the buyer can retry instead of landing on success.
           toast.error(t("checkout.payment.initFailedShort"), {
             description: t("checkout.payment.retryHint", {
-              defaultValue: "Your order was placed. You can retry payment or pay later from Orders.",
+              defaultValue:
+                "Your order was placed. You can retry payment or pay later from Orders.",
             }),
           });
           setPlacedOrderId(order.id);
@@ -471,7 +490,11 @@ export function CheckoutPage() {
 
   const handleNext = () => {
     if (step === "address") {
-      if (addresses.length === 0 || selectedAddressIndex < 0 || selectedAddressIndex >= addresses.length) {
+      if (
+        addresses.length === 0 ||
+        selectedAddressIndex < 0 ||
+        selectedAddressIndex >= addresses.length
+      ) {
         toast.error(t("checkout.address.missingValidation"), {
           description: t("checkout.address.addAddressHint"),
           action: {

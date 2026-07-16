@@ -90,7 +90,7 @@ describe("listSellers", () => {
       envelope({ content: [], page: 0, size: 12, totalElements: 0, totalPages: 0 }),
     );
     await listSellers();
-    const calledUrl = (fetchSpy.mock.calls[0][0] as string);
+    const calledUrl = fetchSpy.mock.calls[0][0] as string;
     expect(calledUrl).toContain("page=0");
     expect(calledUrl).toContain("size=12");
   });

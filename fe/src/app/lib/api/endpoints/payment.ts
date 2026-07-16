@@ -50,15 +50,11 @@ const vietQrCreateSchema = z.object({
   reference: z.string(),
 });
 
-export const stripeCreate = (
-  body: { orderId: string },
-  idempotencyKey?: string,
-) => api.post("/payment/stripe/create", stripeCreateSchema, body, { idempotencyKey });
+export const stripeCreate = (body: { orderId: string }, idempotencyKey?: string) =>
+  api.post("/payment/stripe/create", stripeCreateSchema, body, { idempotencyKey });
 
-export const paypalCreate = (
-  body: { orderId: string },
-  idempotencyKey?: string,
-) => api.post("/payment/paypal/create", payPalCreateSchema, body, { idempotencyKey });
+export const paypalCreate = (body: { orderId: string }, idempotencyKey?: string) =>
+  api.post("/payment/paypal/create", payPalCreateSchema, body, { idempotencyKey });
 
 export const paypalCapture = (paymentId: string, paypalOrderId: string) =>
   api.post(
@@ -67,7 +63,5 @@ export const paypalCapture = (paymentId: string, paypalOrderId: string) =>
     {},
   );
 
-export const vietqrCreate = (
-  body: { orderId: string },
-  idempotencyKey?: string,
-) => api.post("/payment/vietqr/create", vietQrCreateSchema, body, { idempotencyKey });
+export const vietqrCreate = (body: { orderId: string }, idempotencyKey?: string) =>
+  api.post("/payment/vietqr/create", vietQrCreateSchema, body, { idempotencyKey });

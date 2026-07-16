@@ -138,11 +138,7 @@ export function CheckoutSummary({
                     <ul className="space-y-1">
                       {couponsQuery.data.map((coupon) => {
                         const value = coupon.value ?? coupon.discountValue;
-                        const type = (
-                          coupon.type ??
-                          coupon.discountType ??
-                          "FIXED"
-                        ).toUpperCase();
+                        const type = (coupon.type ?? coupon.discountType ?? "FIXED").toUpperCase();
                         const label =
                           type === "PERCENT" && value !== undefined
                             ? t("checkout.summary.couponDiscountPct", { value })
@@ -156,8 +152,7 @@ export function CheckoutSummary({
                               value: formatPrice(coupon.minOrderValue),
                             })
                           : null;
-                        const eligible =
-                          !coupon.minOrderValue || subtotal >= coupon.minOrderValue;
+                        const eligible = !coupon.minOrderValue || subtotal >= coupon.minOrderValue;
                         return (
                           <li key={coupon.code}>
                             <button

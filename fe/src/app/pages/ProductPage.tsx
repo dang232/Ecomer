@@ -1,19 +1,34 @@
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { ShoppingCart, Zap, Heart, Star, Truck, Shield, RefreshCw, ChevronRight, ChevronLeft, MessageCircle, ThumbsUp, Share2, Play, X, ZoomIn } from "lucide-react";
+import {
+  ShoppingCart,
+  Zap,
+  Heart,
+  Star,
+  Truck,
+  Shield,
+  RefreshCw,
+  ChevronRight,
+  ChevronLeft,
+  Share2,
+  Play,
+  X,
+  ZoomIn,
+} from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams, useNavigate, Navigate, Link } from "react-router";
 import { toast } from "sonner";
 
-import { useProductVideos, VideoPlayer, ReviewVideoDisplay } from "../../features/videos";
+import { ProductReviewsSection } from "../../features/reviews/components/product-reviews-section";
+import { useProductReviewController } from "../../features/reviews/use-product-review-controller";
+import { useProductVideos, VideoPlayer } from "../../features/videos";
 import { VideoPlayerSkeleton } from "../../features/videos/components/VideoPlayer";
 import { usePageMeta } from "../../utils/meta-tags";
 import { ImageWithFallback } from "../components/image-with-fallback";
 import { RecentlyViewedGrid } from "../components/RecentlyViewedGrid";
 import { useVNShop } from "../components/vnshop-context";
 import { useAuth } from "../hooks/use-auth";
-import { useProductReviews } from "../hooks/use-product-reviews";
 import { productDetailOptions } from "../hooks/use-products";
 import { useRecentlyViewed } from "../hooks/use-recently-viewed";
 import { useFrequentlyBoughtTogether, useYouMayAlsoLike } from "../hooks/use-recommendations";
@@ -21,7 +36,6 @@ import { useSellerDetail } from "../hooks/use-sellers";
 import { ApiError } from "../lib/api";
 import { askQuestion, questionsByProduct } from "../lib/api/endpoints/questions";
 import type { RecommendationItem } from "../lib/api/endpoints/recommendations";
-import { createReview, voteReviewHelpful } from "../lib/api/endpoints/reviews";
 import { formatPrice } from "../lib/format";
 import { comingSoon } from "../lib/ui/coming-soon";
 
@@ -91,7 +105,11 @@ function SellerCard({ sellerId }: { sellerId?: string }) {
       <div className="flex items-center gap-4">
         <div className="w-12 h-12 rounded-[var(--radius-lg)] overflow-hidden bg-surface-elevated flex items-center justify-center shrink-0">
           {seller.logoUrl ? (
-            <img src={seller.logoUrl} alt={seller.shopName} className="w-full h-full object-cover" />
+            <img
+              src={seller.logoUrl}
+              alt={seller.shopName}
+              className="w-full h-full object-cover"
+            />
           ) : (
             <span
               className="text-lg font-black text-white w-full h-full flex items-center justify-center"
@@ -151,32 +169,15 @@ export function ProductPage() {
     }
   }, [product, addToRecentlyViewed]);
 
-  const liveReviewsQuery = useProductReviews(id!);
+  const reviewController = useProductReviewController(id!);
+  const reviewCount = reviewController.summary?.count ?? product.reviewCount;
+  const reviewRating = reviewController.summary?.average ?? product.rating;
 
   const liveQuestionsQuery = useQuery({
     queryKey: ["questions", "product", id],
     queryFn: () => questionsByProduct(id!),
     enabled: !!id,
     retry: false,
-  });
-
-  const submitReview = useMutation({
-    mutationFn: (input: { rating: number; comment: string }) =>
-      createReview({ productId: id!, ...input }),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["catalog", "reviews", "product", id!] });
-      toast.success(t("product.reviews.submitOk"));
-      setReviewDraft({ rating: 5, comment: "" });
-    },
-    onError: (err) =>
-      toast.error(err instanceof ApiError ? err.message : t("product.reviews.submitErr")),
-  });
-
-  const voteHelpful = useMutation({
-    mutationFn: (reviewId: string) => voteReviewHelpful(reviewId),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["catalog", "reviews", "product", id!] }),
-    onError: (err) =>
-      toast.error(err instanceof ApiError ? err.message : t("product.reviews.voteErr")),
   });
 
   const submitQuestion = useMutation({
@@ -190,7 +191,6 @@ export function ProductPage() {
       toast.error(err instanceof ApiError ? err.message : t("product.qa.submitErr")),
   });
 
-  const [reviewDraft, setReviewDraft] = useState({ rating: 5, comment: "" });
   const [questionDraft, setQuestionDraft] = useState("");
 
   const [imageIdx, setImageIdx] = useState(0);
@@ -200,7 +200,9 @@ export function ProductPage() {
   const [selectedColor, setSelectedColor] = useState(product.colors?.[0] ?? "");
   const [selectedSize, setSelectedSize] = useState(product.sizes?.[0] ?? "");
   const [quantity, setQuantity] = useState(1);
-  const [activeTab, setActiveTab] = useState<"desc" | "specs" | "reviews" | "qa" | "videos">("desc");
+  const [activeTab, setActiveTab] = useState<"desc" | "specs" | "reviews" | "qa" | "videos">(
+    "desc",
+  );
   const loved = isWishlisted(product.id);
 
   usePageMeta({
@@ -214,20 +216,16 @@ export function ProductPage() {
     size: selectedSize || undefined,
     variantId: (() => {
       if (!product.variants?.length) return undefined;
-      return (
-        product.variants.find((v) => {
-          const parts = (v.name ?? "").split(" / ").map((p) => p.trim());
-          return (
-            (!selectedColor || parts.includes(selectedColor)) &&
-            (!selectedSize || parts.includes(selectedSize))
-          );
-        })?.sku
-      );
+      return product.variants.find((v) => {
+        const parts = (v.name ?? "").split(" / ").map((p) => p.trim());
+        return (
+          (!selectedColor || parts.includes(selectedColor)) &&
+          (!selectedSize || parts.includes(selectedSize))
+        );
+      })?.sku;
     })(),
   };
-  const selectedVariant = product.variants?.find(
-    (v) => v.sku === variant.variantId,
-  );
+  const selectedVariant = product.variants?.find((v) => v.sku === variant.variantId);
   const handleAddToCart = () => addToCart(product, quantity, variant);
   const handleBuyNow = () => {
     addToCart(product, quantity, variant);
@@ -244,10 +242,14 @@ export function ProductPage() {
 
   // ── Video-first gallery with discriminated union ──
   type GalleryItem =
-    | { type: "image"; url: string }
-    | { type: "video"; playbackUrl: string; thumbnailUrl: string };
+    { type: "image"; url: string } | { type: "video"; playbackUrl: string; thumbnailUrl: string };
 
-  const { videos: productVideos, isLoading: isProductVideosLoading, isError: isProductVideosError, refetch: refetchProductVideos } = useProductVideos(product.id);
+  const {
+    videos: productVideos,
+    isLoading: isProductVideosLoading,
+    isError: isProductVideosError,
+    refetch: refetchProductVideos,
+  } = useProductVideos(product.id);
 
   const galleryItems: GalleryItem[] = [
     ...productVideos.map((v) => ({
@@ -300,7 +302,10 @@ export function ProductPage() {
             }
           >
             {isVideoPlaying && currentItem?.type === "video" ? (
-              <div className="relative w-full h-full flex items-center justify-center" aria-live="polite">
+              <div
+                className="relative w-full h-full flex items-center justify-center"
+                aria-live="polite"
+              >
                 <VideoPlayer
                   src={currentItem.playbackUrl}
                   poster={currentItem.thumbnailUrl}
@@ -357,14 +362,22 @@ export function ProductPage() {
             {galleryItems.length > 1 ? (
               <>
                 <button
-                  onClick={() => { setImageIdx((i) => (i - 1 + galleryItems.length) % galleryItems.length); setIsVideoPlaying(false); setIsZoomed(false); }}
+                  onClick={() => {
+                    setImageIdx((i) => (i - 1 + galleryItems.length) % galleryItems.length);
+                    setIsVideoPlaying(false);
+                    setIsZoomed(false);
+                  }}
                   aria-label="Previous"
                   className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 shadow-md flex items-center justify-center hover:bg-card transition-colors"
                 >
                   <ChevronLeft size={18} className="text-foreground" />
                 </button>
                 <button
-                  onClick={() => { setImageIdx((i) => (i + 1) % galleryItems.length); setIsVideoPlaying(false); setIsZoomed(false); }}
+                  onClick={() => {
+                    setImageIdx((i) => (i + 1) % galleryItems.length);
+                    setIsVideoPlaying(false);
+                    setIsZoomed(false);
+                  }}
                   aria-label="Next"
                   className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 shadow-md flex items-center justify-center hover:bg-card transition-colors"
                 >
@@ -396,13 +409,15 @@ export function ProductPage() {
             ) : null}
 
             {/* Zoom lightbox button */}
-            {currentItem?.type === "image" ? <button
+            {currentItem?.type === "image" ? (
+              <button
                 onClick={() => setShowLightbox(true)}
                 aria-label="Open zoomed view"
                 className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/80 shadow-md flex items-center justify-center hover:bg-card transition-colors"
               >
                 <ZoomIn size={18} className="text-foreground" />
-              </button> : null}
+              </button>
+            ) : null}
           </div>
 
           {/* Thumbnail strip */}
@@ -410,8 +425,16 @@ export function ProductPage() {
             {galleryItems.map((item, i) => (
               <button
                 key={i}
-                onClick={() => { setImageIdx(i); setIsVideoPlaying(false); setIsZoomed(false); }}
-                aria-label={item.type === "video" ? `${t("video.gallery.playOverlay")} ${i + 1}` : `View image ${i + 1}`}
+                onClick={() => {
+                  setImageIdx(i);
+                  setIsVideoPlaying(false);
+                  setIsZoomed(false);
+                }}
+                aria-label={
+                  item.type === "video"
+                    ? `${t("video.gallery.playOverlay")} ${i + 1}`
+                    : `View image ${i + 1}`
+                }
                 className={[
                   "relative shrink-0 w-[72px] h-[72px] rounded-[var(--radius-md)] bg-surface-elevated border-2 overflow-hidden transition-all duration-150",
                   i === imageIdx
@@ -424,41 +447,52 @@ export function ProductPage() {
                   alt=""
                   className="w-full h-full object-cover"
                 />
-                {item.type === "video" ? <>
+                {item.type === "video" ? (
+                  <>
                     <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                       <Play size={18} className="text-white" aria-hidden="true" />
                     </div>
                     <span className="absolute top-1 right-1 px-1.5 py-0.5 rounded bg-black/70 text-[9px] font-bold uppercase tracking-wider text-white">
                       Video
                     </span>
-                  </> : null}
+                  </>
+                ) : null}
               </button>
             ))}
           </div>
 
           {/* Dot indicators */}
-          {galleryItems.length > 1 ? <div className="flex justify-center gap-2 pt-2" role="tablist" aria-label="Gallery navigation">
+          {galleryItems.length > 1 ? (
+            <div
+              className="flex justify-center gap-2 pt-2"
+              role="tablist"
+              aria-label="Gallery navigation"
+            >
               {galleryItems.map((_, i) => (
                 <button
                   key={i}
                   role="tab"
                   aria-selected={i === imageIdx}
                   aria-label={`Go to image ${i + 1}`}
-                  onClick={() => { setImageIdx(i); setIsVideoPlaying(false); setIsZoomed(false); }}
+                  onClick={() => {
+                    setImageIdx(i);
+                    setIsVideoPlaying(false);
+                    setIsZoomed(false);
+                  }}
                   className={[
                     "w-2.5 h-2.5 rounded-full transition-all duration-200",
-                    i === imageIdx
-                      ? "bg-primary scale-110"
-                      : "bg-border hover:bg-primary/50",
+                    i === imageIdx ? "bg-primary scale-110" : "bg-border hover:bg-primary/50",
                   ].join(" ")}
                 />
               ))}
-            </div> : null}
+            </div>
+          ) : null}
         </div>
 
         {/* Zoom lightbox */}
         <AnimatePresence>
-          {showLightbox && currentItem?.type === "image" ? <motion.div
+          {showLightbox && currentItem?.type === "image" ? (
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -472,29 +506,40 @@ export function ProductPage() {
               >
                 <X size={24} className="text-white" />
               </button>
-              {galleryItems.length > 1 ? <>
+              {galleryItems.length > 1 ? (
+                <>
                   <button
                     className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
-                    onClick={(e) => { e.stopPropagation(); setImageIdx((i) => (i - 1 + galleryItems.length) % galleryItems.length); setIsZoomed(false); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setImageIdx((i) => (i - 1 + galleryItems.length) % galleryItems.length);
+                      setIsZoomed(false);
+                    }}
                     aria-label="Previous"
                   >
                     <ChevronLeft size={24} className="text-white" />
                   </button>
                   <button
                     className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
-                    onClick={(e) => { e.stopPropagation(); setImageIdx((i) => (i + 1) % galleryItems.length); setIsZoomed(false); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setImageIdx((i) => (i + 1) % galleryItems.length);
+                      setIsZoomed(false);
+                    }}
                     aria-label="Next"
                   >
                     <ChevronRight size={24} className="text-white" />
                   </button>
-                </> : null}
+                </>
+              ) : null}
               <ImageWithFallback
                 src={currentItem.url}
                 alt={product.name}
                 className="max-w-[90vw] max-h-[90vh] object-contain"
                 onClick={(e) => e.stopPropagation()}
               />
-            </motion.div> : null}
+            </motion.div>
+          ) : null}
         </AnimatePresence>
 
         {/* ── B. Right Column — Product Info ── */}
@@ -515,8 +560,8 @@ export function ProductPage() {
 
             {/* Rating row */}
             <div className="flex items-center gap-2 mt-2 flex-wrap">
-              <StarRating value={product.rating} size={14} />
-              <span className="text-sm font-semibold text-foreground">{product.rating}</span>
+              <StarRating value={reviewRating} size={14} />
+              <span className="text-sm font-semibold text-foreground">{reviewRating}</span>
               <span className="text-muted-foreground">·</span>
               <span className="text-sm text-muted-foreground">
                 {t("product.soldCount", { count: product.sold })}
@@ -526,16 +571,14 @@ export function ProductPage() {
                 className="text-sm text-muted-foreground underline"
                 onClick={() => setActiveTab("reviews")}
               >
-                {t("product.reviewsCount", { count: product.reviewCount })}
+                {t("product.reviewsCount", { count: reviewCount })}
               </button>
             </div>
           </div>
 
           {/* Price block */}
           <div className="flex items-end gap-2 flex-wrap">
-            <span className="text-3xl font-bold text-primary">
-              {formatPrice(displayPrice)}
-            </span>
+            <span className="text-3xl font-bold text-primary">{formatPrice(displayPrice)}</span>
             {product.originalPrice ? (
               <span className="text-lg line-through text-muted-foreground ml-3">
                 {formatPrice(product.originalPrice)}
@@ -557,7 +600,8 @@ export function ProductPage() {
           {product.colors && product.colors.length > 0 ? (
             <div>
               <p className="text-sm font-semibold text-foreground mb-2">
-                {t("product.colorsLabel")}: <span className="font-normal text-muted-foreground">{selectedColor}</span>
+                {t("product.colorsLabel")}:{" "}
+                <span className="font-normal text-muted-foreground">{selectedColor}</span>
               </p>
               <div className="flex flex-wrap gap-2">
                 {product.colors.map((color) => (
@@ -584,7 +628,8 @@ export function ProductPage() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm font-semibold text-foreground">
-                  {t("product.sizesLabel")}: <span className="font-normal text-muted-foreground">{selectedSize}</span>
+                  {t("product.sizesLabel")}:{" "}
+                  <span className="font-normal text-muted-foreground">{selectedSize}</span>
                 </p>
                 <button
                   className="text-xs font-medium text-primary underline"
@@ -656,39 +701,39 @@ export function ProductPage() {
                 <ShoppingCart size={18} />
                 {t("product.addToCart")}
               </button>
-            <button
-              onClick={handleBuyNow}
-              className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-accent text-white font-bold rounded-[var(--radius-lg)] hover:opacity-90 transition-opacity"
-            >
-              <Zap size={18} />
-              {t("product.buyNow")}
-            </button>
-            <button
-              onClick={() => toggleWishlist(product.id)}
-              aria-label={loved ? "Remove from wishlist" : "Add to wishlist"}
-              aria-pressed={loved}
-              className={[
-                "w-12 h-12 flex items-center justify-center border rounded-[var(--radius-lg)] transition-all shrink-0",
-                loved
-                  ? "border-primary bg-primary-light text-primary"
-                  : "border-border text-muted-foreground hover:border-border-hover",
-              ].join(" ")}
-            >
-              <Heart size={20} fill={loved ? "currentColor" : "none"} />
-            </button>
-            <button
-              onClick={() => {
-                void navigator.clipboard.writeText(window.location.href).then(
-                  () => toast.success("Link copied!"),
-                  () => toast.error("Failed to copy link"),
-                );
-              }}
-              aria-label="Share product"
-              className="w-12 h-12 flex items-center justify-center border border-border rounded-[var(--radius-lg)] transition-all shrink-0 text-muted-foreground hover:border-border-hover"
-            >
-              <Share2 size={20} />
-            </button>
-          </div>
+              <button
+                onClick={handleBuyNow}
+                className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-accent text-white font-bold rounded-[var(--radius-lg)] hover:opacity-90 transition-opacity"
+              >
+                <Zap size={18} />
+                {t("product.buyNow")}
+              </button>
+              <button
+                onClick={() => toggleWishlist(product.id)}
+                aria-label={loved ? "Remove from wishlist" : "Add to wishlist"}
+                aria-pressed={loved}
+                className={[
+                  "w-12 h-12 flex items-center justify-center border rounded-[var(--radius-lg)] transition-all shrink-0",
+                  loved
+                    ? "border-primary bg-primary-light text-primary"
+                    : "border-border text-muted-foreground hover:border-border-hover",
+                ].join(" ")}
+              >
+                <Heart size={20} fill={loved ? "currentColor" : "none"} />
+              </button>
+              <button
+                onClick={() => {
+                  void navigator.clipboard.writeText(window.location.href).then(
+                    () => toast.success("Link copied!"),
+                    () => toast.error("Failed to copy link"),
+                  );
+                }}
+                aria-label="Share product"
+                className="w-12 h-12 flex items-center justify-center border border-border rounded-[var(--radius-lg)] transition-all shrink-0 text-muted-foreground hover:border-border-hover"
+              >
+                <Share2 size={20} />
+              </button>
+            </div>
           ) : (
             <button
               type="button"
@@ -754,11 +799,12 @@ export function ProductPage() {
                 : tab === "specs"
                   ? t("product.tabs.specs", { defaultValue: "Specifications" })
                   : tab === "reviews"
-                    ? t("product.tabs.reviews", { count: product.reviewCount })
+                    ? t("product.tabs.reviews", { count: reviewCount })
                     : t("product.tabs.qa")}
             </button>
           ))}
-          {productVideos.length > 0 ? <button
+          {productVideos.length > 0 ? (
+            <button
               id="product-tab-videos"
               role="tab"
               aria-selected={activeTab === "videos"}
@@ -772,7 +818,8 @@ export function ProductPage() {
               ].join(" ")}
             >
               {t("video.tab.title")} ({productVideos.length})
-            </button> : null}
+            </button>
+          ) : null}
         </div>
 
         <div role="tabpanel" aria-labelledby={`product-tab-${activeTab}`} aria-live="polite">
@@ -790,7 +837,10 @@ export function ProductPage() {
                     value: t("product.info.stockValue", { count: product.stock }),
                   },
                 ].map((info) => (
-                  <div key={info.label} className="p-3 rounded-[var(--radius-md)] bg-surface-elevated">
+                  <div
+                    key={info.label}
+                    className="p-3 rounded-[var(--radius-md)] bg-surface-elevated"
+                  >
                     <p className="text-xs text-muted-foreground mb-0.5">{info.label}</p>
                     <p className="text-sm font-semibold text-foreground">{info.value}</p>
                   </div>
@@ -824,8 +874,13 @@ export function ProductPage() {
                     value: t("product.info.stockValue", { count: product.stock }),
                   },
                 ].map((info) => (
-                  <div key={info.label} className="flex gap-4 py-3 border-b border-border last:border-0">
-                    <span className="text-sm text-muted-foreground w-32 shrink-0">{info.label}</span>
+                  <div
+                    key={info.label}
+                    className="flex gap-4 py-3 border-b border-border last:border-0"
+                  >
+                    <span className="text-sm text-muted-foreground w-32 shrink-0">
+                      {info.label}
+                    </span>
                     <span className="text-sm font-medium text-foreground">{info.value}</span>
                   </div>
                 ))}
@@ -835,163 +890,11 @@ export function ProductPage() {
 
           {/* Reviews tab */}
           {activeTab === "reviews" ? (
-            <div className="space-y-6">
-              {/* Rating summary */}
-              {liveReviewsQuery.data && liveReviewsQuery.data.length > 0 ? (
-                <div className="flex items-center gap-8 p-6 rounded-[var(--radius-xl)] bg-card border border-border">
-                  <div className="text-center shrink-0">
-                    <p className="text-5xl font-black text-primary">{product.rating}</p>
-                    <StarRating value={product.rating} size={16} />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {t("product.reviewsCount", { count: product.reviewCount })}
-                    </p>
-                  </div>
-                  <div className="flex-1 space-y-1.5">
-                    {[5, 4, 3, 2, 1].map((star) => {
-                      const total = liveReviewsQuery.data?.length ?? 0;
-                      const count =
-                        liveReviewsQuery.data?.filter((r) => Math.round(r.rating) === star).length ?? 0;
-                      const pct = total === 0 ? 0 : Math.round((count / total) * 100);
-                      return (
-                        <div key={star} className="flex items-center gap-2">
-                          <span className="text-xs w-4 text-muted-foreground">{star}</span>
-                          <Star size={11} fill="#F59E0B" className="text-amber-400" />
-                          <div className="flex-1 h-2 bg-surface-elevated rounded-full overflow-hidden">
-                            <div
-                              className="h-full rounded-full bg-primary"
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
-                          <span className="text-xs text-muted-foreground w-6">{pct}%</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : null}
-
-              {/* Empty state */}
-              {!liveReviewsQuery.isLoading && liveReviewsQuery.data?.length === 0 ? (
-                <div className="py-8 text-center rounded-[var(--radius-xl)] border border-dashed border-border">
-                  <MessageCircle size={36} className="mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-sm font-semibold text-foreground">
-                    {t("product.reviews.beFirstTitle")}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {t("product.reviews.beFirstSubtitle")}
-                  </p>
-                </div>
-              ) : null}
-
-              {/* Write review */}
-              {authenticated ? (
-                <div className="border border-border rounded-[var(--radius-xl)] p-5 bg-card">
-                  <p className="text-sm font-semibold text-foreground mb-2">
-                    {t("product.reviews.writeTitle")}
-                  </p>
-                  <div className="flex items-center gap-1 mb-3">
-                    {[1, 2, 3, 4, 5].map((n) => (
-                      <button
-                        key={n}
-                        onClick={() => setReviewDraft((d) => ({ ...d, rating: n }))}
-                        type="button"
-                        aria-label={`Rate ${n} star${n > 1 ? "s" : ""}`}
-                      >
-                        <Star
-                          size={20}
-                          fill={n <= reviewDraft.rating ? "#F59E0B" : "#e5e7eb"}
-                          className={n <= reviewDraft.rating ? "text-amber-400" : "text-gray-200"}
-                        />
-                      </button>
-                    ))}
-                  </div>
-                  <textarea
-                    value={reviewDraft.comment}
-                    onChange={(e) => setReviewDraft((d) => ({ ...d, comment: e.target.value }))}
-                    rows={3}
-                    placeholder={t("product.reviews.placeholder")}
-                    className="w-full px-3 py-2 border border-border rounded-[var(--radius-md)] text-sm outline-none focus:border-primary resize-none bg-background"
-                  />
-                  <button
-                    onClick={() => submitReview.mutate(reviewDraft)}
-                    disabled={submitReview.isPending || reviewDraft.comment.trim().length === 0}
-                    className="mt-3 px-4 py-2 rounded-[var(--radius-md)] bg-primary text-white text-sm font-semibold disabled:opacity-50 hover:opacity-90 transition-opacity"
-                  >
-                    {submitReview.isPending
-                      ? t("product.reviews.submitting")
-                      : t("product.reviews.submit")}
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => login(`/product/${id}`)}
-                  className="text-sm font-medium text-primary hover:underline"
-                >
-                  {t("product.reviews.loginToWrite")}
-                </button>
-              )}
-
-              {/* Review list */}
-              {liveReviewsQuery.isLoading ? (
-                <p className="text-sm text-muted-foreground">{t("product.reviews.loading")}</p>
-              ) : null}
-              {liveReviewsQuery.data && liveReviewsQuery.data.length > 0
-                ? liveReviewsQuery.data.map((review) => (
-                    <div key={review.id} className="bg-card border border-border rounded-[var(--radius-xl)] p-5">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-9 h-9 rounded-full bg-surface-elevated flex items-center justify-center text-xs font-bold text-muted-foreground shrink-0">
-                          {(review.userName ?? "?").charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm text-foreground">
-                            {review.userName ?? t("product.reviews.anonGuest")}
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <StarRating value={review.rating} size={13} />
-                            {review.createdAt ? (
-                              <span className="text-xs text-muted-foreground">· {review.createdAt}</span>
-                            ) : null}
-                          </div>
-                        </div>
-                      </div>
-                      {review.comment ? (
-                        <p className="text-sm text-foreground leading-relaxed mb-3">
-                          {review.comment}
-                        </p>
-                      ) : null}
-                      {review.images && review.images.length > 0 ? (
-                        <div className="flex gap-2 mb-3">
-                          {review.images.map((img) => (
-                            <img
-                              key={`${review.id}-${img}`}
-                              src={img}
-                              alt=""
-                              className="w-16 h-16 rounded-[var(--radius-md)] object-cover border border-border"
-                              loading="lazy"
-                            />
-                          ))}
-                          <ReviewVideoDisplay reviewId={review.id} />
-                        </div>
-                      ) : (
-                        <ReviewVideoDisplay reviewId={review.id} />
-                      )}
-                      <button
-                        onClick={() => voteHelpful.mutate(review.id)}
-                        disabled={voteHelpful.isPending}
-                        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-                      >
-                        <ThumbsUp size={13} />{" "}
-                        {t("product.reviews.helpful", { count: review.helpful ?? 0 })}
-                      </button>
-                    </div>
-                  ))
-                : !liveReviewsQuery.isLoading && liveReviewsQuery.data === undefined && (
-                    <div className="py-8 text-center">
-                      <MessageCircle size={40} className="mx-auto mb-3 text-muted-foreground opacity-30" />
-                      <p className="text-muted-foreground">{t("product.reviews.empty")}</p>
-                    </div>
-                  )}
-            </div>
+            <ProductReviewsSection
+              controller={reviewController}
+              authenticated={authenticated}
+              onLogin={() => login(`/product/${id}`)}
+            />
           ) : null}
 
           {/* Q&A tab */}
@@ -1033,7 +936,10 @@ export function ProductPage() {
               {liveQuestionsQuery.data && liveQuestionsQuery.data.length > 0 ? (
                 <div className="space-y-4">
                   {liveQuestionsQuery.data.map((q) => (
-                    <div key={q.id} className="bg-card border border-border rounded-[var(--radius-xl)] p-5">
+                    <div
+                      key={q.id}
+                      className="bg-card border border-border rounded-[var(--radius-xl)] p-5"
+                    >
                       <div className="flex gap-3 mb-2">
                         <span className="shrink-0 w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center">
                           Q
@@ -1065,7 +971,8 @@ export function ProductPage() {
             </div>
           ) : null}
 
-          {activeTab === "videos" ? <div
+          {activeTab === "videos" ? (
+            <div
               className="grid grid-cols-1 sm:grid-cols-2 gap-4"
               aria-busy={isProductVideosLoading}
               aria-live="polite"
@@ -1095,7 +1002,10 @@ export function ProductPage() {
                     <VideoPlayer
                       src={video.playbackUrl ?? ""}
                       poster={video.thumbnailUrl ?? ""}
-                      title={t("video.tab.videoLabel", { index: i + 1, total: productVideos.length })}
+                      title={t("video.tab.videoLabel", {
+                        index: i + 1,
+                        total: productVideos.length,
+                      })}
                       className="w-full aspect-video rounded-[var(--radius-lg)]"
                     />
                   </div>
@@ -1105,7 +1015,8 @@ export function ProductPage() {
                   {t("video.tab.empty")}
                 </p>
               )}
-            </div> : null}
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -1130,7 +1041,7 @@ export function ProductPage() {
       {recentlyViewed.length > 0 ? (
         <RecentlyViewedGrid
           title={t("product.recentlyViewed", { defaultValue: "Recently Viewed" })}
-          items={recentlyViewed.filter(item => item.productId !== id).slice(0, 5)}
+          items={recentlyViewed.filter((item) => item.productId !== id).slice(0, 5)}
         />
       ) : null}
     </div>

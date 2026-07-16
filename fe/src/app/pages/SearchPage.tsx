@@ -1,20 +1,46 @@
-import { SlidersHorizontal, Star, X, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import {
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  SlidersHorizontal,
+  Star,
+  X,
+} from "lucide-react";
 import { motion } from "motion/react";
 import { useState, useMemo, useEffect, memo } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router";
 
-import { FacetList } from "../components/facet-list";
+import { SearchFilters } from "../../features/catalog/components/search-filters";
+import {
+  resolveSearchDataSource,
+  resolveSearchDisplayState,
+} from "../../features/catalog/search-display-state";
+import {
+  clearSearchFilters,
+  readSearchRouteState,
+  updateSearchRouteState,
+  type SearchRouteState,
+} from "../../features/catalog/search-route-state";
+import { AsyncState } from "../../shared/ui/async-state";
+import { Button } from "../../shared/ui/button";
+import { Dialog } from "../../shared/ui/dialog";
+import { Skeleton } from "../../shared/ui/skeleton";
+import { Surface } from "../../shared/ui/surface";
 import { ImageWithFallback } from "../components/image-with-fallback";
 import { useVNShop } from "../components/vnshop-context";
 import { categoryDisplayLabel, useCategories } from "../hooks/use-categories";
 import { useProducts } from "../hooks/use-products";
-import { useResettableState } from "../hooks/use-resettable-state";
 import { useSearch } from "../hooks/use-search";
 import { useSearchFacets } from "../hooks/use-search-facets";
 import { flattenCategoryTree } from "../lib/api/endpoints/categories";
 import { formatPrice } from "../lib/format";
-import { normalizeSearchSort, requiresBackendSearch } from "../lib/search-view";
+import {
+  requiresBackendSearch,
+  validatePriceRange,
+  type PriceRangeError,
+} from "../lib/search-view";
 import type { Product } from "../types/ui";
 
 const getScrollKey = () => `scroll:${window.location.pathname}${window.location.search}`;
@@ -128,71 +154,80 @@ const ProductCard = memo(function ProductCard({
 });
 
 const PAGE_SIZE = 20;
+const PRODUCT_SKELETON_IDS = Array.from({ length: 8 }, (_, index) => `product-skeleton-${index}`);
+
+function ProductGridSkeleton() {
+  return (
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-[repeat(auto-fill,minmax(200px,1fr))]">
+      {PRODUCT_SKELETON_IDS.map((id) => (
+        <Surface key={id} padding="none" className="overflow-hidden">
+          <Skeleton className="aspect-square w-full rounded-none" />
+          <div className="space-y-2 p-3">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-5 w-1/2" />
+          </div>
+        </Surface>
+      ))}
+    </div>
+  );
+}
 
 export function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const query = searchParams.get("q") ?? "";
-  const selectedCat = searchParams.get("cat") ?? "";
-  const isFlash = searchParams.get("flash") === "true";
-  const { t } = useTranslation();
-
-  const priceMin = searchParams.get("priceMin") ?? "";
-  const priceMax = searchParams.get("priceMax") ?? "";
-  const sortBy = normalizeSearchSort(searchParams.get("sort"));
-
-  const [localPriceMin, setLocalPriceMin] = useState(priceMin);
-  const [localPriceMax, setLocalPriceMax] = useState(priceMax);
-  const [minRating, setMinRating] = useState(() => {
-    const v = searchParams.get("minRating");
-    return v ? Number(v) : 0;
-  });
-  const [freeShipOnly, setFreeShipOnly] = useState(() => searchParams.get("freeShip") === "true");
-  const [sameDay, setSameDay] = useState(() => searchParams.get("sameDay") === "true");
-  const [verifiedOnly, setVerifiedOnly] = useState(
-    () => searchParams.get("verifiedOnly") === "true",
-  );
-  const [officialOnly, setOfficialOnly] = useState(
-    () => searchParams.get("officialOnly") === "true",
-  );
-  const [selectedBrand, setSelectedBrand] = useState(() => searchParams.get("brand") ?? "");
-
-  // Sync filter state to URL params so deep-links and browser back work correctly.
-  useEffect(() => {
-    setSearchParams(
-      (prev) => {
-        const p = new URLSearchParams(prev);
-        if (minRating > 0) p.set("minRating", String(minRating));
-        else p.delete("minRating");
-        if (freeShipOnly) p.set("freeShip", "true");
-        else p.delete("freeShip");
-        if (selectedBrand) p.set("brand", selectedBrand);
-        else p.delete("brand");
-        if (sameDay) p.set("sameDay", "true");
-        else p.delete("sameDay");
-        if (verifiedOnly) p.set("verifiedOnly", "true");
-        else p.delete("verifiedOnly");
-        if (officialOnly) p.set("officialOnly", "true");
-        else p.delete("officialOnly");
-        // Only update if actually different to avoid infinite loop
-        if (p.toString() === prev.toString()) return prev;
-        return p;
-      },
-      { replace: true },
-    );
-  }, [
+  const routeState = useMemo(() => readSearchRouteState(searchParams), [searchParams]);
+  const {
+    q: query,
+    cat: selectedCat,
+    flash: isFlash,
+    priceMin,
+    priceMax,
+    sort: sortBy,
     minRating,
-    freeShipOnly,
-    selectedBrand,
+    freeShip: freeShipOnly,
     sameDay,
     verifiedOnly,
     officialOnly,
-    setSearchParams,
-  ]);
+    brand: selectedBrand,
+    page: currentPage,
+  } = routeState;
+  const { t } = useTranslation();
 
-  // Current page for pagination
-  const filterSignature = `${query}|${selectedCat}|${selectedBrand}|${priceMin}|${priceMax}|${minRating}|${freeShipOnly}|${sameDay}|${verifiedOnly}|${officialOnly}|${sortBy}|${isFlash}`;
-  const [currentPage, setCurrentPage] = useResettableState(1, filterSignature);
-  const [pageSize] = useResettableState(PAGE_SIZE, filterSignature);
+  const [localPriceMin, setLocalPriceMin] = useState(priceMin);
+  const [localPriceMax, setLocalPriceMax] = useState(priceMax);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const priceRangeError = validatePriceRange(localPriceMin, localPriceMax);
+  const appliedPriceRangeError = validatePriceRange(priceMin, priceMax);
+  const appliedPriceMin = appliedPriceRangeError ? "" : priceMin;
+  const appliedPriceMax = appliedPriceRangeError ? "" : priceMax;
+  // Price fields are drafts. Applied filters are always owned by the URL contract.
+  useEffect(() => {
+    setLocalPriceMin(priceMin);
+    setLocalPriceMax(priceMax);
+  }, [priceMin, priceMax]);
+
+  const pageSize = PAGE_SIZE;
+
+  const updateRoute = (
+    updates: Partial<SearchRouteState>,
+    options?: { resetPage?: boolean; replace?: boolean },
+  ) => {
+    setSearchParams(
+      (previous) => updateSearchRouteState(previous, updates, { resetPage: options?.resetPage }),
+      { replace: options?.replace ?? true },
+    );
+  };
+
+  const setMinRating = (value: number) => updateRoute({ minRating: value });
+  const setFreeShipOnly = (value: boolean) => updateRoute({ freeShip: value });
+  const setSameDay = (value: boolean) => updateRoute({ sameDay: value });
+  const setVerifiedOnly = (value: boolean) => updateRoute({ verifiedOnly: value });
+  const setOfficialOnly = (value: boolean) => updateRoute({ officialOnly: value });
+  const setSelectedBrand = (value: string) => updateRoute({ brand: value });
+  const setCurrentPage = (next: number | ((current: number) => number)) => {
+    const page = typeof next === "function" ? next(currentPage) : next;
+    updateRoute({ page }, { resetPage: false, replace: false });
+  };
 
   // Restore scroll on back-navigation
   useEffect(() => {
@@ -205,41 +240,44 @@ export function SearchPage() {
   }, []);
 
   const setPriceFromUrl = (min: string, max: string) => {
-    setSearchParams((prev) => {
-      const p = new URLSearchParams(prev);
-      if (min) p.set("priceMin", min);
-      else p.delete("priceMin");
-      if (max) p.set("priceMax", max);
-      else p.delete("priceMax");
-      return p;
-    });
+    if (validatePriceRange(min, max)) return;
+    updateRoute({ priceMin: min, priceMax: max });
     setLocalPriceMin(min);
     setLocalPriceMax(max);
   };
 
-  const setSortBy = (v: string) =>
-    setSearchParams((prev) => {
-      const p = new URLSearchParams(prev);
-      if (v && v !== "popular") p.set("sort", v);
-      else p.delete("sort");
-      return p;
-    });
-
-  const setCategory = (next: string) => {
-    setSearchParams((prev) => {
-      const params = new URLSearchParams(prev);
-      if (next) params.set("cat", next);
-      else params.delete("cat");
-      return params;
-    });
+  const priceRangeErrorMessage = (error: PriceRangeError | null) => {
+    if (!error) return "";
+    const messages: Record<PriceRangeError, string> = {
+      "min-negative": t("search.priceMinNegative", {
+        defaultValue: "Minimum price cannot be negative.",
+      }),
+      "max-negative": t("search.priceMaxNegative", {
+        defaultValue: "Maximum price cannot be negative.",
+      }),
+      "min-greater-than-max": t("search.priceOrderInvalid", {
+        defaultValue: "Minimum price cannot be greater than maximum price.",
+      }),
+      "min-invalid": t("search.priceMinInvalid", {
+        defaultValue: "Enter a valid minimum price.",
+      }),
+      "max-invalid": t("search.priceMaxInvalid", {
+        defaultValue: "Enter a valid maximum price.",
+      }),
+    };
+    return messages[error];
   };
+
+  const setSortBy = (value: SearchRouteState["sort"]) => updateRoute({ sort: value });
+
+  const setCategory = (next: string) => updateRoute({ cat: next });
 
   const searchEnabled = requiresBackendSearch({
     query,
     category: selectedCat,
     brand: selectedBrand,
-    minPrice: priceMin,
-    maxPrice: priceMax,
+    minPrice: appliedPriceMin,
+    maxPrice: appliedPriceMax,
     sameDay,
     verifiedOnly,
     officialOnly,
@@ -251,8 +289,8 @@ export function SearchPage() {
       q: query || undefined,
       category: selectedCat || undefined,
       brand: selectedBrand || undefined,
-      minPrice: priceMin ? Number(priceMin) * 1000 : undefined,
-      maxPrice: priceMax ? Number(priceMax) * 1000 : undefined,
+      minPrice: appliedPriceMin ? Number(appliedPriceMin) * 1000 : undefined,
+      maxPrice: appliedPriceMax ? Number(appliedPriceMax) * 1000 : undefined,
       sort: sortBy === "popular" ? undefined : sortBy,
       page: currentPage - 1,
       size: pageSize,
@@ -267,19 +305,28 @@ export function SearchPage() {
     q: query || undefined,
     category: selectedCat || undefined,
     brand: selectedBrand || undefined,
-    minPrice: priceMin ? Number(priceMin) * 1000 : undefined,
-    maxPrice: priceMax ? Number(priceMax) * 1000 : undefined,
+    minPrice: appliedPriceMin ? Number(appliedPriceMin) * 1000 : undefined,
+    maxPrice: appliedPriceMax ? Number(appliedPriceMax) * 1000 : undefined,
     sameDay: sameDay || undefined,
     verifiedOnly: verifiedOnly || undefined,
     officialOnly: officialOnly || undefined,
     enabled: searchEnabled,
   });
 
-  const { data: localCatalog = [] } = useProducts({ categoryId: selectedCat || undefined });
+  const catalogQuery = useProducts({ categoryId: selectedCat || undefined });
+  const localCatalog = catalogQuery.data ?? [];
   const { data: categories = [] } = useCategories();
   const flatCategories = useMemo(() => flattenCategoryTree(categories), [categories]);
 
-  const usedBackend = searchEnabled && !search.error;
+  const sourceState = resolveSearchDataSource({
+    searchEnabled,
+    searchLoading: search.isLoading,
+    searchHasError: Boolean(search.error),
+    searchTotalElements: search.totalElements,
+    searchProductCount: search.products.length,
+    catalogProductCount: localCatalog.length,
+  });
+  const usedBackend = sourceState.source === "search";
   const catalog = usedBackend ? search.products : localCatalog;
 
   const filtered = useMemo(() => {
@@ -287,6 +334,7 @@ export function SearchPage() {
     if (isFlash) list = list.filter((p) => (p.discount ?? 0) >= 20 || p.badge === "flash");
     if (!usedBackend) {
       if (selectedCat) list = list.filter((p) => p.category === selectedCat);
+      if (selectedBrand) list = list.filter((p) => p.brand === selectedBrand);
       if (query) {
         const q = query.toLowerCase();
         list = list.filter(
@@ -297,8 +345,8 @@ export function SearchPage() {
         );
       }
     }
-    if (priceMin) list = list.filter((p) => p.price >= Number(priceMin) * 1000);
-    if (priceMax) list = list.filter((p) => p.price <= Number(priceMax) * 1000);
+    if (appliedPriceMin) list = list.filter((p) => p.price >= Number(appliedPriceMin) * 1000);
+    if (appliedPriceMax) list = list.filter((p) => p.price <= Number(appliedPriceMax) * 1000);
     if (minRating > 0) list = list.filter((p) => p.rating >= minRating);
     if (freeShipOnly) list = list.filter((p) => p.shippingFee === 0);
     if (sameDay) list = list.filter((p) => p.sameDayDelivery);
@@ -310,9 +358,6 @@ export function SearchPage() {
         break;
       case "price-high":
         list.sort((a, b) => b.price - a.price);
-        break;
-      case "rating":
-        list.sort((a, b) => b.rating - a.rating);
         break;
       case "newest":
         list.sort((a, b) => (b.badge === "new" ? 1 : 0) - (a.badge === "new" ? 1 : 0));
@@ -326,8 +371,9 @@ export function SearchPage() {
     usedBackend,
     query,
     selectedCat,
-    priceMin,
-    priceMax,
+    selectedBrand,
+    appliedPriceMin,
+    appliedPriceMax,
     minRating,
     freeShipOnly,
     sameDay,
@@ -343,24 +389,29 @@ export function SearchPage() {
   const paginated = usedBackend
     ? filtered
     : filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const displayState = resolveSearchDisplayState({
+    searchEnabled,
+    searchLoading: search.isLoading,
+    searchHasError: Boolean(search.error),
+    searchTotalElements: search.totalElements,
+    searchProductCount: search.products.length,
+    catalogLoading: catalogQuery.isLoading,
+    catalogHasError: Boolean(catalogQuery.error),
+    catalogProductCount: localCatalog.length,
+    visibleProductCount: paginated.length,
+  });
+
+  const retryResults = () => {
+    const requests: Promise<unknown>[] = [catalogQuery.refetch()];
+    if (searchEnabled) requests.push(search.refetch());
+    void Promise.allSettled(requests);
+  };
 
   const clearFilters = () => {
-    setMinRating(0);
-    setFreeShipOnly(false);
-    setSameDay(false);
-    setVerifiedOnly(false);
-    setOfficialOnly(false);
-    setSelectedBrand("");
     setLocalPriceMin("");
     setLocalPriceMax("");
-    setSearchParams((prev) => {
-      const p = new URLSearchParams();
-      const q = prev.get("q");
-      if (q) p.set("q", q);
-      const flash = prev.get("flash");
-      if (flash) p.set("flash", flash);
-      return p;
-    });
+    setFiltersOpen(false);
+    setSearchParams((previous) => clearSearchFilters(previous), { replace: true });
   };
 
   const activeFilters: { label: string; onRemove: () => void }[] = [];
@@ -374,9 +425,9 @@ export function SearchPage() {
   if (selectedBrand) {
     activeFilters.push({ label: selectedBrand, onRemove: () => setSelectedBrand("") });
   }
-  if (priceMin || priceMax) {
+  if (appliedPriceMin || appliedPriceMax) {
     activeFilters.push({
-      label: `${priceMin ? `${priceMin}k` : "0"} – ${priceMax ? `${priceMax}k` : "∞"}`,
+      label: `${appliedPriceMin ? `${appliedPriceMin}k` : "0"} – ${appliedPriceMax ? `${appliedPriceMax}k` : "∞"}`,
       onRemove: () => setPriceFromUrl("", ""),
     });
   }
@@ -389,13 +440,60 @@ export function SearchPage() {
   if (freeShipOnly) {
     activeFilters.push({ label: t("search.freeShipping"), onRemove: () => setFreeShipOnly(false) });
   }
+  if (sameDay) {
+    activeFilters.push({
+      label: t("search.sameDayDelivery", { defaultValue: "Same-day delivery" }),
+      onRemove: () => setSameDay(false),
+    });
+  }
+  if (verifiedOnly) {
+    activeFilters.push({
+      label: t("search.verifiedOnly", { defaultValue: "Verified sellers" }),
+      onRemove: () => setVerifiedOnly(false),
+    });
+  }
+  if (officialOnly) {
+    activeFilters.push({
+      label: t("search.officialStores", { defaultValue: "Official stores" }),
+      onRemove: () => setOfficialOnly(false),
+    });
+  }
 
-  const sortOptions = [
+  const sortOptions: readonly { v: SearchRouteState["sort"]; l: string }[] = [
     { v: "popular", l: t("search.sort.shortPopular") },
     { v: "price-low", l: t("search.sort.shortPriceLow") },
     { v: "price-high", l: t("search.sort.shortPriceHigh") },
     { v: "newest", l: t("search.sort.shortNewest") },
   ];
+
+  const filterProps = {
+    categories: flatCategories,
+    facets,
+    values: {
+      selectedCategory: selectedCat,
+      selectedBrand,
+      priceMin: localPriceMin,
+      priceMax: localPriceMax,
+      minRating,
+      freeShipping: freeShipOnly,
+      sameDay,
+      verifiedOnly,
+      officialOnly,
+    },
+    hasActiveFilters: activeFilters.length > 0,
+    priceError: priceRangeErrorMessage(priceRangeError) || null,
+    onClear: clearFilters,
+    onCategoryChange: setCategory,
+    onBrandChange: setSelectedBrand,
+    onPriceMinChange: setLocalPriceMin,
+    onPriceMaxChange: setLocalPriceMax,
+    onApplyPrice: () => setPriceFromUrl(localPriceMin, localPriceMax),
+    onRatingChange: setMinRating,
+    onFreeShippingChange: setFreeShipOnly,
+    onSameDayChange: setSameDay,
+    onVerifiedChange: setVerifiedOnly,
+    onOfficialChange: setOfficialOnly,
+  };
 
   // Pagination helper: build page numbers with ellipsis
   const getPageNumbers = () => {
@@ -424,294 +522,209 @@ export function SearchPage() {
           : t("search.allProducts", { defaultValue: "All Products" })}
       </h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
-        {/* ── Filter Sidebar ── */}
-        <aside>
-          <div className="bg-card border border-border rounded-[var(--radius-xl)] p-5 lg:sticky lg:top-[80px] h-fit">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-2">
-                <SlidersHorizontal size={16} className="text-foreground" />
-                <span className="font-semibold text-foreground">{t("search.filtersTitle")}</span>
-              </div>
-              {activeFilters.length > 0 ? (
-                <button
-                  onClick={clearFilters}
-                  className="text-xs font-medium text-primary hover:underline"
-                >
-                  {t("search.clearAll")}
-                </button>
-              ) : null}
-            </div>
+      <div className="mb-4 flex items-center justify-between gap-3 lg:hidden">
+        <Button
+          variant="outline"
+          aria-label={t("search.openFilters", { defaultValue: "Open filters" })}
+          onClick={() => setFiltersOpen(true)}
+        >
+          <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+          {t("search.filtersTitle", { defaultValue: "Filters" })}
+          {activeFilters.length > 0 ? (
+            <span className="rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
+              {activeFilters.length}
+            </span>
+          ) : null}
+        </Button>
+      </div>
 
-            {/* Category */}
-            <div className="mb-5">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2.5">
-                {t("search.categoriesTitle")}
-              </p>
-              <div className="space-y-1.5">
-                {flatCategories.map((cat) => {
-                  const checked = selectedCat === cat.id;
-                  return (
-                    <label key={cat.id} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => setCategory(checked ? "" : cat.id)}
-                        className="w-4 h-4 rounded border-border accent-primary"
-                      />
-                      <span className="text-sm text-foreground">{categoryDisplayLabel(cat)}</span>
-                    </label>
-                  );
-                })}
-                {/* BE-driven category facets */}
-                {facets.categories.length > 0 ? (
-                  <FacetList
-                    title=""
-                    entries={facets.categories}
-                    selected={selectedCat}
-                    onToggle={(key) => setCategory(selectedCat === key ? "" : key)}
-                    formatLabel={(key) => {
-                      const cat = flatCategories.find((c) => c.id === key);
-                      return cat ? categoryDisplayLabel(cat) : key;
-                    }}
-                  />
-                ) : null}
-              </div>
-            </div>
+      <Dialog
+        open={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        title={t("search.filtersTitle", { defaultValue: "Filters" })}
+        closeLabel={t("search.closeFilters", { defaultValue: "Close filters" })}
+        size="md"
+        scrollable
+        footer={
+          <Button onClick={() => setFiltersOpen(false)} className="w-full sm:w-auto">
+            {t("search.showResults", { defaultValue: "Show results" })}
+          </Button>
+        }
+      >
+        <SearchFilters idPrefix="mobile" {...filterProps} />
+      </Dialog>
 
-            {/* Price Range */}
-            <div className="mb-5 pt-4 border-t border-border">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2.5">
-                {t("search.priceHeader")}
-              </p>
-              <div className="flex gap-2 mb-2">
-                <input
-                  value={localPriceMin}
-                  onChange={(e) => setLocalPriceMin(e.target.value)}
-                  placeholder={t("search.priceFrom")}
-                  type="number"
-                  className="flex-1 min-w-0 px-3 py-2 border border-border rounded-[var(--radius-sm)] text-xs outline-none focus:border-primary bg-background"
-                />
-                <span className="text-xs text-muted-foreground self-center">—</span>
-                <input
-                  value={localPriceMax}
-                  onChange={(e) => setLocalPriceMax(e.target.value)}
-                  placeholder={t("search.priceTo")}
-                  type="number"
-                  className="flex-1 min-w-0 px-3 py-2 border border-border rounded-[var(--radius-sm)] text-xs outline-none focus:border-primary bg-background"
-                />
-              </div>
-              <button
-                onClick={() => setPriceFromUrl(localPriceMin, localPriceMax)}
-                className="w-full py-1.5 rounded-[var(--radius-lg)] border border-border text-xs font-medium text-foreground hover:border-primary hover:text-primary transition-colors"
-              >
-                {t("search.priceApply", { defaultValue: "Apply Price" })}
-              </button>
-            </div>
-
-            {/* Rating */}
-            <div className="mb-5 pt-4 border-t border-border">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2.5">
-                {t("search.ratingHeader")}
-              </p>
-              <div className="space-y-1.5">
-                {[5, 4, 3].map((r) => {
-                  const checked = minRating === r;
-                  return (
-                    <label key={r} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => setMinRating(checked ? 0 : r)}
-                        className="w-4 h-4 rounded border-border accent-primary"
-                      />
-                      <span className="flex items-center gap-1">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <Star
-                            key={i} // eslint-disable-line react/no-array-index-key
-                            size={12}
-                            fill={i < r ? "var(--rating)" : "transparent"}
-                            className={i < r ? "text-amber-400" : "text-muted-foreground"}
-                          />
-                        ))}
-                        <span className="text-xs text-foreground ml-0.5">
-                          {t("search.andUp", { defaultValue: "& up" })}
-                        </span>
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Shipping */}
-            <div className="mb-5 pt-4 border-t border-border">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2.5">
-                {t("search.shippingHeader", { defaultValue: "Shipping" })}
-              </p>
-              <div className="space-y-1.5">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={freeShipOnly}
-                    onChange={() => setFreeShipOnly(!freeShipOnly)}
-                    className="w-4 h-4 rounded border-border accent-primary"
-                  />
-                  <span className="text-sm text-foreground">
-                    {t("search.freeShippingTag", { defaultValue: "Free shipping" })}
-                  </span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={sameDay}
-                    onChange={() => setSameDay(!sameDay)}
-                    className="w-4 h-4 rounded border-border accent-primary"
-                  />
-                  <span className="text-sm text-foreground">
-                    {t("search.sameDayDelivery", { defaultValue: "Same-day delivery" })}
-                  </span>
-                </label>
-              </div>
-            </div>
-
-            {/* Seller */}
-            <div className="mb-5 pt-4 border-t border-border">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2.5">
-                {t("search.brandsTitle")}
-              </p>
-              <div className="space-y-1.5">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={verifiedOnly}
-                    onChange={() => setVerifiedOnly(!verifiedOnly)}
-                    className="w-4 h-4 rounded border-border accent-primary"
-                  />
-                  <span className="text-sm text-foreground">
-                    {t("search.verifiedOnly", { defaultValue: "Verified only" })}
-                  </span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={officialOnly}
-                    onChange={() => setOfficialOnly(!officialOnly)}
-                    className="w-4 h-4 rounded border-border accent-primary"
-                  />
-                  <span className="text-sm text-foreground">
-                    {t("search.officialStores", { defaultValue: "Official stores" })}
-                  </span>
-                </label>
-              </div>
-
-              {/* BE-driven brand facets */}
-              <FacetList
-                title=""
-                entries={facets.brands}
-                selected={selectedBrand}
-                onToggle={(key) => setSelectedBrand(selectedBrand === key ? "" : key)}
-              />
-            </div>
-          </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+        <aside className="hidden lg:block">
+          <Surface padding="md" className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto">
+            <SearchFilters idPrefix="desktop" {...filterProps} />
+          </Surface>
         </aside>
 
         {/* ── Results Area ── */}
         <div className="min-w-0">
-          {/* Active filter pills */}
           {activeFilters.length > 0 ? (
-            <div className="flex flex-wrap gap-2 mb-4">
+            <div
+              className="mb-4 flex flex-wrap gap-2"
+              aria-label={t("search.activeFilters", { defaultValue: "Active filters" })}
+            >
               {activeFilters.map((f) => (
-                <button
+                <Button
                   key={f.label}
+                  variant="ghost"
+                  size="sm"
                   onClick={f.onRemove}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary-light text-primary text-xs font-medium rounded-full border border-primary/15 cursor-pointer hover:bg-error/10 hover:text-error hover:border-error/20 transition-colors"
+                  className="rounded-full border-primary/15 bg-primary-light text-xs text-primary hover:border-error/20 hover:bg-error/10 hover:text-error"
                 >
                   {f.label}
-                  <X size={12} />
-                </button>
+                  <X className="h-3.5 w-3.5" aria-hidden="true" />
+                </Button>
               ))}
             </div>
           ) : null}
 
-          {/* Search toolbar */}
-          <div className="flex items-center justify-between p-3 px-4 bg-card border border-border rounded-[var(--radius-lg)] mb-4">
-            <p aria-live="polite" aria-atomic="true" className="text-sm text-text-secondary">
-              {query ? (
-                totalCount === 0 ? (
-                  <span>
-                    {t("search.noResultsFor", {
-                      query,
-                      defaultValue: "No results for '{{query}}'",
-                    })}
-                  </span>
-                ) : (
-                  <span>
-                    {t("search.showingRange", {
-                      start: (currentPage - 1) * pageSize + 1,
-                      end: Math.min(currentPage * pageSize, filtered.length),
-                      total: totalCount,
-                      query,
-                      defaultValue:
-                        "Showing {{start}}–{{end}} of {{total}} results for '{{query}}'",
-                    })}
-                  </span>
-                )
-              ) : (
-                <>
-                  <span className="font-medium text-foreground">{totalCount}</span>{" "}
-                  {t("search.allProducts")}
-                </>
-              )}
+          <Surface
+            padding="sm"
+            className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <p
+              aria-live="polite"
+              aria-atomic="true"
+              className="min-w-0 text-sm text-muted-foreground"
+            >
+              {displayState.status === "loading"
+                ? t("search.loading", { defaultValue: "Loading products…" })
+                : displayState.status === "error"
+                  ? t("search.resultsUnavailable", { defaultValue: "Results unavailable" })
+                  : query && totalCount > 0
+                    ? t("search.showingRange", {
+                        start: (currentPage - 1) * pageSize + 1,
+                        end: Math.min(currentPage * pageSize, totalCount),
+                        total: totalCount,
+                        query,
+                        defaultValue:
+                          "Showing {{start}}–{{end}} of {{total}} results for '{{query}}'",
+                      })
+                    : query
+                      ? t("search.noResultsFor", {
+                          query,
+                          defaultValue: "No results for '{{query}}'",
+                        })
+                      : t("search.productCount", {
+                          count: totalCount,
+                          defaultValue: "{{count}} products",
+                        })}
             </p>
 
-            {/* Sort pills */}
-            <div className="flex items-center gap-1.5 flex-wrap">
+            <div
+              role="group"
+              aria-label={t("search.sortLabel", { defaultValue: "Sort products" })}
+              className="flex max-w-full shrink-0 gap-1 overflow-x-auto rounded-[var(--radius-control)] border border-border bg-muted p-1"
+            >
               {sortOptions.map((opt) => {
                 const active = sortBy === opt.v;
                 return (
-                  <button
+                  <Button
                     key={opt.v}
+                    variant={active ? "primary" : "ghost"}
+                    size="sm"
+                    aria-pressed={active}
                     onClick={() => setSortBy(opt.v)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
-                      active
-                        ? "bg-primary text-white border-primary shadow-[0_2px_8px_oklch(from_var(--primary)_l_c_h_/_0.25)]"
-                        : "border-border text-text-secondary hover:border-primary hover:text-primary"
-                    }`}
+                    className="shrink-0 border-transparent px-3 text-xs shadow-none"
                   >
                     {opt.l}
-                  </button>
+                  </Button>
                 );
               })}
             </div>
-          </div>
+          </Surface>
 
-          {/* Product grid / empty state */}
-          {paginated.length === 0 ? (
-            <div className="py-24 text-center bg-card border border-border rounded-[var(--radius-xl)]">
-              <Search size={48} className="mx-auto mb-4 text-muted-foreground opacity-30" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">
-                {t("search.emptyTitle")}
-              </h3>
-              <p className="text-sm text-muted-foreground mb-6">{t("search.emptySub")}</p>
-              <button
-                onClick={clearFilters}
-                className="px-6 py-2.5 rounded-[var(--radius-lg)] bg-primary text-white text-sm font-semibold hover:opacity-90 transition-opacity"
-              >
-                {t("search.emptyClear")}
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
-              {paginated.map((p, i) => (
-                <ProductCard key={p.id} product={p} index={i} />
+          {displayState.notice && displayState.status === "ready" ? (
+            <Surface
+              padding="sm"
+              role="status"
+              aria-live="polite"
+              className="mb-4 flex flex-col gap-3 border-warning/40 bg-warning-light sm:flex-row sm:items-center"
+            >
+              <AlertTriangle
+                className="h-5 w-5 shrink-0 text-[var(--color-warning-text)]"
+                aria-hidden="true"
+              />
+              <p className="min-w-0 flex-1 text-sm text-[var(--color-warning-text)]">
+                {displayState.notice === "search-unavailable"
+                  ? t("search.fallbackUnavailable", {
+                      defaultValue:
+                        "Search is temporarily unavailable. Showing available catalog products.",
+                    })
+                  : t("search.fallbackIndexing", {
+                      defaultValue:
+                        "Search results are still updating. Showing available catalog products.",
+                    })}
+              </p>
+              <Button variant="ghost" size="sm" onClick={retryResults} className="shrink-0">
+                {t("common.refresh", { defaultValue: "Refresh" })}
+              </Button>
+            </Surface>
+          ) : null}
+
+          <AsyncState
+            status={displayState.status}
+            retry={{
+              label: t("common.tryAgain", { defaultValue: "Try again" }),
+              onClick: retryResults,
+            }}
+            loading={<ProductGridSkeleton />}
+            error={
+              <Surface padding="lg" className="w-full py-16 text-center sm:py-20">
+                <Search
+                  className="mx-auto mb-4 h-10 w-10 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <h2 className="text-lg font-semibold text-foreground">
+                  {t("search.errorTitle", { defaultValue: "Products could not be loaded" })}
+                </h2>
+                <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+                  {t("search.errorDescription", {
+                    defaultValue: "Check your connection, then try loading the results again.",
+                  })}
+                </p>
+              </Surface>
+            }
+            empty={
+              <Surface padding="lg" className="py-16 text-center sm:py-20">
+                <Search
+                  className="mx-auto mb-4 h-10 w-10 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <h2 className="text-lg font-semibold text-foreground">
+                  {t("search.emptyTitle", { defaultValue: "No products found" })}
+                </h2>
+                <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+                  {t("search.emptySub", {
+                    defaultValue: "Try removing a filter or searching for a different product.",
+                  })}
+                </p>
+                <Button
+                  variant={activeFilters.length > 0 ? "primary" : "outline"}
+                  onClick={activeFilters.length > 0 ? clearFilters : retryResults}
+                  className="mt-6"
+                >
+                  {activeFilters.length > 0
+                    ? t("search.emptyClear", { defaultValue: "Clear filters" })
+                    : t("common.refresh", { defaultValue: "Refresh" })}
+                </Button>
+              </Surface>
+            }
+          >
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-[repeat(auto-fill,minmax(200px,1fr))]">
+              {paginated.map((product, index) => (
+                <ProductCard key={product.id} product={product} index={index} />
               ))}
             </div>
-          )}
+          </AsyncState>
 
           {/* Pagination */}
-          {totalPages > 1 ? (
+          {displayState.status === "ready" && totalPages > 1 ? (
             <nav aria-label="Pagination" className="flex items-center justify-center gap-1 mt-8">
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}

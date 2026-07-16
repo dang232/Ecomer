@@ -9,11 +9,7 @@ interface Props {
   onCompleted: () => void;
 }
 
-export function VietQrPaymentSection({
-  orderId,
-  idempotencyKey,
-  onCompleted,
-}: Props) {
+export function VietQrPaymentSection({ orderId, idempotencyKey, onCompleted }: Props) {
   const { t } = useTranslation();
   const [qr, setQr] = useState<{
     qrImageUrl: string;
@@ -65,7 +61,11 @@ export function VietQrPaymentSection({
   }, [qr, orderId, onCompleted]);
 
   if (error) {
-    return <div className="rounded-2xl border-2 border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>;
+    return (
+      <div className="rounded-2xl border-2 border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        {error}
+      </div>
+    );
   }
   if (!qr) {
     return (
@@ -76,7 +76,10 @@ export function VietQrPaymentSection({
   }
 
   return (
-    <div className="rounded-2xl border-2 border-border p-6 space-y-4 text-center" data-testid="vietqr-section">
+    <div
+      className="rounded-2xl border-2 border-border p-6 space-y-4 text-center"
+      data-testid="vietqr-section"
+    >
       <img
         src={qr.qrImageUrl}
         alt={t("vietqr.altText")}
@@ -94,9 +97,7 @@ export function VietQrPaymentSection({
           <strong>{t("vietqr.referenceLabel")}</strong> <code>{qr.reference}</code>
         </p>
       </div>
-      <p className="text-xs text-muted-foreground">
-        {t("vietqr.autoUpdate")}
-      </p>
+      <p className="text-xs text-muted-foreground">{t("vietqr.autoUpdate")}</p>
     </div>
   );
 }

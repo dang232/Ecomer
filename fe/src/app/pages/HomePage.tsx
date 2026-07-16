@@ -61,7 +61,13 @@ const SectionHeader = memo(function SectionHeader({
 });
 
 // ─── Product Card ─────────────────────────────────────────────────────────────
-const ProductCard = memo(function ProductCard({ product, index = 0 }: { product: Product; index?: number }) {
+const ProductCard = memo(function ProductCard({
+  product,
+  index = 0,
+}: {
+  product: Product;
+  index?: number;
+}) {
   const { t } = useTranslation();
   const { toggleWishlist, isWishlisted } = useVNShop();
   const loved = isWishlisted(product.id);
@@ -73,78 +79,79 @@ const ProductCard = memo(function ProductCard({ product, index = 0 }: { product:
       aria-label={product.name}
       data-testid="product-card"
     >
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: Math.min(index * 0.05, 0.4), duration: 0.3 }}
-      className="group bg-card border border-border rounded-[var(--radius-lg)] overflow-hidden cursor-pointer transition-all duration-[var(--duration-base)] hover:border-border-hover hover:shadow-lg hover:-translate-y-1"
-    >
-      {/* Image */}
-      <div className="relative aspect-square bg-surface-elevated overflow-hidden flex items-center justify-center">
-        <ImageWithFallback
-          src={product.image}
-          alt={product.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[var(--duration-base)]"
-        />
-        {/* Badge */}
-        {product.discount ? (
-          <span className="absolute top-2 left-2 px-2 py-0.5 rounded-[var(--radius-sm)] bg-error text-white text-[11px] font-semibold">
-            -{product.discount}%
-          </span>
-        ) : product.badge === "new" ? (
-          <span className="absolute top-2 left-2 px-2 py-0.5 rounded-[var(--radius-sm)] bg-primary text-white text-[11px] font-semibold">
-            New
-          </span>
-        ) : null}
-        {/* Wishlist */}
-        <button
-          className={`absolute top-2 right-2 w-8 h-8 rounded-full border flex items-center justify-center opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 scale-80 group-hover:scale-100 [@media(hover:none)]:scale-100 transition-all duration-[var(--duration-base)] ${
-            loved
-              ? "bg-error-light border-error text-error"
-              : "bg-card border-border text-muted-foreground hover:text-error hover:border-error hover:bg-error-light"
-          }`}
-          aria-label={loved ? "Remove from wishlist" : "Add to wishlist"}
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleWishlist(product.id);
-          }}
-        >
-          <Heart className="w-4 h-4" fill={loved ? "currentColor" : "none"} />
-        </button>
-      </div>
-
-      {/* Body */}
-      <div className="p-3">
-        <h3 className="text-sm font-medium text-foreground leading-snug line-clamp-2 mb-1.5 min-h-[2.5rem]">
-          {product.name}
-        </h3>
-        <div className="flex items-baseline gap-1.5 flex-wrap mb-1.5">
-          <span className="text-[var(--text-base)] font-bold text-primary">
-            {formatPrice(product.price)}
-          </span>
-          {product.originalPrice ? (
-            <span className="text-xs text-muted-foreground line-through">
-              {formatPrice(product.originalPrice)}
-            </span>
-          ) : null}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: Math.min(index * 0.05, 0.4), duration: 0.3 }}
+        className="group bg-card border border-border rounded-[var(--radius-lg)] overflow-hidden cursor-pointer transition-all duration-[var(--duration-base)] hover:border-border-hover hover:shadow-lg hover:-translate-y-1"
+      >
+        {/* Image */}
+        <div className="relative aspect-square bg-surface-elevated overflow-hidden flex items-center justify-center">
+          <ImageWithFallback
+            src={product.image}
+            alt={product.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[var(--duration-base)]"
+          />
+          {/* Badge */}
           {product.discount ? (
-            <span className="text-[11px] font-semibold text-error bg-error-light px-1.5 py-0.5 rounded">
+            <span className="absolute top-2 left-2 px-2 py-0.5 rounded-[var(--radius-sm)] bg-error text-white text-[11px] font-semibold">
               -{product.discount}%
             </span>
+          ) : product.badge === "new" ? (
+            <span className="absolute top-2 left-2 px-2 py-0.5 rounded-[var(--radius-sm)] bg-primary text-white text-[11px] font-semibold">
+              New
+            </span>
           ) : null}
+          {/* Wishlist */}
+          <button
+            className={`absolute top-2 right-2 w-8 h-8 rounded-full border flex items-center justify-center opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 scale-80 group-hover:scale-100 [@media(hover:none)]:scale-100 transition-all duration-[var(--duration-base)] ${
+              loved
+                ? "bg-error-light border-error text-error"
+                : "bg-card border-border text-muted-foreground hover:text-error hover:border-error hover:bg-error-light"
+            }`}
+            aria-label={loved ? "Remove from wishlist" : "Add to wishlist"}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleWishlist(product.id);
+            }}
+          >
+            <Heart className="w-4 h-4" fill={loved ? "currentColor" : "none"} />
+          </button>
         </div>
-        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <Star className="w-3 h-3 text-accent fill-accent" />
-            <span className="text-foreground font-medium">{product.rating}</span>
+
+        {/* Body */}
+        <div className="p-3">
+          <h3 className="text-sm font-medium text-foreground leading-snug line-clamp-2 mb-1.5 min-h-[2.5rem]">
+            {product.name}
+          </h3>
+          <div className="flex items-baseline gap-1.5 flex-wrap mb-1.5">
+            <span className="text-[var(--text-base)] font-bold text-primary">
+              {formatPrice(product.price)}
+            </span>
+            {product.originalPrice ? (
+              <span className="text-xs text-muted-foreground line-through">
+                {formatPrice(product.originalPrice)}
+              </span>
+            ) : null}
+            {product.discount ? (
+              <span className="text-[11px] font-semibold text-error bg-error-light px-1.5 py-0.5 rounded">
+                -{product.discount}%
+              </span>
+            ) : null}
           </div>
-          <span>·</span>
-          <span>
-            {product.sold >= 1000 ? `${(product.sold / 1000).toFixed(1)}k` : product.sold} {t("product.sold")}
-          </span>
+          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <Star className="w-3 h-3 text-accent fill-accent" />
+              <span className="text-foreground font-medium">{product.rating}</span>
+            </div>
+            <span>·</span>
+            <span>
+              {product.sold >= 1000 ? `${(product.sold / 1000).toFixed(1)}k` : product.sold}{" "}
+              {t("product.sold")}
+            </span>
+          </div>
         </div>
-      </div>
-    </motion.div>
+      </motion.div>
     </Link>
   );
 });
@@ -173,10 +180,7 @@ function HeroSection() {
       <div className="absolute -top-[60%] -right-[15%] w-[500px] h-[500px] rounded-full bg-white/[0.04] animate-pulse" />
       <div className="absolute -bottom-[40%] left-[20%] w-[300px] h-[300px] rounded-full bg-white/[0.03] animate-pulse" />
 
-      <div
-        className="relative z-10 max-w-[480px]"
-        style={{ padding: "clamp(32px, 5vw, 56px)" }}
-      >
+      <div className="relative z-10 max-w-[480px]" style={{ padding: "clamp(32px, 5vw, 56px)" }}>
         <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium text-white bg-white/[0.12] border border-white/10 backdrop-blur-sm mb-4">
           <Zap className="w-3.5 h-3.5" />
           {t("home.hero.eyebrow", { defaultValue: "Limited Time" })}
@@ -245,11 +249,7 @@ function CategoriesSection() {
           {categories.slice(0, 6).map((cat, i) => {
             const Icon = getCategoryIcon(cat.id ?? "");
             return (
-              <Link
-                key={cat.id}
-                to={`/search?cat=${cat.id}`}
-                className="block"
-              >
+              <Link key={cat.id} to={`/search?cat=${cat.id}`} className="block">
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -293,8 +293,6 @@ function FlashSaleSection() {
   const { h, m, s, isExpired } = useCountdown(earliestEnd ?? Date.now());
   const hasCampaigns = items.length > 0 && !isExpired;
 
-  if (!hasCampaigns && !isLoading) return null;
-
   return (
     <section className="mx-[var(--content-padding)] mb-6 bg-card border border-border rounded-[var(--radius-xl)] p-6 hover:shadow-sm transition-shadow">
       {/* Header */}
@@ -314,9 +312,7 @@ function FlashSaleSection() {
                 <span className="bg-foreground text-card text-sm font-bold px-2.5 py-1.5 rounded-[var(--radius-sm)] min-w-[34px] text-center tabular-nums">
                   {v}
                 </span>
-                {i < 2 ? (
-                  <span className="text-muted-foreground font-bold text-sm">:</span>
-                ) : null}
+                {i < 2 ? <span className="text-muted-foreground font-bold text-sm">:</span> : null}
               </div>
             ))}
           </div>
@@ -330,67 +326,76 @@ function FlashSaleSection() {
             <ProductCardSkeleton key={i} />
           ))}
         </div>
-      ) : (
+      ) : hasCampaigns ? (
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-4">
-          {items.slice(0, 5).map(({ campaign: c, product, isLoading: productLoading, isError }, i) => {
-            const discount = pctOff(c.originalPrice, c.salePrice);
-            const firstImage = product?.images?.[0];
-            const firstImageUrl = typeof firstImage === "string" ? firstImage : firstImage?.url;
-            const imageSrc = product?.image ?? firstImageUrl ?? "";
-            const productName = product?.name ?? `Product #${c.productId.slice(0, 8)}`;
+          {items
+            .slice(0, 5)
+            .map(({ campaign: c, product, isLoading: productLoading, isError }, i) => {
+              const discount = pctOff(c.originalPrice, c.salePrice);
+              const firstImage = product?.images?.[0];
+              const firstImageUrl = typeof firstImage === "string" ? firstImage : firstImage?.url;
+              const imageSrc = product?.image ?? firstImageUrl ?? "";
+              const productName = product?.name ?? `Product #${c.productId.slice(0, 8)}`;
 
-            return (
-              <Link
-                key={c.id}
-                to={`/product/${c.productId}`}
-                className="block"
-              >
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.06 }}
-                className="group bg-card border border-border rounded-[var(--radius-lg)] overflow-hidden cursor-pointer hover:border-border-hover hover:shadow-lg hover:-translate-y-1 transition-all duration-[var(--duration-base)]"
-              >
-                <div className="relative aspect-square bg-surface-elevated flex items-center justify-center overflow-hidden">
-                  {product && !productLoading && !isError && imageSrc ? (
-                    <ImageWithFallback
-                      src={imageSrc}
-                      alt={productName}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                  ) : (
-                    <Zap className="w-8 h-8 text-muted-foreground opacity-30" />
-                  )}
-                  {discount > 0 ? (
-                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded-[var(--radius-sm)] bg-error text-white text-[11px] font-semibold">
-                      -{discount}%
-                    </span>
-                  ) : null}
-                </div>
-                <div className="p-3">
-                  <p className="text-sm font-medium text-foreground line-clamp-2 mb-1.5 min-h-[2.5rem]">
-                    {productName}
-                  </p>
-                  <div className="flex items-baseline gap-1.5 flex-wrap">
-                    <span className="text-[var(--text-base)] font-bold text-primary">
-                      {formatPrice(c.salePrice)}
-                    </span>
-                    {c.originalPrice > c.salePrice ? (
-                      <span className="text-xs text-muted-foreground line-through">
-                        {formatPrice(c.originalPrice)}
-                      </span>
-                    ) : null}
-                    {discount > 0 ? (
-                      <span className="text-[11px] font-semibold text-error bg-error-light px-1.5 py-0.5 rounded">
-                        -{discount}%
-                      </span>
-                    ) : null}
-                  </div>
-                </div>
-              </motion.div>
-              </Link>
-            );
-          })}
+              return (
+                <Link key={c.id} to={`/product/${c.productId}`} className="block">
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.06 }}
+                    className="group bg-card border border-border rounded-[var(--radius-lg)] overflow-hidden cursor-pointer hover:border-border-hover hover:shadow-lg hover:-translate-y-1 transition-all duration-[var(--duration-base)]"
+                  >
+                    <div className="relative aspect-square bg-surface-elevated flex items-center justify-center overflow-hidden">
+                      {product && !productLoading && !isError && imageSrc ? (
+                        <ImageWithFallback
+                          src={imageSrc}
+                          alt={productName}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <Zap className="w-8 h-8 text-muted-foreground opacity-30" />
+                      )}
+                      {discount > 0 ? (
+                        <span className="absolute top-2 left-2 px-2 py-0.5 rounded-[var(--radius-sm)] bg-error text-white text-[11px] font-semibold">
+                          -{discount}%
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="p-3">
+                      <p className="text-sm font-medium text-foreground line-clamp-2 mb-1.5 min-h-[2.5rem]">
+                        {productName}
+                      </p>
+                      <div className="flex items-baseline gap-1.5 flex-wrap">
+                        <span className="text-[var(--text-base)] font-bold text-primary">
+                          {formatPrice(c.salePrice)}
+                        </span>
+                        {c.originalPrice > c.salePrice ? (
+                          <span className="text-xs text-muted-foreground line-through">
+                            {formatPrice(c.originalPrice)}
+                          </span>
+                        ) : null}
+                        {discount > 0 ? (
+                          <span className="text-[11px] font-semibold text-error bg-error-light px-1.5 py-0.5 rounded">
+                            -{discount}%
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  </motion.div>
+                </Link>
+              );
+            })}
+        </div>
+      ) : (
+        <div className="py-8 text-center">
+          <p className="text-base font-semibold text-foreground">
+            {t("flashSale.emptyTitle", { defaultValue: "No flash sale running right now" })}
+          </p>
+          <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
+            {t("flashSale.emptyBody", {
+              defaultValue: "Flash sales drop weekly. Browse the catalog while you wait.",
+            })}
+          </p>
         </div>
       )}
     </section>
@@ -409,13 +414,14 @@ const TRUST_ITEMS_CONFIG = [
 function TrustBar() {
   const { t } = useTranslation();
 
-  const trustItems = useMemo(() =>
-    TRUST_ITEMS_CONFIG.map((item) => ({
-      icon: item.icon,
-      title: t(item.titleKey, { defaultValue: item.titleKey }),
-      sub: t(item.subKey, { defaultValue: item.subKey }),
-    })),
-    [t]
+  const trustItems = useMemo(
+    () =>
+      TRUST_ITEMS_CONFIG.map((item) => ({
+        icon: item.icon,
+        title: t(item.titleKey, { defaultValue: item.titleKey }),
+        sub: t(item.subKey, { defaultValue: item.subKey }),
+      })),
+    [t],
   );
 
   return (
@@ -441,8 +447,11 @@ function TrustBar() {
 // ─── Products Section ─────────────────────────────────────────────────────────
 function ProductsSection() {
   const { t } = useTranslation();
-  const { data: catalog = [] as Product[], isLoading: productsLoading, isError: productsError } =
-    useProducts();
+  const {
+    data: catalog = [] as Product[],
+    isLoading: productsLoading,
+    isError: productsError,
+  } = useProducts();
 
   return (
     <section>
@@ -490,10 +499,16 @@ function SellerShowcaseSection() {
       if (!res.ok) return [];
       const body = (await res.json()) as {
         data?: { content?: unknown[] } | unknown[];
+        content?: unknown[];
       };
-      const d = body?.data;
+      const d = body?.data ?? body;
       if (Array.isArray(d)) return d;
-      if (d && typeof d === "object" && "content" in d && Array.isArray((d as { content: unknown[] }).content)) {
+      if (
+        d &&
+        typeof d === "object" &&
+        "content" in d &&
+        Array.isArray((d as { content: unknown[] }).content)
+      ) {
         return (d as { content: unknown[] }).content;
       }
       return [];
