@@ -1,8 +1,7 @@
 /* eslint-disable react-refresh/only-export-components --
  * VNShopProvider keeps the legacy useVNShop hook colocated to avoid touching
- * every importing page during the live-API migration. The shape exposed here is
- * the minimum still consumed by the AI-generated UI; new code should pull from
- * useAuth / useCart / useWishlist directly.
+ * every importing page during the live-API migration. New code should pull
+ * from useAuth / useCart / useWishlist directly.
  */
 import {
   createContext,
@@ -121,7 +120,7 @@ export function VNShopProvider({ children }: { children: ReactNode }) {
         return;
       }
       const added = wishlistStore.toggle(productId);
-      if (added) toast.success("Đã thêm vào danh sách yêu thích ❤️");
+      if (added) toast.success("Đã thêm vào danh sách yêu thích");
       else toast.info("Đã xóa khỏi danh sách yêu thích");
     },
     [auth.authenticated, wishlistStore],

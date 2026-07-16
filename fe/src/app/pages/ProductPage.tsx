@@ -47,7 +47,7 @@ function StarRating({ value, max = 5, size = 16 }: { value: number; max?: number
         const half = !filled && i < value;
         return (
           // eslint-disable-next-line react/no-array-index-key -- decorative star rating, no stable id
-          <svg key={i} width={size} height={size} viewBox="0 0 24 24">
+          <svg key={i} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
             <defs>
               <linearGradient id={`half-${i}`} x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="50%" stopColor="var(--rating)" />
@@ -90,7 +90,7 @@ function SellerCard({ sellerId }: { sellerId?: string }) {
     return (
       <div className="mt-8 bg-card rounded-[var(--radius-xl)] p-5 border border-border">
         <div className="flex items-center gap-3 text-sm text-muted-foreground">
-          <Shield size={18} className="text-muted-foreground opacity-30" />
+          <Shield size={18} className="text-muted-foreground opacity-30" aria-hidden="true" />
           <span>{t("product.seller.comingSoon")}</span>
         </div>
       </div>
@@ -124,7 +124,7 @@ function SellerCard({ sellerId }: { sellerId?: string }) {
           <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground flex-wrap">
             {seller.ratingAvg !== null && seller.ratingAvg !== undefined ? (
               <span className="flex items-center gap-1">
-                <Star size={11} fill="#FF6200" color="#FF6200" />
+                <Star size={11} fill="#FF6200" color="#FF6200" aria-hidden="true" />
                 <span className="font-semibold text-foreground">{seller.ratingAvg.toFixed(1)}</span>
               </span>
             ) : null}
@@ -317,7 +317,7 @@ export function ProductPage() {
                   onClick={() => setIsVideoPlaying(false)}
                   aria-label={t("video.gallery.closePlayer")}
                 >
-                  <X size={18} />
+                  <X size={18} aria-hidden="true" />
                 </button>
               </div>
             ) : currentItem?.type === "video" ? (
@@ -333,7 +333,7 @@ export function ProductPage() {
                 />
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="w-16 h-16 rounded-full bg-black/50 flex items-center justify-center">
-                    <Play size={32} className="text-white ml-1" />
+                    <Play size={32} className="text-white ml-1" aria-hidden="true" />
                   </div>
                 </div>
               </button>
@@ -371,7 +371,7 @@ export function ProductPage() {
                   aria-label="Previous"
                   className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 shadow-md flex items-center justify-center hover:bg-card transition-colors"
                 >
-                  <ChevronLeft size={18} className="text-foreground" />
+                  <ChevronLeft size={18} className="text-foreground" aria-hidden="true" />
                 </button>
                 <button
                   onClick={() => {
@@ -382,7 +382,7 @@ export function ProductPage() {
                   aria-label="Next"
                   className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 shadow-md flex items-center justify-center hover:bg-card transition-colors"
                 >
-                  <ChevronRight size={18} className="text-foreground" />
+                  <ChevronRight size={18} className="text-foreground" aria-hidden="true" />
                 </button>
               </>
             ) : null}
@@ -416,7 +416,7 @@ export function ProductPage() {
                 aria-label="Open zoomed view"
                 className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/80 shadow-md flex items-center justify-center hover:bg-card transition-colors"
               >
-                <ZoomIn size={18} className="text-foreground" />
+                <ZoomIn size={18} className="text-foreground" aria-hidden="true" />
               </button>
             ) : null}
           </div>
@@ -505,7 +505,7 @@ export function ProductPage() {
                 onClick={() => setShowLightbox(false)}
                 aria-label="Close zoomed view"
               >
-                <X size={24} className="text-white" />
+                <X size={24} className="text-white" aria-hidden="true" />
               </button>
               {galleryItems.length > 1 ? (
                 <>
@@ -518,7 +518,7 @@ export function ProductPage() {
                     }}
                     aria-label="Previous"
                   >
-                    <ChevronLeft size={24} className="text-white" />
+                    <ChevronLeft size={24} className="text-white" aria-hidden="true" />
                   </button>
                   <button
                     className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
@@ -529,7 +529,7 @@ export function ProductPage() {
                     }}
                     aria-label="Next"
                   >
-                    <ChevronRight size={24} className="text-white" />
+                    <ChevronRight size={24} className="text-white" aria-hidden="true" />
                   </button>
                 </>
               ) : null}
@@ -694,19 +694,19 @@ export function ProductPage() {
 
           {/* Action buttons */}
           {displayStock > 0 ? (
-            <div className="flex gap-3 items-center">
+            <div className="grid grid-cols-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_3rem_3rem] gap-3 items-center">
               <button
                 onClick={handleAddToCart}
-                className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-primary text-white font-bold rounded-[var(--radius-lg)] hover:opacity-90 transition-opacity"
+                className="min-w-0 flex items-center justify-center gap-2 py-3.5 bg-primary text-white font-bold rounded-[var(--radius-lg)] hover:opacity-90 transition-opacity"
               >
-                <ShoppingCart size={18} />
+                <ShoppingCart size={18} aria-hidden="true" />
                 {t("product.addToCart")}
               </button>
               <button
                 onClick={handleBuyNow}
-                className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-accent text-white font-bold rounded-[var(--radius-lg)] hover:opacity-90 transition-opacity"
+                className="min-w-0 flex items-center justify-center gap-2 py-3.5 bg-accent text-white font-bold rounded-[var(--radius-lg)] hover:opacity-90 transition-opacity"
               >
-                <Zap size={18} />
+                <Zap size={18} aria-hidden="true" />
                 {t("product.buyNow")}
               </button>
               <button
@@ -720,7 +720,7 @@ export function ProductPage() {
                     : "border-border text-muted-foreground hover:border-border-hover",
                 ].join(" ")}
               >
-                <Heart size={20} fill={loved ? "currentColor" : "none"} />
+                <Heart size={20} fill={loved ? "currentColor" : "none"} aria-hidden="true" />
               </button>
               <button
                 onClick={() => {
@@ -732,7 +732,7 @@ export function ProductPage() {
                 aria-label="Share product"
                 className="w-12 h-12 flex items-center justify-center border border-border rounded-[var(--radius-lg)] transition-all shrink-0 text-muted-foreground hover:border-border-hover"
               >
-                <Share2 size={20} />
+                <Share2 size={20} aria-hidden="true" />
               </button>
             </div>
           ) : (
@@ -741,7 +741,7 @@ export function ProductPage() {
               disabled
               className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-muted text-muted-foreground font-bold rounded-[var(--radius-lg)] cursor-not-allowed"
             >
-              <ShoppingCart size={18} />
+              <ShoppingCart size={18} aria-hidden="true" />
               Hết hàng
             </button>
           )}
@@ -766,7 +766,7 @@ export function ProductPage() {
               },
             ].map((item) => (
               <div key={item.text} className="flex items-center gap-1.5">
-                <item.icon size={14} className="text-text-secondary shrink-0" />
+                <item.icon size={14} className="text-text-secondary shrink-0" aria-hidden="true" />
                 <span className="text-xs text-text-secondary">{item.text}</span>
               </div>
             ))}

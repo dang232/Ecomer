@@ -68,7 +68,7 @@
     "couponApplying": "Checking...",
     "couponApply": "Apply",
     "couponInvalid": "Coupon is invalid or expired",
-    "couponApplied": "🎉 Applied: {{code}}",
+    "couponApplied": "Applied: {{code}}",
     "couponRemove": "Remove",
     "couponHint": "Final value is re-checked at checkout.",
     "summaryTitle": "Order summary",
@@ -172,7 +172,7 @@
     "allBrands": "All brands"
   },
   "flashSale": {
-    "title": "⚡ FLASH SALE",
+    "title": "FLASH SALE",
     "subtitle": "Hot deals — Limited stock!",
     "endsIn": "Ends in",
     "viewAll": "View all",
@@ -199,7 +199,7 @@
     "back": "Go back",
     "breadcrumbHome": "Home",
     "badge": {
-      "flash": "⚡ Flash",
+      "flash": "Flash",
       "new": "New",
       "bestseller": "Bestseller",
       "hot": "Hot"
@@ -210,9 +210,9 @@
     "quantityLabel": "Quantity:",
     "stockAvailable": "({{count}} in stock)",
     "totalLabel": "Total:",
-    "addToCart": "🛒 Add to cart",
-    "buyNow": "⚡ Buy now",
-    "savings": "🎉 You save {{amount}}",
+    "addToCart": "Add to cart",
+    "buyNow": "Buy now",
+    "savings": "You save {{amount}}",
     "colorsLabel": "Color",
     "sizesLabel": "Size",
     "sizeGuide": "Size guide",
@@ -639,7 +639,7 @@
       "termsNotice": "By placing this order you agree to VNShop's terms."
     },
     "success": {
-      "title": "Order placed! 🎉",
+      "title": "Order placed!",
       "gatewayTitle": "Redirecting to payment gateway...",
       "orderIdLabel": "Your order ID:",
       "codNotice": "You'll pay <1>{{amount}}</1> on delivery.",
@@ -1267,7 +1267,7 @@
     "pageTitle": "My Wishlist",
     "countLabel": "{{count}} items",
     "emptyTitle": "No favourites yet",
-    "emptySub": "Tap ❤️ on any product to save it to your wishlist",
+    "emptySub": "Tap the heart on any product to save it to your wishlist",
     "discover": "Start exploring",
     "addAll": "Add all to cart",
     "clearAll": "Clear all",
@@ -1414,7 +1414,7 @@
       "body": "Keep this page open. We're checking your payment status with {{provider}}."
     },
     "completed": {
-      "title": "Payment successful 🎉",
+      "title": "Payment successful",
       "amountPaid": "Amount paid:",
       "orderIdLabel": "Order ID:",
       "viewOrders": "View orders",
@@ -1449,7 +1449,7 @@
     "addedToCartQty": "Qty: {{quantity}}",
     "loginToSave": "Please log in to save products",
     "loginLabel": "Log in",
-    "addedToWishlist": "Added to wishlist ❤️",
+    "addedToWishlist": "Added to wishlist",
     "removedFromWishlist": "Removed from wishlist",
     "loggedOut": "You've been signed out"
   },

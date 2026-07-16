@@ -53,7 +53,10 @@ const SectionHeader = memo(function SectionHeader({
           className="group flex items-center gap-1 text-sm font-medium text-primary hover:underline"
         >
           {cta}
-          <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+          <ChevronRight
+            className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform"
+            aria-hidden="true"
+          />
         </Link>
       ) : null}
     </div>
@@ -115,7 +118,7 @@ const ProductCard = memo(function ProductCard({
               toggleWishlist(product.id);
             }}
           >
-            <Heart className="w-4 h-4" fill={loved ? "currentColor" : "none"} />
+            <Heart className="w-4 h-4" fill={loved ? "currentColor" : "none"} aria-hidden="true" />
           </button>
         </div>
 
@@ -141,7 +144,7 @@ const ProductCard = memo(function ProductCard({
           </div>
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
             <div className="flex items-center gap-1">
-              <Star className="w-3 h-3 text-accent fill-accent" />
+              <Star className="w-3 h-3 text-accent fill-accent" aria-hidden="true" />
               <span className="text-foreground font-medium">{product.rating}</span>
             </div>
             <span>·</span>
@@ -182,7 +185,7 @@ function HeroSection() {
 
       <div className="relative z-10 max-w-[480px]" style={{ padding: "clamp(32px, 5vw, 56px)" }}>
         <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium text-white bg-white/[0.12] border border-white/10 backdrop-blur-sm mb-4">
-          <Zap className="w-3.5 h-3.5" />
+          <Zap className="w-3.5 h-3.5" aria-hidden="true" />
           {t("home.hero.eyebrow", { defaultValue: "Limited Time" })}
         </div>
         <h1 className="text-[var(--text-4xl)] font-extrabold text-white leading-[1.15] tracking-tight mb-3.5">
@@ -201,7 +204,10 @@ function HeroSection() {
           className="group inline-flex items-center gap-2 px-6 py-3 bg-white text-primary font-semibold text-sm rounded-[var(--radius-lg)] shadow-lg hover:-translate-y-0.5 hover:shadow-xl transition-all"
         >
           {t("home.hero.ctaShop", { defaultValue: "Shop Deals" })}
-          <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+          <ArrowRight
+            className="w-4 h-4 group-hover:translate-x-0.5 transition-transform"
+            aria-hidden="true"
+          />
         </Link>
       </div>
     </section>
@@ -257,7 +263,7 @@ function CategoriesSection() {
                   className="group flex flex-col items-center gap-2.5 py-5 px-2 bg-card border border-border rounded-[var(--radius-lg)] cursor-pointer transition-all hover:border-primary hover:bg-primary-light hover:-translate-y-0.5 hover:shadow-md"
                 >
                   <div className="w-12 h-12 rounded-[var(--radius-md)] bg-surface-elevated flex items-center justify-center text-text-secondary group-hover:text-primary group-hover:bg-card transition-colors">
-                    <Icon className="w-6 h-6" />
+                    <Icon className="w-6 h-6" aria-hidden="true" />
                   </div>
                   <span className="text-xs font-medium text-foreground text-center leading-tight">
                     {categoryDisplayLabel(cat)}
@@ -299,7 +305,7 @@ function FlashSaleSection() {
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-[var(--radius-md)] bg-accent-light flex items-center justify-center text-accent">
-            <Zap className="w-5 h-5" />
+            <Zap className="w-5 h-5" aria-hidden="true" />
           </div>
           <h3 className="text-lg font-bold text-foreground">
             {t("flashSale.title", { defaultValue: "Flash Sale" })}
@@ -353,7 +359,10 @@ function FlashSaleSection() {
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                       ) : (
-                        <Zap className="w-8 h-8 text-muted-foreground opacity-30" />
+                        <Zap
+                          className="w-8 h-8 text-muted-foreground opacity-30"
+                          aria-hidden="true"
+                        />
                       )}
                       {discount > 0 ? (
                         <span className="absolute top-2 left-2 px-2 py-0.5 rounded-[var(--radius-sm)] bg-error text-white text-[11px] font-semibold">
@@ -432,7 +441,7 @@ function TrustBar() {
           className="flex items-center gap-3 p-4 bg-card border border-border rounded-[var(--radius-lg)] transition-all hover:border-primary hover:-translate-y-0.5 hover:shadow-sm"
         >
           <div className="w-11 h-11 rounded-[var(--radius-md)] bg-primary-light flex items-center justify-center text-primary shrink-0">
-            <item.icon className="w-[22px] h-[22px]" />
+            <item.icon className="w-[22px] h-[22px]" aria-hidden="true" />
           </div>
           <div>
             <h4 className="text-sm font-semibold text-foreground">{item.title}</h4>

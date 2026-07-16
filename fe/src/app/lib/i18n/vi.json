@@ -68,7 +68,7 @@
     "couponApplying": "Đang kiểm tra...",
     "couponApply": "Áp dụng",
     "couponInvalid": "Mã giảm giá không hợp lệ hoặc đã hết hạn",
-    "couponApplied": "🎉 Đã áp dụng: {{code}}",
+    "couponApplied": "Đã áp dụng: {{code}}",
     "couponRemove": "Xóa",
     "couponHint": "Giá trị thực sẽ được kiểm tra lại tại trang thanh toán.",
     "summaryTitle": "Tóm tắt đơn hàng",
@@ -172,7 +172,7 @@
     "allBrands": "Tất cả thương hiệu"
   },
   "flashSale": {
-    "title": "⚡ FLASH SALE",
+    "title": "FLASH SALE",
     "subtitle": "Giảm sốc — Số lượng có hạn!",
     "endsIn": "Kết thúc sau",
     "viewAll": "Xem tất cả",
@@ -199,7 +199,7 @@
     "back": "Quay lại",
     "breadcrumbHome": "Trang chủ",
     "badge": {
-      "flash": "⚡ Flash",
+      "flash": "Flash",
       "new": "Mới",
       "bestseller": "Bán chạy",
       "hot": "Hot"
@@ -210,9 +210,9 @@
     "quantityLabel": "Số lượng:",
     "stockAvailable": "({{count}} sản phẩm có sẵn)",
     "totalLabel": "Tổng:",
-    "addToCart": "🛒 Thêm vào giỏ",
-    "buyNow": "⚡ Mua ngay",
-    "savings": "🎉 Bạn tiết kiệm được {{amount}}",
+    "addToCart": "Thêm vào giỏ",
+    "buyNow": "Mua ngay",
+    "savings": "Bạn tiết kiệm được {{amount}}",
     "colorsLabel": "Màu sắc",
     "sizesLabel": "Kích cỡ",
     "sizeGuide": "Hướng dẫn chọn size",
@@ -639,7 +639,7 @@
       "termsNotice": "Bằng cách đặt hàng, bạn đồng ý với chính sách của VNShop."
     },
     "success": {
-      "title": "Đặt hàng thành công! 🎉",
+      "title": "Đặt hàng thành công!",
       "gatewayTitle": "Đang chuyển đến cổng thanh toán...",
       "orderIdLabel": "Mã đơn hàng của bạn:",
       "codNotice": "Bạn sẽ thanh toán <1>{{amount}}</1> khi nhận hàng.",
@@ -1267,7 +1267,7 @@
     "pageTitle": "Yêu thích của tôi",
     "countLabel": "{{count}} sản phẩm",
     "emptyTitle": "Chưa có sản phẩm yêu thích",
-    "emptySub": "Nhấn vào ❤️ trên sản phẩm để lưu vào danh sách yêu thích của bạn",
+    "emptySub": "Nhấn vào biểu tượng trái tim trên sản phẩm để lưu vào danh sách yêu thích của bạn",
     "discover": "Khám phá ngay",
     "addAll": "Thêm tất cả vào giỏ",
     "clearAll": "Xóa tất cả",
@@ -1414,7 +1414,7 @@
       "body": "Vui lòng giữ trang này mở. Hệ thống đang kiểm tra trạng thái thanh toán với {{provider}}."
     },
     "completed": {
-      "title": "Thanh toán thành công 🎉",
+      "title": "Thanh toán thành công",
       "amountPaid": "Số tiền đã thanh toán:",
       "orderIdLabel": "Mã đơn hàng:",
       "viewOrders": "Xem đơn hàng",
@@ -1449,7 +1449,7 @@
     "addedToCartQty": "Số lượng: {{quantity}}",
     "loginToSave": "Vui lòng đăng nhập để lưu sản phẩm",
     "loginLabel": "Đăng nhập",
-    "addedToWishlist": "Đã thêm vào danh sách yêu thích ❤️",
+    "addedToWishlist": "Đã thêm vào danh sách yêu thích",
     "removedFromWishlist": "Đã xóa khỏi danh sách yêu thích",
     "loggedOut": "Đã đăng xuất khỏi tài khoản"
   },
