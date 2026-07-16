@@ -12,6 +12,11 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Optional;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeParseException;
 
 @Component
 public class OrderSummaryQueryPortAdapter implements OrderSummaryQueryPort {
@@ -64,15 +69,74 @@ public class OrderSummaryQueryPortAdapter implements OrderSummaryQueryPort {
     @Override
     public List<OrderSummaryProjection> findAll(String status) {
         boolean hasStatus = status != null && !status.isBlank();
-        String jpql = "SELECT o FROM OrderSummaryProjectionJpaEntity o"
-                + (hasStatus ? " WHERE o.status = :status" : "")
-                + " ORDER BY o.createdAt DESC";
-        TypedQuery<OrderSummaryProjectionJpaEntity> q = entityManager
-                .createQuery(jpql, OrderSummaryProjectionJpaEntity.class)
-                .setMaxResults(200);
-        if (hasStatus) q.setParameter("status", status);
-        return q.getResultStream()
-                .map(OrderSummaryProjectionJpaEntity::toDomain)
+        String filter = hasStatus
+                ? "WHERE EXISTS (SELECT 1 FROM order_svc.sub_orders filter_so "
+                    + "WHERE filter_so.order_id = o.id AND filter_so.fulfillment_status = :status)"
+                : "";
+        String sql = """
+                SELECT o.id::text,
+                       o.buyer_id,
+                       MIN(so.seller_id),
+                       CASE
+                           WHEN MAX(CASE WHEN so.fulfillment_status = 'PENDING_ACCEPTANCE' THEN 1 ELSE 0 END) = 1
+                               THEN 'PENDING_ACCEPTANCE'
+                           WHEN MAX(CASE WHEN so.fulfillment_status = 'ACCEPTED' THEN 1 ELSE 0 END) = 1
+                               THEN 'ACCEPTED'
+                           WHEN MAX(CASE WHEN so.fulfillment_status = 'PACKED' THEN 1 ELSE 0 END) = 1
+                               THEN 'PACKED'
+                           WHEN MAX(CASE WHEN so.fulfillment_status = 'SHIPPED' THEN 1 ELSE 0 END) = 1
+                               THEN 'SHIPPED'
+                           WHEN MAX(CASE WHEN so.fulfillment_status = 'DELIVERED' THEN 1 ELSE 0 END) = 1
+                               THEN 'DELIVERED'
+                           WHEN MAX(CASE WHEN so.fulfillment_status = 'REJECTED' THEN 1 ELSE 0 END) = 1
+                               THEN 'REJECTED'
+                           WHEN MAX(CASE WHEN so.fulfillment_status = 'CANCELLED' THEN 1 ELSE 0 END) = 1
+                               THEN 'CANCELLED'
+                           ELSE 'UNKNOWN'
+                       END,
+                       o.final_amount,
+                       COALESCE(SUM(oi.quantity), 0),
+                       o.created_at,
+                       o.updated_at
+                FROM order_svc.orders o
+                LEFT JOIN order_svc.sub_orders so ON so.order_id = o.id
+                LEFT JOIN order_svc.order_items oi ON oi.sub_order_id = so.id
+                %s
+                GROUP BY o.id, o.buyer_id, o.final_amount, o.created_at, o.updated_at
+                ORDER BY o.created_at DESC
+                LIMIT 200
+                """.formatted(filter);
+
+        var query = entityManager.createNativeQuery(sql);
+        if (hasStatus) query.setParameter("status", status);
+        return ((List<?>) query.getResultList()).stream()
+                .map(OrderSummaryQueryPortAdapter::toAdminProjection)
                 .toList();
+    }
+
+    private static OrderSummaryProjection toAdminProjection(Object row) {
+        Object[] values = (Object[]) row;
+        return new OrderSummaryProjection(
+                (String) values[0],
+                (String) values[1],
+                (String) values[2],
+                (String) values[3],
+                (java.math.BigDecimal) values[4],
+                ((Number) values[5]).intValue(),
+                toInstant(values[6]),
+                toInstant(values[7]));
+    }
+
+    private static Instant toInstant(Object value) {
+        if (value instanceof Instant instant) return instant;
+        if (value instanceof Timestamp timestamp) return timestamp.toInstant();
+        if (value == null) return null;
+
+        String text = value.toString();
+        try {
+            return Instant.parse(text);
+        } catch (DateTimeParseException ignored) {
+            return LocalDateTime.parse(text).toInstant(ZoneOffset.UTC);
+        }
     }
 }

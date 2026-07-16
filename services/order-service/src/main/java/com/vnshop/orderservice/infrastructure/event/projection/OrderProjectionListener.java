@@ -49,20 +49,56 @@ public class OrderProjectionListener {
         String status = projectStatus(eventType, payload);
         String buyerId = text(payload, "buyerId");
 
-        BigDecimal totalAmount = sumSellerTotals(payload);
+        BigDecimal totalAmount = totalAmount(payload);
         String firstSellerId = firstSellerId(payload);
-        int itemCount = payload.path("itemCount").isMissingNode() ? 0 : payload.path("itemCount").asInt(0);
+        int itemCount = itemCount(payload);
 
         projectionPort.upsertOrderSummary(orderId, status, buyerId, firstSellerId, totalAmount, itemCount);
         LOG.debug("Projected {} for order {} (status={})", eventType, orderId, status);
     }
 
     private static String projectStatus(String eventType, JsonNode payload) {
-        String paymentStatus = text(payload, "paymentStatus");
-        if (paymentStatus != null && !paymentStatus.isBlank()) {
-            return paymentStatus;
+        String fulfillmentStatus = normalizedStatus(text(payload, "fulfillmentStatus"));
+        if (fulfillmentStatus != null) return fulfillmentStatus;
+
+        String legacyStatus = normalizedStatus(text(payload, "status"));
+        if (legacyStatus != null) return legacyStatus;
+
+        String legacyEventStatus = normalizedStatus(eventType);
+        return legacyEventStatus == null ? "PENDING" : legacyEventStatus;
+    }
+
+    private static String normalizedStatus(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String value = raw.trim().toUpperCase();
+        if (value.contains("CANCEL") || value.contains("REJECT")) return "CANCELLED";
+        if (value.contains("PENDING") || value.contains("CREATED")) return "PENDING";
+        if (value.contains("DELIVER")) return "DELIVERED";
+        if (value.contains("SHIP")) return "SHIPPED";
+        if (value.contains("ACCEPT") || value.contains("PACK") || value.contains("CONFIRM")) {
+            return "CONFIRMED";
         }
-        return eventType == null ? "UNKNOWN" : eventType;
+        return null;
+    }
+
+    private static BigDecimal totalAmount(JsonNode payload) {
+        JsonNode value = payload.path("totalAmount");
+        if (value.isNumber()) return value.decimalValue();
+        if (value.isObject() && value.path("amount").isNumber()) {
+            return value.path("amount").decimalValue();
+        }
+        return sumSellerTotals(payload);
+    }
+
+    private static int itemCount(JsonNode payload) {
+        JsonNode value = payload.path("itemCount");
+        if (value.isNumber()) return value.asInt(0);
+
+        int count = 0;
+        for (JsonNode item : payload.path("items")) {
+            count += item.path("quantity").asInt(0);
+        }
+        return count;
     }
 
     private static BigDecimal sumSellerTotals(JsonNode payload) {

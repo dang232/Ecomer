@@ -4,6 +4,7 @@ import com.vnshop.orderservice.domain.Order;
 import com.vnshop.orderservice.domain.port.out.OrderRepositoryPort;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -27,26 +28,31 @@ public class OrderJpaRepository implements OrderRepositoryPort {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<Order> findById(UUID orderId) {
         return springDataRepository.findByIdWithGraph(orderId).map(OrderJpaEntity::toDomain);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<Order> findByOrderNumber(String orderNumber) {
         return springDataRepository.findByOrderNumber(orderNumber).map(OrderJpaEntity::toDomain);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<Order> findByIdempotencyKey(String idempotencyKey) {
         return springDataRepository.findByIdempotencyKeyWithGraph(idempotencyKey).map(OrderJpaEntity::toDomain);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Order> findByBuyerId(String buyerId) {
         return springDataRepository.findByBuyerId(buyerId).stream().map(OrderJpaEntity::toDomain).toList();
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<Order> findBySubOrderId(Long subOrderId) {
         return springDataRepository.findBySubOrderId(subOrderId).map(OrderJpaEntity::toDomain);
     }
@@ -55,10 +61,12 @@ public class OrderJpaRepository implements OrderRepositoryPort {
         return springDataRepository.findOrderIdBySubOrderId(subOrderId).map(UUID::toString);
     }
 
+    @Transactional(readOnly = true)
     public List<Order> findBySellerIdAndFulfillmentStatus(String sellerId, com.vnshop.orderservice.domain.FulfillmentStatus status) {
         return springDataRepository.findBySellerIdAndFulfillmentStatus(sellerId, status).stream().map(OrderJpaEntity::toDomain).toList();
     }
 
+    @Transactional(readOnly = true)
     public List<Order> findBySellerIdAndFulfillmentStatusIn(
             String sellerId, List<com.vnshop.orderservice.domain.FulfillmentStatus> statuses) {
         return springDataRepository.findBySellerIdAndFulfillmentStatusIn(sellerId, statuses).stream()

@@ -50,7 +50,6 @@ public interface OrderJpaSpringDataRepository extends JpaRepository<OrderJpaEnti
     @Query("""
         SELECT DISTINCT o FROM OrderJpaEntity o
         LEFT JOIN FETCH o.subOrders sub
-        LEFT JOIN FETCH sub.items
         WHERE o.id = (SELECT subOrder.order.id FROM SubOrderJpaEntity subOrder WHERE subOrder.id = :subOrderId)
         """)
     Optional<OrderJpaEntity> findBySubOrderId(@Param("subOrderId") Long subOrderId);
@@ -58,7 +57,6 @@ public interface OrderJpaSpringDataRepository extends JpaRepository<OrderJpaEnti
     @Query("""
         SELECT DISTINCT o FROM OrderJpaEntity o
         LEFT JOIN FETCH o.subOrders sub
-        LEFT JOIN FETCH sub.items
         WHERE sub.sellerId = :sellerId AND sub.fulfillmentStatus = :status
         """)
     List<OrderJpaEntity> findBySellerIdAndFulfillmentStatus(
@@ -69,7 +67,6 @@ public interface OrderJpaSpringDataRepository extends JpaRepository<OrderJpaEnti
     @Query("""
         SELECT DISTINCT o FROM OrderJpaEntity o
         LEFT JOIN FETCH o.subOrders sub
-        LEFT JOIN FETCH sub.items
         WHERE sub.sellerId = :sellerId AND sub.fulfillmentStatus IN :statuses
         """)
     List<OrderJpaEntity> findBySellerIdAndFulfillmentStatusIn(
