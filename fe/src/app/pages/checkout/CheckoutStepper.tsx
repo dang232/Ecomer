@@ -1,4 +1,5 @@
 import { CheckCircle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { STEPS, type Step } from "./types";
 
@@ -22,6 +23,7 @@ const STEP_ORDER: Step[] = ["address", "shipping", "payment", "review", "success
  *   always sees where focus is.
  */
 export function CheckoutStepper({ step, onStepChange }: CheckoutStepperProps) {
+  const { t } = useTranslation();
   const stepIdx = STEP_ORDER.indexOf(step);
 
   return (
@@ -30,6 +32,7 @@ export function CheckoutStepper({ step, onStepChange }: CheckoutStepperProps) {
         const isActive = s.id === step;
         const isDone = STEP_ORDER.indexOf(s.id) < stepIdx;
         const StepIcon = s.icon;
+        const label = t(s.labelKey);
         return (
           <li key={s.id} className="flex items-center">
             <div className="flex flex-col items-center">
@@ -40,7 +43,7 @@ export function CheckoutStepper({ step, onStepChange }: CheckoutStepperProps) {
                     e.preventDefault();
                     onStepChange(s.id);
                   }}
-                  aria-label={s.labelKey}
+                  aria-label={label}
                   data-step-id={s.id}
                   data-step-state="done"
                   className={[
@@ -49,11 +52,11 @@ export function CheckoutStepper({ step, onStepChange }: CheckoutStepperProps) {
                     "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                   ].join(" ")}
                 >
-                  <CheckCircle size={16} />
+                  <CheckCircle size={16} aria-hidden="true" />
                 </a>
               ) : (
                 <span
-                  aria-label={s.labelKey}
+                  aria-label={label}
                   aria-current={isActive ? "step" : undefined}
                   aria-disabled={!isActive}
                   data-step-id={s.id}
@@ -68,7 +71,7 @@ export function CheckoutStepper({ step, onStepChange }: CheckoutStepperProps) {
                       : "",
                   ].join(" ")}
                 >
-                  <StepIcon size={16} />
+                  <StepIcon size={16} aria-hidden="true" />
                 </span>
               )}
               <span
@@ -77,7 +80,7 @@ export function CheckoutStepper({ step, onStepChange }: CheckoutStepperProps) {
                   isActive ? "text-foreground" : isDone ? "text-primary" : "text-muted-foreground",
                 ].join(" ")}
               >
-                {s.labelKey}
+                {label}
               </span>
             </div>
             {i < STEPS.length - 1 ? (

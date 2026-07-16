@@ -3,6 +3,19 @@ import { describe, expect, it, vi } from "vitest";
 
 import { CheckoutStepper } from "./CheckoutStepper";
 
+const STEP_LABELS = {
+  "checkout.steps.address": "Address",
+  "checkout.steps.shipping": "Shipping",
+  "checkout.steps.payment": "Payment",
+  "checkout.steps.review": "Review",
+} as const;
+
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: keyof typeof STEP_LABELS) => STEP_LABELS[key] ?? key,
+  }),
+}));
+
 describe("CheckoutStepper", () => {
   it("renders a semantic ordered list with one li per step", () => {
     const { container } = render(<CheckoutStepper step="address" onStepChange={vi.fn()} />);
@@ -78,14 +91,16 @@ describe("CheckoutStepper", () => {
     expect(onStepChange).toHaveBeenCalledWith("address");
   });
 
-  it("renders each step's aria-label from the step's labelKey", () => {
+  it("renders localized labels instead of leaking translation keys", () => {
     render(<CheckoutStepper step="payment" onStepChange={vi.fn()} />);
 
     for (const id of ["address", "shipping", "payment", "review"]) {
       const node = document.querySelector(`[data-step-id="${id}"]`)!;
-      expect(node.getAttribute("aria-label")).toBe(`checkout.steps.${id}`);
+      expect(node.getAttribute("aria-label")).toBe(
+        STEP_LABELS[`checkout.steps.${id}` as keyof typeof STEP_LABELS],
+      );
     }
-    // Visible label text mirrors the labelKey.
-    expect(screen.getByText("checkout.steps.shipping")).toBeInTheDocument();
+    expect(screen.getByText("Shipping")).toBeInTheDocument();
+    expect(screen.queryByText("checkout.steps.shipping")).not.toBeInTheDocument();
   });
 });
