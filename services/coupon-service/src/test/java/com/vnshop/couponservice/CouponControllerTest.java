@@ -88,6 +88,20 @@ class CouponControllerTest {
     }
 
     @Test
+    void listActiveCouponsExcludesExpiredCoupons() throws Exception {
+        mockMvc.perform(post("/coupons")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                couponRequest("EXPIRED-LIST", Instant.now().minusSeconds(60),
+                                        BigDecimal.ZERO, 100))))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/coupons"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[?(@.code=='EXPIRED-LIST')]").doesNotExist());
+    }
+
+    @Test
     void validateCouponReturnsDiscountForValidCoupon() throws Exception {
         mockMvc.perform(post("/coupons")
                 .contentType(MediaType.APPLICATION_JSON)

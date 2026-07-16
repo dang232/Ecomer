@@ -2,6 +2,7 @@ package com.vnshop.couponservice.infrastructure.persistence;
 
 import com.vnshop.couponservice.domain.Coupon;
 import com.vnshop.couponservice.domain.port.out.CouponRepository;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
@@ -45,7 +46,8 @@ public class CouponRepositoryAdapter implements CouponRepository {
 
     @Override
     public List<Coupon> findActive() {
-        return jpa.findByActiveTrue().stream().map(CouponJpaMapper::toDomain).toList();
+        Instant now = Instant.now();
+        return jpa.findActiveAt(now).stream().map(CouponJpaMapper::toDomain).toList();
     }
 
     @Override
