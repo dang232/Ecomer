@@ -237,75 +237,73 @@ function FlashSaleSection() {
         </div>
       ) : hasCampaigns ? (
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-4">
-          {items
-            .slice(0, 5)
-            .map(({ campaign: c }, i) => {
-              // ponytail: rawDiscount from BE is authoritative; fallback to client-side calc
-              const discount = c.rawDiscount ?? pctOff(c.originalPrice, c.salePrice);
-              const imageSrc = cdnUrl(c.imageHash);
-              const productName = c.name ?? `Product #${c.productId.slice(0, 8)}`;
+          {items.slice(0, 5).map(({ campaign: c }, i) => {
+            // ponytail: rawDiscount from BE is authoritative; fallback to client-side calc
+            const discount = c.rawDiscount ?? pctOff(c.originalPrice, c.salePrice);
+            const imageSrc = cdnUrl(c.imageHash);
+            const productName = c.name ?? `Product #${c.productId.slice(0, 8)}`;
 
-              return (
-                <Link key={c.id} to={`/product/${c.productId}`} className="block">
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.06 }}
-                    className="group bg-card border border-border rounded-[var(--radius-lg)] overflow-hidden cursor-pointer hover:border-border-hover hover:shadow-lg hover:-translate-y-1 transition-all duration-[var(--duration-base)]"
-                  >
-                    <div className="relative aspect-square bg-surface-elevated flex items-center justify-center overflow-hidden">
-                      {imageSrc ? (
-                        <ImageWithFallback
-                          src={imageSrc}
-                          alt={productName}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                      ) : (
-                        <Zap
-                          className="w-8 h-8 text-muted-foreground opacity-30"
-                          aria-hidden="true"
-                        />
-                      )}
-                      {discount > 0 ? (
-                        <span className="absolute top-2 left-2 px-2 py-0.5 rounded-[var(--radius-sm)] bg-error text-white text-[11px] font-semibold">
-                          -{discount}%
-                        </span>
-                      ) : null}
-                      {c.isShopOfficial ? (
-                        <span className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-primary text-white text-[10px] font-semibold">
-                          Official
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="p-3">
-                      {c.shopName ? (
-                        <p className="text-[11px] text-muted-foreground mb-0.5 truncate">
-                          {c.shopName}
-                        </p>
-                      ) : null}
-                      <p className="text-sm font-medium text-foreground line-clamp-2 mb-1.5 min-h-[2.5rem]">
-                        {productName}
+            return (
+              <Link key={c.id} to={`/product/${c.productId}`} className="block">
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.06 }}
+                  className="group bg-card border border-border rounded-[var(--radius-lg)] overflow-hidden cursor-pointer hover:border-border-hover hover:shadow-lg hover:-translate-y-1 transition-all duration-[var(--duration-base)]"
+                >
+                  <div className="relative aspect-square bg-surface-elevated flex items-center justify-center overflow-hidden">
+                    {imageSrc ? (
+                      <ImageWithFallback
+                        src={imageSrc}
+                        alt={productName}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <Zap
+                        className="w-8 h-8 text-muted-foreground opacity-30"
+                        aria-hidden="true"
+                      />
+                    )}
+                    {discount > 0 ? (
+                      <span className="absolute top-2 left-2 px-2 py-0.5 rounded-[var(--radius-sm)] bg-error text-white text-[11px] font-semibold">
+                        -{discount}%
+                      </span>
+                    ) : null}
+                    {c.isShopOfficial ? (
+                      <span className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-primary text-white text-[10px] font-semibold">
+                        Official
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="p-3">
+                    {c.shopName ? (
+                      <p className="text-[11px] text-muted-foreground mb-0.5 truncate">
+                        {c.shopName}
                       </p>
-                      <div className="flex items-baseline gap-1.5 flex-wrap">
-                        <span className="text-[var(--text-base)] font-bold text-primary">
-                          {formatPrice(c.salePrice)}
+                    ) : null}
+                    <p className="text-sm font-medium text-foreground line-clamp-2 mb-1.5 min-h-[2.5rem]">
+                      {productName}
+                    </p>
+                    <div className="flex items-baseline gap-1.5 flex-wrap">
+                      <span className="text-[var(--text-base)] font-bold text-primary">
+                        {formatPrice(c.salePrice)}
+                      </span>
+                      {c.originalPrice > c.salePrice ? (
+                        <span className="text-xs text-muted-foreground line-through">
+                          {formatPrice(c.originalPrice)}
                         </span>
-                        {c.originalPrice > c.salePrice ? (
-                          <span className="text-xs text-muted-foreground line-through">
-                            {formatPrice(c.originalPrice)}
-                          </span>
-                        ) : null}
-                        {c.discount ? (
-                          <span className="text-[11px] font-semibold text-error bg-error-light px-1.5 py-0.5 rounded">
-                            {c.discount}
-                          </span>
-                        ) : null}
-                      </div>
+                      ) : null}
+                      {c.discount ? (
+                        <span className="text-[11px] font-semibold text-error bg-error-light px-1.5 py-0.5 rounded">
+                          {c.discount}
+                        </span>
+                      ) : null}
                     </div>
-                  </motion.div>
-                </Link>
-              );
-            })}
+                  </div>
+                </motion.div>
+              </Link>
+            );
+          })}
         </div>
       ) : (
         <div className="py-8 text-center">
