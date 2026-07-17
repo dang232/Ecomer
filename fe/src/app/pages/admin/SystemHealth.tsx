@@ -30,12 +30,12 @@ const SERVICES: ServiceDef[] = [
   {
     id: "catalog",
     labelKey: "admin.health.catalogService",
-    healthUrl: `${API_BASE}/catalog-service/actuator/health`,
+    healthUrl: `${API_BASE}/product-service/actuator/health`,
   },
   {
     id: "notification",
     labelKey: "admin.health.notificationService",
-    healthUrl: `${API_BASE}/notification-service/actuator/health`,
+    healthUrl: `${API_BASE}/notification-service/health`,
   },
 ];
 
@@ -52,7 +52,8 @@ async function checkHealth(url: string): Promise<HealthStatus> {
     const res = await fetch(url, { signal: AbortSignal.timeout(5000), credentials: "omit" });
     if (!res.ok) return "down";
     const body = (await res.json()) as { status?: string };
-    return body.status?.toUpperCase() === "UP" ? "up" : "down";
+    // ponytail: Spring Actuator uses "UP", NestJS /health uses "ok"
+    return ["UP", "OK"].includes(body.status?.toUpperCase() ?? "") ? "up" : "down";
   } catch {
     return "down";
   }

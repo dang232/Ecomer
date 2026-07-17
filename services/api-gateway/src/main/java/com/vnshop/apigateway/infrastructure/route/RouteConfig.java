@@ -206,6 +206,24 @@ public class RouteConfig {
             .route("recommendations", route -> route.path("/recommendations/**")
                 .filters(filters -> resilient(filters, "recommendations-service"))
                 .uri(recommendationsServiceUri))
+            // Actuator proxy routes for the FE admin health-check panel.
+            // stripPrefix(1) removes /<svc> so downstream receives /actuator/health etc.
+            .route("actuator-user-service", route -> route.path("/user-service/actuator/**")
+                .filters(filters -> filters.stripPrefix(1))
+                .uri(userServiceUri))
+            .route("actuator-order-service", route -> route.path("/order-service/actuator/**")
+                .filters(filters -> filters.stripPrefix(1))
+                .uri(orderServiceUri))
+            .route("actuator-payment-service", route -> route.path("/payment-service/actuator/**")
+                .filters(filters -> filters.stripPrefix(1))
+                .uri(paymentServiceUri))
+            .route("actuator-product-service", route -> route.path("/product-service/actuator/**")
+                .filters(filters -> filters.stripPrefix(1))
+                .uri(productServiceUri))
+            // notification-service is NestJS — health at /health, not /actuator/health
+            .route("health-notification-service", route -> route.path("/notification-service/health")
+                .filters(filters -> filters.stripPrefix(1))
+                .uri(notificationServiceUri))
             // Configuration service — public app config endpoint.
             .route("configuration", route -> route.path("/api/config")
                 .uri(configurationServiceUri))

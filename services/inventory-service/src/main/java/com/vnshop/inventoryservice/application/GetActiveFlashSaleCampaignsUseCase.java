@@ -47,6 +47,13 @@ public class GetActiveFlashSaleCampaignsUseCase {
                 campaign.salePrice(),
                 campaign.stockTotal(),
                 remaining,
-                campaign.endsAt().toString());
+                campaign.endsAt().toString(),
+                campaign.name(),
+                campaign.shopName(),
+                campaign.isShopOfficial(),
+                campaign.isShopPreferred(),
+                campaign.rawDiscount(),
+                campaign.discount(),
+                campaign.imageHash());
     }
 }

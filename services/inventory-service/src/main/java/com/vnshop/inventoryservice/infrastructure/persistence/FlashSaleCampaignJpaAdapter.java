@@ -34,6 +34,13 @@ public class FlashSaleCampaignJpaAdapter implements FlashSaleCampaignPort {
                 entity.getStockTotal(),
                 entity.getStartsAt(),
                 entity.getEndsAt(),
-                entity.isActive());
+                entity.isActive(),
+                entity.getName(),
+                entity.getShopName(),
+                entity.isShopOfficial(),
+                entity.isShopPreferred(),
+                entity.getRawDiscount(),
+                entity.getDiscount(),
+                entity.getImageHash());
     }
 }

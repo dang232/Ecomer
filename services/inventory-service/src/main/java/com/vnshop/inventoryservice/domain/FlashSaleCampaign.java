@@ -17,5 +17,12 @@ public record FlashSaleCampaign(
         int stockTotal,
         Instant startsAt,
         Instant endsAt,
-        boolean active) {
+        boolean active,
+        String name,
+        String shopName,
+        boolean isShopOfficial,
+        boolean isShopPreferred,
+        int rawDiscount,
+        String discount,
+        String imageHash) {
 }

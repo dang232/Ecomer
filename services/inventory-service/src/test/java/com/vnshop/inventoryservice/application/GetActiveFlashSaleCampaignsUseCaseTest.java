@@ -37,8 +37,17 @@ class GetActiveFlashSaleCampaignsUseCaseTest {
         assertThat(result).hasSize(2);
         assertThat(result).extracting(ActiveFlashSaleCampaignView::productId)
                 .containsExactly("p-live", "p-also-live");
-        assertThat(result.get(0).stockRemaining()).isEqualTo(12L);
-        assertThat(result.get(0).endsAt()).isEqualTo(live.endsAt().toString());
+        ActiveFlashSaleCampaignView first = result.get(0);
+        assertThat(first.stockRemaining()).isEqualTo(12L);
+        assertThat(first.endsAt()).isEqualTo(live.endsAt().toString());
+        // new enrichment fields
+        assertThat(first.name()).isEqualTo("Test Product");
+        assertThat(first.shopName()).isEqualTo("Test Shop");
+        assertThat(first.isShopOfficial()).isFalse();
+        assertThat(first.isShopPreferred()).isFalse();
+        assertThat(first.rawDiscount()).isEqualTo(30);
+        assertThat(first.discount()).isEqualTo("30%");
+        assertThat(first.imageHash()).isNull();
         assertThat(campaigns.lastQueryAt).isEqualTo(NOW);
     }
 
@@ -89,7 +98,14 @@ class GetActiveFlashSaleCampaignsUseCaseTest {
                 100,
                 startsAt,
                 endsAt,
-                true);
+                true,
+                "Test Product",
+                "Test Shop",
+                false,
+                false,
+                30,
+                "30%",
+                null);
     }
 
     private static final class StubCampaignPort implements FlashSaleCampaignPort {

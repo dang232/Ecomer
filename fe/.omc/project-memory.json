@@ -52,8 +52,8 @@
     "runtime": null
   },
   "build": {
-    "buildCommand": "cd \"C:/Users/dangq/OneDrive/Documents/GitHub/Full-Stack-E-commerce/fe\" && npx tsc -b --noEmit 2>&1 | head -20",
-    "testCommand": "cd \"C:\\Users\\dangq\\OneDrive\\Documents\\GitHub\\Full-Stack-E-commerce\\fe\" && pnpm test 2>&1 | tail -15",
+    "buildCommand": "cd \"C:\\Users\\dangq\\OneDrive\\Documents\\GitHub\\Full-Stack-E-commerce\\fe\" && npx tsc --noEmit 2>&1 | head -5",
+    "testCommand": "cd \"C:\\Users\\dangq\\OneDrive\\Documents\\GitHub\\Full-Stack-E-commerce\\fe\" && npx vitest run src/app/lib/image-url.test.ts 2>&1 | tail -5",
     "lintCommand": "pnpm lint",
     "devCommand": "pnpm dev",
     "scripts": {
@@ -347,6 +347,12 @@
       "accessCount": 2,
       "lastAccessed": 1783852335882,
       "type": "directory"
+    },
+    {
+      "path": "src\\app\\lib\\image-url.test.ts",
+      "accessCount": 2,
+      "lastAccessed": 1784281265582,
+      "type": "file"
     },
     {
       "path": "src\\app\\lib\\api\\endpoints\\products.ts",

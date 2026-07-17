@@ -95,6 +95,9 @@ public class SecurityConfig {
                 // WsJwtVerifier before binding the socket to a user.
                 .pathMatchers("/ws/messaging").permitAll()
                 .pathMatchers("/actuator/health", "/actuator/info", "/actuator/prometheus").permitAll()
+                // ponytail: glob permits /<any>/actuator/health for downstream services — FE admin health checks carry no token
+                .pathMatchers("/" + "*/actuator/health", "/" + "*/actuator/info").permitAll()
+                .pathMatchers("/notification-service/health").permitAll()
                 .pathMatchers("/admin/**").hasRole("ADMIN")
                 .pathMatchers("/seller/**", "/sellers/me/**").hasRole("SELLER")
                 .anyExchange().authenticated()
