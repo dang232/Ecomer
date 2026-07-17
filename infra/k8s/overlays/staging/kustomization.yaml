@@ -34,7 +34,7 @@ replicas:
 images:
 - name: vnshop/api-gateway
   newName: ghcr.io/dang232/vnshop-api-gateway
-  newTag: sha-4939162
+  newTag: sha-8447151
 - name: vnshop/user-service
   newName: ghcr.io/dang232/vnshop-user-service
   newTag: sha-4939162
@@ -43,7 +43,7 @@ images:
   newTag: sha-4939162
 - name: vnshop/inventory-service
   newName: ghcr.io/dang232/vnshop-inventory-service
-  newTag: staging
+  newTag: sha-8447151
 - name: vnshop/search-service
   newName: ghcr.io/dang232/vnshop-search-service
   newTag: staging
