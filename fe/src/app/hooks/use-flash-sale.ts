@@ -1,4 +1,4 @@
-import { queryOptions, useQueries, useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import {

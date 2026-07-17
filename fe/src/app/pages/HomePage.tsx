@@ -20,7 +20,6 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import { ImageWithFallback } from "../components/image-with-fallback";
-import { cdnUrl } from "../lib/image-url";
 import { ProductCard } from "../components/product-card";
 import { RecentlyViewedGrid } from "../components/RecentlyViewedGrid";
 import { categoryDisplayLabel, useCategories } from "../hooks/use-categories";
@@ -29,6 +28,7 @@ import { useFlashSaleWithProducts } from "../hooks/use-flash-sale";
 import { useProducts } from "../hooks/use-products";
 import { useRecentlyViewed } from "../hooks/use-recently-viewed";
 import { formatPrice } from "../lib/format";
+import { cdnUrl } from "../lib/image-url";
 import type { Product } from "../types/ui";
 
 // â”€â”€â”€ Section Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -271,18 +271,18 @@ function FlashSaleSection() {
                           -{discount}%
                         </span>
                       ) : null}
-                      {c.isShopOfficial && (
+                      {c.isShopOfficial ? (
                         <span className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-primary text-white text-[10px] font-semibold">
                           Official
                         </span>
-                      )}
+                      ) : null}
                     </div>
                     <div className="p-3">
-                      {c.shopName && (
+                      {c.shopName ? (
                         <p className="text-[11px] text-muted-foreground mb-0.5 truncate">
                           {c.shopName}
                         </p>
-                      )}
+                      ) : null}
                       <p className="text-sm font-medium text-foreground line-clamp-2 mb-1.5 min-h-[2.5rem]">
                         {productName}
                       </p>
@@ -295,11 +295,11 @@ function FlashSaleSection() {
                             {formatPrice(c.originalPrice)}
                           </span>
                         ) : null}
-                        {c.discount && (
+                        {c.discount ? (
                           <span className="text-[11px] font-semibold text-error bg-error-light px-1.5 py-0.5 rounded">
                             {c.discount}
                           </span>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   </motion.div>
