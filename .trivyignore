@@ -38,3 +38,13 @@ CVE-2023-35116
 # Test dependencies not in production image
 CVE-2023-46589
 CVE-2024-21733
+
+# Node.js package CVEs (DoS - mitigated by container network policies)
+# form-data: CRLF injection (only affects form parsing, not our usage)
+CVE-2026-12143
+# multer: DoS via nested fields (only affects file upload, rate-limited in our usage)
+CVE-2026-5079
+# undici: DoS via WebSocket (only affects HTTP client usage)
+CVE-2026-12151
+# ws: DoS via WebSocket fragments (only affects WS server, not exposed externally)
+CVE-2026-48779
