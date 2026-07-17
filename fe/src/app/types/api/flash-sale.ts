@@ -25,10 +25,10 @@ export const flashSaleStockResponseSchema = z
   .passthrough();
 
 /**
- * Active flash-sale campaign surfaced by inventory-service. Public endpoint —
- * the home page renders these without authentication. `stockRemaining` may be
- * absent or null when the Redis-backed counter isn't live yet, in which case
- * callers can fall back to per-item stock polling.
+ * Enriched active flash-sale campaign from inventory-service. Matches Shopee's
+ * flash_sale_get_items response shape — includes seller info, discount labels,
+ * image hash (resolved via cdnUrl()), and shop badges so the FE can render
+ * the full card without a second product-service call.
  */
 export const activeFlashSaleCampaignSchema = z
   .object({
@@ -39,6 +39,13 @@ export const activeFlashSaleCampaignSchema = z
     stockTotal: z.number(),
     stockRemaining: z.number().nullable().optional(),
     endsAt: z.string(),
+    name: z.string().nullable().optional(),
+    shopName: z.string().nullable().optional(),
+    isShopOfficial: z.boolean().optional(),
+    isShopPreferred: z.boolean().optional(),
+    rawDiscount: z.number().optional(),
+    discount: z.string().nullable().optional(),
+    imageHash: z.string().nullable().optional(),
   })
   .passthrough();
 export type ActiveFlashSaleCampaign = z.infer<typeof activeFlashSaleCampaignSchema>;

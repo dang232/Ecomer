@@ -14,7 +14,14 @@ public record ActiveFlashSaleCampaignResponse(
         BigDecimal salePrice,
         int stockTotal,
         long stockRemaining,
-        String endsAt) {
+        String endsAt,
+        String name,
+        String shopName,
+        boolean isShopOfficial,
+        boolean isShopPreferred,
+        int rawDiscount,
+        String discount,
+        String imageHash) {
 
     static ActiveFlashSaleCampaignResponse from(ActiveFlashSaleCampaignView view) {
         return new ActiveFlashSaleCampaignResponse(
@@ -24,6 +31,13 @@ public record ActiveFlashSaleCampaignResponse(
                 view.salePrice(),
                 view.stockTotal(),
                 view.stockRemaining(),
-                view.endsAt());
+                view.endsAt(),
+                view.name(),
+                view.shopName(),
+                view.isShopOfficial(),
+                view.isShopPreferred(),
+                view.rawDiscount(),
+                view.discount(),
+                view.imageHash());
     }
 }

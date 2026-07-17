@@ -5,8 +5,6 @@ import {
   listActiveFlashSaleCampaigns,
   type ActiveFlashSaleCampaign,
 } from "../lib/api/endpoints/flash-sale";
-import { productById } from "../lib/api/endpoints/products";
-import type { ProductDetail } from "../types/api";
 
 export const flashSaleCampaignsOptions = () =>
   queryOptions<ActiveFlashSaleCampaign[]>({
@@ -18,8 +16,7 @@ export const flashSaleCampaignsOptions = () =>
 
 /**
  * Active flash-sale campaigns from inventory-service. Public — no auth gate.
- * Refreshed once a minute; the per-product `flashSaleStock` poll is the
- * fall-back when individual cards need a live `stockRemaining` value.
+ * Refreshed once a minute; the per-product `stockRemaining` is live from Redis.
  */
 export function useFlashSaleCampaigns() {
   const query = useQuery(flashSaleCampaignsOptions());
@@ -33,53 +30,25 @@ export function useFlashSaleCampaigns() {
 
 export interface FlashSaleItem {
   campaign: ActiveFlashSaleCampaign;
-  product: ProductDetail | undefined;
-  isLoading: boolean;
-  isError: boolean;
 }
 
 /**
- * `/flash-sale/active` only carries productId + price + stock + window — the
- * presentation layer joins it with product-service to pick up name and image.
- * We do that join client-side via parallel `useQueries` so inventory-service
- * doesn't take a synchronous cross-service dep on product-service.
- *
- * Items whose product fetch is loading or errored are still surfaced — the
- * caller decides whether to show a placeholder. The campaign's `salePrice`
- * and `originalPrice` remain authoritative; the product's `price` is ignored.
- *
- * Note: product queries use the same key as productDetailOptions so the cache
- * is shared with ProductPage — a product already loaded there won't re-fetch.
+ * The enriched campaign now carries name + shopName + imageHash + seller badges
+ * directly, so no cross-service product join is needed for basic card rendering.
+ * Callers that still need full product detail (description, variants, images)
+ * should use `useFlashSaleWithFullProducts` instead.
  */
 export function useFlashSaleWithProducts() {
-  const { campaigns, isLoading: campaignsLoading, error } = useFlashSaleCampaigns();
-
-  const productQueries = useQueries({
-    queries: campaigns.map((c) => ({
-      queryKey: ["catalog", "products", "detail", c.productId] as const,
-      queryFn: () => productById(c.productId),
-      staleTime: 60_000,
-      retry: false,
-    })),
-  });
+  const { campaigns, isLoading, error } = useFlashSaleCampaigns();
 
   const items = useMemo<FlashSaleItem[]>(
-    () =>
-      campaigns.map((campaign, i) => {
-        const q = productQueries[i];
-        return {
-          campaign,
-          product: q?.data,
-          isLoading: q?.isLoading ?? false,
-          isError: !!q?.error,
-        };
-      }),
-    [campaigns, productQueries],
+    () => campaigns.map((campaign) => ({ campaign })),
+    [campaigns],
   );
 
   return {
     items,
-    isLoading: campaignsLoading,
+    isLoading,
     error,
   };
 }

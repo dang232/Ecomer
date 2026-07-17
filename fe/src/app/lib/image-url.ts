@@ -110,6 +110,18 @@ export function presetSize(preset: ImagePreset): { width: number; height: number
   return { width: config.width, height: config.height };
 }
 
+/**
+ * Resolve a Shopee-style CDN hash to a full URL.
+ * Handles: "abc123def" → "https://cdn.vnshop.vn/file/abc123def"
+ *          "https://…"   → returned as-is (already a full URL)
+ */
+export function cdnUrl(hash: string | null | undefined): string {
+  if (!hash) return "";
+  if (hash.includes("://")) return hash;
+  const base = (import.meta.env.VITE_CDN_BASE as string | undefined) ?? "";
+  return base ? `${base}/file/${hash}` : `/file/${hash}`;
+}
+
 // ─── Internal builders ───────────────────────────────────────────────
 
 function imgproxyUrl(src: string, w: number, h: number, q: number): string {

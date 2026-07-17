@@ -20,6 +20,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import { ImageWithFallback } from "../components/image-with-fallback";
+import { cdnUrl } from "../lib/image-url";
 import { ProductCard } from "../components/product-card";
 import { RecentlyViewedGrid } from "../components/RecentlyViewedGrid";
 import { categoryDisplayLabel, useCategories } from "../hooks/use-categories";
@@ -238,12 +239,11 @@ function FlashSaleSection() {
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-4">
           {items
             .slice(0, 5)
-            .map(({ campaign: c, product, isLoading: productLoading, isError }, i) => {
-              const discount = pctOff(c.originalPrice, c.salePrice);
-              const firstImage = product?.images?.[0];
-              const firstImageUrl = typeof firstImage === "string" ? firstImage : firstImage?.url;
-              const imageSrc = product?.image ?? firstImageUrl ?? "";
-              const productName = product?.name ?? `Product #${c.productId.slice(0, 8)}`;
+            .map(({ campaign: c }, i) => {
+              // ponytail: rawDiscount from BE is authoritative; fallback to client-side calc
+              const discount = c.rawDiscount ?? pctOff(c.originalPrice, c.salePrice);
+              const imageSrc = cdnUrl(c.imageHash);
+              const productName = c.name ?? `Product #${c.productId.slice(0, 8)}`;
 
               return (
                 <Link key={c.id} to={`/product/${c.productId}`} className="block">
@@ -254,7 +254,7 @@ function FlashSaleSection() {
                     className="group bg-card border border-border rounded-[var(--radius-lg)] overflow-hidden cursor-pointer hover:border-border-hover hover:shadow-lg hover:-translate-y-1 transition-all duration-[var(--duration-base)]"
                   >
                     <div className="relative aspect-square bg-surface-elevated flex items-center justify-center overflow-hidden">
-                      {product && !productLoading && !isError && imageSrc ? (
+                      {imageSrc ? (
                         <ImageWithFallback
                           src={imageSrc}
                           alt={productName}
@@ -271,8 +271,18 @@ function FlashSaleSection() {
                           -{discount}%
                         </span>
                       ) : null}
+                      {c.isShopOfficial && (
+                        <span className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-primary text-white text-[10px] font-semibold">
+                          Official
+                        </span>
+                      )}
                     </div>
                     <div className="p-3">
+                      {c.shopName && (
+                        <p className="text-[11px] text-muted-foreground mb-0.5 truncate">
+                          {c.shopName}
+                        </p>
+                      )}
                       <p className="text-sm font-medium text-foreground line-clamp-2 mb-1.5 min-h-[2.5rem]">
                         {productName}
                       </p>
@@ -285,11 +295,11 @@ function FlashSaleSection() {
                             {formatPrice(c.originalPrice)}
                           </span>
                         ) : null}
-                        {discount > 0 ? (
+                        {c.discount && (
                           <span className="text-[11px] font-semibold text-error bg-error-light px-1.5 py-0.5 rounded">
-                            -{discount}%
+                            {c.discount}
                           </span>
-                        ) : null}
+                        )}
                       </div>
                     </div>
                   </motion.div>

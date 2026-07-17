@@ -37,6 +37,27 @@ public class FlashSaleCampaignJpaEntity {
     @Column(name = "active", nullable = false)
     private boolean active;
 
+    @Column(name = "name")
+    private String name;
+
+    @Column(name = "shop_name")
+    private String shopName;
+
+    @Column(name = "is_shop_official", nullable = false)
+    private boolean isShopOfficial;
+
+    @Column(name = "is_shop_preferred", nullable = false)
+    private boolean isShopPreferred;
+
+    @Column(name = "raw_discount", nullable = false)
+    private int rawDiscount;
+
+    @Column(name = "discount")
+    private String discount;
+
+    @Column(name = "image_hash")
+    private String imageHash;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -51,5 +72,12 @@ public class FlashSaleCampaignJpaEntity {
     public Instant getStartsAt() { return startsAt; }
     public Instant getEndsAt() { return endsAt; }
     public boolean isActive() { return active; }
+    public String getName() { return name; }
+    public String getShopName() { return shopName; }
+    public boolean isShopOfficial() { return isShopOfficial; }
+    public boolean isShopPreferred() { return isShopPreferred; }
+    public int getRawDiscount() { return rawDiscount; }
+    public String getDiscount() { return discount; }
+    public String getImageHash() { return imageHash; }
     public Instant getCreatedAt() { return createdAt; }
 }
