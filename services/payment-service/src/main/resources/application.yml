@@ -148,8 +148,10 @@ config-service:
 springdoc:
   api-docs:
     path: /api-docs
+    enabled: ${SWAGGER_ENABLED:false}
   swagger-ui:
     path: /swagger-ui.html
+    enabled: ${SWAGGER_ENABLED:false}
 
 management:
   endpoints:

@@ -25,6 +25,7 @@ public class SecurityConfig {
         return http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api-docs", "/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/prometheus", "/actuator/info").permitAll()
                         .requestMatchers(HttpMethod.GET, "/coupons").permitAll()
                         .requestMatchers(HttpMethod.POST, "/coupons/validate", "/checkout/validate-coupon").permitAll()

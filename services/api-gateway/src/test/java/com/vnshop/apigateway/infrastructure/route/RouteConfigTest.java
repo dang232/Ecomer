@@ -55,7 +55,7 @@ class RouteConfigTest {
         List<Route> routes = locator.getRoutes().collectList().block();
 
         assertThat(routes).isNotNull().extracting(Route::getId)
-                .contains("products", "search", "flash-sale-reserve", "flash-sale-stock", "flash-sale-active", "recommendations");
+                .contains("products", "search", "flash-sale-reserve", "flash-sale-stock", "flash-sale-active", "recommendations", "monitoring");
         assertThat(route(routes, "products").getUri()).isEqualTo(URI.create("http://product:80"));
         assertThat(route(routes, "search").getUri()).isEqualTo(URI.create("http://search:80"));
         assertThat(route(routes, "flash-sale-reserve").getUri()).isEqualTo(URI.create("http://inventory:80"));
@@ -64,6 +64,8 @@ class RouteConfigTest {
         assertThat(matches(route(routes, "search"), "/search/v2")).isTrue();
         assertThat(matches(route(routes, "flash-sale-reserve"), "/flash-sale/reserve")).isTrue();
         assertThat(matches(route(routes, "flash-sale-stock"), "/flash-sale/stock/p1")).isTrue();
+        assertThat(matches(route(routes, "monitoring"), "/monitoring/openapi.json")).isTrue();
+        assertThat(matches(route(routes, "monitoring"), "/monitoring/docs")).isTrue();
     }
 
     private static Route route(List<Route> routes, String id) {

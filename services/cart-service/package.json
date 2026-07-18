@@ -28,6 +28,7 @@
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.1.21",
     "@nestjs/platform-express": "^11.1.21",
+    "@nestjs/swagger": "^11.4.6",
     "@opentelemetry/auto-instrumentations-node": "^0.76.0",
     "@opentelemetry/exporter-jaeger": "^2.7.1",
     "@opentelemetry/sdk-node": "^0.218.0",

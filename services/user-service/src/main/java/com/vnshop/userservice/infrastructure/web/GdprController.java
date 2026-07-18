@@ -3,6 +3,7 @@ package com.vnshop.userservice.infrastructure.web;
 import com.vnshop.userservice.application.GdprDeleteUseCase;
 import com.vnshop.userservice.application.GdprExportUseCase;
 import com.vnshop.userservice.domain.GdprExportRequest;
+import io.swagger.v3.oas.annotations.Hidden;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
+@Hidden
 @RequestMapping("/api/v1/gdpr")
 public class GdprController {
     private static final Logger log = LoggerFactory.getLogger(GdprController.class);

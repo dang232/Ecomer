@@ -29,6 +29,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .addFilterBefore(new CsrfProtectionFilter(), UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api-docs", "/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/sellers", "/sellers/{id}").permitAll()

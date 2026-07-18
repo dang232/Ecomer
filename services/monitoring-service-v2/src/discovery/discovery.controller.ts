@@ -1,13 +1,19 @@
-import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
-import { Roles } from '../auth/roles.decorator.js';
-import { DiscoveryService } from './discovery.service.js';
+import {
+  Controller,
+  Get,
+  Param,
+  NotFoundException,
+  ServiceUnavailableException,
+} from "@nestjs/common";
+import { Roles } from "../auth/roles.decorator.js";
+import { DiscoveryService } from "./discovery.service.js";
 
-@Controller('monitoring')
-@Roles('admin')
+@Controller("monitoring")
+@Roles("admin")
 export class DiscoveryController {
   constructor(private readonly discoveryService: DiscoveryService) {}
 
-  @Get('endpoints')
+  @Get("endpoints")
   getEndpoints() {
     const endpoints = this.discoveryService.getEndpoints();
     const services = this.discoveryService.getServices();
@@ -20,10 +26,21 @@ export class DiscoveryController {
     return grouped;
   }
 
-  @Get('endpoints/:id/schema')
-  getEndpointSchema(@Param('id') id: string) {
+  @Get("endpoints/:id/schema")
+  getEndpointSchema(@Param("id") id: string) {
     const endpoint = this.discoveryService.getEndpointById(id);
-    if (!endpoint) throw new NotFoundException('Endpoint not found');
+    if (!endpoint) throw new NotFoundException("Endpoint not found");
     return endpoint;
+  }
+
+  @Get("openapi.json")
+  getOpenApiDocument() {
+    const document = this.discoveryService.getOpenApiDocument();
+    if (!document) {
+      throw new ServiceUnavailableException(
+        "OpenAPI document is not available",
+      );
+    }
+    return document;
   }
 }

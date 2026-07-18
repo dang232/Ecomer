@@ -36,12 +36,15 @@ async function bootstrap() {
     },
   });
 
-  const config = new DocumentBuilder()
-    .setTitle("Messaging Service")
-    .setVersion("1.0")
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup("api-docs", app, document);
+  if (process.env.OPENAPI_ENABLED !== "false") {
+    const config = new DocumentBuilder()
+      .setTitle("Messaging Service")
+      .setVersion(process.env.OPENAPI_DOCUMENT_VERSION ?? "1.0.0")
+      .addBearerAuth()
+      .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup("api-docs", app, document);
+  }
 
   await app.startAllMicroservices();
   await app.listen(Number(process.env.PORT ?? 8095));

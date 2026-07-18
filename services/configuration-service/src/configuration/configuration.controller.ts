@@ -1,4 +1,5 @@
 import { Controller, Get, Param, Post } from '@nestjs/common';
+import { ApiExcludeEndpoint } from '@nestjs/swagger';
 import { ConfigurationService } from './configuration.service.js';
 import { AppConfigDto } from './dto/app-config.dto.js';
 import { Public } from '../common/decorators/public.decorator.js';
@@ -15,22 +16,26 @@ export class ConfigurationController {
   }
 
   @Get('config/services')
+  @ApiExcludeEndpoint()
   getAllServiceConfigs(): Record<string, Record<string, unknown>> {
     return this.configurationService.getAllServiceConfigs();
   }
 
   @Get('config/services/:serviceName')
+  @ApiExcludeEndpoint()
   getServiceConfig(@Param('serviceName') serviceName: string): Record<string, unknown> {
     return this.configurationService.getServiceConfig(serviceName);
   }
 
   @Get('config/global')
+  @ApiExcludeEndpoint()
   getGlobalConfig(): Record<string, unknown> {
     return this.configurationService.getGlobalConfig();
   }
 
   @Roles('ADMIN')
   @Post('config/reload')
+  @ApiExcludeEndpoint()
   reloadConfigs(): { status: string } {
     this.configurationService.reloadConfigs();
     return { status: 'reloaded' };

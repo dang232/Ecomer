@@ -28,6 +28,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .addFilterBefore(webhookSignatureFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api-docs", "/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/payment/methods").permitAll()
                         // Payment-gateway callbacks (VNPay/MoMo IPN+return, Stripe webhook)

@@ -1,6 +1,14 @@
 server:
   port: 8094
 
+springdoc:
+  api-docs:
+    path: /api-docs
+    enabled: ${SWAGGER_ENABLED:false}
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: ${SWAGGER_ENABLED:false}
+
 spring:
   main:
     allow-bean-definition-overriding: true
