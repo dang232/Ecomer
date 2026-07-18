@@ -34,19 +34,19 @@ replicas:
 images:
 - name: vnshop/api-gateway
   newName: ghcr.io/dang232/vnshop-api-gateway
-  newTag: sha-8447151
+  newTag: sha-74e70a4
 - name: vnshop/user-service
   newName: ghcr.io/dang232/vnshop-user-service
   newTag: sha-4939162
 - name: vnshop/product-service
   newName: ghcr.io/dang232/vnshop-product-service
-  newTag: sha-4939162
+  newTag: sha-74e70a4
 - name: vnshop/inventory-service
   newName: ghcr.io/dang232/vnshop-inventory-service
-  newTag: sha-8447151
+  newTag: sha-74e70a4
 - name: vnshop/search-service
   newName: ghcr.io/dang232/vnshop-search-service
-  newTag: staging
+  newTag: sha-74e70a4
 - name: vnshop/cart-service
   newName: ghcr.io/dang232/vnshop-cart-service
   newTag: staging
