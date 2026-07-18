@@ -761,6 +761,7 @@ services:
         condition: service_healthy
     environment:
       SERVER_PORT: 8081
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-user:5432/vnshop_user?currentSchema=user_svc
       SPRING_DATASOURCE_USERNAME: vnshop
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
@@ -816,6 +817,7 @@ services:
         condition: service_healthy
     environment:
       SERVER_PORT: 8082
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-product:5432/vnshop_product?currentSchema=product_svc
       SPRING_DATASOURCE_USERNAME: vnshop
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
@@ -880,6 +882,7 @@ services:
         condition: service_healthy
     environment:
       SERVER_PORT: 8083
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-inventory:5432/vnshop_inventory?currentSchema=inventory_svc
       SPRING_DATASOURCE_USERNAME: vnshop
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
@@ -922,6 +925,7 @@ services:
         condition: service_healthy
     environment:
       SERVER_PORT: 8084
+      OPENAPI_ENABLED: ${SWAGGER_ENABLED:-true}
       REDIS_HOST: redis
       REDIS_PASSWORD: ${REDIS_PASSWORD:-vnshop123}
       DATABASE_URL: postgresql://vnshop:${POSTGRES_PASSWORD:-vnshop}@postgres-cart:5432/vnshop_cart
@@ -953,6 +957,7 @@ services:
       - "8097:8097"
     environment:
       SERVER_PORT: 8097
+      OPENAPI_ENABLED: ${SWAGGER_ENABLED:-true}
       BRAND_NAME: VNShop
       BRAND_TAGLINE: MARKETPLACE
       SOCIAL_FACEBOOK: https://facebook.com/vnshop
@@ -995,6 +1000,7 @@ services:
         condition: service_healthy
     environment:
       SERVER_PORT: 8086
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-search:5432/vnshop_search?currentSchema=search_svc
       SPRING_DATASOURCE_USERNAME: vnshop
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
@@ -1041,6 +1047,7 @@ services:
       MONGO_URI: mongodb://vnshop:${MONGO_ROOT_PASSWORD:-vnshop123}@mongo:27017/notification_db?authSource=admin
       REDIS_URL: redis://:${REDIS_PASSWORD:-vnshop123}@redis:6379
       PORT: 8087
+      OPENAPI_ENABLED: ${SWAGGER_ENABLED:-true}
       OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://jaeger:4318/v1/traces
       OTEL_TRACES_SAMPLER: parentbased_traceidratio
       OTEL_TRACES_SAMPLER_ARG: "1.0"
@@ -1086,6 +1093,7 @@ services:
         condition: service_healthy
     environment:
       SERVER_PORT: 8088
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-legacy:5432/vnshop?currentSchema=coupon_svc
       SPRING_DATASOURCE_USERNAME: vnshop
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
@@ -1125,6 +1133,7 @@ services:
         condition: service_healthy
     environment:
       SERVER_PORT: 8090
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-legacy:5432/vnshop?currentSchema=seller_finance_svc
       SPRING_DATASOURCE_USERNAME: vnshop
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
@@ -1166,6 +1175,7 @@ services:
         condition: service_healthy
     environment:
       SERVER_PORT: 8094
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-legacy:5432/vnshop?currentSchema=recommendations_svc
       SPRING_DATASOURCE_USERNAME: vnshop
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
@@ -1206,6 +1216,7 @@ services:
         condition: service_healthy
     environment:
       SERVER_PORT: 8091
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-order:5432/vnshop_order?currentSchema=order_svc
       SPRING_DATASOURCE_USERNAME: vnshop
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
@@ -1269,6 +1280,7 @@ services:
         condition: service_healthy
     environment:
       SERVER_PORT: 8092
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-payment:5432/vnshop_payment?currentSchema=payment_svc
       SPRING_DATASOURCE_USERNAME: vnshop
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
@@ -1345,6 +1357,7 @@ services:
         condition: service_healthy
     environment:
       SERVER_PORT: 8093
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-shipping:5432/vnshop_shipping?currentSchema=shipping_svc
       SPRING_DATASOURCE_USERNAME: vnshop
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
@@ -1401,6 +1414,7 @@ services:
       DB_DATABASE: vnshop
       DATABASE_URL: postgresql://vnshop:${POSTGRES_PASSWORD:-vnshop}@postgres-legacy:5432/vnshop?currentSchema=messaging_svc
       PORT: 8095
+      OPENAPI_ENABLED: ${SWAGGER_ENABLED:-true}
       OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://jaeger:4318/v1/traces
       OTEL_TRACES_SAMPLER: parentbased_traceidratio
       OTEL_TRACES_SAMPLER_ARG: "1.0"
@@ -1420,12 +1434,16 @@ services:
     # profiles removed for full deployment
     build: ./services/monitoring-service-v2
     container_name: vnshop-monitoring
-    ports:
-      - "8096:8096"
     environment:
       PORT: 8096
       GATEWAY_URL: http://api-gateway:8080
       GATEWAY_ACTUATOR_URL: http://api-gateway:8080/actuator/gateway/routes
+      OPENAPI_ENABLED: ${OPENAPI_ENABLED:-true}
+      OPENAPI_GATEWAY_SERVER_URL: ${OPENAPI_GATEWAY_SERVER_URL:-http://localhost:8080}
+      OPENAPI_DOCUMENT_VERSION: ${OPENAPI_DOCUMENT_VERSION:-1.0.0}
+      OPENAPI_REFRESH_INTERVAL_MS: ${OPENAPI_REFRESH_INTERVAL_MS:-300000}
+      OPENAPI_FETCH_TIMEOUT_MS: ${OPENAPI_FETCH_TIMEOUT_MS:-3000}
+      DISCOVERY_MODE: ${DISCOVERY_MODE:-static}
       TIMESCALE_HOST: timescaledb
       TIMESCALE_PORT: 5432
       TIMESCALE_DB: monitoring
@@ -1433,7 +1451,7 @@ services:
       TIMESCALE_PASSWORD: ${MONITORING_DB_PASSWORD:-monitoring}
       KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
-      CORS_ORIGINS: http://localhost:8096,http://localhost:3000,http://localhost:5173
+      CORS_ORIGINS: http://localhost:3000,http://localhost:5173
     depends_on:
       timescaledb:
         condition: service_healthy

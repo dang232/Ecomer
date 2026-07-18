@@ -4,6 +4,7 @@ import com.vnshop.paymentservice.application.webhook.WebhookDeadLetterRecord;
 import com.vnshop.paymentservice.application.webhook.WebhookDeadLetterService;
 import com.vnshop.paymentservice.application.webhook.WebhookDltEvent;
 import com.vnshop.paymentservice.domain.port.out.WebhookDeadLetterPort;
+import io.swagger.v3.oas.annotations.Hidden;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -27,6 +28,7 @@ import java.util.UUID;
  * Requires {@code ROLE_ADMIN} authority on all endpoints.
  */
 @RestController
+@Hidden
 @RequestMapping("/api/v1/admin/webhooks")
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminWebhookDltController {

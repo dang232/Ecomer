@@ -27,6 +27,7 @@ public class SecurityConfig {
         return http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api-docs", "/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/prometheus", "/actuator/info").permitAll()
                         // ponytail: flash-sale/active is a public read (homepage banner) — must not require JWT
                         .requestMatchers(HttpMethod.GET, "/flash-sale/active").permitAll()

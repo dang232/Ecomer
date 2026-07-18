@@ -1,10 +1,24 @@
 import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  if (process.env.OPENAPI_ENABLED !== 'false') {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('Notification Service')
+      .setVersion(process.env.OPENAPI_DOCUMENT_VERSION ?? '1.0.0')
+      .addBearerAuth()
+      .build();
+    SwaggerModule.setup(
+      'api-docs',
+      app,
+      SwaggerModule.createDocument(app, swaggerConfig),
+    );
+  }
 
   // WebSocket adapter (socket.io)
   app.useWebSocketAdapter(new IoAdapter(app));

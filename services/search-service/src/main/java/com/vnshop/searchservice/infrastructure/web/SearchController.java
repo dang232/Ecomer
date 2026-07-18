@@ -6,6 +6,7 @@ import com.vnshop.searchservice.application.SearchProductsUseCase;
 import com.vnshop.searchservice.application.CursorSort;
 import com.vnshop.searchservice.application.SearchV2Query;
 import com.vnshop.searchservice.application.SearchV2Response;
+import io.swagger.v3.oas.annotations.Hidden;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -108,6 +109,7 @@ public class SearchController {
     }
 
     @GetMapping("/categories")
+    @Hidden
     public ApiResponse<List<String>> categories() {
         return ApiResponse.ok(searchProductsUseCase.categories());
     }

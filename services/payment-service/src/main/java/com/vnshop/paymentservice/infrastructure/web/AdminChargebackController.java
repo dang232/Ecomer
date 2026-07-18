@@ -3,6 +3,7 @@ package com.vnshop.paymentservice.infrastructure.web;
 import com.vnshop.paymentservice.application.chargeback.ChargebackNotFoundException;
 import com.vnshop.paymentservice.application.chargeback.ChargebackService;
 import com.vnshop.paymentservice.domain.Chargeback;
+import io.swagger.v3.oas.annotations.Hidden;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,6 +21,7 @@ import java.util.UUID;
  * Both endpoints require the {@code ROLE_ADMIN} authority.
  */
 @RestController
+@Hidden
 @RequestMapping("/api/v1/chargebacks")
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminChargebackController {

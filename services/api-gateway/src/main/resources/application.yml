@@ -32,10 +32,6 @@ spring:
             allow-credentials: false
             max-age: 3600
 
-springdoc:
-  swagger-ui:
-    path: /swagger-ui.html
-
 management:
   endpoints:
     web:

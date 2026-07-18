@@ -8,6 +8,7 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
+    "validate:openapi": "node ../../scripts/validate-openapi.mjs",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage"
@@ -22,6 +23,7 @@
     "@nestjs/platform-socket.io": "^11.1.24",
     "@nestjs/schedule": "^5.0.1",
     "@nestjs/serve-static": "^5.0.1",
+    "@nestjs/swagger": "^11.4.6",
     "@nestjs/typeorm": "^11.0.0",
     "@nestjs/websockets": "^11.1.24",
     "axios": "^1.7.9",
