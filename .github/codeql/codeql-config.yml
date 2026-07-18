@@ -1,0 +1,11 @@
+name: VNShop CodeQL configuration
+
+# The Flutter platform folders contain generated/native Kotlin, Swift, and C++
+# code. They are outside the server and web security analysis covered here.
+paths-ignore:
+  - vnshop_mobile/**
+  - '**/node_modules/**'
+  - '**/target/**'
+  - '**/build/**'
+  - '**/.dart_tool/**'
+
