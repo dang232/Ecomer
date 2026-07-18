@@ -1,10 +1,9 @@
 import { KeyRound, AlertCircle, CheckCircle } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-const env = import.meta.env as Record<string, string | undefined>;
-const API_URL = env.VITE_API_URL ?? "http://localhost:8080";
+import { requestPasswordReset } from "../lib/api/endpoints/auth";
 
 /**
  * Native password-reset request page. Replaces the old "forgot password"
@@ -29,32 +28,25 @@ export function PasswordResetPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const requestController = useRef<AbortController | null>(null);
+
+  useEffect(() => () => requestController.current?.abort(), []);
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (submitting) return;
     setError(null);
     setSubmitting(true);
+    const controller = new AbortController();
+    requestController.current = controller;
     void (async () => {
       try {
-        const res = await fetch(`${API_URL}/auth/password-reset-request`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ email: email.trim() }),
-        });
-        if (!res.ok && res.status !== 202) {
-          // 4xx other than the expected 202: surface a generic error.
-          // The BE never leaks "user not found" so any visible failure
-          // is a transport / validation problem.
-          setError(t("passwordReset.errorGeneric"));
-          return;
-        }
+        await requestPasswordReset(email.trim(), controller.signal);
         setSubmitted(true);
       } catch {
-        setError(t("passwordReset.errorGeneric"));
+        if (!controller.signal.aborted) setError(t("passwordReset.errorGeneric"));
       } finally {
-        setSubmitting(false);
+        if (!controller.signal.aborted) setSubmitting(false);
       }
     })();
   };

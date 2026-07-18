@@ -1,4 +1,5 @@
 import { IconLoader2, IconSearch, IconSend } from "@tabler/icons-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
@@ -6,7 +7,7 @@ import { toast } from "sonner";
 
 import { useAuth } from "../hooks/use-auth";
 import { useMarkThreadRead, useMessages, useSendMessage } from "../hooks/use-messages";
-import { useThreads } from "../hooks/use-threads";
+import { THREADS_KEY, useThreads } from "../hooks/use-threads";
 import { ApiError } from "../lib/api";
 import { openThread } from "../lib/api/endpoints/messaging";
 import type { ChatMessage, MessageThreadSummary } from "../lib/api/endpoints/messaging";
@@ -152,14 +153,16 @@ function MessageBubble({ message, isMine }: { message: ChatMessage; isMine: bool
 function MessagePane({
   threadId,
   callerId,
+  participant,
 }: {
   threadId: string | null;
   callerId: string | undefined;
+  participant: MessageThreadSummary | null;
 }) {
   const { t } = useTranslation();
   const messagesQuery = useMessages(threadId ?? undefined);
   const sendMessage = useSendMessage(threadId ?? undefined);
-  const markRead = useMarkThreadRead();
+  const { mutate: markThreadRead } = useMarkThreadRead();
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -172,9 +175,8 @@ function MessagePane({
   // Mark thread as read whenever the user opens it (idempotent on the server).
   useEffect(() => {
     if (!threadId) return;
-    markRead.mutate(threadId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [threadId]);
+    markThreadRead(threadId);
+  }, [markThreadRead, threadId]);
 
   // Auto-scroll to the latest message when the cache changes.
   useEffect(() => {
@@ -193,21 +195,19 @@ function MessagePane({
   const submit = () => {
     const trimmed = draft.trim();
     if (!trimmed || !threadId) return;
-    setDraft("");
     sendMessage.mutate(
       { body: trimmed },
       {
+        onSuccess: () => setDraft(""),
         onError: (err) =>
           toast.error(err instanceof ApiError ? err.message : t("messaging.sendError")),
       },
     );
   };
 
-  const headerLatest = messagesQuery.data?.content?.[0];
-  const headerThread = headerLatest?.threadId
-    ? t("messaging.headerThread", { id: headerLatest.threadId.slice(0, 8) })
+  const headerName = participant
+    ? (participant.otherPartyUsername ?? `User ${participant.otherPartyId.slice(0, 8)}`)
     : t("messaging.headerThreadFallback");
-  const headerName = headerThread;
   const initials = headerName.slice(0, 2).toUpperCase();
 
   return (
@@ -219,7 +219,6 @@ function MessagePane({
         </div>
         <div>
           <p className="font-semibold text-sm text-foreground">{headerName}</p>
-          <p className="text-[11px] text-success">● Online</p>
         </div>
       </div>
 
@@ -286,14 +285,17 @@ function MessagePane({
 export function MessagesPage() {
   const { ready, authenticated, login, subject } = useAuth();
   const [params, setParams] = useSearchParams();
+  const queryClient = useQueryClient();
   const threads = useThreads();
   const [filter, setFilter] = useState("");
   const [resolving, setResolving] = useState(false);
+  const [resolvedThreadId, setResolvedThreadId] = useState<string | null>(null);
   const { t } = useTranslation();
 
   const requestedThreadId = params.get("thread");
   const requestedRecipient = params.get("with");
   const requestedProduct = params.get("product");
+  const paramsValue = params.toString();
 
   // If the URL says ?with=<userId>[&product=<id>], find or create that thread
   // before rendering the pane.
@@ -307,16 +309,20 @@ export function MessagesPage() {
     })
       .then((thread) => {
         if (cancelled) return;
+        setResolvedThreadId(thread.id);
+        void queryClient.invalidateQueries({ queryKey: THREADS_KEY });
         // Strip the auto-resolve params and stash the thread id so a refresh
         // doesn't re-trigger the resolve.
-        const next = new URLSearchParams(params);
+        const next = new URLSearchParams(paramsValue);
         next.delete("with");
         next.delete("product");
         next.set("thread", thread.id);
         setParams(next, { replace: true });
       })
       .catch((err) => {
-        toast.error(err instanceof ApiError ? err.message : t("messaging.openThreadError"));
+        if (!cancelled) {
+          toast.error(err instanceof ApiError ? err.message : t("messaging.openThreadError"));
+        }
       })
       .finally(() => {
         if (!cancelled) setResolving(false);
@@ -324,22 +330,41 @@ export function MessagesPage() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, authenticated, requestedRecipient, requestedThreadId, requestedProduct]);
+  }, [
+    authenticated,
+    paramsValue,
+    ready,
+    requestedProduct,
+    requestedRecipient,
+    requestedThreadId,
+    queryClient,
+    setParams,
+    t,
+  ]);
 
   // Only treat the URL thread param as selected if it actually exists in the
   // loaded thread list. This prevents the pane from rendering stale/invalid
   // thread content while threads are still loading or after a URL is shared.
   const threadIds = useMemo(() => new Set(threads.items.map((t) => t.id)), [threads.items]);
   const selectedId: string | null = useMemo(() => {
-    if (requestedThreadId && threadIds.has(requestedThreadId)) return requestedThreadId;
+    if (
+      requestedThreadId &&
+      (threadIds.has(requestedThreadId) || resolvedThreadId === requestedThreadId)
+    ) {
+      return requestedThreadId;
+    }
+    if (resolving) return null;
     // Fall back to the first available thread only when no explicit param is set.
     if (!requestedThreadId) return threads.items.find((t) => !!t.id)?.id ?? null;
     // URL has a threadId but threads haven't loaded yet — keep it so the pane
     // shows a loading state rather than the "select a conversation" placeholder.
     if (threads.isLoading) return requestedThreadId;
     return null;
-  }, [requestedThreadId, threadIds, threads.items, threads.isLoading]);
+  }, [requestedThreadId, resolving, resolvedThreadId, threadIds, threads.items, threads.isLoading]);
+  const selectedThread = useMemo(
+    () => threads.items.find((thread) => thread.id === selectedId) ?? null,
+    [selectedId, threads.items],
+  );
 
   const selectThread = (id: string) => {
     const next = new URLSearchParams(params);
@@ -374,7 +399,7 @@ export function MessagesPage() {
           onFilterChange={setFilter}
           isLoading={threads.isLoading || resolving}
         />
-        <MessagePane threadId={selectedId} callerId={subject} />
+        <MessagePane threadId={selectedId} callerId={subject} participant={selectedThread} />
       </div>
     </div>
   );

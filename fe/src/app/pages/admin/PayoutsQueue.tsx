@@ -1,6 +1,6 @@
 import { IconArrowsSort, IconSearch } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -83,7 +83,7 @@ export function PayoutsQueue() {
   });
 
   const activeQuery = tab === "pending" ? pendingQuery : completedQuery;
-  const activeList = activeQuery.data ?? [];
+  const activeList = useMemo(() => activeQuery.data ?? [], [activeQuery.data]);
   const completeTarget =
     completeFor && tab === "pending"
       ? (pendingQuery.data?.find((p) => p.id === completeFor) ?? null)
@@ -91,8 +91,10 @@ export function PayoutsQueue() {
 
   // Completed rows sort on completedAt (when the payout actually settled),
   // pending rows on requestedAt (when the seller filed the request).
-  const dateField = (p: AdminPayout) =>
-    tab === "completed" ? (p.completedAt ?? p.requestedAt) : p.requestedAt;
+  const dateField = useCallback(
+    (p: AdminPayout) => (tab === "completed" ? (p.completedAt ?? p.requestedAt) : p.requestedAt),
+    [tab],
+  );
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -111,13 +113,13 @@ export function PayoutsQueue() {
       const tb = dateField(b) ? Date.parse(dateField(b)!) : 0;
       return tb - ta;
     });
-  }, [filtered, sortBy, tab]);
+  }, [filtered, sortBy, dateField]);
 
   // Date sections only when sorted by date — under amount sort the
   // grouping would split the comparison the user is trying to make.
   const sections = useMemo(
     () => (sortBy === "date" ? groupByDate(sorted, dateField, i18n.language) : null),
-    [sorted, sortBy, tab, i18n.language],
+    [sorted, sortBy, dateField, i18n.language],
   );
 
   const focusTab = (next: Tab) => {

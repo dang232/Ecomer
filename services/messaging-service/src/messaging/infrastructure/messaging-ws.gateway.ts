@@ -100,11 +100,26 @@ export class MessagingWsGateway
     const auth = request.headers.authorization;
     if (auth?.startsWith("Bearer ")) return auth.slice(7).trim();
 
+    const protocols = request.headers["sec-websocket-protocol"];
+    const protocolHeader = Array.isArray(protocols)
+      ? protocols.join(",")
+      : protocols;
+    const jwtProtocol = protocolHeader
+      ?.split(",")
+      .map((value) => value.trim())
+      .find((value) => value.startsWith("vnshop-jwt."));
+    if (jwtProtocol) {
+      const token = jwtProtocol.slice("vnshop-jwt.".length).trim();
+      if (token) return token;
+    }
+
     const url = new URL(
       request.url ?? "/",
       `http://${request.headers.host ?? "localhost"}`,
     );
     const fromQuery = url.searchParams.get("token");
+    // Backward-compatible fallback for clients deployed before subprotocol
+    // authentication was introduced. New clients must not use this path.
     return fromQuery ? fromQuery.trim() : null;
   }
 

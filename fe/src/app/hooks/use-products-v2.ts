@@ -1,7 +1,7 @@
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 
-import { productListV2, type ProductListV2Params } from "../lib/api/endpoints/products";
 import { catalogV2Enabled } from "../lib/api/catalog-flags";
+import { productListV2, type ProductListV2Params } from "../lib/api/endpoints/products";
 
 export const productV2Options = (params: ProductListV2Params, enabled = true) => ({
   queryKey: ["products-v2", params] as const,

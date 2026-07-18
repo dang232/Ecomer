@@ -142,6 +142,8 @@
     "emptySub": "Thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm",
     "emptyClear": "Xóa bộ lọc",
     "loadMore": "Xem thêm {{count}} sản phẩm",
+    "showingLoaded": "Đang hiển thị {{count}} sản phẩm đã tải",
+    "loadingMore": "Đang tải thêm...",
     "noResultsFor": "Không tìm thấy kết quả cho '{{query}}'",
     "showingRange": "Hiển thị {{start}}–{{end}} trong {{total}} kết quả cho '{{query}}'",
     "andUp": "trở lên",

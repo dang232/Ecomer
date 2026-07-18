@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import {
   ChevronRight,
   Zap,
@@ -27,6 +26,7 @@ import { useCountdown } from "../hooks/use-countdown";
 import { useFlashSaleWithProducts } from "../hooks/use-flash-sale";
 import { useProducts } from "../hooks/use-products";
 import { useRecentlyViewed } from "../hooks/use-recently-viewed";
+import { useSellerShowcase } from "../hooks/use-sellers";
 import { formatPrice } from "../lib/format";
 import { cdnUrl } from "../lib/image-url";
 import type { Product } from "../types/ui";
@@ -409,34 +409,10 @@ function ProductsSection() {
 // â”€â”€â”€ Seller Showcase Section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function SellerShowcaseSection() {
   const { t } = useTranslation();
-  const { data: sellers = [], isLoading } = useQuery({
-    queryKey: ["sellers", "showcase"],
-    queryFn: async () => {
-      const res = await fetch(
-        `${(import.meta.env as Record<string, string | undefined>).VITE_API_URL ?? "http://localhost:8080"}/sellers?size=4`,
-      );
-      if (!res.ok) return [];
-      const body = (await res.json()) as {
-        data?: { content?: unknown[] } | unknown[];
-        content?: unknown[];
-      };
-      const d = body?.data ?? body;
-      if (Array.isArray(d)) return d;
-      if (
-        d &&
-        typeof d === "object" &&
-        "content" in d &&
-        Array.isArray((d as { content: unknown[] }).content)
-      ) {
-        return (d as { content: unknown[] }).content;
-      }
-      return [];
-    },
-    staleTime: 5 * 60_000,
-    retry: false,
-  });
+  const { data, isLoading, isError } = useSellerShowcase();
+  const sellers = data?.content ?? [];
 
-  if (!isLoading && sellers.length === 0) return null;
+  if (!isLoading && (isError || sellers.length === 0)) return null;
 
   return (
     <section>
@@ -453,22 +429,21 @@ function SellerShowcaseSection() {
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {sellers.slice(0, 4).map((seller) => {
-            const s = seller as Record<string, unknown>;
-            const id = (s.id ?? s.sellerId) as string | number;
-            const name = (s.shopName ?? s.name ?? "S") as string;
-            const productCount = (s.productCount ?? 0) as number;
+          {sellers.map((seller) => {
+            const name = seller.shopName || "S";
             return (
               <Link
-                key={String(id)}
-                to={`/sellers/${String(id)}`}
+                key={seller.id}
+                to={`/sellers/${encodeURIComponent(seller.id)}`}
                 className="block bg-card border border-border rounded-[var(--radius-lg)] p-4 text-center hover:border-primary hover:shadow-md transition-all cursor-pointer"
               >
                 <div className="w-14 h-14 rounded-full bg-primary-light mx-auto mb-3 flex items-center justify-center text-primary font-bold text-lg">
                   {name.charAt(0).toUpperCase()}
                 </div>
                 <p className="text-sm font-semibold text-foreground line-clamp-1">{name}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{productCount} products</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {seller.totalProducts} products
+                </p>
               </Link>
             );
           })}

@@ -11,7 +11,7 @@ vi.mock("../../auth/native-auth", () => ({
 
 import { ApiError } from "../envelope";
 
-import { registerUser } from "./auth";
+import { registerUser, requestPasswordReset } from "./auth";
 
 const fetchSpy = vi.spyOn(global, "fetch");
 
@@ -94,5 +94,29 @@ describe("registerUser", () => {
     expect(err).toBeInstanceOf(ApiError);
     expect((err as ApiError).errorCode).toBe("EMAIL_TAKEN");
     expect((err as ApiError).message).toBe("Email already registered");
+  });
+});
+
+describe("requestPasswordReset", () => {
+  it("uses the public typed endpoint with cookie credentials", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse(
+        {
+          success: true,
+          message: "ok",
+          data: { accepted: true },
+          errorCode: null,
+          timestamp: "2026-05-15T00:00:00Z",
+        },
+        { status: 202 },
+      ),
+    );
+
+    await expect(requestPasswordReset("u@example.com")).resolves.toEqual({ accepted: true });
+
+    const init = fetchSpy.mock.calls[0][1];
+    expect(init?.credentials).toBe("include");
+    expect(init?.headers).toMatchObject({ "Content-Type": "application/json" });
+    expect(JSON.parse(String(init?.body))).toEqual({ email: "u@example.com" });
   });
 });

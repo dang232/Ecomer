@@ -70,6 +70,7 @@ export function useAvatarUpload(options: AvatarUploadOptions = {}) {
       const putResponse = await fetch(init.uploadUrl, {
         method: "PUT",
         body: file,
+        signal: AbortSignal.timeout(30_000),
         headers: {
           "Content-Type": file.type,
           "x-amz-meta-sha256": sha256Hex,

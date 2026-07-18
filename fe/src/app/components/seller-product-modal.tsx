@@ -68,6 +68,7 @@ async function uploadOne(file: File, productId: string): Promise<string> {
     method: "PUT",
     headers: { "Content-Type": file.type },
     body: file,
+    signal: AbortSignal.timeout(30_000),
   });
   if (!putRes.ok) {
     // Status code surfaced via i18n in the caller
@@ -162,6 +163,16 @@ function SellerProductModalBody({
   });
   const [matrixEditRow, setMatrixEditRow] = useState<string | null>(null); // size being renamed
   const [matrixEditCol, setMatrixEditCol] = useState<string | null>(null); // color being renamed
+  const matrixEditRowInputRef = useRef<HTMLInputElement>(null);
+  const matrixEditColInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (matrixEditRow) matrixEditRowInputRef.current?.focus();
+  }, [matrixEditRow]);
+
+  useEffect(() => {
+    if (matrixEditCol) matrixEditColInputRef.current?.focus();
+  }, [matrixEditCol]);
 
   // Image state. `existingImages` are URLs already attached to the product (edit mode).
   // `staged` are local files the user picked but haven't been uploaded yet.
@@ -854,7 +865,7 @@ function SellerProductModalBody({
                                 onBlur={() => setMatrixEditCol(null)}
                                 onKeyDown={(e) => e.key === "Enter" && setMatrixEditCol(null)}
                                 className="w-20 px-1 py-0.5 border border-border rounded text-center text-xs"
-                                autoFocus
+                                ref={matrixEditColInputRef}
                               />
                             ) : (
                               <button
@@ -924,7 +935,7 @@ function SellerProductModalBody({
                             onBlur={() => setMatrixEditRow(null)}
                             onKeyDown={(e) => e.key === "Enter" && setMatrixEditRow(null)}
                             className="w-full px-1 py-0.5 border border-border rounded text-xs"
-                            autoFocus
+                            ref={matrixEditRowInputRef}
                           />
                         ) : (
                           <button

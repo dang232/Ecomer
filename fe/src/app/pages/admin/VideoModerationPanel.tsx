@@ -22,11 +22,9 @@ export function VideoModerationPanel() {
   const queueBtnRef = useRef<HTMLButtonElement>(null);
   const appealsBtnRef = useRef<HTMLButtonElement>(null);
 
-  const refs = { queue: queueBtnRef, appeals: appealsBtnRef };
-
   const focusTab = useCallback((next: SubTab) => {
     setSubTab(next);
-    refs[next].current?.focus();
+    (next === "queue" ? queueBtnRef : appealsBtnRef).current?.focus();
   }, []);
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLButtonElement>, current: SubTab) {

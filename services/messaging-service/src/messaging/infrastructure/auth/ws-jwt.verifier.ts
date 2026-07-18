@@ -18,10 +18,10 @@ const LOG_THROTTLE_MS = 60_000;
 
 /**
  * Validates a JWT for the WebSocket handshake. Lives outside passport-jwt
- * because `ws` upgrades aren't Express requests — we need to verify the token
- * passed via the `?token=` query parameter (the SPA puts the Bearer token there
- * because browsers can't set custom headers on WebSocket constructors) before
- * accepting the upgrade.
+ * because `ws` upgrades aren't Express requests. The SPA offers the Bearer
+ * token through a WebSocket subprotocol because browsers can't set custom
+ * headers on WebSocket constructors; the gateway keeps a query-parameter
+ * fallback for older clients while they roll forward.
  */
 @Injectable()
 export class WsJwtVerifier {
@@ -66,7 +66,10 @@ export class WsJwtVerifier {
         (err, decoded) => {
           if (err || !decoded || typeof decoded === "string") {
             const message = err?.message ?? "malformed payload";
-            if (err?.name === "TokenExpiredError" || message.includes("jwt expired")) {
+            if (
+              err?.name === "TokenExpiredError" ||
+              message.includes("jwt expired")
+            ) {
               reject(new TokenExpiredError(message));
             } else {
               reject(err ?? new Error("Malformed token"));
