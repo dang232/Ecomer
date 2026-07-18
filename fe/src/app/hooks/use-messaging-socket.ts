@@ -32,9 +32,10 @@ const RECONNECT_CAP_MS = 30_000;
 
 /**
  * Boot-time WebSocket connection. Authenticates with the same JWT as REST
- * (Keycloak) by passing it as the `?token=` query param — browsers don't let
- * us set Authorization headers on `new WebSocket(...)`. The server validates
- * the token before binding the socket to the user and pushes
+ * through a WebSocket subprotocol. Putting the token in the URL would expose
+ * it to request logs, and browsers don't let us set Authorization headers on
+ * `new WebSocket(...)`. The server validates the token before binding the
+ * socket to the user and pushes
  * `{type:'message', payload:{...}}` events for the recipient on every Kafka
  * fan-out.
  *
@@ -48,18 +49,33 @@ export function useMessagingSocket(): void {
   const attemptRef = useRef(0);
   const stoppedRef = useRef(false);
   const lastSeenRef = useRef<string | null>(null);
+  const connectionIdRef = useRef(0);
+  const reconnectTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!ready || !authenticated || !token) return;
+    const connectionId = ++connectionIdRef.current;
     stoppedRef.current = false;
+    attemptRef.current = 0;
+    lastSeenRef.current = null;
+
+    const isCurrent = () => !stoppedRef.current && connectionIdRef.current === connectionId;
+
+    if (!ready || !authenticated || !token) {
+      return () => {
+        stoppedRef.current = true;
+      };
+    }
 
     const connect = () => {
-      if (stoppedRef.current) return;
-      const url = `${BASE_WS_URL}${WS_PATH}?token=${encodeURIComponent(token)}`;
-      const socket = new WebSocket(url);
+      if (!isCurrent()) return;
+      const socket = new WebSocket(`${BASE_WS_URL}${WS_PATH}`, [
+        "vnshop-auth",
+        `vnshop-jwt.${token}`,
+      ]);
       socketRef.current = socket;
 
       socket.addEventListener("open", () => {
+        if (!isCurrent()) return;
         attemptRef.current = 0;
         // Request catch-up for messages missed during reconnect/token refresh
         if (lastSeenRef.current) {
@@ -70,6 +86,7 @@ export function useMessagingSocket(): void {
       });
 
       socket.addEventListener("message", (event) => {
+        if (!isCurrent()) return;
         try {
           const raw: unknown = JSON.parse(typeof event.data === "string" ? event.data : "");
           const envelope = raw as ServerEnvelope;
@@ -108,10 +125,13 @@ export function useMessagingSocket(): void {
       });
 
       const scheduleReconnect = () => {
-        if (stoppedRef.current) return;
+        if (!isCurrent() || reconnectTimerRef.current !== null) return;
         const attempt = attemptRef.current++;
         const delay = Math.min(RECONNECT_BASE_MS * 2 ** attempt, RECONNECT_CAP_MS);
-        window.setTimeout(connect, delay);
+        reconnectTimerRef.current = window.setTimeout(() => {
+          reconnectTimerRef.current = null;
+          connect();
+        }, delay);
       };
 
       socket.addEventListener("close", scheduleReconnect);
@@ -128,9 +148,17 @@ export function useMessagingSocket(): void {
 
     return () => {
       stoppedRef.current = true;
+      if (reconnectTimerRef.current !== null) {
+        window.clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
       const socket = socketRef.current;
-      socketRef.current = null;
-      if (socket && socket.readyState === socket.OPEN) {
+      if (socketRef.current === socket) socketRef.current = null;
+      lastSeenRef.current = null;
+      if (
+        socket &&
+        (socket.readyState === socket.OPEN || socket.readyState === socket.CONNECTING)
+      ) {
         try {
           socket.close();
         } catch {

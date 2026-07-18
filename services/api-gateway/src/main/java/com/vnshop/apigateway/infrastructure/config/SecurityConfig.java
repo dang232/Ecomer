@@ -86,13 +86,12 @@ public class SecurityConfig {
                 .pathMatchers(HttpMethod.POST, "/reviews/seller-summaries", "/products/counts",
                         "/coupons/validate", "/checkout/validate-coupon").permitAll()
                 .pathMatchers("/auth/**", "/payment/*/callback", "/payment/*/ipn", "/payment/stripe/webhook").permitAll()
-                // The WebSocket handshake on /ws/messaging carries the JWT via the
-                // `?token=` query parameter (browsers can't set Authorization headers
-                // on `new WebSocket(...)`), so it cannot pass the gateway's resource
-                // server filter — and we can't relay query params into the
-                // Authorization header before the security filter chain. The
-                // downstream messaging-service verifies the token itself via
-                // WsJwtVerifier before binding the socket to a user.
+                // The WebSocket handshake on /ws/messaging carries the JWT through
+                // a subprotocol because browsers can't set Authorization headers on
+                // `new WebSocket(...)`, so it cannot pass the gateway's resource
+                // server filter. The downstream messaging-service verifies the
+                // token itself via WsJwtVerifier before binding the socket to a user.
+                // A query-token fallback remains in that service for older clients.
                 .pathMatchers("/ws/messaging").permitAll()
                 .pathMatchers("/actuator/health", "/actuator/info", "/actuator/prometheus").permitAll()
                 // ponytail: glob permits /<any>/actuator/health for downstream services — FE admin health checks carry no token
