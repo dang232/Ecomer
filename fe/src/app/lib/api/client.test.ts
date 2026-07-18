@@ -235,12 +235,7 @@ describe("request", () => {
       }),
     );
 
-    const result = await api.getWithMeta(
-      "/products/v2",
-      productSchema,
-      undefined,
-      { auth: false },
-    );
+    const result = await api.getWithMeta("/products/v2", productSchema, undefined, { auth: false });
 
     expect(result.data).toEqual({ id: "p1", name: "Tai nghe" });
     expect(result.meta).toMatchObject({
@@ -266,7 +261,9 @@ describe("request", () => {
     );
     fetchSpy.mockResolvedValueOnce(new Response(null, { status: 304 }));
 
-    const initial = await api.getWithMeta("/products/v2", productSchema, undefined, { auth: false });
+    const initial = await api.getWithMeta("/products/v2", productSchema, undefined, {
+      auth: false,
+    });
     expect(initial.headers.get("etag")).toBe('"product-v1"');
     const result = await api
       .getWithMeta("/products/v2", productSchema, undefined, { auth: false })

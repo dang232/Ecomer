@@ -9,7 +9,7 @@ export const productV2Options = (params: ProductListV2Params, enabled = true) =>
     productListV2({ ...params, cursor: pageParam }, signal),
   initialPageParam: undefined as string | undefined,
   getNextPageParam: (lastPage: Awaited<ReturnType<typeof productListV2>>) =>
-    lastPage.data.hasMore ? lastPage.data.nextCursor ?? undefined : undefined,
+    lastPage.data.hasMore ? (lastPage.data.nextCursor ?? undefined) : undefined,
   placeholderData: keepPreviousData,
   staleTime: 30_000,
   enabled: enabled && catalogV2Enabled,

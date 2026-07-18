@@ -310,7 +310,10 @@ export const retryInterceptor: ErrorInterceptor = async (err, ctx) => {
     if (method.toUpperCase() !== "GET" || (ctx.meta.attempts ?? 1) >= 2) return undefined;
     const signal = ctx.init.signal ?? undefined;
     try {
-      await delay(Math.min(err.retryAfterMs ?? 0, 5_000), signal instanceof AbortSignal ? signal : undefined);
+      await delay(
+        Math.min(err.retryAfterMs ?? 0, 5_000),
+        signal instanceof AbortSignal ? signal : undefined,
+      );
     } catch {
       return undefined;
     }

@@ -316,10 +316,14 @@ async function executeRequest<TSchema extends z.ZodType>(
     }
 
     if (response.status === 304 && usePublicCache && cached) {
-      telemetryInterceptor({ request: requestCtx, response, parsed: null });
+      void telemetryInterceptor({ request: requestCtx, response, parsed: null });
       return {
         data: cached.data as z.infer<TSchema>,
-        meta: { ...cached.meta, cacheStatus: "hit", requestId: requestIdFrom(response, correlationId) },
+        meta: {
+          ...cached.meta,
+          cacheStatus: "hit",
+          requestId: requestIdFrom(response, correlationId),
+        },
         status: 304,
         headers: response.headers,
       };
@@ -329,7 +333,7 @@ async function executeRequest<TSchema extends z.ZodType>(
       removeConditionalHeader(requestCtx.init);
       response = await fetch(requestCtx.url, requestCtx.init);
       if (response.status === 304) {
-        telemetryInterceptor({ request: requestCtx, response, parsed: null });
+        void telemetryInterceptor({ request: requestCtx, response, parsed: null });
         throw new ApiError(
           304,
           "NOT_MODIFIED",
@@ -389,7 +393,9 @@ async function executeRequest<TSchema extends z.ZodType>(
 }
 
 function requestIdFrom(response: Response, fallback: string): string {
-  return response.headers.get("x-request-id") ?? response.headers.get("x-correlation-id") ?? fallback;
+  return (
+    response.headers.get("x-request-id") ?? response.headers.get("x-correlation-id") ?? fallback
+  );
 }
 
 export async function request<TSchema extends z.ZodType>(
@@ -416,7 +422,15 @@ export const api = {
     schema: T,
     query?: RequestOptions<T>["query"],
     opts?: Pick<RequestOptions<T>, "auth" | "signal" | "credentials">,
-  ) => requestWithMeta({ method: "GET", path, schema, query, ...opts, publicCache: opts?.auth === false }),
+  ) =>
+    requestWithMeta({
+      method: "GET",
+      path,
+      schema,
+      query,
+      ...opts,
+      publicCache: opts?.auth === false,
+    }),
   post: <T extends z.ZodType>(
     path: string,
     schema: T,

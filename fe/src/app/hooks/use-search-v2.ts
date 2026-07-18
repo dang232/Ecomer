@@ -9,7 +9,7 @@ export const searchV2Options = (params: CursorSearchParams, enabled = true) => (
     searchProductsV2({ ...params, cursor: pageParam }, signal),
   initialPageParam: undefined as string | undefined,
   getNextPageParam: (lastPage: Awaited<ReturnType<typeof searchProductsV2>>) =>
-    lastPage.data.hasMore ? lastPage.data.nextCursor ?? undefined : undefined,
+    lastPage.data.hasMore ? (lastPage.data.nextCursor ?? undefined) : undefined,
   placeholderData: keepPreviousData,
   staleTime: 10_000,
   enabled: enabled && catalogV2Enabled,
