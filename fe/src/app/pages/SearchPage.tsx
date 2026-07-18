@@ -29,9 +29,13 @@ import { Surface } from "../../shared/ui/surface";
 import { ProductCard } from "../components/product-card";
 import { categoryDisplayLabel, useCategories } from "../hooks/use-categories";
 import { useProducts } from "../hooks/use-products";
+import { useProductsV2 } from "../hooks/use-products-v2";
 import { useSearch } from "../hooks/use-search";
 import { useSearchFacets } from "../hooks/use-search-facets";
+import { useSearchV2 } from "../hooks/use-search-v2";
+import { catalogV2Enabled } from "../lib/api/catalog-flags";
 import { flattenCategoryTree } from "../lib/api/endpoints/categories";
+import { fromServer } from "../lib/api/product-mapper";
 import {
   requiresBackendSearch,
   validatePriceRange,
@@ -170,6 +174,30 @@ export function SearchPage() {
     officialOnly,
     sortBy,
   });
+  // The v2 contract only exposes deterministic cursor sorts and does not yet
+  // carry the legacy flash/rating/free-shipping filters.
+  const v2Eligible =
+    catalogV2Enabled && sortBy !== "popular" && !isFlash && minRating === 0 && !freeShipOnly;
+  const useV2SearchPath = v2Eligible && searchEnabled;
+  const useV2CatalogPath = v2Eligible && !searchEnabled;
+  const v2Params = {
+    q: query || undefined,
+    category: selectedCat || undefined,
+    brand: selectedBrand || undefined,
+    minPrice: appliedPriceMin ? Number(appliedPriceMin) * 1000 : undefined,
+    maxPrice: appliedPriceMax ? Number(appliedPriceMax) * 1000 : undefined,
+    sort: sortBy,
+    sameDay: sameDay || undefined,
+    verifiedOnly: verifiedOnly || undefined,
+    officialOnly: officialOnly || undefined,
+    limit: pageSize,
+  };
+  const searchV2 = useSearchV2({ ...v2Params, includeFacets: true }, useV2SearchPath);
+  const productsV2 = useProductsV2(v2Params, useV2CatalogPath);
+  const v2SearchActive = useV2SearchPath && !searchV2.error;
+  const v2CatalogActive = useV2CatalogPath && !productsV2.error;
+  const legacySearchEnabled = searchEnabled && (!useV2SearchPath || Boolean(searchV2.error));
+  const legacyCatalogEnabled = !useV2CatalogPath || Boolean(productsV2.error);
   // Spring Pageable is 0-based; currentPage is 1-based.
   const search = useSearch(
     {
@@ -185,7 +213,7 @@ export function SearchPage() {
       verifiedOnly: verifiedOnly || undefined,
       officialOnly: officialOnly || undefined,
     },
-    searchEnabled,
+    legacySearchEnabled,
   );
 
   const { facets } = useSearchFacets({
@@ -197,26 +225,58 @@ export function SearchPage() {
     sameDay: sameDay || undefined,
     verifiedOnly: verifiedOnly || undefined,
     officialOnly: officialOnly || undefined,
-    enabled: searchEnabled,
+    enabled: legacySearchEnabled,
   });
 
-  const catalogQuery = useProducts({ categoryId: selectedCat || undefined });
+  const catalogQuery = useProducts({ categoryId: selectedCat || undefined }, legacyCatalogEnabled);
   const localCatalog = catalogQuery.data ?? [];
+  const v2SearchProducts = useMemo(() => {
+    const seen = new Set<string>();
+    return (searchV2.data?.pages.flatMap((page) => page.data.items) ?? [])
+      .filter((item) => {
+        if (seen.has(item.id)) return false;
+        seen.add(item.id);
+        return true;
+      })
+      .map(fromServer);
+  }, [searchV2.data]);
+  const v2CatalogProducts = useMemo(() => {
+    const seen = new Set<string>();
+    return (productsV2.data?.pages.flatMap((page) => page.data.items) ?? [])
+      .filter((item) => {
+        if (seen.has(item.id)) return false;
+        seen.add(item.id);
+        return true;
+      })
+      .map(fromServer);
+  }, [productsV2.data]);
+  const backendProducts = v2SearchActive ? v2SearchProducts : search.products;
+  const backendLoading = v2SearchActive ? searchV2.isLoading : search.isLoading;
+  const backendHasError = v2SearchActive ? false : Boolean(search.error);
+  const backendTotalElements = v2SearchActive ? v2SearchProducts.length : search.totalElements;
+  const catalogProducts = v2CatalogActive ? v2CatalogProducts : localCatalog;
+  const catalogLoading = v2CatalogActive ? productsV2.isLoading : catalogQuery.isLoading;
+  const catalogHasError = v2CatalogActive ? false : Boolean(catalogQuery.error);
   const { data: categories = [] } = useCategories();
   const flatCategories = useMemo(() => flattenCategoryTree(categories), [categories]);
 
   const sourceState = resolveSearchDataSource({
     searchEnabled,
-    searchLoading: search.isLoading,
-    searchHasError: Boolean(search.error),
-    searchTotalElements: search.totalElements,
-    searchProductCount: search.products.length,
-    catalogProductCount: localCatalog.length,
+    searchLoading: backendLoading,
+    searchHasError: backendHasError,
+    searchTotalElements: backendTotalElements,
+    searchProductCount: backendProducts.length,
+    catalogProductCount: catalogProducts.length,
   });
   const usedBackend = sourceState.source === "search";
-  const catalog = usedBackend ? search.products : localCatalog;
+  const catalog = usedBackend ? backendProducts : catalogProducts;
+  // A search can legitimately return zero items while the local catalog is
+  // available during index lag. In that case the displayed source is legacy
+  // fallback and must retain its local filtering/pagination behavior.
+  const v2DisplayActive = (v2SearchActive && usedBackend) || (v2CatalogActive && !usedBackend);
 
   const filtered = useMemo(() => {
+    if (v2DisplayActive) return catalog;
     let list = [...catalog];
     if (isFlash) list = list.filter((p) => (p.discount ?? 0) >= 20 || p.badge === "flash");
     if (!usedBackend) {
@@ -255,6 +315,7 @@ export function SearchPage() {
     return list;
   }, [
     catalog,
+    v2DisplayActive,
     usedBackend,
     query,
     selectedCat,
@@ -271,27 +332,47 @@ export function SearchPage() {
   ]);
 
   // Backend handles its own pagination; only slice locally for the fallback catalog.
-  const totalCount = usedBackend ? search.totalElements : filtered.length;
-  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const totalCount = v2DisplayActive
+    ? filtered.length
+    : usedBackend
+      ? search.totalElements
+      : filtered.length;
+  const totalPages = v2DisplayActive ? 1 : Math.max(1, Math.ceil(totalCount / pageSize));
   const paginated = usedBackend
     ? filtered
     : filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const displayState = resolveSearchDisplayState({
     searchEnabled,
-    searchLoading: search.isLoading,
-    searchHasError: Boolean(search.error),
-    searchTotalElements: search.totalElements,
-    searchProductCount: search.products.length,
-    catalogLoading: catalogQuery.isLoading,
-    catalogHasError: Boolean(catalogQuery.error),
-    catalogProductCount: localCatalog.length,
+    searchLoading: backendLoading,
+    searchHasError: backendHasError,
+    searchTotalElements: backendTotalElements,
+    searchProductCount: backendProducts.length,
+    catalogLoading,
+    catalogHasError,
+    catalogProductCount: catalogProducts.length,
     visibleProductCount: paginated.length,
   });
 
   const retryResults = () => {
-    const requests: Promise<unknown>[] = [catalogQuery.refetch()];
-    if (searchEnabled) requests.push(search.refetch());
+    const requests: Promise<unknown>[] = [];
+    if (useV2SearchPath) requests.push(searchV2.refetch());
+    if (useV2CatalogPath) requests.push(productsV2.refetch());
+    if (legacyCatalogEnabled) requests.push(catalogQuery.refetch());
+    if (legacySearchEnabled) requests.push(search.refetch());
     void Promise.allSettled(requests);
+  };
+  const v2HasMore =
+    v2DisplayActive && (v2SearchActive ? searchV2.hasNextPage : productsV2.hasNextPage);
+  const v2FetchingNext =
+    v2DisplayActive && v2SearchActive
+      ? searchV2.isFetchingNextPage
+      : v2DisplayActive && productsV2.isFetchingNextPage;
+  const loadNextV2Page = () => {
+    if (v2SearchActive) {
+      void searchV2.fetchNextPage();
+    } else if (v2CatalogActive) {
+      void productsV2.fetchNextPage();
+    }
   };
 
   const clearFilters = () => {
@@ -355,7 +436,7 @@ export function SearchPage() {
 
   const filterProps = {
     categories: flatCategories,
-    facets,
+    facets: v2SearchActive ? (searchV2.data?.pages[0]?.data.facets ?? facets) : facets,
     values: {
       selectedCategory: selectedCat,
       selectedBrand,
@@ -483,24 +564,29 @@ export function SearchPage() {
                 ? t("search.loading", { defaultValue: "Loading productsâ€¦" })
                 : displayState.status === "error"
                   ? t("search.resultsUnavailable", { defaultValue: "Results unavailable" })
-                  : query && totalCount > 0
-                    ? t("search.showingRange", {
-                        start: (currentPage - 1) * pageSize + 1,
-                        end: Math.min(currentPage * pageSize, totalCount),
-                        total: totalCount,
-                        query,
-                        defaultValue:
-                          "Showing {{start}}â€“{{end}} of {{total}} results for '{{query}}'",
+                  : v2DisplayActive
+                    ? t("search.showingLoaded", {
+                        count: totalCount,
+                        defaultValue: "Showing {{count}} loaded products",
                       })
-                    : query
-                      ? t("search.noResultsFor", {
+                    : query && totalCount > 0
+                      ? t("search.showingRange", {
+                          start: (currentPage - 1) * pageSize + 1,
+                          end: Math.min(currentPage * pageSize, totalCount),
+                          total: totalCount,
                           query,
-                          defaultValue: "No results for '{{query}}'",
+                          defaultValue:
+                            "Showing {{start}}â€“{{end}} of {{total}} results for '{{query}}'",
                         })
-                      : t("search.productCount", {
-                          count: totalCount,
-                          defaultValue: "{{count}} products",
-                        })}
+                      : query
+                        ? t("search.noResultsFor", {
+                            query,
+                            defaultValue: "No results for '{{query}}'",
+                          })
+                        : t("search.productCount", {
+                            count: totalCount,
+                            defaultValue: "{{count}} products",
+                          })}
             </p>
 
             <div
@@ -618,7 +704,15 @@ export function SearchPage() {
           </AsyncState>
 
           {/* Pagination */}
-          {displayState.status === "ready" && totalPages > 1 ? (
+          {v2DisplayActive && displayState.status === "ready" && v2HasMore ? (
+            <div className="mt-8 flex justify-center">
+              <Button variant="outline" onClick={loadNextV2Page} disabled={v2FetchingNext}>
+                {v2FetchingNext
+                  ? t("search.loadingMore", { defaultValue: "Loading more..." })
+                  : t("search.loadMore", { defaultValue: "Load more" })}
+              </Button>
+            </div>
+          ) : !v2DisplayActive && displayState.status === "ready" && totalPages > 1 ? (
             <nav aria-label="Pagination" className="flex items-center justify-center gap-1 mt-8">
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}

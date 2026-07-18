@@ -142,6 +142,8 @@
     "emptySub": "Try adjusting your filters or search query",
     "emptyClear": "Clear filters",
     "loadMore": "Show {{count}} more products",
+    "showingLoaded": "Showing {{count}} loaded products",
+    "loadingMore": "Loading more...",
     "noResultsFor": "No results for '{{query}}'",
     "showingRange": "Showing {{start}}–{{end}} of {{total}} results for '{{query}}'",
     "andUp": "& up",

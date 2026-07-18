@@ -1,5 +1,9 @@
+import { z } from "zod";
+
 import { emptyResponseSchema } from "../../../types/api/shared";
 import { api } from "../client";
+
+const passwordResetResponseSchema = z.object({ accepted: z.boolean() }).passthrough();
 
 export interface RegisterInput {
   email: string;
@@ -22,3 +26,11 @@ export const registerUser = (input: RegisterInput) =>
     auth: false,
     credentials: "include",
   });
+
+export const requestPasswordReset = (email: string, signal?: AbortSignal) =>
+  api.post(
+    "/auth/password-reset-request",
+    passwordResetResponseSchema,
+    { email },
+    { auth: false, credentials: "include", signal },
+  );

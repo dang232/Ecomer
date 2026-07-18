@@ -35,7 +35,14 @@ describe("fetchConfig", () => {
 
     await expect(fetchConfig()).resolves.toEqual(validConfig);
 
-    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8080/api/config");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8080/api/config",
+      expect.objectContaining({
+        credentials: "omit",
+        headers: { Accept: "application/json" },
+        signal: expect.any(AbortSignal),
+      }),
+    );
   });
 
   it("falls back when the response does not match the configuration contract", async () => {
@@ -56,5 +63,13 @@ describe("fetchConfig", () => {
     );
 
     await expect(fetchConfig()).resolves.toMatchObject({ auth: { oauthProviders: [] } });
+  });
+
+  it("preserves query cancellation instead of replacing it with defaults", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new DOMException("aborted", "AbortError"));
+
+    await expect(fetchConfig(controller.signal)).rejects.toMatchObject({ name: "AbortError" });
   });
 });

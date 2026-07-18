@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 const API_BASE =
@@ -47,9 +47,14 @@ interface ServiceHealth {
   detail?: string;
 }
 
-async function checkHealth(url: string): Promise<HealthStatus> {
+async function checkHealth(url: string, signal: AbortSignal): Promise<HealthStatus> {
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(5000), credentials: "omit" });
+    const timeout = AbortSignal.timeout(5000);
+    const res = await fetch(url, {
+      signal: AbortSignal.any([signal, timeout]),
+      credentials: "omit",
+      headers: { Accept: "application/json" },
+    });
     if (!res.ok) return "down";
     const body = (await res.json()) as { status?: string };
     // ponytail: Spring Actuator uses "UP", NestJS /health uses "ok"
@@ -65,21 +70,30 @@ export function SystemHealth() {
     SERVICES.map((s) => ({ id: s.id, status: "checking" })),
   );
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
+  const checksController = useRef<AbortController | null>(null);
+  const [isChecking, setIsChecking] = useState(false);
 
   async function runChecks() {
+    checksController.current?.abort();
+    const controller = new AbortController();
+    checksController.current = controller;
     setResults(SERVICES.map((s) => ({ id: s.id, status: "checking" })));
+    setIsChecking(true);
     const checks = await Promise.all(
       SERVICES.map(async (s) => ({
         id: s.id,
-        status: await checkHealth(s.healthUrl),
+        status: await checkHealth(s.healthUrl, controller.signal),
       })),
     );
+    if (controller.signal.aborted) return;
     setResults(checks);
     setLastChecked(new Date());
+    setIsChecking(false);
   }
 
   useEffect(() => {
     void runChecks();
+    return () => checksController.current?.abort();
   }, []);
 
   const upCount = results.filter((r) => r.status === "up").length;
@@ -92,6 +106,7 @@ export function SystemHealth() {
         <h2 className="text-xl font-bold text-foreground">{t("admin.health.title")}</h2>
         <button
           onClick={() => void runChecks()}
+          disabled={isChecking}
           className="px-3 py-1.5 rounded-xl text-xs font-semibold border border-border text-muted-foreground hover:bg-muted"
         >
           {t("admin.health.refresh")}

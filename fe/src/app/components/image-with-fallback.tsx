@@ -53,7 +53,7 @@ export function ImageWithFallback({
       alt={alt}
       className={className}
       loading={imageLoading}
-      fetchPriority={imageFetchPriority}
+      {...(imageFetchPriority ? { fetchpriority: imageFetchPriority } : {})}
       decoding={decoding}
       onError={(e) => {
         if (!usingFallback && fallbackSrc) {

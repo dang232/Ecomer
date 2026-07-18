@@ -102,7 +102,7 @@ export function PaymentReturnPage() {
       cancelled = true;
       if (timeout) clearTimeout(timeout);
     };
-  }, [orderId]);
+  }, [orderId, t]);
 
   // Best-effort amount surface: gateways sometimes pass it back in URL.
   useEffect(() => {

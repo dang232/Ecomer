@@ -101,12 +101,18 @@ const CONFIG_URL = (
   "http://localhost:8080"
 ).replace(/\/$/, "");
 
-export async function fetchConfig(): Promise<AppConfig> {
+export async function fetchConfig(signal?: AbortSignal): Promise<AppConfig> {
   try {
-    const res = await fetch(`${CONFIG_URL}/api/config`);
+    const timeout = AbortSignal.timeout(10_000);
+    const res = await fetch(`${CONFIG_URL}/api/config`, {
+      signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+      credentials: "omit",
+      headers: { Accept: "application/json" },
+    });
     if (!res.ok) throw new Error(`Config fetch failed: ${res.status}`);
     return appConfigSchema.parse(await res.json());
-  } catch {
+  } catch (error) {
+    if (signal?.aborted) throw error;
     // Fallback to defaults if config service is unavailable
     return DEFAULT_CONFIG;
   }
@@ -115,7 +121,7 @@ export async function fetchConfig(): Promise<AppConfig> {
 export function useAppConfig() {
   const query = useQuery<AppConfig>({
     queryKey: ["app-config"],
-    queryFn: fetchConfig,
+    queryFn: ({ signal }) => fetchConfig(signal),
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes
     retry: 1,

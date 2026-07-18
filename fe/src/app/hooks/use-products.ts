@@ -11,7 +11,7 @@ export interface ProductListQueryParams {
   categoryId?: string;
 }
 
-export const productListOptions = (params: ProductListQueryParams = {}) =>
+export const productListOptions = (params: ProductListQueryParams = {}, enabled = true) =>
   queryOptions<Product[]>({
     queryKey: ["catalog", "products", "list", params] as const,
     queryFn: async () => {
@@ -23,6 +23,7 @@ export const productListOptions = (params: ProductListQueryParams = {}) =>
       });
       return page.content.map(fromServer);
     },
+    enabled,
   });
 
 export const productDetailOptions = (id: string) =>
@@ -36,8 +37,8 @@ export const productDetailOptions = (id: string) =>
  * Catalog list. Returns whatever the backend returns — empty arrays included.
  * Errors propagate so callers can render an error state explicitly.
  */
-export function useProducts(params: ProductListQueryParams = {}) {
-  return useQuery(productListOptions(params));
+export function useProducts(params: ProductListQueryParams = {}, enabled = true) {
+  return useQuery(productListOptions(params, enabled));
 }
 
 /** Detail of a single product. */
