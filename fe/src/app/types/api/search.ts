@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+import { cursorPageSchema } from "./shared";
+import { productSummarySchema } from "./product";
+
 const facetEntrySchema = z
   .object({
     key: z.string(),
@@ -14,3 +17,8 @@ export const searchFacetsSchema = z
   })
   .passthrough();
 export type SearchFacets = z.infer<typeof searchFacetsSchema>;
+
+export const searchV2Schema = cursorPageSchema(productSummarySchema).extend({
+  facets: searchFacetsSchema.optional(),
+});
+export type SearchV2 = z.infer<typeof searchV2Schema>;

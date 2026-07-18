@@ -2,6 +2,8 @@ package com.vnshop.productservice.infrastructure.persistence;
 
 import java.util.List;
 import java.util.UUID;
+import java.math.BigDecimal;
+import java.time.Instant;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -9,6 +11,75 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface ProductJpaSpringDataRepository extends JpaRepository<ProductJpaEntity, UUID> {
+    @Query("""
+            select product from ProductJpaEntity product join product.variants variant
+            where product.status = 'ACTIVE'
+              and (:categoryId is null or product.categoryId = cast(:categoryId as string))
+              and (:q is null or lower(product.name) like lower(concat('%', cast(:q as string), '%')))
+              and (:brand is null or product.brand = cast(:brand as string))
+              and (:sameDay is null or product.sameDayDelivery = :sameDay)
+              and (:verifiedOnly is null or product.verified = :verifiedOnly)
+              and (:officialOnly is null or product.isOfficial = :officialOnly)
+            group by product
+            having (:minPrice is null or min(variant.price.amount) >= :minPrice)
+               and (:maxPrice is null or min(variant.price.amount) <= :maxPrice)
+               and (:anchorCreatedAt is null or product.createdAt < :anchorCreatedAt
+                    or (product.createdAt = :anchorCreatedAt and product.id < :anchorProductId))
+            order by product.createdAt desc, product.id desc
+            """)
+    List<ProductJpaEntity> findCatalogAfterNewest(
+            @Param("categoryId") String categoryId, @Param("q") String q, @Param("brand") String brand,
+            @Param("minPrice") BigDecimal minPrice, @Param("maxPrice") BigDecimal maxPrice,
+            @Param("sameDay") Boolean sameDay, @Param("verifiedOnly") Boolean verifiedOnly,
+            @Param("officialOnly") Boolean officialOnly, @Param("anchorCreatedAt") Instant anchorCreatedAt,
+            @Param("anchorProductId") UUID anchorProductId, org.springframework.data.domain.Pageable pageable);
+
+    @Query("""
+            select product from ProductJpaEntity product join product.variants variant
+            where product.status = 'ACTIVE'
+              and (:categoryId is null or product.categoryId = cast(:categoryId as string))
+              and (:q is null or lower(product.name) like lower(concat('%', cast(:q as string), '%')))
+              and (:brand is null or product.brand = cast(:brand as string))
+              and (:sameDay is null or product.sameDayDelivery = :sameDay)
+              and (:verifiedOnly is null or product.verified = :verifiedOnly)
+              and (:officialOnly is null or product.isOfficial = :officialOnly)
+            group by product
+            having (:minPrice is null or min(variant.price.amount) >= :minPrice)
+               and (:maxPrice is null or min(variant.price.amount) <= :maxPrice)
+               and (:anchorPrice is null or min(variant.price.amount) > :anchorPrice
+                    or (min(variant.price.amount) = :anchorPrice and product.id > :anchorProductId))
+            order by min(variant.price.amount) asc, product.id asc
+            """)
+    List<ProductJpaEntity> findCatalogAfterPriceLow(
+            @Param("categoryId") String categoryId, @Param("q") String q, @Param("brand") String brand,
+            @Param("minPrice") BigDecimal minPrice, @Param("maxPrice") BigDecimal maxPrice,
+            @Param("sameDay") Boolean sameDay, @Param("verifiedOnly") Boolean verifiedOnly,
+            @Param("officialOnly") Boolean officialOnly, @Param("anchorPrice") BigDecimal anchorPrice,
+            @Param("anchorProductId") UUID anchorProductId, org.springframework.data.domain.Pageable pageable);
+
+    @Query("""
+            select product from ProductJpaEntity product join product.variants variant
+            where product.status = 'ACTIVE'
+              and (:categoryId is null or product.categoryId = cast(:categoryId as string))
+              and (:q is null or lower(product.name) like lower(concat('%', cast(:q as string), '%')))
+              and (:brand is null or product.brand = cast(:brand as string))
+              and (:sameDay is null or product.sameDayDelivery = :sameDay)
+              and (:verifiedOnly is null or product.verified = :verifiedOnly)
+              and (:officialOnly is null or product.isOfficial = :officialOnly)
+            group by product
+            having (:minPrice is null or min(variant.price.amount) >= :minPrice)
+               and (:maxPrice is null or min(variant.price.amount) <= :maxPrice)
+               and (:anchorPrice is null or min(variant.price.amount) < :anchorPrice
+                    or (min(variant.price.amount) = :anchorPrice and product.id < :anchorProductId))
+            order by min(variant.price.amount) desc, product.id desc
+            """)
+    List<ProductJpaEntity> findCatalogAfterPriceHigh(
+            @Param("categoryId") String categoryId, @Param("q") String q, @Param("brand") String brand,
+            @Param("minPrice") BigDecimal minPrice, @Param("maxPrice") BigDecimal maxPrice,
+            @Param("sameDay") Boolean sameDay, @Param("verifiedOnly") Boolean verifiedOnly,
+            @Param("officialOnly") Boolean officialOnly, @Param("anchorPrice") BigDecimal anchorPrice,
+            @Param("anchorProductId") UUID anchorProductId, org.springframework.data.domain.Pageable pageable);
+
     List<ProductJpaEntity> findBySellerId(String sellerId);
 
     List<ProductJpaEntity> findByCategoryId(String categoryId);

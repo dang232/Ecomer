@@ -87,6 +87,10 @@ public class RouteConfig {
         TieredRateLimiter paymentRateLimiter,
         TieredRateLimiter authRateLimiter,
         TieredRateLimiter searchRateLimiter,
+        TieredRateLimiter flashSaleReserveRateLimiter,
+        TieredRateLimiter flashSaleStockRateLimiter,
+        TieredRateLimiter flashSaleActiveRateLimiter,
+        TieredRateLimiter recommendationsRateLimiter,
         TieredRateLimiter generalRateLimiter,
         KeyResolver tieredKeyResolver
     ) {
@@ -107,6 +111,15 @@ public class RouteConfig {
             // only gRPC (Reserve/Release) and the flash-sale REST endpoint below.
             // Stock for product detail is now served by product-service directly via
             // ProductResponse.stock; no public HTTP /inventory/* endpoint exists.
+            .route("flash-sale-reserve", route -> route.path("/flash-sale/reserve")
+                .filters(filters -> rateLimited(filters, "inventory-service", flashSaleReserveRateLimiter, tieredKeyResolver))
+                .uri(inventoryServiceUri))
+            .route("flash-sale-stock", route -> route.path("/flash-sale/stock/**")
+                .filters(filters -> rateLimited(filters, "inventory-service", flashSaleStockRateLimiter, tieredKeyResolver))
+                .uri(inventoryServiceUri))
+            .route("flash-sale-active", route -> route.path("/flash-sale/active")
+                .filters(filters -> rateLimited(filters, "inventory-service", flashSaleActiveRateLimiter, tieredKeyResolver))
+                .uri(inventoryServiceUri))
             .route("flash-sale", route -> route.path("/flash-sale/**")
                 .filters(filters -> resilient(filters, "inventory-service"))
                 .uri(inventoryServiceUri))
@@ -204,7 +217,7 @@ public class RouteConfig {
             // are public reads — no rate limit, just a circuit breaker so a slow
             // recommendations-service can't stall product detail page renders.
             .route("recommendations", route -> route.path("/recommendations/**")
-                .filters(filters -> resilient(filters, "recommendations-service"))
+                .filters(filters -> rateLimited(filters, "recommendations-service", recommendationsRateLimiter, tieredKeyResolver))
                 .uri(recommendationsServiceUri))
             // Actuator proxy routes for the FE admin health-check panel.
             // stripPrefix(1) removes /<svc> so downstream receives /actuator/health etc.

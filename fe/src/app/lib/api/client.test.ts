@@ -12,7 +12,7 @@ vi.mock("../auth/native-auth", () => ({
   refreshTokens: (...args: unknown[]) => refreshTokensMock(...args),
 }));
 
-import { api, request } from "./client";
+import { api, clearPublicResponseCache, request } from "./client";
 import { ApiError } from "./envelope";
 
 interface MockResponseInit {
@@ -37,6 +37,7 @@ beforeEach(() => {
   fetchSpy.mockReset();
   liveToken = null;
   refreshTokensMock.mockReset();
+  clearPublicResponseCache();
 });
 
 afterEach(() => {
@@ -217,5 +218,64 @@ describe("request", () => {
     expect(u.searchParams.get("page")).toBe("2");
     expect(u.searchParams.has("brand")).toBe(false);
     expect(u.searchParams.has("category")).toBe(false);
+  });
+
+  it("returns response metadata without changing the legacy data result", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      mockResponse({
+        body: {
+          success: true,
+          message: "ok",
+          data: { id: "p1", name: "Tai nghe" },
+          errorCode: null,
+          timestamp: "2026-05-15T00:00:00Z",
+          meta: { cacheStatus: "hit", stale: false },
+        },
+        headers: { "x-request-id": "request-1" },
+      }),
+    );
+
+    const result = await api.getWithMeta(
+      "/products/v2",
+      productSchema,
+      undefined,
+      { auth: false },
+    );
+
+    expect(result.data).toEqual({ id: "p1", name: "Tai nghe" });
+    expect(result.meta).toMatchObject({
+      cacheStatus: "hit",
+      stale: false,
+      requestId: "request-1",
+    });
+    expect(result.status).toBe(200);
+  });
+
+  it("reuses a public GET body when the server returns 304", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      mockResponse({
+        body: {
+          success: true,
+          message: "ok",
+          data: { id: "p1", name: "Tai nghe" },
+          errorCode: null,
+          timestamp: "2026-05-15T00:00:00Z",
+        },
+        headers: { etag: '"product-v1"' },
+      }),
+    );
+    fetchSpy.mockResolvedValueOnce(new Response(null, { status: 304 }));
+
+    const initial = await api.getWithMeta("/products/v2", productSchema, undefined, { auth: false });
+    expect(initial.headers.get("etag")).toBe('"product-v1"');
+    const result = await api
+      .getWithMeta("/products/v2", productSchema, undefined, { auth: false })
+      .catch((error) => error);
+
+    const secondHeaders = fetchSpy.mock.calls[1][1]?.headers as Record<string, string>;
+    expect(secondHeaders["If-None-Match"]).toBe('"product-v1"');
+    expect(result).not.toBeInstanceOf(ApiError);
+    expect(result.data).toEqual({ id: "p1", name: "Tai nghe" });
+    expect(result.status).toBe(304);
   });
 });

@@ -11,11 +11,15 @@ import com.vnshop.productservice.application.ProductResponse;
 import com.vnshop.productservice.application.UpdateProductUseCase;
 import com.vnshop.productservice.application.UpdateProductEligibilityUseCase;
 import com.vnshop.productservice.application.PublishProductUseCase;
+import com.vnshop.productservice.application.CatalogCursorSort;
+import com.vnshop.productservice.application.CatalogV2Query;
+import com.vnshop.productservice.application.CatalogV2Response;
 import com.vnshop.productservice.infrastructure.config.JwtPrincipalUtil;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,11 +29,13 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.UUID;
+import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
 @RequestMapping
@@ -106,6 +112,38 @@ public class ProductController {
         return ApiResponse.ok(getProductUseCase.findCatalog(categoryId, q, sellerId, pageable));
     }
 
+    @GetMapping("/products/v2")
+    public ResponseEntity<ApiResponse<CatalogV2Response>> findProductsV2(
+            @RequestParam(name = "q", required = false) String query,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String brand,
+            @RequestParam(required = false) java.math.BigDecimal minPrice,
+            @RequestParam(required = false) java.math.BigDecimal maxPrice,
+            @RequestParam(required = false) String sort,
+            @RequestParam(name = "sameDay", required = false) Boolean sameDay,
+            @RequestParam(name = "verifiedOnly", required = false) Boolean verifiedOnly,
+            @RequestParam(name = "officialOnly", required = false) Boolean officialOnly,
+            @RequestParam(required = false) String cursor,
+            @RequestParam(defaultValue = "24") int limit,
+            @RequestParam(defaultValue = "false") boolean includeFacets,
+            @RequestHeader(name = "X-Correlation-Id", required = false) String correlationId,
+            @RequestHeader(name = "X-Request-Id", required = false) String requestId,
+            @RequestHeader(name = "If-None-Match", required = false) String ifNoneMatch,
+            HttpServletResponse response) {
+        String effectiveRequestId = effectiveRequestId(correlationId, requestId);
+        response.setHeader("X-Correlation-Id", effectiveRequestId);
+        response.setHeader("X-Request-Id", effectiveRequestId);
+        CatalogV2Response result = getProductUseCase.findCatalogV2(new CatalogV2Query(
+                query, category, brand, minPrice, maxPrice, CatalogCursorSort.parse(sort),
+                sameDay, verifiedOnly, officialOnly, cursor, limit, includeFacets));
+        String etag = StableEtag.of(result);
+        if ("*".equals(ifNoneMatch) || etag.equals(ifNoneMatch)) {
+            return ResponseEntity.status(HttpStatus.NOT_MODIFIED).eTag(etag).build();
+        }
+        return ResponseEntity.ok().eTag(etag).body(ApiResponse.okWithMeta(result, new ApiMeta(
+                effectiveRequestId, "miss", false, result.nextCursor(), result.hasMore())));
+    }
+
     // NOTE: /products/count is a literal segment and must be declared before /products/{id}
     // so Spring resolves it first. Spring MVC already prefers literal over path-variable
     // segments, but explicit ordering here makes the intent clear.
@@ -147,5 +185,14 @@ public class ProductController {
                 request.sameDayDelivery(),
                 request.verified(),
                 request.isOfficial()));
+    }
+
+    private static String effectiveRequestId(String correlationId, String requestId) {
+        String candidate = validRequestId(correlationId) ? correlationId : requestId;
+        return validRequestId(candidate) ? candidate : UUID.randomUUID().toString();
+    }
+
+    private static boolean validRequestId(String value) {
+        return value != null && value.length() <= 128 && value.matches("[A-Za-z0-9._:-]+");
     }
 }

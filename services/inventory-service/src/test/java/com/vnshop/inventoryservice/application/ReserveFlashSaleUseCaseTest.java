@@ -16,6 +16,39 @@ import org.junit.jupiter.api.Test;
 class ReserveFlashSaleUseCaseTest {
 
 	@Test
+	void replaysSameIdempotencyKeyWithoutDecrementingStockTwice() {
+		var port = new AtomicInMemoryFlashSaleReservationPort(1);
+		var useCase = new ReserveFlashSaleUseCase(port);
+		var firstCommand = new ReserveFlashSaleCommand("product-1", "buyer-1", 1, "key-1", "hash-1");
+
+		ReserveFlashSaleResult first = useCase.reserve(firstCommand);
+		ReserveFlashSaleResult replay = useCase.reserve(firstCommand);
+
+		assertThat(replay.reservationId()).isEqualTo(first.reservationId());
+		assertThat(port.stock()).isZero();
+	}
+
+	@Test
+	void rejectsSameIdempotencyKeyWithDifferentRequestBody() {
+		var port = new AtomicInMemoryFlashSaleReservationPort(3);
+		var useCase = new ReserveFlashSaleUseCase(port);
+		useCase.reserve(new ReserveFlashSaleCommand("product-1", "buyer-1", 1, "key-1", "hash-1"));
+
+		assertThatThrownBy(() -> useCase.reserve(new ReserveFlashSaleCommand(
+				"product-1", "buyer-1", 2, "key-1", "hash-2")))
+				.isInstanceOf(FlashSaleIdempotencyConflictException.class);
+	}
+
+	@Test
+	void mapsOutOfStockToConflictInsteadOfRejectedSuccess() {
+		var useCase = new ReserveFlashSaleUseCase(new AtomicInMemoryFlashSaleReservationPort(0));
+
+		assertThatThrownBy(() -> useCase.reserve(new ReserveFlashSaleCommand(
+				"product-1", "buyer-1", 1, "key-1", "hash-1")))
+				.isInstanceOf(FlashSaleOutOfStockException.class);
+	}
+
+	@Test
 	void returnsReservationWhenRedisReservesStock() {
 		var port = new InMemoryFlashSaleReservationPort(true, 5);
 		var useCase = new ReserveFlashSaleUseCase(port);
@@ -139,5 +172,53 @@ class ReserveFlashSaleUseCaseTest {
 		public boolean hasActiveReservation(String productId, String buyerId) {
 			return activeReservations.contains(productId + ":" + buyerId);
 		}
+	}
+
+	private static final class AtomicInMemoryFlashSaleReservationPort implements FlashSaleReservationPort {
+		private final Map<String, FlashSaleReservation> byKey = new ConcurrentHashMap<>();
+		private final Map<String, String> hashes = new ConcurrentHashMap<>();
+		private final Set<String> active = ConcurrentHashMap.newKeySet();
+		private long remainingStock;
+
+		private AtomicInMemoryFlashSaleReservationPort(long remainingStock) {
+			this.remainingStock = remainingStock;
+		}
+
+		@Override
+		public synchronized IdempotentReservation reserveIdempotently(
+				String productId, String buyerId, int quantity, String idempotencyKey, String requestHash) {
+			String key = productId + ":" + buyerId + ":" + idempotencyKey;
+			FlashSaleReservation existing = byKey.get(key);
+			if (existing != null) {
+				if (!requestHash.equals(hashes.get(key))) {
+					throw new FlashSaleIdempotencyConflictException(idempotencyKey);
+				}
+				return new IdempotentReservation(existing, true);
+			}
+			if (active.contains(productId + ":" + buyerId)) {
+				throw new DuplicateFlashSaleReservationException(productId, buyerId);
+			}
+			Instant now = Instant.now();
+			if (remainingStock < quantity) {
+				return new IdempotentReservation(new FlashSaleReservation(null, productId, buyerId, quantity,
+						FlashSaleReservation.Status.REJECTED, now, now.plusSeconds(900)), false);
+			}
+			remainingStock -= quantity;
+			FlashSaleReservation reservation = new FlashSaleReservation(UUID.randomUUID(), productId, buyerId, quantity,
+					FlashSaleReservation.Status.RESERVED, now, now.plusSeconds(900));
+			byKey.put(key, reservation);
+			hashes.put(key, requestHash);
+			active.add(productId + ":" + buyerId);
+			return new IdempotentReservation(reservation, false);
+		}
+
+		long stock() { return remainingStock; }
+
+		@Override public boolean reserve(String productId, String buyerId, int quantity, UUID reservationId) { return false; }
+		@Override public void save(FlashSaleReservation reservation) { }
+		@Override public Optional<FlashSaleReservation> findById(UUID reservationId) { return Optional.empty(); }
+		@Override public void release(UUID reservationId) { }
+		@Override public long getStock(String productId) { return remainingStock; }
+		@Override public boolean hasActiveReservation(String productId, String buyerId) { return active.contains(productId + ":" + buyerId); }
 	}
 }

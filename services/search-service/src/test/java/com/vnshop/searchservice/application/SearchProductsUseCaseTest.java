@@ -47,6 +47,47 @@ class SearchProductsUseCaseTest {
     }
 
     @Test
+    void searchV2_returnsOneExtraRowAsCursorMetadataAndDoesNotLoadFacetsByDefault() {
+        SearchV2Query query = new SearchV2Query(
+                " phone ", null, null, null, null, CursorSort.NEWEST,
+                null, null, null, null, 2, false);
+        ProductReadModel first = product("p1", Instant.parse("2026-07-18T10:00:00Z"));
+        ProductReadModel second = product("p2", Instant.parse("2026-07-18T09:00:00Z"));
+        ProductReadModel third = product("p3", Instant.parse("2026-07-18T08:00:00Z"));
+        when(repository.searchAfter(any(), any(), any(), any(), any(), any(), any(), any(), eq(CursorSort.NEWEST), isNull(), eq(3)))
+                .thenReturn(List.of(first, second, third));
+
+        SearchV2Response result = new SearchProductsUseCaseWithSecret(repository).searchV2(query);
+
+        assertThat(result.items()).extracting(SearchProductResponse::id).containsExactly("p1", "p2");
+        assertThat(result.hasMore()).isTrue();
+        assertThat(result.nextCursor()).isNotBlank();
+        assertThat(result.facets()).isNull();
+        verify(repository).searchAfter("phone", null, null, null, null, null, null, null,
+                CursorSort.NEWEST, null, 3);
+    }
+
+    @Test
+    void searchV2_rejectsCursorCreatedForDifferentFilters() {
+        SearchProductsUseCaseWithSecret useCaseWithSecret = new SearchProductsUseCaseWithSecret(repository);
+        SearchV2Query original = new SearchV2Query(
+                "phone", null, null, null, null, CursorSort.PRICE_LOW,
+                null, null, null, null, 1, false);
+        ProductReadModel product = product("p1", Instant.parse("2026-07-18T10:00:00Z"));
+        when(repository.searchAfter(any(), any(), any(), any(), any(), any(), any(), any(), eq(CursorSort.PRICE_LOW), isNull(), eq(2)))
+                .thenReturn(List.of(product, product("p2", Instant.parse("2026-07-18T09:00:00Z"))));
+        String cursor = useCaseWithSecret.searchV2(original).nextCursor();
+
+        SearchV2Query changed = new SearchV2Query(
+                "tablet", null, null, null, null, CursorSort.PRICE_LOW,
+                null, null, null, cursor, 1, false);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> useCaseWithSecret.searchV2(changed))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("filters");
+    }
+
+    @Test
     void categories_returnsRepositoryDistinctCategories() {
         when(repository.findDistinctCategories()).thenReturn(List.of("electronics", "fashion"));
         assertThat(useCase.categories()).containsExactly("electronics", "fashion");
@@ -119,5 +160,19 @@ class SearchProductsUseCaseTest {
 
         verify(repository).categoryFacetsFor("q", "Acme", BigDecimal.ONE, BigDecimal.TEN, null, null, null);
         verify(repository).brandFacetsFor("q", "electronics", BigDecimal.ONE, BigDecimal.TEN, null, null, null);
+    }
+
+    private static ProductReadModel product(String id, Instant createdAt) {
+        return new ProductReadModel(
+                id, "Phone " + id, "desc", "electronics", "Acme", "ACTIVE",
+                BigDecimal.valueOf(100), BigDecimal.valueOf(200), 1,
+                "https://cdn.example/phone.jpg", 12, createdAt,
+                false, false, false);
+    }
+
+    private static final class SearchProductsUseCaseWithSecret extends SearchProductsUseCase {
+        private SearchProductsUseCaseWithSecret(SearchRepository repository) {
+            super(repository, new SearchCursorCodec("test-search-secret"));
+        }
     }
 }

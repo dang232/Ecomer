@@ -331,6 +331,39 @@ describe("retryInterceptor", () => {
     expect(await retryInterceptor(apiErr(409), errCtx())).toBeUndefined();
   });
 
+  it("retries a safe GET once using a bounded Retry-After delay", async () => {
+    fetchSpy.mockResolvedValueOnce(new Response("ok", { status: 200 }));
+    const ctx = errCtx();
+    const error = new ApiError(429, "RATE_LIMITED", "slow down", "cid-retry", 0);
+
+    const result = await retryInterceptor(error, ctx);
+
+    expect(result).toBeInstanceOf(Response);
+    expect((result as Response).status).toBe(200);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(ctx.meta.attempts).toBe(2);
+  });
+
+  it("does not retry a 429 mutation even when it has an idempotency key", async () => {
+    const ctx = errCtx({
+      init: { method: "POST", headers: {} },
+      meta: {
+        auth: true,
+        hasBody: true,
+        idempotencyKey: "flash-key",
+        attempts: 1,
+        startedAt: Date.now(),
+        method: "POST",
+        path: "/flash-sale/reserve",
+      },
+    });
+
+    expect(
+      await retryInterceptor(new ApiError(429, "RATE_LIMITED", "slow down", "cid-retry", 0), ctx),
+    ).toBeUndefined();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("returns undefined for 401 (owned by unauthorizedInterceptor)", async () => {
     expect(await retryInterceptor(apiErr(401), errCtx())).toBeUndefined();
   });

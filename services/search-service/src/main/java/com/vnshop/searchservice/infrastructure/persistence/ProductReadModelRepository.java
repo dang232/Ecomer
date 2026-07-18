@@ -9,10 +9,100 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 
 @Repository
 public interface ProductReadModelRepository extends JpaRepository<ProductReadModelJpaEntity, String> {
+    @Query("""
+            select product from ProductReadModelJpaEntity product
+            where product.status = 'ACTIVE'
+              and (:query is null or lower(product.name) like lower(concat('%', cast(:query as string), '%')) or lower(product.description) like lower(concat('%', cast(:query as string), '%')))
+              and (:categoryId is null or product.categoryId = cast(:categoryId as string))
+              and (:brand is null or product.brand = cast(:brand as string))
+              and (:minPrice is null or product.maxPrice >= :minPrice)
+              and (:maxPrice is null or product.minPrice <= :maxPrice)
+              and (:sameDay is null or product.sameDayDelivery = :sameDay)
+              and (:verifiedOnly is null or product.verified = :verifiedOnly)
+              and (:officialOnly is null or product.isOfficial = :officialOnly)
+              and (:anchorCreatedAt is null or product.createdAt < :anchorCreatedAt
+                   or (product.createdAt = :anchorCreatedAt and product.productId < :anchorProductId))
+            order by product.createdAt desc, product.productId desc
+            """)
+    List<ProductReadModelJpaEntity> searchAfterNewest(
+            @Param("query") String query,
+            @Param("categoryId") String categoryId,
+            @Param("brand") String brand,
+            @Param("minPrice") BigDecimal minPrice,
+            @Param("maxPrice") BigDecimal maxPrice,
+            @Param("sameDay") Boolean sameDay,
+            @Param("verifiedOnly") Boolean verifiedOnly,
+            @Param("officialOnly") Boolean officialOnly,
+            @Param("anchorCreatedAt") Instant anchorCreatedAt,
+            @Param("anchorProductId") String anchorProductId,
+            Pageable pageable
+    );
+
+    @Query("""
+            select product from ProductReadModelJpaEntity product
+            where product.status = 'ACTIVE'
+              and product.minPrice is not null
+              and (:query is null or lower(product.name) like lower(concat('%', cast(:query as string), '%')) or lower(product.description) like lower(concat('%', cast(:query as string), '%')))
+              and (:categoryId is null or product.categoryId = cast(:categoryId as string))
+              and (:brand is null or product.brand = cast(:brand as string))
+              and (:minPrice is null or product.maxPrice >= :minPrice)
+              and (:maxPrice is null or product.minPrice <= :maxPrice)
+              and (:sameDay is null or product.sameDayDelivery = :sameDay)
+              and (:verifiedOnly is null or product.verified = :verifiedOnly)
+              and (:officialOnly is null or product.isOfficial = :officialOnly)
+              and (:anchorPrice is null or product.minPrice > :anchorPrice
+                   or (product.minPrice = :anchorPrice and product.productId > :anchorProductId))
+            order by product.minPrice asc, product.productId asc
+            """)
+    List<ProductReadModelJpaEntity> searchAfterPriceLow(
+            @Param("query") String query,
+            @Param("categoryId") String categoryId,
+            @Param("brand") String brand,
+            @Param("minPrice") BigDecimal minPrice,
+            @Param("maxPrice") BigDecimal maxPrice,
+            @Param("sameDay") Boolean sameDay,
+            @Param("verifiedOnly") Boolean verifiedOnly,
+            @Param("officialOnly") Boolean officialOnly,
+            @Param("anchorPrice") BigDecimal anchorPrice,
+            @Param("anchorProductId") String anchorProductId,
+            Pageable pageable
+    );
+
+    @Query("""
+            select product from ProductReadModelJpaEntity product
+            where product.status = 'ACTIVE'
+              and product.minPrice is not null
+              and (:query is null or lower(product.name) like lower(concat('%', cast(:query as string), '%')) or lower(product.description) like lower(concat('%', cast(:query as string), '%')))
+              and (:categoryId is null or product.categoryId = cast(:categoryId as string))
+              and (:brand is null or product.brand = cast(:brand as string))
+              and (:minPrice is null or product.maxPrice >= :minPrice)
+              and (:maxPrice is null or product.minPrice <= :maxPrice)
+              and (:sameDay is null or product.sameDayDelivery = :sameDay)
+              and (:verifiedOnly is null or product.verified = :verifiedOnly)
+              and (:officialOnly is null or product.isOfficial = :officialOnly)
+              and (:anchorPrice is null or product.minPrice < :anchorPrice
+                   or (product.minPrice = :anchorPrice and product.productId < :anchorProductId))
+            order by product.minPrice desc, product.productId desc
+            """)
+    List<ProductReadModelJpaEntity> searchAfterPriceHigh(
+            @Param("query") String query,
+            @Param("categoryId") String categoryId,
+            @Param("brand") String brand,
+            @Param("minPrice") BigDecimal minPrice,
+            @Param("maxPrice") BigDecimal maxPrice,
+            @Param("sameDay") Boolean sameDay,
+            @Param("verifiedOnly") Boolean verifiedOnly,
+            @Param("officialOnly") Boolean officialOnly,
+            @Param("anchorPrice") BigDecimal anchorPrice,
+            @Param("anchorProductId") String anchorProductId,
+            Pageable pageable
+    );
+
     @Query("""
             select product from ProductReadModelJpaEntity product
             where product.status = 'ACTIVE'

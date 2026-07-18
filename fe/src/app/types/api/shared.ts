@@ -45,6 +45,23 @@ export interface Page<T> {
   last?: boolean;
 }
 
+export const cursorPageSchema = <T extends z.ZodType>(item: T) =>
+  z
+    .object({
+      items: z.array(item),
+      nextCursor: z.string().nullable().optional(),
+      hasMore: z.boolean(),
+      facets: z.unknown().optional(),
+    })
+    .passthrough();
+
+export interface CursorPage<T> {
+  items: T[];
+  nextCursor?: string | null;
+  hasMore: boolean;
+  facets?: unknown;
+}
+
 export const addressSchema = z
   .object({
     street: z.string(),

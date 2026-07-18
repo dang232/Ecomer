@@ -21,14 +21,25 @@ public class CorrelationIdFilter implements WebFilter {
     public @NonNull Mono<Void> filter(ServerWebExchange exchange, @NonNull WebFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
         String correlationId = request.getHeaders().getFirst(CORRELATION_ID_HEADER);
+        String requestId = request.getHeaders().getFirst("X-Request-ID");
 
-        if (correlationId == null || correlationId.isBlank()) {
-            correlationId = UUID.randomUUID().toString();
-        }
+        String effectiveId = valid(correlationId)
+                ? correlationId
+                : valid(requestId) ? requestId : UUID.randomUUID().toString();
 
-        exchange.getAttributes().put(CORRELATION_ID_HEADER, correlationId);
-        exchange.getResponse().getHeaders().set(CORRELATION_ID_HEADER, correlationId);
+        ServerHttpRequest normalizedRequest = request.mutate()
+                .header(CORRELATION_ID_HEADER, effectiveId)
+                .header("X-Request-ID", effectiveId)
+                .build();
+        ServerWebExchange normalizedExchange = exchange.mutate().request(normalizedRequest).build();
+        normalizedExchange.getAttributes().put(CORRELATION_ID_HEADER, effectiveId);
+        normalizedExchange.getResponse().getHeaders().set(CORRELATION_ID_HEADER, effectiveId);
+        normalizedExchange.getResponse().getHeaders().set("X-Request-ID", effectiveId);
 
-        return chain.filter(exchange);
+        return chain.filter(normalizedExchange);
+    }
+
+    private static boolean valid(String value) {
+        return value != null && value.length() <= 128 && value.matches("[A-Za-z0-9._:-]+");
     }
 }

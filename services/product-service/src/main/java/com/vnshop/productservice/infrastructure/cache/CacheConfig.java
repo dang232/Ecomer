@@ -41,7 +41,7 @@ public class CacheConfig implements CachingConfigurer {
                 .disableCachingNullValues()
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(
                         new GenericJackson2JsonRedisSerializer()))
-                .prefixCacheNameWith("product-svc::");
+                .prefixCacheNameWith("vnshop:cache:v2::");
         return RedisCacheManager.builder(connectionFactory)
                 .withCacheConfiguration(PRODUCT_CACHE, productConfig)
                 .build();

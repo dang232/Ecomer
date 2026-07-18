@@ -7,6 +7,8 @@ import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import com.vnshop.searchservice.application.SearchFacetsResponse;
 import com.vnshop.searchservice.application.SearchRepository;
+import com.vnshop.searchservice.application.CursorSort;
+import com.vnshop.searchservice.application.SearchCursor;
 import com.vnshop.searchservice.domain.ProductReadModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +21,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.client.elc.ElasticsearchAggregation;
 import org.springframework.data.elasticsearch.client.elc.ElasticsearchAggregations;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
+import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
@@ -99,6 +102,40 @@ public class ElasticsearchSearchAdapter implements SearchRepository {
             return fallbackRepository.searchPaged(
                     query, categoryId, brand, minPrice, maxPrice,
                     sameDay, verifiedOnly, officialOnly, pageable);
+        }
+    }
+
+    @Override
+    public List<ProductReadModel> searchAfter(
+            String query, String categoryId, String brand,
+            BigDecimal minPrice, BigDecimal maxPrice,
+            Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly,
+            CursorSort sort, SearchCursor cursor, int limit) {
+        try {
+            NativeQueryBuilder builder = NativeQuery.builder()
+                    .withQuery(buildSearchQuery(query, categoryId, brand, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly))
+                    .withPageable(Pageable.ofSize(limit))
+                    .withSort(toCursorSort(sort))
+                    .withTrackTotalHits(false);
+            if (sort != CursorSort.NEWEST) {
+                builder.withFilter(Query.of(filter -> filter.exists(exists -> exists.field("price"))));
+            }
+            if (cursor != null) {
+                builder.withSearchAfter(searchAfterValues(cursor));
+            }
+            SearchHits<ProductDocument> hits = elasticsearchOperations.search(builder.build(), ProductDocument.class);
+            List<ProductReadModel> results = hits.getSearchHits().stream()
+                    .map(SearchHit::getContent)
+                    .map(ElasticsearchSearchAdapter::toReadModel)
+                    .toList();
+            return results.isEmpty()
+                    ? fallbackRepository.searchAfter(query, categoryId, brand, minPrice, maxPrice,
+                    sameDay, verifiedOnly, officialOnly, sort, cursor, limit)
+                    : results;
+        } catch (Exception ex) {
+            LOGGER.warn("Elasticsearch cursor search failed, using JPA read-model fallback. Cause: {}", ex.getMessage());
+            return fallbackRepository.searchAfter(query, categoryId, brand, minPrice, maxPrice,
+                    sameDay, verifiedOnly, officialOnly, sort, cursor, limit);
         }
     }
 
@@ -303,6 +340,24 @@ public class ElasticsearchSearchAdapter implements SearchRepository {
             ));
         }
         return options;
+    }
+
+    private static List<co.elastic.clients.elasticsearch._types.SortOptions> toCursorSort(CursorSort sort) {
+        String field = sort == CursorSort.NEWEST ? "createdAt" : "price";
+        SortOrder direction = sort == CursorSort.PRICE_LOW ? SortOrder.Asc : SortOrder.Desc;
+        return List.of(
+                co.elastic.clients.elasticsearch._types.SortOptions.of(s -> s
+                        .field(f -> f.field(field).order(direction))),
+                co.elastic.clients.elasticsearch._types.SortOptions.of(s -> s
+                        .field(f -> f.field("_id").order(direction)))
+        );
+    }
+
+    private static List<Object> searchAfterValues(SearchCursor cursor) {
+        Object primary = cursor.sort() == CursorSort.NEWEST
+                ? cursor.createdAt().toString()
+                : cursor.price();
+        return List.of(primary, cursor.productId());
     }
 
     private static co.elastic.clients.elasticsearch._types.SortOptions defaultSort() {

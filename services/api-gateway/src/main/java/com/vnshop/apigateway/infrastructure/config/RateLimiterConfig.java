@@ -47,12 +47,12 @@ public class RateLimiterConfig {
 
     @Bean
     RedisRateLimiter paymentAnonRateLimiter() {
-        return new RedisRateLimiter(1, 2, 1);
+        return new NamespacedRedisRateLimiter(1, 2, 1);
     }
 
     @Bean
     RedisRateLimiter paymentAuthRateLimiter() {
-        return new RedisRateLimiter(5, 10, 1);
+        return new NamespacedRedisRateLimiter(5, 10, 1);
     }
 
     @Bean
@@ -63,18 +63,18 @@ public class RateLimiterConfig {
     }
 
     // -----------------------------------------------------------------------
-    // Auth route: 3 req/s burst 5 — flat for BOTH anon and auth since
+    // Auth route: 3 req/s burst 5 â€” flat for BOTH anon and auth since
     // auth endpoints are login/register, not post-auth operations.
     // -----------------------------------------------------------------------
 
     @Bean
     RedisRateLimiter authAnonRateLimiter() {
-        return new RedisRateLimiter(3, 5, 1);
+        return new NamespacedRedisRateLimiter(3, 5, 1);
     }
 
     @Bean
     RedisRateLimiter authAuthRateLimiter() {
-        return new RedisRateLimiter(3, 5, 1);
+        return new NamespacedRedisRateLimiter(3, 5, 1);
     }
 
     @Bean
@@ -90,12 +90,12 @@ public class RateLimiterConfig {
 
     @Bean
     RedisRateLimiter searchAnonRateLimiter() {
-        return new RedisRateLimiter(5, 10, 1);
+        return new NamespacedRedisRateLimiter(5, 10, 1);
     }
 
     @Bean
     RedisRateLimiter searchAuthRateLimiter() {
-        return new RedisRateLimiter(20, 40, 1);
+        return new NamespacedRedisRateLimiter(20, 40, 1);
     }
 
     @Bean
@@ -103,6 +103,79 @@ public class RateLimiterConfig {
             RedisRateLimiter searchAnonRateLimiter,
             RedisRateLimiter searchAuthRateLimiter) {
         return new TieredRateLimiter(searchAnonRateLimiter, searchAuthRateLimiter);
+    }
+
+    // Flash-sale reserve: authenticated buyers get 2 req/s with burst 5.
+    // Anonymous traffic is kept stricter because the endpoint requires auth.
+    @Bean
+    RedisRateLimiter flashSaleReserveAnonRateLimiter() {
+        return new NamespacedRedisRateLimiter(1, 2, 1);
+    }
+
+    @Bean
+    RedisRateLimiter flashSaleReserveAuthRateLimiter() {
+        return new NamespacedRedisRateLimiter(2, 5, 1);
+    }
+
+    @Bean
+    TieredRateLimiter flashSaleReserveRateLimiter(
+            RedisRateLimiter flashSaleReserveAnonRateLimiter,
+            RedisRateLimiter flashSaleReserveAuthRateLimiter) {
+        return new TieredRateLimiter(flashSaleReserveAnonRateLimiter, flashSaleReserveAuthRateLimiter);
+    }
+
+    // Stock reads: 5 req/s with burst 10 for either tier.
+    @Bean
+    RedisRateLimiter flashSaleStockAnonRateLimiter() {
+        return new NamespacedRedisRateLimiter(5, 10, 1);
+    }
+
+    @Bean
+    RedisRateLimiter flashSaleStockAuthRateLimiter() {
+        return new NamespacedRedisRateLimiter(5, 10, 1);
+    }
+
+    @Bean
+    TieredRateLimiter flashSaleStockRateLimiter(
+            RedisRateLimiter flashSaleStockAnonRateLimiter,
+            RedisRateLimiter flashSaleStockAuthRateLimiter) {
+        return new TieredRateLimiter(flashSaleStockAnonRateLimiter, flashSaleStockAuthRateLimiter);
+    }
+
+    // Active campaign reads: 10 req/s with burst 20 for either tier.
+    @Bean
+    RedisRateLimiter flashSaleActiveAnonRateLimiter() {
+        return new NamespacedRedisRateLimiter(10, 20, 1);
+    }
+
+    @Bean
+    RedisRateLimiter flashSaleActiveAuthRateLimiter() {
+        return new NamespacedRedisRateLimiter(10, 20, 1);
+    }
+
+    @Bean
+    TieredRateLimiter flashSaleActiveRateLimiter(
+            RedisRateLimiter flashSaleActiveAnonRateLimiter,
+            RedisRateLimiter flashSaleActiveAuthRateLimiter) {
+        return new TieredRateLimiter(flashSaleActiveAnonRateLimiter, flashSaleActiveAuthRateLimiter);
+    }
+
+    // Recommendations: 5/10 anonymous and 20/40 authenticated.
+    @Bean
+    RedisRateLimiter recommendationsAnonRateLimiter() {
+        return new NamespacedRedisRateLimiter(5, 10, 1);
+    }
+
+    @Bean
+    RedisRateLimiter recommendationsAuthRateLimiter() {
+        return new NamespacedRedisRateLimiter(20, 40, 1);
+    }
+
+    @Bean
+    TieredRateLimiter recommendationsRateLimiter(
+            RedisRateLimiter recommendationsAnonRateLimiter,
+            RedisRateLimiter recommendationsAuthRateLimiter) {
+        return new TieredRateLimiter(recommendationsAnonRateLimiter, recommendationsAuthRateLimiter);
     }
 
     // -----------------------------------------------------------------------
@@ -114,12 +187,12 @@ public class RateLimiterConfig {
 
     @Bean
     RedisRateLimiter generalAnonRateLimiter() {
-        return new RedisRateLimiter(5, 10, 1);
+        return new NamespacedRedisRateLimiter(5, 10, 1);
     }
 
     @Bean
     RedisRateLimiter generalAuthRateLimiter() {
-        return new RedisRateLimiter(30, 60, 1);
+        return new NamespacedRedisRateLimiter(30, 60, 1);
     }
 
     @Bean

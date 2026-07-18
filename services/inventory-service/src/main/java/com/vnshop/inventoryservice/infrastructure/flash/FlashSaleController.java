@@ -8,11 +8,15 @@ import com.vnshop.inventoryservice.infrastructure.config.JwtPrincipalUtil;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -30,13 +34,26 @@ public class FlashSaleController {
 
 	@PostMapping("/reserve")
 	@PreAuthorize("hasRole('BUYER') or hasRole('ADMIN')")
-	public ApiResponse<ReserveFlashSaleResponse> reserve(@Valid @RequestBody ReserveFlashSaleRequest request) {
+	public ApiResponse<ReserveFlashSaleResponse> reserve(
+			@Valid @RequestBody ReserveFlashSaleRequest request,
+			@RequestHeader("Idempotency-Key") String idempotencyKey) {
 		ReserveFlashSaleResult result = reserveFlashSaleUseCase.reserve(
-				new ReserveFlashSaleCommand(request.productId(), JwtPrincipalUtil.currentUserId(), request.quantity()));
+				new ReserveFlashSaleCommand(
+						request.productId(), JwtPrincipalUtil.currentUserId(), request.quantity(),
+						idempotencyKey, requestHash(request)));
 		return ApiResponse.ok(new ReserveFlashSaleResponse(
 				result.reservationId(),
 				result.status(),
 				result.expiresAt()));
+	}
+
+	private static String requestHash(ReserveFlashSaleRequest request) {
+		try {
+			return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+					.digest((request.productId() + "\n" + request.quantity()).getBytes(StandardCharsets.UTF_8)));
+		} catch (Exception exception) {
+			throw new IllegalStateException("SHA-256 is unavailable", exception);
+		}
 	}
 
 	@GetMapping("/stock/{productId}")

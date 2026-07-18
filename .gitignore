@@ -234,6 +234,8 @@ app.*.symbols
 .agents/rules/personal-*
 .agents/skills/personal-*
 /.agent-shell/
-/docs
+/docs/*
+!/docs/architect/
+!/docs/architect/SHOPEE-HAR-INVESTIGATION-AND-PLAN.md
 /services/configuration-service/dist
 /services/product-service/.omc

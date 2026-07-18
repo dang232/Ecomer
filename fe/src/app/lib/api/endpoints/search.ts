@@ -4,6 +4,7 @@ import {
   pageSchema,
   productSummarySchema,
   searchFacetsSchema,
+  searchV2Schema,
   type SearchFacets,
 } from "../../../types/api";
 import { api } from "../client";
@@ -43,6 +44,34 @@ export const searchProducts = (params: SearchParams) =>
       officialOnly: params.officialOnly,
     },
     { auth: false },
+  );
+
+export interface CursorSearchParams extends Omit<SearchParams, "page" | "size"> {
+  cursor?: string;
+  limit?: number;
+  includeFacets?: boolean;
+}
+
+/** Opt-in v2 search. The result keeps response metadata for cache/cursor-aware callers. */
+export const searchProductsV2 = (params: CursorSearchParams, signal?: AbortSignal) =>
+  api.getWithMeta(
+    "/search/v2",
+    searchV2Schema,
+    {
+      q: params.q,
+      category: params.category,
+      brand: params.brand,
+      minPrice: params.minPrice,
+      maxPrice: params.maxPrice,
+      sort: params.sort,
+      sameDay: params.sameDay,
+      verifiedOnly: params.verifiedOnly,
+      officialOnly: params.officialOnly,
+      cursor: params.cursor,
+      limit: params.limit ?? 24,
+      includeFacets: params.includeFacets,
+    },
+    { auth: false, signal },
   );
 
 /**

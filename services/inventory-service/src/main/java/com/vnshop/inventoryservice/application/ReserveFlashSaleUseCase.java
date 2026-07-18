@@ -25,6 +25,9 @@ public class ReserveFlashSaleUseCase {
 
 	public ReserveFlashSaleResult reserve(ReserveFlashSaleCommand command) {
 		FlashSaleReservation reservation = reserveReservation(command);
+		if (reservation.getStatus() == Status.REJECTED) {
+			throw new FlashSaleOutOfStockException(command.productId());
+		}
 		String reservationId = reservation.getReservationId() == null ? null : reservation.getReservationId().toString();
 		return new ReserveFlashSaleResult(
 				reservationId,
@@ -33,22 +36,13 @@ public class ReserveFlashSaleUseCase {
 	}
 
 	FlashSaleReservation reserveReservation(ReserveFlashSaleCommand command) {
-		if (reservationPort.hasActiveReservation(command.productId(), command.buyerId())) {
-			throw new DuplicateFlashSaleReservationException(command.productId(), command.buyerId());
-		}
 		Instant reservedAt = clock.instant();
-		UUID reservationId = UUID.randomUUID();
-		boolean reserved = reservationPort.reserve(command.productId(), command.buyerId(), command.quantity(), reservationId);
-		FlashSaleReservation reservation = new FlashSaleReservation(
-				reserved ? reservationId : null,
-				command.productId(),
-				command.buyerId(),
-				command.quantity(),
-				reserved ? Status.RESERVED : Status.REJECTED,
-				reservedAt,
-				reservedAt.plus(RESERVATION_TTL));
-		if (reserved) {
-			reservationPort.save(reservation);
+		FlashSaleReservation reservation = reservationPort.reserveIdempotently(
+				command.productId(), command.buyerId(), command.quantity(),
+				command.idempotencyKey(), command.requestHash()).reservation();
+		if (reservation.getReservedAt() == null) {
+			reservation.setReservedAt(reservedAt);
+			reservation.setExpiresAt(reservedAt.plus(RESERVATION_TTL));
 		}
 		return reservation;
 	}

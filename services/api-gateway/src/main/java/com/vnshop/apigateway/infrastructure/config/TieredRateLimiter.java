@@ -4,6 +4,9 @@ import org.springframework.cloud.gateway.filter.ratelimit.AbstractRateLimiter;
 import org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter;
 import org.springframework.validation.Validator;
 import reactor.core.publisher.Mono;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import java.util.Map;
 
 /**
  * A {@link org.springframework.cloud.gateway.filter.ratelimit.RateLimiter} that
@@ -22,6 +25,8 @@ import reactor.core.publisher.Mono;
  */
 public class TieredRateLimiter extends AbstractRateLimiter<RedisRateLimiter.Config> {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(TieredRateLimiter.class);
+
     private static final String PROPERTY_NAME = "tiered-rate-limiter";
 
     private final RedisRateLimiter anonLimiter;
@@ -37,9 +42,18 @@ public class TieredRateLimiter extends AbstractRateLimiter<RedisRateLimiter.Conf
 
     @Override
     public Mono<Response> isAllowed(String routeId, String id) {
-        if (id.startsWith(TieredKeyResolver.USER_PREFIX)) {
-            return authLimiter.isAllowed(routeId, id);
-        }
-        return anonLimiter.isAllowed(routeId, id);
+        Mono<Response> delegated = id.startsWith(TieredKeyResolver.USER_PREFIX)
+                ? authLimiter.isAllowed(routeId, id)
+                : anonLimiter.isAllowed(routeId, id);
+        return delegated.onErrorResume(error -> {
+            LOGGER.error("rate-limit dependency failed routeId={}", routeId, error);
+            // Reservation admission is a mutation and must fail closed. Public
+            // reads remain available while the limiter is degraded.
+            if ("flash-sale-reserve".equals(routeId) || "payment".equals(routeId)
+                    || "orders".equals(routeId)) {
+                return Mono.just(new Response(false, Map.of("Retry-After", "1")));
+            }
+            return Mono.just(new Response(true, Map.of("X-RateLimit-Degraded", "true")));
+        });
     }
 }

@@ -1,6 +1,6 @@
 import type { z } from "zod";
 
-import { ApiError } from "./envelope";
+import { ApiError, type ApiMeta } from "./envelope";
 import {
   authInterceptor,
   contentTypeInterceptor,
@@ -89,6 +89,44 @@ export interface RequestOptions<TSchema extends z.ZodType> {
    * browser to attach / receive httpOnly cookies on cross-origin responses.
    */
   credentials?: RequestCredentials;
+  /** Enables conditional requests for anonymous public GETs. */
+  publicCache?: boolean;
+}
+
+export interface ApiResult<T> {
+  data: T;
+  meta?: ApiMeta;
+  status: number;
+  headers: Headers;
+}
+
+interface PublicCacheEntry {
+  data: unknown;
+  meta?: ApiMeta;
+  etag: string;
+}
+
+const PUBLIC_CACHE_LIMIT = 200;
+const publicResponseCache = new Map<string, PublicCacheEntry>();
+
+export function clearPublicResponseCache(): void {
+  publicResponseCache.clear();
+}
+
+function cachePut(key: string, entry: PublicCacheEntry): void {
+  publicResponseCache.delete(key);
+  publicResponseCache.set(key, entry);
+  while (publicResponseCache.size > PUBLIC_CACHE_LIMIT) {
+    const oldest = publicResponseCache.keys().next().value;
+    if (oldest === undefined) break;
+    publicResponseCache.delete(oldest);
+  }
+}
+
+function removeConditionalHeader(init: RequestInit): void {
+  const headers = new Headers(init.headers);
+  headers.delete("If-None-Match");
+  init.headers = headers;
 }
 
 function buildUrl(path: string, query?: RequestOptions<z.ZodType>["query"]): string {
@@ -151,14 +189,16 @@ async function runErrorChain(err: unknown, ctx: RequestContext): Promise<Respons
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 
-export async function request<TSchema extends z.ZodType>(
+async function executeRequest<TSchema extends z.ZodType>(
   opts: RequestOptions<TSchema>,
-): Promise<z.infer<TSchema>> {
+): Promise<ApiResult<z.infer<TSchema>>> {
   const method: Method = opts.method ?? "GET";
   const auth = opts.auth ?? true;
   const correlationId = crypto.randomUUID();
   const url = buildUrl(opts.path, opts.query);
   const hasBody = opts.body !== undefined && method !== "GET";
+  const usePublicCache = Boolean(opts.publicCache && method === "GET" && !auth);
+  const cached = usePublicCache ? publicResponseCache.get(url) : undefined;
 
   const timeoutController = new AbortController();
   const timeoutId = setTimeout(
@@ -177,6 +217,11 @@ export async function request<TSchema extends z.ZodType>(
     signal: composedSignal,
     credentials: opts.credentials ?? "omit",
   };
+  if (cached) {
+    const headers = new Headers(init.headers);
+    headers.set("If-None-Match", cached.etag);
+    init.headers = headers;
+  }
 
   try {
     const requestCtx = await runRequestChain({
@@ -270,6 +315,30 @@ export async function request<TSchema extends z.ZodType>(
       }
     }
 
+    if (response.status === 304 && usePublicCache && cached) {
+      telemetryInterceptor({ request: requestCtx, response, parsed: null });
+      return {
+        data: cached.data as z.infer<TSchema>,
+        meta: { ...cached.meta, cacheStatus: "hit", requestId: requestIdFrom(response, correlationId) },
+        status: 304,
+        headers: response.headers,
+      };
+    }
+
+    if (response.status === 304 && usePublicCache) {
+      removeConditionalHeader(requestCtx.init);
+      response = await fetch(requestCtx.url, requestCtx.init);
+      if (response.status === 304) {
+        telemetryInterceptor({ request: requestCtx, response, parsed: null });
+        throw new ApiError(
+          304,
+          "NOT_MODIFIED",
+          "Server returned 304 without a cached response",
+          requestIdFrom(response, correlationId),
+        );
+      }
+    }
+
     const responseChain: readonly ResponseInterceptor[] = [
       jsonParseInterceptor,
       telemetryInterceptor,
@@ -277,14 +346,62 @@ export async function request<TSchema extends z.ZodType>(
       envelopeInterceptor(opts.schema),
     ];
 
-    const finalCtx = await runResponseChain(
-      { request: requestCtx, response, parsed: null },
-      responseChain,
-    );
-    return finalCtx.parsed as z.infer<TSchema>;
+    let finalCtx: ResponseContext;
+    try {
+      finalCtx = await runResponseChain(
+        { request: requestCtx, response, parsed: null },
+        responseChain,
+      );
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 429) {
+        const retried = await retryInterceptor(error, requestCtx);
+        if (!retried) throw error;
+        response = retried;
+        finalCtx = await runResponseChain(
+          { request: requestCtx, response: retried, parsed: null },
+          responseChain,
+        );
+      } else {
+        throw error;
+      }
+    }
+
+    const requestId = requestIdFrom(response, correlationId);
+    const meta: ApiMeta = {
+      ...finalCtx.envelopeMeta,
+      requestId: finalCtx.envelopeMeta?.requestId ?? requestId,
+      ...(usePublicCache && !finalCtx.envelopeMeta?.cacheStatus ? { cacheStatus: "miss" } : {}),
+    };
+    const result: ApiResult<z.infer<TSchema>> = {
+      data: finalCtx.parsed as z.infer<TSchema>,
+      meta,
+      status: response.status,
+      headers: response.headers,
+    };
+    const etag = response.headers.get("etag");
+    if (usePublicCache && etag && response.status >= 200 && response.status < 300) {
+      cachePut(url, { data: result.data, meta, etag });
+    }
+    return result;
   } finally {
     clearTimeout(timeoutId);
   }
+}
+
+function requestIdFrom(response: Response, fallback: string): string {
+  return response.headers.get("x-request-id") ?? response.headers.get("x-correlation-id") ?? fallback;
+}
+
+export async function request<TSchema extends z.ZodType>(
+  opts: RequestOptions<TSchema>,
+): Promise<z.infer<TSchema>> {
+  return (await executeRequest(opts)).data;
+}
+
+export async function requestWithMeta<TSchema extends z.ZodType>(
+  opts: RequestOptions<TSchema>,
+): Promise<ApiResult<z.infer<TSchema>>> {
+  return executeRequest({ ...opts, publicCache: opts.publicCache ?? opts.auth === false });
 }
 
 export const api = {
@@ -294,6 +411,12 @@ export const api = {
     query?: RequestOptions<T>["query"],
     opts?: Pick<RequestOptions<T>, "auth" | "signal" | "credentials">,
   ) => request({ method: "GET", path, schema, query, ...opts }),
+  getWithMeta: <T extends z.ZodType>(
+    path: string,
+    schema: T,
+    query?: RequestOptions<T>["query"],
+    opts?: Pick<RequestOptions<T>, "auth" | "signal" | "credentials">,
+  ) => requestWithMeta({ method: "GET", path, schema, query, ...opts, publicCache: opts?.auth === false }),
   post: <T extends z.ZodType>(
     path: string,
     schema: T,

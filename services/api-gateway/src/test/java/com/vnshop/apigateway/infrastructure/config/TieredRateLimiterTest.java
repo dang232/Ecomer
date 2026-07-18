@@ -62,6 +62,28 @@ class TieredRateLimiterTest {
             .verifyComplete();
     }
 
+    @Test
+    void reservation_rate_limit_failure_fails_closed() {
+        when(anonLimiter.isAllowed("flash-sale-reserve", "anon:198.51.100.1"))
+                .thenReturn(Mono.error(new IllegalStateException("redis unavailable")));
+
+        StepVerifier.create(tieredRateLimiter.isAllowed("flash-sale-reserve", "anon:198.51.100.1"))
+                .expectNextMatches(response -> !response.isAllowed()
+                        && "1".equals(response.getHeaders().get("Retry-After")))
+                .verifyComplete();
+    }
+
+    @Test
+    void public_read_rate_limit_failure_fails_open() {
+        when(anonLimiter.isAllowed("recommendations", "anon:198.51.100.1"))
+                .thenReturn(Mono.error(new IllegalStateException("redis unavailable")));
+
+        StepVerifier.create(tieredRateLimiter.isAllowed("recommendations", "anon:198.51.100.1"))
+                .expectNextMatches(response -> response.isAllowed()
+                        && "true".equals(response.getHeaders().get("X-RateLimit-Degraded")))
+                .verifyComplete();
+    }
+
     private Map<String, String> headers(String... keyValues) {
         Map<String, String> map = new HashMap<>();
         for (int i = 0; i < keyValues.length - 1; i += 2) {
