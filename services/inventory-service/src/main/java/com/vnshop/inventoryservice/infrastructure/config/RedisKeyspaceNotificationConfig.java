@@ -8,7 +8,7 @@ import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 
 /**
- * Configures Redis keyspace notifications so that expired {@code flash:reservation:*}
+ * Configures Redis keyspace notifications so that expired {@code vnshop:flash-sale:v1:reservation:*}
  * keys trigger {@link ReservationExpiryListener}.
  *
  * <p>The Redis server must have keyspace notifications enabled:

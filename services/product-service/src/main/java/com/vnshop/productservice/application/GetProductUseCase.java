@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.ArrayList;
 
 public class GetProductUseCase {
     private final ProductRepositoryPort productRepositoryPort;
@@ -46,5 +47,23 @@ public class GetProductUseCase {
 
     public Page<ProductResponse> findCatalog(String categoryId, String q, String sellerId, Pageable pageable) {
         return productRepositoryPort.findCatalog(categoryId, q, sellerId, pageable).map(ProductResponse::fromDomain);
+    }
+
+    public CatalogV2Response findCatalogV2(CatalogV2Query query) {
+        CatalogCursorCodec codec = new CatalogCursorCodec(
+                System.getenv().getOrDefault("VNSHOP_PRODUCT_CURSOR_SECRET", "local-product-cursor-secret-change-me"));
+        return findCatalogV2(query, codec);
+    }
+
+    CatalogV2Response findCatalogV2(CatalogV2Query query, CatalogCursorCodec codec) {
+        CatalogCursor cursor = codec.decode(query.cursor(), query);
+        List<com.vnshop.productservice.domain.CatalogProduct> rows = productRepositoryPort.findCatalogAfter(
+                query.category(), query.query(), query.brand(), query.minPrice(), query.maxPrice(),
+                query.sameDay(), query.verifiedOnly(), query.officialOnly(), query.sort(), cursor, query.limit() + 1);
+        boolean hasMore = rows.size() > query.limit();
+        List<com.vnshop.productservice.domain.CatalogProduct> page = hasMore
+                ? new ArrayList<>(rows.subList(0, query.limit())) : rows;
+        String nextCursor = hasMore ? codec.encode(query, page.getLast()) : null;
+        return new CatalogV2Response(page.stream().map(entry -> ProductResponse.fromDomain(entry.product())).toList(), nextCursor, hasMore);
     }
 }

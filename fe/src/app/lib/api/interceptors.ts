@@ -2,7 +2,7 @@ import type { z } from "zod";
 
 import { getAccessToken, refreshTokens, setLiveTokenSet } from "../auth/native-auth";
 
-import { apiResponseSchema, ApiError } from "./envelope";
+import { apiResponseSchema, ApiError, type ApiMeta } from "./envelope";
 import { recordTelemetry } from "./telemetry-store";
 
 export interface RequestContext {
@@ -29,6 +29,7 @@ export interface ResponseContext {
   response: Response;
   /** Pre-parsed JSON body. `null` until a response interceptor populates it. */
   parsed: unknown;
+  envelopeMeta?: ApiMeta;
 }
 
 export type RequestInterceptor = (ctx: RequestContext) => Promise<RequestContext> | RequestContext;
@@ -105,7 +106,9 @@ export const authInterceptor: RequestInterceptor = (ctx) => {
 /** Read body once, parse JSON or throw `INVALID_JSON`. Sets `ctx.parsed`. */
 export const jsonParseInterceptor: ResponseInterceptor = async (ctx) => {
   const serverCorrelationId =
-    ctx.response.headers.get("x-correlation-id") ?? ctx.request.correlationId;
+    ctx.response.headers.get("x-request-id") ??
+    ctx.response.headers.get("x-correlation-id") ??
+    ctx.request.correlationId;
   const text = await ctx.response.text();
   if (text.length === 0) return { ...ctx, parsed: null };
   try {
@@ -122,9 +125,12 @@ export const jsonParseInterceptor: ResponseInterceptor = async (ctx) => {
 
 /** Maps non-2xx responses to `ApiError`, pulling errorCode/message from the body when present. */
 export const errorStatusInterceptor: ResponseInterceptor = (ctx) => {
+  if (ctx.response.status === 304) return ctx;
   if (ctx.response.ok) return ctx;
   const serverCorrelationId =
-    ctx.response.headers.get("x-correlation-id") ?? ctx.request.correlationId;
+    ctx.response.headers.get("x-request-id") ??
+    ctx.response.headers.get("x-correlation-id") ??
+    ctx.request.correlationId;
   const parsed = ctx.parsed;
   const code =
     parsed &&
@@ -140,8 +146,21 @@ export const errorStatusInterceptor: ResponseInterceptor = (ctx) => {
     typeof (parsed as Record<string, unknown>).message === "string"
       ? ((parsed as Record<string, unknown>).message as string)
       : `HTTP ${ctx.response.status}`;
-  throw new ApiError(ctx.response.status, code, message, serverCorrelationId);
+  const retryAfterHeader = ctx.response.headers.get("retry-after");
+  const retryAfterMs =
+    ctx.response.status === 429 && retryAfterHeader
+      ? parseRetryAfterMs(retryAfterHeader)
+      : undefined;
+  throw new ApiError(ctx.response.status, code, message, serverCorrelationId, retryAfterMs);
 };
+
+function parseRetryAfterMs(value: string): number | undefined {
+  const seconds = Number(value);
+  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return undefined;
+  return Math.max(0, timestamp - Date.now());
+}
 
 /**
  * Builds a response interceptor that validates the API envelope against the
@@ -153,7 +172,9 @@ export function envelopeInterceptor<TSchema extends z.ZodType>(
 ): ResponseInterceptor {
   return (ctx) => {
     const serverCorrelationId =
-      ctx.response.headers.get("x-correlation-id") ?? ctx.request.correlationId;
+      ctx.response.headers.get("x-request-id") ??
+      ctx.response.headers.get("x-correlation-id") ??
+      ctx.request.correlationId;
     const envelope = apiResponseSchema(schema).safeParse(ctx.parsed);
     if (!envelope.success) {
       throw new ApiError(
@@ -171,7 +192,7 @@ export function envelopeInterceptor<TSchema extends z.ZodType>(
         serverCorrelationId,
       );
     }
-    return { ...ctx, parsed: envelope.data.data };
+    return { ...ctx, parsed: envelope.data.data, envelopeMeta: envelope.data.meta };
   };
 }
 
@@ -222,7 +243,7 @@ export const unauthorizedInterceptor: ErrorInterceptor = async (err, ctx) => {
 const BACKOFFS_MS = [0, 250, 750, 2000, 5000] as const;
 const MAX_ATTEMPTS = BACKOFFS_MS.length;
 
-const RETRYABLE_STATUSES = new Set([500, 502, 503, 504]);
+const RETRYABLE_STATUSES = new Set([500, 502, 503, 504, 429]);
 
 function isUnsafeMutation(method: string | undefined, hasIdempotencyKey: boolean): boolean {
   if (!method) return false;
@@ -284,6 +305,22 @@ export const retryInterceptor: ErrorInterceptor = async (err, ctx) => {
   if (err.status === 401) return undefined;
   if (!RETRYABLE_STATUSES.has(err.status)) return undefined;
 
+  const method = ctx.meta.method ?? ctx.init.method ?? "GET";
+  if (err.status === 429) {
+    if (method.toUpperCase() !== "GET" || (ctx.meta.attempts ?? 1) >= 2) return undefined;
+    const signal = ctx.init.signal ?? undefined;
+    try {
+      await delay(
+        Math.min(err.retryAfterMs ?? 0, 5_000),
+        signal instanceof AbortSignal ? signal : undefined,
+      );
+    } catch {
+      return undefined;
+    }
+    ctx.meta.attempts = 2;
+    return fetch(ctx.url, ctx.init);
+  }
+
   const attempts = (ctx.meta.attempts ?? 1) + 1;
   if (attempts > MAX_ATTEMPTS) {
     recordTelemetry({
@@ -299,7 +336,6 @@ export const retryInterceptor: ErrorInterceptor = async (err, ctx) => {
     return undefined;
   }
 
-  const method = ctx.meta.method ?? ctx.init.method ?? "GET";
   if (isUnsafeMutation(method, Boolean(ctx.meta.idempotencyKey))) return undefined;
 
   const signal = ctx.init.signal ?? undefined;
@@ -335,7 +371,10 @@ export const retryInterceptor: ErrorInterceptor = async (err, ctx) => {
  * shape.
  */
 export const telemetryInterceptor: ResponseInterceptor = (ctx) => {
-  const correlationId = ctx.response.headers.get("x-correlation-id") ?? ctx.request.correlationId;
+  const correlationId =
+    ctx.response.headers.get("x-request-id") ??
+    ctx.response.headers.get("x-correlation-id") ??
+    ctx.request.correlationId;
   const errorCode = ctx.response.ok ? null : extractErrorCode(ctx.parsed);
   const startedAt = ctx.request.meta.startedAt ?? Date.now();
   recordTelemetry({

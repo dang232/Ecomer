@@ -1,6 +1,9 @@
 package com.vnshop.productservice.infrastructure.persistence;
 
 import com.vnshop.productservice.domain.Product;
+import com.vnshop.productservice.domain.CatalogProduct;
+import com.vnshop.productservice.application.CatalogCursor;
+import com.vnshop.productservice.application.CatalogCursorSort;
 import com.vnshop.productservice.domain.port.out.ProductRepositoryPort;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -14,6 +17,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.math.BigDecimal;
+import java.util.ArrayList;
 
 @Repository
 public class ProductJpaRepository implements ProductRepositoryPort {
@@ -65,6 +70,34 @@ public class ProductJpaRepository implements ProductRepositoryPort {
     }
 
     @Override
+    public List<CatalogProduct> findCatalogAfter(
+            String categoryId, String query, String brand,
+            BigDecimal minPrice, BigDecimal maxPrice,
+            Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly,
+            CatalogCursorSort sort, CatalogCursor cursor, int limit) {
+        String normalizedCategory = blankToNull(categoryId);
+        String normalizedQuery = blankToNull(query);
+        String normalizedBrand = blankToNull(brand);
+        Pageable pageable = Pageable.ofSize(limit);
+        UUID anchorId = cursor == null ? null : UUID.fromString(cursor.productId());
+        List<ProductJpaEntity> entities = switch (sort) {
+            case NEWEST -> springDataRepository.findCatalogAfterNewest(
+                    normalizedCategory, normalizedQuery, normalizedBrand, minPrice, maxPrice,
+                    sameDay, verifiedOnly, officialOnly,
+                    cursor == null ? null : cursor.createdAt(), anchorId, pageable);
+            case PRICE_LOW -> springDataRepository.findCatalogAfterPriceLow(
+                    normalizedCategory, normalizedQuery, normalizedBrand, minPrice, maxPrice,
+                    sameDay, verifiedOnly, officialOnly,
+                    cursor == null ? null : cursor.price(), anchorId, pageable);
+            case PRICE_HIGH -> springDataRepository.findCatalogAfterPriceHigh(
+                    normalizedCategory, normalizedQuery, normalizedBrand, minPrice, maxPrice,
+                    sameDay, verifiedOnly, officialOnly,
+                    cursor == null ? null : cursor.price(), anchorId, pageable);
+        };
+        return entities.stream().map(ProductJpaRepository::toCatalogProduct).toList();
+    }
+
+    @Override
     public long countBySellerId(String sellerId) {
         return springDataRepository.countBySellerId(sellerId);
     }
@@ -86,5 +119,18 @@ public class ProductJpaRepository implements ProductRepositoryPort {
             result.put(sellerId, count);
         }
         return result;
+    }
+
+    private static CatalogProduct toCatalogProduct(ProductJpaEntity entity) {
+        Product product = entity.toDomain();
+        BigDecimal minPrice = product.variants().stream()
+                .map(variant -> variant.price().amount())
+                .min(BigDecimal::compareTo)
+                .orElse(null);
+        return new CatalogProduct(product, entity.getCreatedAt(), minPrice);
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
     }
 }

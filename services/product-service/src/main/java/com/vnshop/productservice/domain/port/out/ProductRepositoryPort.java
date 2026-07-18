@@ -1,6 +1,9 @@
 package com.vnshop.productservice.domain.port.out;
 
 import com.vnshop.productservice.domain.Product;
+import com.vnshop.productservice.domain.CatalogProduct;
+import com.vnshop.productservice.application.CatalogCursor;
+import com.vnshop.productservice.application.CatalogCursorSort;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -29,6 +32,14 @@ public interface ProductRepositoryPort {
      * null/blank means the corresponding filter is skipped.
      */
     Page<Product> findCatalog(String categoryId, String q, String sellerId, Pageable pageable);
+
+    default List<CatalogProduct> findCatalogAfter(
+            String categoryId, String query, String brand,
+            java.math.BigDecimal minPrice, java.math.BigDecimal maxPrice,
+            Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly,
+            CatalogCursorSort sort, CatalogCursor cursor, int limit) {
+        throw new UnsupportedOperationException("v2 catalog is not available for this repository");
+    }
 
     long countBySellerId(String sellerId);
 

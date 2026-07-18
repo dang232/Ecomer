@@ -2,6 +2,8 @@ package com.vnshop.searchservice.infrastructure.persistence;
 
 import com.vnshop.searchservice.application.SearchFacetsResponse;
 import com.vnshop.searchservice.application.SearchRepository;
+import com.vnshop.searchservice.application.CursorSort;
+import com.vnshop.searchservice.application.SearchCursor;
 import com.vnshop.searchservice.domain.ProductReadModel;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -35,6 +37,36 @@ public class JpaSearchAdapter implements SearchRepository {
     }
 
     @Override
+    public List<ProductReadModel> searchAfter(
+            String query, String categoryId, String brand,
+            BigDecimal minPrice, BigDecimal maxPrice,
+            Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly,
+            CursorSort sort, SearchCursor cursor, int limit) {
+        Pageable pageable = Pageable.ofSize(limit);
+        String normalizedQuery = blankToNull(query);
+        String normalizedCategory = blankToNull(categoryId);
+        String normalizedBrand = blankToNull(brand);
+        List<ProductReadModelJpaEntity> entities = switch (sort) {
+            case NEWEST -> repository.searchAfterNewest(
+                    normalizedQuery, normalizedCategory, normalizedBrand, minPrice, maxPrice,
+                    sameDay, verifiedOnly, officialOnly,
+                    cursor == null ? null : cursor.createdAt(),
+                    cursor == null ? null : cursor.productId(), pageable);
+            case PRICE_LOW -> repository.searchAfterPriceLow(
+                    normalizedQuery, normalizedCategory, normalizedBrand, minPrice, maxPrice,
+                    sameDay, verifiedOnly, officialOnly,
+                    cursor == null ? null : cursor.price(),
+                    cursor == null ? null : cursor.productId(), pageable);
+            case PRICE_HIGH -> repository.searchAfterPriceHigh(
+                    normalizedQuery, normalizedCategory, normalizedBrand, minPrice, maxPrice,
+                    sameDay, verifiedOnly, officialOnly,
+                    cursor == null ? null : cursor.price(),
+                    cursor == null ? null : cursor.productId(), pageable);
+        };
+        return entities.stream().map(ProductReadModelJpaEntity::toDomain).toList();
+    }
+
+    @Override
     public List<String> findDistinctCategories() {
         return repository.findDistinctCategories();
     }
@@ -62,5 +94,9 @@ public class JpaSearchAdapter implements SearchRepository {
         return rows.stream()
                 .map(row -> new SearchFacetsResponse.FacetEntry((String) row[0], ((Number) row[1]).longValue()))
                 .toList();
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
     }
 }

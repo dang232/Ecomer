@@ -4,6 +4,7 @@ import {
   productImageActivateSchema,
   productImageUploadUrlSchema,
   productSummarySchema,
+  cursorPageSchema,
 } from "../../../types/api";
 import { api } from "../client";
 
@@ -29,6 +30,45 @@ export const productList = (params: ProductListParams = {}) =>
       sellerId: params.sellerId,
     },
     { auth: false },
+  );
+
+export interface ProductListV2Params {
+  cursor?: string;
+  limit?: number;
+  category?: string;
+  brand?: string;
+  q?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  sort?: string;
+  sameDay?: boolean;
+  verifiedOnly?: boolean;
+  officialOnly?: boolean;
+  includeFacets?: boolean;
+}
+
+const productListV2Schema = cursorPageSchema(productSummarySchema);
+
+/** Opt-in cursor catalog read; legacy productList remains unchanged. */
+export const productListV2 = (params: ProductListV2Params = {}, signal?: AbortSignal) =>
+  api.getWithMeta(
+    "/products/v2",
+    productListV2Schema,
+    {
+      q: params.q,
+      category: params.category,
+      brand: params.brand,
+      minPrice: params.minPrice,
+      maxPrice: params.maxPrice,
+      sort: params.sort,
+      sameDay: params.sameDay,
+      verifiedOnly: params.verifiedOnly,
+      officialOnly: params.officialOnly,
+      cursor: params.cursor,
+      limit: params.limit ?? 24,
+      includeFacets: params.includeFacets,
+    },
+    { auth: false, signal },
   );
 
 export const productById = (id: string) =>

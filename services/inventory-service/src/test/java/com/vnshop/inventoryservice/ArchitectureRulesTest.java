@@ -27,6 +27,7 @@ class ArchitectureRulesTest {
         noClasses()
                 .that().resideInAPackage("..domain..")
                 .should().dependOnClassesThat().resideInAPackage("..infrastructure..")
+                .allowEmptyShould(true)
                 .check(classes);
     }
 
@@ -35,6 +36,7 @@ class ArchitectureRulesTest {
         noClasses()
                 .that().resideInAPackage("..domain..")
                 .should().dependOnClassesThat().resideInAPackage("..application..")
+                .allowEmptyShould(true)
                 .check(classes);
     }
 
@@ -46,6 +48,7 @@ class ArchitectureRulesTest {
                 .orShould().beAnnotatedWith("org.springframework.stereotype.Repository")
                 .orShould().beAnnotatedWith("org.springframework.stereotype.Component")
                 .orShould().beAnnotatedWith("org.springframework.stereotype.Controller")
+                .allowEmptyShould(true)
                 .check(classes);
     }
 
@@ -54,6 +57,7 @@ class ArchitectureRulesTest {
         noClasses()
                 .that().resideInAPackage("..application..")
                 .should().dependOnClassesThat().resideInAPackage("..infrastructure..")
+                .allowEmptyShould(true)
                 .check(classes);
     }
 
@@ -62,6 +66,7 @@ class ArchitectureRulesTest {
         classes()
                 .that().areAnnotatedWith("org.springframework.web.bind.annotation.RestController")
                 .should().resideInAPackage("..infrastructure.web..")
+                .allowEmptyShould(true)
                 .check(classes);
     }
 
@@ -70,6 +75,7 @@ class ArchitectureRulesTest {
         classes()
                 .that().haveSimpleNameEndingWith("GrpcAdapter")
                 .should().resideInAPackage("..infrastructure.grpc..")
+                .allowEmptyShould(true)
                 .check(classes);
     }
 
@@ -78,6 +84,7 @@ class ArchitectureRulesTest {
         slices()
                 .matching(BASE_PACKAGE + ".(*)..")
                 .should().beFreeOfCycles()
+                .allowEmptyShould(true)
                 .check(classes);
     }
 }

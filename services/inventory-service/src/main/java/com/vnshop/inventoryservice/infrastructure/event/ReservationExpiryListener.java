@@ -24,7 +24,7 @@ import org.springframework.stereotype.Component;
 public class ReservationExpiryListener implements MessageListener {
 
     private static final Logger log = LoggerFactory.getLogger(ReservationExpiryListener.class);
-    private static final String RESERVATION_KEY_PREFIX = "flash:reservation:";
+    private static final String RESERVATION_KEY_PREFIX = "vnshop:flash-sale:v1:reservation:";
     private static final String TOPIC_RESERVATION_EXPIRED = "inventory.reservation-expired";
 
     private final KafkaTemplate<String, String> kafkaTemplate;

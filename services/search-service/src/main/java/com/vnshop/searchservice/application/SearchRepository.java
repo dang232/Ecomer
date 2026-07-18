@@ -13,6 +13,21 @@ import java.util.List;
  */
 public interface SearchRepository {
 
+    /** Returns at most {@code limit} plus one row, using the supplied keyset cursor. */
+    List<ProductReadModel> searchAfter(
+            String query,
+            String categoryId,
+            String brand,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            Boolean sameDay,
+            Boolean verifiedOnly,
+            Boolean officialOnly,
+            CursorSort sort,
+            SearchCursor cursor,
+            int limit
+    );
+
     /**
      * Full-text / filtered search returning a page of domain read models.
      * All parameters are nullable; null means "no filter on that dimension".

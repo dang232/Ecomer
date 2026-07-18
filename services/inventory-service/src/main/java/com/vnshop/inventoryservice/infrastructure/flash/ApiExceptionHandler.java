@@ -2,6 +2,9 @@ package com.vnshop.inventoryservice.infrastructure.flash;
 
 import com.vnshop.inventoryservice.application.DuplicateFlashSaleReservationException;
 import com.vnshop.inventoryservice.application.FlashSaleAccessDeniedException;
+import com.vnshop.inventoryservice.application.FlashSaleIdempotencyConflictException;
+import com.vnshop.inventoryservice.application.FlashSaleOutOfStockException;
+import com.vnshop.inventoryservice.application.FlashSaleDependencyUnavailableException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -23,6 +26,18 @@ public class ApiExceptionHandler {
     @ResponseStatus(HttpStatus.CONFLICT)
     public ApiResponse<Void> duplicateFlashSaleReservation(DuplicateFlashSaleReservationException exception) {
         return ApiResponse.error(exception.getMessage(), "CONFLICT");
+    }
+
+    @ExceptionHandler({FlashSaleIdempotencyConflictException.class, FlashSaleOutOfStockException.class})
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ApiResponse<Void> conflict(RuntimeException exception) {
+        return ApiResponse.error(exception.getMessage(), "CONFLICT");
+    }
+
+    @ExceptionHandler(FlashSaleDependencyUnavailableException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public ApiResponse<Void> unavailable(FlashSaleDependencyUnavailableException exception) {
+        return ApiResponse.error(exception.getMessage(), "SERVICE_UNAVAILABLE");
     }
 
     @ExceptionHandler(FlashSaleAccessDeniedException.class)
