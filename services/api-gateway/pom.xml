@@ -15,7 +15,7 @@
 	<description>API Gateway service</description>
 	<properties>
 		<java.version>25</java.version>
-		<opentelemetry.javaagent.version>2.27.0</opentelemetry.javaagent.version>
+		<opentelemetry.javaagent.version>2.29.0</opentelemetry.javaagent.version>
 		<tomcat.version>11.0.22</tomcat.version>
 		<spring-cloud.version>2025.1.1</spring-cloud.version>
 		<netty.version>4.2.15.Final</netty.version>
