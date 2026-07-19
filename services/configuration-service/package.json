@@ -19,9 +19,9 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
-    "@nestjs/common": "^11.1.21",
-    "@nestjs/core": "^11.1.21",
-    "@nestjs/platform-express": "^11.1.21",
+    "@nestjs/common": "^11.1.28",
+    "@nestjs/core": "^11.1.28",
+    "@nestjs/platform-express": "^11.1.28",
     "@nestjs/swagger": "^11.4.6",
     "js-yaml": "^4.1.0",
     "reflect-metadata": "^0.2.2",
@@ -30,12 +30,15 @@
   "devDependencies": {
     "@nestjs/cli": "^11.0.21",
     "@nestjs/schematics": "^11.1.0",
-    "@nestjs/testing": "^11.1.21",
+    "@nestjs/testing": "^11.1.28",
+    "@types/jest": "^30.0.0",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^24.12.4",
-    "typescript": "^5.7.3",
+    "jest": "^30.4.2",
+    "ts-jest": "^29.4.11",
     "ts-node": "^10.9.2",
-    "tsconfig-paths": "^4.2.0"
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.7.3"
   },
   "jest": {
     "moduleFileExtensions": [
@@ -47,6 +50,9 @@
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "moduleNameMapper": {
+      "^(\\.{1,2}/.*)\\.js$": "$1"
     },
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"

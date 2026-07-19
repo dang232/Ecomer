@@ -1,7 +1,4 @@
-/* eslint-disable react-refresh/only-export-components --
- * AuthProvider colocates with its hooks intentionally — splitting them across
- * files would require updating every import site for marginal HMR benefit.
- */
+/* eslint-disable react-refresh/only-export-components -- provider and hooks share one public module. */
 import {
   createContext,
   useCallback,
@@ -18,16 +15,16 @@ import { ApiError } from "../lib/api/envelope";
 import {
   AuthError,
   decodeJwt,
-  passwordLogin,
-  refreshTokens,
-  revokeTokens,
   setLiveTokenSet,
+  setTokenRefreshHandler,
   type JwtClaims,
   type TokenSet,
 } from "../lib/auth/native-auth";
+import { createOidcClient } from "../lib/auth/oidc-client";
+
+import { useAppConfig } from "./use-app-config";
 
 export type Role = "BUYER" | "SELLER" | "ADMIN";
-
 export type { RegisterInput };
 
 export interface AuthProfile {
@@ -45,13 +42,7 @@ interface AuthState {
   profile: AuthProfile | undefined;
   roles: Role[];
   subject: string | undefined;
-  /**
-   * Back-compat shim. Existing call sites navigated away to Keycloak via
-   * `login(redirectTo)`. Now we redirect to the in-app /login page with the
-   * desired `next=` so the native form takes over.
-   */
   login: (redirectTo?: string) => void;
-  loginWithCredentials: (username: string, password: string) => Promise<Role[]>;
   beginOAuthLogin: (provider: "google" | "facebook", next?: string) => void;
   register: (input: RegisterInput) => Promise<void>;
   logout: () => void;
@@ -61,7 +52,9 @@ const AuthContext = createContext<AuthState | null>(null);
 
 function parseRoles(claims: JwtClaims | null): Role[] {
   const realm = claims?.realm_access?.roles ?? [];
-  return realm.filter((r): r is Role => r === "BUYER" || r === "SELLER" || r === "ADMIN");
+  return realm.filter(
+    (role): role is Role => role === "BUYER" || role === "SELLER" || role === "ADMIN",
+  );
 }
 
 function profileFromClaims(claims: JwtClaims | null): AuthProfile | undefined {
@@ -76,6 +69,22 @@ function profileFromClaims(claims: JwtClaims | null): AuthProfile | undefined {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const appConfig = useAppConfig();
+  const oidc = useMemo(
+    () =>
+      createOidcClient({
+        issuerUri: appConfig.auth.issuerUri,
+        callbackUri: appConfig.auth.callbackUri,
+        logoutUri: appConfig.auth.logoutUri,
+        clientId: appConfig.auth.clientId,
+      }),
+    [
+      appConfig.auth.callbackUri,
+      appConfig.auth.clientId,
+      appConfig.auth.issuerUri,
+      appConfig.auth.logoutUri,
+    ],
+  );
   const [ready, setReady] = useState(false);
   const [tokenSet, setTokenSet] = useState<TokenSet | null>(null);
   const refreshTimeoutRef = useRef<number | null>(null);
@@ -83,10 +92,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const applyTokenSet = useCallback((next: TokenSet | null) => {
     setTokenSet(next);
     setLiveTokenSet(next);
-    // No localStorage write — refresh-token cookie is the persistence
-    // boundary now. The access token deliberately does not survive a
-    // hard reload; the rehydrate effect calls /auth/refresh to recover
-    // the session via the httpOnly cookie.
   }, []);
 
   const clearRefreshTimer = useCallback(() => {
@@ -96,157 +101,118 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const scheduleRefresh = useCallback(
-    (current: TokenSet) => {
-      clearRefreshTimer();
-      const skewMs = 30_000;
-      const delay = Math.max(0, current.accessExpiresAt - Date.now() - skewMs);
-      refreshTimeoutRef.current = window.setTimeout(() => {
-        void (async () => {
-          try {
-            const next = await refreshTokens();
-            applyTokenSet(next);
-          } catch {
-            applyTokenSet(null);
-          }
-        })();
-      }, delay);
-    },
-    [applyTokenSet, clearRefreshTimer],
-  );
+  const refreshSession = useCallback(async () => {
+    const next = await oidc.refresh();
+    applyTokenSet(next);
+    return next;
+  }, [applyTokenSet, oidc]);
 
-  // Rehydrate on mount. With the cookie-based flow we always ask
-  // /auth/refresh: if a valid vnshop_rt cookie exists, Keycloak rotates
-  // it and returns a fresh access token; otherwise we get 401 and stay
-  // unauthenticated. There is no localStorage to read anymore.
   useEffect(() => {
     let cancelled = false;
+    setReady(false);
+    setTokenRefreshHandler(refreshSession);
     void (async () => {
       try {
-        const refreshed = await refreshTokens();
-        if (!cancelled) applyTokenSet(refreshed);
+        const initial = await oidc.init();
+        if (!cancelled) applyTokenSet(initial);
       } catch {
         if (!cancelled) applyTokenSet(null);
+      } finally {
+        if (!cancelled) setReady(true);
       }
-      if (!cancelled) setReady(true);
     })();
     return () => {
       cancelled = true;
+      setTokenRefreshHandler(null);
     };
-  }, [applyTokenSet]);
+  }, [applyTokenSet, oidc, refreshSession]);
 
   useEffect(() => {
-    if (!tokenSet) {
-      clearRefreshTimer();
-      return;
-    }
-    scheduleRefresh(tokenSet);
+    clearRefreshTimer();
+    if (!tokenSet) return;
+    const refreshSkewMs = 30_000;
+    const delay = Math.max(1_000, tokenSet.accessExpiresAt - Date.now() - refreshSkewMs);
+    refreshTimeoutRef.current = window.setTimeout(() => {
+      void refreshSession().catch(() => applyTokenSet(null));
+    }, delay);
     return clearRefreshTimer;
-  }, [tokenSet, scheduleRefresh, clearRefreshTimer]);
+  }, [applyTokenSet, clearRefreshTimer, refreshSession, tokenSet]);
 
-  // Listen for the unrecoverable 401 signal dispatched by the api interceptor.
   useEffect(() => {
-    const handler = () => applyTokenSet(null);
-    window.addEventListener("auth:unauthorized", handler);
-    return () => window.removeEventListener("auth:unauthorized", handler);
+    const clearSession = () => applyTokenSet(null);
+    window.addEventListener("auth:unauthorized", clearSession);
+    return () => window.removeEventListener("auth:unauthorized", clearSession);
   }, [applyTokenSet]);
 
-  // Cross-tab / F5 recovery: when a tab regains visibility and we appear
-  // logged out, retry the cookie-based refresh. The httpOnly refresh-token
-  // cookie persists across tabs, so this recovers sessions silently.
   useEffect(() => {
-    const handleVisibility = () => {
-      if (document.hidden || tokenSet) return;
-      void (async () => {
-        try {
-          const next = await refreshTokens();
-          applyTokenSet(next);
-        } catch {
-          // Cookie expired or missing — stay logged out.
-        }
-      })();
+    const refreshVisibleSession = () => {
+      if (document.hidden || !tokenSet) return;
+      void refreshSession().catch(() => applyTokenSet(null));
     };
-    document.addEventListener("visibilitychange", handleVisibility);
-    window.addEventListener("focus", handleVisibility);
+    document.addEventListener("visibilitychange", refreshVisibleSession);
+    window.addEventListener("focus", refreshVisibleSession);
     return () => {
-      document.removeEventListener("visibilitychange", handleVisibility);
-      window.removeEventListener("focus", handleVisibility);
+      document.removeEventListener("visibilitychange", refreshVisibleSession);
+      window.removeEventListener("focus", refreshVisibleSession);
     };
-  }, [tokenSet, applyTokenSet]);
+  }, [applyTokenSet, refreshSession, tokenSet]);
 
-  const loginWithCredentials = useCallback(
-    async (username: string, password: string) => {
-      const next = await passwordLogin(username, password);
-      applyTokenSet(next);
-      return parseRoles(decodeJwt(next.accessToken));
+  const login = useCallback(
+    (redirectTo?: string) => {
+      const next = redirectTo ?? window.location.pathname + window.location.search;
+      oidc.login(next);
     },
-    [applyTokenSet],
+    [oidc],
   );
 
-  const register = useCallback(
-    async (input: RegisterInput) => {
-      try {
-        await registerUser(input);
-      } catch (err) {
-        if (err instanceof ApiError) {
-          throw new AuthError(err.status, err.errorCode ?? "register_failed", err.message);
-        }
-        throw err;
+  const beginOAuthLogin = useCallback(
+    (provider: "google" | "facebook", next?: string) => {
+      oidc.login(next, provider);
+    },
+    [oidc],
+  );
+
+  const register = useCallback(async (input: RegisterInput) => {
+    try {
+      await registerUser(input);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw new AuthError(error.status, error.errorCode ?? "register_failed", error.message);
       }
-      // Auto-login with the credentials we just submitted.
-      await loginWithCredentials(input.email, input.password);
-    },
-    [loginWithCredentials],
-  );
+      throw error;
+    }
+  }, []);
 
   const logout = useCallback(() => {
-    // Fire revoke before clearing local state so the cookie is still
-    // attached to the request. revokeTokens swallows transport errors.
-    void revokeTokens();
     applyTokenSet(null);
-  }, [applyTokenSet]);
-
-  const login = useCallback((redirectTo?: string) => {
-    const next = redirectTo ?? window.location.pathname + window.location.search;
-    window.location.assign(`/login?next=${encodeURIComponent(next)}`);
-  }, []);
-
-  const beginOAuthLogin = useCallback((provider: "google" | "facebook", next?: string) => {
-    const env = import.meta.env as Record<string, string | undefined>;
-    const apiUrl = env.VITE_API_URL ?? "http://localhost:8080";
-    // sanitizeRedirect is already applied in LoginPage, but double-check here for safety
-    const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
-    const url = `${apiUrl}/auth/oauth/${provider}/start?next=${encodeURIComponent(safeNext)}`;
-    window.location.href = url;
-  }, []);
+    oidc.logout();
+  }, [applyTokenSet, oidc]);
 
   const value = useMemo<AuthState>(() => {
     const claims = tokenSet ? decodeJwt(tokenSet.accessToken) : null;
     return {
       ready,
-      authenticated: !!tokenSet,
+      authenticated: tokenSet !== null,
       token: tokenSet?.accessToken,
       profile: profileFromClaims(claims),
       roles: parseRoles(claims),
       subject: claims?.sub,
       login,
-      loginWithCredentials,
       beginOAuthLogin,
       register,
       logout,
     };
-  }, [ready, tokenSet, login, loginWithCredentials, beginOAuthLogin, register, logout]);
+  }, [beginOAuthLogin, login, logout, ready, register, tokenSet]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): AuthState {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
-  return ctx;
+  const context = useContext(AuthContext);
+  if (!context) throw new Error("useAuth must be used within AuthProvider");
+  return context;
 }
 
 export function useHasRole(role: Role): boolean {
-  const { roles } = useAuth();
-  return roles.includes(role);
+  return useAuth().roles.includes(role);
 }

@@ -81,7 +81,7 @@ public class SecurityConfig {
                 .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .pathMatchers(HttpMethod.GET, "/products/**", "/categories/**", "/search/**",
                         "/reviews/**", "/questions/**", "/recommendations/**", "/health",
-                        "/api/config", "/sellers", "/sellers/*", "/flash-sale/active",
+                        "/api/config", "/api/config/public", "/sellers", "/sellers/*", "/flash-sale/active",
                         "/payment/methods", "/coupons").permitAll()
                 .pathMatchers(HttpMethod.POST, "/reviews/seller-summaries", "/products/counts",
                         "/coupons/validate", "/checkout/validate-coupon").permitAll()

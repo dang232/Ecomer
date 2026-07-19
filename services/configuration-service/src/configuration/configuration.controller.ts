@@ -2,6 +2,7 @@ import { Controller, Get, Param, Post } from '@nestjs/common';
 import { ApiExcludeEndpoint } from '@nestjs/swagger';
 import { ConfigurationService } from './configuration.service.js';
 import { AppConfigDto } from './dto/app-config.dto.js';
+import { PublicConfigDto } from './dto/public-config.dto.js';
 import { Public } from '../common/decorators/public.decorator.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
 
@@ -13,6 +14,12 @@ export class ConfigurationController {
   @Get('config')
   getConfig(): AppConfigDto {
     return this.configurationService.getConfig();
+  }
+
+  @Public()
+  @Get('config/public')
+  getPublicConfig(): PublicConfigDto {
+    return this.configurationService.getPublicConfig();
   }
 
   @Get('config/services')

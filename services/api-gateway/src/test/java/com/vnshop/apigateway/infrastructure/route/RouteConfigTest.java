@@ -45,7 +45,7 @@ class RouteConfigTest {
 
         RouteConfig config = new RouteConfig(
                 "http://product", "http://user", "http://search", "http://inventory", "http://cart",
-                "http://order", "http://payment", "http://shipping", "http://notification", "http://coupon",
+                "http://order", "http://payment", "http://shipping", "http://notification",
                 "http://finance", "http://recommendations", "http://messaging", "http://monitoring", "http://configuration");
         TieredRateLimiter limiter = new TieredRateLimiter(mock(org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter.class),
                 mock(org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter.class));
@@ -55,7 +55,8 @@ class RouteConfigTest {
         List<Route> routes = locator.getRoutes().collectList().block();
 
         assertThat(routes).isNotNull().extracting(Route::getId)
-                .contains("products", "search", "flash-sale-reserve", "flash-sale-stock", "flash-sale-active", "recommendations", "monitoring");
+                .contains("products", "search", "flash-sale-reserve", "flash-sale-stock", "flash-sale-active",
+                        "recommendations", "monitoring", "configuration");
         assertThat(route(routes, "products").getUri()).isEqualTo(URI.create("http://product:80"));
         assertThat(route(routes, "search").getUri()).isEqualTo(URI.create("http://search:80"));
         assertThat(route(routes, "flash-sale-reserve").getUri()).isEqualTo(URI.create("http://inventory:80"));
@@ -66,6 +67,14 @@ class RouteConfigTest {
         assertThat(matches(route(routes, "flash-sale-stock"), "/flash-sale/stock/p1")).isTrue();
         assertThat(matches(route(routes, "monitoring"), "/monitoring/openapi.json")).isTrue();
         assertThat(matches(route(routes, "monitoring"), "/monitoring/docs")).isTrue();
+        assertThat(matches(route(routes, "configuration"), "/api/config")).isTrue();
+        assertThat(matches(route(routes, "configuration"), "/api/config/public")).isTrue();
+        assertThat(matches(route(routes, "configuration"), "/api/config/services")).isFalse();
+        assertThat(route(routes, "checkout").getUri()).isEqualTo(URI.create("http://order:80"));
+        assertThat(matches(route(routes, "checkout"), "/checkout/apply-coupon")).isTrue();
+        assertThat(route(routes, "coupons").getUri()).isEqualTo(URI.create("http://order:80"));
+        assertThat(matches(route(routes, "coupons"), "/coupons/validate")).isTrue();
+        assertThat(route(routes, "admin-coupons").getUri()).isEqualTo(URI.create("http://order:80"));
     }
 
     private static Route route(List<Route> routes, String id) {

@@ -5,11 +5,8 @@ import { io, type Socket } from "socket.io-client";
 import { showNotificationToast } from "../components/notification-toast";
 import { notificationSchema, type Notification } from "../types/api/notification";
 
+import { useAppConfig } from "./use-app-config";
 import { useAuth } from "./use-auth";
-
-const BASE_URL = (
-  (import.meta.env as Record<string, string | undefined>).VITE_API_URL ?? "http://localhost:8080"
-).replace(/\/$/, "");
 
 const RECONNECT_BASE_MS = 2000;
 const RECONNECT_CAP_MS = 30_000;
@@ -39,6 +36,7 @@ interface CachedUnreadCount {
  */
 export function useNotificationSocket(): void {
   const { ready, authenticated, token } = useAuth();
+  const config = useAppConfig();
   const qc = useQueryClient();
   const socketRef = useRef<Socket | null>(null);
   const attemptRef = useRef(0);
@@ -58,8 +56,9 @@ export function useNotificationSocket(): void {
         socketRef.current = null;
       }
 
-      const socket = io(BASE_URL, {
-        path: "/ws/notifications",
+      const endpoint = new URL(config.websocket.notificationsUri);
+      const socket = io(endpoint.origin, {
+        path: endpoint.pathname,
         auth: { token },
         transports: ["websocket"],
         reconnection: false, // We handle reconnection manually
@@ -160,5 +159,5 @@ export function useNotificationSocket(): void {
         socket.disconnect();
       }
     };
-  }, [ready, authenticated, token, qc]);
+  }, [ready, authenticated, token, qc, config.websocket.notificationsUri]);
 }

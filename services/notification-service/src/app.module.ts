@@ -9,12 +9,13 @@ import { NotificationModule } from './notification/notification.module';
     ConfigModule.forRoot({ isGlobal: true }),
     MongooseModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        uri: config.get<string>(
-          'MONGO_URI',
-          'mongodb://vnshop:vnshop123@localhost:27017/notification_db?authSource=admin',
-        ),
-      }),
+      useFactory: (config: ConfigService) => {
+        const uri = config.get<string>('MONGO_URI');
+        if (!uri) {
+          throw new Error('MONGO_URI environment variable is required');
+        }
+        return { uri };
+      },
     }),
     NotificationModule,
   ],

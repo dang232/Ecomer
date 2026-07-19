@@ -13,9 +13,14 @@ public class ObjectStorageProperties {
     private String bucket;
     private String region = "auto";
     private String endpoint;
+    private String publicEndpoint;
     private String accessKey;
     private String secretKey;
     private boolean pathStyleAccess = true;
+
+    public String resolvePublicEndpoint() {
+        return publicEndpoint == null || publicEndpoint.isBlank() ? endpoint : publicEndpoint;
+    }
 
     public enum Profile {
         R2,

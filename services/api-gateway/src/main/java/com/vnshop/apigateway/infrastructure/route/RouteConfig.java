@@ -40,7 +40,6 @@ public class RouteConfig {
     private final String paymentServiceUri;
     private final String shippingServiceUri;
     private final String notificationServiceUri;
-    private final String couponServiceUri;
     private final String sellerFinanceServiceUri;
     private final String recommendationsServiceUri;
     private final String messagingServiceUri;
@@ -57,7 +56,6 @@ public class RouteConfig {
         @Value("${vnshop.routes.payment-service:http://payment-service:8092}") String paymentServiceUri,
         @Value("${vnshop.routes.shipping-service:http://shipping-service:8093}") String shippingServiceUri,
         @Value("${vnshop.routes.notification-service:http://notification-service:8087}") String notificationServiceUri,
-        @Value("${vnshop.routes.coupon-service:http://coupon-service:8088}") String couponServiceUri,
         @Value("${vnshop.routes.seller-finance-service:http://seller-finance-service:8090}") String sellerFinanceServiceUri,
         @Value("${vnshop.routes.recommendations-service:http://recommendations-service:8094}") String recommendationsServiceUri,
         @Value("${vnshop.routes.messaging-service:http://messaging-service:8095}") String messagingServiceUri,
@@ -73,7 +71,6 @@ public class RouteConfig {
         this.paymentServiceUri = paymentServiceUri;
         this.shippingServiceUri = shippingServiceUri;
         this.notificationServiceUri = notificationServiceUri;
-        this.couponServiceUri = couponServiceUri;
         this.sellerFinanceServiceUri = sellerFinanceServiceUri;
         this.recommendationsServiceUri = recommendationsServiceUri;
         this.messagingServiceUri = messagingServiceUri;
@@ -160,13 +157,6 @@ public class RouteConfig {
             .route("seller-orders", route -> route.path("/seller/orders/**")
                 .filters(filters -> resilient(filters, "order-service"))
                 .uri(orderServiceUri))
-            // Coupon-service owns the /checkout/{validate,apply}-coupon aliases
-            // (legacy paths kept alongside /coupons/validate). These specific
-            // routes must precede the broader /checkout/** -> order-service
-            // route below so the alias keeps reaching coupon-service.
-            .route("checkout-coupons", route -> route.path("/checkout/validate-coupon", "/checkout/apply-coupon")
-                .filters(filters -> resilient(filters, "coupon-service"))
-                .uri(couponServiceUri))
             .route("checkout", route -> route.path("/checkout/**")
                 .filters(filters -> resilient(filters, "order-service"))
                 .uri(orderServiceUri))
@@ -205,8 +195,8 @@ public class RouteConfig {
             .route("messaging-ws", route -> route.path("/ws/messaging")
                 .uri(messagingServiceUri))
             .route("coupons", route -> route.path("/coupons/**")
-                .filters(filters -> resilient(filters, "coupon-service"))
-                .uri(couponServiceUri))
+                .filters(filters -> resilient(filters, "order-service"))
+                .uri(orderServiceUri))
             .route("reviews", route -> route.path("/reviews/**")
                 .filters(filters -> resilient(filters, "product-service"))
                 .uri(productServiceUri))
@@ -238,7 +228,7 @@ public class RouteConfig {
                 .filters(filters -> filters.stripPrefix(1))
                 .uri(notificationServiceUri))
             // Configuration service — public app config endpoint.
-            .route("configuration", route -> route.path("/api/config")
+            .route("configuration", route -> route.path("/api/config", "/api/config/public")
                 .uri(configurationServiceUri))
             // Admin sub-routes — more specific patterns must come before the
             // catch-all /admin/** route below. Each maps to the service that owns
@@ -253,8 +243,8 @@ public class RouteConfig {
                 .filters(filters -> resilient(filters, "order-service"))
                 .uri(orderServiceUri))
             .route("admin-coupons", route -> route.path("/admin/coupons/**")
-                .filters(filters -> resilient(filters, "coupon-service"))
-                .uri(couponServiceUri))
+                .filters(filters -> resilient(filters, "order-service"))
+                .uri(orderServiceUri))
             .route("admin-finance", route -> route.path("/admin/finance/**")
                 .filters(filters -> resilient(filters, "seller-finance-service"))
                 .uri(sellerFinanceServiceUri))

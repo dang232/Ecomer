@@ -14,10 +14,19 @@ import { defineConfig, devices } from "@playwright/test";
  */
 
 const baseURL = process.env.VITE_E2E_BASE_URL ?? "http://localhost:3000";
+const ingressIp = process.env.E2E_INGRESS_IP;
+const releaseHosts = [
+  "web.vnshop.invalid",
+  "api.vnshop.invalid",
+  "auth.vnshop.invalid",
+  "storage.vnshop.invalid",
+];
+const hostResolverRules = ingressIp
+  ? `MAP ${releaseHosts.map((host) => `${host} ${ingressIp}`).join(",MAP ")}`
+  : undefined;
 // The dockerised FE is already up; only auto-start a webServer when explicitly
 // pointed at the dev port. Default behaviour: assume the stack is running.
-const skipWebServer =
-  process.env.E2E_SKIP_WEBSERVER !== undefined || baseURL.includes(":3000");
+const skipWebServer = process.env.E2E_SKIP_WEBSERVER !== undefined || baseURL.includes(":3000");
 
 export default defineConfig({
   testDir: "./e2e",
@@ -33,6 +42,7 @@ export default defineConfig({
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
     baseURL,
+    ignoreHTTPSErrors: false,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
@@ -40,7 +50,12 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        launchOptions: hostResolverRules
+          ? { args: [`--host-resolver-rules=${hostResolverRules}`] }
+          : {},
+      },
     },
   ],
   webServer: skipWebServer

@@ -18,7 +18,7 @@ import { MIN_PASSWORD_LENGTH } from "../lib/validation/password";
 export function RegisterPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { ready, authenticated, register } = useAuth();
+  const { ready, authenticated, register, login } = useAuth();
   const { t } = useTranslation();
   const next = sanitizeRedirect(params.get("next"));
 
@@ -88,7 +88,7 @@ export function RegisterPage() {
           // BE never receives a non-E.164 string.
           phone: parseOptionalPhone(phone, phoneCountry) ?? undefined,
         });
-        void navigate(next, { replace: true });
+        login(next);
       } catch (err) {
         const errorCode =
           err && typeof err === "object" && "errorCode" in err

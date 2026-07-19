@@ -1,5 +1,7 @@
 import type { z } from "zod";
 
+import { apiUrl } from "../runtime-endpoints";
+
 import { ApiError, type ApiMeta } from "./envelope";
 import {
   authInterceptor,
@@ -19,10 +21,6 @@ import {
   type ResponseContext,
   type ResponseInterceptor,
 } from "./interceptors";
-
-const BASE_URL = (
-  (import.meta.env as Record<string, string | undefined>).VITE_API_URL ?? "http://localhost:8080"
-).replace(/\/$/, "");
 
 // ---------------------------------------------------------------------------
 // Cross-tab token-refresh coordination via BroadcastChannel
@@ -130,7 +128,7 @@ function removeConditionalHeader(init: RequestInit): void {
 }
 
 function buildUrl(path: string, query?: RequestOptions<z.ZodType>["query"]): string {
-  const url = new URL(path.startsWith("/") ? `${BASE_URL}${path}` : `${BASE_URL}/${path}`);
+  const url = new URL(apiUrl(path));
   if (query) {
     for (const [k, v] of Object.entries(query)) {
       if (v === undefined || v === null) continue;

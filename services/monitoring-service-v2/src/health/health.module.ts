@@ -4,10 +4,11 @@ import { HealthService } from './health.service.js';
 import { HealthController } from './health.controller.js';
 import { DiscoveryModule } from '../discovery/discovery.module.js';
 import { MetricsModule } from '../metrics/metrics.module.js';
+import { ProbeController } from './probe.controller.js';
 
 @Module({
   imports: [DiscoveryModule, MetricsModule],
-  controllers: [HealthController],
+  controllers: [HealthController, ProbeController],
   providers: [HealthChecker, HealthService],
   exports: [HealthService],
 })
