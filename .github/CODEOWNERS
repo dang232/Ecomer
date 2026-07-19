@@ -1,0 +1,10 @@
+# Repository governance and production promotion controls.
+* @dang232
+/.github/ @dang232
+/infra/ @dang232
+/proto/ @dang232
+/services/order-service/ @dang232
+/services/payment-service/ @dang232
+/services/user-service/ @dang232
+/fe/ @dang232
+/vnshop_mobile/ @dang232

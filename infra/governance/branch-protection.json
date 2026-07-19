@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "1.0",
+  "repository": "dang232/Ecomer",
+  "branches": {
+    "main": {
+      "requiredChecks": [
+        "CI Gate",
+        "Deployable",
+        "Analyze (actions)",
+        "Analyze (javascript-typescript)",
+        "Analyze (java-kotlin)",
+        "Analyze (python)"
+      ],
+      "requiredApprovals": 1,
+      "requireCodeOwnerReviews": true
+    },
+    "production": {
+      "requiredChecks": [
+        "CI Gate",
+        "Deployable",
+        "Analyze (actions)",
+        "Analyze (javascript-typescript)",
+        "Analyze (java-kotlin)",
+        "Analyze (python)"
+      ],
+      "requiredApprovals": 1,
+      "requireCodeOwnerReviews": true
+    }
+  },
+  "common": {
+    "dismissStaleReviews": true,
+    "requireLastPushApproval": true,
+    "requireConversationResolution": true,
+    "requireLinearHistory": true,
+    "enforceAdmins": true,
+    "allowForcePushes": false,
+    "allowDeletions": false
+  }
+}

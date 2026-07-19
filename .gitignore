@@ -3,7 +3,12 @@
 .env.secrets
 /.env
 /.env.local
+/.env.*
+!/.env.example
+!/.env.secrets.example
 /secrets.env.local
+/ssh_private_key_for_dokploy.pem
+/*private*key*.pem
 /services/notification-service/dist
 /services/cart-service/node_modules
 /services/cart-service/dist
@@ -43,6 +48,7 @@ infra/kafka/certs/*.jks
 infra/kafka/certs/*.pem
 infra/kafka/certs/*.csr
 infra/kafka/certs/*.srl
+infra/kafka/certs/ssl_credentials
 
 # Terraform
 **/.terraform/
