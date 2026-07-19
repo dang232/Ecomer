@@ -4,76 +4,113 @@ namespace: vnshop-staging
 resources:
 - ../../base
 - namespace.yaml
+- ingress.yaml
 replicas:
+- name: vnshop-frontend
+  count: 2
 - name: vnshop-api-gateway
   count: 2
-- name: vnshop-user
+- name: vnshop-cart
   count: 2
-- name: vnshop-product
+- name: vnshop-configuration
   count: 2
 - name: vnshop-inventory
   count: 2
-- name: vnshop-search
+- name: vnshop-invoice
   count: 2
-- name: vnshop-cart
+- name: vnshop-messaging
+  count: 2
+- name: vnshop-monitoring
+  count: 2
+- name: vnshop-notification
   count: 2
 - name: vnshop-order
   count: 2
 - name: vnshop-payment
   count: 2
-- name: vnshop-shipping
+- name: vnshop-product
   count: 2
-- name: vnshop-notification
+- name: vnshop-recommendations
   count: 2
-- name: vnshop-coupon
-  count: 2
-- name: vnshop-review
+- name: vnshop-search
   count: 2
 - name: vnshop-seller-finance
   count: 2
+- name: vnshop-shipping
+  count: 2
+- name: vnshop-user
+  count: 2
+- name: vnshop-video-moderator
+  count: 2
+- name: vnshop-video-transcoder
+  count: 2
 images:
-- name: vnshop/api-gateway
+- name: ghcr.io/dang232/vnshop-frontend
+  newName: ghcr.io/dang232/vnshop-frontend
+  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+- name: ghcr.io/dang232/vnshop-api-gateway
   newName: ghcr.io/dang232/vnshop-api-gateway
-  newTag: sha-74e70a4
-- name: vnshop/user-service
-  newName: ghcr.io/dang232/vnshop-user-service
-  newTag: sha-4939162
-- name: vnshop/product-service
-  newName: ghcr.io/dang232/vnshop-product-service
-  newTag: sha-74e70a4
-- name: vnshop/inventory-service
-  newName: ghcr.io/dang232/vnshop-inventory-service
-  newTag: sha-74e70a4
-- name: vnshop/search-service
-  newName: ghcr.io/dang232/vnshop-search-service
-  newTag: sha-74e70a4
-- name: vnshop/cart-service
-  newName: ghcr.io/dang232/vnshop-cart-service
-  newTag: staging
-- name: vnshop/order-service
-  newName: ghcr.io/dang232/vnshop-order-service
-  newTag: sha-4939162
-- name: vnshop/payment-service
-  newName: ghcr.io/dang232/vnshop-payment-service
-  newTag: sha-4939162
-- name: vnshop/shipping-service
-  newName: ghcr.io/dang232/vnshop-shipping-service
-  newTag: staging
-- name: vnshop/notification-service
-  newName: ghcr.io/dang232/vnshop-notification-service
-  newTag: staging
-- name: vnshop/coupon-service
-  newName: ghcr.io/dang232/vnshop-coupon-service
-  newTag: staging
-- name: vnshop/review-service
-  newName: ghcr.io/dang232/vnshop-review-service
-  newTag: staging
-- name: vnshop/seller-finance-service
-  newName: ghcr.io/dang232/vnshop-seller-finance-service
-  newTag: staging
-patchesStrategicMerge:
-- configmap-env.yaml
+  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+- name: ghcr.io/dang232/vnshop-cart
+  newName: ghcr.io/dang232/vnshop-cart
+  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+- name: ghcr.io/dang232/vnshop-configuration
+  newName: ghcr.io/dang232/vnshop-configuration
+  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+- name: ghcr.io/dang232/vnshop-inventory
+  newName: ghcr.io/dang232/vnshop-inventory
+  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+- name: ghcr.io/dang232/vnshop-invoice
+  newName: ghcr.io/dang232/vnshop-invoice
+  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+- name: ghcr.io/dang232/vnshop-messaging
+  newName: ghcr.io/dang232/vnshop-messaging
+  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+- name: ghcr.io/dang232/vnshop-monitoring
+  newName: ghcr.io/dang232/vnshop-monitoring
+  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+- name: ghcr.io/dang232/vnshop-notification
+  newName: ghcr.io/dang232/vnshop-notification
+  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+- name: ghcr.io/dang232/vnshop-order
+  newName: ghcr.io/dang232/vnshop-order
+  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+- name: ghcr.io/dang232/vnshop-payment
+  newName: ghcr.io/dang232/vnshop-payment
+  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+- name: ghcr.io/dang232/vnshop-product
+  newName: ghcr.io/dang232/vnshop-product
+  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+- name: ghcr.io/dang232/vnshop-recommendations
+  newName: ghcr.io/dang232/vnshop-recommendations
+  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+- name: ghcr.io/dang232/vnshop-search
+  newName: ghcr.io/dang232/vnshop-search
+  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+- name: ghcr.io/dang232/vnshop-seller-finance
+  newName: ghcr.io/dang232/vnshop-seller-finance
+  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+- name: ghcr.io/dang232/vnshop-shipping
+  newName: ghcr.io/dang232/vnshop-shipping
+  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+- name: ghcr.io/dang232/vnshop-user
+  newName: ghcr.io/dang232/vnshop-user
+  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+- name: ghcr.io/dang232/vnshop-video-moderator
+  newName: ghcr.io/dang232/vnshop-video-moderator
+  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+- name: ghcr.io/dang232/vnshop-video-transcoder
+  newName: ghcr.io/dang232/vnshop-video-transcoder
+  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
 patches:
+- path: configmap-env.yaml
+- target:
+    kind: HorizontalPodAutoscaler
+    name: vnshop-frontend
+  patch: |-
+    - op: replace
+      path: /spec/maxReplicas
+      value: 6
 - target:
     kind: HorizontalPodAutoscaler
     name: vnshop-api-gateway
@@ -83,14 +120,14 @@ patches:
       value: 6
 - target:
     kind: HorizontalPodAutoscaler
-    name: vnshop-user
+    name: vnshop-cart
   patch: |-
     - op: replace
       path: /spec/maxReplicas
       value: 6
 - target:
     kind: HorizontalPodAutoscaler
-    name: vnshop-product
+    name: vnshop-configuration
   patch: |-
     - op: replace
       path: /spec/maxReplicas
@@ -104,14 +141,28 @@ patches:
       value: 6
 - target:
     kind: HorizontalPodAutoscaler
-    name: vnshop-search
+    name: vnshop-invoice
   patch: |-
     - op: replace
       path: /spec/maxReplicas
       value: 6
 - target:
     kind: HorizontalPodAutoscaler
-    name: vnshop-cart
+    name: vnshop-messaging
+  patch: |-
+    - op: replace
+      path: /spec/maxReplicas
+      value: 6
+- target:
+    kind: HorizontalPodAutoscaler
+    name: vnshop-monitoring
+  patch: |-
+    - op: replace
+      path: /spec/maxReplicas
+      value: 6
+- target:
+    kind: HorizontalPodAutoscaler
+    name: vnshop-notification
   patch: |-
     - op: replace
       path: /spec/maxReplicas
@@ -132,28 +183,21 @@ patches:
       value: 6
 - target:
     kind: HorizontalPodAutoscaler
-    name: vnshop-shipping
+    name: vnshop-product
   patch: |-
     - op: replace
       path: /spec/maxReplicas
       value: 6
 - target:
     kind: HorizontalPodAutoscaler
-    name: vnshop-notification
+    name: vnshop-recommendations
   patch: |-
     - op: replace
       path: /spec/maxReplicas
       value: 6
 - target:
     kind: HorizontalPodAutoscaler
-    name: vnshop-coupon
-  patch: |-
-    - op: replace
-      path: /spec/maxReplicas
-      value: 6
-- target:
-    kind: HorizontalPodAutoscaler
-    name: vnshop-review
+    name: vnshop-search
   patch: |-
     - op: replace
       path: /spec/maxReplicas
@@ -161,6 +205,34 @@ patches:
 - target:
     kind: HorizontalPodAutoscaler
     name: vnshop-seller-finance
+  patch: |-
+    - op: replace
+      path: /spec/maxReplicas
+      value: 6
+- target:
+    kind: HorizontalPodAutoscaler
+    name: vnshop-shipping
+  patch: |-
+    - op: replace
+      path: /spec/maxReplicas
+      value: 6
+- target:
+    kind: HorizontalPodAutoscaler
+    name: vnshop-user
+  patch: |-
+    - op: replace
+      path: /spec/maxReplicas
+      value: 6
+- target:
+    kind: HorizontalPodAutoscaler
+    name: vnshop-video-moderator
+  patch: |-
+    - op: replace
+      path: /spec/maxReplicas
+      value: 6
+- target:
+    kind: HorizontalPodAutoscaler
+    name: vnshop-video-transcoder
   patch: |-
     - op: replace
       path: /spec/maxReplicas

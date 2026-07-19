@@ -1,0 +1,105 @@
+name: VNShop Verify Production
+
+on:
+  workflow_run:
+    workflows: ["VNShop CI"]
+    types: [completed]
+    branches: [production]
+  workflow_dispatch:
+    inputs:
+      production_revision:
+        description: Full desired-state commit on protected production
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-reconciliation
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    name: Verify exact production revision and image IDs
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      PRODUCTION_REVISION: ${{ github.event.workflow_run.head_sha || inputs.production_revision }}
+    steps:
+      - name: Validate full revision
+        run: '[[ "$PRODUCTION_REVISION" =~ ^[0-9a-f]{40}$ ]]'
+
+      - name: Check out immutable production desired state
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ env.PRODUCTION_REVISION }}
+
+      - name: Validate complete immutable production release
+        run: |
+          python -m pip install --disable-pip-version-check PyYAML==6.0.3
+          python infra/scripts/validate-k8s-release.py --environment prod
+
+      - name: Configure isolated cluster access
+        env:
+          KUBECONFIG_BASE64: ${{ secrets.PORTFOLIO_KUBECONFIG_BASE64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$KUBECONFIG_BASE64" | base64 --decode > "$RUNNER_TEMP/kubeconfig"
+          echo "KUBECONFIG=$RUNNER_TEMP/kubeconfig" >> "$GITHUB_ENV"
+
+      - name: Wait up to 20 minutes for the exact Argo revision
+        run: |
+          set -euo pipefail
+          started="$(date -u +%s)"
+          deadline=$((started + 1200))
+          while (( $(date -u +%s) < deadline )); do
+            kubectl -n argocd get application vnshop-prod -o json > production-argo.json
+            if jq -e --arg revision "$PRODUCTION_REVISION" \
+              '.status.sync.status == "Synced" and .status.health.status == "Healthy" and .status.sync.revision == $revision' \
+              production-argo.json >/dev/null; then
+              break
+            fi
+            sleep 15
+          done
+          jq -e --arg revision "$PRODUCTION_REVISION" \
+            '.status.sync.status == "Synced" and .status.health.status == "Healthy" and .status.sync.revision == $revision' \
+            production-argo.json
+          echo "RECONCILE_STARTED=$started" >> "$GITHUB_ENV"
+
+      - name: Compare every desired and live image to the release lock
+        run: |
+          set -euo pipefail
+          kubectl -n vnshop-prod get deployments -l vnshop.io/artifact-id -o json > production-deployments.json
+          kubectl -n vnshop-prod get pods -l vnshop.io/artifact-id -o json > production-pods.json
+          python infra/scripts/verify-live-release.py \
+            --lock infra/release/locks/prod.json \
+            --deployments production-deployments.json \
+            --pods production-pods.json \
+            --output production-live-images.json
+          duration="$(($(date -u +%s) - RECONCILE_STARTED))"
+          jq -n \
+            --arg revision "$PRODUCTION_REVISION" \
+            --arg sourceCommit "$(jq -r .sourceCommit infra/release/locks/prod.json)" \
+            --arg capturedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --argjson reconciliationSeconds "$duration" \
+            --slurpfile argo production-argo.json \
+            --slurpfile images production-live-images.json \
+            '{schemaVersion:"1.0",revision:$revision,sourceCommit:$sourceCommit,capturedAt:$capturedAt,reconciliationSeconds:$reconciliationSeconds,argo:$argo[0],images:$images[0]}' \
+            > production-evidence.json
+
+      - name: Upload production reconciliation evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: production-reconciliation-${{ env.PRODUCTION_REVISION }}
+          path: |
+            production-argo.json
+            production-deployments.json
+            production-pods.json
+            production-live-images.json
+            production-evidence.json
+          if-no-files-found: warn
+          retention-days: 90

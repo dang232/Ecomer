@@ -1,0 +1,153 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vnshop-backup
+  annotations: {argocd.argoproj.io/sync-wave: "-20"}
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vnshop-backup-policy
+  annotations: {argocd.argoproj.io/sync-wave: "5"}
+data:
+  RPO_HOURS: "24"
+  RTO_HOURS: "4"
+  DAILY_RETENTION: "14"
+  WEEKLY_RETENTION: "8"
+  TARGET_CLASS: encrypted-off-cluster-s3
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: vnshop-authoritative-backup
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  schedule: "0 2 * * *"
+  timeZone: Asia/Bangkok
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 10800
+      template:
+        metadata:
+          labels: {app.kubernetes.io/name: vnshop-authoritative-backup, app.kubernetes.io/part-of: vnshop}
+        spec:
+          restartPolicy: Never
+          serviceAccountName: vnshop-backup
+          automountServiceAccountToken: false
+          securityContext: {runAsNonRoot: true, runAsUser: 10001, runAsGroup: 10001, fsGroup: 10001, seccompProfile: {type: RuntimeDefault}}
+          initContainers:
+          - name: postgresql
+            image: postgres@sha256:2a0d0fe14825b0939f78a8cad5cd4e6aa68bf94d0e5dd96e24b6d23af4315545
+            command: [sh, -ec, 'pg_dumpall --clean --if-exists | gzip -9 > /backup/postgresql.sql.gz']
+            env:
+            - {name: PGHOST, value: postgres}
+            - {name: PGDATABASE, value: vnshop}
+            - name: PGUSER
+              valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-postgres-admin-username}}
+            - name: PGPASSWORD
+              valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-postgres-admin-password}}
+            securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+            volumeMounts: [{name: backup, mountPath: /backup}, {name: tmp, mountPath: /tmp}]
+          - name: timescaledb
+            image: postgres@sha256:2a0d0fe14825b0939f78a8cad5cd4e6aa68bf94d0e5dd96e24b6d23af4315545
+            command: [sh, -ec, 'pg_dumpall --clean --if-exists | gzip -9 > /backup/timescaledb.sql.gz']
+            env:
+            - {name: PGHOST, value: timescaledb}
+            - {name: PGDATABASE, value: monitoring}
+            - name: PGUSER
+              valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-timescale-username}}
+            - name: PGPASSWORD
+              valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-timescale-password}}
+            securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+            volumeMounts: [{name: backup, mountPath: /backup}, {name: tmp, mountPath: /tmp}]
+          - name: mongodb
+            image: mongo@sha256:951c2ff9fc6bdb6cb89b1dfea4a0e8ae3ee4fb287c0bf579b2bba54c7803f75d
+            command: [sh, -ec, 'mongodump --uri="$MONGODB_URI" --archive=/backup/mongodb.archive --gzip']
+            env:
+            - name: MONGODB_URI
+              valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-mongo-backup-uri}}
+            securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+            volumeMounts: [{name: backup, mountPath: /backup}, {name: tmp, mountPath: /tmp}]
+          - name: minio
+            image: minio/mc@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
+            command: [sh, -ec, 'mc alias set source http://minio:9000 "$MINIO_USER" "$MINIO_PASSWORD" && mc mirror --overwrite source /backup/minio']
+            env:
+            - {name: HOME, value: /tmp}
+            - name: MINIO_USER
+              valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-minio-root-user}}
+            - name: MINIO_PASSWORD
+              valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-minio-root-password}}
+            securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+            volumeMounts: [{name: backup, mountPath: /backup}, {name: tmp, mountPath: /tmp}]
+          containers:
+          - name: upload
+            image: amazon/aws-cli@sha256:964336bffb17b82d2e84a2526b0672e70a2c881544e1a281acaca1d9aa41b536
+            command: [/bin/sh, -ec]
+            args:
+            - |
+              prune() {
+                prefix="$1"
+                keep="$2"
+                aws s3api list-objects-v2 --bucket "$BACKUP_BUCKET" --prefix "$prefix/" --delimiter / \
+                  --query 'CommonPrefixes[].Prefix' --output text \
+                  | tr '\t' '\n' | sort -r | tail -n "+$((keep + 1))" \
+                  | while read -r expired; do
+                      [ -z "$expired" ] || aws s3 rm "s3://${BACKUP_BUCKET}/${expired}" --recursive --only-show-errors
+                    done
+              }
+              stamp="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+              aws s3 sync /backup "s3://${BACKUP_BUCKET}/${BACKUP_PREFIX}/daily/${stamp}/" --sse AES256 --only-show-errors
+              if [ "$(TZ=Asia/Bangkok date +%u)" = "7" ]; then
+                aws s3 sync /backup "s3://${BACKUP_BUCKET}/${BACKUP_PREFIX}/weekly/${stamp}/" --sse AES256 --only-show-errors
+              fi
+              prune "${BACKUP_PREFIX}/daily" 14
+              prune "${BACKUP_PREFIX}/weekly" 8
+              date -u +%s > /backup/.completed-at
+            env:
+            - {name: HOME, value: /tmp}
+            - name: BACKUP_BUCKET
+              valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: backup-s3-bucket}}
+            - name: BACKUP_PREFIX
+              valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: backup-s3-prefix}}
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: backup-s3-access-key-id}}
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: backup-s3-secret-access-key}}
+            - name: AWS_DEFAULT_REGION
+              valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: backup-s3-region}}
+            securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+            resources:
+              requests: {cpu: 50m, memory: 128Mi}
+              limits: {cpu: "1", memory: 512Mi}
+            volumeMounts: [{name: backup, mountPath: /backup}, {name: tmp, mountPath: /tmp}]
+          - name: publish-success-metric
+            image: busybox@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
+            command: [sh, -ec]
+            args:
+            - |
+              for attempt in $(seq 1 1080); do
+                if [ -s /backup/.completed-at ]; then
+                  printf 'vnshop_backup_last_success_timestamp_seconds %s\n' "$(cat /backup/.completed-at)" > /tmp/metrics
+                  wget -qO- --header='Content-Type: text/plain' --post-file=/tmp/metrics \
+                    http://prometheus-pushgateway:9091/metrics/job/vnshop-backup
+                  exit 0
+                fi
+                sleep 10
+              done
+              exit 1
+            securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+            resources:
+              requests: {cpu: 5m, memory: 8Mi}
+              limits: {cpu: 50m, memory: 32Mi}
+            volumeMounts: [{name: backup, mountPath: /backup}, {name: tmp, mountPath: /tmp}]
+          volumes:
+          - name: backup
+            emptyDir: {sizeLimit: 50Gi}
+          - name: tmp
+            emptyDir: {}

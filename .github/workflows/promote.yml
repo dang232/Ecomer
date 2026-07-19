@@ -1,0 +1,214 @@
+name: VNShop Promote Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      staging_revision:
+        description: Merged staging desired-state commit on protected main
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-promotion
+  cancel-in-progress: false
+
+jobs:
+  verify-and-promote:
+    name: Verify staging and open production PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ secrets.RELEASE_BOT_TOKEN }}
+      STAGING_REVISION: ${{ inputs.staging_revision }}
+    steps:
+      - name: Validate full revision
+        run: '[[ "$STAGING_REVISION" =~ ^[0-9a-f]{40}$ ]]'
+
+      - name: Check out staged desired state
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ env.STAGING_REVISION }}
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_BOT_TOKEN }}
+
+      - name: Validate immutable staging release
+        run: |
+          python -m pip install --disable-pip-version-check PyYAML==6.0.3
+          python infra/scripts/validate-k8s-release.py --environment staging
+
+      - name: Configure isolated cluster access
+        env:
+          KUBECONFIG_BASE64: ${{ secrets.PORTFOLIO_KUBECONFIG_BASE64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$KUBECONFIG_BASE64" | base64 --decode > "$RUNNER_TEMP/kubeconfig"
+          echo "KUBECONFIG=$RUNNER_TEMP/kubeconfig" >> "$GITHUB_ENV"
+
+      - name: Wait up to 15 minutes for exact Argo revision
+        run: |
+          set -euo pipefail
+          deadline=$((SECONDS + 900))
+          while (( SECONDS < deadline )); do
+            kubectl -n argocd get application vnshop-staging -o json > staging-argo.json
+            sync="$(jq -r '.status.sync.status // ""' staging-argo.json)"
+            health="$(jq -r '.status.health.status // ""' staging-argo.json)"
+            revision="$(jq -r '.status.sync.revision // ""' staging-argo.json)"
+            if [[ "$sync" == "Synced" && "$health" == "Healthy" && "$revision" == "$STAGING_REVISION" ]]; then
+              break
+            fi
+            sleep 15
+          done
+          jq -e --arg revision "$STAGING_REVISION" \
+            '.status.sync.status == "Synced" and .status.health.status == "Healthy" and .status.sync.revision == $revision' \
+            staging-argo.json
+
+      - name: Capture and compare desired and live image identities
+        run: |
+          set -euo pipefail
+          kubectl -n vnshop-staging get deployments -l vnshop.io/artifact-id -o json > staging-deployments.json
+          kubectl -n vnshop-staging get pods -l vnshop.io/artifact-id -o json > staging-pods.json
+          jq -r '.artifacts[] | [.id, (.image + "@" + .digest)] | @tsv' infra/release/locks/staging.json | sort > expected-images.tsv
+          jq -r '.items[] | [.metadata.labels["vnshop.io/artifact-id"], .spec.template.spec.containers[0].image] | @tsv' staging-deployments.json | sort > desired-images.tsv
+          diff -u expected-images.tsv desired-images.tsv
+          [[ "$(wc -l < desired-images.tsv)" -eq 19 ]]
+          python infra/scripts/verify-live-release.py \
+            --lock infra/release/locks/staging.json \
+            --deployments staging-deployments.json \
+            --pods staging-pods.json \
+            --output staging-live-images.json
+          jq -n \
+            --arg revision "$STAGING_REVISION" \
+            --arg capturedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --slurpfile argo staging-argo.json \
+            --slurpfile deployments staging-deployments.json \
+            --slurpfile pods staging-pods.json \
+            '{revision:$revision,capturedAt:$capturedAt,argo:$argo[0],deployments:$deployments[0],pods:$pods[0]}' \
+            > staging-evidence.json
+
+      - name: Resolve the staging ingress
+        run: |
+          set -euo pipefail
+          target="$(kubectl -n vnshop-staging get ingress vnshop -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"
+          if [[ -z "$target" ]]; then
+            hostname="$(kubectl -n vnshop-staging get ingress vnshop -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
+            target="$(getent ahostsv4 "$hostname" | awk 'NR == 1 {print $1}')"
+          fi
+          [[ "$target" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          echo "E2E_INGRESS_IP=$target" >> "$GITHUB_ENV"
+          printf '%s\n' "$target web.vnshop.invalid api.vnshop.invalid auth.vnshop.invalid storage.vnshop.invalid" | sudo tee -a /etc/hosts
+
+      - name: Install and verify the staging trust root
+        env:
+          CA_BASE64: ${{ secrets.VNSHOP_CI_ROOT_CA_BASE64 }}
+        run: |
+          set -euo pipefail
+          [[ -n "$CA_BASE64" ]]
+          printf '%s' "$CA_BASE64" | base64 --decode > vnshop-ci-root.crt
+          sudo install -m 0644 vnshop-ci-root.crt /usr/local/share/ca-certificates/vnshop-ci-root.crt
+          sudo update-ca-certificates
+          for host in web.vnshop.invalid api.vnshop.invalid auth.vnshop.invalid storage.vnshop.invalid; do
+            openssl s_client -connect "$E2E_INGRESS_IP:443" -servername "$host" -CAfile vnshop-ci-root.crt </dev/null 2>/dev/null |
+              openssl x509 -noout -checkhost "$host" -issuer
+          done
+          echo "NODE_EXTRA_CA_CERTS=$GITHUB_WORKSPACE/vnshop-ci-root.crt" >> "$GITHUB_ENV"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: fe/package-lock.json
+
+      - name: Install the release browser
+        working-directory: fe
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Verify the public release contract
+        working-directory: fe
+        env:
+          VITE_E2E_BASE_URL: https://web.vnshop.invalid
+          E2E_SKIP_WEBSERVER: "true"
+          E2E_RELEASE_CONTRACT: "true"
+          E2E_CA_ISSUER: vnshop-ci-root
+          E2E_BUYER_USERNAME: ${{ secrets.E2E_BUYER_USERNAME }}
+          E2E_BUYER_PASSWORD: ${{ secrets.E2E_BUYER_PASSWORD }}
+        run: npx playwright test e2e/release-contract.spec.ts --project=chromium
+
+      - name: Enforce the staging load budget over trusted TLS
+        run: |
+          docker run --rm \
+            --add-host api.vnshop.invalid:"$E2E_INGRESS_IP" \
+            -e BASE_URL=https://api.vnshop.invalid \
+            -e SSL_CERT_FILE=/certs/vnshop-ci-root.crt \
+            -v "$GITHUB_WORKSPACE/infra/load-tests:/scripts:ro" \
+            -v "$GITHUB_WORKSPACE/vnshop-ci-root.crt:/certs/vnshop-ci-root.crt:ro" \
+            -v "$RUNNER_TEMP:/evidence" \
+            grafana/k6@sha256:1f40432b1cbe7234e977f96c362c9bc550a2d2b583d014dd8669fe40d3e9e755 \
+            run --summary-export=/evidence/staging-k6-summary.json /scripts/k6-release.js
+
+      - name: Promote unchanged 19-digest lock
+        run: |
+          set -euo pipefail
+          cp infra/release/locks/staging.json infra/release/locks/prod.json
+          mkdir -p "infra/release/evidence/$STAGING_REVISION"
+          cp staging-evidence.json "infra/release/evidence/$STAGING_REVISION/staging.json"
+          python infra/k8s/generate.py
+          python infra/scripts/validate-k8s-release.py --environment prod
+
+      - name: Commit production desired state on a review branch
+        id: branch
+        run: |
+          set -euo pipefail
+          source_commit="$(jq -r '.sourceCommit' infra/release/locks/prod.json)"
+          branch="release/production-${source_commit:0:12}"
+          git switch -c "$branch"
+          git config user.name "vnshop-release[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add infra/release/locks/prod.json infra/release/evidence/ infra/k8s/
+          git commit -m "release: promote ${source_commit:0:12} unchanged"
+          git push --force-with-lease origin "HEAD:$branch"
+          echo "name=$branch" >> "$GITHUB_OUTPUT"
+
+      - name: Open protected-production pull request
+        env:
+          BRANCH: ${{ steps.branch.outputs.name }}
+        run: |
+          source_commit="$(jq -r '.sourceCommit' infra/release/locks/prod.json)"
+          existing="$(gh pr list --head "$BRANCH" --base production --json url --jq '.[0].url // empty')"
+          if [[ -n "$existing" ]]; then
+            echo "$existing"
+          else
+            gh pr create \
+              --base production \
+              --head "$BRANCH" \
+              --title "release: promote ${source_commit:0:12} unchanged" \
+              --body "Promotes the exact 19-digest staging lock after Argo reported Synced/Healthy at $STAGING_REVISION. Requires @dang232 Code Owner approval; the release bot has no bypass authority."
+          fi
+
+      - name: Upload reconciliation evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: staging-reconciliation-${{ inputs.staging_revision }}
+          path: |
+            staging-argo.json
+            staging-deployments.json
+            staging-pods.json
+            staging-evidence.json
+            expected-images.tsv
+            desired-images.tsv
+            staging-live-images.json
+            fe/playwright-report/
+            fe/test-results/
+            ${{ runner.temp }}/staging-k6-summary.json
+          if-no-files-found: warn
+          retention-days: 90

@@ -2,7 +2,11 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: vnshop-dev
+  annotations:
+    argocd.argoproj.io/sync-wave: "-20"
   labels:
     app.kubernetes.io/part-of: vnshop
     environment: dev
-    istio-injection: enabled
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted

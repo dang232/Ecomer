@@ -1,8 +1,7 @@
-name: Verify Backup
+name: VNShop Backup and Restore Drill
 
 on:
   schedule:
-    # Weekly: Sunday at 02:00 UTC
     - cron: "0 2 * * 0"
   workflow_dispatch:
 
@@ -10,76 +9,198 @@ permissions:
   contents: read
 
 concurrency:
-  group: backup-verification
+  group: portfolio-restore-drill
   cancel-in-progress: false
 
 jobs:
-  verify-backup:
-    name: Backup Verification
+  restore-drill:
+    name: Isolated restore within RPO and RTO
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 240
     env:
-      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'vnshop' }}
-      # Compose interpolates the entire stack, although this job starts only Postgres.
-      # These are non-production placeholders used only to validate that configuration.
-      ELASTIC_PASSWORD: ci-compose-placeholder
-      KAFKA_ADMIN_PASSWORD: ci-compose-placeholder
-      KAFKA_ORDER_PASSWORD: ci-compose-placeholder
-      KAFKA_PAYMENT_PASSWORD: ci-compose-placeholder
-      KAFKA_INVENTORY_PASSWORD: ci-compose-placeholder
-      KAFKA_PRODUCT_PASSWORD: ci-compose-placeholder
-      KAFKA_SHIPPING_PASSWORD: ci-compose-placeholder
-      KAFKA_FINANCE_PASSWORD: ci-compose-placeholder
-      KAFKA_SEARCH_PASSWORD: ci-compose-placeholder
-      KAFKA_RECOMMENDATIONS_PASSWORD: ci-compose-placeholder
-      KAFKA_INVOICE_PASSWORD: ci-compose-placeholder
-      KAFKA_VIDEO_TRANSCODER_PASSWORD: ci-compose-placeholder
-      KAFKA_VIDEO_MODERATOR_PASSWORD: ci-compose-placeholder
-
+      AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ secrets.BACKUP_S3_REGION }}
+      BACKUP_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+      BACKUP_PREFIX: ${{ secrets.BACKUP_S3_PREFIX }}
     steps:
-      - name: Checkout repository
+      - name: Check out full desired-state history
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
 
-      - name: Start core database services
-        run: docker compose --profile apps up -d postgres-user postgres-order postgres-product
-
-      - name: Wait for databases to be healthy
+      - name: Validate recovery credentials
         run: |
-          for svc in vnshop-postgres-user vnshop-postgres-order vnshop-postgres-product; do
-            echo "Waiting for $svc..."
-            for i in $(seq 1 30); do
-              if docker inspect --format '{{.State.Health.Status}}' "$svc" 2>/dev/null | grep -q healthy; then
-                echo "$svc is healthy"
-                break
-              fi
-              if [ "$i" -eq 30 ]; then
-                echo "ERROR: $svc did not become healthy within 30 attempts"
-                exit 1
-              fi
-              sleep 5
-            done
+          set -euo pipefail
+          for name in AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION BACKUP_BUCKET BACKUP_PREFIX; do
+            [[ -n "${!name}" ]] || { echo "missing required secret: $name" >&2; exit 1; }
           done
 
-      - name: Seed backup verification fixtures
+      - name: Configure isolated cluster access
+        env:
+          KUBECONFIG_BASE64: ${{ secrets.PORTFOLIO_KUBECONFIG_BASE64 }}
         run: |
-          seed() {
-            local container="$1"
-            local database="$2"
-            local schema="$3"
-            local table="$4"
+          set -euo pipefail
+          umask 077
+          printf '%s' "$KUBECONFIG_BASE64" | base64 --decode > "$RUNNER_TEMP/kubeconfig"
+          echo "KUBECONFIG=$RUNNER_TEMP/kubeconfig" >> "$GITHUB_ENV"
 
-            docker exec -e PGPASSWORD="$POSTGRES_PASSWORD" "$container" \
-              psql -v ON_ERROR_STOP=1 -U vnshop -d "$database" \
-              -c "CREATE SCHEMA IF NOT EXISTS \"$schema\"; CREATE TABLE IF NOT EXISTS \"$schema\".\"$table\" (id integer PRIMARY KEY); INSERT INTO \"$schema\".\"$table\" (id) VALUES (1) ON CONFLICT (id) DO NOTHING;"
-          }
+      - name: Download the newest authoritative backup
+        id: backup
+        run: |
+          set -euo pipefail
+          latest="$(aws s3api list-objects-v2 \
+            --bucket "$BACKUP_BUCKET" \
+            --prefix "${BACKUP_PREFIX}/daily/" \
+            --delimiter / \
+            --query 'sort_by(CommonPrefixes,&Prefix)[-1].Prefix' \
+            --output text)"
+          [[ -n "$latest" && "$latest" != "None" ]]
+          stamp="${latest%/}"
+          stamp="${stamp##*/}"
+          created_epoch="$(date -u -d "${stamp:0:10} ${stamp:11:2}:${stamp:14:2}:${stamp:17:2}Z" +%s)"
+          now_epoch="$(date -u +%s)"
+          age_seconds="$((now_epoch - created_epoch))"
+          (( age_seconds >= 0 && age_seconds <= 86400 ))
+          mkdir -p "$RUNNER_TEMP/restore"
+          aws s3 sync "s3://${BACKUP_BUCKET}/${latest}" "$RUNNER_TEMP/restore" --only-show-errors
+          test -s "$RUNNER_TEMP/restore/postgresql.sql.gz"
+          test -s "$RUNNER_TEMP/restore/timescaledb.sql.gz"
+          test -s "$RUNNER_TEMP/restore/mongodb.archive"
+          test -d "$RUNNER_TEMP/restore/minio"
+          echo "prefix=$latest" >> "$GITHUB_OUTPUT"
+          echo "age_seconds=$age_seconds" >> "$GITHUB_OUTPUT"
+          echo "started_epoch=$now_epoch" >> "$GITHUB_OUTPUT"
 
-          seed vnshop-postgres-user vnshop_user user_svc users
-          seed vnshop-postgres-order vnshop_order order_svc orders
-          seed vnshop-postgres-product vnshop_product product_svc products
+      - name: Create disposable isolated restore namespace
+        run: |
+          set -euo pipefail
+          namespace="vnshop-restore-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          echo "RESTORE_NAMESPACE=$namespace" >> "$GITHUB_ENV"
+          kubectl create namespace "$namespace"
+          kubectl label namespace "$namespace" vnshop.io/restore-drill=true
+          kubectl -n "$namespace" apply -f - <<'YAML'
+          apiVersion: networking.k8s.io/v1
+          kind: NetworkPolicy
+          metadata: {name: isolate-restore}
+          spec:
+            podSelector: {}
+            policyTypes: [Ingress, Egress]
+            ingress:
+              - from:
+                  - podSelector: {}
+            egress:
+              - to:
+                  - podSelector: {}
+                ports:
+                  - {protocol: TCP, port: 9000}
+              - to:
+                  - namespaceSelector:
+                      matchLabels:
+                        kubernetes.io/metadata.name: kube-system
+                ports:
+                  - {protocol: UDP, port: 53}
+                  - {protocol: TCP, port: 53}
+          YAML
 
-      - name: Run backup verification
-        run: bash scripts/verify-backup.sh
+      - name: Start isolated authoritative datastores
+        run: |
+          set -euo pipefail
+          password="$(openssl rand -hex 24)"
+          minio_password="$(openssl rand -hex 24)"
+          kubectl -n "$RESTORE_NAMESPACE" create secret generic restore-credentials \
+            --from-literal=database-password="$password" \
+            --from-literal=minio-password="$minio_password"
+          echo "RESTORE_DATABASE_PASSWORD=$password" >> "$GITHUB_ENV"
+          echo "RESTORE_MINIO_PASSWORD=$minio_password" >> "$GITHUB_ENV"
 
-      - name: Stop services
+          kubectl -n "$RESTORE_NAMESPACE" run postgres \
+            --image=postgres@sha256:2a0d0fe14825b0939f78a8cad5cd4e6aa68bf94d0e5dd96e24b6d23af4315545 \
+            --env="POSTGRES_USER=restore" --env="POSTGRES_PASSWORD=$password" --env="POSTGRES_DB=restore" \
+            --port=5432
+          kubectl -n "$RESTORE_NAMESPACE" run timescaledb \
+            --image=timescale/timescaledb@sha256:61f891691050da6032023c01ea885730eeeba06b7c17b403e7d0b9c49c37dfe9 \
+            --env="POSTGRES_USER=restore" --env="POSTGRES_PASSWORD=$password" --env="POSTGRES_DB=monitoring" \
+            --port=5432
+          kubectl -n "$RESTORE_NAMESPACE" run mongodb \
+            --image=mongo@sha256:951c2ff9fc6bdb6cb89b1dfea4a0e8ae3ee4fb287c0bf579b2bba54c7803f75d \
+            --env="MONGO_INITDB_ROOT_USERNAME=restore" --env="MONGO_INITDB_ROOT_PASSWORD=$password" \
+            --port=27017
+          kubectl -n "$RESTORE_NAMESPACE" run minio \
+            --image=minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e \
+            --env="MINIO_ROOT_USER=restore" --env="MINIO_ROOT_PASSWORD=$minio_password" \
+            --port=9000 --command -- minio server /data
+          kubectl -n "$RESTORE_NAMESPACE" expose pod minio --name=minio --port=9000 --target-port=9000
+          kubectl -n "$RESTORE_NAMESPACE" wait --for=condition=Ready pod/postgres pod/timescaledb pod/mongodb pod/minio --timeout=10m
+
+      - name: Restore and validate authoritative data
+        run: |
+          set -euo pipefail
+          kubectl -n "$RESTORE_NAMESPACE" cp "$RUNNER_TEMP/restore/postgresql.sql.gz" postgres:/tmp/postgresql.sql.gz
+          kubectl -n "$RESTORE_NAMESPACE" exec postgres -- sh -ec \
+            'gzip -dc /tmp/postgresql.sql.gz | PGPASSWORD="$POSTGRES_PASSWORD" psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+          postgres_tables="$(kubectl -n "$RESTORE_NAMESPACE" exec postgres -- sh -ec \
+            'PGPASSWORD="$POSTGRES_PASSWORD" psql -At -U "$POSTGRES_USER" -d vnshop -c "select count(*) from information_schema.tables where table_schema not in ('"'"'pg_catalog'"'"','"'"'information_schema'"'"');"')"
+          (( postgres_tables > 0 ))
+
+          kubectl -n "$RESTORE_NAMESPACE" cp "$RUNNER_TEMP/restore/timescaledb.sql.gz" timescaledb:/tmp/timescaledb.sql.gz
+          kubectl -n "$RESTORE_NAMESPACE" exec timescaledb -- sh -ec \
+            'gzip -dc /tmp/timescaledb.sql.gz | PGPASSWORD="$POSTGRES_PASSWORD" psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+          timescale_tables="$(kubectl -n "$RESTORE_NAMESPACE" exec timescaledb -- sh -ec \
+            'PGPASSWORD="$POSTGRES_PASSWORD" psql -At -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "select count(*) from information_schema.tables where table_schema not in ('"'"'pg_catalog'"'"','"'"'information_schema'"'"');"')"
+          (( timescale_tables > 0 ))
+
+          kubectl -n "$RESTORE_NAMESPACE" cp "$RUNNER_TEMP/restore/mongodb.archive" mongodb:/tmp/mongodb.archive
+          kubectl -n "$RESTORE_NAMESPACE" exec mongodb -- mongorestore \
+            --username restore --password "$RESTORE_DATABASE_PASSWORD" --authenticationDatabase admin \
+            --archive=/tmp/mongodb.archive --gzip --drop \
+            '--nsExclude=admin.*' '--nsExclude=config.*' '--nsExclude=local.*'
+          mongo_databases="$(kubectl -n "$RESTORE_NAMESPACE" exec mongodb -- mongosh \
+            --quiet --username restore --password "$RESTORE_DATABASE_PASSWORD" --authenticationDatabase admin \
+            --eval 'db.adminCommand({listDatabases:1}).databases.filter(d => !["admin","config","local"].includes(d.name)).length')"
+          (( mongo_databases > 0 ))
+
+          kubectl -n "$RESTORE_NAMESPACE" run minio-client \
+            --image=minio/mc@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727 \
+            --restart=Never --command -- sleep 3600
+          kubectl -n "$RESTORE_NAMESPACE" wait --for=condition=Ready pod/minio-client --timeout=5m
+          kubectl -n "$RESTORE_NAMESPACE" cp "$RUNNER_TEMP/restore/minio" minio-client:/backup
+          kubectl -n "$RESTORE_NAMESPACE" exec minio-client -- sh -ec '
+            mc alias set restore http://minio:9000 restore "$1"
+            for source in /backup/*; do
+              [ -d "$source" ] || continue
+              bucket="${source##*/}"
+              mc mb --ignore-existing "restore/$bucket"
+              mc mirror --overwrite "$source" "restore/$bucket"
+            done
+            test "$(mc find restore --type f | wc -l)" -gt 0
+          ' sh "$RESTORE_MINIO_PASSWORD"
+
+          jq -n \
+            --arg backupPrefix '${{ steps.backup.outputs.prefix }}' \
+            --argjson backupAgeSeconds '${{ steps.backup.outputs.age_seconds }}' \
+            --arg namespace "$RESTORE_NAMESPACE" \
+            --argjson postgresTables "$postgres_tables" \
+            --argjson timescaleTables "$timescale_tables" \
+            --argjson mongoDatabases "$mongo_databases" \
+            --argjson durationSeconds "$(($(date -u +%s) - ${{ steps.backup.outputs.started_epoch }}))" \
+            '{schemaVersion:"1.0",backupPrefix:$backupPrefix,backupAgeSeconds:$backupAgeSeconds,restoreNamespace:$namespace,postgresTables:$postgresTables,timescaleTables:$timescaleTables,mongoDatabases:$mongoDatabases,durationSeconds:$durationSeconds,rpoMet:($backupAgeSeconds <= 86400),rtoMet:($durationSeconds <= 14400)}' \
+            > restore-drill-report.json
+          jq -e '.rpoMet and .rtoMet' restore-drill-report.json
+
+      - name: Upload restore evidence
         if: always()
-        run: docker compose --profile apps down -v
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: restore-drill-${{ github.run_id }}-${{ github.run_attempt }}
+          path: restore-drill-report.json
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Destroy the restore namespace
+        if: always()
+        run: |
+          if [[ -n "${RESTORE_NAMESPACE:-}" ]]; then
+            kubectl delete namespace "$RESTORE_NAMESPACE" --wait=false --ignore-not-found
+          fi
+          rm -rf "$RUNNER_TEMP/restore"

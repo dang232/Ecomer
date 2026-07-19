@@ -6,3 +6,13 @@ data:
   SPRING_PROFILES_ACTIVE: prod
   NODE_ENV: production
   OTEL_TRACES_SAMPLER_ARG: "0.01"
+  WEB_ORIGIN: https://web.vnshop.example
+  API_ORIGIN: https://api.vnshop.example
+  AUTH_ORIGIN: https://auth.vnshop.example
+  KEYCLOAK_ISSUER_URI: https://auth.vnshop.example/realms/vnshop
+  KEYCLOAK_PUBLIC_BASE_URL: https://auth.vnshop.example
+  GATEWAY_CORS_ALLOWED_ORIGINS: https://web.vnshop.example
+  VNSHOP_FRONTEND_URL: https://web.vnshop.example
+  VNSHOP_AUTH_CALLBACK_BASE_URL: https://api.vnshop.example/auth/oauth/callback
+  VNSHOP_OBJECT_STORAGE_PUBLIC_ENDPOINT: https://storage.vnshop.example
+  VNSHOP_USER_STORAGE_PUBLIC_ENDPOINT: https://storage.vnshop.example

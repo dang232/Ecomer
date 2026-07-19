@@ -1,0 +1,97 @@
+name: VNShop Alert Delivery Drill
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: GitOps environment to test
+        required: true
+        default: staging
+        type: choice
+        options: [staging, prod]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alert-delivery-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  delivery:
+    name: Receive a critical alert within 10 minutes
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      RECEIPT_URL: ${{ secrets.ALERT_RECEIPT_API_URL }}
+      RECEIPT_TOKEN: ${{ secrets.ALERT_RECEIPT_API_TOKEN }}
+    steps:
+      - name: Configure isolated cluster access
+        env:
+          KUBECONFIG_BASE64: ${{ secrets.PORTFOLIO_KUBECONFIG_BASE64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$KUBECONFIG_BASE64" | base64 --decode > "$RUNNER_TEMP/kubeconfig"
+          echo "KUBECONFIG=$RUNNER_TEMP/kubeconfig" >> "$GITHUB_ENV"
+          [[ -n "$RECEIPT_URL" && -n "$RECEIPT_TOKEN" ]]
+
+      - name: Send a uniquely correlated critical alert
+        run: |
+          set -euo pipefail
+          namespace="vnshop-${{ inputs.environment }}"
+          correlation="alert-drill-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          started="$(date -u +%s)"
+          kubectl -n "$namespace" port-forward service/alertmanager 9093:9093 >port-forward.log 2>&1 &
+          port_forward_pid=$!
+          trap 'kill "$port_forward_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:9093/-/ready && break
+            sleep 1
+          done
+          jq -n \
+            --arg startsAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg endsAt "$(date -u -d '+15 minutes' +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg correlation "$correlation" \
+            '[{labels:{alertname:"VNShopDeliveryTest",severity:"critical",artifact_id:"operations",correlation_id:$correlation},annotations:{summary:"VNShop alert delivery drill",correlationId:$correlation},startsAt:$startsAt,endsAt:$endsAt}]' \
+            > alert.json
+          curl -fsS -H 'Content-Type: application/json' --data @alert.json http://127.0.0.1:9093/api/v2/alerts
+
+          deadline=$((started + 600))
+          while (( $(date -u +%s) < deadline )); do
+            if curl -fsS -H "Authorization: Bearer $RECEIPT_TOKEN" \
+              "${RECEIPT_URL}?correlationId=${correlation}" > receipt.json; then
+              if jq -e --arg correlation "$correlation" \
+                '.correlationId == $correlation and (.status == "accepted" or .status == "delivered") and (.receiptId | length > 0)' \
+                receipt.json >/dev/null; then
+                break
+              fi
+            fi
+            sleep 10
+          done
+          jq -e --arg correlation "$correlation" \
+            '.correlationId == $correlation and (.status == "accepted" or .status == "delivered") and (.receiptId | length > 0)' \
+            receipt.json
+          duration="$(($(date -u +%s) - started))"
+          (( duration <= 600 ))
+          jq -n \
+            --arg environment '${{ inputs.environment }}' \
+            --arg correlationId "$correlation" \
+            --arg receiptId "$(jq -r .receiptId receipt.json)" \
+            --arg status "$(jq -r .status receipt.json)" \
+            --argjson deliverySeconds "$duration" \
+            '{schemaVersion:"1.0",environment:$environment,correlationId:$correlationId,receiptId:$receiptId,status:$status,deliverySeconds:$deliverySeconds}' \
+            > alert-delivery-evidence.json
+
+      - name: Upload delivery evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: alert-delivery-${{ inputs.environment }}-${{ github.run_id }}
+          path: |
+            alert.json
+            receipt.json
+            alert-delivery-evidence.json
+            port-forward.log
+          if-no-files-found: warn
+          retention-days: 90

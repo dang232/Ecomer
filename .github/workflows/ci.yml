@@ -2,9 +2,9 @@ name: VNShop CI
 
 on:
   push:
-    branches: [main, "release/**"]
+    branches: [main, production, "release/**"]
   pull_request:
-    branches: [main]
+    branches: [main, production]
   workflow_dispatch:
 
 permissions:
@@ -34,6 +34,7 @@ jobs:
       frontend: ${{ steps.matrix.outputs.frontend }}
       mobile: ${{ steps.matrix.outputs.mobile }}
       proto: ${{ steps.matrix.outputs.proto }}
+      container_policy: ${{ steps.matrix.outputs.container_policy }}
     steps:
       - name: Check out repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -47,9 +48,6 @@ jobs:
           filters: |
             api-gateway:
               - 'services/api-gateway/**'
-              - '.github/workflows/ci.yml'
-            coupon-service:
-              - 'services/coupon-service/**'
               - '.github/workflows/ci.yml'
             inventory-service:
               - 'services/inventory-service/**'
@@ -135,6 +133,9 @@ jobs:
             proto:
               - 'proto/**'
               - '.github/workflows/ci.yml'
+            container_policy:
+              - '.trivyignore.yaml'
+              - 'infra/deployables.json'
 
       - name: Normalize matrices
         id: matrix
@@ -147,10 +148,11 @@ jobs:
           FRONTEND_FILTER: ${{ steps.surfaces.outputs.frontend }}
           MOBILE_FILTER: ${{ steps.surfaces.outputs.mobile }}
           PROTO_FILTER: ${{ steps.surfaces.outputs.proto }}
+          CONTAINER_POLICY_FILTER: ${{ steps.surfaces.outputs.container_policy }}
         run: |
           set -euo pipefail
 
-          all_java='["api-gateway","coupon-service","inventory-service","invoice-service","order-service","payment-service","product-service","recommendations-service","search-service","seller-finance-service","shipping-service","user-service","video-transcoder"]'
+          all_java='["api-gateway","inventory-service","invoice-service","order-service","payment-service","product-service","recommendations-service","search-service","seller-finance-service","shipping-service","user-service","video-transcoder"]'
           all_node='["cart-service","configuration-service","messaging-service","monitoring-service-v2","notification-service"]'
           all_python='["video-moderator"]'
 
@@ -161,6 +163,7 @@ jobs:
             frontend=true
             mobile=true
             proto=true
+            container_policy=true
           else
             java_services="${JAVA_FILTER:-[]}"
             node_services="${NODE_FILTER:-[]}"
@@ -168,6 +171,13 @@ jobs:
             frontend="${FRONTEND_FILTER:-false}"
             mobile="${MOBILE_FILTER:-false}"
             proto="${PROTO_FILTER:-false}"
+            container_policy="${CONTAINER_POLICY_FILTER:-false}"
+            if [[ "$container_policy" == "true" ]]; then
+              java_services="$all_java"
+              node_services="$all_node"
+              python_services="$all_python"
+              frontend=true
+            fi
           fi
 
           services="$(jq -cn \
@@ -184,6 +194,7 @@ jobs:
             echo "frontend=$frontend"
             echo "mobile=$mobile"
             echo "proto=$proto"
+            echo "container_policy=$container_policy"
           } >> "$GITHUB_OUTPUT"
 
   repository_checks:
@@ -209,8 +220,66 @@ jobs:
       - name: Run repository tooling tests
         run: node --test scripts/ci_monitor.test.cjs scripts/generate-design-tokens.test.mjs
 
+      - name: Test deployables manifest
+        run: >-
+          node --test
+          infra/scripts/validate-deployables.test.mjs
+          infra/scripts/validate-sensitive-paths.test.mjs
+          infra/scripts/validate-trivy-policy.test.mjs
+          infra/scripts/github-governance.test.mjs
+
+      - name: Validate deployables manifest
+        run: node infra/scripts/validate-deployables.mjs
+
+      - name: Reject tracked sensitive paths
+        run: node infra/scripts/validate-sensitive-paths.mjs
+
+      - name: Validate vulnerability exception policy
+        run: node infra/scripts/validate-trivy-policy.mjs
+
       - name: Validate Keycloak realm JSON
         run: node -e "JSON.parse(require('node:fs').readFileSync('infra/keycloak/vnshop-realm.json', 'utf8'))"
+
+  deployable:
+    name: Deployable
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install manifest parser
+        run: python -m pip install --disable-pip-version-check PyYAML==6.0.3
+
+      - name: Verify generated desired state is current
+        shell: bash
+        run: |
+          set -euo pipefail
+          python infra/k8s/generate.py
+          git diff --exit-code -- infra/k8s
+
+      - name: Validate staging and production structure
+        shell: bash
+        run: |
+          set -euo pipefail
+          python infra/scripts/validate-k8s-release.py --environment staging --allow-unresolved --allow-unsealed
+          python infra/scripts/validate-k8s-release.py --environment prod --allow-unresolved --allow-unsealed
+
+      - name: Enforce immutable release state when locks exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          for environment in staging prod; do
+            lock="infra/release/locks/${environment}.json"
+            if [[ -f "$lock" ]]; then
+              python infra/scripts/validate-k8s-release.py --environment "$environment"
+            fi
+          done
 
   frontend:
     name: React application
@@ -273,7 +342,7 @@ jobs:
   java_tests:
     name: Java unit tests (${{ matrix.service }})
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     needs: changes
     if: needs.changes.outputs.java_services != '[]'
     strategy:
@@ -296,7 +365,11 @@ jobs:
           cache-dependency-path: services/${{ matrix.service }}/pom.xml
 
       - name: Run isolated unit tests
-        run: mvn --batch-mode --no-transfer-progress test -DskipTests=false -Djacoco.skip=true "-Dtest=!*ApplicationTests,!ArchitectureRulesTest,!Grpc*ServerTest,!*PactTest,!*IntegrationTest,!GrpcClientConfigTest,!GrpcShippingRequestAdapterTest,!CarrierModeSelectionTest" "-Dsurefire.failIfNoSpecifiedTests=false"
+        run: mvn --batch-mode --no-transfer-progress test -DskipTests=false -Djacoco.skip=true "-Dtest=!*ApplicationTests,!Grpc*ServerTest,!*PactTest,!*IntegrationTest,!GrpcClientConfigTest,!CarrierModeSelectionTest" "-Dsurefire.failIfNoSpecifiedTests=false"
+
+      - name: Run order migration and persistence integration tests
+        if: matrix.service == 'order-service'
+        run: mvn --batch-mode --no-transfer-progress test -Djacoco.skip=true -Dtest=OrderServiceIntegrationTest
 
   node_tests:
     name: Node service (${{ matrix.service }})
@@ -402,7 +475,7 @@ jobs:
       - name: Set up Buf
         uses: bufbuild/buf-setup-action@a47c93e0b1648d5651a065437926377d060baa99 # v1.50.0
         with:
-          version: "latest"
+          version: "1.50.0"
 
       - name: Resolve baseline branch
         id: baseline
@@ -425,15 +498,14 @@ jobs:
         working-directory: proto
         run: buf breaking --against "../.git#ref=refs/remotes/origin/${{ steps.baseline.outputs.branch }},subdir=proto"
 
-  container_scan:
-    name: Container scan (${{ matrix.service }})
+  service_container_scan:
+    name: Service container scan (${{ matrix.service }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: [changes, java_tests, node_tests, python_tests]
     if: >-
       ${{
         always() &&
-        github.event_name != 'pull_request' &&
         needs.changes.result == 'success' &&
         needs.changes.outputs.services != '[]' &&
         (needs.java_tests.result == 'success' || needs.java_tests.result == 'skipped') &&
@@ -459,7 +531,64 @@ jobs:
           severity: CRITICAL,HIGH
           scanners: vuln
           exit-code: "1"
-          trivyignores: .trivyignore
+          trivyignores: .trivyignore.yaml
+
+  frontend_container_scan:
+    name: Frontend container scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [changes, frontend]
+    if: >-
+      ${{
+        always() &&
+        needs.changes.result == 'success' &&
+        needs.changes.outputs.frontend == 'true' &&
+        needs.frontend.result == 'success'
+      }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Build image
+        run: docker build -f fe/Dockerfile -t vnshop/frontend:${{ github.sha }} fe
+
+      - name: Scan image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: vnshop/frontend:${{ github.sha }}
+          format: table
+          severity: CRITICAL,HIGH
+          scanners: vuln
+          exit-code: "1"
+          trivyignores: .trivyignore.yaml
+
+  secret_scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install pinned Gitleaks
+        run: bash infra/scripts/install-gitleaks.sh "$RUNNER_TEMP/gitleaks"
+
+      - name: Scan checked-out content
+        run: >-
+          "$RUNNER_TEMP/gitleaks/gitleaks" dir .
+          --redact
+          --no-banner
+          --report-format json
+          --report-path gitleaks-current.json
+
+      - name: Upload redacted scan report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: gitleaks-current-${{ github.sha }}
+          path: gitleaks-current.json
+          if-no-files-found: error
+          retention-days: 14
 
   ci_gate:
     name: CI Gate
@@ -469,23 +598,29 @@ jobs:
     needs:
       - changes
       - repository_checks
+      - deployable
       - frontend
       - mobile
       - java_tests
       - node_tests
       - python_tests
       - proto
-      - container_scan
+      - service_container_scan
+      - frontend_container_scan
+      - secret_scan
     env:
       CHANGES_RESULT: ${{ needs.changes.result }}
       REPOSITORY_RESULT: ${{ needs.repository_checks.result }}
+      DEPLOYABLE_RESULT: ${{ needs.deployable.result }}
       FRONTEND_RESULT: ${{ needs.frontend.result }}
       MOBILE_RESULT: ${{ needs.mobile.result }}
       JAVA_RESULT: ${{ needs.java_tests.result }}
       NODE_RESULT: ${{ needs.node_tests.result }}
       PYTHON_RESULT: ${{ needs.python_tests.result }}
       PROTO_RESULT: ${{ needs.proto.result }}
-      CONTAINER_RESULT: ${{ needs.container_scan.result }}
+      SERVICE_CONTAINER_RESULT: ${{ needs.service_container_scan.result }}
+      FRONTEND_CONTAINER_RESULT: ${{ needs.frontend_container_scan.result }}
+      SECRET_SCAN_RESULT: ${{ needs.secret_scan.result }}
     steps:
       - name: Verify required jobs
         shell: bash
@@ -495,13 +630,16 @@ jobs:
           results=(
             "changes=$CHANGES_RESULT"
             "repository=$REPOSITORY_RESULT"
+            "deployable=$DEPLOYABLE_RESULT"
             "frontend=$FRONTEND_RESULT"
             "mobile=$MOBILE_RESULT"
             "java=$JAVA_RESULT"
             "node=$NODE_RESULT"
             "python=$PYTHON_RESULT"
             "proto=$PROTO_RESULT"
-            "container=$CONTAINER_RESULT"
+            "service-container=$SERVICE_CONTAINER_RESULT"
+            "frontend-container=$FRONTEND_CONTAINER_RESULT"
+            "secret-scan=$SECRET_SCAN_RESULT"
           )
 
           for entry in "${results[@]}"; do

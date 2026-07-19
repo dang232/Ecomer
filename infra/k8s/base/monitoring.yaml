@@ -1,0 +1,294 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vnshop-monitoring-config
+  annotations: {argocd.argoproj.io/sync-wave: "5"}
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+      external_labels:
+        platform: vnshop-portfolio
+    rule_files: [/etc/prometheus/rules/*.yml]
+    alerting:
+      alertmanagers:
+      - static_configs:
+        - targets: [alertmanager:9093]
+    scrape_configs:
+    - job_name: prometheus
+      static_configs:
+      - targets: [localhost:9090]
+    - job_name: vnshop-readiness
+      metrics_path: /probe
+      params: {module: [http_2xx]}
+      static_configs:
+            - targets: ["http://frontend:8080/healthz"]
+              labels: {artifact_id: "frontend"}
+            - targets: ["http://api-gateway:8080/actuator/health/readiness"]
+              labels: {artifact_id: "api-gateway"}
+            - targets: ["http://cart-service:8084/ready"]
+              labels: {artifact_id: "cart-service"}
+            - targets: ["http://configuration-service:8097/ready"]
+              labels: {artifact_id: "configuration-service"}
+            - targets: ["http://inventory-service:8083/actuator/health/readiness"]
+              labels: {artifact_id: "inventory-service"}
+            - targets: ["http://invoice-service:8098/actuator/health/readiness"]
+              labels: {artifact_id: "invoice-service"}
+            - targets: ["http://messaging-service:8095/ready"]
+              labels: {artifact_id: "messaging-service"}
+            - targets: ["http://monitoring-service-v2:8096/ready"]
+              labels: {artifact_id: "monitoring-service-v2"}
+            - targets: ["http://notification-service:8087/ready"]
+              labels: {artifact_id: "notification-service"}
+            - targets: ["http://order-service:8091/actuator/health/readiness"]
+              labels: {artifact_id: "order-service"}
+            - targets: ["http://payment-service:8092/actuator/health/readiness"]
+              labels: {artifact_id: "payment-service"}
+            - targets: ["http://product-service:8082/actuator/health/readiness"]
+              labels: {artifact_id: "product-service"}
+            - targets: ["http://recommendations-service:8094/actuator/health/readiness"]
+              labels: {artifact_id: "recommendations-service"}
+            - targets: ["http://search-service:8086/actuator/health/readiness"]
+              labels: {artifact_id: "search-service"}
+            - targets: ["http://seller-finance-service:8090/actuator/health/readiness"]
+              labels: {artifact_id: "seller-finance-service"}
+            - targets: ["http://shipping-service:8093/actuator/health/readiness"]
+              labels: {artifact_id: "shipping-service"}
+            - targets: ["http://user-service:8081/actuator/health/readiness"]
+              labels: {artifact_id: "user-service"}
+            - targets: ["http://video-moderator:8100/ready"]
+              labels: {artifact_id: "video-moderator"}
+            - targets: ["http://video-transcoder:8098/actuator/health/readiness"]
+              labels: {artifact_id: "video-transcoder"}
+      relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+    - job_name: vnshop-backup
+      static_configs:
+      - targets: [prometheus-pushgateway:9091]
+  alerts.yml: |
+    groups:
+    - name: vnshop-portfolio-slo
+      rules:
+      - alert: VNShopArtifactUnavailable
+        expr: probe_success{job="vnshop-readiness"} == 0
+        for: 2m
+        labels: {severity: critical, owner: operations}
+        annotations:
+          summary: "{{ $labels.artifact_id }} readiness failed"
+          description: "{{ $labels.instance }} has failed the locked readiness path for two minutes."
+      - alert: VNShopAvailabilityFastBurn
+        expr: (1 - avg_over_time(probe_success{job="vnshop-readiness"}[1h])) > 0.144
+        for: 2m
+        labels: {severity: critical, owner: operations}
+        annotations:
+          summary: "{{ $labels.artifact_id }} is burning the 99.0% availability budget quickly"
+      - alert: VNShopAvailabilitySlowBurn
+        expr: (1 - avg_over_time(probe_success{job="vnshop-readiness"}[3d])) > 0.03
+        for: 15m
+        labels: {severity: warning, owner: operations}
+        annotations:
+          summary: "{{ $labels.artifact_id }} is burning the 99.0% availability budget"
+      - alert: VNShopAvailabilitySLOBreach
+        expr: avg_over_time(probe_success{job="vnshop-readiness"}[30d]) < 0.99
+        for: 15m
+        labels: {severity: warning, owner: operations}
+        annotations:
+          summary: "{{ $labels.artifact_id }} is below the 99.0% rolling availability objective"
+      - alert: VNShopBackupTelemetryMissing
+        expr: absent(vnshop_backup_last_success_timestamp_seconds)
+        for: 30m
+        labels: {severity: critical, owner: operations}
+        annotations: {summary: "No successful authoritative backup has been recorded"}
+      - alert: VNShopBackupRPOAtRisk
+        expr: time() - vnshop_backup_last_success_timestamp_seconds > 86400
+        for: 5m
+        labels: {severity: critical, owner: operations}
+        annotations: {summary: "The latest authoritative backup is older than the 24 hour RPO"}
+  blackbox.yml: |
+    modules:
+      http_2xx:
+        prober: http
+        timeout: 5s
+        http:
+          method: GET
+          preferred_ip_protocol: ip4
+  alertmanager.yml: |
+    global:
+      resolve_timeout: 5m
+    route:
+      receiver: operations-webhook
+      group_by: [alertname, artifact_id]
+      group_wait: 10s
+      group_interval: 5m
+      repeat_interval: 3h
+      routes:
+      - matchers: ['severity="critical"']
+        receiver: operations-webhook
+        repeat_interval: 15m
+    receivers:
+    - name: operations-webhook
+      webhook_configs:
+      - url_file: /etc/alertmanager/secrets/webhook-url
+        send_resolved: true
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-data
+  annotations: {argocd.argoproj.io/sync-wave: "-20"}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests: {storage: 10Gi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  annotations: {argocd.argoproj.io/sync-wave: "5"}
+spec:
+  selector: {app.kubernetes.io/name: prometheus}
+  ports: [{name: http, port: 9090, targetPort: http}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  annotations: {argocd.argoproj.io/sync-wave: "5"}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app.kubernetes.io/name: prometheus}}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: prometheus, app.kubernetes.io/part-of: vnshop}
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {runAsNonRoot: true, runAsUser: 65534, runAsGroup: 65534, fsGroup: 65534, seccompProfile: {type: RuntimeDefault}}
+      containers:
+      - name: prometheus
+        image: prom/prometheus@sha256:075b1ba2c4ebb04bc3a6ab86c06ec8d8099f8fda1c96ef6d104d9bb1def1d8bc
+        args: [--config.file=/etc/prometheus/prometheus.yml, --storage.tsdb.path=/prometheus, --storage.tsdb.retention.time=35d]
+        ports: [{name: http, containerPort: 9090}]
+        readinessProbe: {httpGet: {path: /-/ready, port: http}}
+        resources:
+          requests: {cpu: 100m, memory: 256Mi}
+          limits: {cpu: "1", memory: 1Gi}
+        securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+        volumeMounts:
+        - {name: config, mountPath: /etc/prometheus/prometheus.yml, subPath: prometheus.yml, readOnly: true}
+        - {name: config, mountPath: /etc/prometheus/rules/alerts.yml, subPath: alerts.yml, readOnly: true}
+        - {name: data, mountPath: /prometheus}
+      volumes:
+      - {name: config, configMap: {name: vnshop-monitoring-config}}
+      - {name: data, persistentVolumeClaim: {claimName: prometheus-data}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: blackbox-exporter
+  annotations: {argocd.argoproj.io/sync-wave: "5"}
+spec:
+  selector: {app.kubernetes.io/name: blackbox-exporter}
+  ports: [{name: http, port: 9115, targetPort: http}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: blackbox-exporter
+  annotations: {argocd.argoproj.io/sync-wave: "5"}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app.kubernetes.io/name: blackbox-exporter}}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: blackbox-exporter, app.kubernetes.io/part-of: vnshop}
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {runAsNonRoot: true, runAsUser: 65534, runAsGroup: 65534, seccompProfile: {type: RuntimeDefault}}
+      containers:
+      - name: blackbox-exporter
+        image: prom/blackbox-exporter@sha256:b04a9fef4fa086a02fc7fcd8dcdbc4b7b35cc30cdee860fdc6a19dd8b208d63e
+        args: [--config.file=/etc/blackbox/blackbox.yml]
+        ports: [{name: http, containerPort: 9115}]
+        readinessProbe: {httpGet: {path: /-/healthy, port: http}}
+        resources: {requests: {cpu: 25m, memory: 32Mi}, limits: {cpu: 250m, memory: 128Mi}}
+        securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+        volumeMounts: [{name: config, mountPath: /etc/blackbox/blackbox.yml, subPath: blackbox.yml, readOnly: true}]
+      volumes: [{name: config, configMap: {name: vnshop-monitoring-config}}]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-pushgateway
+  annotations: {argocd.argoproj.io/sync-wave: "5"}
+spec:
+  selector: {app.kubernetes.io/name: prometheus-pushgateway}
+  ports: [{name: http, port: 9091, targetPort: http}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-pushgateway
+  annotations: {argocd.argoproj.io/sync-wave: "5"}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app.kubernetes.io/name: prometheus-pushgateway}}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: prometheus-pushgateway, app.kubernetes.io/part-of: vnshop}
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {runAsNonRoot: true, runAsUser: 65534, runAsGroup: 65534, seccompProfile: {type: RuntimeDefault}}
+      containers:
+      - name: pushgateway
+        image: prom/pushgateway@sha256:98a458415f8f5afcfd45622d289a0aa67063563bec0f90d598ebc76783571936
+        ports: [{name: http, containerPort: 9091}]
+        readinessProbe: {httpGet: {path: /-/ready, port: http}}
+        resources: {requests: {cpu: 25m, memory: 32Mi}, limits: {cpu: 250m, memory: 128Mi}}
+        securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager
+  annotations: {argocd.argoproj.io/sync-wave: "5"}
+spec:
+  selector: {app.kubernetes.io/name: alertmanager}
+  ports: [{name: http, port: 9093, targetPort: http}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager
+  annotations: {argocd.argoproj.io/sync-wave: "5"}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app.kubernetes.io/name: alertmanager}}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: alertmanager, app.kubernetes.io/part-of: vnshop}
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {runAsNonRoot: true, runAsUser: 65534, runAsGroup: 65534, seccompProfile: {type: RuntimeDefault}}
+      containers:
+      - name: alertmanager
+        image: prom/alertmanager@sha256:e13b6ed5cb929eeaee733479dce55e10eb3bc2e9c4586c705a4e8da41e5eacf5
+        args: [--config.file=/etc/alertmanager/alertmanager.yml, --storage.path=/alertmanager]
+        ports: [{name: http, containerPort: 9093}]
+        readinessProbe: {httpGet: {path: /-/ready, port: http}}
+        resources: {requests: {cpu: 25m, memory: 64Mi}, limits: {cpu: 250m, memory: 256Mi}}
+        securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+        volumeMounts:
+        - {name: config, mountPath: /etc/alertmanager/alertmanager.yml, subPath: alertmanager.yml, readOnly: true}
+        - {name: webhook, mountPath: /etc/alertmanager/secrets, readOnly: true}
+        - {name: data, mountPath: /alertmanager}
+      volumes:
+      - {name: config, configMap: {name: vnshop-monitoring-config}}
+      - {name: webhook, secret: {secretName: vnshop-runtime-secrets, items: [{key: alert-webhook-url, path: webhook-url}]}}
+      - {name: data, emptyDir: {sizeLimit: 1Gi}}

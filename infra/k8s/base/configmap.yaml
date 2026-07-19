@@ -2,14 +2,59 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: vnshop-app-config
+  annotations:
+    argocd.argoproj.io/sync-wave: "-20"
 data:
+  WEB_ORIGIN: http://frontend:8080
+  API_ORIGIN: http://api-gateway:8080
+  AUTH_ORIGIN: http://keycloak:8080
+  GATEWAY_CORS_ALLOWED_ORIGINS: http://frontend:8080
   REDIS_HOST: redis
   REDIS_PORT: "6379"
+  SPRING_DATA_REDIS_HOST: redis
+  SPRING_DATA_REDIS_PORT: "6379"
   KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-  KEYCLOAK_ISSUER_URI: http://keycloak:8085/realms/vnshop
-  MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
-  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://jaeger:4318/v1/traces
+  KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
+  KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/vnshop
+  KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
+  KEYCLOAK_ADMIN_BASE_URL: http://keycloak:8080
+  KEYCLOAK_PUBLIC_BASE_URL: http://keycloak:8080
+  CONFIG_SERVICE_URL: http://configuration-service:8097
+  CONFIG_SERVICE_ENABLED: "true"
+  PRODUCT_SERVICE_URL: http://product-service:8082
+  PRODUCT_SERVICE_URI: http://product-service:8082
+  VNSHOP_FRONTEND_URL: http://frontend:8080
+  VNSHOP_AUTH_CALLBACK_BASE_URL: http://api-gateway:8080/auth/oauth/callback
+  VNSHOP_OBJECT_STORAGE_PUBLIC_ENDPOINT: http://minio:9000
+  VNSHOP_USER_STORAGE_PUBLIC_ENDPOINT: http://minio:9000
+  GRPC_CLIENT_INVENTORY_HOST: inventory-service
+  GRPC_CLIENT_INVENTORY_PORT: "9093"
+  GRPC_CLIENT_PAYMENT_HOST: payment-service
+  GRPC_CLIENT_PAYMENT_PORT: "9094"
+  GRPC_CLIENT_SHIPPING_HOST: shipping-service
+  GRPC_CLIENT_SHIPPING_PORT: "9095"
+  MANAGEMENT_OTLP_TRACING_ENDPOINT: http://otel-collector:4318/v1/traces
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://otel-collector:4318/v1/traces
   OTEL_TRACES_SAMPLER: parentbased_traceidratio
   DB_HOST: postgres
   DB_PORT: "5432"
   DB_NAME: vnshop
+  MONGODB_HOST: mongodb
+  ELASTICSEARCH_URL: http://elasticsearch:9200
+  ELASTICSEARCH_HOST: elasticsearch
+  ELASTICSEARCH_PORT: "9200"
+  MINIO_ENDPOINT: http://minio:9000
+  TIMESCALE_HOST: timescaledb
+  TIMESCALE_PORT: "5432"
+  OPENAPI_ENABLED: "false"
+  SWAGGER_ENABLED: "false"
+  VNSHOP_AUTH_COOKIE_SECURE: "true"
+  VNSHOP_AUTH_COOKIE_SAME_SITE: Strict
+  CARRIER_MODE: stub
+  COD_ENABLED: "true"
+  VIETQR_MODE: demo
+  STRIPE_ENABLED: "false"
+  PAYPAL_ENABLED: "false"
+  VNPAY_ENABLED: "false"
+  MOMO_ENABLED: "false"
+  SEPAY_ENABLED: "false"

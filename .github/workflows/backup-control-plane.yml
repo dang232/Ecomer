@@ -1,0 +1,120 @@
+name: VNShop Control Plane Backup
+
+on:
+  schedule:
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: portfolio-control-plane-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Encrypt and retain GitOps recovery material
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ secrets.BACKUP_S3_REGION }}
+      BACKUP_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+      BACKUP_PREFIX: ${{ secrets.BACKUP_S3_PREFIX }}
+      ARCHIVE_KEY: ${{ secrets.BACKUP_ARCHIVE_ENCRYPTION_KEY }}
+    steps:
+      - name: Check out protected production state
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: production
+          fetch-depth: 0
+
+      - name: Validate recovery credentials
+        run: |
+          set -euo pipefail
+          for name in AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION BACKUP_BUCKET BACKUP_PREFIX ARCHIVE_KEY; do
+            [[ -n "${!name}" ]] || { echo "missing required secret: $name" >&2; exit 1; }
+          done
+          [[ "${#ARCHIVE_KEY}" -ge 32 ]]
+
+      - name: Configure cluster access
+        env:
+          KUBECONFIG_BASE64: ${{ secrets.PORTFOLIO_KUBECONFIG_BASE64 }}
+        run: |
+          set -euo pipefail
+          [[ -n "$KUBECONFIG_BASE64" ]]
+          umask 077
+          printf '%s' "$KUBECONFIG_BASE64" | base64 --decode > "$RUNNER_TEMP/kubeconfig"
+          echo "KUBECONFIG=$RUNNER_TEMP/kubeconfig" >> "$GITHUB_ENV"
+
+      - name: Create encrypted recovery archive
+        id: archive
+        run: |
+          set -euo pipefail
+          umask 077
+          work="$RUNNER_TEMP/control-plane"
+          mkdir -p "$work"
+          git fetch origin main production
+          git archive --format=tar origin/main .github/CODEOWNERS .github/workflows infra/k8s infra/gitops infra/release | gzip -9 > "$work/main.tar.gz"
+          git archive --format=tar origin/production .github/CODEOWNERS .github/workflows infra/k8s infra/gitops infra/release | gzip -9 > "$work/production.tar.gz"
+          kubectl -n kube-system get secret \
+            -l sealedsecrets.bitnami.com/sealed-secrets-key \
+            -o json > "$work/sealed-secrets-key.json"
+          jq -e '.items | length >= 1' "$work/sealed-secrets-key.json"
+          tar -C "$work" -czf "$RUNNER_TEMP/control-plane.tar.gz" .
+          openssl enc -aes-256-cbc -pbkdf2 -salt \
+            -in "$RUNNER_TEMP/control-plane.tar.gz" \
+            -out "$RUNNER_TEMP/control-plane.tar.gz.enc" \
+            -pass env:ARCHIVE_KEY
+          sha256sum "$RUNNER_TEMP/control-plane.tar.gz.enc" \
+            | awk '{print $1 "  control-plane.tar.gz.enc"}' > control-plane-backup.sha256
+          stamp="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+          echo "stamp=$stamp" >> "$GITHUB_OUTPUT"
+
+      - name: Upload and enforce 14 daily / 8 weekly retention
+        env:
+          STAMP: ${{ steps.archive.outputs.stamp }}
+        run: |
+          set -euo pipefail
+          prune() {
+            prefix="$1"
+            keep="$2"
+            aws s3api list-objects-v2 --bucket "$BACKUP_BUCKET" --prefix "$prefix/" --delimiter / \
+              --query 'CommonPrefixes[].Prefix' --output text \
+              | tr '\t' '\n' | sort -r | tail -n "+$((keep + 1))" \
+              | while read -r expired; do
+                  [[ -z "$expired" ]] || aws s3 rm "s3://${BACKUP_BUCKET}/${expired}" --recursive --only-show-errors
+                done
+          }
+          daily="${BACKUP_PREFIX}/control-plane/daily/${STAMP}"
+          aws s3 cp "$RUNNER_TEMP/control-plane.tar.gz.enc" \
+            "s3://${BACKUP_BUCKET}/${daily}/control-plane.tar.gz.enc" \
+            --sse AES256 --only-show-errors
+          aws s3 cp control-plane-backup.sha256 \
+            "s3://${BACKUP_BUCKET}/${daily}/control-plane-backup.sha256" \
+            --sse AES256 --only-show-errors
+          if [[ "$(TZ=Asia/Bangkok date +%u)" == "7" ]]; then
+            weekly="${BACKUP_PREFIX}/control-plane/weekly/${STAMP}"
+            aws s3 cp "$RUNNER_TEMP/control-plane.tar.gz.enc" \
+              "s3://${BACKUP_BUCKET}/${weekly}/control-plane.tar.gz.enc" \
+              --sse AES256 --only-show-errors
+            aws s3 cp control-plane-backup.sha256 \
+              "s3://${BACKUP_BUCKET}/${weekly}/control-plane-backup.sha256" \
+              --sse AES256 --only-show-errors
+          fi
+          prune "${BACKUP_PREFIX}/control-plane/daily" 14
+          prune "${BACKUP_PREFIX}/control-plane/weekly" 8
+
+      - name: Upload non-secret evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: control-plane-backup-${{ steps.archive.outputs.stamp }}
+          path: control-plane-backup.sha256
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Remove recovery material from the runner
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/control-plane" "$RUNNER_TEMP/control-plane.tar.gz" "$RUNNER_TEMP/control-plane.tar.gz.enc"

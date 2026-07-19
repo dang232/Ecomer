@@ -1,204 +1,242 @@
-name: VNShop CD
+name: VNShop Release Candidate
 
 on:
   workflow_run:
     workflows: ["VNShop CI"]
     types: [completed]
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      source_commit:
+        description: Full commit SHA already present on protected main
+        required: true
+        type: string
 
 permissions:
   contents: read
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/vnshop
+concurrency:
+  group: release-candidate-${{ github.event.workflow_run.head_sha || inputs.source_commit }}
+  cancel-in-progress: false
 
 jobs:
-  detect-changes:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+  prepare:
+    name: Prepare 19-artifact release
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
-      services: ${{ steps.filter.outputs.changes }}
+      matrix: ${{ steps.catalog.outputs.matrix }}
+      source_commit: ${{ steps.source.outputs.commit }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-          fetch-depth: 2
-
-      - name: Resolve comparison base
-        id: comparison-base
+      - name: Resolve source commit
+        id: source
         env:
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          WORKFLOW_SHA: ${{ github.event.workflow_run.head_sha }}
+          INPUT_SHA: ${{ inputs.source_commit }}
         run: |
-          BASE_SHA=$(git rev-parse "${HEAD_SHA}^1")
-          echo "sha=${BASE_SHA}" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          commit="${WORKFLOW_SHA:-$INPUT_SHA}"
+          [[ "$commit" =~ ^[0-9a-f]{40}$ ]]
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
 
-      - uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
-        id: filter
+      - name: Check out source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          base: ${{ steps.comparison-base.outputs.sha }}
-          ref: ${{ github.event.workflow_run.head_sha }}
-          filters: |
-            api-gateway:
-              - 'services/api-gateway/**'
-            cart-service:
-              - 'services/cart-service/**'
-            configuration-service:
-              - 'services/configuration-service/**'
-            coupon-service:
-              - 'services/coupon-service/**'
-            inventory-service:
-              - 'services/inventory-service/**'
-            invoice-service:
-              - 'services/invoice-service/**'
-            messaging-service:
-              - 'services/messaging-service/**'
-            monitoring-service-v2:
-              - 'services/monitoring-service-v2/**'
-            notification-service:
-              - 'services/notification-service/**'
-            order-service:
-              - 'services/order-service/**'
-            payment-service:
-              - 'services/payment-service/**'
-            product-service:
-              - 'services/product-service/**'
-            recommendations-service:
-              - 'services/recommendations-service/**'
-            search-service:
-              - 'services/search-service/**'
-            seller-finance-service:
-              - 'services/seller-finance-service/**'
-            shipping-service:
-              - 'services/shipping-service/**'
-            user-service:
-              - 'services/user-service/**'
-            video-moderator:
-              - 'services/video-moderator/**'
-            video-transcoder:
-              - 'services/video-transcoder/**'
+          ref: ${{ steps.source.outputs.commit }}
+          fetch-depth: 0
 
-  build-push:
-    needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.services != '[]' }}
+      - name: Require source commit to belong to protected main
+        env:
+          SOURCE_COMMIT: ${{ steps.source.outputs.commit }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor "$SOURCE_COMMIT" origin/main
+
+      - name: Read checked artifact catalog
+        id: catalog
+        run: echo "matrix=$(jq -c '[.deployables[] | {id, source, image}]' infra/deployables.json)" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build and attest (${{ matrix.artifact.id }})
+    needs: prepare
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     strategy:
+      fail-fast: false
+      max-parallel: 6
       matrix:
-        service: ${{ fromJson(needs.detect-changes.outputs.services) }}
+        artifact: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     permissions:
       contents: read
       packages: write
+      id-token: write
+      attestations: write
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Check out immutable source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.prepare.outputs.source_commit }}
 
       - name: Log in to GHCR
         uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
-        with:
-          images: ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}
-          tags: |
-            type=sha,prefix=sha-,format=short
-            type=raw,value=latest
-            type=raw,value=v{{date 'YYYY-MM-DD'}}
-
-      - name: Build and push
+      - name: Build once, push SBOM and provenance
+        id: image
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
-          context: ./services/${{ matrix.service }}
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          context: ${{ matrix.artifact.source }}
+          file: ${{ matrix.artifact.source }}/Dockerfile
           platforms: linux/amd64
+          push: true
+          tags: ${{ matrix.artifact.image }}:sha-${{ needs.prepare.outputs.source_commit }}
+          sbom: true
+          provenance: mode=max
+          cache-from: type=gha,scope=${{ matrix.artifact.id }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.artifact.id }}
 
-  update-manifests:
-    needs: [detect-changes, build-push]
+      - name: Verify pushed immutable index and attestations
+        env:
+          IMAGE: ${{ matrix.artifact.image }}
+          DIGEST: ${{ steps.image.outputs.digest }}
+        run: |
+          set -euo pipefail
+          manifest="$(docker buildx imagetools inspect "$IMAGE@$DIGEST" --format '{{json .Manifest}}')"
+          jq -e --arg digest "$DIGEST" '.digest == $digest' <<<"$manifest"
+          jq -e '[.manifests[]? | select(.platform.architecture == "unknown")] | length >= 1' <<<"$manifest"
+
+      - name: Generate GitHub build provenance
+        id: attestation
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        with:
+          subject-name: ${{ matrix.artifact.image }}
+          subject-digest: ${{ steps.image.outputs.digest }}
+          push-to-registry: true
+          create-storage-record: false
+
+      - name: Verify signed provenance identity
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE: ${{ matrix.artifact.image }}
+          DIGEST: ${{ steps.image.outputs.digest }}
+          SOURCE_COMMIT: ${{ needs.prepare.outputs.source_commit }}
+        run: |
+          set -euo pipefail
+          mkdir -p attestation-evidence
+          gh attestation verify "oci://$IMAGE@$DIGEST" \
+            --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/cd.yml" \
+            --source-digest "$SOURCE_COMMIT" \
+            --deny-self-hosted-runners \
+            --format json > "attestation-evidence/${{ matrix.artifact.id }}.json"
+          jq -e 'length >= 1' "attestation-evidence/${{ matrix.artifact.id }}.json"
+
+      - name: Record release identity
+        env:
+          ARTIFACT_ID: ${{ matrix.artifact.id }}
+          IMAGE: ${{ matrix.artifact.image }}
+          DIGEST: ${{ steps.image.outputs.digest }}
+          ATTESTATION_URL: ${{ steps.attestation.outputs.attestation-url }}
+        run: |
+          mkdir -p release-parts
+          jq -n \
+            --arg id "$ARTIFACT_ID" \
+            --arg image "$IMAGE" \
+            --arg digest "$DIGEST" \
+            --arg sbom "oci://$IMAGE@$DIGEST#sbom" \
+            --arg provenance "$ATTESTATION_URL" \
+            '{id:$id,image:$image,digest:$digest,sbom:$sbom,provenance:$provenance,provenanceVerified:true}' \
+            > "release-parts/$ARTIFACT_ID.json"
+
+      - name: Upload artifact identity
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-part-${{ matrix.artifact.id }}
+          path: release-parts/${{ matrix.artifact.id }}.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload provenance verification
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: attestation-verification-${{ matrix.artifact.id }}
+          path: attestation-evidence/${{ matrix.artifact.id }}.json
+          if-no-files-found: error
+          retention-days: 90
+
+  desired-state-pr:
+    name: Open staging desired-state PR
+    needs: [prepare, build]
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: write
+      pull-requests: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ secrets.RELEASE_BOT_TOKEN }}
+      SOURCE_COMMIT: ${{ needs.prepare.outputs.source_commit }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Check out protected main source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ env.SOURCE_COMMIT }}
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_BOT_TOKEN }}
 
-      - name: Update staging kustomization image tags
+      - name: Download all 19 identity fragments
+        run: gh run download "$GITHUB_RUN_ID" --pattern 'release-part-*' --dir release-parts
+
+      - name: Build complete staging lock
         run: |
-          SHA_SHORT=$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-7)
-          SERVICES='${{ needs.detect-changes.outputs.services }}'
-          MANIFEST=infra/k8s/overlays/staging/kustomization.yaml
+          set -euo pipefail
+          mapfile -t fragments < <(find release-parts -type f -name '*.json' | sort)
+          [[ "${#fragments[@]}" -eq 19 ]]
+          mkdir -p infra/release/locks
+          jq -s \
+            --arg sourceCommit "$SOURCE_COMMIT" \
+            --arg createdAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{schemaVersion:"1.0",sourceCommit:$sourceCommit,createdAt:$createdAt,artifacts:(sort_by(.id))}' \
+            "${fragments[@]}" > infra/release/locks/staging.json
 
-          for SERVICE in $(echo "$SERVICES" | jq -r '.[]'); do
-            BASE_IMAGE="vnshop/${SERVICE}"
-
-            # The base workload uses vnshop/<service>; the overlay maps that
-            # stable name to the GHCR image and owns the deployment tag.
-            if ! grep -Fqx -- "- name: ${BASE_IMAGE}" "$MANIFEST"; then
-              echo "::notice::Skipping ${SERVICE}: no staging workload mapping"
-              continue
-            fi
-
-            awk -v image="$BASE_IMAGE" -v tag="sha-${SHA_SHORT}" '
-              $0 == "- name: " image { in_image=1; print; next }
-              in_image && $1 == "newTag:" { print "  newTag: " tag; in_image=0; next }
-              { print }
-            ' "$MANIFEST" > "${MANIFEST}.tmp"
-            mv "${MANIFEST}.tmp" "$MANIFEST"
-          done
-
-      - name: Validate staging manifests
-        run: kubectl kustomize infra/k8s/overlays/staging >/dev/null
-
-      - name: Commit manifest updates
+      - name: Render immutable desired state
         run: |
-          git config user.name "github-actions[bot]"
+          python -m pip install --disable-pip-version-check PyYAML==6.0.3
+          python infra/k8s/generate.py
+          python infra/scripts/validate-k8s-release.py --environment staging
+
+      - name: Commit release evidence on a review branch
+        id: branch
+        run: |
+          set -euo pipefail
+          branch="release/staging-${SOURCE_COMMIT:0:12}"
+          git switch -c "$branch"
+          git config user.name "vnshop-release[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add infra/k8s/overlays/staging/
-          git diff --staged --quiet || git commit -m "ci: update staging image tags to sha-$(echo ${{ github.event.workflow_run.head_sha }} | cut -c1-7)"
-          git push
+          git add infra/release/locks/staging.json infra/k8s/
+          git commit -m "release: stage ${SOURCE_COMMIT:0:12} with 19 digests"
+          git push --force-with-lease origin "HEAD:$branch"
+          echo "name=$branch" >> "$GITHUB_OUTPUT"
 
-  smoke-test:
-    needs: [update-manifests]
-    runs-on: ubuntu-latest
-    if: success()
-    steps:
-      - name: Wait for rollout
+      - name: Open protected-main pull request
+        env:
+          BRANCH: ${{ steps.branch.outputs.name }}
         run: |
-          echo "Waiting 60s for staging deployment to stabilize..."
-          sleep 60
-
-      - name: Health check gateway
-        run: |
-          GATEWAY_URL="${{ vars.STAGING_GATEWAY_URL || 'http://staging.vnshop.vn' }}"
-          echo "Checking $GATEWAY_URL..."
-
-          # Gateway health
-          curl -sf "${GATEWAY_URL}/actuator/health" --max-time 10 || exit 1
-          echo "✓ Gateway healthy"
-
-          # Products endpoint
-          curl -sf "${GATEWAY_URL}/products?size=1" --max-time 10 | jq -e '.success == true' || exit 1
-          echo "✓ Products responding"
-
-          # Search endpoint
-          curl -sf "${GATEWAY_URL}/search?q=test" --max-time 10 | jq -e '.success == true' || exit 1
-          echo "✓ Search responding"
-
-          echo "All smoke tests passed ✓"
-
-      - name: Notify on failure
-        if: failure()
-        run: |
-          curl -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
-            -H 'Content-Type: application/json' \
-            -d '{"text":"⚠️ Staging smoke tests FAILED after deploy. Check CD workflow."}' || true
+          existing="$(gh pr list --head "$BRANCH" --base main --json url --jq '.[0].url // empty')"
+          if [[ -n "$existing" ]]; then
+            echo "$existing"
+          else
+            gh pr create \
+              --base main \
+              --head "$BRANCH" \
+              --title "release: stage ${SOURCE_COMMIT:0:12}" \
+              --body "Build-once release candidate for $SOURCE_COMMIT. Contains exactly 19 immutable image digests with OCI SBOM/provenance references. Merge only after required CI, CodeQL, Deployable, and review gates pass."
+          fi

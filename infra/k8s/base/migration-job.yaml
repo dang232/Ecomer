@@ -1,0 +1,229 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vnshop-migrations
+  annotations: {argocd.argoproj.io/sync-wave: "-20"}
+automountServiceAccountToken: false
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vnshop-database-principals
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/sync-wave: "-10"
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+spec:
+  backoffLimit: 6
+  activeDeadlineSeconds: 900
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: vnshop-database-principals, app.kubernetes.io/part-of: vnshop}
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: vnshop-migrations
+      automountServiceAccountToken: false
+      securityContext: {runAsNonRoot: true, runAsUser: 999, runAsGroup: 999, fsGroup: 999, seccompProfile: {type: RuntimeDefault}}
+      containers:
+      - name: migrate
+        image: postgres@sha256:2a0d0fe14825b0939f78a8cad5cd4e6aa68bf94d0e5dd96e24b6d23af4315545
+        command: [sh, -ec]
+        args:
+        - |
+          create_role_and_schema() {
+            role="$1"
+            password="$2"
+            schema="$3"
+            psql -v ON_ERROR_STOP=1 -v role="$role" -v password="$password" -v schema="$schema" <<'SQL'
+          SELECT format('CREATE ROLE %I LOGIN PASSWORD %L', :'role', :'password')
+          WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'role') \gexec
+          SELECT format('ALTER ROLE %I PASSWORD %L', :'role', :'password') \gexec
+          SELECT format('CREATE SCHEMA IF NOT EXISTS %I AUTHORIZATION %I', :'schema', :'role') \gexec
+          SELECT format('GRANT ALL ON SCHEMA %I TO %I', :'schema', :'role') \gexec
+          SQL
+          }
+          own_schema_objects() {
+            role="$1"
+            schema="$2"
+            psql -v ON_ERROR_STOP=1 -v role="$role" -v schema="$schema" <<'SQL'
+          SELECT format('ALTER TABLE %I.%I OWNER TO %I', schemaname, tablename, :'role')
+          FROM pg_tables WHERE schemaname = :'schema' \gexec
+          SELECT format('ALTER SEQUENCE %I.%I OWNER TO %I', sequence_schema, sequence_name, :'role')
+          FROM information_schema.sequences WHERE sequence_schema = :'schema' \gexec
+          SELECT format('GRANT ALL ON ALL TABLES IN SCHEMA %I TO %I', :'schema', :'role') \gexec
+          SELECT format('GRANT ALL ON ALL SEQUENCES IN SCHEMA %I TO %I', :'schema', :'role') \gexec
+          SQL
+          }
+          create_role_and_schema "${CART_SERVICE_DB_USERNAME}" "${CART_SERVICE_DB_PASSWORD}" "cart_svc"
+          create_role_and_schema "${INVENTORY_SERVICE_DB_USERNAME}" "${INVENTORY_SERVICE_DB_PASSWORD}" "inventory_svc"
+          create_role_and_schema "${INVOICE_SERVICE_DB_USERNAME}" "${INVOICE_SERVICE_DB_PASSWORD}" "invoice_svc"
+          create_role_and_schema "${MESSAGING_SERVICE_DB_USERNAME}" "${MESSAGING_SERVICE_DB_PASSWORD}" "messaging_svc"
+          create_role_and_schema "${ORDER_SERVICE_DB_USERNAME}" "${ORDER_SERVICE_DB_PASSWORD}" "order_svc"
+          create_role_and_schema "${PAYMENT_SERVICE_DB_USERNAME}" "${PAYMENT_SERVICE_DB_PASSWORD}" "payment_svc"
+          create_role_and_schema "${PRODUCT_SERVICE_DB_USERNAME}" "${PRODUCT_SERVICE_DB_PASSWORD}" "product_svc"
+          create_role_and_schema "${RECOMMENDATIONS_SERVICE_DB_USERNAME}" "${RECOMMENDATIONS_SERVICE_DB_PASSWORD}" "recommendations_svc"
+          create_role_and_schema "${SEARCH_SERVICE_DB_USERNAME}" "${SEARCH_SERVICE_DB_PASSWORD}" "search_svc"
+          create_role_and_schema "${SELLER_FINANCE_SERVICE_DB_USERNAME}" "${SELLER_FINANCE_SERVICE_DB_PASSWORD}" "seller_finance_svc"
+          create_role_and_schema "${SHIPPING_SERVICE_DB_USERNAME}" "${SHIPPING_SERVICE_DB_PASSWORD}" "shipping_svc"
+          create_role_and_schema "${USER_SERVICE_DB_USERNAME}" "${USER_SERVICE_DB_PASSWORD}" "user_svc"
+          create_role_and_schema "${VIDEO_MODERATOR_DB_USERNAME}" "${VIDEO_MODERATOR_DB_PASSWORD}" "video_moderator_svc"
+          create_role_and_schema "${VIDEO_TRANSCODER_DB_USERNAME}" "${VIDEO_TRANSCODER_DB_PASSWORD}" "video_transcoder_svc"
+          create_role_and_schema "$KEYCLOAK_DB_USERNAME" "$KEYCLOAK_DB_PASSWORD" "keycloak"
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE TABLE IF NOT EXISTS cart_svc.carts (
+            user_id VARCHAR(255) PRIMARY KEY,
+            items JSONB NOT NULL DEFAULT '{"userId":"","items":[],"updatedAt":"1970-01-01T00:00:00.000Z"}',
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            version INTEGER NOT NULL DEFAULT 1
+          );
+
+          CREATE SCHEMA IF NOT EXISTS messaging_svc;
+
+          -- Direct buyer-seller threads. Optionally scoped to a product so the same
+          -- buyer/seller pair can spin up separate threads per product (Shopee/Lazada
+          -- pattern). product_id is NULL for "general shop chat" threads.
+          CREATE TABLE IF NOT EXISTS messaging_svc.threads (
+            id UUID PRIMARY KEY,
+            buyer_id VARCHAR(64) NOT NULL,
+            seller_id VARCHAR(64) NOT NULL,
+            product_id VARCHAR(64) NULL,
+            last_message_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            buyer_last_read_at TIMESTAMPTZ NULL,
+            seller_last_read_at TIMESTAMPTZ NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          );
+
+          -- Idempotency for "open chat from product page" — POST /threads with the same
+          -- (recipient, product) returns the existing row instead of creating a duplicate.
+          -- COALESCE so the partial-uniqueness applies to NULL product_id too.
+          CREATE UNIQUE INDEX IF NOT EXISTS ux_threads_buyer_seller_product
+            ON messaging_svc.threads (buyer_id, seller_id, COALESCE(product_id, ''));
+
+          CREATE INDEX IF NOT EXISTS idx_threads_buyer_last_msg
+            ON messaging_svc.threads (buyer_id, last_message_at DESC);
+          CREATE INDEX IF NOT EXISTS idx_threads_seller_last_msg
+            ON messaging_svc.threads (seller_id, last_message_at DESC);
+
+          CREATE TABLE IF NOT EXISTS messaging_svc.messages (
+            id UUID PRIMARY KEY,
+            thread_id UUID NOT NULL REFERENCES messaging_svc.threads(id) ON DELETE CASCADE,
+            sender_id VARCHAR(64) NOT NULL,
+            body TEXT NOT NULL,
+            sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          );
+
+          -- Drives both thread-detail pagination ("messages newest first") and the
+          -- last-message preview the thread list shows.
+          CREATE INDEX IF NOT EXISTS idx_messages_thread_sent_at
+            ON messaging_svc.messages (thread_id, sent_at DESC);
+          SQL
+          own_schema_objects "${CART_SERVICE_DB_USERNAME}" "cart_svc"
+          own_schema_objects "${MESSAGING_SERVICE_DB_USERNAME}" "messaging_svc"
+        env:
+        - {name: PGHOST, value: postgres}
+        - {name: PGPORT, value: "5432"}
+        - {name: PGDATABASE, value: vnshop}
+        - name: PGUSER
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: platform-postgres-admin-username}
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: platform-postgres-admin-password}
+        - name: CART_SERVICE_DB_USERNAME
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: cart-service-db-username}
+        - name: CART_SERVICE_DB_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: cart-service-db-password}
+        - name: INVENTORY_SERVICE_DB_USERNAME
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: inventory-service-db-username}
+        - name: INVENTORY_SERVICE_DB_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: inventory-service-db-password}
+        - name: INVOICE_SERVICE_DB_USERNAME
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: invoice-service-db-username}
+        - name: INVOICE_SERVICE_DB_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: invoice-service-db-password}
+        - name: MESSAGING_SERVICE_DB_USERNAME
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: messaging-service-db-username}
+        - name: MESSAGING_SERVICE_DB_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: messaging-service-db-password}
+        - name: ORDER_SERVICE_DB_USERNAME
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: order-service-db-username}
+        - name: ORDER_SERVICE_DB_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: order-service-db-password}
+        - name: PAYMENT_SERVICE_DB_USERNAME
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: payment-service-db-username}
+        - name: PAYMENT_SERVICE_DB_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: payment-service-db-password}
+        - name: PRODUCT_SERVICE_DB_USERNAME
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: product-service-db-username}
+        - name: PRODUCT_SERVICE_DB_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: product-service-db-password}
+        - name: RECOMMENDATIONS_SERVICE_DB_USERNAME
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: recommendations-service-db-username}
+        - name: RECOMMENDATIONS_SERVICE_DB_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: recommendations-service-db-password}
+        - name: SEARCH_SERVICE_DB_USERNAME
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: search-service-db-username}
+        - name: SEARCH_SERVICE_DB_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: search-service-db-password}
+        - name: SELLER_FINANCE_SERVICE_DB_USERNAME
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: seller-finance-service-db-username}
+        - name: SELLER_FINANCE_SERVICE_DB_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: seller-finance-service-db-password}
+        - name: SHIPPING_SERVICE_DB_USERNAME
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: shipping-service-db-username}
+        - name: SHIPPING_SERVICE_DB_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: shipping-service-db-password}
+        - name: USER_SERVICE_DB_USERNAME
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: user-service-db-username}
+        - name: USER_SERVICE_DB_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: user-service-db-password}
+        - name: VIDEO_MODERATOR_DB_USERNAME
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: video-moderator-db-username}
+        - name: VIDEO_MODERATOR_DB_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: video-moderator-db-password}
+        - name: VIDEO_TRANSCODER_DB_USERNAME
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: video-transcoder-db-username}
+        - name: VIDEO_TRANSCODER_DB_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: video-transcoder-db-password}
+        - name: KEYCLOAK_DB_USERNAME
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: keycloak-db-username}
+        - name: KEYCLOAK_DB_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: keycloak-db-password}
+        resources:
+          requests: {cpu: 25m, memory: 64Mi}
+          limits: {cpu: 250m, memory: 256Mi}
+        securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+        volumeMounts: [{name: tmp, mountPath: /tmp}]
+      volumes:
+      - name: tmp
+        emptyDir: {}

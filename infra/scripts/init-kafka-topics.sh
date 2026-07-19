@@ -8,7 +8,7 @@ ADMIN_CONFIG="/tmp/admin.properties"
 cat > $ADMIN_CONFIG <<EOF
 security.protocol=SASL_PLAINTEXT
 sasl.mechanism=PLAIN
-sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="admin" password="${KAFKA_ADMIN_PASSWORD:-admin-secret-change-me}";
+sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="admin" password="${KAFKA_ADMIN_PASSWORD:?KAFKA_ADMIN_PASSWORD is required}";
 EOF
 
 echo "Waiting for Kafka to be ready..."
@@ -140,8 +140,8 @@ $ACL --add --allow-principal User:svc-invoice --operation Read --group invoice-s
 $ACL --add --allow-principal User:svc-order --operation Read --topic notification.events
 $ACL --add --allow-principal User:svc-order --operation Write --topic notification.events
 
-# notification-service uses the svc-order principal in local Compose and consumes
-# each topic declared by KafkaEventConsumer. Nest appends "-server" to its group.
+# notification-service consumes each topic declared by KafkaEventConsumer.
+# Nest appends "-server" to its group.
 NOTIFICATION_CONSUMER_TOPICS=(
   "order.created"
   "order.cancelled"
@@ -160,9 +160,14 @@ NOTIFICATION_CONSUMER_TOPICS=(
   "video.rejected"
 )
 for topic in "${NOTIFICATION_CONSUMER_TOPICS[@]}"; do
-  $ACL --add --allow-principal User:svc-order --operation Read --topic "$topic"
+  $ACL --add --allow-principal User:svc-notification --operation Read --topic "$topic"
 done
-$ACL --add --allow-principal User:svc-order --operation Read --group notification-service --resource-pattern-type prefixed
+$ACL --add --allow-principal User:svc-notification --operation Read --group notification-service --resource-pattern-type prefixed
+
+# messaging-service persists and consumes its own fan-out topic.
+$ACL --add --allow-principal User:svc-messaging --operation Write --topic messaging.message.sent
+$ACL --add --allow-principal User:svc-messaging --operation Read --topic messaging.message.sent
+$ACL --add --allow-principal User:svc-messaging --operation Read --group messaging-service --resource-pattern-type prefixed
 
 # order-service: consumes gdpr.*-requested; produces gdpr.export-fragment / gdpr.deletion-completed
 $ACL --add --allow-principal User:svc-order --operation Read --topic gdpr.export-requested
