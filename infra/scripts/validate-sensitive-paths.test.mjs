@@ -24,11 +24,12 @@ test("rejects known leaked paths and non-example environment files", () => {
 });
 
 test("rejects private-key filenames and content markers", () => {
+  const privateKeyMarker = ["-----BEGIN OPENSSH", "PRIVATE KEY-----"].join(" ");
   const files = new Map([
     ["operator-private-key.txt", "redacted"],
     ["deploy/id_rsa", "redacted"],
     ["certs/server.key", "redacted"],
-    ["notes.txt", "-----BEGIN OPENSSH PRIVATE KEY-----\nredacted"]
+    ["notes.txt", `${privateKeyMarker}\nredacted`]
   ]);
   const errors = validateTrackedFiles([...files.keys()], (path) => files.get(path));
 
