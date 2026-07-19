@@ -28,7 +28,7 @@
     "@nestjs/schedule": "^5.0.1",
     "@nestjs/serve-static": "^5.0.1",
     "@nestjs/swagger": "^11.4.6",
-    "@nestjs/typeorm": "^11.0.0",
+    "@nestjs/typeorm": "^11.0.3",
     "@nestjs/websockets": "^11.1.28",
     "axios": "^1.7.9",
     "jsonwebtoken": "^9.0.2",
