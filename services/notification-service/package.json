@@ -35,7 +35,7 @@
     "@opentelemetry/auto-instrumentations-node": "^0.76.0",
     "@opentelemetry/exporter-jaeger": "^2.7.1",
     "@opentelemetry/sdk-node": "^0.218.0",
-    "firebase-admin": "^13.10.0",
+    "firebase-admin": "^14.2.0",
     "handlebars": "^4.7.9",
     "ioredis": "^5.3.2",
     "jwks-rsa": "^3.2.0",
