@@ -11,7 +11,8 @@ RUN apk upgrade --no-cache && apk add --no-cache curl && addgroup -S vnshop && a
 WORKDIR /app
 COPY --from=builder /workspace/dist ./dist
 COPY --from=builder /workspace/package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm ci --omit=dev && npm cache clean --force \
+    && rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 RUN chown -R vnshop:vnshop /app
 USER vnshop
 EXPOSE 8097

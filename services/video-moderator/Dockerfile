@@ -1,34 +1,28 @@
-FROM python:3.11-slim AS base
+FROM cgr.dev/chainguard/wolfi-base:latest@sha256:02dab76bd852a70556b5b2002195c8a5fdab77d323c433bf6642aab080489795 AS base
 
-# Install system dependencies: ffmpeg for frame extraction
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        ffmpeg \
-        libpq-dev \
-        gcc \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk upgrade --no-cache \
+    && apk add --no-cache ffmpeg python-3.11 py3.11-pip
 
 WORKDIR /app
 
-# Install Python dependencies separately for layer caching
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN python3.11 -m venv /app/venv \
+    && /app/venv/bin/pip install --no-cache-dir --upgrade pip setuptools wheel \
+    && /app/venv/bin/pip install --no-cache-dir -r requirements.txt \
+    && /app/venv/bin/pip uninstall --yes pip setuptools wheel \
+    && apk del py3.11-pip
 
-# Copy application source
+ENV PATH="/app/venv/bin:$PATH"
+
 COPY app/ ./app/
 
-# Create tmp directory
-RUN mkdir -p /tmp/video-moderator
-
-# Non-root user for security
-RUN addgroup --system moderator && adduser --system --ingroup moderator moderator
-RUN chown -R moderator:moderator /app /tmp/video-moderator
-USER moderator
+RUN mkdir -p /tmp/video-moderator \
+    && chown -R 65532:65532 /app /tmp/video-moderator
+USER 65532
 
 EXPOSE 8100
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8100/health')" || exit 1
+    CMD python3.11 -c "import urllib.request; urllib.request.urlopen('http://localhost:8100/health')" || exit 1
 
-CMD ["python", "-m", "app.main"]
+CMD ["python3.11", "-m", "app.main"]

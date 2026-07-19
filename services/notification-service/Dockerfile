@@ -12,6 +12,7 @@ WORKDIR /app
 COPY --from=builder /workspace/node_modules ./node_modules
 COPY --from=builder /workspace/dist ./dist
 COPY package*.json ./
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 RUN chown -R vnshop:vnshop /app
 USER vnshop
 EXPOSE 8087
