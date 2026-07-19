@@ -1,0 +1,3 @@
+# Exceptions must include an affected path or PURL, an owner/ticket statement,
+# and an expiration no more than 30 days from the change. CI enforces this.
+vulnerabilities: []

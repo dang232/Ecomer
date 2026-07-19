@@ -285,7 +285,7 @@ If you see 503s on either suite, Spring Cloud Gateway's Resilience4j breaker has
 8085 keycloak
 8086 search-service
 8087 notification-service
-8088 coupon-service          (profile: legacy)
+8088 coupon-service          (archived local migration source; never deployed)
 8090 seller-finance-service
 8091 order-service
 8092 payment-service
@@ -328,9 +328,8 @@ docker compose --profile apps down
 | cart-service | 8084 | NestJS | apps | Redis cart snapshots, buyer cart operations |
 | search-service | 8086 | Spring Boot | apps | Elasticsearch search index, faceted queries |
 | notification-service | 8087 | NestJS | apps | Kafka-driven email, SMS, push, in-app workflows |
-| coupon-service | 8088 | Spring Boot | legacy | Coupon validate/apply (superseded by order-service in app profile) |
 | seller-finance-service | 8090 | Spring Boot | apps | Seller wallet, payouts, transactions |
-| order-service | 8091 | Spring Boot | apps | Orders, sub-orders, checkout, coupon integration (calls coupon-service), saga orchestration, outbox, finance projections |
+| order-service | 8091 | Spring Boot | apps | Orders, sub-orders, checkout, coupon ownership and atomic redemption, saga orchestration, outbox, finance projections |
 | payment-service | 8092 | Spring Boot | apps | Payment intents, COD + VietQR + SePay live, Stripe + PayPal sandbox-ready (full refund saga), VNPay deferred (see [PAYMENT-ROADMAP.md](docs/PAYMENT-ROADMAP.md)) |
 | shipping-service | 8093 | Spring Boot | apps | Shipment creation, carrier integration, tracking |
 | recommendations-service | 8094 | Spring Boot | apps | Frequently-bought-together via co-purchase aggregator |
@@ -439,7 +438,7 @@ services/
   cart-service/            # NestJS Redis cart (8084)
   search-service/          # Elasticsearch (8086)
   notification-service/   # NestJS email/SMS/push (8087)
-  coupon-service/          # Legacy profile (8088)
+  coupon-service/          # Archived migration source; not a deployable
   seller-finance-service/  # Wallet + payouts (8090)
   order-service/           # Orders, checkout, saga, finance (8091)
   payment-service/         # COD + VietQR live; Stripe + PayPal sandbox (8092)

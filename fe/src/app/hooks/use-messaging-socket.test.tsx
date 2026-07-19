@@ -2,8 +2,12 @@ import { renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const useAuthMock = vi.fn();
+const useAppConfigMock = vi.fn();
 vi.mock("./use-auth", () => ({
   useAuth: () => useAuthMock(),
+}));
+vi.mock("./use-app-config", () => ({
+  useAppConfig: () => useAppConfigMock(),
 }));
 
 import { makeWrapper } from "../test-utils/render-with-query-client";
@@ -40,6 +44,9 @@ const originalWebSocket = globalThis.WebSocket;
 
 beforeEach(() => {
   useAuthMock.mockReturnValue({ ready: true, authenticated: true, token: "jwt-token" });
+  useAppConfigMock.mockReturnValue({
+    websocket: { messagingUri: "wss://api.vnshop.invalid/ws/messaging" },
+  });
   FakeWebSocket.instances.length = 0;
   globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket;
 });
@@ -55,7 +62,7 @@ describe("useMessagingSocket", () => {
     const { unmount } = renderHook(() => useMessagingSocket(), { wrapper: Wrapper });
 
     expect(FakeWebSocket.instances).toHaveLength(1);
-    expect(FakeWebSocket.instances[0].url).toBe("ws://localhost:8080/ws/messaging");
+    expect(FakeWebSocket.instances[0].url).toBe("wss://api.vnshop.invalid/ws/messaging");
     expect(FakeWebSocket.instances[0].url).not.toContain("token=");
     expect(FakeWebSocket.instances[0].protocols).toEqual(["vnshop-auth", "vnshop-jwt.jwt-token"]);
 

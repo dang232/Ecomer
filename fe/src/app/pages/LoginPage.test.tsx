@@ -1,21 +1,17 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const useAuthMock = vi.fn();
 
-vi.mock("../hooks/use-auth", () => ({
-  useAuth: () => useAuthMock(),
-}));
-
+vi.mock("../hooks/use-auth", () => ({ useAuth: () => useAuthMock() }));
 vi.mock("../hooks/use-app-config", () => ({
-  useAppConfig: () => ({ auth: { oauthProviders: [] } }),
+  useAppConfig: () => ({ auth: { oauthProviders: ["google"] } }),
 }));
-
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string, options?: Record<string, unknown>) =>
-      typeof options?.defaultValue === "string" ? options.defaultValue : key,
+    t: (_key: string, options?: Record<string, unknown>) =>
+      typeof options?.defaultValue === "string" ? options.defaultValue : _key,
   }),
 }));
 
@@ -26,85 +22,63 @@ function renderLogin(initialEntry = "/login") {
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/" element={<div data-testid="storefront">Storefront</div>} />
-        <Route path="/admin" element={<div data-testid="admin-console">Admin</div>} />
-        <Route path="/orders" element={<div data-testid="orders">Orders</div>} />
+        <Route path="/admin" element={<div data-testid="admin-console" />} />
       </Routes>
     </MemoryRouter>,
   );
 }
 
-describe("LoginPage post-login routing", () => {
+describe("LoginPage OIDC routing", () => {
+  const login = vi.fn();
+  const beginOAuthLogin = vi.fn();
+
   beforeEach(() => {
-    localStorage.clear();
-    useAuthMock.mockReturnValue({
-      ready: true,
-      authenticated: false,
-      roles: [],
-      loginWithCredentials: vi.fn().mockResolvedValue(["BUYER"]),
-      beginOAuthLogin: vi.fn(),
-    });
-  });
-
-  afterEach(() => {
     vi.clearAllMocks();
-  });
-
-  it("routes an admin to /admin after credentials login with no next URL", async () => {
-    const loginWithCredentials = vi.fn().mockResolvedValue(["ADMIN"]);
     useAuthMock.mockReturnValue({
       ready: true,
       authenticated: false,
       roles: [],
-      loginWithCredentials,
-      beginOAuthLogin: vi.fn(),
+      login,
+      beginOAuthLogin,
     });
-
-    renderLogin();
-    fireEvent.change(screen.getByLabelText(/email or username/i), {
-      target: { value: "admin1" },
-    });
-    fireEvent.change(screen.getByLabelText(/^password$/i), {
-      target: { value: "test" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
-
-    await waitFor(() => expect(screen.getByTestId("admin-console")).toBeInTheDocument());
-    expect(loginWithCredentials).toHaveBeenCalledWith("admin1", "test");
   });
 
-  it("routes a buyer to the storefront after credentials login with no next URL", async () => {
-    renderLogin();
-    fireEvent.change(screen.getByLabelText(/email or username/i), {
-      target: { value: "buyer1" },
-    });
-    fireEvent.change(screen.getByLabelText(/^password$/i), {
-      target: { value: "test" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
-
-    await waitFor(() => expect(screen.getByTestId("storefront")).toBeInTheDocument());
-  });
-
-  it("preserves an explicit safe next URL for an admin", async () => {
-    const loginWithCredentials = vi.fn().mockResolvedValue(["ADMIN"]);
-    useAuthMock.mockReturnValue({
-      ready: true,
-      authenticated: false,
-      roles: [],
-      loginWithCredentials,
-      beginOAuthLogin: vi.fn(),
-    });
-
+  it("starts OIDC with the sanitized requested destination", () => {
     renderLogin("/login?next=%2Forders%3Fstatus%3DSHIPPED");
-    fireEvent.change(screen.getByLabelText(/email or username/i), {
-      target: { value: "admin1" },
-    });
-    fireEvent.change(screen.getByLabelText(/^password$/i), {
-      target: { value: "test" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
 
-    await waitFor(() => expect(screen.getByTestId("orders")).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: /continue to sign in/i }));
+
+    expect(login).toHaveBeenCalledWith("/orders?status=SHIPPED");
+  });
+
+  it("fails a malicious return destination closed to the storefront", () => {
+    renderLogin("/login?next=https%3A%2F%2Fattacker.invalid");
+
+    fireEvent.click(screen.getByRole("button", { name: /continue to sign in/i }));
+
+    expect(login).toHaveBeenCalledWith("/");
+  });
+
+  it("uses Keycloak identity-provider hints only for enabled providers", () => {
+    renderLogin();
+
+    fireEvent.click(screen.getByRole("button", { name: "google" }));
+
+    expect(beginOAuthLogin).toHaveBeenCalledWith("google", "/");
+    expect(screen.getByRole("button", { name: "facebook" })).toBeDisabled();
+  });
+
+  it("redirects an authenticated admin using the existing role contract", () => {
+    useAuthMock.mockReturnValue({
+      ready: true,
+      authenticated: true,
+      roles: ["ADMIN"],
+      login,
+      beginOAuthLogin,
+    });
+
+    renderLogin();
+
+    expect(screen.getByTestId("admin-console")).toBeInTheDocument();
   });
 });

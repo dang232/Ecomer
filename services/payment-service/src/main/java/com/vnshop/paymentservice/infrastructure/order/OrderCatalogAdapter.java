@@ -3,7 +3,7 @@ package com.vnshop.paymentservice.infrastructure.order;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vnshop.paymentservice.application.order.OrderSnapshot;
+import com.vnshop.paymentservice.domain.OrderSnapshot;
 import com.vnshop.paymentservice.domain.port.out.OrderCatalogPort;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;

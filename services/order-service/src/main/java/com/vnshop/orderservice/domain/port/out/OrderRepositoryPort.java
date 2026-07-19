@@ -8,6 +8,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface OrderRepositoryPort {
+    default void lockIdempotencyKey(String idempotencyKey) {
+        // Production adapters override with a transaction-scoped database lock.
+    }
+
     Order save(Order order);
 
     Optional<Order> findById(UUID orderId);

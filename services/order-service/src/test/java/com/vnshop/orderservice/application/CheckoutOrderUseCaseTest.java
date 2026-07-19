@@ -3,7 +3,7 @@ package com.vnshop.orderservice.application;
 import com.vnshop.orderservice.application.CheckoutOrderUseCase.CheckoutLineItem;
 import com.vnshop.orderservice.application.CheckoutOrderUseCase.CheckoutOrderCommand;
 import com.vnshop.orderservice.application.CheckoutOrderUseCase.ProductNotFoundException;
-import com.vnshop.orderservice.application.catalog.CatalogProduct;
+import com.vnshop.orderservice.domain.catalog.CatalogProduct;
 import com.vnshop.orderservice.domain.Address;
 import com.vnshop.orderservice.domain.Money;
 import com.vnshop.orderservice.domain.Order;
@@ -21,6 +21,7 @@ import com.vnshop.orderservice.domain.port.out.CartRepositoryPort;
 import com.vnshop.orderservice.domain.port.out.ShippingRequestPort;
 import com.vnshop.orderservice.application.saga.SagaOrchestrator;
 import com.vnshop.orderservice.application.tax.TaxCalculationService;
+import com.vnshop.orderservice.application.coupon.CouponRedemptionService;
 import com.vnshop.orderservice.domain.port.out.MetricsPort;
 import com.vnshop.orderservice.domain.port.out.OutboxPort;
 import com.vnshop.orderservice.domain.port.out.SagaCompensationPublisherPort;
@@ -37,6 +38,12 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Verifies that {@link CheckoutOrderUseCase} closes the price-tampering hole.
@@ -65,10 +72,43 @@ class CheckoutOrderUseCaseTest {
     private final MetricsPort noopMetrics = new NoopMetrics();
 
     private CheckoutOrderUseCase newUseCase() {
+        return newUseCase(null);
+    }
+
+    private CheckoutOrderUseCase newUseCase(CouponRedemptionService couponRedemptionService) {
         SagaOrchestrator sagaOrchestrator = new SagaOrchestrator(new NoopSagaStateRepository(), new NoopOutboxPort(), new NoopCompensationPublisher(), 1_000);
         TaxCalculationService taxService = new TaxCalculationService((code, date) -> java.util.Optional.of(new java.math.BigDecimal("0.10")));
-        CreateOrderUseCase createOrderUseCase = new CreateOrderUseCase(repository, inventory, payment, shipping, events, tierLookup, cart, noopMetrics, sagaOrchestrator, taxService);
+        CreateOrderUseCase createOrderUseCase = new CreateOrderUseCase(
+                repository, inventory, payment, shipping, events, tierLookup, cart, noopMetrics,
+                sagaOrchestrator, taxService, couponRedemptionService);
         return new CheckoutOrderUseCase(catalog, createOrderUseCase);
+    }
+
+    @Test
+    void placeOrderConsumesCouponOnceAndIdempotentRetryReturnsSameOrder() {
+        catalog.add(new CatalogProduct(
+                "p1", "seller-A", "Product",
+                List.of(new CatalogProduct.Variant("sku-1", new Money(new BigDecimal("200000"), "VND"))),
+                ""));
+        CouponRedemptionService coupons = mock(CouponRedemptionService.class);
+        when(coupons.consume(eq("SAVE10"), any(Money.class), eq("buyer-1"), any(UUID.class)))
+                .thenReturn(new Money(new BigDecimal("20000")));
+        CheckoutOrderUseCase useCase = newUseCase(coupons);
+        CheckoutOrderCommand command = new CheckoutOrderCommand(
+                "buyer-1",
+                new Address("street", "ward", "district", "city"),
+                List.of(new CheckoutLineItem("p1", "sku-1", 1)),
+                "idem-coupon",
+                PaymentMethod.COD,
+                "SAVE10");
+
+        Order first = useCase.checkout(command);
+        Order retry = useCase.checkout(command);
+
+        assertThat(retry.id()).isEqualTo(first.id());
+        assertThat(first.discount().amount()).isEqualByComparingTo("20000");
+        verify(coupons, times(1)).consume(
+                eq("SAVE10"), any(Money.class), eq("buyer-1"), eq(first.id()));
     }
 
     @Test

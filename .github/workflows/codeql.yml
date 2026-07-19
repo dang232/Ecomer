@@ -1,8 +1,12 @@
 name: CodeQL
 
-# Automatic CodeQL scanning is already enabled through repository default setup.
-# Keep this advanced configuration manual-only to avoid conflicting SARIF uploads.
 on:
+  push:
+    branches: [main, production]
+  pull_request:
+    branches: [main, production]
+  schedule:
+    - cron: '23 3 * * 1'
   workflow_dispatch:
 
 permissions:
@@ -32,7 +36,7 @@ jobs:
           - language: python
             build-mode: none
           - language: java-kotlin
-            build-mode: none
+            build-mode: manual
 
     steps:
       - name: Check out repository
@@ -45,6 +49,37 @@ jobs:
           build-mode: ${{ matrix.build-mode }}
           config-file: ./.github/codeql/codeql-config.yml
           dependency-caching: true
+
+      - name: Set up Java
+        if: matrix.language == 'java-kotlin'
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Build active Java services
+        if: matrix.language == 'java-kotlin'
+        shell: bash
+        run: |
+          set -euo pipefail
+          services=(
+            api-gateway
+            inventory-service
+            invoice-service
+            order-service
+            payment-service
+            product-service
+            recommendations-service
+            search-service
+            seller-finance-service
+            shipping-service
+            user-service
+            video-transcoder
+          )
+          for service in "${services[@]}"; do
+            mvn --batch-mode --no-transfer-progress -f "services/$service/pom.xml" -DskipTests package
+          done
 
       - name: Analyze
         uses: github/codeql-action/analyze@7188fc363630916deb702c7fdcf4e481b751f97a # v4.37.1

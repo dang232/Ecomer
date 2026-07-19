@@ -60,7 +60,8 @@ public class OrderController {
                 request.shippingAddress().toDomain(),
                 request.toLineItems(),
                 idempotencyKey,
-                request.paymentMethod()))));
+                request.paymentMethod(),
+                request.couponCode()))));
     }
 
     @PreAuthorize("isAuthenticated()")

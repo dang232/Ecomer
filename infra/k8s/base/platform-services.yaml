@@ -1,0 +1,383 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  annotations: {argocd.argoproj.io/sync-wave: "-15"}
+spec:
+  selector: {app.kubernetes.io/name: postgres}
+  ports: [{name: postgres, port: 5432, targetPort: postgres}]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  annotations: {argocd.argoproj.io/sync-wave: "-15"}
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: postgres}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: postgres, app.kubernetes.io/part-of: vnshop}
+    spec:
+      securityContext: {runAsNonRoot: true, fsGroup: 999, seccompProfile: {type: RuntimeDefault}}
+      containers:
+      - name: postgres
+        image: postgres@sha256:2a0d0fe14825b0939f78a8cad5cd4e6aa68bf94d0e5dd96e24b6d23af4315545
+        ports: [{name: postgres, containerPort: 5432}]
+        env:
+        - {name: POSTGRES_DB, value: vnshop}
+        - name: POSTGRES_USER
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-postgres-admin-username}}
+        - name: POSTGRES_PASSWORD
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-postgres-admin-password}}
+        readinessProbe: {exec: {command: [sh, -ec, "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"]}, periodSeconds: 10}
+        resources:
+          requests: {cpu: 250m, memory: 512Mi}
+          limits: {cpu: "2", memory: 2Gi}
+        securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+        volumeMounts: [{name: data, mountPath: /var/lib/postgresql/data}]
+  volumeClaimTemplates:
+  - metadata: {name: data}
+    spec:
+      accessModes: [ReadWriteOnce]
+      resources: {requests: {storage: 40Gi}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: timescaledb
+  annotations: {argocd.argoproj.io/sync-wave: "-15"}
+spec:
+  selector: {app.kubernetes.io/name: timescaledb}
+  ports: [{name: postgres, port: 5432, targetPort: postgres}]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: timescaledb
+  annotations: {argocd.argoproj.io/sync-wave: "-15"}
+spec:
+  serviceName: timescaledb
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: timescaledb}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: timescaledb, app.kubernetes.io/part-of: vnshop}
+    spec:
+      securityContext: {runAsNonRoot: true, fsGroup: 70, seccompProfile: {type: RuntimeDefault}}
+      containers:
+      - name: timescaledb
+        image: timescale/timescaledb@sha256:61f891691050da6032023c01ea885730eeeba06b7c17b403e7d0b9c49c37dfe9
+        ports: [{name: postgres, containerPort: 5432}]
+        env:
+        - {name: POSTGRES_DB, value: monitoring}
+        - name: POSTGRES_USER
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-timescale-username}}
+        - name: POSTGRES_PASSWORD
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-timescale-password}}
+        resources:
+          requests: {cpu: 100m, memory: 256Mi}
+          limits: {cpu: "1", memory: 1Gi}
+        securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+        volumeMounts: [{name: data, mountPath: /var/lib/postgresql/data}]
+  volumeClaimTemplates:
+  - metadata: {name: data}
+    spec:
+      accessModes: [ReadWriteOnce]
+      resources: {requests: {storage: 20Gi}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  annotations: {argocd.argoproj.io/sync-wave: "-15"}
+spec:
+  selector: {app.kubernetes.io/name: redis}
+  ports: [{name: redis, port: 6379, targetPort: redis}]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  annotations: {argocd.argoproj.io/sync-wave: "-15"}
+spec:
+  serviceName: redis
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: redis}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: redis, app.kubernetes.io/part-of: vnshop}
+    spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 999, fsGroup: 999, seccompProfile: {type: RuntimeDefault}}
+      containers:
+      - name: redis
+        image: redis@sha256:2cc044fc5a07c9b701f8f1255a309ae9ad7856e694ac03513bf3648c01e40763
+        command: [sh, -ec, 'exec redis-server --appendonly yes --requirepass "$REDIS_PASSWORD"']
+        env:
+        - name: REDIS_PASSWORD
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-redis-password}}
+        ports: [{name: redis, containerPort: 6379}]
+        resources:
+          requests: {cpu: 50m, memory: 128Mi}
+          limits: {cpu: 500m, memory: 512Mi}
+        securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+        volumeMounts: [{name: data, mountPath: /data}]
+  volumeClaimTemplates:
+  - metadata: {name: data}
+    spec:
+      accessModes: [ReadWriteOnce]
+      resources: {requests: {storage: 5Gi}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+  annotations: {argocd.argoproj.io/sync-wave: "-15"}
+spec:
+  selector: {app.kubernetes.io/name: mongodb}
+  ports: [{name: mongodb, port: 27017, targetPort: mongodb}]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb
+  annotations: {argocd.argoproj.io/sync-wave: "-15"}
+spec:
+  serviceName: mongodb
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: mongodb}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: mongodb, app.kubernetes.io/part-of: vnshop}
+    spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 999, fsGroup: 999, seccompProfile: {type: RuntimeDefault}}
+      containers:
+      - name: mongodb
+        image: mongo@sha256:340c1c56fb10e95cf79ff547f8664b96bc6ead9909bc355238cbf865a9695a6f
+        ports: [{name: mongodb, containerPort: 27017}]
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-mongo-admin-username}}
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-mongo-admin-password}}
+        resources:
+          requests: {cpu: 100m, memory: 256Mi}
+          limits: {cpu: "1", memory: 1Gi}
+        securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+        volumeMounts: [{name: data, mountPath: /data/db}]
+  volumeClaimTemplates:
+  - metadata: {name: data}
+    spec:
+      accessModes: [ReadWriteOnce]
+      resources: {requests: {storage: 20Gi}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka
+  annotations: {argocd.argoproj.io/sync-wave: "-15"}
+spec:
+  selector: {app.kubernetes.io/name: kafka}
+  ports: [{name: kafka, port: 9092, targetPort: kafka}]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kafka
+  annotations: {argocd.argoproj.io/sync-wave: "-15"}
+spec:
+  serviceName: kafka
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: kafka}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: kafka, app.kubernetes.io/part-of: vnshop}
+    spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 1000, fsGroup: 1000, seccompProfile: {type: RuntimeDefault}}
+      containers:
+      - name: kafka
+        image: confluentinc/cp-kafka@sha256:acbbf674f2ed40e5d0a8ca51beb0f00692c866fc22b5ce06f8cadbdc54cd4436
+        ports: [{name: kafka, containerPort: 9092}]
+        env:
+        - {name: KAFKA_NODE_ID, value: "1"}
+        - {name: KAFKA_PROCESS_ROLES, value: broker,controller}
+        - {name: KAFKA_LISTENERS, value: 'SASL_PLAINTEXT://:9092,CONTROLLER://:9093'}
+        - {name: KAFKA_ADVERTISED_LISTENERS, value: 'SASL_PLAINTEXT://kafka:9092'}
+        - {name: KAFKA_CONTROLLER_LISTENER_NAMES, value: CONTROLLER}
+        - {name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP, value: 'CONTROLLER:PLAINTEXT,SASL_PLAINTEXT:SASL_PLAINTEXT'}
+        - {name: KAFKA_SASL_ENABLED_MECHANISMS, value: PLAIN}
+        - {name: KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL, value: PLAIN}
+        - {name: KAFKA_INTER_BROKER_LISTENER_NAME, value: SASL_PLAINTEXT}
+        - {name: KAFKA_AUTHORIZER_CLASS_NAME, value: org.apache.kafka.metadata.authorizer.StandardAuthorizer}
+        - {name: KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND, value: "false"}
+        - {name: KAFKA_SUPER_USERS, value: 'User:admin'}
+        - {name: KAFKA_OPTS, value: '-Djava.security.auth.login.config=/etc/kafka/secrets/kafka_server_jaas.conf'}
+        - {name: KAFKA_CONTROLLER_QUORUM_VOTERS, value: '1@kafka-0.kafka:9093'}
+        - {name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR, value: "1"}
+        - {name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR, value: "1"}
+        - {name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR, value: "1"}
+        - name: CLUSTER_ID
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-kafka-cluster-id}}
+        resources:
+          requests: {cpu: 250m, memory: 512Mi}
+          limits: {cpu: "2", memory: 2Gi}
+        securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+        volumeMounts:
+        - {name: data, mountPath: /var/lib/kafka/data}
+        - {name: kafka-jaas, mountPath: /etc/kafka/secrets/kafka_server_jaas.conf, subPath: kafka_server_jaas.conf, readOnly: true}
+      volumes:
+      - name: kafka-jaas
+        secret:
+          secretName: vnshop-runtime-secrets
+          items: [{key: kafka-server-jaas, path: kafka_server_jaas.conf}]
+  volumeClaimTemplates:
+  - metadata: {name: data}
+    spec:
+      accessModes: [ReadWriteOnce]
+      resources: {requests: {storage: 30Gi}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+  annotations: {argocd.argoproj.io/sync-wave: "-15"}
+spec:
+  selector: {app.kubernetes.io/name: minio}
+  ports:
+  - {name: api, port: 9000, targetPort: api}
+  - {name: console, port: 9001, targetPort: console}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: minio
+  annotations: {argocd.argoproj.io/sync-wave: "-15"}
+spec:
+  serviceName: minio
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: minio}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: minio, app.kubernetes.io/part-of: vnshop}
+    spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 1000, fsGroup: 1000, seccompProfile: {type: RuntimeDefault}}
+      containers:
+      - name: minio
+        image: minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+        args: [server, /data, --console-address, ':9001']
+        ports:
+        - {name: api, containerPort: 9000}
+        - {name: console, containerPort: 9001}
+        env:
+        - name: MINIO_ROOT_USER
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-minio-root-user}}
+        - name: MINIO_ROOT_PASSWORD
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-minio-root-password}}
+        resources:
+          requests: {cpu: 100m, memory: 256Mi}
+          limits: {cpu: "1", memory: 1Gi}
+        securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+        volumeMounts: [{name: data, mountPath: /data}]
+  volumeClaimTemplates:
+  - metadata: {name: data}
+    spec:
+      accessModes: [ReadWriteOnce]
+      resources: {requests: {storage: 40Gi}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch
+  annotations: {argocd.argoproj.io/sync-wave: "-15"}
+spec:
+  selector: {app.kubernetes.io/name: elasticsearch}
+  ports: [{name: http, port: 9200, targetPort: http}]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: elasticsearch
+  annotations: {argocd.argoproj.io/sync-wave: "-15"}
+spec:
+  serviceName: elasticsearch
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: elasticsearch}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: elasticsearch, app.kubernetes.io/part-of: vnshop}
+    spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 1000, fsGroup: 1000, seccompProfile: {type: RuntimeDefault}}
+      containers:
+      - name: elasticsearch
+        image: docker.elastic.co/elasticsearch/elasticsearch@sha256:754c3d8ca6f74acba58eb0610b8479a13c36df09ac1a4e0f2667dc167d377b84
+        ports: [{name: http, containerPort: 9200}]
+        env:
+        - {name: discovery.type, value: single-node}
+        - {name: xpack.security.enabled, value: "false"}
+        - {name: ES_JAVA_OPTS, value: '-Xms512m -Xmx512m'}
+        resources:
+          requests: {cpu: 250m, memory: 1Gi}
+          limits: {cpu: "2", memory: 2Gi}
+        securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+        volumeMounts: [{name: data, mountPath: /usr/share/elasticsearch/data}]
+  volumeClaimTemplates:
+  - metadata: {name: data}
+    spec:
+      accessModes: [ReadWriteOnce]
+      resources: {requests: {storage: 20Gi}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  annotations: {argocd.argoproj.io/sync-wave: "-15"}
+spec:
+  selector: {app.kubernetes.io/name: keycloak}
+  ports: [{name: http, port: 8080, targetPort: http}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  annotations: {argocd.argoproj.io/sync-wave: "-15"}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: keycloak}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: keycloak, app.kubernetes.io/part-of: vnshop}
+    spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 1000, fsGroup: 1000, seccompProfile: {type: RuntimeDefault}}
+      containers:
+      - name: keycloak
+        image: quay.io/keycloak/keycloak@sha256:0aae0de7fca85525f727d3354df17896092de8bb26ae4c12d89c77e5df8cbce4
+        args: [start, --http-enabled=true, --proxy-headers=xforwarded]
+        ports: [{name: http, containerPort: 8080}]
+        env:
+        - {name: KC_DB, value: postgres}
+        - {name: KC_DB_URL, value: 'jdbc:postgresql://postgres:5432/vnshop'}
+        - {name: KC_DB_SCHEMA, value: keycloak}
+        - name: KC_HOSTNAME
+          valueFrom: {configMapKeyRef: {name: vnshop-app-config, key: AUTH_ORIGIN}}
+        - name: KC_DB_USERNAME
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: keycloak-db-username}}
+        - name: KC_DB_PASSWORD
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: keycloak-db-password}}
+        - name: KC_BOOTSTRAP_ADMIN_USERNAME
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: keycloak-admin-username}}
+        - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: keycloak-admin-password}}
+        readinessProbe: {httpGet: {path: /realms/master, port: http}, periodSeconds: 10, failureThreshold: 12}
+        resources:
+          requests: {cpu: 250m, memory: 512Mi}
+          limits: {cpu: "2", memory: 2Gi}
+        securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}

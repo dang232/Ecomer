@@ -1,6 +1,6 @@
 package com.vnshop.paymentservice.application;
 
-import com.vnshop.paymentservice.application.order.OrderSnapshot;
+import com.vnshop.paymentservice.domain.OrderSnapshot;
 import com.vnshop.paymentservice.domain.JournalEntry;
 import com.vnshop.paymentservice.domain.LedgerEntry;
 import com.vnshop.paymentservice.domain.Payment;

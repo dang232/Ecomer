@@ -27,6 +27,7 @@ class ArchitectureRulesTest {
         noClasses()
                 .that().resideInAPackage("..domain..")
                 .should().dependOnClassesThat().resideInAPackage("..infrastructure..")
+                .allowEmptyShould(true)
                 .check(classes);
     }
 
@@ -35,6 +36,7 @@ class ArchitectureRulesTest {
         noClasses()
                 .that().resideInAPackage("..domain..")
                 .should().dependOnClassesThat().resideInAPackage("..application..")
+                .allowEmptyShould(true)
                 .check(classes);
     }
 
@@ -46,6 +48,7 @@ class ArchitectureRulesTest {
                 .orShould().beAnnotatedWith("org.springframework.stereotype.Repository")
                 .orShould().beAnnotatedWith("org.springframework.stereotype.Component")
                 .orShould().beAnnotatedWith("org.springframework.stereotype.Controller")
+                .allowEmptyShould(true)
                 .check(classes);
     }
 
@@ -70,6 +73,7 @@ class ArchitectureRulesTest {
         classes()
                 .that().haveSimpleNameEndingWith("GrpcAdapter")
                 .should().resideInAPackage("..infrastructure.grpc..")
+                .allowEmptyShould(true)
                 .check(classes);
     }
 

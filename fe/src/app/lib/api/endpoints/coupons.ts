@@ -9,7 +9,7 @@ import {
 import { api } from "../client";
 
 /**
- * Coupon endpoints exposed to buyers (the public-facing slice of coupon-service).
+ * Buyer coupon endpoints owned by order-service.
  * Admin-side CRUD lives in `./admin.ts`. Backend is mid-migration (see FE-PLAN §1
  * issue #5 + §5 churn note); we use loose schemas so server-side renames don't
  * crash the UI.
@@ -32,6 +32,6 @@ export const listActiveCoupons = () =>
 export const validateCouponCode = (body: { code: string; orderAmount?: number }) =>
   api.post("/coupons/validate", validateCouponResponseSchema, body);
 
-/** Apply (consumes one usage). Use during order placement, not preview. */
+/** Quote-only preview. Coupon usage is consumed atomically by order placement. */
 export const applyCoupon = (body: { code: string; orderAmount: number; orderId?: number }) =>
   api.post("/checkout/apply-coupon", applyCouponResponseSchema, body);

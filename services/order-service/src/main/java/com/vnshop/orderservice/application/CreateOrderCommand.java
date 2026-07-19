@@ -11,9 +11,19 @@ public record CreateOrderCommand(
         Address shippingAddress,
         List<OrderItem> items,
         String idempotencyKey,
-        PaymentMethod paymentMethod) {
+        PaymentMethod paymentMethod,
+        String couponCode) {
+
+    public CreateOrderCommand(
+            String buyerId,
+            Address shippingAddress,
+            List<OrderItem> items,
+            String idempotencyKey,
+            PaymentMethod paymentMethod) {
+        this(buyerId, shippingAddress, items, idempotencyKey, paymentMethod, null);
+    }
 
     public CreateOrderCommand(String buyerId, Address shippingAddress, List<OrderItem> items, String idempotencyKey) {
-        this(buyerId, shippingAddress, items, idempotencyKey, PaymentMethod.COD);
+        this(buyerId, shippingAddress, items, idempotencyKey, PaymentMethod.COD, null);
     }
 }

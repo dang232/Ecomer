@@ -18,6 +18,7 @@ import com.vnshop.orderservice.application.saga.SagaOrchestrator;
 import com.vnshop.orderservice.application.tax.TaxCalculationService;
 import com.vnshop.orderservice.application.tax.TaxResult;
 import com.vnshop.orderservice.domain.Money;
+import com.vnshop.orderservice.application.coupon.CouponRedemptionService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +41,7 @@ public class CreateOrderUseCase {
     private final MetricsPort metricsPort;
     private final SagaOrchestrator sagaOrchestrator;
     private final TaxCalculationService taxCalculationService;
+    private final CouponRedemptionService couponRedemptionService;
 
     public CreateOrderUseCase(
             OrderRepositoryPort orderRepository,
@@ -51,7 +53,8 @@ public class CreateOrderUseCase {
             CartRepositoryPort cartRepositoryPort,
             MetricsPort metricsPort,
             SagaOrchestrator sagaOrchestrator,
-            TaxCalculationService taxCalculationService
+            TaxCalculationService taxCalculationService,
+            CouponRedemptionService couponRedemptionService
     ) {
         this.orderRepository = Objects.requireNonNull(orderRepository, "orderRepository is required");
         this.inventoryReservationPort = Objects.requireNonNull(inventoryReservationPort, "inventoryReservationPort is required");
@@ -63,8 +66,26 @@ public class CreateOrderUseCase {
         this.metricsPort = Objects.requireNonNull(metricsPort, "metricsPort is required");
         this.sagaOrchestrator = Objects.requireNonNull(sagaOrchestrator, "sagaOrchestrator is required");
         this.taxCalculationService = Objects.requireNonNull(taxCalculationService, "taxCalculationService is required");
+        this.couponRedemptionService = couponRedemptionService;
     }
 
+    public CreateOrderUseCase(
+            OrderRepositoryPort orderRepository,
+            InventoryReservationPort inventoryReservationPort,
+            PaymentRequestPort paymentRequestPort,
+            ShippingRequestPort shippingRequestPort,
+            OrderEventPublisherPort orderEventPublisherPort,
+            CommissionTierLookupPort commissionTierLookupPort,
+            CartRepositoryPort cartRepositoryPort,
+            MetricsPort metricsPort,
+            SagaOrchestrator sagaOrchestrator,
+            TaxCalculationService taxCalculationService) {
+        this(orderRepository, inventoryReservationPort, paymentRequestPort, shippingRequestPort,
+                orderEventPublisherPort, commissionTierLookupPort, cartRepositoryPort, metricsPort,
+                sagaOrchestrator, taxCalculationService, null);
+    }
+
+    @Transactional
     public Order create(CreateOrderCommand command) {
         requireNonBlank(command.buyerId(), "buyerId");
         requireNonBlank(command.idempotencyKey(), "idempotencyKey");
@@ -73,22 +94,24 @@ public class CreateOrderUseCase {
             throw new IllegalArgumentException("items must not be empty");
         }
 
+        orderRepository.lockIdempotencyKey(command.idempotencyKey());
         return orderRepository.findByIdempotencyKey(command.idempotencyKey())
                 .orElseGet(() -> createNewOrder(
                         command.buyerId(),
                         command.shippingAddress(),
                         command.items(),
                         command.idempotencyKey(),
-                        command.paymentMethod()));
+                        command.paymentMethod(),
+                        command.couponCode()));
     }
 
-    @Transactional
     private Order createNewOrder(
             String buyerId,
             Address shippingAddress,
             List<OrderItem> items,
             String idempotencyKey,
-            PaymentMethod paymentMethod) {
+            PaymentMethod paymentMethod,
+            String couponCode) {
         var timerSample = metricsPort.startTimer();
         List<OrderItem> itemSnapshot = List.copyOf(items);
         List<SubOrder> subOrders = splitBySeller(itemSnapshot);
@@ -99,6 +122,14 @@ public class CreateOrderUseCase {
                 subOrders,
                 paymentMethod == null ? PaymentMethod.COD.name() : paymentMethod.name(),
                 idempotencyKey);
+
+        if (couponCode != null && !couponCode.isBlank()) {
+            if (couponRedemptionService == null) {
+                throw new IllegalStateException("coupon redemption is not configured");
+            }
+            order.applyDiscount(couponRedemptionService.consume(
+                    couponCode, order.itemsTotal(), buyerId, order.id()));
+        }
 
         TaxResult taxResult = taxCalculationService.calculate(itemSnapshot);
         order.applyTax(new Money(taxResult.totalTax()));

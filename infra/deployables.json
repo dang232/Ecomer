@@ -1,0 +1,220 @@
+{
+  "schemaVersion": "1.0",
+  "imagePrefix": "ghcr.io/dang232/vnshop-",
+  "expectedCount": 19,
+  "retiredSources": [
+    "services/coupon-service",
+    "services/review-service"
+  ],
+  "deployables": [
+    {
+      "id": "frontend",
+      "source": "fe",
+      "image": "ghcr.io/dang232/vnshop-frontend",
+      "workload": "vnshop-frontend",
+      "container": "frontend",
+      "runtime": "nginx",
+      "owner": "frontend-auth",
+      "probe": { "readiness": "/healthz", "liveness": "/healthz" },
+      "data": []
+    },
+    {
+      "id": "api-gateway",
+      "source": "services/api-gateway",
+      "image": "ghcr.io/dang232/vnshop-api-gateway",
+      "workload": "vnshop-api-gateway",
+      "container": "api-gateway",
+      "runtime": "spring",
+      "owner": "platform",
+      "probe": { "readiness": "/actuator/health/readiness", "liveness": "/actuator/health/liveness" },
+      "data": [{ "name": "redis", "class": "E" }]
+    },
+    {
+      "id": "cart-service",
+      "source": "services/cart-service",
+      "image": "ghcr.io/dang232/vnshop-cart",
+      "workload": "vnshop-cart",
+      "container": "cart-service",
+      "runtime": "node",
+      "owner": "cart",
+      "probe": { "readiness": "/ready", "liveness": "/health" },
+      "data": [{ "name": "postgresql", "class": "A" }, { "name": "redis", "class": "E" }]
+    },
+    {
+      "id": "configuration-service",
+      "source": "services/configuration-service",
+      "image": "ghcr.io/dang232/vnshop-configuration",
+      "workload": "vnshop-configuration",
+      "container": "configuration-service",
+      "runtime": "node",
+      "owner": "frontend-auth",
+      "probe": { "readiness": "/ready", "liveness": "/health" },
+      "data": [{ "name": "git-or-configmap", "class": "A" }]
+    },
+    {
+      "id": "inventory-service",
+      "source": "services/inventory-service",
+      "image": "ghcr.io/dang232/vnshop-inventory",
+      "workload": "vnshop-inventory",
+      "container": "inventory-service",
+      "runtime": "spring",
+      "owner": "inventory",
+      "probe": { "readiness": "/actuator/health/readiness", "liveness": "/actuator/health/liveness" },
+      "data": [{ "name": "postgresql", "class": "A" }, { "name": "redis", "class": "E" }, { "name": "kafka", "class": "T" }]
+    },
+    {
+      "id": "invoice-service",
+      "source": "services/invoice-service",
+      "image": "ghcr.io/dang232/vnshop-invoice",
+      "workload": "vnshop-invoice",
+      "container": "invoice-service",
+      "runtime": "spring",
+      "owner": "orders",
+      "probe": { "readiness": "/actuator/health/readiness", "liveness": "/actuator/health/liveness" },
+      "data": [{ "name": "postgresql", "class": "A" }, { "name": "kafka", "class": "T" }]
+    },
+    {
+      "id": "messaging-service",
+      "source": "services/messaging-service",
+      "image": "ghcr.io/dang232/vnshop-messaging",
+      "workload": "vnshop-messaging",
+      "container": "messaging-service",
+      "runtime": "node",
+      "owner": "messaging",
+      "probe": { "readiness": "/ready", "liveness": "/health" },
+      "data": [{ "name": "postgresql", "class": "A" }, { "name": "kafka", "class": "T" }]
+    },
+    {
+      "id": "monitoring-service-v2",
+      "source": "services/monitoring-service-v2",
+      "image": "ghcr.io/dang232/vnshop-monitoring",
+      "workload": "vnshop-monitoring",
+      "container": "monitoring-service-v2",
+      "runtime": "node",
+      "owner": "operations",
+      "probe": { "readiness": "/ready", "liveness": "/health" },
+      "data": [{ "name": "timescaledb", "class": "R" }]
+    },
+    {
+      "id": "notification-service",
+      "source": "services/notification-service",
+      "image": "ghcr.io/dang232/vnshop-notification",
+      "workload": "vnshop-notification",
+      "container": "notification-service",
+      "runtime": "node",
+      "owner": "messaging",
+      "probe": { "readiness": "/ready", "liveness": "/health" },
+      "data": [{ "name": "mongodb", "class": "A" }, { "name": "redis", "class": "E" }, { "name": "kafka", "class": "T" }]
+    },
+    {
+      "id": "order-service",
+      "source": "services/order-service",
+      "image": "ghcr.io/dang232/vnshop-order",
+      "workload": "vnshop-order",
+      "container": "order-service",
+      "runtime": "spring",
+      "owner": "orders",
+      "probe": { "readiness": "/actuator/health/readiness", "liveness": "/actuator/health/liveness" },
+      "data": [{ "name": "postgresql", "class": "A" }, { "name": "redis", "class": "E" }, { "name": "kafka", "class": "T" }]
+    },
+    {
+      "id": "payment-service",
+      "source": "services/payment-service",
+      "image": "ghcr.io/dang232/vnshop-payment",
+      "workload": "vnshop-payment",
+      "container": "payment-service",
+      "runtime": "spring",
+      "owner": "payments",
+      "probe": { "readiness": "/actuator/health/readiness", "liveness": "/actuator/health/liveness" },
+      "data": [{ "name": "postgresql", "class": "A" }, { "name": "kafka", "class": "T" }]
+    },
+    {
+      "id": "product-service",
+      "source": "services/product-service",
+      "image": "ghcr.io/dang232/vnshop-product",
+      "workload": "vnshop-product",
+      "container": "product-service",
+      "runtime": "spring",
+      "owner": "catalog",
+      "probe": { "readiness": "/actuator/health/readiness", "liveness": "/actuator/health/liveness" },
+      "data": [{ "name": "postgresql", "class": "A" }, { "name": "redis", "class": "E" }, { "name": "minio", "class": "A" }, { "name": "kafka", "class": "T" }]
+    },
+    {
+      "id": "recommendations-service",
+      "source": "services/recommendations-service",
+      "image": "ghcr.io/dang232/vnshop-recommendations",
+      "workload": "vnshop-recommendations",
+      "container": "recommendations-service",
+      "runtime": "spring",
+      "owner": "catalog",
+      "probe": { "readiness": "/actuator/health/readiness", "liveness": "/actuator/health/liveness" },
+      "data": [{ "name": "postgresql", "class": "A" }, { "name": "kafka", "class": "T" }]
+    },
+    {
+      "id": "search-service",
+      "source": "services/search-service",
+      "image": "ghcr.io/dang232/vnshop-search",
+      "workload": "vnshop-search",
+      "container": "search-service",
+      "runtime": "spring",
+      "owner": "catalog",
+      "probe": { "readiness": "/actuator/health/readiness", "liveness": "/actuator/health/liveness" },
+      "data": [{ "name": "postgresql", "class": "A" }, { "name": "elasticsearch", "class": "R" }, { "name": "kafka", "class": "T" }]
+    },
+    {
+      "id": "seller-finance-service",
+      "source": "services/seller-finance-service",
+      "image": "ghcr.io/dang232/vnshop-seller-finance",
+      "workload": "vnshop-seller-finance",
+      "container": "seller-finance-service",
+      "runtime": "spring",
+      "owner": "finance",
+      "probe": { "readiness": "/actuator/health/readiness", "liveness": "/actuator/health/liveness" },
+      "data": [{ "name": "postgresql", "class": "A" }, { "name": "kafka", "class": "T" }]
+    },
+    {
+      "id": "shipping-service",
+      "source": "services/shipping-service",
+      "image": "ghcr.io/dang232/vnshop-shipping",
+      "workload": "vnshop-shipping",
+      "container": "shipping-service",
+      "runtime": "spring",
+      "owner": "fulfillment",
+      "probe": { "readiness": "/actuator/health/readiness", "liveness": "/actuator/health/liveness" },
+      "data": [{ "name": "postgresql", "class": "A" }, { "name": "kafka", "class": "T" }]
+    },
+    {
+      "id": "user-service",
+      "source": "services/user-service",
+      "image": "ghcr.io/dang232/vnshop-user",
+      "workload": "vnshop-user",
+      "container": "user-service",
+      "runtime": "spring",
+      "owner": "identity",
+      "probe": { "readiness": "/actuator/health/readiness", "liveness": "/actuator/health/liveness" },
+      "data": [{ "name": "postgresql", "class": "A" }, { "name": "redis", "class": "E" }, { "name": "minio", "class": "A" }, { "name": "kafka", "class": "T" }]
+    },
+    {
+      "id": "video-moderator",
+      "source": "services/video-moderator",
+      "image": "ghcr.io/dang232/vnshop-video-moderator",
+      "workload": "vnshop-video-moderator",
+      "container": "video-moderator",
+      "runtime": "python",
+      "owner": "video",
+      "probe": { "readiness": "/ready", "liveness": "/health" },
+      "data": [{ "name": "postgresql", "class": "A" }, { "name": "minio", "class": "A" }, { "name": "kafka", "class": "T" }]
+    },
+    {
+      "id": "video-transcoder",
+      "source": "services/video-transcoder",
+      "image": "ghcr.io/dang232/vnshop-video-transcoder",
+      "workload": "vnshop-video-transcoder",
+      "container": "video-transcoder",
+      "runtime": "spring",
+      "owner": "video",
+      "probe": { "readiness": "/actuator/health/readiness", "liveness": "/actuator/health/liveness" },
+      "data": [{ "name": "postgresql", "class": "A" }, { "name": "minio", "class": "A" }, { "name": "kafka", "class": "T" }]
+    }
+  ]
+}

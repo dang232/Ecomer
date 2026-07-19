@@ -43,8 +43,15 @@ class OrderServiceIntegrationTest {
     void flywayMigrationsApplied() throws Exception {
         try (Connection conn = dataSource.getConnection()) {
             var meta = conn.getMetaData();
-            var rs = meta.getTables(null, null, "orders", null);
-            assertThat(rs.next()).isTrue();
+            try (var tables = meta.getTables(null, "order_svc", "orders", null);
+                 var auditLog = meta.getTables(null, "order_svc", "audit_log", null);
+                 var invoiceCreatedAt = meta.getColumns(null, "order_svc", "invoices", "created_at");
+                 var invoiceUpdatedAt = meta.getColumns(null, "order_svc", "invoices", "updated_at")) {
+                assertThat(tables.next()).isTrue();
+                assertThat(auditLog.next()).isTrue();
+                assertThat(invoiceCreatedAt.next()).isTrue();
+                assertThat(invoiceUpdatedAt.next()).isTrue();
+            }
         }
     }
 

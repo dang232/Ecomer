@@ -1,6 +1,6 @@
 package com.vnshop.paymentservice.domain.port.out;
 
-import com.vnshop.paymentservice.application.webhook.WebhookDeadLetterRecord;
+import com.vnshop.paymentservice.domain.WebhookDeadLetterRecord;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 

@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 
 import { messageSchema, type ChatMessage, type MessagesPage } from "../lib/api/endpoints/messaging";
 
+import { useAppConfig } from "./use-app-config";
 import { useAuth } from "./use-auth";
 import { messagesKey } from "./use-messages";
 import { THREADS_KEY } from "./use-threads";
@@ -17,15 +18,6 @@ interface ServerEnvelope {
     sentAt?: string;
   } & Record<string, unknown>;
 }
-
-const BASE_WS_URL = (() => {
-  const apiUrl = (
-    (import.meta.env as Record<string, string | undefined>).VITE_API_URL ?? "http://localhost:8080"
-  ).replace(/\/$/, "");
-  return apiUrl.replace(/^http/, "ws");
-})();
-
-const WS_PATH = "/ws/messaging";
 
 const RECONNECT_BASE_MS = 1000;
 const RECONNECT_CAP_MS = 30_000;
@@ -44,6 +36,7 @@ const RECONNECT_CAP_MS = 30_000;
  */
 export function useMessagingSocket(): void {
   const { ready, authenticated, token } = useAuth();
+  const config = useAppConfig();
   const qc = useQueryClient();
   const socketRef = useRef<WebSocket | null>(null);
   const attemptRef = useRef(0);
@@ -68,7 +61,7 @@ export function useMessagingSocket(): void {
 
     const connect = () => {
       if (!isCurrent()) return;
-      const socket = new WebSocket(`${BASE_WS_URL}${WS_PATH}`, [
+      const socket = new WebSocket(config.websocket.messagingUri, [
         "vnshop-auth",
         `vnshop-jwt.${token}`,
       ]);
@@ -166,7 +159,7 @@ export function useMessagingSocket(): void {
         }
       }
     };
-  }, [ready, authenticated, token, qc]);
+  }, [ready, authenticated, token, qc, config.websocket.messagingUri]);
 }
 
 function appendIfNew(qc: ReturnType<typeof useQueryClient>, message: ChatMessage): void {

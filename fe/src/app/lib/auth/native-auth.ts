@@ -26,12 +26,7 @@
  * cookie (same-origin policy) and therefore cannot forge the header.
  */
 
-const env = import.meta.env as Record<string, string | undefined>;
-const API_URL = env.VITE_API_URL ?? "http://localhost:8080";
-
-const LOGIN_ENDPOINT = `${API_URL}/auth/login`;
-const REFRESH_ENDPOINT = `${API_URL}/auth/refresh`;
-const LOGOUT_ENDPOINT = `${API_URL}/auth/logout`;
+import { apiUrl } from "../runtime-endpoints";
 
 /** Name of the non-httpOnly CSRF cookie set by user-service. */
 export const CSRF_COOKIE_NAME = "vnshop_csrf";
@@ -68,6 +63,7 @@ export class AuthError extends Error {
 /** Module-level live reference. Kept in sync by the AuthProvider so the api client can read the current token without going through React. */
 let liveTokenSet: TokenSet | null = null;
 let inFlightRefresh: Promise<TokenSet> | null = null;
+let tokenRefreshHandler: (() => Promise<TokenSet>) | null = null;
 
 export function getAccessToken(): string | null {
   return liveTokenSet?.accessToken ?? null;
@@ -75,6 +71,10 @@ export function getAccessToken(): string | null {
 
 export function setLiveTokenSet(next: TokenSet | null): void {
   liveTokenSet = next;
+}
+
+export function setTokenRefreshHandler(handler: (() => Promise<TokenSet>) | null): void {
+  tokenRefreshHandler = handler;
 }
 
 interface AuthSessionResponse {
@@ -172,14 +172,15 @@ async function readEnvelope(res: Response, fallbackErrorCode: string): Promise<T
 export async function passwordLogin(username: string, password: string): Promise<TokenSet> {
   // /auth/login is excluded from the CSRF filter (it is not cookie-authenticated),
   // so do not attach the X-CSRF-Token header here.
-  const res = await postAuth(LOGIN_ENDPOINT, { username, password });
+  const res = await postAuth(apiUrl("/auth/login"), { username, password });
   return readEnvelope(res, "auth_failed");
 }
 
 export async function refreshTokens(): Promise<TokenSet> {
   if (inFlightRefresh) return inFlightRefresh;
   const pending = (async () => {
-    const res = await postAuth(REFRESH_ENDPOINT, undefined, csrfAuthHeader());
+    if (tokenRefreshHandler) return tokenRefreshHandler();
+    const res = await postAuth(apiUrl("/auth/refresh"), undefined, csrfAuthHeader());
     return readEnvelope(res, "refresh_failed");
   })();
   inFlightRefresh = pending;
@@ -194,7 +195,7 @@ export async function refreshTokens(): Promise<TokenSet> {
 
 export async function revokeTokens(): Promise<void> {
   try {
-    await postAuth(LOGOUT_ENDPOINT, undefined, csrfAuthHeader());
+    await postAuth(apiUrl("/auth/logout"), undefined, csrfAuthHeader());
   } catch {
     // Best-effort. Local state is cleared regardless.
   }

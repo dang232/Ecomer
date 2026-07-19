@@ -1,8 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { AppConfigDto } from './dto/app-config.dto.js';
+import {
+  PublicConfigDto,
+  type ProviderConfigDto,
+} from './dto/public-config.dto.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
+import { isIP } from 'node:net';
 
 @Injectable()
 export class ConfigurationService {
@@ -30,7 +39,35 @@ export class ConfigurationService {
   }
 
   getConfig(): AppConfigDto {
+    const publicConfig = this.getPublicConfig();
     return {
+      brand: publicConfig.brand,
+      social: publicConfig.social,
+      payment: publicConfig.payment,
+      auth: { oauthProviders: publicConfig.auth.oauthProviders },
+      features: publicConfig.features,
+      support: publicConfig.support,
+      websocket: publicConfig.websocket,
+    };
+  }
+
+  getPublicConfig(): PublicConfigDto {
+    const web = this.requireOrigin('WEB_ORIGIN');
+    const api = this.requireOrigin('API_ORIGIN');
+    const auth = this.requireOrigin('AUTH_ORIGIN');
+    const generatedAt = new Date();
+    const providers = this.providerConfigs();
+    const enabledProviders = providers
+      .filter((provider) => provider.status === 'enabled')
+      .map((provider) => this.displayProviderName(provider.id));
+
+    return {
+      schemaVersion: '1.0',
+      generatedAt: generatedAt.toISOString(),
+      expiresAt: new Date(generatedAt.getTime() + 5 * 60 * 1000).toISOString(),
+      runtimeConfigUri: `${web.origin}/runtime-config.json`,
+      webUri: `${web.origin}/`,
+      apiUri: `${api.origin}/`,
       brand: {
         name: process.env.BRAND_NAME ?? 'VNShop',
         tagline: process.env.BRAND_TAGLINE ?? 'MARKETPLACE',
@@ -43,20 +80,21 @@ export class ConfigurationService {
         youtube: process.env.SOCIAL_YOUTUBE ?? 'https://youtube.com',
       },
       payment: {
-        providers: (
-          process.env.PAYMENT_PROVIDERS ?? 'VNPay,MoMo,COD,Visa,Mastercard'
-        ).split(','),
-        defaultMethod: process.env.PAYMENT_DEFAULT ?? 'COD',
+        providers: enabledProviders,
+        defaultMethod: enabledProviders.includes('COD') ? 'COD' : enabledProviders[0] ?? '',
       },
       auth: {
         oauthProviders: [
           ...(process.env.GOOGLE_OAUTH_ENABLED === 'true' ? ['google'] : []),
-          ...(process.env.FACEBOOK_OAUTH_ENABLED === 'true'
-            ? ['facebook']
-            : []),
+          ...(process.env.FACEBOOK_OAUTH_ENABLED === 'true' ? ['facebook'] : []),
         ],
+        issuerUri: `${auth.origin}/realms/vnshop`,
+        callbackUri: `${web.origin}/auth/callback`,
+        logoutUri: `${web.origin}/`,
+        clientId: process.env.OIDC_CLIENT_ID ?? 'vnshop-web',
       },
       features: {
+        checkout: enabledProviders.length > 0,
         flashSale: process.env.FEATURE_FLASH_SALE !== 'false',
         messaging: process.env.FEATURE_MESSAGING !== 'false',
         notifications: process.env.FEATURE_NOTIFICATIONS !== 'false',
@@ -68,23 +106,107 @@ export class ConfigurationService {
         hours: process.env.SUPPORT_HOURS ?? '24/7',
       },
       websocket: {
-        notificationsPath:
-          process.env.WS_NOTIFICATIONS_PATH ?? '/ws/notifications',
-        messagingPath: process.env.WS_MESSAGING_PATH ?? '/ws/messaging',
-        maxReconnectAttempts: parseInt(
-          process.env.WS_MAX_RECONNECT ?? '5',
-          10,
-        ),
-        reconnectBaseMs: parseInt(
-          process.env.WS_RECONNECT_BASE_MS ?? '2000',
-          10,
-        ),
-        reconnectCapMs: parseInt(
-          process.env.WS_RECONNECT_CAP_MS ?? '30000',
-          10,
-        ),
+        notificationsPath: '/ws/notifications',
+        messagingPath: '/ws/messaging',
+        notificationsUri: `wss://${api.hostname}/ws/notifications`,
+        messagingUri: `wss://${api.hostname}/ws/messaging`,
+        maxReconnectAttempts: this.positiveInteger('WS_MAX_RECONNECT', 5),
+        reconnectBaseMs: this.positiveInteger('WS_RECONNECT_BASE_MS', 2000),
+        reconnectCapMs: this.positiveInteger('WS_RECONNECT_CAP_MS', 30000),
       },
+      providers,
     };
+  }
+
+  assertReady(): void {
+    this.getPublicConfig();
+  }
+
+  private requireOrigin(name: string): URL {
+    const raw = process.env[name];
+    if (!raw?.trim()) {
+      throw new ServiceUnavailableException(`Missing ${name}`);
+    }
+    let url: URL;
+    try {
+      url = new URL(raw);
+    } catch {
+      throw new ServiceUnavailableException(`Invalid ${name}`);
+    }
+
+    const hostname = url.hostname.toLowerCase();
+    const invalid =
+      url.protocol !== 'https:' ||
+      (url.port !== '' && url.port !== '443') ||
+      url.pathname !== '/' ||
+      url.username !== '' ||
+      url.password !== '' ||
+      url.search !== '' ||
+      url.hash !== '' ||
+      hostname.includes('*') ||
+      hostname === 'localhost' ||
+      hostname.endsWith('.localhost') ||
+      isIP(hostname) !== 0;
+
+    if (invalid) {
+      throw new ServiceUnavailableException(`Invalid ${name}`);
+    }
+    return url;
+  }
+
+  private providerConfigs(): ProviderConfigDto[] {
+    const stripeEnabled = process.env.STRIPE_ENABLED === 'true';
+    const paypalEnabled = process.env.PAYPAL_ENABLED === 'true';
+
+    return [
+      { id: 'cod', status: 'enabled', mode: 'stub', reasonCode: 'PORTFOLIO_STUB' },
+      { id: 'vietqr', status: 'enabled', mode: 'demo', reasonCode: 'PORTFOLIO_DEMO' },
+      this.optionalSandboxProvider(
+        'stripe',
+        stripeEnabled,
+        process.env.STRIPE_PUBLISHABLE_KEY,
+      ),
+      this.optionalSandboxProvider(
+        'paypal',
+        paypalEnabled,
+        process.env.PAYPAL_CLIENT_ID,
+      ),
+      { id: 'vnpay', status: 'disabled', mode: 'disabled', reasonCode: 'DISABLED_BY_POLICY' },
+      { id: 'momo', status: 'disabled', mode: 'disabled', reasonCode: 'DISABLED_BY_POLICY' },
+      { id: 'sepay', status: 'disabled', mode: 'disabled', reasonCode: 'DISABLED_BY_POLICY' },
+    ];
+  }
+
+  private optionalSandboxProvider(
+    id: 'stripe' | 'paypal',
+    enabled: boolean,
+    publicCredential: string | undefined,
+  ): ProviderConfigDto {
+    if (!enabled) {
+      return { id, status: 'disabled', mode: 'sandbox', reasonCode: 'DISABLED_BY_CONFIGURATION' };
+    }
+    if (!publicCredential?.trim()) {
+      return { id, status: 'disabled', mode: 'sandbox', reasonCode: 'MISSING_PUBLIC_CREDENTIAL' };
+    }
+    return { id, status: 'enabled', mode: 'sandbox', reasonCode: 'SANDBOX_ONLY' };
+  }
+
+  private displayProviderName(id: ProviderConfigDto['id']): string {
+    const names: Record<ProviderConfigDto['id'], string> = {
+      cod: 'COD',
+      vietqr: 'VietQR',
+      stripe: 'Stripe',
+      paypal: 'PayPal',
+      vnpay: 'VNPay',
+      momo: 'MoMo',
+      sepay: 'SePay',
+    };
+    return names[id];
+  }
+
+  private positiveInteger(name: string, fallback: number): number {
+    const value = Number.parseInt(process.env[name] ?? String(fallback), 10);
+    return Number.isInteger(value) && value > 0 ? value : fallback;
   }
 
   getServiceConfig(serviceName: string): Record<string, unknown> {

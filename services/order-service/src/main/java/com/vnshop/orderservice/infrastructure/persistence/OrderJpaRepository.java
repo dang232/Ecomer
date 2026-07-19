@@ -5,6 +5,7 @@ import com.vnshop.orderservice.domain.port.out.OrderRepositoryPort;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.persistence.EntityManager;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -17,9 +18,18 @@ import java.util.UUID;
 @Repository
 public class OrderJpaRepository implements OrderRepositoryPort {
     private final OrderJpaSpringDataRepository springDataRepository;
+    private final EntityManager entityManager;
 
-    public OrderJpaRepository(OrderJpaSpringDataRepository springDataRepository) {
+    public OrderJpaRepository(OrderJpaSpringDataRepository springDataRepository, EntityManager entityManager) {
         this.springDataRepository = springDataRepository;
+        this.entityManager = entityManager;
+    }
+
+    @Override
+    public void lockIdempotencyKey(String idempotencyKey) {
+        entityManager.createNativeQuery("select pg_advisory_xact_lock(hashtext(:key))")
+                .setParameter("key", idempotencyKey)
+                .getSingleResult();
     }
 
     @Override

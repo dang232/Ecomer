@@ -1,0 +1,76 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: vnshop-portfolio
+  namespace: argocd
+spec:
+  description: VNShop portfolio staging and production delivery boundary
+  sourceRepos:
+  - https://github.com/dang232/Ecomer.git
+  destinations:
+  - namespace: vnshop-staging
+    server: https://kubernetes.default.svc
+  - namespace: vnshop-prod
+    server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+  - group: ""
+    kind: Namespace
+  namespaceResourceWhitelist:
+  - group: "*"
+    kind: "*"
+  orphanedResources:
+    warn: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vnshop-staging
+  namespace: argocd
+spec:
+  project: vnshop-portfolio
+  source:
+    repoURL: https://github.com/dang232/Ecomer.git
+    targetRevision: main
+    path: infra/k8s/overlays/staging
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vnshop-staging
+  syncPolicy:
+    automated:
+      enabled: true
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=false
+    - PruneLast=true
+    - RespectIgnoreDifferences=true
+    retry:
+      limit: 5
+      backoff: {duration: 10s, factor: 2, maxDuration: 3m}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vnshop-prod
+  namespace: argocd
+spec:
+  project: vnshop-portfolio
+  source:
+    repoURL: https://github.com/dang232/Ecomer.git
+    targetRevision: production
+    path: infra/k8s/overlays/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vnshop-prod
+  syncPolicy:
+    automated:
+      enabled: true
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=false
+    - PruneLast=true
+    - RespectIgnoreDifferences=true
+    retry:
+      limit: 5
+      backoff: {duration: 10s, factor: 2, maxDuration: 3m}

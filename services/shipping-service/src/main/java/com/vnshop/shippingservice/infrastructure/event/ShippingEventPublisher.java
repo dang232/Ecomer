@@ -1,6 +1,7 @@
 package com.vnshop.shippingservice.infrastructure.event;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vnshop.shippingservice.domain.port.out.ShippingEventPublisherPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -10,7 +11,7 @@ import java.time.Instant;
 import java.util.Map;
 
 @Component
-public class ShippingEventPublisher {
+public class ShippingEventPublisher implements ShippingEventPublisherPort {
 
     private static final Logger LOG = LoggerFactory.getLogger(ShippingEventPublisher.class);
     private static final String TOPIC_CANCELLED = "shipping.cancelled";
@@ -23,6 +24,7 @@ public class ShippingEventPublisher {
         this.objectMapper = objectMapper;
     }
 
+    @Override
     public void publishCancelled(String orderId, String sagaId, String reason) {
         try {
             Map<String, Object> payload = Map.of(

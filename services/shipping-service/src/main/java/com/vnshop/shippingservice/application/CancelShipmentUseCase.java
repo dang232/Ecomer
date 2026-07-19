@@ -1,6 +1,6 @@
 package com.vnshop.shippingservice.application;
 
-import com.vnshop.shippingservice.infrastructure.event.ShippingEventPublisher;
+import com.vnshop.shippingservice.domain.port.out.ShippingEventPublisherPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -10,9 +10,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class CancelShipmentUseCase {
 
     private static final Logger LOG = LoggerFactory.getLogger(CancelShipmentUseCase.class);
-    private final ShippingEventPublisher shippingEventPublisher;
+    private final ShippingEventPublisherPort shippingEventPublisher;
 
-    public CancelShipmentUseCase(ShippingEventPublisher shippingEventPublisher) {
+    public CancelShipmentUseCase(ShippingEventPublisherPort shippingEventPublisher) {
         this.shippingEventPublisher = shippingEventPublisher;
     }
 

@@ -944,7 +944,7 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:9200/
 # Expected: 401
 
 # With credentials — should get 200:
-curl -s -u "elastic:vnshop-es-dev-password" http://localhost:9200/ | jq .name
+curl -s -u "${ELASTIC_USER}:${ELASTIC_PASSWORD}" http://localhost:9200/ | jq .name
 # Expected: cluster name returned
 ```
 

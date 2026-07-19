@@ -1,0 +1,126 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vnshop-storage-bootstrap
+  annotations:
+    argocd.argoproj.io/sync-wave: "-20"
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vnshop-storage-policies
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+data:
+  product.json: |
+    {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:GetBucketLocation","s3:ListBucket","s3:ListBucketMultipartUploads"],"Resource":["arn:aws:s3:::vnshop-products","arn:aws:s3:::vnshop-videos-staging","arn:aws:s3:::vnshop-videos"]},{"Effect":"Allow","Action":["s3:GetObject","s3:PutObject","s3:DeleteObject","s3:AbortMultipartUpload"],"Resource":["arn:aws:s3:::vnshop-products/*","arn:aws:s3:::vnshop-videos-staging/*","arn:aws:s3:::vnshop-videos/*"]}]}
+  user.json: |
+    {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:GetBucketLocation","s3:ListBucket","s3:ListBucketMultipartUploads"],"Resource":["arn:aws:s3:::vnshop-avatars"]},{"Effect":"Allow","Action":["s3:GetObject","s3:PutObject","s3:DeleteObject","s3:AbortMultipartUpload"],"Resource":["arn:aws:s3:::vnshop-avatars/*"]}]}
+  moderator.json: |
+    {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:GetBucketLocation","s3:ListBucket"],"Resource":["arn:aws:s3:::vnshop-videos-staging","arn:aws:s3:::vnshop-videos"]},{"Effect":"Allow","Action":["s3:GetObject","s3:PutObject","s3:DeleteObject"],"Resource":["arn:aws:s3:::vnshop-videos-staging/*","arn:aws:s3:::vnshop-videos/*"]}]}
+  transcoder.json: |
+    {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:GetBucketLocation","s3:ListBucket","s3:ListBucketMultipartUploads"],"Resource":["arn:aws:s3:::vnshop-video-uploads-tmp","arn:aws:s3:::vnshop-videos-staging"]},{"Effect":"Allow","Action":["s3:GetObject","s3:PutObject","s3:DeleteObject","s3:AbortMultipartUpload"],"Resource":["arn:aws:s3:::vnshop-video-uploads-tmp/*","arn:aws:s3:::vnshop-videos-staging/*"]}]}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vnshop-storage-bootstrap
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/sync-wave: "-10"
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+spec:
+  backoffLimit: 6
+  activeDeadlineSeconds: 900
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vnshop-storage-bootstrap
+        app.kubernetes.io/part-of: vnshop
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: vnshop-storage-bootstrap
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+      - name: bootstrap
+        image: minio/mc@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
+        command: [sh, -ec]
+        args:
+        - |
+          until mc alias set local http://minio:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"; do sleep 5; done
+          mc ready local
+          mc mb --ignore-existing \
+            local/vnshop-products \
+            local/vnshop-avatars \
+            local/vnshop-video-uploads-tmp \
+            local/vnshop-videos-staging \
+            local/vnshop-videos
+          mc anonymous set download local/vnshop-products
+          mc anonymous set download local/vnshop-avatars
+          mc anonymous set download local/vnshop-videos
+
+          configure_user() {
+            access_key="$1"
+            secret_key="$2"
+            policy="$3"
+            mc admin policy create local "$policy" "/policies/$policy.json"
+            mc admin user add local "$access_key" "$secret_key"
+            mc admin policy attach local "$policy" --user "$access_key"
+          }
+          configure_user "$PRODUCT_ACCESS_KEY" "$PRODUCT_SECRET_KEY" product
+          configure_user "$USER_ACCESS_KEY" "$USER_SECRET_KEY" user
+          configure_user "$MODERATOR_ACCESS_KEY" "$MODERATOR_SECRET_KEY" moderator
+          configure_user "$TRANSCODER_ACCESS_KEY" "$TRANSCODER_SECRET_KEY" transcoder
+        env:
+        - name: HOME
+          value: /tmp
+        - name: MINIO_ROOT_USER
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: platform-minio-root-user}
+        - name: MINIO_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: platform-minio-root-password}
+        - name: PRODUCT_ACCESS_KEY
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: product-service-minio-access-key}
+        - name: PRODUCT_SECRET_KEY
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: product-service-minio-secret-key}
+        - name: USER_ACCESS_KEY
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: user-service-minio-access-key}
+        - name: USER_SECRET_KEY
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: user-service-minio-secret-key}
+        - name: MODERATOR_ACCESS_KEY
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: video-moderator-minio-access-key}
+        - name: MODERATOR_SECRET_KEY
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: video-moderator-minio-secret-key}
+        - name: TRANSCODER_ACCESS_KEY
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: video-transcoder-minio-access-key}
+        - name: TRANSCODER_SECRET_KEY
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: video-transcoder-minio-secret-key}
+        resources:
+          requests: {cpu: 25m, memory: 64Mi}
+          limits: {cpu: 250m, memory: 256Mi}
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities: {drop: [ALL]}
+        volumeMounts:
+        - {name: policies, mountPath: /policies, readOnly: true}
+        - {name: tmp, mountPath: /tmp}
+      volumes:
+      - {name: policies, configMap: {name: vnshop-storage-policies}}
+      - {name: tmp, emptyDir: {}}

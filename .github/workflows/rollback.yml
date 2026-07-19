@@ -1,0 +1,90 @@
+name: VNShop Prepare Production Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_revision:
+        description: Earlier production desired-state commit containing the known-good lock
+        required: true
+        type: string
+      reason:
+        description: Incident or rollback reason recorded in evidence
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-rollback
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Open protected production rollback PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ secrets.RELEASE_BOT_TOKEN }}
+      TARGET_REVISION: ${{ inputs.target_revision }}
+      ROLLBACK_REASON: ${{ inputs.reason }}
+    steps:
+      - name: Check out protected production
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: production
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_BOT_TOKEN }}
+
+      - name: Validate known-good target
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_REVISION" =~ ^[0-9a-f]{40}$ ]]
+          git cat-file -e "$TARGET_REVISION^{commit}"
+          git merge-base --is-ancestor "$TARGET_REVISION" origin/production
+          git show "$TARGET_REVISION:infra/release/locks/prod.json" > "$RUNNER_TEMP/prod.json"
+          jq -e '.artifacts | length == 19' "$RUNNER_TEMP/prod.json"
+
+      - name: Restore the immutable lock without rebuilding
+        run: |
+          set -euo pipefail
+          cp "$RUNNER_TEMP/prod.json" infra/release/locks/prod.json
+          python -m pip install --disable-pip-version-check PyYAML==6.0.3
+          python infra/k8s/generate.py
+          python infra/scripts/validate-k8s-release.py --environment prod
+          mkdir -p infra/release/evidence/rollback
+          jq -n \
+            --arg requestedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg currentRevision "$(git rev-parse HEAD)" \
+            --arg targetRevision "$TARGET_REVISION" \
+            --arg targetSourceCommit "$(jq -r .sourceCommit infra/release/locks/prod.json)" \
+            --arg reason "$ROLLBACK_REASON" \
+            '{schemaVersion:"1.0",requestedAt:$requestedAt,currentRevision:$currentRevision,targetRevision:$targetRevision,targetSourceCommit:$targetSourceCommit,reason:$reason}' \
+            > infra/release/evidence/rollback/pending.json
+
+      - name: Commit rollback on a review branch
+        id: branch
+        run: |
+          set -euo pipefail
+          branch="release/rollback-${TARGET_REVISION:0:12}-${GITHUB_RUN_ID}"
+          git switch -c "$branch"
+          git config user.name "vnshop-release[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add infra/release/locks/prod.json infra/release/evidence/rollback/pending.json infra/k8s/
+          git commit -m "rollback: restore production lock ${TARGET_REVISION:0:12}"
+          git push origin "HEAD:$branch"
+          echo "name=$branch" >> "$GITHUB_OUTPUT"
+
+      - name: Open Code Owner approved rollback PR
+        env:
+          BRANCH: ${{ steps.branch.outputs.name }}
+        run: |
+          source_commit="$(jq -r .sourceCommit infra/release/locks/prod.json)"
+          gh pr create \
+            --base production \
+            --head "$BRANCH" \
+            --title "rollback: production to ${source_commit:0:12}" \
+            --body "Restores the exact 19-digest lock from desired-state revision $TARGET_REVISION. No image is rebuilt. Reason: $ROLLBACK_REASON. Requires @dang232 Code Owner approval; after merge, VNShop Verify Production measures Argo reconciliation and live image IDs."

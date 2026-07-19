@@ -1,6 +1,6 @@
 package com.vnshop.paymentservice.domain.port.out;
 
-import com.vnshop.paymentservice.application.order.OrderSnapshot;
+import com.vnshop.paymentservice.domain.OrderSnapshot;
 
 import java.util.Optional;
 

@@ -6,6 +6,7 @@ import com.vnshop.orderservice.domain.SubOrder;
 import com.vnshop.orderservice.domain.port.out.InventoryReservationPort;
 import com.vnshop.orderservice.domain.port.out.OrderEventPublisherPort;
 import com.vnshop.orderservice.domain.port.out.OrderRepositoryPort;
+import com.vnshop.orderservice.application.coupon.CouponRedemptionService;
 
 import java.util.Objects;
 import java.util.Set;
@@ -24,15 +25,25 @@ public class CancelOrderUseCase {
     private final OrderRepositoryPort orderRepository;
     private final InventoryReservationPort inventoryReservationPort;
     private final OrderEventPublisherPort orderEventPublisherPort;
+    private final CouponRedemptionService couponRedemptionService;
 
     public CancelOrderUseCase(
             OrderRepositoryPort orderRepository,
             InventoryReservationPort inventoryReservationPort,
-            OrderEventPublisherPort orderEventPublisherPort
+            OrderEventPublisherPort orderEventPublisherPort,
+            CouponRedemptionService couponRedemptionService
     ) {
         this.orderRepository = Objects.requireNonNull(orderRepository, "orderRepository is required");
         this.inventoryReservationPort = Objects.requireNonNull(inventoryReservationPort, "inventoryReservationPort is required");
         this.orderEventPublisherPort = Objects.requireNonNull(orderEventPublisherPort, "orderEventPublisherPort is required");
+        this.couponRedemptionService = couponRedemptionService;
+    }
+
+    public CancelOrderUseCase(
+            OrderRepositoryPort orderRepository,
+            InventoryReservationPort inventoryReservationPort,
+            OrderEventPublisherPort orderEventPublisherPort) {
+        this(orderRepository, inventoryReservationPort, orderEventPublisherPort, null);
     }
 
     @Audited(action = "CANCEL_ORDER", resourceType = "Order")
@@ -61,8 +72,9 @@ public class CancelOrderUseCase {
             }
         });
         inventoryReservationPort.release(order.id().toString());
-        // Coupon usage release is handled by coupon-service upon receiving
-        // the OrderCancelled Kafka event published below.
+        if (couponRedemptionService != null) {
+            couponRedemptionService.release(order.id());
+        }
         order.markPaymentFailed();
         Order savedOrder = orderRepository.save(order);
         orderEventPublisherPort.publishOrderUpdated(savedOrder);

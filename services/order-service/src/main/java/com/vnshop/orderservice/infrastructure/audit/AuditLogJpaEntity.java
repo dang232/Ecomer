@@ -6,7 +6,7 @@ import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 
 @Entity
-@Table(name = "audit_log")
+@Table(schema = "order_svc", name = "audit_log")
 public class AuditLogJpaEntity {
 
     @Id

@@ -18,6 +18,7 @@ import {
   readCookieValue,
   refreshTokens,
   revokeTokens,
+  setTokenRefreshHandler,
 } from "./native-auth";
 
 const CSRF_TOKEN_VALUE = "test-csrf-token-abc123";
@@ -81,9 +82,11 @@ beforeEach(() => {
   fetchMock = vi.fn();
   vi.spyOn(globalThis, "fetch").mockImplementation(fetchMock);
   setDocumentCookie("");
+  setTokenRefreshHandler(null);
 });
 
 afterEach(() => {
+  setTokenRefreshHandler(null);
   vi.restoreAllMocks();
 });
 
@@ -122,6 +125,20 @@ describe("csrfAuthHeader", () => {
 });
 
 describe("refreshTokens", () => {
+  it("delegates browser-session refresh to the active OIDC client", async () => {
+    const tokenSet = {
+      accessToken: "oidc-access-token",
+      accessExpiresAt: Date.now() + 60_000,
+    };
+    const oidcRefresh = vi.fn().mockResolvedValue(tokenSet);
+    setTokenRefreshHandler(oidcRefresh);
+
+    await expect(refreshTokens()).resolves.toEqual(tokenSet);
+
+    expect(oidcRefresh).toHaveBeenCalledTimes(1);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("attaches the X-CSRF-Token header on /auth/refresh", async () => {
     setDocumentCookie(`${CSRF_COOKIE_NAME}=${CSRF_TOKEN_VALUE}`);
     mockFetchReturningAuthSession();

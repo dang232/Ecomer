@@ -1,0 +1,259 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vnshop-kafka-bootstrap
+  annotations: {argocd.argoproj.io/sync-wave: "-20"}
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vnshop-kafka-bootstrap
+  annotations: {argocd.argoproj.io/sync-wave: "-10"}
+data:
+  init-kafka-topics.sh: |
+    #!/bin/bash
+    set -e
+
+    BROKER="kafka:9092"
+    ADMIN_CONFIG="/tmp/admin.properties"
+
+    # Create admin client config for SASL authentication
+    cat > $ADMIN_CONFIG <<EOF
+    security.protocol=SASL_PLAINTEXT
+    sasl.mechanism=PLAIN
+    sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="admin" password="${KAFKA_ADMIN_PASSWORD:?KAFKA_ADMIN_PASSWORD is required}";
+    EOF
+
+    echo "Waiting for Kafka to be ready..."
+    until kafka-broker-api-versions --bootstrap-server $BROKER --command-config $ADMIN_CONFIG > /dev/null 2>&1; do
+      sleep 2
+    done
+    echo "Kafka is ready."
+
+    # --- Create Topics ---
+    TOPICS=(
+      "messaging.message.sent:1"
+      "product-events:12"
+      "order.created:6"
+      "order.updated:6"
+      "order.paid:6"
+      "order.shipped:6"
+      "order.cancelled:6"
+      "payment.completed:6"
+      "payment.refund.requested:6"
+      "payment.refunded:6"
+      "inventory.released:6"
+      "shipping.cancelled:6"
+      # invoice / notification topics
+      "order.confirmed:6"
+      "order.confirmed.retry:6"
+      "order.confirmed.DLT:6"
+      "order.delivered:6"
+      "notification.events:6"
+      "product.approved:3"
+      "product.rejected:3"
+      "review.replied:3"
+      "return.requested:3"
+      "payout.completed:3"
+      "user.registered:3"
+      "user.password-reset:3"
+      # video pipeline topics (per spec section 6 — moderator consumes video.transcode.completed directly, no relay)
+      "video.upload.completed:3"
+      "video.transcode.completed:3"
+      "video.transcode.failed:3"
+      "video.moderation.completed:3"
+      "video.published:3"
+      "video.rejected:3"
+      "video.upload.completed.DLT:3"
+      "video.transcode.completed.DLT:3"
+      # GDPR topics
+      "gdpr.export-requested:1"
+      "gdpr.export-fragment:3"
+      "gdpr.deletion-requested:1"
+      "gdpr.deletion-completed:3"
+    )
+
+    for entry in "${TOPICS[@]}"; do
+      IFS=':' read -r topic partitions <<< "$entry"
+      kafka-topics --bootstrap-server $BROKER --command-config $ADMIN_CONFIG \
+        --create --if-not-exists --topic "$topic" --partitions "$partitions" --replication-factor 1
+    done
+    echo "All topics created."
+
+    # --- Configure ACLs ---
+    ACL="kafka-acls --bootstrap-server $BROKER --command-config $ADMIN_CONFIG"
+
+    # order-service (svc-order): produces order.*, payment.refund.requested
+    $ACL --add --allow-principal User:svc-order --operation Write --topic order --resource-pattern-type prefixed
+    $ACL --add --allow-principal User:svc-order --operation Write --topic payment.refund.requested
+    # order-service: consumes payment.completed, payment.refunded, inventory.released, shipping.cancelled
+    $ACL --add --allow-principal User:svc-order --operation Read --topic payment.completed
+    $ACL --add --allow-principal User:svc-order --operation Read --topic payment.refunded
+    $ACL --add --allow-principal User:svc-order --operation Read --topic inventory.released
+    $ACL --add --allow-principal User:svc-order --operation Read --topic shipping.cancelled
+    # order-service: also reads its own order.* topics for projection
+    $ACL --add --allow-principal User:svc-order --operation Read --topic order --resource-pattern-type prefixed
+    # order-service consumer groups
+    $ACL --add --allow-principal User:svc-order --operation Read --group order-service-payment
+    $ACL --add --allow-principal User:svc-order --operation Read --group order-service-refund
+    $ACL --add --allow-principal User:svc-order --operation Read --group order-service-projection
+    $ACL --add --allow-principal User:svc-order --operation Read --group order-service-finance
+    $ACL --add --allow-principal User:svc-order --operation Read --group order-service-saga-compensation
+
+    # payment-service (svc-payment): produces payment.completed, payment.refunded
+    $ACL --add --allow-principal User:svc-payment --operation Write --topic payment.completed
+    $ACL --add --allow-principal User:svc-payment --operation Write --topic payment.refunded
+    # payment-service: consumes payment.refund.requested
+    $ACL --add --allow-principal User:svc-payment --operation Read --topic payment.refund.requested
+    $ACL --add --allow-principal User:svc-payment --operation Read --group payment-service-paypal-refund
+
+    # inventory-service (svc-inventory): produces inventory.released
+    $ACL --add --allow-principal User:svc-inventory --operation Write --topic inventory.released
+
+    # product-service (svc-product): produces product-events
+    $ACL --add --allow-principal User:svc-product --operation Write --topic product-events
+    # product-service: consumes delivered-order evidence for verified reviews
+    $ACL --add --allow-principal User:svc-product --operation Read --topic order.delivered
+    $ACL --add --allow-principal User:svc-product --operation Read --group product-service-review-purchases
+
+    # shipping-service (svc-shipping): produces shipping.cancelled
+    $ACL --add --allow-principal User:svc-shipping --operation Write --topic shipping.cancelled
+
+    # seller-finance-service (svc-finance): consumes order.created, order.paid, payment.refunded
+    $ACL --add --allow-principal User:svc-finance --operation Read --topic order.created
+    $ACL --add --allow-principal User:svc-finance --operation Read --topic order.paid
+    $ACL --add --allow-principal User:svc-finance --operation Read --topic payment.refunded
+    $ACL --add --allow-principal User:svc-finance --operation Read --group seller-finance-service
+    $ACL --add --allow-principal User:svc-finance --operation Read --group seller-finance-service-refund
+
+    # search-service (svc-search): consumes product-events
+    $ACL --add --allow-principal User:svc-search --operation Read --topic product-events
+    $ACL --add --allow-principal User:svc-search --operation Read --group search-service
+
+    # recommendations-service (svc-recommendations): consumes order.created
+    $ACL --add --allow-principal User:svc-recommendations --operation Read --topic order.created
+    $ACL --add --allow-principal User:svc-recommendations --operation Read --group recommendations-service
+
+    # user-service: produces gdpr.export-requested / gdpr.deletion-requested; consumes gdpr.export-fragment
+    $ACL --add --allow-principal User:svc-user --operation Write --topic gdpr.export-requested
+    $ACL --add --allow-principal User:svc-user --operation Write --topic gdpr.deletion-requested
+    $ACL --add --allow-principal User:svc-user --operation Read --topic gdpr.export-fragment
+    $ACL --add --allow-principal User:svc-user --operation Read --topic gdpr.deletion-completed
+    $ACL --add --allow-principal User:svc-user --operation Read --group user-service-gdpr-export
+
+    # invoice-service (svc-invoice): consumes order.confirmed, retries, DLT; produces to retry/DLT
+    $ACL --add --allow-principal User:svc-invoice --operation Read --topic order.confirmed
+    $ACL --add --allow-principal User:svc-invoice --operation Read --topic order.confirmed.retry
+    $ACL --add --allow-principal User:svc-invoice --operation Read --topic order.confirmed.DLT
+    $ACL --add --allow-principal User:svc-invoice --operation Write --topic order.confirmed.retry
+    $ACL --add --allow-principal User:svc-invoice --operation Write --topic order.confirmed.DLT
+    $ACL --add --allow-principal User:svc-invoice --operation Read --group invoice-service
+
+    # notification topic: order-service produces notification.events
+    $ACL --add --allow-principal User:svc-order --operation Read --topic notification.events
+    $ACL --add --allow-principal User:svc-order --operation Write --topic notification.events
+
+    # notification-service consumes each topic declared by KafkaEventConsumer.
+    # Nest appends "-server" to its group.
+    NOTIFICATION_CONSUMER_TOPICS=(
+      "order.created"
+      "order.cancelled"
+      "order.shipped"
+      "order.delivered"
+      "payment.completed"
+      "payment.refunded"
+      "product.approved"
+      "product.rejected"
+      "review.replied"
+      "return.requested"
+      "payout.completed"
+      "user.registered"
+      "user.password-reset"
+      "video.published"
+      "video.rejected"
+    )
+    for topic in "${NOTIFICATION_CONSUMER_TOPICS[@]}"; do
+      $ACL --add --allow-principal User:svc-notification --operation Read --topic "$topic"
+    done
+    $ACL --add --allow-principal User:svc-notification --operation Read --group notification-service --resource-pattern-type prefixed
+
+    # messaging-service persists and consumes its own fan-out topic.
+    $ACL --add --allow-principal User:svc-messaging --operation Write --topic messaging.message.sent
+    $ACL --add --allow-principal User:svc-messaging --operation Read --topic messaging.message.sent
+    $ACL --add --allow-principal User:svc-messaging --operation Read --group messaging-service --resource-pattern-type prefixed
+
+    # order-service: consumes gdpr.*-requested; produces gdpr.export-fragment / gdpr.deletion-completed
+    $ACL --add --allow-principal User:svc-order --operation Read --topic gdpr.export-requested
+    $ACL --add --allow-principal User:svc-order --operation Read --topic gdpr.deletion-requested
+    $ACL --add --allow-principal User:svc-order --operation Write --topic gdpr.export-fragment
+    $ACL --add --allow-principal User:svc-order --operation Write --topic gdpr.deletion-completed
+    $ACL --add --allow-principal User:svc-order --operation Read --group order-service-gdpr
+
+    # payment-service: consumes gdpr.*-requested; produces gdpr.export-fragment / gdpr.deletion-completed
+    $ACL --add --allow-principal User:svc-payment --operation Read --topic gdpr.export-requested
+    $ACL --add --allow-principal User:svc-payment --operation Read --topic gdpr.deletion-requested
+    $ACL --add --allow-principal User:svc-payment --operation Write --topic gdpr.export-fragment
+    $ACL --add --allow-principal User:svc-payment --operation Write --topic gdpr.deletion-completed
+    $ACL --add --allow-principal User:svc-payment --operation Read --group payment-service-gdpr
+
+    # shipping-service: consumes gdpr.*-requested; produces gdpr.export-fragment / gdpr.deletion-completed
+    $ACL --add --allow-principal User:svc-shipping --operation Read --topic gdpr.export-requested
+    $ACL --add --allow-principal User:svc-shipping --operation Read --topic gdpr.deletion-requested
+    $ACL --add --allow-principal User:svc-shipping --operation Write --topic gdpr.export-fragment
+    $ACL --add --allow-principal User:svc-shipping --operation Write --topic gdpr.deletion-completed
+    $ACL --add --allow-principal User:svc-shipping --operation Read --group shipping-service-gdpr
+
+    # video-transcoder (svc-video-transcoder): consumes video.upload.completed; produces video.transcode.completed, video.transcode.failed
+    $ACL --add --allow-principal User:svc-video-transcoder --operation Read --topic video.upload.completed
+    $ACL --add --allow-principal User:svc-video-transcoder --operation Write --topic video.transcode.completed
+    $ACL --add --allow-principal User:svc-video-transcoder --operation Write --topic video.transcode.failed
+    $ACL --add --allow-principal User:svc-video-transcoder --operation Read --topic video.transcode.completed.DLT
+    $ACL --add --allow-principal User:svc-video-transcoder --operation Write --topic video.transcode.completed.DLT
+
+    # video-moderator (svc-video-moderator): consumes video.transcode.completed directly (no relay topic); produces video.moderation.completed, video.published, video.rejected
+    $ACL --add --allow-principal User:svc-video-moderator --operation Read --topic video.transcode.completed
+    $ACL --add --allow-principal User:svc-video-moderator --operation Write --topic video.moderation.completed
+    $ACL --add --allow-principal User:svc-video-moderator --operation Write --topic video.published
+    $ACL --add --allow-principal User:svc-video-moderator --operation Write --topic video.rejected
+
+    echo "All ACLs configured."
+    rm -f $ADMIN_CONFIG
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vnshop-kafka-bootstrap
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/sync-wave: "-10"
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+spec:
+  backoffLimit: 6
+  activeDeadlineSeconds: 900
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: vnshop-kafka-bootstrap, app.kubernetes.io/part-of: vnshop}
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: vnshop-kafka-bootstrap
+      automountServiceAccountToken: false
+      securityContext: {runAsNonRoot: true, runAsUser: 1000, runAsGroup: 1000, fsGroup: 1000, seccompProfile: {type: RuntimeDefault}}
+      containers:
+      - name: bootstrap
+        image: confluentinc/cp-kafka@sha256:acbbf674f2ed40e5d0a8ca51beb0f00692c866fc22b5ce06f8cadbdc54cd4436
+        command: [bash, /opt/vnshop/init-kafka-topics.sh]
+        env:
+        - name: KAFKA_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: platform-kafka-admin-password}
+        resources:
+          requests: {cpu: 25m, memory: 128Mi}
+          limits: {cpu: 500m, memory: 512Mi}
+        securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+        volumeMounts:
+        - {name: script, mountPath: /opt/vnshop/init-kafka-topics.sh, subPath: init-kafka-topics.sh, readOnly: true}
+        - {name: tmp, mountPath: /tmp}
+      volumes:
+      - {name: script, configMap: {name: vnshop-kafka-bootstrap, defaultMode: 0555}}
+      - {name: tmp, emptyDir: {}}

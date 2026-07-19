@@ -4,6 +4,8 @@ import com.vnshop.paymentservice.application.PaymentPromotionService;
 import com.vnshop.paymentservice.domain.Payment;
 import com.vnshop.paymentservice.domain.PaymentMethod;
 import com.vnshop.paymentservice.domain.PaymentStatus;
+import com.vnshop.paymentservice.domain.PaymentCallbackOutboxRecord;
+import com.vnshop.paymentservice.domain.port.out.PaymentCallbackOutbox;
 import com.vnshop.paymentservice.domain.port.out.PaymentRepositoryPort;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;

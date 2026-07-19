@@ -7,10 +7,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.vnshop.recommendationsservice.infrastructure.persistence.CoPurchaseJpaEntity;
-import com.vnshop.recommendationsservice.infrastructure.persistence.CoPurchaseRepository;
-import com.vnshop.recommendationsservice.infrastructure.persistence.ProcessedOrderJpaEntity;
-import com.vnshop.recommendationsservice.infrastructure.persistence.ProcessedOrderRepository;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -24,123 +20,123 @@ import org.mockito.Mockito;
 
 class CoPurchaseAggregatorTest {
 
-    private CoPurchaseRepository coPurchaseRepository;
-    private ProcessedOrderRepository processedOrderRepository;
+    private CoPurchasePort coPurchasePort;
+    private ProcessedOrderPort processedOrderPort;
     private InMemoryCoPurchaseStore store;
 
     @BeforeEach
     void setUp() {
-        coPurchaseRepository = Mockito.mock(CoPurchaseRepository.class);
-        processedOrderRepository = Mockito.mock(ProcessedOrderRepository.class);
+        coPurchasePort = Mockito.mock(CoPurchasePort.class);
+        processedOrderPort = Mockito.mock(ProcessedOrderPort.class);
         store = new InMemoryCoPurchaseStore();
-        when(coPurchaseRepository.findById(any())).thenAnswer(inv ->
-                Optional.ofNullable(store.get(inv.getArgument(0))));
-        when(coPurchaseRepository.save(any())).thenAnswer(inv -> {
-            CoPurchaseJpaEntity entity = inv.getArgument(0);
-            store.put(entity);
-            return entity;
+        when(coPurchasePort.find(any(), any())).thenAnswer(inv ->
+                Optional.ofNullable(store.get(inv.getArgument(0), inv.getArgument(1))));
+        when(coPurchasePort.save(any())).thenAnswer(inv -> {
+            CoPurchase row = inv.getArgument(0);
+            store.put(row);
+            return row;
         });
     }
 
     @Test
     void recordsAllOrderedPairsBothWays() {
-        when(processedOrderRepository.existsById("order-1")).thenReturn(false);
+        when(processedOrderPort.exists("order-1")).thenReturn(false);
 
-        new CoPurchaseAggregator(coPurchaseRepository, processedOrderRepository)
+        new CoPurchaseAggregator(coPurchasePort, processedOrderPort)
                 .recordOrder("order-1", List.of("a", "b", "c"));
 
         // 3 distinct products -> 3 unordered pairs -> 6 directed inserts
-        verify(coPurchaseRepository, times(6)).save(any());
-        ArgumentCaptor<ProcessedOrderJpaEntity> processed = ArgumentCaptor.forClass(ProcessedOrderJpaEntity.class);
-        verify(processedOrderRepository).save(processed.capture());
-        assertThat(processed.getValue().getOrderId()).isEqualTo("order-1");
-        assertThat(store.get(new CoPurchaseJpaEntity.CoPurchaseId("a", "b")).getCoCount()).isEqualTo(1L);
-        assertThat(store.get(new CoPurchaseJpaEntity.CoPurchaseId("b", "a")).getCoCount()).isEqualTo(1L);
+        verify(coPurchasePort, times(6)).save(any());
+        ArgumentCaptor<String> processed = ArgumentCaptor.forClass(String.class);
+        verify(processedOrderPort).save(processed.capture());
+        assertThat(processed.getValue()).isEqualTo("order-1");
+        assertThat(store.get("a", "b").count()).isEqualTo(1L);
+        assertThat(store.get("b", "a").count()).isEqualTo(1L);
     }
 
     @Test
     void incrementsExistingCounters() {
-        store.put(new CoPurchaseJpaEntity("a", "b", 4L, Instant.EPOCH));
-        store.put(new CoPurchaseJpaEntity("b", "a", 4L, Instant.EPOCH));
-        when(processedOrderRepository.existsById("order-2")).thenReturn(false);
+        store.put(new CoPurchase("a", "b", 4L, Instant.EPOCH));
+        store.put(new CoPurchase("b", "a", 4L, Instant.EPOCH));
+        when(processedOrderPort.exists("order-2")).thenReturn(false);
 
-        new CoPurchaseAggregator(coPurchaseRepository, processedOrderRepository)
+        new CoPurchaseAggregator(coPurchasePort, processedOrderPort)
                 .recordOrder("order-2", List.of("a", "b"));
 
-        assertThat(store.get(new CoPurchaseJpaEntity.CoPurchaseId("a", "b")).getCoCount()).isEqualTo(5L);
-        assertThat(store.get(new CoPurchaseJpaEntity.CoPurchaseId("b", "a")).getCoCount()).isEqualTo(5L);
+        assertThat(store.get("a", "b").count()).isEqualTo(5L);
+        assertThat(store.get("b", "a").count()).isEqualTo(5L);
     }
 
     @Test
     void deduplicatesProductIdsWithinOneOrder() {
-        when(processedOrderRepository.existsById("order-3")).thenReturn(false);
+        when(processedOrderPort.exists("order-3")).thenReturn(false);
 
-        new CoPurchaseAggregator(coPurchaseRepository, processedOrderRepository)
+        new CoPurchaseAggregator(coPurchasePort, processedOrderPort)
                 .recordOrder("order-3", Arrays.asList("a", "a", "b"));
 
         // After distinct -> 2 products -> 1 unordered pair -> 2 directed inserts
-        verify(coPurchaseRepository, times(2)).save(any());
+        verify(coPurchasePort, times(2)).save(any());
     }
 
     @Test
     void skipsAlreadyProcessedOrder() {
-        when(processedOrderRepository.existsById("order-replay")).thenReturn(true);
+        when(processedOrderPort.exists("order-replay")).thenReturn(true);
 
-        new CoPurchaseAggregator(coPurchaseRepository, processedOrderRepository)
+        new CoPurchaseAggregator(coPurchasePort, processedOrderPort)
                 .recordOrder("order-replay", List.of("a", "b"));
 
-        verifyNoInteractions(coPurchaseRepository);
+        verifyNoInteractions(coPurchasePort);
     }
 
     @Test
     void singleItemOrderRecordsProcessedButNoCoPurchases() {
-        when(processedOrderRepository.existsById("order-solo")).thenReturn(false);
+        when(processedOrderPort.exists("order-solo")).thenReturn(false);
 
-        new CoPurchaseAggregator(coPurchaseRepository, processedOrderRepository)
+        new CoPurchaseAggregator(coPurchasePort, processedOrderPort)
                 .recordOrder("order-solo", List.of("a"));
 
-        verifyNoInteractions(coPurchaseRepository);
-        verify(processedOrderRepository).save(any());
+        verifyNoInteractions(coPurchasePort);
+        verify(processedOrderPort).save(any());
     }
 
     @Test
     void blankOrderIdIsIgnored() {
-        new CoPurchaseAggregator(coPurchaseRepository, processedOrderRepository)
+        new CoPurchaseAggregator(coPurchasePort, processedOrderPort)
                 .recordOrder("  ", List.of("a", "b"));
 
-        verifyNoInteractions(coPurchaseRepository);
-        verifyNoInteractions(processedOrderRepository);
+        verifyNoInteractions(coPurchasePort);
+        verifyNoInteractions(processedOrderPort);
     }
 
     @Test
     void nullProductsListIsIgnored() {
-        new CoPurchaseAggregator(coPurchaseRepository, processedOrderRepository)
+        new CoPurchaseAggregator(coPurchasePort, processedOrderPort)
                 .recordOrder("order-null", null);
 
-        verifyNoInteractions(coPurchaseRepository);
-        verify(processedOrderRepository).save(any());
+        verifyNoInteractions(coPurchasePort);
+        verify(processedOrderPort).save(any());
     }
 
     @Test
     void filtersBlankAndNullProductIds() {
-        when(processedOrderRepository.existsById("order-blanks")).thenReturn(false);
+        when(processedOrderPort.exists("order-blanks")).thenReturn(false);
 
-        new CoPurchaseAggregator(coPurchaseRepository, processedOrderRepository)
+        new CoPurchaseAggregator(coPurchasePort, processedOrderPort)
                 .recordOrder("order-blanks", Arrays.asList(null, "", "a", " ", "b"));
 
         // After filter -> 2 distinct -> 2 directed inserts
-        verify(coPurchaseRepository, times(2)).save(any());
+        verify(coPurchasePort, times(2)).save(any());
     }
 
     private static final class InMemoryCoPurchaseStore {
-        private final Map<CoPurchaseJpaEntity.CoPurchaseId, CoPurchaseJpaEntity> rows = new HashMap<>();
+        private final Map<String, CoPurchase> rows = new HashMap<>();
 
-        CoPurchaseJpaEntity get(CoPurchaseJpaEntity.CoPurchaseId id) {
-            return rows.get(id);
+        CoPurchase get(String productA, String productB) {
+            return rows.get(productA + "\0" + productB);
         }
 
-        void put(CoPurchaseJpaEntity entity) {
-            rows.put(entity.getId(), entity);
+        void put(CoPurchase row) {
+            rows.put(row.productA() + "\0" + row.productB(), row);
         }
     }
 }

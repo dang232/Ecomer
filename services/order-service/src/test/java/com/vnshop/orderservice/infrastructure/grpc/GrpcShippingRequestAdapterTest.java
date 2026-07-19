@@ -7,11 +7,12 @@ import com.vnshop.orderservice.domain.SubOrder;
 import com.vnshop.proto.shipping.ShippingServiceGrpc;
 import com.vnshop.proto.shipping.ShippingRequest;
 import com.vnshop.proto.shipping.ShippingResponse;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -20,6 +21,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -29,11 +31,18 @@ class GrpcShippingRequestAdapterTest {
     @Mock
     private ShippingServiceGrpc.ShippingServiceBlockingStub shippingStub;
 
-    @InjectMocks
     private GrpcShippingRequestAdapter adapter;
 
     @Captor
     private ArgumentCaptor<ShippingRequest> requestCaptor;
+
+    @BeforeEach
+    void setUp() {
+        adapter = new GrpcShippingRequestAdapter(
+                shippingStub,
+                CircuitBreaker.ofDefaults("shipping-request-test"));
+        when(shippingStub.withDeadlineAfter(anyLong(), any())).thenReturn(shippingStub);
+    }
 
     @Test
     void shouldSendShippingRequestWithCorrectOrderIdAndSellerId() {

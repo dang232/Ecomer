@@ -1091,10 +1091,10 @@ docker compose ps grafana
 curl http://localhost:3001/api/health
 
 # Verify datasources provisioned
-curl -u admin:vnshop123 http://localhost:3001/api/datasources | jq '.[].name'
+curl -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" http://localhost:3001/api/datasources | jq '.[].name'
 
 # Verify dashboards provisioned
-curl -u admin:vnshop123 http://localhost:3001/api/search?type=dash-db | jq '.[].title'
+curl -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" http://localhost:3001/api/search?type=dash-db | jq '.[].title'
 
 # Tear down
 docker compose down prometheus grafana
@@ -1460,7 +1460,7 @@ Start-Sleep -Seconds 30
 curl "http://localhost:3100/loki/api/v1/query?query={job=%22docker%22}&limit=5"
 
 # Verify Grafana can query Loki datasource
-curl -u admin:vnshop123 "http://localhost:3001/api/datasources/proxy/uid/loki/loki/api/v1/labels"
+curl -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" "http://localhost:3001/api/datasources/proxy/uid/loki/loki/api/v1/labels"
 
 # Tear down
 docker compose --profile apps down
@@ -2170,11 +2170,11 @@ curl http://localhost:9090/api/v1/rules | jq '.data.groups[] | select(.name == "
 # Verify SLO dashboard loaded in Grafana
 docker compose up -d grafana
 Start-Sleep -Seconds 10
-curl -u admin:vnshop123 http://localhost:3001/api/dashboards/uid/vnshop-slo-overview | jq '.dashboard.title'
+curl -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" http://localhost:3001/api/dashboards/uid/vnshop-slo-overview | jq '.dashboard.title'
 # Expected: "VNShop - SLO Overview"
 
 # Verify all 5 dashboards are provisioned
-curl -u admin:vnshop123 http://localhost:3001/api/search?type=dash-db | jq '.[].title'
+curl -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" http://localhost:3001/api/search?type=dash-db | jq '.[].title'
 # Expected: RED Metrics, JVM Overview, Kafka Consumer Lag, Business KPIs, SLO Overview
 
 # Check SLI/SLO doc exists
@@ -2222,11 +2222,11 @@ curl http://localhost:3001/api/health          # Grafana
 curl http://localhost:3100/ready              # Loki
 
 # Verify Grafana has all datasources
-curl -u admin:vnshop123 http://localhost:3001/api/datasources | jq '.[].name'
+curl -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" http://localhost:3001/api/datasources | jq '.[].name'
 # Expected: Prometheus, Loki, Jaeger
 
 # Verify all 5 dashboards
-curl -u admin:vnshop123 "http://localhost:3001/api/search?type=dash-db" | jq '.[].title'
+curl -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" "http://localhost:3001/api/search?type=dash-db" | jq '.[].title'
 # Expected: VNShop - RED Metrics, VNShop - JVM Overview, VNShop - Kafka Consumer Lag, VNShop - Business KPIs, VNShop - SLO Overview
 
 # Verify Prometheus rules

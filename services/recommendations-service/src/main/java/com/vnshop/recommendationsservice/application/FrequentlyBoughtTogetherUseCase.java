@@ -1,11 +1,8 @@
 package com.vnshop.recommendationsservice.application;
 
-import com.vnshop.recommendationsservice.infrastructure.persistence.CoPurchaseJpaEntity;
-import com.vnshop.recommendationsservice.infrastructure.persistence.CoPurchaseRepository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import org.springframework.data.domain.PageRequest;
 
 /**
  * "Frequently bought together" recommender. We take the top-N products that
@@ -26,14 +23,14 @@ import org.springframework.data.domain.PageRequest;
  * is weaker but the surface stays alive while real co-purchase data accrues.
  */
 public class FrequentlyBoughtTogetherUseCase {
-    private final CoPurchaseRepository coPurchaseRepository;
+    private final CoPurchasePort coPurchasePort;
     private final ProductServicePort productServicePort;
 
     public FrequentlyBoughtTogetherUseCase(
-            CoPurchaseRepository coPurchaseRepository,
+            CoPurchasePort coPurchasePort,
             ProductServicePort productServicePort
     ) {
-        this.coPurchaseRepository = Objects.requireNonNull(coPurchaseRepository, "coPurchaseRepository is required");
+        this.coPurchasePort = Objects.requireNonNull(coPurchasePort, "coPurchasePort is required");
         this.productServicePort = Objects.requireNonNull(productServicePort, "productServicePort is required");
     }
 
@@ -44,13 +41,12 @@ public class FrequentlyBoughtTogetherUseCase {
         if (limit <= 0) {
             return List.of();
         }
-        List<CoPurchaseJpaEntity> rows = coPurchaseRepository
-                .findTopByProductA(productId, PageRequest.of(0, limit));
+        List<CoPurchase> rows = coPurchasePort.findTopByProductA(productId, limit);
         if (rows.isEmpty()) {
             return coldStartFallback(productId, limit);
         }
         List<ProductProjection> enriched = new ArrayList<>(rows.size());
-        for (CoPurchaseJpaEntity row : rows) {
+        for (CoPurchase row : rows) {
             productServicePort.findById(row.productB()).ifPresent(enriched::add);
         }
         return List.copyOf(enriched);

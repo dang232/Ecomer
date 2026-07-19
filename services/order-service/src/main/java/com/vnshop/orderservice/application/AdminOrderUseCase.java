@@ -1,7 +1,9 @@
 package com.vnshop.orderservice.application;
 
+import com.vnshop.orderservice.application.coupon.CouponRedemptionService;
 import com.vnshop.orderservice.domain.FulfillmentStatus;
 import com.vnshop.orderservice.domain.Order;
+import com.vnshop.orderservice.domain.SubOrder;
 import com.vnshop.orderservice.domain.port.out.InventoryReservationPort;
 import com.vnshop.orderservice.domain.port.out.OrderEventPublisherPort;
 import com.vnshop.orderservice.domain.port.out.OrderRepositoryPort;
@@ -20,17 +22,20 @@ public class AdminOrderUseCase {
     private final OrderSummaryQueryPort orderSummaryQueryPort;
     private final InventoryReservationPort inventoryReservationPort;
     private final OrderEventPublisherPort orderEventPublisherPort;
+    private final CouponRedemptionService couponRedemptionService;
 
     public AdminOrderUseCase(
             OrderRepositoryPort orderRepository,
             OrderSummaryQueryPort orderSummaryQueryPort,
             InventoryReservationPort inventoryReservationPort,
-            OrderEventPublisherPort orderEventPublisherPort
+            OrderEventPublisherPort orderEventPublisherPort,
+            CouponRedemptionService couponRedemptionService
     ) {
         this.orderRepository = Objects.requireNonNull(orderRepository, "orderRepository is required");
         this.orderSummaryQueryPort = Objects.requireNonNull(orderSummaryQueryPort, "orderSummaryQueryPort is required");
         this.inventoryReservationPort = Objects.requireNonNull(inventoryReservationPort, "inventoryReservationPort is required");
         this.orderEventPublisherPort = Objects.requireNonNull(orderEventPublisherPort, "orderEventPublisherPort is required");
+        this.couponRedemptionService = Objects.requireNonNull(couponRedemptionService, "couponRedemptionService is required");
     }
 
     /**
@@ -57,14 +62,19 @@ public class AdminOrderUseCase {
     public Order forceCancel(UUID orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("order not found: " + orderId));
-        order.subOrders().forEach(subOrder -> {
+        boolean cancelledAny = false;
+        for (SubOrder subOrder : order.subOrders()) {
             FulfillmentStatus fs = subOrder.fulfillmentStatus();
             if (fs == FulfillmentStatus.PENDING_ACCEPTANCE || fs == FulfillmentStatus.ACCEPTED) {
                 subOrder.cancel();
+                cancelledAny = true;
             }
-        });
-        inventoryReservationPort.release(order.id().toString());
-        order.markPaymentFailed();
+        }
+        if (cancelledAny) {
+            inventoryReservationPort.release(order.id().toString());
+            releaseCouponForFullyCancelledOrder(order);
+            order.markPaymentFailed();
+        }
         Order saved = orderRepository.save(order);
         orderEventPublisherPort.publishOrderUpdated(saved);
         return saved;
@@ -93,7 +103,9 @@ public class AdminOrderUseCase {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("order not found: " + orderId));
         FulfillmentStatus target = FulfillmentStatus.valueOf(targetStatus.toUpperCase());
-        order.subOrders().forEach(subOrder -> {
+        boolean cancelledAny = false;
+        for (SubOrder subOrder : order.subOrders()) {
+            FulfillmentStatus before = subOrder.fulfillmentStatus();
             try {
                 switch (target) {
                     case ACCEPTED -> subOrder.accept();
@@ -105,9 +117,23 @@ public class AdminOrderUseCase {
             } catch (IllegalStateException ignored) {
                 // Sub-order already in this or a later state.
             }
-        });
+            cancelledAny |= target == FulfillmentStatus.CANCELLED
+                    && before != subOrder.fulfillmentStatus();
+        }
+        if (cancelledAny) {
+            releaseCouponForFullyCancelledOrder(order);
+        }
         Order saved = orderRepository.save(order);
         orderEventPublisherPort.publishOrderUpdated(saved);
         return saved;
+    }
+
+    private void releaseCouponForFullyCancelledOrder(Order order) {
+        boolean fullyCancelled = order.subOrders().stream()
+                .allMatch(subOrder -> subOrder.fulfillmentStatus() == FulfillmentStatus.CANCELLED
+                        || subOrder.fulfillmentStatus() == FulfillmentStatus.REJECTED);
+        if (fullyCancelled) {
+            couponRedemptionService.release(order.id());
+        }
     }
 }

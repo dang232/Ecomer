@@ -1,7 +1,7 @@
 package com.vnshop.paymentservice.infrastructure.persistence;
 
-import com.vnshop.paymentservice.infrastructure.gateway.PaymentCallbackOutbox;
-import com.vnshop.paymentservice.infrastructure.gateway.PaymentCallbackOutboxRecord;
+import com.vnshop.paymentservice.domain.PaymentCallbackOutboxRecord;
+import com.vnshop.paymentservice.domain.port.out.PaymentCallbackOutbox;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.data.domain.PageRequest;

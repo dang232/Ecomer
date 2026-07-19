@@ -24,6 +24,14 @@ describe('RolesGuard', () => {
     expect(guard.canActivate(mockContext({}))).toBe(true);
   });
 
+  it('allows a public route even when its controller requires admin', () => {
+    jest
+      .spyOn(reflector, 'getAllAndOverride')
+      .mockReturnValueOnce(true)
+      .mockReturnValueOnce(['admin']);
+    expect(guard.canActivate(mockContext(undefined))).toBe(true);
+  });
+
   it('denies access when user has no matching role', () => {
     jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(['admin']);
     const user = { sub: '1', realm_access: { roles: ['buyer'] } };

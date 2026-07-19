@@ -1,41 +1,40 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-const API_BASE =
-  (import.meta.env as Record<string, string | undefined>).VITE_API_URL ?? "http://localhost:8080";
+import { apiUrl } from "../../lib/runtime-endpoints";
 
 interface ServiceDef {
   id: string;
   labelKey: string;
-  healthUrl: string;
+  healthPath: string;
 }
 
 const SERVICES: ServiceDef[] = [
-  { id: "gateway", labelKey: "admin.health.gateway", healthUrl: `${API_BASE}/actuator/health` },
+  { id: "gateway", labelKey: "admin.health.gateway", healthPath: "/actuator/health" },
   {
     id: "user",
     labelKey: "admin.health.userService",
-    healthUrl: `${API_BASE}/user-service/actuator/health`,
+    healthPath: "/user-service/actuator/health",
   },
   {
     id: "order",
     labelKey: "admin.health.orderService",
-    healthUrl: `${API_BASE}/order-service/actuator/health`,
+    healthPath: "/order-service/actuator/health",
   },
   {
     id: "payment",
     labelKey: "admin.health.paymentService",
-    healthUrl: `${API_BASE}/payment-service/actuator/health`,
+    healthPath: "/payment-service/actuator/health",
   },
   {
     id: "catalog",
     labelKey: "admin.health.catalogService",
-    healthUrl: `${API_BASE}/product-service/actuator/health`,
+    healthPath: "/product-service/actuator/health",
   },
   {
     id: "notification",
     labelKey: "admin.health.notificationService",
-    healthUrl: `${API_BASE}/notification-service/health`,
+    healthPath: "/notification-service/health",
   },
 ];
 
@@ -82,7 +81,7 @@ export function SystemHealth() {
     const checks = await Promise.all(
       SERVICES.map(async (s) => ({
         id: s.id,
-        status: await checkHealth(s.healthUrl, controller.signal),
+        status: await checkHealth(apiUrl(s.healthPath), controller.signal),
       })),
     );
     if (controller.signal.aborted) return;
@@ -140,7 +139,9 @@ export function SystemHealth() {
               <div key={svc.id} className="px-5 py-4 flex items-center justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-foreground">{t(svc.labelKey)}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5 truncate">{svc.healthUrl}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                    {apiUrl(svc.healthPath)}
+                  </p>
                 </div>
                 <div className="shrink-0 flex items-center gap-2">
                   {status === "checking" ? (

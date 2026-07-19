@@ -11,7 +11,10 @@ export const REDIS_CLIENT = Symbol('REDIS_CLIENT');
       provide: REDIS_CLIENT,
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
-        const url = config.get<string>('REDIS_URL', 'redis://localhost:6379');
+        const url = config.get<string>('REDIS_URL');
+        if (!url) {
+          throw new Error('REDIS_URL environment variable is required');
+        }
         return new Redis(url, { lazyConnect: true, maxRetriesPerRequest: 3 });
       },
     },

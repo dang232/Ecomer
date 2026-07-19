@@ -1,6 +1,6 @@
 package com.vnshop.orderservice.application.tax;
 
-import com.vnshop.orderservice.application.catalog.CatalogProduct;
+import com.vnshop.orderservice.domain.catalog.CatalogProduct;
 import com.vnshop.orderservice.domain.Money;
 import com.vnshop.orderservice.domain.OrderItem;
 import org.junit.jupiter.api.Test;

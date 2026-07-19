@@ -62,7 +62,7 @@ public class S3ObjectStorageAdapter implements ObjectStoragePort {
 
     @Override
     public URI publicUrl(String key) {
-        String base = properties.getEndpoint().replaceAll("/$", "");
+        String base = properties.resolvePublicEndpoint().replaceAll("/$", "");
         if (properties.isPathStyleAccess()) {
             return URI.create(base + "/" + properties.getBucket() + "/" + key);
         }

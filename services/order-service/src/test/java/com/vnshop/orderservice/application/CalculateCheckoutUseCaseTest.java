@@ -3,7 +3,7 @@ package com.vnshop.orderservice.application;
 import com.vnshop.orderservice.application.CalculateCheckoutUseCase.CheckoutBreakdown;
 import com.vnshop.orderservice.application.CheckoutOrderUseCase.CheckoutLineItem;
 import com.vnshop.orderservice.application.CheckoutOrderUseCase.ProductNotFoundException;
-import com.vnshop.orderservice.application.catalog.CatalogProduct;
+import com.vnshop.orderservice.domain.catalog.CatalogProduct;
 import com.vnshop.orderservice.domain.Money;
 import com.vnshop.orderservice.domain.checkout.CartItemSnapshot;
 import com.vnshop.orderservice.domain.checkout.CartSnapshot;
