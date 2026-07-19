@@ -1,6 +1,6 @@
 package com.vnshop.paymentservice.infrastructure.persistence;
 
-import com.vnshop.paymentservice.application.webhook.WebhookDeadLetterRecord;
+import com.vnshop.paymentservice.domain.WebhookDeadLetterRecord;
 import com.vnshop.paymentservice.domain.port.out.WebhookDeadLetterPort;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;

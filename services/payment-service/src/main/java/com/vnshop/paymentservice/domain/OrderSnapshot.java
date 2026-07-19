@@ -1,4 +1,4 @@
-package com.vnshop.paymentservice.application.order;
+package com.vnshop.paymentservice.domain;
 
 import java.math.BigDecimal;
 import java.util.Objects;

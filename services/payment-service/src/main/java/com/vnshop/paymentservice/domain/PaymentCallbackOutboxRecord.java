@@ -1,4 +1,4 @@
-package com.vnshop.paymentservice.infrastructure.gateway;
+package com.vnshop.paymentservice.domain;
 
 import java.math.BigDecimal;
 import java.time.Instant;

@@ -1,5 +1,6 @@
 package com.vnshop.paymentservice.application.webhook;
 
+import com.vnshop.paymentservice.domain.WebhookDeadLetterRecord;
 import com.vnshop.paymentservice.domain.port.out.WebhookDeadLetterPort;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Counter;

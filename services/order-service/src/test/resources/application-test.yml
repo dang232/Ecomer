@@ -5,3 +5,8 @@ spring:
   kafka:
     consumer:
       auto-offset-reset: earliest
+
+vnshop:
+  datasource:
+    read-replica:
+      enabled: false

@@ -1,4 +1,4 @@
-package com.vnshop.paymentservice.infrastructure.event;
+package com.vnshop.paymentservice.application.chargeback;
 
 import com.vnshop.paymentservice.domain.Chargeback;
 

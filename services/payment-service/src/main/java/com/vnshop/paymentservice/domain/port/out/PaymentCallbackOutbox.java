@@ -1,4 +1,6 @@
-package com.vnshop.paymentservice.infrastructure.gateway;
+package com.vnshop.paymentservice.domain.port.out;
+
+import com.vnshop.paymentservice.domain.PaymentCallbackOutboxRecord;
 
 import java.time.Instant;
 import java.util.List;

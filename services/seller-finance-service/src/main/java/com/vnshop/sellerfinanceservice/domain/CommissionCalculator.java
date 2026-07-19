@@ -1,15 +1,15 @@
 package com.vnshop.sellerfinanceservice.domain;
 
-import com.vnshop.sellerfinanceservice.infrastructure.config.CommissionRateConfig;
+import com.vnshop.sellerfinanceservice.domain.port.out.CommissionRatePort;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Objects;
 
 public class CommissionCalculator {
-    private final CommissionRateConfig rateConfig;
+    private final CommissionRatePort rateConfig;
 
-    public CommissionCalculator(CommissionRateConfig rateConfig) {
+    public CommissionCalculator(CommissionRatePort rateConfig) {
         this.rateConfig = Objects.requireNonNull(rateConfig, "rateConfig is required");
     }
 

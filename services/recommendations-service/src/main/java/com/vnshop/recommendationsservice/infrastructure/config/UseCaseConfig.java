@@ -1,9 +1,9 @@
 package com.vnshop.recommendationsservice.infrastructure.config;
 
+import com.vnshop.recommendationsservice.application.CoPurchasePort;
 import com.vnshop.recommendationsservice.application.FrequentlyBoughtTogetherUseCase;
 import com.vnshop.recommendationsservice.application.ProductServicePort;
 import com.vnshop.recommendationsservice.application.YouMayAlsoLikeUseCase;
-import com.vnshop.recommendationsservice.infrastructure.persistence.CoPurchaseRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,10 +14,10 @@ public class UseCaseConfig {
 
     @Bean
     FrequentlyBoughtTogetherUseCase frequentlyBoughtTogetherUseCase(
-            CoPurchaseRepository coPurchaseRepository,
+            CoPurchasePort coPurchasePort,
             ProductServicePort productServicePort
     ) {
-        return new FrequentlyBoughtTogetherUseCase(coPurchaseRepository, productServicePort);
+        return new FrequentlyBoughtTogetherUseCase(coPurchasePort, productServicePort);
     }
 
     @Bean

@@ -1,13 +1,8 @@
 package com.vnshop.recommendationsservice.application;
 
-import com.vnshop.recommendationsservice.infrastructure.persistence.CoPurchaseJpaEntity;
-import com.vnshop.recommendationsservice.infrastructure.persistence.CoPurchaseRepository;
-import com.vnshop.recommendationsservice.infrastructure.persistence.ProcessedOrderJpaEntity;
-import com.vnshop.recommendationsservice.infrastructure.persistence.ProcessedOrderRepository;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -36,15 +31,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class CoPurchaseAggregator {
     private static final Logger LOGGER = LoggerFactory.getLogger(CoPurchaseAggregator.class);
 
-    private final CoPurchaseRepository coPurchaseRepository;
-    private final ProcessedOrderRepository processedOrderRepository;
+    private final CoPurchasePort coPurchasePort;
+    private final ProcessedOrderPort processedOrderPort;
 
     public CoPurchaseAggregator(
-            CoPurchaseRepository coPurchaseRepository,
-            ProcessedOrderRepository processedOrderRepository
+            CoPurchasePort coPurchasePort,
+            ProcessedOrderPort processedOrderPort
     ) {
-        this.coPurchaseRepository = Objects.requireNonNull(coPurchaseRepository, "coPurchaseRepository is required");
-        this.processedOrderRepository = Objects.requireNonNull(processedOrderRepository, "processedOrderRepository is required");
+        this.coPurchasePort = Objects.requireNonNull(coPurchasePort, "coPurchasePort is required");
+        this.processedOrderPort = Objects.requireNonNull(processedOrderPort, "processedOrderPort is required");
     }
 
     @Transactional
@@ -59,7 +54,7 @@ public class CoPurchaseAggregator {
             markProcessed(orderId);
             return;
         }
-        if (processedOrderRepository.existsById(orderId)) {
+        if (processedOrderPort.exists(orderId)) {
             LOGGER.debug("Skipping already-processed order {}", orderId);
             return;
         }
@@ -87,21 +82,16 @@ public class CoPurchaseAggregator {
     }
 
     private void incrementPair(String productA, String productB) {
-        CoPurchaseJpaEntity.CoPurchaseId id = new CoPurchaseJpaEntity.CoPurchaseId(productA, productB);
-        Optional<CoPurchaseJpaEntity> existing = coPurchaseRepository.findById(id);
-        if (existing.isPresent()) {
-            CoPurchaseJpaEntity entity = existing.get();
-            entity.setCoCount(entity.getCoCount() + 1);
-            entity.setLastSeenAt(Instant.now());
-            coPurchaseRepository.save(entity);
-        } else {
-            coPurchaseRepository.save(new CoPurchaseJpaEntity(productA, productB, 1L, Instant.now()));
-        }
+        Instant now = Instant.now();
+        CoPurchase updated = coPurchasePort.find(productA, productB)
+                .map(row -> row.incrementedAt(now))
+                .orElseGet(() -> new CoPurchase(productA, productB, 1L, now));
+        coPurchasePort.save(updated);
     }
 
     private void markProcessed(String orderId) {
-        if (!processedOrderRepository.existsById(orderId)) {
-            processedOrderRepository.save(new ProcessedOrderJpaEntity(orderId));
+        if (!processedOrderPort.exists(orderId)) {
+            processedOrderPort.save(orderId);
         }
     }
 }

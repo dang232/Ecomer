@@ -2,10 +2,10 @@ package com.vnshop.paymentservice.application;
 
 import com.vnshop.paymentservice.application.ledger.LedgerService;
 import com.vnshop.paymentservice.domain.Payment;
+import com.vnshop.paymentservice.domain.PaymentCallbackOutboxRecord;
 import com.vnshop.paymentservice.domain.PaymentStatus;
+import com.vnshop.paymentservice.domain.port.out.PaymentCallbackOutbox;
 import com.vnshop.paymentservice.domain.port.out.PaymentRepositoryPort;
-import com.vnshop.paymentservice.infrastructure.gateway.PaymentCallbackOutbox;
-import com.vnshop.paymentservice.infrastructure.gateway.PaymentCallbackOutboxRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

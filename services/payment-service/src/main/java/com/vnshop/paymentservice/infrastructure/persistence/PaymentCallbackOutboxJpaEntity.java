@@ -1,7 +1,7 @@
 package com.vnshop.paymentservice.infrastructure.persistence;
 
 import com.vnshop.paymentservice.infrastructure.persistence.BaseJpaEntity;
-import com.vnshop.paymentservice.infrastructure.gateway.PaymentCallbackOutboxRecord;
+import com.vnshop.paymentservice.domain.PaymentCallbackOutboxRecord;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;

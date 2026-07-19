@@ -19,6 +19,10 @@ import java.util.Map;
  * primary host, both lookup keys point to the same database — no code change required.
  */
 @Configuration
+@ConditionalOnProperty(
+        name = "vnshop.datasource.read-replica.enabled",
+        havingValue = "true",
+        matchIfMissing = true)
 public class ReadReplicaDataSourceConfig {
 
     private enum DataSourceType { PRIMARY, REPLICA }

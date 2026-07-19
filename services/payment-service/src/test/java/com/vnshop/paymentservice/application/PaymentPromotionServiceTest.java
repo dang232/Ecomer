@@ -8,8 +8,8 @@ import com.vnshop.paymentservice.domain.PaymentMethod;
 import com.vnshop.paymentservice.domain.PaymentStatus;
 import com.vnshop.paymentservice.domain.port.out.LedgerRepositoryPort;
 import com.vnshop.paymentservice.domain.port.out.PaymentRepositoryPort;
-import com.vnshop.paymentservice.infrastructure.gateway.PaymentCallbackOutbox;
-import com.vnshop.paymentservice.infrastructure.gateway.PaymentCallbackOutboxRecord;
+import com.vnshop.paymentservice.domain.PaymentCallbackOutboxRecord;
+import com.vnshop.paymentservice.domain.port.out.PaymentCallbackOutbox;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;

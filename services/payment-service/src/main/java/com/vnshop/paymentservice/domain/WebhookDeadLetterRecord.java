@@ -1,4 +1,4 @@
-package com.vnshop.paymentservice.application.webhook;
+package com.vnshop.paymentservice.domain;
 
 import java.time.Instant;
 import java.util.UUID;

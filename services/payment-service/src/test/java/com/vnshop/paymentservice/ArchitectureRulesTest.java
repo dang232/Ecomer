@@ -70,6 +70,7 @@ class ArchitectureRulesTest {
         classes()
                 .that().haveSimpleNameEndingWith("GrpcAdapter")
                 .should().resideInAPackage("..infrastructure.grpc..")
+                .allowEmptyShould(true)
                 .check(classes);
     }
 

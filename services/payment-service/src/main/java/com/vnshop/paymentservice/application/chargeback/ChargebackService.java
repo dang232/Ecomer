@@ -2,7 +2,6 @@ package com.vnshop.paymentservice.application.chargeback;
 
 import com.vnshop.paymentservice.domain.Chargeback;
 import com.vnshop.paymentservice.domain.port.out.ChargebackRepositoryPort;
-import com.vnshop.paymentservice.infrastructure.event.ChargebackCreatedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;

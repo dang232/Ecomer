@@ -1,6 +1,6 @@
 package com.vnshop.paymentservice.infrastructure.web;
 
-import com.vnshop.paymentservice.application.webhook.WebhookDeadLetterRecord;
+import com.vnshop.paymentservice.domain.WebhookDeadLetterRecord;
 import com.vnshop.paymentservice.application.webhook.WebhookDeadLetterService;
 import com.vnshop.paymentservice.application.webhook.WebhookDltEvent;
 import com.vnshop.paymentservice.domain.port.out.WebhookDeadLetterPort;

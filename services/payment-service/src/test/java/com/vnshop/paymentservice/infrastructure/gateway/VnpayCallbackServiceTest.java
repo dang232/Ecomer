@@ -1,5 +1,7 @@
 package com.vnshop.paymentservice.infrastructure.gateway;
 
+import com.vnshop.paymentservice.domain.PaymentCallbackOutboxRecord;
+import com.vnshop.paymentservice.domain.port.out.PaymentCallbackOutbox;
 import com.vnshop.paymentservice.application.PaymentPromotionService;
 import com.vnshop.paymentservice.application.ledger.LedgerService;
 import com.vnshop.paymentservice.domain.JournalEntry;
