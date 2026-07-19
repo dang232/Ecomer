@@ -1,4 +1,4 @@
-package com.vnshop.orderservice.application.catalog;
+package com.vnshop.orderservice.domain.catalog;
 
 import com.vnshop.orderservice.domain.Money;
 

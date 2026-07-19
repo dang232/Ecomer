@@ -1,4 +1,4 @@
-package com.vnshop.orderservice.infrastructure.admin;
+package com.vnshop.orderservice.infrastructure.web.admin;
 
 import com.vnshop.orderservice.application.GetDashboardUseCase;
 import com.vnshop.orderservice.infrastructure.web.ApiResponse;

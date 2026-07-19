@@ -3,7 +3,7 @@ package com.vnshop.orderservice.infrastructure.product;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vnshop.orderservice.application.catalog.CatalogProduct;
+import com.vnshop.orderservice.domain.catalog.CatalogProduct;
 import com.vnshop.orderservice.domain.Money;
 import com.vnshop.orderservice.domain.port.out.ProductCatalogPort;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;

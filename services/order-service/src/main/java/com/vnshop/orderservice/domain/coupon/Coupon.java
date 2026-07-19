@@ -71,8 +71,55 @@ public class Coupon {
         if (validUntil.isBefore(validFrom)) {
             throw new IllegalArgumentException("validUntil must not be before validFrom");
         }
+        if (totalLimit <= 0) {
+            throw new IllegalArgumentException("totalLimit must be positive");
+        }
+        if (perUserLimit <= 0) {
+            throw new IllegalArgumentException("perUserLimit must be positive");
+        }
         return new Coupon(id, code, discountType, discountValue, maxDiscount, minOrderAmount,
                 totalLimit, perUserLimit, validFrom, validUntil);
+    }
+
+    public static Coupon restore(
+            CouponId id,
+            String code,
+            DiscountType discountType,
+            BigDecimal discountValue,
+            Money maxDiscount,
+            Money minOrderAmount,
+            int totalLimit,
+            int totalUsed,
+            int perUserLimit,
+            LocalDateTime validFrom,
+            LocalDateTime validUntil,
+            boolean active) {
+        Coupon coupon = create(id, code, discountType, discountValue, maxDiscount, minOrderAmount,
+                totalLimit, perUserLimit, validFrom, validUntil);
+        if (totalUsed < 0 || totalUsed > totalLimit) {
+            throw new IllegalArgumentException("totalUsed must be between zero and totalLimit");
+        }
+        coupon.totalUsed = totalUsed;
+        coupon.active = active;
+        return coupon;
+    }
+
+    public Coupon replaceTerms(
+            String replacementCode,
+            DiscountType replacementType,
+            BigDecimal replacementValue,
+            Money replacementMaxDiscount,
+            Money replacementMinOrderAmount,
+            int replacementTotalLimit,
+            int replacementPerUserLimit,
+            LocalDateTime replacementValidFrom,
+            LocalDateTime replacementValidUntil) {
+        if (replacementTotalLimit < totalUsed) {
+            throw new IllegalArgumentException("totalLimit cannot be lower than totalUsed");
+        }
+        return restore(id, replacementCode, replacementType, replacementValue, replacementMaxDiscount,
+                replacementMinOrderAmount, replacementTotalLimit, totalUsed, replacementPerUserLimit,
+                replacementValidFrom, replacementValidUntil, active);
     }
 
     public CouponId id() { return id; }

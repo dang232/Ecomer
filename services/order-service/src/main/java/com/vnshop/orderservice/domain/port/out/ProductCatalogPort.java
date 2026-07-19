@@ -1,6 +1,6 @@
 package com.vnshop.orderservice.domain.port.out;
 
-import com.vnshop.orderservice.application.catalog.CatalogProduct;
+import com.vnshop.orderservice.domain.catalog.CatalogProduct;
 
 import java.util.Optional;
 

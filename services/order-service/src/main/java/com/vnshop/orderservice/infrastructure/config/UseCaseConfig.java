@@ -45,6 +45,10 @@ import com.vnshop.orderservice.application.saga.SagaOrchestrator;
 import com.vnshop.orderservice.application.tax.TaxCalculationService;
 import com.vnshop.orderservice.domain.port.out.TaxRateLookupPort;
 import java.time.Clock;
+import com.vnshop.orderservice.application.coupon.CouponManagementService;
+import com.vnshop.orderservice.application.coupon.CouponRedemptionService;
+import com.vnshop.orderservice.domain.coupon.CouponRepository;
+import com.vnshop.orderservice.domain.coupon.CouponUsageRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -55,9 +59,11 @@ public class UseCaseConfig {
             OrderRepositoryPort orderRepositoryPort,
             OrderSummaryQueryPort orderSummaryQueryPort,
             InventoryReservationPort inventoryReservationPort,
-            OrderEventPublisherPort orderEventPublisherPort
+            OrderEventPublisherPort orderEventPublisherPort,
+            CouponRedemptionService couponRedemptionService
     ) {
-        return new AdminOrderUseCase(orderRepositoryPort, orderSummaryQueryPort, inventoryReservationPort, orderEventPublisherPort);
+        return new AdminOrderUseCase(orderRepositoryPort, orderSummaryQueryPort, inventoryReservationPort,
+                orderEventPublisherPort, couponRedemptionService);
     }
 
     @Bean
@@ -76,9 +82,25 @@ public class UseCaseConfig {
             CartRepositoryPort cartRepositoryPort,
             MetricsPort metricsPort,
             SagaOrchestrator sagaOrchestrator,
-            TaxCalculationService taxCalculationService
+            TaxCalculationService taxCalculationService,
+            CouponRedemptionService couponRedemptionService
     ) {
-        return new CreateOrderUseCase(orderRepositoryPort, inventoryReservationPort, paymentRequestPort, shippingRequestPort, orderEventPublisherPort, commissionTierLookupPort, cartRepositoryPort, metricsPort, sagaOrchestrator, taxCalculationService);
+        return new CreateOrderUseCase(orderRepositoryPort, inventoryReservationPort, paymentRequestPort,
+                shippingRequestPort, orderEventPublisherPort, commissionTierLookupPort, cartRepositoryPort,
+                metricsPort, sagaOrchestrator, taxCalculationService, couponRedemptionService);
+    }
+
+    @Bean
+    CouponRedemptionService couponRedemptionService(
+            CouponRepository couponRepository,
+            CouponUsageRepository couponUsageRepository,
+            Clock clock) {
+        return new CouponRedemptionService(couponRepository, couponUsageRepository, clock);
+    }
+
+    @Bean
+    CouponManagementService couponManagementService(CouponRepository couponRepository, Clock clock) {
+        return new CouponManagementService(couponRepository, clock);
     }
 
     @Bean
@@ -151,9 +173,11 @@ public class UseCaseConfig {
     CancelOrderUseCase cancelOrderUseCase(
             OrderRepositoryPort orderRepositoryPort,
             InventoryReservationPort inventoryReservationPort,
-            OrderEventPublisherPort orderEventPublisherPort
+            OrderEventPublisherPort orderEventPublisherPort,
+            CouponRedemptionService couponRedemptionService
     ) {
-        return new CancelOrderUseCase(orderRepositoryPort, inventoryReservationPort, orderEventPublisherPort);
+        return new CancelOrderUseCase(orderRepositoryPort, inventoryReservationPort,
+                orderEventPublisherPort, couponRedemptionService);
     }
 
     @Bean

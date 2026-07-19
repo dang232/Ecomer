@@ -70,8 +70,6 @@ vnshop:
       VERIFIED: "0.08"
       PREFERRED: "0.05"
       MALL: "0.03"
-  coupon-service:
-    base-url: ${COUPON_SERVICE_URL:http://coupon-service:8088}
 
 config-service:
   url: ${CONFIG_SERVICE_URL:http://configuration-service:8097}

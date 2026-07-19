@@ -3,6 +3,7 @@ package com.vnshop.orderservice.infrastructure.web;
 import com.vnshop.orderservice.application.CheckoutOrderUseCase;
 import com.vnshop.orderservice.application.OrderAccessDeniedException;
 import com.vnshop.orderservice.domain.InvoiceAccessDeniedException;
+import com.vnshop.orderservice.domain.coupon.CouponException;
 import com.vnshop.orderservice.infrastructure.cart.CartUnavailableException;
 import com.vnshop.orderservice.infrastructure.product.ProductCatalogUnavailableException;
 import org.slf4j.Logger;
@@ -58,6 +59,12 @@ public class ApiExceptionHandler {
     public ApiResponse<Void> cartUnavailable(CartUnavailableException exception) {
         log.warn("cart-unavailable: {}", exception.getMessage());
         return ApiResponse.error("Cart service is temporarily unavailable", "CART_UNAVAILABLE");
+    }
+
+    @ExceptionHandler(CouponException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiResponse<Void> couponFailure(CouponException exception) {
+        return ApiResponse.error(exception.getMessage(), exception.code());
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

@@ -68,7 +68,8 @@ class ArchitectureRulesTest {
     @Test
     void grpc_adapters_should_reside_in_grpc_package() {
         classes()
-                .that().haveSimpleNameEndingWith("GrpcAdapter")
+                .that().haveSimpleNameStartingWith("Grpc")
+                .and().haveSimpleNameEndingWith("Adapter")
                 .should().resideInAPackage("..infrastructure.grpc..")
                 .check(classes);
     }

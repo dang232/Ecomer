@@ -183,6 +183,11 @@ public class Order {
         calculateTotals();
     }
 
+    public void applyDiscount(Money discount) {
+        this.discount = Objects.requireNonNull(discount, "discount is required");
+        calculateTotals();
+    }
+
     public void markPaymentCompleted() {
         paymentStatus = PaymentStatus.COMPLETED;
     }

@@ -1,4 +1,4 @@
-package com.vnshop.orderservice.infrastructure.admin;
+package com.vnshop.orderservice.infrastructure.web.admin;
 
 import com.vnshop.orderservice.domain.RevenueTimeSeries;
 import java.math.BigDecimal;
