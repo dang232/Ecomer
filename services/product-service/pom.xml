@@ -27,7 +27,7 @@
 		<url/>
 	</scm>
 	<properties>
-		<jackson.version>2.21.4</jackson.version>
+		<jackson.version>2.22.1</jackson.version>
 		<jackson3.version>3.2.1</jackson3.version>
 		<java.version>25</java.version>
 		<opentelemetry.javaagent.version>2.27.0</opentelemetry.javaagent.version>
