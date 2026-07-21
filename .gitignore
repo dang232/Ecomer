@@ -245,5 +245,14 @@ app.*.symbols
 !/docs/architect/SHOPEE-HAR-INVESTIGATION-AND-PLAN.md
 !/docs/PRODUCTION-READINESS-REVIEW.md
 !/docs/PRODUCTION-READINESS-CLOSURE-PLAN.md
+!/docs/PENETRATION-TESTING-REPORT-2026-07-11.md
+!/docs/SESSION-HANDOVER-2026-07-10.md
+!/docs/SESSION-HANDOVER-AUDIT-2026-07-10.md
+!/docs/SESSION-HANDOVER-PENTEST-2026-07-11.md
+!/docs/SPRINT-2026-07-MEDIUM-BLOCKERS.md
+!/docs/ULTRA-GOAL-REPORT-2026-07-10.md
+!/docs/gdt-integration-status.md
+!/docs/operations/
+!/docs/operations/*.md
 /services/configuration-service/dist
 /services/product-service/.omc
