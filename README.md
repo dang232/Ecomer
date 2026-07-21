@@ -16,6 +16,8 @@ VNShop is a portfolio full-stack project for a Vietnamese multi-seller marketpla
 | Resource | Use it for |
 | --- | --- |
 | [HANDOFF.md](HANDOFF.md) | **Start here.** Single-page pickup doc for someone new to the codebase. |
+| [Architech.md](Architech.md) | Full service-by-service architecture, boundaries, contracts, and deployment model. |
+| [Production readiness review](docs/PRODUCTION-READINESS-REVIEW.md) | Dated review of local fallbacks, hardcoded infrastructure, provider modes, and release blockers. |
 | [Architecture doc](.sisyphus/ARCHITECTURE.md) | Full system design, bounded contexts, API conventions |
 | [Status doc](.sisyphus/STATUS.md) | Per-service health, feature coverage, NFR audit, roadmap |
 | [Audit summary 2026-05-21](docs/AUDIT-SUMMARY-2026-05-21.md) | Consolidated security audit ledger (pt12 → pt23) — 18 findings closed across 7 services |
@@ -27,6 +29,18 @@ VNShop is a portfolio full-stack project for a Vietnamese multi-seller marketpla
 | [Docker Compose](docker-compose.yml) | Local infrastructure and service definitions |
 
 For a chronological view of what shipped, walk the handover series in `docs/SESSION-HANDOVER-2026-05-{17..29}-pt{0..44}.md` and `docs/SESSION-HANDOVER-2026-06-*.md`. For the day-to-day pickup case, [HANDOFF.md](HANDOFF.md) is enough.
+
+## Current Production Readiness
+
+The repository has a working local integration topology and substantial domain/test coverage, but the
+current Kubernetes promotion artifacts are **not production-ready**. Before treating a deployment as
+live, resolve the empty SealedSecret, replace all-zero image digests, select live carrier/payment modes,
+and remove or gate server-side localhost/stub/demo fallbacks. The complete evidence and remediation
+order are maintained in [`docs/PRODUCTION-READINESS-REVIEW.md`](docs/PRODUCTION-READINESS-REVIEW.md).
+
+Local-only values are intentional in `.env.example` and `infra/compose/staging/docker-compose.staging.yml`.
+They are documented for developer setup and must never be copied into shared staging or production. The
+architecture source of truth for service ownership and cross-service contracts is [`Architech.md`](Architech.md).
 
 ## Architecture Overview
 
@@ -316,6 +330,9 @@ docker compose --profile apps down
 ```
 
 ## Service Map
+
+This is the quick ownership map. See [`Architech.md`](Architech.md) for the full service boundaries,
+dependencies, contracts, deployment topology, and per-service production notes.
 
 | Service | Port | Tech | Profile | Owns |
 | --- | ---: | --- | --- | --- |
