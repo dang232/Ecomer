@@ -40,6 +40,13 @@
 	</properties>
 	<dependencyManagement>
 		<dependencies>
+			<dependency>
+				<groupId>io.grpc</groupId>
+				<artifactId>grpc-bom</artifactId>
+				<version>${grpc.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
 			<!-- Jackson CVE-2026-54512, CVE-2026-54513 -->
 			<dependency>
 				<groupId>com.fasterxml.jackson.core</groupId>
@@ -188,7 +195,7 @@
 			<version>4.6.14</version>
 			<scope>test</scope>
 			<exclusions>
-				<!-- The service uses grpc-netty-shaded 1.81. Mixing Pact's
+				<!-- The service uses grpc-netty-shaded 1.82.2. Mixing Pact's
 				     transitive grpc-netty 1.56 causes ServerBuilder to load
 				     incompatible transport classes in gRPC tests. -->
 				<exclusion>

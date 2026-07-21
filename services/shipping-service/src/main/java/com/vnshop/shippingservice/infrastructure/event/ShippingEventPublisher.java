@@ -5,8 +5,6 @@ import com.vnshop.shippingservice.domain.model.CarrierWebhookEvent;
 import com.vnshop.shippingservice.domain.port.out.ShippingCancellationEventPublisherPort;
 import com.vnshop.shippingservice.domain.port.out.ShippingStatusEventPublisherPort;
 import com.vnshop.shippingservice.infrastructure.config.ShippingEventProperties;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
@@ -18,8 +16,6 @@ import java.util.concurrent.CompletableFuture;
 
 @Component
 public class ShippingEventPublisher implements ShippingCancellationEventPublisherPort, ShippingStatusEventPublisherPort {
-
-    private static final Logger LOG = LoggerFactory.getLogger(ShippingEventPublisher.class);
 
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
@@ -41,17 +37,16 @@ public class ShippingEventPublisher implements ShippingCancellationEventPublishe
     }
 
     @Override
-    public void publishCancelled(String orderId, String sagaId, String reason) {
+    public CompletableFuture<Void> publishCancelled(String orderId, String sagaId, String reason) {
         try {
             Map<String, Object> payload = new LinkedHashMap<>();
             payload.put("orderId", orderId);
             payload.put("sagaId", sagaId == null ? "" : sagaId);
             payload.put("reason", reason);
             payload.put("timestamp", Instant.now().toString());
-            send(properties.cancelledTopic(), orderId, objectMapper.writeValueAsString(payload))
-                    .whenComplete((ignored, failure) -> logResult(properties.cancelledTopic(), orderId, failure));
+            return send(properties.cancelledTopic(), orderId, objectMapper.writeValueAsString(payload));
         } catch (Exception e) {
-            LOG.error("Unable to enqueue {} for order {}", properties.cancelledTopic(), orderId, e);
+            return CompletableFuture.failedFuture(e);
         }
     }
 
@@ -78,11 +73,4 @@ public class ShippingEventPublisher implements ShippingCancellationEventPublishe
         return kafkaTemplate.send(topic, key, payload).thenApply(ignored -> null);
     }
 
-    private void logResult(String topic, String orderId, Throwable failure) {
-        if (failure == null) {
-            LOG.debug("Kafka acknowledged {} for order {}", topic, orderId);
-        } else {
-            LOG.error("Kafka publish failed for {} and order {}", topic, orderId, failure);
-        }
-    }
 }

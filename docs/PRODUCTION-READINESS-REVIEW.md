@@ -168,6 +168,109 @@ zero placeholders, and the runtime SealedSecret has no encrypted data.
 - **Risk:** Containers or remote staging clients can connect to the wrong network namespace. A green local process check does not prove the distributed contract works in a shared environment.
 - **Remediation:** Use service DNS for in-network advertisements and inject all gRPC host/port values in the staging overlay. Add a rendered-Compose smoke test that resolves each dependency from inside the workload network.
 
+## Code-owned closure backlog
+
+The following items were verified by the 2026-07-22 source audit. They are separate from
+PR-000 through PR-015 because they can be addressed primarily in repository code and tests.
+They remain release blockers until their proof gates pass.
+
+### CRITICAL / HIGH
+
+#### PR-016 - Checkout gRPC path returns synthetic shipping labels
+
+- **Location:** [`GrpcShippingServer`](../services/shipping-service/src/main/java/com/vnshop/shippingservice/infrastructure/grpc/GrpcShippingServer.java):67-82; [`GrpcShippingRequestAdapter`](../services/order-service/src/main/java/com/vnshop/orderservice/infrastructure/grpc/GrpcShippingRequestAdapter.java):56-61.
+- **Evidence:** The server contains a TODO for `CreateLabelCommand`, always returns success, generates random tracking codes, and the order adapter logs `success=false` without failing the saga.
+- **Risk:** Orders can be marked shipping-complete without a provider shipment or usable carrier tracking code.
+- **Status:** `in-progress`; the gRPC path now invokes `CreateLabelUseCase` and propagates carrier failure, but the shared shipping contract still lacks carrier-required contact, ward, district, province-code, parcel, and amount fields.
+- **Proof gate:** A gRPC test must verify the configured carrier gateway is called and provider failure prevents `SHIPPING` completion.
+
+#### PR-017 - Carrier webhook authentication is fail-open in default stub mode
+
+- **Location:** [`GhnWebhookSignatureService`](../services/shipping-service/src/main/java/com/vnshop/shippingservice/infrastructure/webhook/GhnWebhookSignatureService.java):42-47; [`GhtkWebhookSignatureService`](../services/shipping-service/src/main/java/com/vnshop/shippingservice/infrastructure/webhook/GhtkWebhookSignatureService.java):45-51.
+- **Evidence:** Missing webhook credentials accept blank signatures whenever `CARRIER_MODE` is not `live`; the default mode is `stub`.
+- **Risk:** An unauthenticated caller can submit carrier status events in a default or misconfigured deployment.
+- **Status:** `implemented`; missing credentials fail closed, and unsigned behavior requires an explicit local/dev opt-in.
+- **Proof gate:** Real signature services and security-enabled MockMvc tests reject blank credentials; local stub tests opt in explicitly.
+
+#### PR-018 - Payment callback outbox marks rows before Kafka acknowledgment
+
+- **Location:** [`PaymentCallbackOutboxRelay`](../services/payment-service/src/main/java/com/vnshop/paymentservice/infrastructure/event/PaymentCallbackOutboxRelay.java):86-92.
+- **Evidence:** `send()` returns a future that is ignored, then `markPublished()` runs immediately.
+- **Risk:** An asynchronous broker failure permanently loses `payment.completed`, leaving orders waiting for payment.
+- **Status:** `implemented`; the relay waits for bounded Kafka acknowledgement before marking published.
+- **Proof gate:** Exceptional and timed-out Kafka futures leave rows retryable; only an acknowledged send marks a row published.
+
+#### PR-019 - Compensation event delivery has fire-and-forget paths
+
+- **Location:** [`CancelShipmentUseCase`](../services/shipping-service/src/main/java/com/vnshop/shippingservice/application/CancelShipmentUseCase.java):20-24; [`ShippingEventPublisher`](../services/shipping-service/src/main/java/com/vnshop/shippingservice/infrastructure/event/ShippingEventPublisher.java):44-56; [`GrpcInventoryReservationAdapter`](../services/order-service/src/main/java/com/vnshop/orderservice/infrastructure/grpc/GrpcInventoryReservationAdapter.java):117-124.
+- **Evidence:** Shipping cancellation has a repository TODO and direct asynchronous Kafka publishing; inventory release fallback also sends without waiting or an outbox.
+- **Risk:** Saga compensation can report success while refund/release/cancellation commands are lost.
+- **Status:** `implemented-with-gap`; cancellation and inventory-release delivery now wait for acknowledgement, but shipment lookup/status persistence remains a repository TODO.
+- **Proof gate:** Broker outage tests show compensation rows/events remain retryable and are not acknowledged early.
+
+#### PR-020 - Product/search projection recovery is incomplete
+
+- **Location:** [`ProductEventPublisher`](../services/product-service/src/main/java/com/vnshop/productservice/infrastructure/event/ProductEventPublisher.java):32-41; [`ProductEventConsumer`](../services/search-service/src/main/java/com/vnshop/searchservice/infrastructure/kafka/ProductEventConsumer.java):47-65.
+- **Evidence:** Product lifecycle events are sent without a producer outbox. Elasticsearch failures are logged, then the Kafka event is marked processed.
+- **Risk:** Product changes can commit without delivery, and Elasticsearch can remain stale without replay.
+- **Status:** `implemented`; product lifecycle events use an outbox and Elasticsearch failures enter a repair queue.
+- **Proof gate:** Product writes create a durable event row; Kafka/Elasticsearch failures retry or enter an explicit repair path.
+
+#### PR-021 - Cart merge is not one atomic, reachable operation
+
+- **Location:** [`CartController`](../services/cart-service/src/cart/infrastructure/cart.controller.ts):28-36; [`MergeCartUseCase`](../services/cart-service/src/cart/application/merge-cart.use-case.ts):34-40; [`use-cart.ts`](../fe/src/app/hooks/use-cart.ts):365-399.
+- **Evidence:** The backend use case is registered but not injected into the controller; the web client replays item additions; backend save/delete run concurrently.
+- **Risk:** Retries or browser crashes can duplicate quantities, and a partial merge can leave both carts inconsistent.
+- **Status:** `implemented`; the authenticated merge endpoint is atomic and idempotent, with unit/frontend coverage. Full E2E still needs PostgreSQL/Redis.
+- **Proof gate:** One consent-gated merge request is atomic and idempotent under retry, concurrency, and partial network failure.
+
+#### PR-022 - Missing inventory projection is fail-open
+
+- **Location:** [`ReserveStockUseCase`](../services/inventory-service/src/main/java/com/vnshop/inventoryservice/application/ReserveStockUseCase.java):62-68.
+- **Evidence:** A missing stock row logs a warning and allows reservation without decrement.
+- **Risk:** Checkout can proceed without reserving stock, creating oversell risk.
+- **Status:** `implemented`; missing projected stock now rejects reservation instead of allowing checkout.
+- **Proof gate:** Missing projection rejects checkout until an explicit product-to-inventory projection exists.
+
+### MEDIUM
+
+#### PR-023 - Notification retry and provider channels remain local/stub behavior
+
+- **Location:** [`RetryFailedDeliveriesUseCase`](../services/notification-service/src/notification/application/command/retry-failed-deliveries.use-case.ts):29-34; email/SMS/push adapters under `services/notification-service/src/notification/infrastructure`.
+- **Evidence:** The retry use case returns zero work as a placeholder; email, SMS, and push are disabled/no-op without credentials.
+- **Risk:** Notifications may be persisted while external delivery never occurs or cannot be replayed operationally.
+- **Status:** `implemented-with-external-provider`; retry/DLQ behavior is durable, while real email/SMS/push credentials remain external.
+- **Proof gate:** A scheduled retry/DLQ path is tested, and staging has real channel credentials or an explicitly approved disabled-channel policy.
+
+## Closure plan and external leftovers
+
+The detailed execution order, file map, acceptance criteria, and verification matrix are in
+[`PRODUCTION-READINESS-CLOSURE-PLAN.md`](PRODUCTION-READINESS-CLOSURE-PLAN.md).
+
+Repository code can address PR-016 through PR-023. The following remain `blocked-external`
+after those fixes until operational evidence is supplied: image digests, sealed secrets, public
+origins, live carrier/payment credentials, independent webhook secrets, Kafka topology/TLS,
+Elasticsearch security, FX policy, invoice identity, coupon ownership, shared staging DNS/gRPC
+configuration, provider contract approval, and the missing carrier-required fields in the shipping
+gRPC contract. These are not closed by unit tests or local Compose.
+
+## 2026-07-22 execution evidence
+
+The first closure implementation round completed the repository-owned durability, security, and
+fallback-boundary work for PR-017, PR-018, PR-020, PR-021, PR-022, and PR-023. PR-019 is
+acknowledgement-safe but still needs shipment lookup/status persistence. PR-016 no longer creates
+synthetic tracking labels, but live carrier checkout remains blocked until the order-to-shipping
+contract supplies contact, ward, district, province-code, parcel, and amount data.
+
+Fresh focused evidence:
+
+- Java: shipping 27 tests, order shipping/inventory adapter tests, payment outbox tests, inventory
+  13 tests, product context/outbox tests, and search projection/repair tests passed.
+- TypeScript/frontend: cart 25 tests plus typecheck, notification 27 suites/271 tests, and frontend
+  cart 13 tests plus typecheck passed.
+- Cart E2E now resolves the module graph but requires a live `DATABASE_URL` and PostgreSQL/Redis;
+  it remains an environment-gated check rather than a source failure.
+
 ## Independent review synthesis
 
 - **Code-reviewer lane:** `REQUEST CHANGES`, with 1 critical, 5 high, and 4 medium findings. The critical issue is the unsigned stub-mode carrier webhook path.

@@ -1,10 +1,12 @@
 package com.vnshop.shippingservice.infrastructure.webhook;
 
 import com.vnshop.shippingservice.infrastructure.carrier.GhnProperties;
-import com.vnshop.shippingservice.infrastructure.config.CarrierProperties;
+import com.vnshop.shippingservice.infrastructure.config.WebhookSecurityProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.StandardEnvironment;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -19,18 +21,21 @@ public class GhnWebhookSignatureService {
     private static final Logger LOG = LoggerFactory.getLogger(GhnWebhookSignatureService.class);
 
     private final GhnProperties properties;
-    private final CarrierProperties carrierProperties;
+    private final WebhookSecurityProperties webhookSecurityProperties;
+    private final Environment environment;
 
     @Autowired
     public GhnWebhookSignatureService(
             GhnProperties properties,
-            CarrierProperties carrierProperties) {
+            WebhookSecurityProperties webhookSecurityProperties,
+            Environment environment) {
         this.properties = properties;
-        this.carrierProperties = carrierProperties;
+        this.webhookSecurityProperties = webhookSecurityProperties;
+        this.environment = environment;
     }
 
     public GhnWebhookSignatureService(GhnProperties properties) {
-        this(properties, new CarrierProperties("stub"));
+        this(properties, new WebhookSecurityProperties(false), new StandardEnvironment());
     }
 
     /**
@@ -40,11 +45,12 @@ public class GhnWebhookSignatureService {
     public boolean isValid(GhnWebhookPayload payload, String signature, String token) {
         String configuredToken = properties.webhookToken();
         if (configuredToken == null || configuredToken.isBlank()) {
-            boolean localStub = !"live".equalsIgnoreCase(carrierProperties.mode());
-            if (!localStub) {
-                LOG.error("GHN webhook token is not configured while carrier mode is live");
+            if (isInsecureLocalMode()) {
+                LOG.warn("Accepting GHN webhook without credentials because explicit local-only opt-in is enabled");
+                return true;
             }
-            return localStub && (token == null || token.isBlank());
+            LOG.error("GHN webhook token is not configured");
+            return false;
         }
 
         if (token == null || token.isBlank()) {
@@ -59,5 +65,10 @@ public class GhnWebhookSignatureService {
             LOG.warn("Invalid GHN token");
         }
         return valid;
+    }
+
+    private boolean isInsecureLocalMode() {
+        return webhookSecurityProperties.allowInsecureLocal()
+                && environment.matchesProfiles("local", "dev");
     }
 }

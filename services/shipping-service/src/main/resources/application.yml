@@ -52,7 +52,7 @@ spring:
 
 shipping:
   carrier:
-    mode: ${CARRIER_MODE:stub}
+    mode: ${CARRIER_MODE:live}
     # =============================================================================
     # PRODUCTION CONFIGURATION
     # =============================================================================
@@ -76,6 +76,20 @@ shipping:
       token: ${GHTK_TOKEN:}
       webhook-token: ${GHTK_WEBHOOK_TOKEN:${GHTK_TOKEN:}}
       partner-code: ${GHTK_PARTNER_CODE:}
+
+  checkout:
+    default-carrier: ${SHIPPING_DEFAULT_CARRIER:GHN}
+    origin:
+      full-name: ${SHIPPING_ORIGIN_FULL_NAME:}
+      phone: ${SHIPPING_ORIGIN_PHONE:}
+      address-line: ${SHIPPING_ORIGIN_ADDRESS_LINE:}
+      ward-code: ${SHIPPING_ORIGIN_WARD_CODE:}
+      district-code: ${SHIPPING_ORIGIN_DISTRICT_CODE:}
+      province-code: ${SHIPPING_ORIGIN_PROVINCE_CODE:}
+
+  webhook-security:
+    # Only effective with an explicit local/dev Spring profile; production fails closed.
+    allow-insecure-local: ${SHIPPING_ALLOW_INSECURE_LOCAL_WEBHOOKS:false}
 
   # Carrier callbacks are acknowledged after durable outbox acceptance. Kafka
   # delivery is retried by the relay without holding the carrier request open.
@@ -143,5 +157,9 @@ spring:
   config:
     activate:
       on-profile: dev
+
+shipping:
+  carrier:
+    mode: ${CARRIER_MODE:stub}
 
 # otel.sdk.trace.sampler.probability removed — use OTEL_TRACES_SAMPLER_ARG env var instead

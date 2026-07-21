@@ -11,6 +11,9 @@ export class NotificationResponseDto {
   readonly threadTitle: string | null;
   readonly read: boolean;
   readonly readAt: string | null;
+  readonly deliveryStatus: string;
+  readonly retryCount: number;
+  readonly nextRetryAt: string | null;
   readonly createdAt: string;
 
   private constructor(props: NotificationResponseDto) {
@@ -29,6 +32,9 @@ export class NotificationResponseDto {
       threadTitle: n.thread?.threadTitle ?? null,
       read: n.read,
       readAt: n.readAt?.toISOString() ?? null,
+      deliveryStatus: n.deliveryStatus.getValue(),
+      retryCount: n.retryCount,
+      nextRetryAt: n.nextRetryAt?.toISOString() ?? null,
       createdAt: n.createdAt.toISOString(),
     });
   }

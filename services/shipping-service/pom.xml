@@ -40,6 +40,13 @@
 	</properties>
 	<dependencyManagement>
 		<dependencies>
+			<dependency>
+				<groupId>io.grpc</groupId>
+				<artifactId>grpc-bom</artifactId>
+				<version>${grpc.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
 			<!-- Jackson CVE-2026-54512, CVE-2026-54513 -->
 			<dependency>
 				<groupId>com.fasterxml.jackson.core</groupId>

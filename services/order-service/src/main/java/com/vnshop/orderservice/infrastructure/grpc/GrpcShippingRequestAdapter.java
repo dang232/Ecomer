@@ -55,9 +55,14 @@ public class GrpcShippingRequestAdapter implements ShippingRequestPort {
 
             if (!response.getSuccess()) {
                 LOGGER.warn("Shipping request failed for order {} seller {}", orderId, subOrder.sellerId());
+                throw new IllegalStateException("Shipping service did not create labels for order " + orderId);
             } else {
                 LOGGER.info("Shipping request submitted for order {} seller {} — {} label(s)",
                         orderId, subOrder.sellerId(), response.getLabelsCount());
+            }
+            if (response.getLabelsCount() != 1) {
+                throw new IllegalStateException("Shipping service returned " + response.getLabelsCount()
+                        + " labels for seller " + subOrder.sellerId());
             }
         } catch (CallNotPermittedException e) {
             LOGGER.error("Circuit breaker OPEN for shipping-service: {}", e.getMessage());

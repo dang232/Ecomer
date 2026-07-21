@@ -27,7 +27,7 @@ import com.vnshop.productservice.application.video.VideoUploadService;
 import com.vnshop.productservice.domain.port.out.ObjectMetadataRepositoryPort;
 import com.vnshop.productservice.domain.port.out.ObjectStoragePort;
 import com.vnshop.productservice.domain.port.out.ContentSanitizerPort;
-import com.vnshop.productservice.domain.port.out.ProductEventPublisherPort;
+import com.vnshop.productservice.domain.port.out.ProductEventOutboxPort;
 import com.vnshop.productservice.domain.port.out.ProductRepositoryPort;
 import com.vnshop.productservice.domain.review.port.out.BuyerProfileLookupPort;
 import com.vnshop.productservice.domain.review.port.out.PurchaseVerificationPort;
@@ -48,33 +48,33 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 public class UseCaseConfig {
     @Bean
     CreateProductUseCase createProductUseCase(ProductRepositoryPort productRepositoryPort,
-            ProductEventPublisherPort productEventPublisherPort, ContentSanitizerPort contentSanitizer) {
-        return new CreateProductUseCase(productRepositoryPort, productEventPublisherPort, contentSanitizer);
+            ProductEventOutboxPort productEventOutboxPort, ContentSanitizerPort contentSanitizer) {
+        return new CreateProductUseCase(productRepositoryPort, productEventOutboxPort, contentSanitizer);
     }
 
     @Bean
     UpdateProductUseCase updateProductUseCase(ProductRepositoryPort productRepositoryPort,
-            ProductEventPublisherPort productEventPublisherPort, HtmlSanitizer htmlSanitizer) {
-        return new UpdateProductUseCase(productRepositoryPort, productEventPublisherPort, htmlSanitizer);
+            ProductEventOutboxPort productEventOutboxPort, HtmlSanitizer htmlSanitizer) {
+        return new UpdateProductUseCase(productRepositoryPort, productEventOutboxPort, htmlSanitizer);
     }
 
     @Bean
     UpdateProductEligibilityUseCase updateProductEligibilityUseCase(
             ProductRepositoryPort productRepositoryPort,
-            ProductEventPublisherPort productEventPublisherPort) {
-        return new UpdateProductEligibilityUseCase(productRepositoryPort, productEventPublisherPort);
+            ProductEventOutboxPort productEventOutboxPort) {
+        return new UpdateProductEligibilityUseCase(productRepositoryPort, productEventOutboxPort);
     }
 
     @Bean
     PublishProductUseCase publishProductUseCase(ProductRepositoryPort productRepositoryPort,
-            ProductEventPublisherPort productEventPublisherPort) {
-        return new PublishProductUseCase(productRepositoryPort, productEventPublisherPort);
+            ProductEventOutboxPort productEventOutboxPort) {
+        return new PublishProductUseCase(productRepositoryPort, productEventOutboxPort);
     }
 
     @Bean
     DeleteProductUseCase deleteProductUseCase(ProductRepositoryPort productRepositoryPort,
-            ProductEventPublisherPort productEventPublisherPort) {
-        return new DeleteProductUseCase(productRepositoryPort, productEventPublisherPort);
+            ProductEventOutboxPort productEventOutboxPort) {
+        return new DeleteProductUseCase(productRepositoryPort, productEventOutboxPort);
     }
 
     @Bean

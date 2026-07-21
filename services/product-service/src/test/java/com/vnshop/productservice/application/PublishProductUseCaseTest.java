@@ -5,7 +5,7 @@ import com.vnshop.productservice.domain.ProductEvent;
 import com.vnshop.productservice.domain.ProductImage;
 import com.vnshop.productservice.domain.ProductVariant;
 import com.vnshop.productservice.domain.Money;
-import com.vnshop.productservice.domain.port.out.ProductEventPublisherPort;
+import com.vnshop.productservice.domain.port.out.ProductEventOutboxPort;
 import com.vnshop.productservice.domain.port.out.ProductRepositoryPort;
 import org.junit.jupiter.api.Test;
 
@@ -27,16 +27,16 @@ class PublishProductUseCaseTest {
     @Test
     void publishesDraftProductAndEmitsActiveProjectionEvent() {
         ProductRepositoryPort repository = mock(ProductRepositoryPort.class);
-        ProductEventPublisherPort publisher = mock(ProductEventPublisherPort.class);
+        ProductEventOutboxPort outbox = mock(ProductEventOutboxPort.class);
         Product product = draftProduct();
         when(repository.findById(product.productId())).thenReturn(Optional.of(product));
         when(repository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        ProductResponse response = new PublishProductUseCase(repository, publisher)
+        ProductResponse response = new PublishProductUseCase(repository, outbox)
                 .publish(SELLER_ID, product.productId());
 
         assertThat(response.status()).isEqualTo("ACTIVE");
-        verify(publisher).publish(org.mockito.ArgumentMatchers.argThat(event ->
+        verify(outbox).enqueue(org.mockito.ArgumentMatchers.argThat(event ->
                 event.eventType() == ProductEvent.EventType.UPDATED
                         && "ACTIVE".equals(event.payload().get("status"))));
     }
@@ -44,11 +44,11 @@ class PublishProductUseCaseTest {
     @Test
     void refusesToPublishAProductOwnedByAnotherSeller() {
         ProductRepositoryPort repository = mock(ProductRepositoryPort.class);
-        ProductEventPublisherPort publisher = mock(ProductEventPublisherPort.class);
+        ProductEventOutboxPort outbox = mock(ProductEventOutboxPort.class);
         Product product = draftProduct();
         when(repository.findById(product.productId())).thenReturn(Optional.of(product));
 
-        assertThatThrownBy(() -> new PublishProductUseCase(repository, publisher)
+        assertThatThrownBy(() -> new PublishProductUseCase(repository, outbox)
                 .publish("seller-2", product.productId()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("does not belong to seller");

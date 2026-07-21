@@ -6,6 +6,12 @@ export const getCart = () => api.get("/cart", cartSchema);
 export const addCartItem = (body: { productId: string; quantity: number; variantId?: string }) =>
   api.post("/cart/items", cartSchema, body);
 
+export const mergeCart = (body: {
+  sessionId: string;
+  idempotencyKey: string;
+  items: Array<{ productId: string; quantity: number; variantId?: string }>;
+}) => api.post("/cart/merge", cartSchema, body, { idempotencyKey: body.idempotencyKey });
+
 export const updateCartItem = (productId: string, body: { quantity: number }) =>
   api.put(`/cart/items/${encodeURIComponent(productId)}`, cartSchema, body);
 

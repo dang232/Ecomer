@@ -10,6 +10,7 @@ import {
 import { Notification } from '../../../domain/model/notification';
 import { NotificationType } from '../../../domain/model/notification-type.enum';
 import { NotificationThread } from '../../../domain/model/notification-thread';
+import { Priority } from '../../../domain/model/priority.enum';
 
 describe('MongoNotificationRepository', () => {
   let mongod: MongoMemoryServer;
@@ -242,6 +243,34 @@ describe('MongoNotificationRepository', () => {
   it('findById returns null for missing id', async () => {
     const result = await repo.findById('non-existent-id');
     expect(result).toBeNull();
+  });
+
+  it('finds only failed notifications whose retry time has arrived', async () => {
+    const due = Notification.create({
+      userId: 'retry-user',
+      type: NotificationType.ORDER_CREATED,
+      title: 'Due',
+      body: 'B',
+      priority: Priority.MEDIUM,
+    });
+    due.markFailed(new Date('2026-01-01T00:00:00.000Z'));
+    const later = Notification.create({
+      userId: 'retry-user',
+      type: NotificationType.ORDER_CREATED,
+      title: 'Later',
+      body: 'B',
+    });
+    later.markFailed(new Date('2099-01-01T00:00:00.000Z'));
+    await repo.save(due);
+    await repo.save(later);
+
+    const retries = await repo.findDueRetries(
+      new Date('2026-01-01T00:00:01.000Z'),
+      10,
+    );
+
+    expect(retries.map((notification) => notification.id)).toContain(due.id);
+    expect(retries.map((notification) => notification.id)).not.toContain(later.id);
   });
 
   it('findByIdempotencyKey returns null for missing key', async () => {

@@ -2,24 +2,26 @@ package com.vnshop.productservice.application;
 
 import com.vnshop.productservice.domain.Product;
 import com.vnshop.productservice.domain.ProductEvent;
-import com.vnshop.productservice.domain.port.out.ProductEventPublisherPort;
+import com.vnshop.productservice.domain.port.out.ProductEventOutboxPort;
 import com.vnshop.productservice.domain.port.out.ProductRepositoryPort;
 
 import java.util.Objects;
 import java.util.UUID;
+import org.springframework.transaction.annotation.Transactional;
 
 public class UpdateProductEligibilityUseCase {
     private final ProductRepositoryPort productRepositoryPort;
-    private final ProductEventPublisherPort productEventPublisherPort;
+    private final ProductEventOutboxPort productEventOutboxPort;
 
     public UpdateProductEligibilityUseCase(
             ProductRepositoryPort productRepositoryPort,
-            ProductEventPublisherPort productEventPublisherPort) {
+            ProductEventOutboxPort productEventOutboxPort) {
         this.productRepositoryPort = Objects.requireNonNull(productRepositoryPort, "productRepositoryPort is required");
-        this.productEventPublisherPort = Objects.requireNonNull(
-                productEventPublisherPort, "productEventPublisherPort is required");
+        this.productEventOutboxPort = Objects.requireNonNull(
+                productEventOutboxPort, "productEventOutboxPort is required");
     }
 
+    @Transactional
     public ProductResponse update(
             UUID productId,
             boolean sameDayDelivery,
@@ -32,7 +34,7 @@ public class UpdateProductEligibilityUseCase {
         product.setOfficial(isOfficial);
 
         Product saved = productRepositoryPort.save(product);
-        productEventPublisherPort.publish(new ProductEvent(
+        productEventOutboxPort.enqueue(new ProductEvent(
                 saved.productId().toString(),
                 ProductEvent.EventType.UPDATED,
                 null,

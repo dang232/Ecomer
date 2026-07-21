@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 @Component
 @ConditionalOnBean(InventoryServiceGrpc.InventoryServiceBlockingStub.class)
@@ -120,10 +122,15 @@ public class GrpcInventoryReservationAdapter implements InventoryReservationPort
                 "orderId", orderId,
                 "timestamp", Instant.now().toString()
             ));
-            kafkaTemplate.send(TOPIC_RELEASE_REQUESTED, orderId, payload);
-            LOGGER.info("Published inventory.release-requested for order {}", orderId);
+            kafkaTemplate.send(TOPIC_RELEASE_REQUESTED, orderId, payload).get(5, TimeUnit.SECONDS);
+            LOGGER.info("Kafka acknowledged inventory.release-requested for order {}", orderId);
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Failed to serialize release-requested event for order " + orderId, e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while publishing release-requested event for order " + orderId, e);
+        } catch (ExecutionException | TimeoutException e) {
+            throw new IllegalStateException("Inventory release fallback was not acknowledged for order " + orderId, e);
         }
     }
 }

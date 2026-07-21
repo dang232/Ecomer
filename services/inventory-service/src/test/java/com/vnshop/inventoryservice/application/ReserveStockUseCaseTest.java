@@ -53,18 +53,18 @@ class ReserveStockUseCaseTest {
     }
 
     @Test
-    void reserveAllowsWithWarnWhenProductHasNoStockRow() {
+    void reserveRejectsWhenProductHasNoProjectedStockRow() {
         InMemoryStockReservationPort port = new InMemoryStockReservationPort();
         ReserveStockUseCase useCase = new ReserveStockUseCase(port, fixedClock);
 
         ReserveStockResult result = useCase.reserve("ord-3",
                 List.of(new ReserveItem("brand-new-product", null, 3)));
 
-        assertThat(result.success()).isTrue();
-        assertThat(result.reservedItems()).isEqualTo(1);
+        assertThat(result.success()).isFalse();
+        assertThat(result.reservedItems()).isZero();
         // No row created — the use case does not project stock for unknown products.
         assertThat(port.stockOf("brand-new-product")).isEqualTo(-1);
-        assertThat(port.findActiveReservationsByOrderId("ord-3")).hasSize(1);
+        assertThat(port.findActiveReservationsByOrderId("ord-3")).isEmpty();
     }
 
     @Test

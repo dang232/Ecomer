@@ -4,7 +4,7 @@ import com.vnshop.productservice.domain.Money;
 import com.vnshop.productservice.domain.Product;
 import com.vnshop.productservice.domain.ProductEvent;
 import com.vnshop.productservice.domain.ProductVariant;
-import com.vnshop.productservice.domain.port.out.ProductEventPublisherPort;
+import com.vnshop.productservice.domain.port.out.ProductEventOutboxPort;
 import com.vnshop.productservice.domain.port.out.ProductRepositoryPort;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -23,7 +23,7 @@ class UpdateProductEligibilityUseCaseTest {
     @Test
     void updatesFlagsAndPublishesCompleteSearchPayload() {
         ProductRepositoryPort repository = mock(ProductRepositoryPort.class);
-        ProductEventPublisherPort publisher = mock(ProductEventPublisherPort.class);
+        ProductEventOutboxPort outbox = mock(ProductEventOutboxPort.class);
         UUID productId = UUID.randomUUID();
         Product product = new Product(
                 productId,
@@ -36,7 +36,7 @@ class UpdateProductEligibilityUseCaseTest {
                 List.of());
         when(repository.findById(productId)).thenReturn(Optional.of(product));
         when(repository.save(product)).thenReturn(product);
-        UpdateProductEligibilityUseCase useCase = new UpdateProductEligibilityUseCase(repository, publisher);
+        UpdateProductEligibilityUseCase useCase = new UpdateProductEligibilityUseCase(repository, outbox);
 
         ProductResponse response = useCase.update(productId, true, true, true);
 
@@ -44,7 +44,7 @@ class UpdateProductEligibilityUseCaseTest {
         assertThat(response.verified()).isTrue();
         assertThat(response.isOfficial()).isTrue();
         ArgumentCaptor<ProductEvent> event = ArgumentCaptor.forClass(ProductEvent.class);
-        verify(publisher).publish(event.capture());
+        verify(outbox).enqueue(event.capture());
         assertThat(event.getValue().payload())
                 .containsEntry("name", "Phone")
                 .containsEntry("categoryId", "electronics")

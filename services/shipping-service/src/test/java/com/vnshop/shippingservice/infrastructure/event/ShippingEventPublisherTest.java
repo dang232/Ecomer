@@ -48,6 +48,17 @@ class ShippingEventPublisherTest {
     }
 
     @Test
+    void cancellation_propagatesKafkaFailureToCompensationCaller() {
+        KafkaTemplate<String, String> kafkaTemplate = mockKafkaTemplate();
+        when(kafkaTemplate.send(eq("shipping.cancelled"), eq("order-1"), anyString()))
+                .thenReturn(CompletableFuture.failedFuture(new IllegalStateException("broker unavailable")));
+        ShippingEventPublisher publisher = new ShippingEventPublisher(kafkaTemplate, new ObjectMapper());
+
+        assertTrue(publisher.publishCancelled("order-1", "saga-1", "SAGA_COMPENSATION")
+                .isCompletedExceptionally());
+    }
+
+    @Test
     void statusUpdate_usesConfiguredTopic() {
         KafkaTemplate<String, String> kafkaTemplate = mockKafkaTemplate();
         CompletableFuture<SendResult<String, String>> sendFuture = CompletableFuture.completedFuture(null);

@@ -3,9 +3,15 @@ package com.vnshop.shippingservice.infrastructure.grpc;
 import com.vnshop.proto.shipping.ShippingRequest;
 import com.vnshop.proto.shipping.ShippingResponse;
 import com.vnshop.proto.shipping.ShippingServiceGrpc;
-import com.vnshop.shippingservice.domain.model.CarrierCode;
+import com.vnshop.shippingservice.application.CreateLabelCommand;
+import com.vnshop.shippingservice.application.CreateLabelResult;
+import com.vnshop.shippingservice.application.CreateLabelUseCase;
+import com.vnshop.shippingservice.domain.ShippingAddress;
+import com.vnshop.shippingservice.domain.ShippingLineItem;
+import com.vnshop.shippingservice.infrastructure.config.ShippingCheckoutProperties;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -16,8 +22,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.time.LocalDate;
-import java.util.UUID;
+import java.util.List;
+import java.util.Objects;
 
 @Component
 @ConditionalOnProperty(name = "grpc.server.enabled", havingValue = "true", matchIfMissing = true)
@@ -25,10 +31,19 @@ public class GrpcShippingServer extends ShippingServiceGrpc.ShippingServiceImplB
 
     private static final Logger log = LoggerFactory.getLogger(GrpcShippingServer.class);
 
+    private final CreateLabelUseCase createLabelUseCase;
+    private final ShippingCheckoutProperties checkoutProperties;
     private Server server;
 
     @Value("${grpc.server.port:9095}")
     int port;
+
+    public GrpcShippingServer(
+            CreateLabelUseCase createLabelUseCase,
+            ShippingCheckoutProperties checkoutProperties) {
+        this.createLabelUseCase = Objects.requireNonNull(createLabelUseCase, "createLabelUseCase is required");
+        this.checkoutProperties = Objects.requireNonNull(checkoutProperties, "checkoutProperties is required");
+    }
 
     @PostConstruct
     public void start() throws IOException {
@@ -51,43 +66,61 @@ public class GrpcShippingServer extends ShippingServiceGrpc.ShippingServiceImplB
     public void requestShipping(ShippingRequest request,
                                 StreamObserver<ShippingResponse> responseObserver) {
         if (request.getOrderId().isBlank()) {
-            responseObserver.onError(
-                    new IllegalArgumentException("orderId must not be blank"));
+            responseObserver.onError(Status.INVALID_ARGUMENT
+                    .withDescription("orderId must not be blank").asRuntimeException());
             return;
         }
         if (request.getSubOrdersCount() == 0) {
-            responseObserver.onError(
-                    new IllegalArgumentException("subOrders must not be empty"));
+            responseObserver.onError(Status.INVALID_ARGUMENT
+                    .withDescription("subOrders must not be empty").asRuntimeException());
             return;
         }
 
         log.info("Requesting shipping for order {} with {} sub-order(s)",
                 request.getOrderId(), request.getSubOrdersCount());
 
-        // TODO: delegate to CreateLabelCommand / carrier gateway for real labels
         var response = ShippingResponse.newBuilder()
                 .setSuccess(true);
 
-        for (int i = 0; i < request.getSubOrdersCount(); i++) {
-            var subOrder = request.getSubOrders(i);
-            String trackingCode = "VN" + UUID.randomUUID().toString()
-                    .replace("-", "").substring(0, 12).toUpperCase();
-            CarrierCode carrier = pickCarrier(i);
-            String estimatedDelivery = LocalDate.now().plusDays(3 + i).toString();
-
-            response.addLabels(com.vnshop.proto.shipping.ShippingLabel.newBuilder()
-                    .setTrackingCode(trackingCode)
-                    .setCarrier(carrier.name())
-                    .setEstimatedDelivery(estimatedDelivery)
-                    .build());
+        try {
+            for (var subOrder : request.getSubOrdersList()) {
+                CreateLabelResult label = createLabelUseCase.create(toCreateLabelCommand(request.getOrderId(), subOrder));
+                response.addLabels(com.vnshop.proto.shipping.ShippingLabel.newBuilder()
+                        .setTrackingCode(label.trackingCode())
+                        .setCarrier(label.carrierCode().name())
+                        .build());
+            }
+        } catch (RuntimeException exception) {
+            log.error("Carrier label creation failed for order {}", request.getOrderId(), exception);
+            responseObserver.onError(Status.FAILED_PRECONDITION
+                    .withDescription("Carrier label creation failed: " + exception.getMessage())
+                    .withCause(exception)
+                    .asRuntimeException());
+            return;
         }
 
         responseObserver.onNext(response.build());
         responseObserver.onCompleted();
     }
 
-    private CarrierCode pickCarrier(int index) {
-        CarrierCode[] values = CarrierCode.values();
-        return values[index % values.length];
+    private CreateLabelCommand toCreateLabelCommand(String orderId, com.vnshop.proto.shipping.SubOrder subOrder) {
+        var destination = subOrder.getShippingAddress();
+        List<ShippingLineItem> items = subOrder.getItemsList().stream()
+                .map(item -> new ShippingLineItem(
+                        item.getProductId() + (item.getVariant().isBlank() ? "" : ":" + item.getVariant()),
+                        item.getQuantity(),
+                        null))
+                .toList();
+
+        return new CreateLabelCommand(
+                checkoutProperties.defaultCarrier(),
+                orderId,
+                checkoutProperties.origin(),
+                new ShippingAddress(destination.getFullName(), destination.getPhone(), destination.getStreet(),
+                        null, destination.getProvince(), destination.getCity()),
+                null,
+                null,
+                null,
+                items);
     }
 }

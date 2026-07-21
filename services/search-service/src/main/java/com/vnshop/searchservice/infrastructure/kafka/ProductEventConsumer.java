@@ -6,6 +6,8 @@ import com.vnshop.searchservice.infrastructure.idempotency.ProcessedEvent;
 import com.vnshop.searchservice.infrastructure.idempotency.ProcessedEventRepository;
 import com.vnshop.searchservice.infrastructure.persistence.ProductReadModelJpaEntity;
 import com.vnshop.searchservice.infrastructure.persistence.ProductReadModelRepository;
+import com.vnshop.searchservice.infrastructure.projection.ProductProjectionRepair;
+import com.vnshop.searchservice.infrastructure.projection.ProductProjectionRepairRepository;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,14 +26,17 @@ public class ProductEventConsumer {
     private final ProductReadModelRepository productReadModelRepository;
     private final ProcessedEventRepository processedEventRepository;
     private final ProductElasticsearchRepository productElasticsearchRepository;
+    private final ProductProjectionRepairRepository repairRepository;
 
     public ProductEventConsumer(
             ProductReadModelRepository productReadModelRepository,
             ProcessedEventRepository processedEventRepository,
-            ProductElasticsearchRepository productElasticsearchRepository) {
+            ProductElasticsearchRepository productElasticsearchRepository,
+            ProductProjectionRepairRepository repairRepository) {
         this.productReadModelRepository = productReadModelRepository;
         this.processedEventRepository = processedEventRepository;
         this.productElasticsearchRepository = productElasticsearchRepository;
+        this.repairRepository = repairRepository;
     }
 
     @Transactional
@@ -46,12 +51,23 @@ public class ProductEventConsumer {
         LOGGER.info("Consuming product event {} for product {}", event.eventType(), event.productId());
         if (event.eventType() == ProductEvent.EventType.DELETED) {
             productReadModelRepository.deleteById(event.productId());
-            indexDeleteToElasticsearch(event.productId());
+            projectOrQueueRepair(event, () -> indexDeleteToElasticsearch(event.productId()));
         } else {
             productReadModelRepository.save(ProductReadModelJpaEntity.fromEvent(event.productId(), event.payload()));
-            indexUpsertToElasticsearch(event.productId(), event.payload());
+            projectOrQueueRepair(event, () -> indexUpsertToElasticsearch(event.productId(), event.payload()));
         }
-        processedEventRepository.save(new ProcessedEvent(eventId, event.eventType().name(), Instant.now()));
+    }
+
+    private void projectOrQueueRepair(ProductEvent event, Runnable projection) {
+        try {
+            projection.run();
+            processedEventRepository.save(new ProcessedEvent(
+                    event.deduplicationId(), event.eventType().name(), Instant.now()));
+        } catch (RuntimeException exception) {
+            repairRepository.save(ProductProjectionRepair.from(event));
+            LOGGER.warn("Queued search projection repair for eventId={} productId={}: {}",
+                    event.deduplicationId(), event.productId(), exception.getMessage());
+        }
     }
 
     private void indexUpsertToElasticsearch(String productId, Map<String, Object> payload) {
@@ -62,6 +78,7 @@ public class ProductEventConsumer {
         } catch (Exception ex) {
             // Log and continue — JPA write already succeeded; ES is eventually consistent.
             LOGGER.warn("Failed to index product {} into Elasticsearch: {}", productId, ex.getMessage());
+            throw new IllegalStateException("Elasticsearch index projection failed", ex);
         }
     }
 
@@ -71,6 +88,7 @@ public class ProductEventConsumer {
             LOGGER.debug("Deleted product {} from Elasticsearch", productId);
         } catch (Exception ex) {
             LOGGER.warn("Failed to delete product {} from Elasticsearch: {}", productId, ex.getMessage());
+            throw new IllegalStateException("Elasticsearch delete projection failed", ex);
         }
     }
 

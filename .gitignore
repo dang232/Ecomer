@@ -244,5 +244,6 @@ app.*.symbols
 !/docs/architect/
 !/docs/architect/SHOPEE-HAR-INVESTIGATION-AND-PLAN.md
 !/docs/PRODUCTION-READINESS-REVIEW.md
+!/docs/PRODUCTION-READINESS-CLOSURE-PLAN.md
 /services/configuration-service/dist
 /services/product-service/.omc

@@ -5,6 +5,7 @@ import {
   addCartItem,
   clearCart as clearCartApi,
   getCart,
+  mergeCart,
   removeCartItem,
   updateCartItem,
 } from "../lib/api/endpoints/cart";
@@ -17,6 +18,7 @@ import { useAuth } from "./use-auth";
 
 const CART_KEY = ["cart"] as const;
 const GUEST_STORAGE_KEY = "vnshop:guest-cart";
+const GUEST_SESSION_STORAGE_KEY = "vnshop:guest-cart-session";
 
 const EMPTY_CART: Cart = { items: [], itemCount: 0, totalAmount: 0 };
 
@@ -61,6 +63,14 @@ function writeGuestCart(items: GuestCartItem[]): void {
   } catch {
     /* quota exceeded, private mode, etc. — guest cart degrades to in-memory */
   }
+}
+
+function guestSessionId(): string {
+  const current = localStorage.getItem(GUEST_SESSION_STORAGE_KEY);
+  if (current) return current;
+  const sessionId = crypto.randomUUID();
+  localStorage.setItem(GUEST_SESSION_STORAGE_KEY, sessionId);
+  return sessionId;
 }
 
 function guestItemsToCart(items: GuestCartItem[]): Cart {
@@ -146,6 +156,7 @@ export function useCart() {
   const { authenticated, ready } = useAuth();
   const qc = useQueryClient();
   const [guestItems, setGuestItems] = useState<GuestCartItem[]>(() => readGuestCart());
+  const mergeIdempotencyKeyRef = useRef<string | null>(null);
 
   const query = useQuery<Cart>({
     queryKey: CART_KEY,
@@ -363,43 +374,42 @@ export function useCart() {
     let mergedCart = query.data;
 
     try {
-      for (const item of guestItems) {
-        // Check for variant warning
-        if (item.variantId === undefined) {
-          console.warn(
-            `[cart] merge called without variantId for product ${item.productId} — ` +
-              `variant selection may be lost`,
-          );
-        }
-
-        try {
-          mergedCart = await addCartItem({
-            productId: item.productId,
-            quantity: item.quantity,
-            variantId: item.variantId,
-          });
-        } catch (err) {
-          console.warn("cart merge: failed to add", item.productId, err);
-          failedItems.push(item);
-        }
+      const missingVariant = guestItems.find((item) => item.variantId === undefined);
+      if (missingVariant) {
+        console.warn(
+          `[cart] merge called without variantId for product ${missingVariant.productId} — ` +
+            `variant selection may be lost`,
+        );
       }
 
-      // Clear guest cart only if all items succeeded
-      if (failedItems.length === 0) {
-        writeGuestCart([]);
-        setGuestItems([]);
-        qc.setQueryData(CART_KEY, mergedCart);
-      } else {
-        writeGuestCart(failedItems);
-        setGuestItems(failedItems);
-      }
-
-      setShowMergeDialog(false);
-      mergeApprovedRef.current = false;
-      return failedItems.length === 0;
+      const idempotencyKey = mergeIdempotencyKeyRef.current ?? crypto.randomUUID();
+      mergeIdempotencyKeyRef.current = idempotencyKey;
+      mergedCart = await mergeCart({
+        sessionId: guestSessionId(),
+        idempotencyKey,
+        items: guestItems,
+      });
+    } catch (err) {
+      console.warn("cart merge: failed", err);
+      failedItems.push(...guestItems);
     } finally {
       setIsMerging(false);
     }
+
+    // Clear guest cart only if all items succeeded
+    if (failedItems.length === 0) {
+      writeGuestCart([]);
+      setGuestItems([]);
+      qc.setQueryData(CART_KEY, mergedCart);
+      mergeIdempotencyKeyRef.current = null;
+    } else {
+      writeGuestCart(failedItems);
+      setGuestItems(failedItems);
+    }
+
+    setShowMergeDialog(false);
+    mergeApprovedRef.current = false;
+    return failedItems.length === 0;
   }, [ready, authenticated, guestItems, query.data, query.isSuccess, qc]);
 
   const executeMerge = useCallback(async (): Promise<boolean> => {
