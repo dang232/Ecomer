@@ -9,7 +9,7 @@ export const addCartItem = (body: { productId: string; quantity: number; variant
 export const mergeCart = (body: {
   sessionId: string;
   idempotencyKey: string;
-  items: Array<{ productId: string; quantity: number; variantId?: string }>;
+  items: { productId: string; quantity: number; variantId?: string }[];
 }) => api.post("/cart/merge", cartSchema, body, { idempotencyKey: body.idempotencyKey });
 
 export const updateCartItem = (productId: string, body: { quantity: number }) =>

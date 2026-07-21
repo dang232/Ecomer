@@ -2,9 +2,8 @@ package com.vnshop.shippingservice.application;
 
 import com.vnshop.shippingservice.domain.CarrierCode;
 import com.vnshop.shippingservice.domain.port.out.CarrierGatewayPort;
-import com.vnshop.shippingservice.infrastructure.config.CarrierProperties;
+import com.vnshop.shippingservice.domain.port.out.CarrierLabelPolicyPort;
 import org.junit.jupiter.api.Test;
-import org.springframework.core.env.StandardEnvironment;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
@@ -15,8 +14,8 @@ class CreateLabelUseCaseTest {
     @Test
     void rejectsIncompleteCarrierDataOutsideTheExplicitLocalStubBoundary() {
         CarrierGatewayPort gateway = mock(CarrierGatewayPort.class);
-        CreateLabelUseCase useCase = new CreateLabelUseCase(
-                gateway, new CarrierProperties("live"), new StandardEnvironment());
+        CarrierLabelPolicyPort policy = mock(CarrierLabelPolicyPort.class);
+        CreateLabelUseCase useCase = new CreateLabelUseCase(gateway, policy);
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
                 () -> useCase.create(new CreateLabelCommand(CarrierCode.GHN, "order-1", null, null,
@@ -29,8 +28,8 @@ class CreateLabelUseCaseTest {
     @Test
     void doesNotTreatStubModeAsLocalWithoutAnActiveLocalProfile() {
         CarrierGatewayPort gateway = mock(CarrierGatewayPort.class);
-        CreateLabelUseCase useCase = new CreateLabelUseCase(
-                gateway, new CarrierProperties("stub"), new StandardEnvironment());
+        CarrierLabelPolicyPort policy = mock(CarrierLabelPolicyPort.class);
+        CreateLabelUseCase useCase = new CreateLabelUseCase(gateway, policy);
 
         assertThrows(IllegalArgumentException.class,
                 () -> useCase.create(new CreateLabelCommand(CarrierCode.GHN, "order-1", null, null,

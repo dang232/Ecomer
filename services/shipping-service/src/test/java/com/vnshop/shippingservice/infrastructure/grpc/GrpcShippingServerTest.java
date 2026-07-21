@@ -13,8 +13,8 @@ import com.vnshop.shippingservice.domain.model.ShippingLabel;
 import com.vnshop.shippingservice.domain.model.TrackingInfo;
 import com.vnshop.shippingservice.domain.model.TrackingRequest;
 import com.vnshop.shippingservice.domain.port.out.CarrierGatewayPort;
+import com.vnshop.shippingservice.domain.port.out.CarrierLabelPolicyPort;
 import com.vnshop.shippingservice.infrastructure.config.ShippingCheckoutProperties;
-import com.vnshop.shippingservice.infrastructure.config.CarrierProperties;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Server;
@@ -23,7 +23,6 @@ import io.grpc.StatusRuntimeException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.core.env.StandardEnvironment;
 
 import java.io.IOException;
 
@@ -41,10 +40,9 @@ class GrpcShippingServerTest {
     @BeforeEach
     void setUp() throws IOException {
         gateway = new CapturingGateway();
-        StandardEnvironment environment = new StandardEnvironment();
-        environment.setActiveProfiles("local");
+        CarrierLabelPolicyPort policy = () -> true;
         GrpcShippingServer service = new GrpcShippingServer(
-                new CreateLabelUseCase(gateway, new CarrierProperties("stub"), environment),
+                new CreateLabelUseCase(gateway, policy),
                 new ShippingCheckoutProperties(CarrierCode.GHTK,
                         new ShippingAddress("Seller", "0900000000", "1 Origin", "W1", "D1", "HCM")));
         server = ServerBuilder.forPort(0).addService(service).build().start();

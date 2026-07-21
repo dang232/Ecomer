@@ -8,8 +8,7 @@ import com.vnshop.shippingservice.domain.model.LabelRequest;
 import com.vnshop.shippingservice.domain.model.Parcel;
 import com.vnshop.shippingservice.domain.model.ShippingLabel;
 import com.vnshop.shippingservice.domain.port.out.CarrierGatewayPort;
-import com.vnshop.shippingservice.infrastructure.config.CarrierProperties;
-import org.springframework.core.env.Environment;
+import com.vnshop.shippingservice.domain.port.out.CarrierLabelPolicyPort;
 
 import java.util.List;
 import java.util.Objects;
@@ -17,21 +16,18 @@ import java.util.Objects;
 /** Creates a carrier label through the configured carrier gateway. */
 public class CreateLabelUseCase {
     private final CarrierGatewayPort carrierGateway;
-    private final CarrierProperties carrierProperties;
-    private final Environment environment;
+    private final CarrierLabelPolicyPort carrierLabelPolicy;
 
     public CreateLabelUseCase(
             CarrierGatewayPort carrierGateway,
-            CarrierProperties carrierProperties,
-            Environment environment) {
+            CarrierLabelPolicyPort carrierLabelPolicy) {
         this.carrierGateway = Objects.requireNonNull(carrierGateway, "carrierGateway is required");
-        this.carrierProperties = Objects.requireNonNull(carrierProperties, "carrierProperties is required");
-        this.environment = Objects.requireNonNull(environment, "environment is required");
+        this.carrierLabelPolicy = Objects.requireNonNull(carrierLabelPolicy, "carrierLabelPolicy is required");
     }
 
     public CreateLabelResult create(CreateLabelCommand command) {
         Objects.requireNonNull(command, "command is required");
-        if (!isLocalStub()) {
+        if (!carrierLabelPolicy.allowsIncompleteLabelData()) {
             validateCarrierFields(command);
         }
 
@@ -88,11 +84,6 @@ public class CreateLabelUseCase {
                 .map(item -> item.name() + " x" + item.quantity())
                 .reduce((left, right) -> left + ", " + right)
                 .orElse("");
-    }
-
-    private boolean isLocalStub() {
-        return "stub".equalsIgnoreCase(carrierProperties.mode())
-                && environment.matchesProfiles("local", "dev");
     }
 
     private static void validateCarrierFields(CreateLabelCommand command) {
