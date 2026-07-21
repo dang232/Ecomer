@@ -1,5 +1,5 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState, useCallback } from "react";
 
 import {
   addCartItem,
@@ -145,7 +145,6 @@ function recomputeTotals(cart: Cart): Cart {
 export function useCart() {
   const { authenticated, ready } = useAuth();
   const qc = useQueryClient();
-  const mergeAttempted = useRef(false);
   const [guestItems, setGuestItems] = useState<GuestCartItem[]>(() => readGuestCart());
 
   const query = useQuery<Cart>({
@@ -154,63 +153,6 @@ export function useCart() {
     enabled: ready && authenticated,
     refetchOnWindowFocus: true,
   });
-
-  // One-shot guest -> server merge on first authenticated load.
-  useEffect(() => {
-    if (!ready || !authenticated) return;
-    if (mergeAttempted.current) return;
-    // Gate on server cart being loaded — prevents race where localStorage is cleared
-    // before the query cache has the authoritative server state for dedup.
-    if (!query.isSuccess || !query.data) return;
-    const pending = readGuestCart();
-    if (pending.length === 0) return;
-    mergeAttempted.current = true;
-
-    const aborted = { current: false };
-
-    void (async () => {
-      const failedItems: GuestCartItem[] = [];
-      for (const item of pending) {
-        if (aborted.current) break;
-        // Deduplication guard: dedupe against authoritative query.data (not getQueryData
-        // which may be stale during initial load).
-        const serverItem = query.data?.items?.find(
-          (i) => i.productId === item.productId && i.variantId === item.variantId,
-        );
-        if (serverItem && serverItem.quantity >= item.quantity) continue;
-        // Runtime guard: warn if product has variants but guest cart lacks selection
-        if (item.variantId === undefined) {
-          console.warn(
-            `[cart] addCartItem called without variantId for product ${item.productId} — ` +
-              `variant selection may be lost on login migration`,
-          );
-        }
-        try {
-          await addCartItem({
-            productId: item.productId,
-            quantity: item.quantity,
-            variantId: item.variantId,
-          });
-        } catch (err) {
-          console.warn("cart merge: failed to add", item.productId, err);
-          failedItems.push(item);
-        }
-      }
-      // Clear guest cart only after all items succeed — so failures can retry.
-      if (aborted.current) return;
-
-      // Keep failed lines in local storage so a later authenticated load can retry them.
-      writeGuestCart(failedItems);
-      setGuestItems(failedItems);
-      if (failedItems.length === 0) {
-        void qc.invalidateQueries({ queryKey: CART_KEY });
-      }
-    })();
-
-    return () => {
-      aborted.current = true;
-    };
-  }, [ready, authenticated, query.isSuccess, query.data, qc]);
 
   const addItem = useMutation<
     Cart,
@@ -393,6 +335,92 @@ export function useCart() {
   const itemCount = cart?.itemCount ?? items.reduce((n, i) => n + i.quantity, 0);
   const totalAmount = cart?.totalAmount ?? items.reduce((s, i) => s + i.price * i.quantity, 0);
 
+  // Merge dialog state
+  const [showMergeDialog, setShowMergeDialog] = useState(false);
+  const mergeApprovedRef = useRef(false);
+  const [isMerging, setIsMerging] = useState(false);
+
+  // Showing the dialog is deliberately separate from merging: merely
+  // authenticating must never move guest items into the saved cart.
+  const requestMerge = useCallback(() => {
+    if (!ready || !authenticated || guestItems.length === 0) return;
+    if (!query.isSuccess || !query.data) return;
+    mergeApprovedRef.current = false;
+    setShowMergeDialog(true);
+  }, [ready, authenticated, guestItems.length, query.isSuccess, query.data]);
+
+  // The only guest -> server merge path. The dialog's Merge action grants
+  // consent immediately before this work starts; there is no login-time merge.
+  // addCartItem is additive for a matching product/variant: server 5 + guest
+  // 2 is sent as quantity 2 and becomes 7, subject to the server's item cap.
+  const mergeGuestItems = useCallback(async (): Promise<boolean> => {
+    if (!ready || !authenticated) return false;
+    if (!query.isSuccess || !query.data) return false;
+    if (!mergeApprovedRef.current) return false;
+
+    setIsMerging(true);
+    const failedItems: GuestCartItem[] = [];
+    let mergedCart = query.data;
+
+    try {
+      for (const item of guestItems) {
+        // Check for variant warning
+        if (item.variantId === undefined) {
+          console.warn(
+            `[cart] merge called without variantId for product ${item.productId} — ` +
+              `variant selection may be lost`,
+          );
+        }
+
+        try {
+          mergedCart = await addCartItem({
+            productId: item.productId,
+            quantity: item.quantity,
+            variantId: item.variantId,
+          });
+        } catch (err) {
+          console.warn("cart merge: failed to add", item.productId, err);
+          failedItems.push(item);
+        }
+      }
+
+      // Clear guest cart only if all items succeeded
+      if (failedItems.length === 0) {
+        writeGuestCart([]);
+        setGuestItems([]);
+        qc.setQueryData(CART_KEY, mergedCart);
+      } else {
+        writeGuestCart(failedItems);
+        setGuestItems(failedItems);
+      }
+
+      setShowMergeDialog(false);
+      mergeApprovedRef.current = false;
+      return failedItems.length === 0;
+    } finally {
+      setIsMerging(false);
+    }
+  }, [ready, authenticated, guestItems, query.data, query.isSuccess, qc]);
+
+  const executeMerge = useCallback(async (): Promise<boolean> => {
+    if (!showMergeDialog || isMerging) return false;
+    mergeApprovedRef.current = true;
+    return mergeGuestItems();
+  }, [isMerging, mergeGuestItems, showMergeDialog]);
+
+  // Keep carts separate (don't merge)
+  const keepSeparate = useCallback(() => {
+    mergeApprovedRef.current = false;
+    setShowMergeDialog(false);
+  }, []);
+
+  // Calculate item counts for merge dialog
+  const guestItemCount = guestItems.reduce((n, i) => n + i.quantity, 0);
+  const serverItemCount = query.data?.items?.reduce((n, i) => n + i.quantity, 0) ?? 0;
+
+  // Check if there are items without variant selection
+  const hasItemsWithoutVariant = guestItems.some((item) => item.variantId === undefined);
+
   return {
     cart,
     items,
@@ -403,6 +431,15 @@ export function useCart() {
     isLoading: isGuest ? false : query.isLoading,
     isReady: isGuest ? true : query.isSuccess,
     error: isGuest ? null : query.error,
+    // Merge-related state and functions
+    showMergeDialog,
+    isMerging,
+    requestMerge,
+    executeMerge,
+    keepSeparate,
+    guestItemCount,
+    serverItemCount,
+    hasItemsWithoutVariant,
     addItem: (
       input: { productId: string; quantity: number; variantId?: string },
       options?: Parameters<typeof addItem.mutate>[1],

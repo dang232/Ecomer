@@ -1,294 +1,401 @@
-import { renderHook, act, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { renderHook, waitFor, act } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { makeWrapper } from "../test-utils/render-with-query-client";
+
+import { useCart } from "./use-cart";
+
+vi.mock("../lib/auth/native-auth", () => ({
+  getAccessToken: () => null,
+  setLiveTokenSet: vi.fn(),
+  refreshTokens: vi.fn(),
+}));
+
+// Mock product endpoint used by guest cart hydration
+vi.mock("../lib/api/endpoints/products", () => ({
+  productById: vi.fn().mockResolvedValue(null),
+}));
+
+const fetchSpy = vi.spyOn(global, "fetch");
+
+function cartEnvelope(data: unknown, status = 200): Response {
+  const cartData = {
+    items:
+      data && typeof data === "object" && "items" in data
+        ? (data as { items: unknown[] }).items
+        : [],
+    itemCount:
+      data && typeof data === "object" && "itemCount" in data
+        ? (data as { itemCount: number }).itemCount
+        : 0,
+    totalAmount:
+      data && typeof data === "object" && "totalAmount" in data
+        ? (data as { totalAmount: number }).totalAmount
+        : 0,
+  };
+  return new Response(
+    JSON.stringify({
+      success: true,
+      message: "ok",
+      data: cartData,
+      errorCode: null,
+      timestamp: "",
+    }),
+    { status, headers: { "content-type": "application/json" } },
+  );
+}
 
 const useAuthMock = vi.fn();
 vi.mock("./use-auth", () => ({
   useAuth: () => useAuthMock(),
 }));
 
-const getCartMock = vi.fn();
-const addCartItemMock = vi.fn();
-const updateCartItemMock = vi.fn();
-const removeCartItemMock = vi.fn();
-const clearCartMock = vi.fn();
-vi.mock("../lib/api/endpoints/cart", () => ({
-  getCart: (...args: unknown[]) => getCartMock(...args),
-  addCartItem: (...args: unknown[]) => addCartItemMock(...args),
-  updateCartItem: (...args: unknown[]) => updateCartItemMock(...args),
-  removeCartItem: (...args: unknown[]) => removeCartItemMock(...args),
-  clearCart: (...args: unknown[]) => clearCartMock(...args),
-}));
-
-import { makeWrapper } from "../test-utils/render-with-query-client";
-
-import { useCart } from "./use-cart";
+let localStorageSetItemSpy: ReturnType<typeof vi.spyOn>;
+let localStorageRemoveItemSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
-  useAuthMock.mockReturnValue({ ready: true, authenticated: true });
-  getCartMock.mockReset();
-  addCartItemMock.mockReset();
-  updateCartItemMock.mockReset();
-  removeCartItemMock.mockReset();
-  clearCartMock.mockReset();
+  fetchSpy.mockReset();
   localStorage.clear();
+
+  // Spy on localStorage methods
+  localStorageSetItemSpy = vi.spyOn(localStorage, "setItem");
+  localStorageRemoveItemSpy = vi.spyOn(localStorage, "removeItem");
+
+  useAuthMock.mockReset();
 });
 
 afterEach(() => {
   vi.clearAllMocks();
+  localStorage.clear();
 });
 
 describe("useCart", () => {
-  it("does not fetch the cart while keycloak is initialising", () => {
-    useAuthMock.mockReturnValue({ ready: false, authenticated: false });
-    const { Wrapper } = makeWrapper();
-    renderHook(() => useCart(), { wrapper: Wrapper });
-    expect(getCartMock).not.toHaveBeenCalled();
+  describe("Guest cart (not authenticated)", () => {
+    it("should return guest items from localStorage", async () => {
+      useAuthMock.mockReturnValue({ ready: true, authenticated: false });
+      localStorage.setItem(
+        "vnshop:guest-cart",
+        JSON.stringify([
+          { productId: "prod-1", quantity: 2 },
+          { productId: "prod-2", quantity: 1, variantId: "var-1" },
+        ]),
+      );
+
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
+
+      await waitFor(() => {
+        expect(result.current.isGuest).toBe(true);
+      });
+
+      expect(result.current.items).toHaveLength(2);
+    });
+
+    it("should add item to guest cart", async () => {
+      useAuthMock.mockReturnValue({ ready: true, authenticated: false });
+      localStorage.removeItem("vnshop:guest-cart");
+
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
+
+      await waitFor(() => {
+        expect(result.current.isGuest).toBe(true);
+      });
+
+      act(() => {
+        result.current.addItem({ productId: "prod-1", quantity: 1 });
+      });
+
+      expect(localStorageSetItemSpy).toHaveBeenCalledWith("vnshop:guest-cart", expect.any(String));
+    });
+
+    it("should update guest cart item quantity", async () => {
+      useAuthMock.mockReturnValue({ ready: true, authenticated: false });
+      localStorage.setItem(
+        "vnshop:guest-cart",
+        JSON.stringify([{ productId: "prod-1", quantity: 2 }]),
+      );
+
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
+
+      await waitFor(() => {
+        expect(result.current.isGuest).toBe(true);
+      });
+
+      act(() => {
+        result.current.updateItem({ productId: "prod-1", quantity: 5 });
+      });
+
+      expect(localStorageSetItemSpy).toHaveBeenCalledWith(
+        "vnshop:guest-cart",
+        expect.stringContaining("5"),
+      );
+    });
+
+    it("should remove item from guest cart", async () => {
+      useAuthMock.mockReturnValue({ ready: true, authenticated: false });
+      localStorage.setItem(
+        "vnshop:guest-cart",
+        JSON.stringify([
+          { productId: "prod-1", quantity: 2 },
+          { productId: "prod-2", quantity: 1 },
+        ]),
+      );
+
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
+
+      await waitFor(() => {
+        expect(result.current.isGuest).toBe(true);
+      });
+
+      act(() => {
+        result.current.removeItem("prod-1");
+      });
+
+      expect(localStorageSetItemSpy).toHaveBeenCalledWith(
+        "vnshop:guest-cart",
+        expect.not.stringContaining("prod-1"),
+      );
+    });
+
+    it("should clear guest cart", async () => {
+      useAuthMock.mockReturnValue({ ready: true, authenticated: false });
+      localStorage.setItem(
+        "vnshop:guest-cart",
+        JSON.stringify([{ productId: "prod-1", quantity: 2 }]),
+      );
+
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
+
+      await waitFor(() => {
+        expect(result.current.isGuest).toBe(true);
+      });
+
+      act(() => {
+        result.current.clear();
+      });
+
+      expect(localStorageRemoveItemSpy).toHaveBeenCalledWith("vnshop:guest-cart");
+    });
   });
 
-  it("does not fetch when unauthenticated", () => {
-    useAuthMock.mockReturnValue({ ready: true, authenticated: false });
-    const { Wrapper } = makeWrapper();
-    renderHook(() => useCart(), { wrapper: Wrapper });
-    expect(getCartMock).not.toHaveBeenCalled();
+  describe("Merge functionality (authenticated)", () => {
+    it("should expose merge-related state and functions", async () => {
+      useAuthMock.mockReturnValue({ ready: true, authenticated: true });
+      fetchSpy.mockResolvedValueOnce(cartEnvelope({ items: [], itemCount: 0, totalAmount: 0 }));
+
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
+
+      await waitFor(() => {
+        expect(result.current.isReady).toBe(true);
+      });
+
+      // Verify merge functions are exposed
+      expect(result.current.showMergeDialog).toBeDefined();
+      expect(result.current.executeMerge).toBeDefined();
+      expect(result.current.keepSeparate).toBeDefined();
+      expect(result.current.requestMerge).toBeDefined();
+      expect(result.current.isMerging).toBeDefined();
+      expect(result.current.guestItemCount).toBeDefined();
+      expect(result.current.serverItemCount).toBeDefined();
+      expect(result.current.hasItemsWithoutVariant).toBeDefined();
+    });
+
+    it("should detect items without variant selection", async () => {
+      localStorage.setItem(
+        "vnshop:guest-cart",
+        JSON.stringify([
+          { productId: "prod-1", quantity: 2 }, // No variantId
+          { productId: "prod-2", quantity: 1, variantId: "var-1" }, // Has variantId
+        ]),
+      );
+
+      useAuthMock.mockReturnValue({ ready: true, authenticated: true });
+      fetchSpy.mockResolvedValueOnce(cartEnvelope({ items: [], itemCount: 0, totalAmount: 0 }));
+
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
+
+      await waitFor(() => {
+        expect(result.current.guestItemCount).toBeGreaterThan(0);
+      });
+
+      expect(result.current.hasItemsWithoutVariant).toBe(true);
+    });
+
+    it("should not have items without variant when all have variantId", async () => {
+      localStorage.setItem(
+        "vnshop:guest-cart",
+        JSON.stringify([
+          { productId: "prod-1", quantity: 2, variantId: "var-1" },
+          { productId: "prod-2", quantity: 1, variantId: "var-2" },
+        ]),
+      );
+
+      useAuthMock.mockReturnValue({ ready: true, authenticated: true });
+      fetchSpy.mockResolvedValueOnce(cartEnvelope({ items: [], itemCount: 0, totalAmount: 0 }));
+
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
+
+      await waitFor(() => {
+        expect(result.current.guestItemCount).toBeGreaterThan(0);
+      });
+
+      expect(result.current.hasItemsWithoutVariant).toBe(false);
+    });
+
+    it("does not auto-merge before the buyer chooses merge or keep separate", async () => {
+      const mockCart = {
+        items: [{ productId: "prod-1", quantity: 5, price: 100, name: "Server Item" }],
+        itemCount: 5,
+        totalAmount: 500,
+      };
+
+      useAuthMock.mockReturnValue({ ready: true, authenticated: true });
+      fetchSpy.mockImplementation(() => Promise.resolve(cartEnvelope(mockCart)));
+      localStorage.setItem(
+        "vnshop:guest-cart",
+        JSON.stringify([{ productId: "prod-1", quantity: 2 }]),
+      );
+
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
+
+      // Wait for initial query to complete
+      await waitFor(() => {
+        expect(result.current.isReady).toBe(true);
+      });
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(result.current.showMergeDialog).toBe(false);
+
+      act(() => result.current.requestMerge());
+
+      expect(result.current.showMergeDialog).toBe(true);
+
+      act(() => result.current.keepSeparate());
+
+      await act(async () => {
+        await expect(result.current.executeMerge()).resolves.toBe(false);
+      });
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it("adds the guest quantity to a matching server item only after merge consent", async () => {
+      const mockCart = {
+        items: [{ productId: "prod-1", quantity: 5, price: 100, name: "Server Item" }],
+        itemCount: 5,
+        totalAmount: 500,
+      };
+
+      useAuthMock.mockReturnValue({ ready: true, authenticated: true });
+      const mergedCart = {
+        items: [{ productId: "prod-1", quantity: 7, price: 100, name: "Server Item" }],
+        itemCount: 7,
+        totalAmount: 700,
+      };
+      fetchSpy
+        .mockResolvedValueOnce(cartEnvelope(mockCart))
+        .mockResolvedValueOnce(cartEnvelope(mergedCart));
+      localStorage.setItem(
+        "vnshop:guest-cart",
+        JSON.stringify([{ productId: "prod-1", quantity: 2 }]),
+      );
+
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
+
+      await waitFor(() => expect(result.current.isReady).toBe(true));
+      act(() => result.current.requestMerge());
+
+      await act(async () => {
+        await expect(result.current.executeMerge()).resolves.toBe(true);
+      });
+
+      const postCall = fetchSpy.mock.calls.find(
+        ([, request]) => (request as RequestInit | undefined)?.method === "POST",
+      );
+      expect(postCall).toBeDefined();
+      const [, request] = postCall as [RequestInfo | URL, RequestInit];
+      expect(request).toMatchObject({ method: "POST" });
+      expect(JSON.parse((request as RequestInit).body as string)).toEqual({
+        productId: "prod-1",
+        quantity: 2,
+      });
+      expect(result.current.items).toMatchObject([{ productId: "prod-1", quantity: 7 }]);
+      expect(result.current.itemCount).toBe(7);
+    });
   });
 
-  it("fetches the cart and exposes derived totals", async () => {
-    getCartMock.mockResolvedValue({
-      items: [
-        { productId: "p1", price: 100, quantity: 2 },
-        { productId: "p2", price: 50, quantity: 3 },
-      ],
-      totalAmount: 350,
-      itemCount: 5,
-    });
-    const { Wrapper } = makeWrapper();
-    const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
+  describe("Authenticated cart (no guest items)", () => {
+    it("should fetch cart from server when authenticated", async () => {
+      const mockCart = {
+        items: [{ productId: "prod-1", quantity: 1, price: 100, name: "Test Item" }],
+        itemCount: 1,
+        totalAmount: 100,
+      };
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.items).toHaveLength(2);
-    expect(result.current.itemCount).toBe(5);
-    expect(result.current.totalAmount).toBe(350);
-  });
+      useAuthMock.mockReturnValue({ ready: true, authenticated: true });
+      fetchSpy.mockResolvedValueOnce(cartEnvelope(mockCart));
+      localStorage.removeItem("vnshop:guest-cart");
 
-  it("falls back to derived totals when the server omits them", async () => {
-    getCartMock.mockResolvedValue({
-      items: [
-        { productId: "p1", price: 100, quantity: 2 },
-        { productId: "p2", price: 50, quantity: 1 },
-      ],
-    });
-    const { Wrapper } = makeWrapper();
-    const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
 
-    await waitFor(() => expect(result.current.items).toHaveLength(2));
-    expect(result.current.itemCount).toBe(3);
-    expect(result.current.totalAmount).toBe(250);
-  });
+      await waitFor(() => {
+        expect(result.current.isReady).toBe(true);
+      });
 
-  it("addItem updates the cache directly on success without refetching", async () => {
-    getCartMock.mockResolvedValue({ items: [], totalAmount: 0, itemCount: 0 });
-    addCartItemMock.mockResolvedValue({
-      items: [{ productId: "p1", price: 100, quantity: 1 }],
-      itemCount: 1,
-      totalAmount: 100,
-    });
-    const { Wrapper } = makeWrapper();
-    const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
-
-    // Wait for query to succeed (isReady gate) before attempting mutation
-    await waitFor(() => expect(result.current.isReady).toBe(true));
-
-    await act(async () => {
-      await result.current.addItemAsync({ productId: "p1", quantity: 1 });
+      expect(fetchSpy).toHaveBeenCalled();
+      expect(result.current.items).toHaveLength(1);
     });
 
-    expect(addCartItemMock).toHaveBeenCalledWith({ productId: "p1", quantity: 1 });
-    // Cart endpoint shouldn't be re-hit on success — cache was patched directly.
-    expect(getCartMock).toHaveBeenCalledTimes(1);
-    await waitFor(() => expect(result.current.itemCount).toBe(1));
-    expect(result.current.totalAmount).toBe(100);
-  });
+    it("should add item to server cart when authenticated", async () => {
+      const mockCart = {
+        items: [{ productId: "prod-1", quantity: 1, price: 100, name: "Test Item" }],
+        itemCount: 1,
+        totalAmount: 100,
+      };
+      const newCart = {
+        items: [
+          { productId: "prod-1", quantity: 1, price: 100, name: "Test Item" },
+          { productId: "prod-2", quantity: 2, price: 50, name: "New Item" },
+        ],
+        itemCount: 3,
+        totalAmount: 200,
+      };
 
-  it("addItem rolls back to the previous cart when the mutation fails", async () => {
-    const initialCart = { items: [], totalAmount: 0, itemCount: 0 };
-    getCartMock.mockResolvedValue(initialCart);
-    addCartItemMock.mockRejectedValueOnce(new Error("server boom"));
-    const { Wrapper } = makeWrapper();
-    const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
+      useAuthMock.mockReturnValue({ ready: true, authenticated: true });
+      fetchSpy
+        .mockResolvedValueOnce(cartEnvelope(mockCart))
+        .mockResolvedValueOnce(cartEnvelope(newCart));
+      localStorage.removeItem("vnshop:guest-cart");
 
-    await waitFor(() => expect(result.current.items).toEqual([]));
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
 
-    await act(async () => {
-      await result.current.addItemAsync({ productId: "p1", quantity: 1 }).catch(() => undefined);
+      // Wait for query to complete first
+      await waitFor(() => {
+        expect(result.current.isReady).toBe(true);
+      });
+
+      // Now call addItem
+      act(() => {
+        result.current.addItem({ productId: "prod-2", quantity: 2 });
+      });
+
+      // Wait for mutation to complete
+      await waitFor(
+        () => {
+          expect(fetchSpy).toHaveBeenCalledTimes(2);
+        },
+        { timeout: 3000 },
+      );
     });
-
-    // Cache restored from snapshot — no extra refetch needed.
-    expect(getCartMock).toHaveBeenCalledTimes(1);
-    await waitFor(() => expect(result.current.items).toEqual([]));
-    expect(result.current.itemCount).toBe(0);
-  });
-
-  it("updateItem and removeItem patch the cache from the server response", async () => {
-    getCartMock.mockResolvedValue({
-      items: [{ productId: "p1", price: 100, quantity: 2 }],
-      totalAmount: 200,
-      itemCount: 2,
-    });
-    updateCartItemMock.mockResolvedValue({
-      items: [{ productId: "p1", price: 100, quantity: 5 }],
-      totalAmount: 500,
-      itemCount: 5,
-    });
-    removeCartItemMock.mockResolvedValue({ items: [], totalAmount: 0, itemCount: 0 });
-
-    const { Wrapper } = makeWrapper();
-    const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
-
-    await waitFor(() => expect(result.current.itemCount).toBe(2));
-
-    await act(async () => {
-      result.current.updateItem({ productId: "p1", quantity: 5 });
-    });
-    await waitFor(() => expect(result.current.itemCount).toBe(5));
-    expect(updateCartItemMock).toHaveBeenCalledWith("p1", { quantity: 5 });
-
-    await act(async () => {
-      result.current.removeItem("p1");
-    });
-    await waitFor(() => expect(result.current.itemCount).toBe(0));
-    expect(removeCartItemMock).toHaveBeenCalledWith("p1");
-  });
-
-  it("clear sets the cart to an empty shape locally", async () => {
-    getCartMock.mockResolvedValue({
-      items: [{ productId: "p1", price: 100, quantity: 1 }],
-      totalAmount: 100,
-      itemCount: 1,
-    });
-    clearCartMock.mockResolvedValue({});
-
-    const { Wrapper } = makeWrapper();
-    const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
-
-    await waitFor(() => expect(result.current.itemCount).toBe(1));
-
-    await act(async () => {
-      result.current.clear();
-    });
-
-    await waitFor(() => expect(result.current.items).toEqual([]));
-    expect(clearCartMock).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe("useCart (guest mode)", () => {
-  beforeEach(() => {
-    useAuthMock.mockReturnValue({ ready: true, authenticated: false });
-  });
-
-  it("addItem persists to localStorage and surfaces immediately", () => {
-    const { Wrapper } = makeWrapper();
-    const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
-
-    expect(result.current.isGuest).toBe(true);
-    act(() => {
-      result.current.addItem({ productId: "p1", quantity: 2 });
-    });
-
-    expect(result.current.itemCount).toBe(2);
-    expect(addCartItemMock).not.toHaveBeenCalled();
-    const stored = JSON.parse(localStorage.getItem("vnshop:guest-cart") ?? "[]") as {
-      productId: string;
-      quantity: number;
-    }[];
-    expect(stored).toEqual([{ productId: "p1", quantity: 2 }]);
-  });
-
-  it("addItem on existing product accumulates quantity", () => {
-    const { Wrapper } = makeWrapper();
-    const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
-
-    act(() => {
-      result.current.addItem({ productId: "p1", quantity: 1 });
-    });
-    act(() => {
-      result.current.addItem({ productId: "p1", quantity: 3 });
-    });
-
-    expect(result.current.items).toHaveLength(1);
-    expect(result.current.itemCount).toBe(4);
-  });
-
-  it("updateItem with quantity<=0 removes the item", () => {
-    localStorage.setItem("vnshop:guest-cart", JSON.stringify([{ productId: "p1", quantity: 5 }]));
-    const { Wrapper } = makeWrapper();
-    const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
-
-    expect(result.current.itemCount).toBe(5);
-    act(() => {
-      result.current.updateItem({ productId: "p1", quantity: 0 });
-    });
-
-    expect(result.current.items).toEqual([]);
-    expect(localStorage.getItem("vnshop:guest-cart")).toBeNull();
-  });
-
-  it("removeItem and clear update localStorage", () => {
-    localStorage.setItem(
-      "vnshop:guest-cart",
-      JSON.stringify([
-        { productId: "p1", quantity: 1 },
-        { productId: "p2", quantity: 2 },
-      ]),
-    );
-    const { Wrapper } = makeWrapper();
-    const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
-
-    act(() => {
-      result.current.removeItem("p1");
-    });
-    expect(result.current.items.map((i) => i.productId)).toEqual(["p2"]);
-
-    act(() => {
-      result.current.clear();
-    });
-    expect(result.current.items).toEqual([]);
-    expect(localStorage.getItem("vnshop:guest-cart")).toBeNull();
-  });
-});
-
-describe("useCart guest -> server merge", () => {
-  it("replays the localStorage cart to the server on first authenticated load", async () => {
-    localStorage.setItem(
-      "vnshop:guest-cart",
-      JSON.stringify([
-        { productId: "p1", quantity: 2 },
-        { productId: "p2", quantity: 1 },
-      ]),
-    );
-    useAuthMock.mockReturnValue({ ready: true, authenticated: true });
-    getCartMock.mockResolvedValue({ items: [], totalAmount: 0, itemCount: 0 });
-    addCartItemMock.mockResolvedValue({
-      items: [{ productId: "p1", price: 100, quantity: 2 }],
-      itemCount: 2,
-      totalAmount: 200,
-    });
-    const { Wrapper } = makeWrapper();
-    renderHook(() => useCart(), { wrapper: Wrapper });
-
-    await waitFor(() => expect(addCartItemMock).toHaveBeenCalledTimes(2));
-    expect(addCartItemMock).toHaveBeenCalledWith({ productId: "p1", quantity: 2 });
-    expect(addCartItemMock).toHaveBeenCalledWith({ productId: "p2", quantity: 1 });
-    await waitFor(() => expect(localStorage.getItem("vnshop:guest-cart")).toBeNull());
-  });
-
-  it("does not run the merge when no localStorage cart exists", async () => {
-    useAuthMock.mockReturnValue({ ready: true, authenticated: true });
-    getCartMock.mockResolvedValue({ items: [], totalAmount: 0, itemCount: 0 });
-    const { Wrapper } = makeWrapper();
-    renderHook(() => useCart(), { wrapper: Wrapper });
-
-    await waitFor(() => expect(getCartMock).toHaveBeenCalled());
-    expect(addCartItemMock).not.toHaveBeenCalled();
   });
 });

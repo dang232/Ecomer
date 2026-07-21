@@ -114,6 +114,17 @@ def workload_documents(item: dict) -> str:
         - name: KAFKA_SASL_PASSWORD
           valueFrom:
             secretKeyRef: {{name: vnshop-runtime-secrets, key: {service_id}-kafka-password}}''')
+        if service_id == "shipping-service":
+            env_entries.append('''        - name: GHN_WEBHOOK_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: vnshop-runtime-secrets
+              key: ghn-webhook-token
+        - name: GHTK_WEBHOOK_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: vnshop-runtime-secrets
+              key: ghtk-webhook-token''')
         if "redis" in data_names:
             if service_id == "notification-service":
                 env_entries.append('''        - name: REDIS_URL

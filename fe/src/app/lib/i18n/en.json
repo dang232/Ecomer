@@ -49,6 +49,15 @@
   },
   "cart": {
     "title": "Cart",
+    "merge": {
+      "title": "Merge Your Carts",
+      "description": "You have {{guestCount}} items in guest cart and {{serverCount}} items in saved cart",
+      "mergeBtn": "Merge Items",
+      "keepBtn": "Keep Separate",
+      "success": "Cart merged successfully",
+      "failed": "Failed to merge cart",
+      "variantWarning": "Warning: Some items may have lost their variant selection during merge"
+    },
     "addToCart": "+ Add to cart",
     "titleWithCount": "Cart ({{count}} items)",
     "loginPromptTitle": "Log in to view your cart",
@@ -1697,5 +1706,83 @@
     "reload": "Reload page",
     "retry": "Try again",
     "retrying": "Retrying…"
+  },
+  "return": {
+    "request": {
+      "title": "Request Return",
+      "backToOrders": "Back to orders",
+      "orderIdLabel": "Order ID",
+      "orderIdPlaceholder": "Enter order ID",
+      "orderIdHint": "Find the order ID in your orders page",
+      "reasonLabel": "Return reason",
+      "selectReasonOption": "Select a reason",
+      "reasonDetailLabel": "Details (optional)",
+      "reasonDetailPlaceholder": "Provide more details to help the seller process faster...",
+      "pickupTypeLabel": "Return method",
+      "pickup": "Pickup at your address",
+      "dropoff": "Drop off at store",
+      "photoLabel": "Evidence photos (optional)",
+      "addPhoto": "Add",
+      "removePhoto": "Remove",
+      "photoHint": "Upload photos of the product to speed up processing",
+      "photoUploadHint": "Photo upload feature coming soon",
+      "footnote": "After submission, the seller may approve or reject. If there's no response within 3 days, you can open a dispute.",
+      "submit": "Submit request",
+      "submitting": "Submitting...",
+      "success": "Return request submitted",
+      "error": "Failed to submit return request",
+      "selectOrder": "Please enter order ID",
+      "selectReason": "Please select a return reason",
+      "reasonTooShort": "Description must be at least 10 characters"
+    },
+    "status": {
+      "title": "My Returns",
+      "loadError": "Failed to load returns",
+      "empty": "You have no return requests yet",
+      "viewOrders": "View orders",
+      "requested": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "completed": "Completed",
+      "disputed": "Disputed"
+    },
+    "detail": {
+      "title": "Return Details",
+      "notFound": "Return request not found",
+      "orderId": "Order",
+      "reason": "Reason",
+      "refundAmount": "Refund amount",
+      "requestedAt": "Requested on"
+    },
+    "dispute": {
+      "title": "Dispute",
+      "placeholder": "Describe the dispute details...",
+      "submit": "Submit dispute",
+      "submitting": "Submitting...",
+      "success": "Dispute submitted",
+      "error": "Failed to submit dispute",
+      "reasonTooShort": "Description must be at least 10 characters"
+    },
+    "reason": {
+      "damaged": "Item arrived damaged",
+      "wrong_item": "Received wrong item",
+      "changed_mind": "Changed my mind",
+      "not_as_described": "Not as described",
+      "other": "Other reason"
+    },
+    "seller": {
+      "title": "Return Management",
+      "pending": "Pending",
+      "approve": "Approve",
+      "reject": "Reject",
+      "complete": "Complete",
+      "approveSuccess": "Return request approved",
+      "approveError": "Failed to approve return request",
+      "rejectSuccess": "Return request rejected",
+      "rejectError": "Failed to reject return request",
+      "completeSuccess": "Return completed",
+      "completeError": "Failed to complete return",
+      "empty": "No return requests"
+    }
   }
 }
