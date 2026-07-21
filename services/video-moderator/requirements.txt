@@ -7,7 +7,7 @@ pydantic-settings==2.14.2
 kafka-python==2.2.15
 
 # Object storage
-boto3==1.35.79
+boto3==1.43.51
 
 # NudeNet NSFW detection (ONNX-based, CPU-friendly)
 nudenet==3.4.2
