@@ -16,7 +16,7 @@ VNShop is a portfolio full-stack project for a Vietnamese multi-seller marketpla
 | Resource | Use it for |
 | --- | --- |
 | [HANDOFF.md](HANDOFF.md) | **Start here.** Single-page pickup doc for someone new to the codebase. |
-| [Architech.md](Architech.md) | Full service-by-service architecture, boundaries, contracts, and deployment model. |
+| [Architech.md](Architech.md) | Source-linked service architecture, code maps, end-to-end workflows, state machines, fallbacks, and deployment model. |
 | [Production readiness review](docs/PRODUCTION-READINESS-REVIEW.md) | Dated review of local fallbacks, hardcoded infrastructure, provider modes, and release blockers. |
 | [Architecture doc](.sisyphus/ARCHITECTURE.md) | Full system design, bounded contexts, API conventions |
 | [Status doc](.sisyphus/STATUS.md) | Per-service health, feature coverage, NFR audit, roadmap |

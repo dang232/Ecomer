@@ -305,3 +305,521 @@ When changing a service boundary:
 5. Update Compose, Kubernetes, secrets, and CI references together.
 6. Run the affected service tests and both end-to-end gates.
 7. Record any deferred production work in [`docs/PRODUCTION-READINESS-REVIEW.md`](docs/PRODUCTION-READINESS-REVIEW.md).
+
+## 9. Code-Level Structure
+
+This section is the source-navigation map. The service catalog above describes ownership; this
+section describes the classes that execute each boundary.
+
+### 9.1 Layer contract
+
+The Java services use a ports-and-adapters shape. The NestJS services use the same dependency
+direction with TypeScript folders instead of Java packages.
+
+```text
+infrastructure/web, infrastructure/grpc, infrastructure/event
+        | translates HTTP, gRPC, Kafka, or provider payloads
+        v
+application use cases and commands
+        | coordinates a business operation through ports
+        v
+domain model and domain ports
+        ^
+        | implemented by
+infrastructure/persistence, infrastructure/gateway, infrastructure/config
+```
+
+The dependency rule is one-way:
+
+| Layer | May depend on | Must not depend on |
+| --- | --- | --- |
+| `domain` | JDK types, domain value objects, domain ports | Spring, Kafka, HTTP clients, JPA entities, controllers |
+| `application` | domain types and ports | concrete infrastructure adapters |
+| `infrastructure` | application and domain contracts, framework libraries | leaking provider DTOs into domain APIs |
+| `web` / `grpc` | application use cases and transport DTOs | direct repository or provider calls |
+
+Architecture tests enforce this rule in services such as [`order-service ArchitectureRulesTest`](services/order-service/src/test/java/com/vnshop/orderservice/ArchitectureRulesTest.java), [`product-service ArchitectureRulesTest`](services/product-service/src/test/java/com/vnshop/productservice/ArchitectureRulesTest.java), and [`coupon-service ArchitectureRulesTest`](services/coupon-service/src/test/java/com/vnshop/couponservice/ArchitectureRulesTest.java).
+
+### 9.2 Canonical request path
+
+For a normal authenticated request, the concrete call shape is:
+
+```text
+Client
+  -> api-gateway RouteConfig / SecurityConfig / filters
+  -> service infrastructure/web controller
+  -> application/*UseCase.execute(...)
+  -> domain validation and domain ports
+  -> infrastructure adapter
+  -> service-owned database or remote dependency
+  -> response DTO
+```
+
+For an event, the shape is:
+
+```text
+transactional use case
+  -> domain event or outbox port
+  -> service-owned outbox table (same transaction where required)
+  -> scheduled relay / Kafka producer
+  -> consumer with deduplication
+  -> application handler
+  -> projection, state transition, or another outbox row
+```
+
+The outbox boundary matters: Kafka is not the source of truth for an order, payment, or accepted
+carrier callback. The owning database is the source of truth; Kafka is the delivery mechanism.
+
+## 10. Service Code Map
+
+The following map names the most important executable code, not every DTO or test. Open the linked
+class first when changing a service boundary.
+
+| Service | Inbound adapters and application entrypoints | Domain, ports, adapters, and persistence |
+| --- | --- | --- |
+| **API Gateway** | [`RouteConfig`](services/api-gateway/src/main/java/com/vnshop/apigateway/infrastructure/route/RouteConfig.java), [`SecurityConfig`](services/api-gateway/src/main/java/com/vnshop/apigateway/infrastructure/config/SecurityConfig.java), [`CorrelationIdFilter`](services/api-gateway/src/main/java/com/vnshop/apigateway/infrastructure/filter/CorrelationIdFilter.java), [`UserIdHeaderFilter`](services/api-gateway/src/main/java/com/vnshop/apigateway/infrastructure/filter/UserIdHeaderFilter.java) | [`TieredRateLimiter`](services/api-gateway/src/main/java/com/vnshop/apigateway/infrastructure/config/TieredRateLimiter.java), [`ResilienceConfig`](services/api-gateway/src/main/java/com/vnshop/apigateway/infrastructure/config/ResilienceConfig.java), [`FallbackController`](services/api-gateway/src/main/java/com/vnshop/apigateway/infrastructure/web/FallbackController.java). It is a transport boundary, not a business-data owner. |
+| **User** | [`AuthSessionController`](services/user-service/src/main/java/com/vnshop/userservice/infrastructure/web/AuthSessionController.java), [`UserController`](services/user-service/src/main/java/com/vnshop/userservice/infrastructure/web/UserController.java), [`SellerController`](services/user-service/src/main/java/com/vnshop/userservice/infrastructure/web/SellerController.java), [`AuthSessionUseCase`](services/user-service/src/main/java/com/vnshop/userservice/application/AuthSessionUseCase.java), registration and seller approval use cases | Domain profiles and addresses live under [`domain`](services/user-service/src/main/java/com/vnshop/userservice/domain). [`KeycloakTokenClient`](services/user-service/src/main/java/com/vnshop/userservice/infrastructure/keycloak/KeycloakTokenClient.java) owns token exchange; [`UserJpaRepository`](services/user-service/src/main/java/com/vnshop/userservice/infrastructure/persistence/UserJpaRepository.java) and the object-storage adapter persist user data and avatars. |
+| **Product** | [`ProductController`](services/product-service/src/main/java/com/vnshop/productservice/infrastructure/web/ProductController.java), [`CreateProductUseCase`](services/product-service/src/main/java/com/vnshop/productservice/application/CreateProductUseCase.java), [`UpdateProductUseCase`](services/product-service/src/main/java/com/vnshop/productservice/application/UpdateProductUseCase.java), [`PublishProductUseCase`](services/product-service/src/main/java/com/vnshop/productservice/application/PublishProductUseCase.java) | Product and review models are under [`domain`](services/product-service/src/main/java/com/vnshop/productservice/domain). [`ProductEventPublisher`](services/product-service/src/main/java/com/vnshop/productservice/infrastructure/event/ProductEventPublisher.java) and [`VideoEventPublisher`](services/product-service/src/main/java/com/vnshop/productservice/infrastructure/event/VideoEventPublisher.java) publish lifecycle events; [`ProductJpaEntity`](services/product-service/src/main/java/com/vnshop/productservice/infrastructure/persistence/ProductJpaEntity.java) owns the write model. |
+| **Search** | [`SearchProductsUseCase`](services/search-service/src/main/java/com/vnshop/searchservice/application/SearchProductsUseCase.java) handles page search, cursor search, facets, categories, and suggestions | [`ProductEventConsumer`](services/search-service/src/main/java/com/vnshop/searchservice/infrastructure/kafka/ProductEventConsumer.java) is an idempotent projection consumer. [`ElasticsearchSearchAdapter`](services/search-service/src/main/java/com/vnshop/searchservice/infrastructure/elasticsearch/ElasticsearchSearchAdapter.java) is the primary read adapter and [`JpaSearchAdapter`](services/search-service/src/main/java/com/vnshop/searchservice/infrastructure/persistence/JpaSearchAdapter.java) is the current fallback. [`SearchCursorCodec`](services/search-service/src/main/java/com/vnshop/searchservice/application/SearchCursorCodec.java) signs cursor state. |
+| **Cart** | [`CartController`](services/cart-service/src/cart/infrastructure/cart.controller.ts), [`AddToCartUseCase`](services/cart-service/src/cart/application/add-to-cart.use-case.ts), [`UpdateCartItemUseCase`](services/cart-service/src/cart/application/update-cart-item.use-case.ts), [`ViewCartUseCase`](services/cart-service/src/cart/application/view-cart.use-case.ts) | [`Cart`](services/cart-service/src/cart/domain/cart.ts) and [`CartItem`](services/cart-service/src/cart/domain/cart-item.ts) hold item-key and quantity rules. [`MergeCartUseCase`](services/cart-service/src/cart/application/merge-cart.use-case.ts) adds guest quantities to the authenticated cart and deletes the guest key after success. [`CartRedisRepository`](services/cart-service/src/cart/infrastructure/cart.redis-repository.ts) and [`CartPersistenceService`](services/cart-service/src/cart/infrastructure/cart-persistence.service.ts) own Redis persistence; [`merge-cart.use-case.spec.ts`](services/cart-service/src/cart/application/merge-cart.use-case.spec.ts) locks merge behavior. |
+| **Order** | [`CheckoutController`](services/order-service/src/main/java/com/vnshop/orderservice/infrastructure/web/CheckoutController.java), [`OrderController`](services/order-service/src/main/java/com/vnshop/orderservice/infrastructure/web/OrderController.java), [`ReturnController`](services/order-service/src/main/java/com/vnshop/orderservice/infrastructure/web/ReturnController.java), [`AdminDisputeController`](services/order-service/src/main/java/com/vnshop/orderservice/infrastructure/web/AdminDisputeController.java) | [`CheckoutOrderUseCase`](services/order-service/src/main/java/com/vnshop/orderservice/application/CheckoutOrderUseCase.java) resolves prices from Product; [`CreateOrderUseCase`](services/order-service/src/main/java/com/vnshop/orderservice/application/CreateOrderUseCase.java) owns the transaction and saga start. Ports include inventory, payment, shipping, coupon, cart, refund, and outbox contracts. [`SagaOrchestrator`](services/order-service/src/main/java/com/vnshop/orderservice/application/saga/SagaOrchestrator.java), [`OutboxPortAdapter`](services/order-service/src/main/java/com/vnshop/orderservice/infrastructure/outbox/OutboxPortAdapter.java), [`OutboxPublisher`](services/order-service/src/main/java/com/vnshop/orderservice/infrastructure/outbox/OutboxPublisher.java), payment listeners, and gRPC adapters complete the workflow. |
+| **Inventory** | [`GrpcInventoryServer`](services/inventory-service/src/main/java/com/vnshop/inventoryservice/infrastructure/grpc/GrpcInventoryServer.java), [`FlashSaleController`](services/inventory-service/src/main/java/com/vnshop/inventoryservice/infrastructure/flash/FlashSaleController.java), [`ReserveStockUseCase`](services/inventory-service/src/main/java/com/vnshop/inventoryservice/application/ReserveStockUseCase.java), [`ReleaseStockUseCase`](services/inventory-service/src/main/java/com/vnshop/inventoryservice/application/ReleaseStockUseCase.java) | [`StockReservation`](services/inventory-service/src/main/java/com/vnshop/inventoryservice/domain/StockReservation.java) is the reservation model. [`StockLevelJpaEntity`](services/inventory-service/src/main/java/com/vnshop/inventoryservice/infrastructure/persistence/StockLevelJpaEntity.java) and [`StockReservationJpaEntity`](services/inventory-service/src/main/java/com/vnshop/inventoryservice/infrastructure/persistence/StockReservationJpaEntity.java) persist stock; [`InventoryEventPublisher`](services/inventory-service/src/main/java/com/vnshop/inventoryservice/infrastructure/event/InventoryEventPublisher.java) emits reservation results and [`ReleaseRequestedKafkaConsumer`](services/inventory-service/src/main/java/com/vnshop/inventoryservice/infrastructure/event/ReleaseRequestedKafkaConsumer.java) handles the asynchronous release fallback. |
+| **Coupon** | [`CouponController`](services/coupon-service/src/main/java/com/vnshop/couponservice/infrastructure/web/CouponController.java), [`ApplyCouponUseCase`](services/coupon-service/src/main/java/com/vnshop/couponservice/application/ApplyCouponUseCase.java), [`ValidateCouponUseCase`](services/coupon-service/src/main/java/com/vnshop/couponservice/application/ValidateCouponUseCase.java) | [`Coupon`](services/coupon-service/src/main/java/com/vnshop/couponservice/domain/Coupon.java) and [`CouponValidation`](services/coupon-service/src/main/java/com/vnshop/couponservice/domain/CouponValidation.java) enforce discount rules. [`CouponRepositoryAdapter`](services/coupon-service/src/main/java/com/vnshop/couponservice/infrastructure/persistence/CouponRepositoryAdapter.java) and [`CouponUsageAdapter`](services/coupon-service/src/main/java/com/vnshop/couponservice/infrastructure/persistence/CouponUsageAdapter.java) persist coupon state and usage. |
+| **Payment** | [`PaymentController`](services/payment-service/src/main/java/com/vnshop/paymentservice/infrastructure/web/PaymentController.java), [`ProcessPaymentUseCase`](services/payment-service/src/main/java/com/vnshop/paymentservice/application/ProcessPaymentUseCase.java), [`RefundPaymentUseCase`](services/payment-service/src/main/java/com/vnshop/paymentservice/application/RefundPaymentUseCase.java), [`HandleVnpayIpnUseCase`](services/payment-service/src/main/java/com/vnshop/paymentservice/application/HandleVnpayIpnUseCase.java) | [`Payment`](services/payment-service/src/main/java/com/vnshop/paymentservice/domain/Payment.java), [`LedgerService`](services/payment-service/src/main/java/com/vnshop/paymentservice/application/ledger/LedgerService.java), [`CompositePaymentGateway`](services/payment-service/src/main/java/com/vnshop/paymentservice/infrastructure/gateway/CompositePaymentGateway.java), provider handlers, webhook controllers, and [`PaymentCallbackOutboxRelay`](services/payment-service/src/main/java/com/vnshop/paymentservice/infrastructure/event/PaymentCallbackOutboxRelay.java). Payment, idempotency, callback, ledger, and reconciliation entities are under [`infrastructure/persistence`](services/payment-service/src/main/java/com/vnshop/paymentservice/infrastructure/persistence). |
+| **Shipping** | [`ShippingController`](services/shipping-service/src/main/java/com/vnshop/shippingservice/infrastructure/web/ShippingController.java), [`RateQuoteController`](services/shipping-service/src/main/java/com/vnshop/shippingservice/infrastructure/web/RateQuoteController.java), [`GhnWebhookController`](services/shipping-service/src/main/java/com/vnshop/shippingservice/infrastructure/web/GhnWebhookController.java), [`GhtkWebhookController`](services/shipping-service/src/main/java/com/vnshop/shippingservice/infrastructure/web/GhtkWebhookController.java), [`ReceiveCarrierWebhookUseCase`](services/shipping-service/src/main/java/com/vnshop/shippingservice/application/ReceiveCarrierWebhookUseCase.java) | [`CarrierGatewayPort`](services/shipping-service/src/main/java/com/vnshop/shippingservice/domain/port/out/CarrierGatewayPort.java) separates carrier behavior. [`GhnCarrierGateway`](services/shipping-service/src/main/java/com/vnshop/shippingservice/infrastructure/carrier/GhnCarrierGateway.java), [`GhtkCarrierGateway`](services/shipping-service/src/main/java/com/vnshop/shippingservice/infrastructure/carrier/GhtkCarrierGateway.java), and [`StubCarrierGateway`](services/shipping-service/src/main/java/com/vnshop/shippingservice/infrastructure/carrier/StubCarrierGateway.java) implement it. [`ShippingWebhookOutboxRelay`](services/shipping-service/src/main/java/com/vnshop/shippingservice/infrastructure/event/ShippingWebhookOutboxRelay.java) delivers accepted callbacks; [`ShippingEventPublisher`](services/shipping-service/src/main/java/com/vnshop/shippingservice/infrastructure/event/ShippingEventPublisher.java) publishes status events. |
+| **Seller Finance** | [`SellerFinanceController`](services/seller-finance-service/src/main/java/com/vnshop/sellerfinanceservice/infrastructure/web/SellerFinanceController.java), [`AdminFinanceController`](services/seller-finance-service/src/main/java/com/vnshop/sellerfinanceservice/infrastructure/web/AdminFinanceController.java), wallet and payout use cases | [`SellerWallet`](services/seller-finance-service/src/main/java/com/vnshop/sellerfinanceservice/domain/SellerWallet.java) and [`Payout`](services/seller-finance-service/src/main/java/com/vnshop/sellerfinanceservice/domain/Payout.java) model balances and payout state. [`OrderCreatedFinanceListener`](services/seller-finance-service/src/main/java/com/vnshop/sellerfinanceservice/infrastructure/event/OrderCreatedFinanceListener.java) credits seller finance from order events; [`PaymentRefundedFinanceListener`](services/seller-finance-service/src/main/java/com/vnshop/sellerfinanceservice/infrastructure/event/PaymentRefundedFinanceListener.java) reverses funds. `ProcessedOrderEvent` and `ProcessedRefund` provide consumer deduplication. |
+| **Invoice** | [`InvoiceController`](services/invoice-service/src/main/java/com/vnshop/invoiceservice/infrastructure/web/InvoiceController.java), [`InvoiceService`](services/invoice-service/src/main/java/com/vnshop/invoiceservice/application/InvoiceService.java), [`InvoiceSubmissionService`](services/invoice-service/src/main/java/com/vnshop/invoiceservice/application/gdt/InvoiceSubmissionService.java) | [`OrderConfirmedListener`](services/invoice-service/src/main/java/com/vnshop/invoiceservice/infrastructure/event/OrderConfirmedListener.java) creates an idempotent draft. [`InvoiceXmlGenerator`](services/invoice-service/src/main/java/com/vnshop/invoiceservice/application/xml/InvoiceXmlGenerator.java) creates and validates XML; [`GdtApiClient`](services/invoice-service/src/main/java/com/vnshop/invoiceservice/application/gdt/GdtApiClient.java) submits to the tax provider. Invoice repositories and migrations own the lifecycle. |
+| **Notification** | [`NotificationController`](services/notification-service/src/notification/infrastructure/rest/notification.controller.ts), [`NotificationPreferencesController`](services/notification-service/src/notification/infrastructure/rest/notification-preferences.controller.ts), command/query use cases | [`KafkaEventConsumer`](services/notification-service/src/notification/infrastructure/messaging/kafka-event.consumer.ts) maps business events to [`NotificationCreatedHandler`](services/notification-service/src/notification/application/event-handler/notification-created.handler.ts). [`DeliveryPolicy`](services/notification-service/src/notification/domain/service/delivery-policy.ts) chooses channels; SES, Twilio, FCM, OneSignal, and Socket.IO adapters implement outbound ports. Mongo repositories persist notifications and Redis adapters provide deduplication and connection state. |
+| **Messaging** | [`MessagingController`](services/messaging-service/src/messaging/infrastructure/messaging.controller.ts), [`MessagingWsGateway`](services/messaging-service/src/messaging/infrastructure/messaging-ws.gateway.ts), create/list/send/read use cases | [`Thread`](services/messaging-service/src/messaging/domain/thread.ts) and [`Message`](services/messaging-service/src/messaging/domain/message.ts) are the domain model. [`KafkaMessagePublisher`](services/messaging-service/src/messaging/application/kafka-message.publisher.ts) and [`KafkaMessageConsumer`](services/messaging-service/src/messaging/application/kafka-message.consumer.ts) distribute events; [`IdempotencyStore`](services/messaging-service/src/messaging/infrastructure/idempotency-store.ts) protects retries; MikroORM repositories persist threads and messages. |
+| **Recommendations** | [`RecommendationsController`](services/recommendations-service/src/main/java/com/vnshop/recommendationsservice/infrastructure/web/RecommendationsController.java), [`YouMayAlsoLikeUseCase`](services/recommendations-service/src/main/java/com/vnshop/recommendationsservice/application/YouMayAlsoLikeUseCase.java), [`FrequentlyBoughtTogetherUseCase`](services/recommendations-service/src/main/java/com/vnshop/recommendationsservice/application/FrequentlyBoughtTogetherUseCase.java) | [`OrderEventListener`](services/recommendations-service/src/main/java/com/vnshop/recommendationsservice/infrastructure/event/OrderEventListener.java) builds co-purchase projections. [`RecommendationPersistenceAdapter`](services/recommendations-service/src/main/java/com/vnshop/recommendationsservice/infrastructure/persistence/RecommendationPersistenceAdapter.java) owns the projection; [`RestProductServiceAdapter`](services/recommendations-service/src/main/java/com/vnshop/recommendationsservice/infrastructure/product/RestProductServiceAdapter.java) enriches product data. |
+| **Monitoring** | [`DiscoveryController`](services/monitoring-service-v2/src/discovery/discovery.controller.ts), [`HealthController`](services/monitoring-service-v2/src/health/health.controller.ts), [`ProbeController`](services/monitoring-service-v2/src/health/probe.controller.ts), [`MonitoringGateway`](services/monitoring-service-v2/src/gateway/monitoring.gateway.ts) | [`DiscoveryService`](services/monitoring-service-v2/src/discovery/discovery.service.ts) maintains the service registry; [`OpenApiFetcher`](services/monitoring-service-v2/src/discovery/openapi-fetcher.ts) and [`OpenApiAggregator`](services/monitoring-service-v2/src/discovery/openapi-aggregator.ts) create the API view. [`HealthService`](services/monitoring-service-v2/src/health/health.service.ts), [`HealthChecker`](services/monitoring-service-v2/src/health/health-checker.ts), and [`MetricsService`](services/monitoring-service-v2/src/metrics/metrics.service.ts) poll, store, and alert on health. |
+| **Video Transcoder** | [`TranscodeEventConsumer`](services/video-transcoder/src/main/java/com/vnshop/transcoder/consumer/TranscodeEventConsumer.java) consumes completed-upload jobs | [`TranscodeService`](services/video-transcoder/src/main/java/com/vnshop/transcoder/service/TranscodeService.java) downloads from S3, verifies the SHA-256, runs [`FfmpegCommandBuilder`](services/video-transcoder/src/main/java/com/vnshop/transcoder/service/FfmpegCommandBuilder.java), uploads outputs, and deletes staging data. [`TranscodeEventProducer`](services/video-transcoder/src/main/java/com/vnshop/transcoder/producer/TranscodeEventProducer.java) emits completed or failed outcomes. |
+| **Video Moderator** | [`main.py`](services/video-moderator/app/main.py) exposes health/readiness and starts [`ModerationConsumer`](services/video-moderator/app/consumer.py) | [`Moderator`](services/video-moderator/app/moderator.py) scores sampled frames; [`StorageClient`](services/video-moderator/app/storage.py) promotes approved objects from staging to public storage; [`ModerationProducer`](services/video-moderator/app/producer.py) emits verdicts and DLT messages; [`db.py`](services/video-moderator/app/db.py) updates the owned moderation fields. |
+| **Configuration** | [`ConfigurationController`](services/configuration-service/src/configuration/configuration.controller.ts) exposes public, service, global, and admin reload endpoints | [`ConfigurationService`](services/configuration-service/src/configuration/configuration.service.ts) loads [`services.yml`](services/configuration-service/config/services.yml), validates public origins, and returns a client-safe provider/feature projection. Service clients such as [`payment ConfigServiceClient`](services/payment-service/src/main/java/com/vnshop/paymentservice/infrastructure/config/ConfigServiceClient.java) fetch their slice during startup. |
+
+> The seller-finance row intentionally points at code that consumes `order.created` and
+> `payment.refunded`; it does not own order or payment state. The configuration-service row is
+> also intentionally explicit about startup loading: the current client can fall back to local
+> `application.yml`, which is a documented production-readiness finding rather than an invisible
+> guarantee.
+
+## 11. End-to-End Workflows
+
+The diagrams below show the actual repository path. A box is a service or external dependency; a
+class name in parentheses is the code responsible for that step.
+
+### 11.1 Browser request and authentication
+
+```mermaid
+sequenceDiagram
+  participant B as Browser / Flutter
+  participant G as api-gateway
+  participant U as user-service
+  participant K as Keycloak
+  B->>G: POST /auth/login
+  G->>U: Forward request + correlation id
+  U->>K: AuthSessionUseCase -> KeycloakTokenClient.passwordGrant
+  K-->>U: access token + refresh token
+  U-->>B: access token in response; vnshop_rt httpOnly cookie
+  B->>G: API request with in-memory access token
+  G->>K: Validate JWT / route authorization
+  G->>U: Forward request and x-user-id context
+  U-->>B: DTO response
+```
+
+Code path:
+
+1. [`AuthSessionController.login`](services/user-service/src/main/java/com/vnshop/userservice/infrastructure/web/AuthSessionController.java) calls [`AuthSessionUseCase.login`](services/user-service/src/main/java/com/vnshop/userservice/application/AuthSessionUseCase.java).
+2. [`KeycloakTokenClient`](services/user-service/src/main/java/com/vnshop/userservice/infrastructure/keycloak/KeycloakTokenClient.java) performs the provider exchange.
+3. The controller writes `vnshop_rt` as an httpOnly cookie and returns only the access token and expiry to the client.
+4. Refresh reads and rotates the cookie; logout revokes best-effort and always clears cookies.
+5. Gateway filters add correlation and user context before the routed service executes.
+
+### 11.2 Product write to searchable catalog
+
+```mermaid
+sequenceDiagram
+  participant S as Seller client
+  participant P as product-service
+  participant DB as Product database
+  participant K as Kafka: product-events
+  participant Q as search-service
+  participant ES as Elasticsearch
+  participant R as Search JPA projection
+  S->>P: POST/PUT product
+  P->>P: ProductController -> Create/Update/PublishProductUseCase
+  P->>DB: Save ProductJpaEntity
+  P->>K: ProductEventPublisher (CREATED/UPDATED/DELETED)
+  K->>Q: ProductEventConsumer
+  Q->>Q: Check ProcessedEvent deduplication
+  Q->>R: Save/delete read model
+  Q->>ES: Upsert/delete document
+  Q-->>S: Later GET/search returns projection
+```
+
+Important consistency details:
+
+- Product write state is authoritative in product-service; search is eventually consistent.
+- The search consumer records a processed-event key so Kafka redelivery is safe.
+- The JPA projection is saved before the Elasticsearch index operation. Elasticsearch failures are logged and the read path currently falls back to JPA through [`ElasticsearchSearchAdapter`](services/search-service/src/main/java/com/vnshop/searchservice/infrastructure/elasticsearch/ElasticsearchSearchAdapter.java).
+- Cursor search is decoded and signed in [`SearchProductsUseCase`](services/search-service/src/main/java/com/vnshop/searchservice/application/SearchProductsUseCase.java); the cursor secret must be an environment secret in production.
+
+### 11.3 Guest cart to authenticated cart
+
+```mermaid
+sequenceDiagram
+  participant B as Browser
+  participant L as localStorage guest cart
+  participant C as cart-service
+  participant R as Redis
+  B->>L: Add guest item
+  B->>C: Login completes
+  B->>C: GET /cart
+  C->>R: Load authenticated cart
+  C-->>B: Server cart
+  B->>B: use-cart.ts requestMerge opens consent dialog
+  alt User chooses Merge
+    B->>C: Add each guest item with guest quantity
+    C->>R: Add existing item quantity + guest quantity
+    C-->>B: Updated cart after each item
+    B->>L: Delete guest cart only after all items succeed
+  else User chooses Keep separate
+    B->>B: Close dialog; local items remain local
+  end
+```
+
+Code path:
+
+1. [`use-cart.ts`](fe/src/app/hooks/use-cart.ts) hydrates guest items from `vnshop:guest-cart`.
+2. Authentication only calls `requestMerge`; it does not merge automatically.
+3. `executeMerge` is the consent boundary. `mergeApprovedRef` must be true before `mergeGuestItems` can call the API.
+4. The web client sends the guest quantity as an additive delta. For example, server quantity `5` plus guest quantity `2` becomes `7`, subject to the server cap.
+5. The backend equivalent is [`MergeCartUseCase`](services/cart-service/src/cart/application/merge-cart.use-case.ts), which uses the item key (`productId:variantId`), adds quantities, saves the user cart, and deletes the `guest:<session>` key.
+6. A partial client failure preserves only failed guest items locally so the user can retry instead of losing intent.
+
+The mobile client has an independent local cart implementation under
+[`cart_repository_impl.dart`](vnshop_mobile/lib/features/cart/data/repositories/cart_repository_impl.dart).
+It must remain contract-compatible with the server cart rules; it is not a replacement for the
+server cart after authentication.
+
+### 11.4 Checkout, payment, inventory, and shipping saga
+
+```mermaid
+sequenceDiagram
+  participant B as Browser/mobile
+  participant O as order-service
+  participant P as product-service
+  participant I as inventory-service
+  participant Pay as payment-service
+  participant S as shipping-service
+  participant DB as order DB + outbox
+  participant K as Kafka
+  B->>O: POST /checkout/calculate or /calculate-from-cart
+  O->>P: ProductCatalogPort resolves current product/variant/price
+  O-->>B: Checkout quote and available options
+  B->>O: Create order with idempotency key
+  O->>O: Validate buyer, address, items, coupon, idempotency
+  O->>I: gRPC Reserve via GrpcInventoryReservationAdapter
+  I->>I: ReserveStockUseCase atomic decrement/reservation
+  I-->>O: reservation result
+  O->>Pay: gRPC RequestPayment via GrpcPaymentRequestAdapter
+  Pay->>Pay: ProcessPaymentUseCase trusted internal path
+  Pay-->>O: payment result / redirect information
+  O->>S: gRPC RequestShipping per seller suborder
+  S-->>O: label/tracking result
+  O->>DB: Save order, saga state, and order.created outbox event
+  O->>K: OutboxPublisher sends events after commit
+  K-->>Pay: payment.completed callback path when provider confirms
+  K-->>O: payment.completed / compensation events
+  O-->>B: Order response
+```
+
+The request path in code is:
+
+1. [`CheckoutController`](services/order-service/src/main/java/com/vnshop/orderservice/infrastructure/web/CheckoutController.java) accepts only product identifiers, variant identifiers, and quantities for the quote. It does not trust a browser-supplied price.
+2. [`CheckoutOrderUseCase`](services/order-service/src/main/java/com/vnshop/orderservice/application/CheckoutOrderUseCase.java) resolves product data through `ProductCatalogPort` and creates authoritative `OrderItem` snapshots.
+3. [`CreateOrderUseCase`](services/order-service/src/main/java/com/vnshop/orderservice/application/CreateOrderUseCase.java) validates idempotency, buyer ownership, address, coupon, and item constraints inside the order transaction.
+4. It splits lines by seller, calculates commission/tax, starts [`SagaOrchestrator`](services/order-service/src/main/java/com/vnshop/orderservice/application/saga/SagaOrchestrator.java), then invokes inventory, payment, and shipping ports.
+5. Inventory uses the gRPC server and [`ReserveStockUseCase`](services/inventory-service/src/main/java/com/vnshop/inventoryservice/application/ReserveStockUseCase.java). A missing stock projection currently logs a warning and allows the reservation without decrement; this is a known readiness gap.
+6. Payment uses the trusted internal `processInternal` path. The browser-facing payment path resolves the amount from order-service, checks buyer ownership, hashes the idempotency request, and records a ledger posting only after a completed payment.
+7. Shipping is requested once per seller suborder through [`GrpcShippingRequestAdapter`](services/order-service/src/main/java/com/vnshop/orderservice/infrastructure/grpc/GrpcShippingRequestAdapter.java).
+8. [`OutboxPortAdapter`](services/order-service/src/main/java/com/vnshop/orderservice/infrastructure/outbox/OutboxPortAdapter.java) persists events; [`OutboxPublisher`](services/order-service/src/main/java/com/vnshop/orderservice/infrastructure/outbox/OutboxPublisher.java) sends and marks them published.
+9. If a downstream step fails, [`SagaOrchestrator.compensate`](services/order-service/src/main/java/com/vnshop/orderservice/application/saga/SagaOrchestrator.java) publishes the required refund and inventory-release commands. A timeout job finalizes stuck saga state.
+10. [`PaymentCompletedListener`](services/order-service/src/main/java/com/vnshop/orderservice/infrastructure/event/payment/PaymentCompletedListener.java) and [`SagaCompensationListener`](services/order-service/src/main/java/com/vnshop/orderservice/infrastructure/event/saga/SagaCompensationListener.java) are idempotent event boundaries.
+
+### 11.5 Payment provider callback and completion event
+
+```mermaid
+sequenceDiagram
+  participant Provider as Payment provider
+  participant W as Payment webhook/controller
+  participant U as Payment promotion/use case
+  participant DB as payment DB
+  participant O as payment callback outbox
+  participant K as Kafka
+  participant Order as order-service
+  Provider->>W: IPN/webhook/return callback
+  W->>W: Verify provider signature and idempotency
+  W->>U: Promote or reconcile payment state
+  U->>DB: Update payment and ledger in transaction
+  U->>O: Insert payment.completed outbox row
+  O->>K: PaymentCallbackOutboxRelay publishes after commit
+  K->>Order: PaymentCompletedListener
+  Order->>Order: Mark paid once; write order-paid event
+```
+
+Provider adapters are selected by [`CompositePaymentGateway`](services/payment-service/src/main/java/com/vnshop/paymentservice/infrastructure/gateway/CompositePaymentGateway.java).
+The callback path must not use a browser return URL as proof of payment; provider-signed server
+callbacks and reconciliation are the authoritative paths. The current provider matrix and known
+stub/demo modes are recorded in the [production-readiness review](docs/PRODUCTION-READINESS-REVIEW.md).
+
+### 11.6 Carrier label and webhook delivery
+
+```mermaid
+sequenceDiagram
+  participant C as Carrier GHN/GHTK
+  participant G as api-gateway
+  participant W as Shipping webhook controller
+  participant V as Signature service + mapper
+  participant A as ReceiveCarrierWebhookUseCase
+  participant DB as Shipping webhook outbox
+  participant R as ShippingWebhookOutboxRelay
+  participant K as Kafka
+  participant O as order-service
+  C->>G: POST /webhooks/ghn or /webhooks/ghtk
+  G->>W: Public callback route
+  W->>V: Validate signature/token; map provider payload
+  W->>A: receive(CarrierWebhookEvent)
+  A->>DB: Durable accept with duplicate identity check
+  DB-->>W: ACCEPTED or DUPLICATE
+  W-->>C: 200 only after durable accept; 503 on storage failure
+  R->>DB: Claim pending rows and recover stale claims
+  R->>K: ShippingEventPublisher -> shipping.status.updated
+  K->>O: Consume status transition
+  R->>DB: Mark published or retry/dead with exponential backoff
+```
+
+Code path:
+
+1. Gateway [`SecurityConfig`](services/api-gateway/src/main/java/com/vnshop/apigateway/infrastructure/config/SecurityConfig.java) permits the two public callback paths so a carrier does not need a user JWT. This permit must be paired with provider signature validation.
+2. [`GhnWebhookController`](services/shipping-service/src/main/java/com/vnshop/shippingservice/infrastructure/web/GhnWebhookController.java) and [`GhtkWebhookController`](services/shipping-service/src/main/java/com/vnshop/shippingservice/infrastructure/web/GhtkWebhookController.java) validate required identifiers, call the carrier-specific signature service, map payloads, and call the shared use case.
+3. [`ReceiveCarrierWebhookUseCase`](services/shipping-service/src/main/java/com/vnshop/shippingservice/application/ReceiveCarrierWebhookUseCase.java) treats the outbox insert as the HTTP acknowledgement boundary.
+4. [`ShippingWebhookOutboxRelay`](services/shipping-service/src/main/java/com/vnshop/shippingservice/infrastructure/event/ShippingWebhookOutboxRelay.java) claims pending records, publishes to Kafka, records attempts, schedules exponential retry, and moves exhausted records to failed state.
+5. The current implementation still has a separate publisher-level acknowledgment risk documented as PR-000/PR-005 in the review. Keep the HTTP durability contract and Kafka acknowledgment contract distinct when changing this path.
+
+### 11.7 Notification and messaging fan-out
+
+```mermaid
+sequenceDiagram
+  participant K as Kafka
+  participant N as notification-service
+  participant DB as MongoDB + Redis
+  participant Ch as SES/Twilio/FCM/OneSignal/Socket.IO
+  participant M as messaging-service
+  participant WS as WebSocket clients
+  K->>N: Business event
+  N->>N: KafkaEventConsumer -> NotificationCreatedHandler
+  N->>DB: Deduplicate and persist notification
+  N->>N: DeliveryPolicy selects enabled channels
+  N->>Ch: Deliver notification
+  Ch-->>N: Delivery status
+  DB-->>WS: Socket.IO realtime notification
+  WS->>M: Send message / mark thread read
+  M->>M: Controller or WS gateway -> use case
+  M->>DB: MikroORM transaction + idempotency key
+  M->>K: KafkaMessagePublisher
+```
+
+Notification delivery is a fan-out concern and must not become part of the checkout transaction.
+Messaging owns threads/messages and uses an idempotency store so WebSocket retries or duplicate
+HTTP submissions do not create duplicate messages.
+
+### 11.8 Video upload, transcode, and moderation
+
+```mermaid
+sequenceDiagram
+  participant P as product-service
+  participant K as Kafka
+  participant T as video-transcoder
+  participant S as S3/MinIO staging
+  participant M as video-moderator
+  participant Pub as S3/MinIO public
+  P->>S: Upload raw video to temporary object
+  P->>K: video.upload.completed
+  K->>T: TranscodeEventConsumer
+  T->>S: Download and verify SHA-256
+  T->>T: TranscodeService + FFmpeg + poster extraction
+  T->>S: Upload transcoded output and poster
+  T->>K: video.transcode.completed
+  K->>M: ModerationConsumer
+  M->>S: Download and sample frames
+  M->>M: Moderator classifies NSFW score
+  alt AUTO_APPROVED
+    M->>Pub: Promote staging object to public bucket
+  else PENDING_REVIEW or REJECTED
+    M->>S: Keep in staging or mark rejected
+  end
+  M->>K: video.moderation.completed or DLT
+  M->>P: Update moderation fields through owned persistence contract
+```
+
+The transcoder uses local disk only as bounded FFmpeg staging; object storage remains the durable
+media source. The moderator owns the verdict and emits a result for product-service/admin review.
+
+## 12. State Machines and Delivery Semantics
+
+### 12.1 Order saga
+
+```text
+STARTED
+  -> INVENTORY_RESERVED
+  -> PAYMENT_CHARGED
+  -> SHIPPING_CREATED
+  -> COMPLETED
+
+Any step failure:
+  INVENTORY failure -> FAILED
+  PAYMENT failure   -> release inventory -> FAILED
+  SHIPPING failure  -> refund payment + release inventory -> FAILED
+  timeout           -> COMPENSATING or FAILED according to last completed step
+```
+
+[`SagaOrchestrator`](services/order-service/src/main/java/com/vnshop/orderservice/application/saga/SagaOrchestrator.java)
+stores saga state, writes compensation events through an outbox port, and finalizes only after
+compensation confirmation. Do not add a direct cross-service database update to this flow.
+
+### 12.2 Outbox rows
+
+| State | Meaning | Owner action |
+| --- | --- | --- |
+| `PENDING` | Durable event has not been sent | Claim and publish |
+| `PROCESSING` / claimed | A worker owns the delivery attempt | Recover after claim timeout |
+| `PUBLISHED` | Kafka producer acknowledged the send | Retain for audit/retention policy |
+| `FAILED` / dead | Retry budget exhausted | Alert, inspect, and replay deliberately |
+
+Order outbox schema is [`V2__outbox_schema.sql`](services/order-service/src/main/resources/db/migration/V2__outbox_schema.sql).
+Saga state schema is [`V9__saga_schema.sql`](services/order-service/src/main/resources/db/migration/V9__saga_schema.sql).
+Shipping webhook outbox behavior is implemented in [`ShippingWebhookOutboxRelay`](services/shipping-service/src/main/java/com/vnshop/shippingservice/infrastructure/event/ShippingWebhookOutboxRelay.java).
+
+### 12.3 Payment and provider states
+
+```text
+PENDING -> COMPLETED -> REFUNDED
+       \-> FAILED
+
+Provider callback:
+  received -> signature verified -> idempotency checked -> promoted -> payment.completed outbox
+                                               \-> dead-letter / reconciliation issue
+```
+
+`ProcessPaymentUseCase` deliberately performs the provider side effect outside the database
+transaction, then persists the result and ledger entry in a transaction. If persistence fails after
+a provider charge, reconciliation must recover the orphan; a database rollback cannot reverse an
+external bank charge.
+
+### 12.4 Search and media states
+
+| Projection/work item | States and transition |
+| --- | --- |
+| Search product projection | Product event -> dedup check -> JPA read model -> Elasticsearch upsert/delete; ES failure leaves JPA available and is observable. |
+| Transcoding | `video.upload.completed` -> download/hash verification -> FFmpeg -> output upload -> `video.transcode.completed`; retryable errors go through Kafka retry/DLT. |
+| Moderation | Transcode completed -> frame analysis -> `AUTO_APPROVED`, `PENDING_REVIEW`, or `REJECTED`; approved objects are promoted to the public bucket. |
+| Invoice | `DRAFT` -> validated XML -> submitted to GDT -> accepted/rejected; rejected invoices can be corrected and resubmitted by an admin. |
+
+## 13. Current Local Fallbacks and Their Production Meaning
+
+These are documented intentionally so a future engineer can distinguish a design fallback from an
+accidental hardcoded dependency.
+
+| Location | Current behavior | Why it exists locally | Production requirement |
+| --- | --- | --- | --- |
+| [`ConfigServiceClient`](services/payment-service/src/main/java/com/vnshop/paymentservice/infrastructure/config/ConfigServiceClient.java) and equivalent clients | Startup fetch failure logs a warning and uses local `application.yml`; loading occurs in `ApplicationRunner` | Lets one service run while configuration-service is absent | Fail readiness or require a signed/versioned config snapshot; do not silently choose payment/shipping modes. |
+| [`services.yml`](services/configuration-service/config/services.yml) | Shipping is `stub`; COD/VietQR are marked enabled with stub/demo semantics; invoice seller identity is a placeholder | Local/demo integration | Replace with environment-owned values and reject placeholder identity in production. |
+| [`StubCarrierGateway`](services/shipping-service/src/main/java/com/vnshop/shippingservice/infrastructure/carrier/StubCarrierGateway.java) | Generates local shipping behavior when `CARRIER_MODE=stub` | Compose and tests | `CARRIER_MODE=live`, real GHN/GHTK URLs, credentials, webhook secrets, and provider contract tests. |
+| [`ElasticsearchSearchAdapter`](services/search-service/src/main/java/com/vnshop/searchservice/infrastructure/elasticsearch/ElasticsearchSearchAdapter.java) | Falls back to JPA search on empty results or Elasticsearch errors | Keeps catalog browseable when the search projection is unavailable | Alert on fallback rate; decide whether stale JPA reads are acceptable for each endpoint. |
+| [`ReserveStockUseCase`](services/inventory-service/src/main/java/com/vnshop/inventoryservice/application/ReserveStockUseCase.java) | Allows a reservation when no projected stock row exists, with a warning | Prevents new local products from being unpurchasable before projection catches up | Build the product-to-inventory projection or fail closed for real inventory. |
+| [`AuthSessionController`](services/user-service/src/main/java/com/vnshop/userservice/infrastructure/web/AuthSessionController.java) | Has localhost defaults for callback, Keycloak, and frontend URLs | Developer login without a full environment file | Require production URLs from environment/config service and reject localhost at readiness. |
+| Web [`use-cart.ts`](fe/src/app/hooks/use-cart.ts) and mobile cart repository | Guest cart is local until authentication and explicit merge consent | Guests need a cart before an account exists and offline/mobile UI needs continuity | Treat local storage as a temporary intent buffer only; authenticated checkout must use server cart. |
+| Product recently viewed UI | Recent products are localStorage-only | Fast client-only personalization | Move to an authenticated profile/event store if cross-device history is a product requirement. |
+| FX adapter/config | Fixed or local fallback rates may be used when the live FX dependency is unavailable | Deterministic local tests and non-money-path development | Money paths require a fresh approved rate, provenance, timestamp, and alert when stale. |
+| Video transcode/moderation | Local filesystem is used for bounded process staging | FFmpeg requires local files | Keep only transient files locally; use S3-compatible storage for every durable input/output and configure tmpfs in deployments. |
+
+The full finding list, severity, evidence, and closure order remain in
+[`docs/PRODUCTION-READINESS-REVIEW.md`](docs/PRODUCTION-READINESS-REVIEW.md). This table is a
+navigation aid, not a waiver for any finding.
+
+## 14. Operational Workflows
+
+### 14.1 Startup and readiness
+
+```mermaid
+flowchart TD
+  A[Container starts] --> B[Load environment and application.yml]
+  B --> C[Load configuration-service slice]
+  C -->|success| D[Create DB/Kafka/Redis/provider clients]
+  C -->|failure today| E[Local fallback may be selected]
+  E --> D
+  D --> F[Health/readiness endpoints]
+  F -->|production gate| G[Require real endpoints, secrets, modes, and image digest]
+  F -->|local profile| H[Allow Compose stubs and local credentials]
+```
+
+Readiness is not just process liveness. A release is not promotable when the service is alive but
+configured for a stub carrier, demo payment, empty secret, localhost dependency, or placeholder
+invoice identity.
+
+### 14.2 Event failure and replay
+
+1. Check the owning outbox or consumer dedup table, not only Kafka broker logs.
+2. Identify the event key, aggregate ID, attempt count, and last error.
+3. Confirm the downstream operation is idempotent before replaying.
+4. Replay from the owning service's supported admin/DLT path; do not edit production rows manually.
+5. Verify the resulting state in the owning database and the downstream projection.
+6. Record the incident and add a regression test if the failure exposed a contract gap.
+
+### 14.3 Webhook incident handling
+
+1. Verify the gateway route is reachable without a user JWT but still protected by the carrier signature/token.
+2. Check whether the controller returned `503` before durable acceptance; a carrier retry is expected in that case.
+3. Inspect shipping webhook outbox rows and claim timeout recovery.
+4. Verify Kafka acknowledgment and relay retry/dead state.
+5. Confirm order-service applied the status exactly once.
+6. Never disable signature validation to make a MockMvc test pass; use a security-enabled integration test with the real filter chain.
+
+## 15. Change Checklist by Workflow
+
+### Change a synchronous API
+
+1. Change the domain/application command or response contract first.
+2. Update the controller DTO and OpenAPI/proto contract.
+3. Update gateway route/security/rate-limit rules.
+4. Update web, mobile, and service clients.
+5. Add authenticated integration coverage and a failure-path test.
+
+### Change an event
+
+1. Identify the owning aggregate and outbox table.
+2. Version the payload or preserve backward-compatible fields.
+3. Update every consumer, deduplication key, retry/DLT behavior, and topic ACL.
+4. Test duplicate, out-of-order, timeout, and replay behavior.
+5. Update the event table in this document and the deployment topic initializer.
+
+### Change checkout, payment, shipping, or inventory
+
+1. Start at [`CreateOrderUseCase`](services/order-service/src/main/java/com/vnshop/orderservice/application/CreateOrderUseCase.java) and [`SagaOrchestrator`](services/order-service/src/main/java/com/vnshop/orderservice/application/saga/SagaOrchestrator.java).
+2. Preserve server-side price/quantity/ownership validation.
+3. Preserve idempotency at HTTP, gRPC, provider callback, and Kafka boundaries.
+4. Define the compensation path before implementing the forward path.
+5. Test provider outage, Kafka outage, database rollback, duplicate callback, and replay.
+6. Re-run the production-readiness review for any change to secrets, modes, fallback, or external URLs.
+
+### Change a local fallback
+
+1. State whether the fallback is a user-facing degraded mode, a test double, or a developer-only convenience.
+2. Put the selection behind typed configuration with an explicit environment name.
+3. Emit a metric and structured log whenever the fallback is used.
+4. Make readiness fail when the fallback is forbidden for the target environment.
+5. Add a test that proves production configuration cannot silently select the local path.
+
+This detailed guide should be updated alongside code changes. The readiness review should be updated
+when a finding is closed, reclassified, or made worse by a new fallback.
