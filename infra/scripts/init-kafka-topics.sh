@@ -31,6 +31,7 @@ TOPICS=(
   "payment.refunded:6"
   "inventory.released:6"
   "shipping.cancelled:6"
+  "shipping.status.updated:6"
   # invoice / notification topics
   "order.confirmed:6"
   "order.confirmed.retry:6"
@@ -103,8 +104,9 @@ $ACL --add --allow-principal User:svc-product --operation Write --topic product-
 $ACL --add --allow-principal User:svc-product --operation Read --topic order.delivered
 $ACL --add --allow-principal User:svc-product --operation Read --group product-service-review-purchases
 
-# shipping-service (svc-shipping): produces shipping.cancelled
+# shipping-service (svc-shipping): produces shipping.cancelled and shipping.status.updated
 $ACL --add --allow-principal User:svc-shipping --operation Write --topic shipping.cancelled
+$ACL --add --allow-principal User:svc-shipping --operation Write --topic shipping.status.updated
 
 # seller-finance-service (svc-finance): consumes order.created, order.paid, payment.refunded
 $ACL --add --allow-principal User:svc-finance --operation Read --topic order.created

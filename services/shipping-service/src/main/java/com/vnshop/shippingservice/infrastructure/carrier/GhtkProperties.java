@@ -6,6 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record GhtkProperties(
         String baseUrl,
         String token,
-        String partnerCode
+        String partnerCode,
+        String webhookToken
 ) {
 }

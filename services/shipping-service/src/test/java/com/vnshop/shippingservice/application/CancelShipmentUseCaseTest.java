@@ -1,6 +1,6 @@
 package com.vnshop.shippingservice.application;
 
-import com.vnshop.shippingservice.domain.port.out.ShippingEventPublisherPort;
+import com.vnshop.shippingservice.domain.port.out.ShippingCancellationEventPublisherPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -13,7 +13,7 @@ import static org.mockito.Mockito.verify;
 class CancelShipmentUseCaseTest {
 
     @Mock
-    private ShippingEventPublisherPort shippingEventPublisher;
+    private ShippingCancellationEventPublisherPort shippingEventPublisher;
 
     @InjectMocks
     private CancelShipmentUseCase cancelShipmentUseCase;

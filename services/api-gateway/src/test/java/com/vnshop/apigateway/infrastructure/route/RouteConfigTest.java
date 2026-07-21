@@ -61,6 +61,7 @@ class RouteConfigTest {
         assertThat(route(routes, "search").getUri()).isEqualTo(URI.create("http://search:80"));
         assertThat(route(routes, "flash-sale-reserve").getUri()).isEqualTo(URI.create("http://inventory:80"));
         assertThat(route(routes, "recommendations").getUri()).isEqualTo(URI.create("http://recommendations:80"));
+        assertThat(route(routes, "shipping-webhooks").getUri()).isEqualTo(URI.create("http://shipping:80"));
         assertThat(matches(route(routes, "products"), "/products/v2")).isTrue();
         assertThat(matches(route(routes, "search"), "/search/v2")).isTrue();
         assertThat(matches(route(routes, "flash-sale-reserve"), "/flash-sale/reserve")).isTrue();
@@ -70,6 +71,9 @@ class RouteConfigTest {
         assertThat(matches(route(routes, "configuration"), "/api/config")).isTrue();
         assertThat(matches(route(routes, "configuration"), "/api/config/public")).isTrue();
         assertThat(matches(route(routes, "configuration"), "/api/config/services")).isFalse();
+        assertThat(matches(route(routes, "shipping-webhooks"), "/webhooks/ghn")).isTrue();
+        assertThat(matches(route(routes, "shipping-webhooks"), "/webhooks/ghtk")).isTrue();
+        assertThat(matches(route(routes, "shipping-webhooks"), "/webhooks/unknown")).isFalse();
         assertThat(route(routes, "checkout").getUri()).isEqualTo(URI.create("http://order:80"));
         assertThat(matches(route(routes, "checkout"), "/checkout/apply-coupon")).isTrue();
         assertThat(route(routes, "coupons").getUri()).isEqualTo(URI.create("http://order:80"));

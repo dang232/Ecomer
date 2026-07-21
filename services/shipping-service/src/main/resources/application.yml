@@ -18,7 +18,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5439/vnshop_shipping?currentSchema=shipping_svc
     username: vnshop
-    password: ${DB_PASSWORD:vnshop}
+    password: ${DB_PASSWORD:}
     hikari:
       maximum-pool-size: 10
       minimum-idle: 3
@@ -38,9 +38,9 @@ spring:
     properties:
       security.protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_SSL}
       sasl.mechanism: PLAIN
-      sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_SASL_USERNAME:svc-shipping}" password="${KAFKA_SASL_PASSWORD:shipping-secret-change-me}";
+      sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_SASL_USERNAME:svc-shipping}" password="${KAFKA_SASL_PASSWORD:}";
       ssl.truststore.location: ${KAFKA_SSL_TRUSTSTORE_LOCATION:/etc/kafka/secrets/kafka.truststore.jks}
-      ssl.truststore.password: ${KAFKA_SSL_TRUSTSTORE_PASSWORD:kafka-ssl-dev-password}
+      ssl.truststore.password: ${KAFKA_SSL_TRUSTSTORE_PASSWORD:}
       ssl.endpoint.identification.algorithm: https
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
@@ -53,20 +53,50 @@ spring:
 shipping:
   carrier:
     mode: ${CARRIER_MODE:stub}
+    # =============================================================================
+    # PRODUCTION CONFIGURATION
+    # =============================================================================
+    # For production, set environment variables:
+    # - CARRIER_MODE=live
+    # - GHN_BASE_URL=https://online-gateway.ghn.vn (production endpoint)
+    # - GHN_TOKEN=<your-production-ghn-token>
+    # - GHN_SHOP_ID=<your-shop-id>
+    # - GHTK_BASE_URL=https://services.giaohangtietkiem.vn (production)
+    # - GHTK_TOKEN=<your-production-ghtk-token>
+    # - GHTK_PARTNER_CODE=<your-partner-code>
+    # =============================================================================
     ghn:
       base-url: ${GHN_BASE_URL:https://dev-online-gateway.ghn.vn}
       token: ${GHN_TOKEN:}
+      webhook-token: ${GHN_WEBHOOK_TOKEN:${GHN_TOKEN:}}
       shop-id: ${GHN_SHOP_ID:}
       service-type-id: ${GHN_SERVICE_TYPE_ID:2}
     ghtk:
       base-url: ${GHTK_BASE_URL:https://services.giaohangtietkiem.vn}
       token: ${GHTK_TOKEN:}
+      webhook-token: ${GHTK_WEBHOOK_TOKEN:${GHTK_TOKEN:}}
       partner-code: ${GHTK_PARTNER_CODE:}
+
+  # Carrier callbacks are acknowledged after durable outbox acceptance. Kafka
+  # delivery is retried by the relay without holding the carrier request open.
+  webhook-outbox:
+    batch-size: ${SHIPPING_WEBHOOK_OUTBOX_BATCH_SIZE:50}
+    poll-interval-ms: ${SHIPPING_WEBHOOK_OUTBOX_POLL_INTERVAL_MS:1000}
+    claim-timeout-ms: ${SHIPPING_WEBHOOK_OUTBOX_CLAIM_TIMEOUT_MS:60000}
+    max-attempts: ${SHIPPING_WEBHOOK_OUTBOX_MAX_ATTEMPTS:8}
+    initial-backoff-seconds: ${SHIPPING_WEBHOOK_OUTBOX_INITIAL_BACKOFF_SECONDS:1}
+    max-backoff-seconds: ${SHIPPING_WEBHOOK_OUTBOX_MAX_BACKOFF_SECONDS:300}
+    backoff-exponent-cap: ${SHIPPING_WEBHOOK_OUTBOX_BACKOFF_EXPONENT_CAP:8}
+    max-error-length: ${SHIPPING_WEBHOOK_OUTBOX_MAX_ERROR_LENGTH:1000}
+  events:
+    cancelled-topic: ${SHIPPING_CANCELLED_TOPIC:shipping.cancelled}
+    status-updated-topic: ${SHIPPING_STATUS_UPDATED_TOPIC:shipping.status.updated}
 
 config-service:
   url: ${CONFIG_SERVICE_URL:http://configuration-service:8097}
+  service-name: ${SPRING_APPLICATION_NAME:shipping-service}
   enabled: ${CONFIG_SERVICE_ENABLED:true}
-  timeout-ms: 3000
+  timeout-ms: ${CONFIG_SERVICE_TIMEOUT_MS:3000}
 
 springdoc:
   api-docs:
