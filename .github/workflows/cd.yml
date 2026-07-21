@@ -182,7 +182,7 @@ jobs:
       pull-requests: write
       actions: read
     env:
-      GH_TOKEN: ${{ secrets.RELEASE_BOT_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
       SOURCE_COMMIT: ${{ needs.prepare.outputs.source_commit }}
     steps:
       - name: Check out protected main source
@@ -190,7 +190,7 @@ jobs:
         with:
           ref: ${{ env.SOURCE_COMMIT }}
           fetch-depth: 0
-          token: ${{ secrets.RELEASE_BOT_TOKEN }}
+          token: ${{ github.token }}
 
       - name: Download all 19 identity fragments
         run: gh run download "$GITHUB_RUN_ID" --pattern 'release-part-*' --dir release-parts
