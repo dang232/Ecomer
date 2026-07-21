@@ -411,20 +411,16 @@ class name in parentheses is the code responsible for that step.
 ### 11.1 Browser request and authentication
 
 ```mermaid
-sequenceDiagram
-  participant B as Browser / Flutter
-  participant G as api-gateway
-  participant U as user-service
-  participant K as Keycloak
-  B->>G: POST /auth/login
-  G->>U: Forward request + correlation id
-  U->>K: AuthSessionUseCase -> KeycloakTokenClient.passwordGrant
-  K-->>U: access token + refresh token
-  U-->>B: access token in response; vnshop_rt httpOnly cookie
-  B->>G: API request with in-memory access token
-  G->>K: Validate JWT / route authorization
-  G->>U: Forward request and x-user-id context
-  U-->>B: DTO response
+flowchart LR
+  B["Browser / Flutter"] -->|POST /auth/login| G["api-gateway"]
+  G -->|Forward request + correlation id| U["user-service"]
+  U -->|passwordGrant| K["Keycloak"]
+  K -->|access token + refresh token| U
+  U -->|access token + vnshop_rt cookie| B
+  B -->|API request with in-memory access token| G
+  G -->|JWT validation and user context| K
+  G -->|Forward authenticated request| U
+  U -->|DTO response| B
 ```
 
 Code path:
@@ -438,23 +434,15 @@ Code path:
 ### 11.2 Product write to searchable catalog
 
 ```mermaid
-sequenceDiagram
-  participant S as Seller client
-  participant P as product-service
-  participant DB as Product database
-  participant K as Kafka: product-events
-  participant Q as search-service
-  participant ES as Elasticsearch
-  participant R as Search JPA projection
-  S->>P: POST/PUT product
-  P->>P: ProductController -> Create/Update/PublishProductUseCase
-  P->>DB: Save ProductJpaEntity
-  P->>K: ProductEventPublisher (CREATED/UPDATED/DELETED)
-  K->>Q: ProductEventConsumer
-  Q->>Q: Check ProcessedEvent deduplication
-  Q->>R: Save/delete read model
-  Q->>ES: Upsert/delete document
-  Q-->>S: Later GET/search returns projection
+flowchart LR
+  S["Seller client"] -->|POST or PUT product| P["product-service"]
+  P -->|ProductController and use case| DB["Product database"]
+  P -->|ProductEventPublisher| K["Kafka: product-events"]
+  K --> Q["search-service"]
+  Q -->|ProcessedEvent deduplication| R["Search JPA projection"]
+  Q -->|Upsert or delete document| ES["Elasticsearch"]
+  ES -.->|fallback on failure or empty result| R
+  R -->|eventually consistent search result| S
 ```
 
 Important consistency details:
@@ -467,25 +455,17 @@ Important consistency details:
 ### 11.3 Guest cart to authenticated cart
 
 ```mermaid
-sequenceDiagram
-  participant B as Browser
-  participant L as localStorage guest cart
-  participant C as cart-service
-  participant R as Redis
-  B->>L: Add guest item
-  B->>C: Login completes
-  B->>C: GET /cart
-  C->>R: Load authenticated cart
-  C-->>B: Server cart
-  B->>B: use-cart.ts requestMerge opens consent dialog
-  alt User chooses Merge
-    B->>C: Add each guest item with guest quantity
-    C->>R: Add existing item quantity + guest quantity
-    C-->>B: Updated cart after each item
-    B->>L: Delete guest cart only after all items succeed
-  else User chooses Keep separate
-    B->>B: Close dialog; local items remain local
-  end
+flowchart LR
+  B["Browser"] -->|Add guest item| L["localStorage guest cart"]
+  B -->|Login and GET /cart| C["cart-service"]
+  C -->|Load authenticated cart| R["Redis"]
+  R --> C
+  C -->|Server cart| B
+  B --> D["use-cart.ts consent dialog"]
+  D -->|Merge| C
+  C -->|Add guest quantity to server quantity| R
+  C -->|All items succeed| L
+  D -->|Keep separate| L
 ```
 
 Code path:
@@ -505,33 +485,22 @@ server cart after authentication.
 ### 11.4 Checkout, payment, inventory, and shipping saga
 
 ```mermaid
-sequenceDiagram
-  participant B as Browser/mobile
-  participant O as order-service
-  participant P as product-service
-  participant I as inventory-service
-  participant Pay as payment-service
-  participant S as shipping-service
-  participant DB as order DB + outbox
-  participant K as Kafka
-  B->>O: POST /checkout/calculate or /calculate-from-cart
-  O->>P: ProductCatalogPort resolves current product/variant/price
-  O-->>B: Checkout quote and available options
-  B->>O: Create order with idempotency key
-  O->>O: Validate buyer, address, items, coupon, idempotency
-  O->>I: gRPC Reserve via GrpcInventoryReservationAdapter
-  I->>I: ReserveStockUseCase atomic decrement/reservation
-  I-->>O: reservation result
-  O->>Pay: gRPC RequestPayment via GrpcPaymentRequestAdapter
-  Pay->>Pay: ProcessPaymentUseCase trusted internal path
-  Pay-->>O: payment result / redirect information
-  O->>S: gRPC RequestShipping per seller suborder
-  S-->>O: label/tracking result
-  O->>DB: Save order, saga state, and order.created outbox event
-  O->>K: OutboxPublisher sends events after commit
-  K-->>Pay: payment.completed callback path when provider confirms
-  K-->>O: payment.completed / compensation events
-  O-->>B: Order response
+flowchart LR
+  B["Browser / mobile"] -->|Checkout calculate| O["order-service"]
+  O -->|Resolve current product, variant, and price| P["product-service"]
+  P --> O
+  O -->|Quote and available options| B
+  B -->|Create order with idempotency key| O
+  O -->|Reserve through gRPC| I["inventory-service"]
+  I -->|Reservation result| O
+  O -->|Request payment through gRPC| Pay["payment-service"]
+  Pay -->|Payment result or redirect| O
+  O -->|Request shipping per seller| S["shipping-service"]
+  S -->|Label and tracking result| O
+  O -->|Save order, saga, and outbox| DB["Order database"]
+  DB -->|OutboxPublisher after commit| K["Kafka"]
+  K -->|Payment completion or compensation| O
+  O -->|Order response| B
 ```
 
 The request path in code is:
@@ -550,22 +519,14 @@ The request path in code is:
 ### 11.5 Payment provider callback and completion event
 
 ```mermaid
-sequenceDiagram
-  participant Provider as Payment provider
-  participant W as Payment webhook/controller
-  participant U as Payment promotion/use case
-  participant DB as payment DB
-  participant O as payment callback outbox
-  participant K as Kafka
-  participant Order as order-service
-  Provider->>W: IPN/webhook/return callback
-  W->>W: Verify provider signature and idempotency
-  W->>U: Promote or reconcile payment state
-  U->>DB: Update payment and ledger in transaction
-  U->>O: Insert payment.completed outbox row
-  O->>K: PaymentCallbackOutboxRelay publishes after commit
-  K->>Order: PaymentCompletedListener
-  Order->>Order: Mark paid once; write order-paid event
+flowchart LR
+  Provider["Payment provider"] -->|IPN or webhook| W["Payment webhook/controller"]
+  W -->|Verify signature and idempotency| U["Payment promotion use case"]
+  U -->|Update payment and ledger| DB["Payment database"]
+  U -->|Insert payment.completed| O["Payment callback outbox"]
+  O -->|Relay after commit| K["Kafka"]
+  K -->|PaymentCompletedListener| Order["order-service"]
+  Order -->|Mark paid once and emit order-paid| DB2["Order database"]
 ```
 
 Provider adapters are selected by [`CompositePaymentGateway`](services/payment-service/src/main/java/com/vnshop/paymentservice/infrastructure/gateway/CompositePaymentGateway.java).
@@ -576,27 +537,17 @@ stub/demo modes are recorded in the [production-readiness review](docs/PRODUCTIO
 ### 11.6 Carrier label and webhook delivery
 
 ```mermaid
-sequenceDiagram
-  participant C as Carrier GHN/GHTK
-  participant G as api-gateway
-  participant W as Shipping webhook controller
-  participant V as Signature service + mapper
-  participant A as ReceiveCarrierWebhookUseCase
-  participant DB as Shipping webhook outbox
-  participant R as ShippingWebhookOutboxRelay
-  participant K as Kafka
-  participant O as order-service
-  C->>G: POST /webhooks/ghn or /webhooks/ghtk
-  G->>W: Public callback route
-  W->>V: Validate signature/token; map provider payload
-  W->>A: receive(CarrierWebhookEvent)
-  A->>DB: Durable accept with duplicate identity check
-  DB-->>W: ACCEPTED or DUPLICATE
-  W-->>C: 200 only after durable accept; 503 on storage failure
-  R->>DB: Claim pending rows and recover stale claims
-  R->>K: ShippingEventPublisher -> shipping.status.updated
-  K->>O: Consume status transition
-  R->>DB: Mark published or retry/dead with exponential backoff
+flowchart LR
+  C["Carrier GHN / GHTK"] -->|POST webhook| G["api-gateway"]
+  G --> W["Shipping webhook controller"]
+  W -->|Validate signature and map payload| V["Signature service + mapper"]
+  V --> A["ReceiveCarrierWebhookUseCase"]
+  A -->|Durable accept and duplicate check| DB["Shipping webhook outbox"]
+  DB -->|200 after accept or 503 on storage failure| C
+  DB --> R["ShippingWebhookOutboxRelay"]
+  R -->|Publish status update| K["Kafka"]
+  K --> O["order-service"]
+  R -->|Mark published or retry/dead| DB
 ```
 
 Code path:
@@ -610,24 +561,15 @@ Code path:
 ### 11.7 Notification and messaging fan-out
 
 ```mermaid
-sequenceDiagram
-  participant K as Kafka
-  participant N as notification-service
-  participant DB as MongoDB + Redis
-  participant Ch as SES/Twilio/FCM/OneSignal/Socket.IO
-  participant M as messaging-service
-  participant WS as WebSocket clients
-  K->>N: Business event
-  N->>N: KafkaEventConsumer -> NotificationCreatedHandler
-  N->>DB: Deduplicate and persist notification
-  N->>N: DeliveryPolicy selects enabled channels
-  N->>Ch: Deliver notification
-  Ch-->>N: Delivery status
-  DB-->>WS: Socket.IO realtime notification
-  WS->>M: Send message / mark thread read
-  M->>M: Controller or WS gateway -> use case
-  M->>DB: MikroORM transaction + idempotency key
-  M->>K: KafkaMessagePublisher
+flowchart LR
+  K["Kafka"] --> N["notification-service"]
+  N -->|Consumer and created handler| DB["MongoDB + Redis"]
+  N -->|DeliveryPolicy| Ch["SES / Twilio / FCM / OneSignal / Socket.IO"]
+  Ch -->|Delivery status| N
+  DB -->|Realtime notification| WS["WebSocket clients"]
+  WS -->|Send message or mark read| M["messaging-service"]
+  M -->|Controller or gateway to use case| DB
+  M -->|KafkaMessagePublisher| K
 ```
 
 Notification delivery is a fan-out concern and must not become part of the checkout transaction.
@@ -637,30 +579,19 @@ HTTP submissions do not create duplicate messages.
 ### 11.8 Video upload, transcode, and moderation
 
 ```mermaid
-sequenceDiagram
-  participant P as product-service
-  participant K as Kafka
-  participant T as video-transcoder
-  participant S as S3/MinIO staging
-  participant M as video-moderator
-  participant Pub as S3/MinIO public
-  P->>S: Upload raw video to temporary object
-  P->>K: video.upload.completed
-  K->>T: TranscodeEventConsumer
-  T->>S: Download and verify SHA-256
-  T->>T: TranscodeService + FFmpeg + poster extraction
-  T->>S: Upload transcoded output and poster
-  T->>K: video.transcode.completed
-  K->>M: ModerationConsumer
-  M->>S: Download and sample frames
-  M->>M: Moderator classifies NSFW score
-  alt AUTO_APPROVED
-    M->>Pub: Promote staging object to public bucket
-  else PENDING_REVIEW or REJECTED
-    M->>S: Keep in staging or mark rejected
-  end
-  M->>K: video.moderation.completed or DLT
-  M->>P: Update moderation fields through owned persistence contract
+flowchart LR
+  P["product-service"] -->|Upload raw video| S["S3 / MinIO staging"]
+  P -->|video.upload.completed| K["Kafka"]
+  K --> T["video-transcoder"]
+  T -->|Download and verify SHA-256| S
+  T -->|FFmpeg and poster extraction| S
+  T -->|video.transcode.completed| K
+  K --> M["video-moderator"]
+  M -->|Sample frames and classify| S
+  M -->|Approved| Pub["S3 / MinIO public"]
+  M -->|Pending review or rejected| S
+  M -->|Moderation completed or DLT| K
+  M -->|Update moderation fields| P
 ```
 
 The transcoder uses local disk only as bounded FFmpeg staging; object storage remains the durable
