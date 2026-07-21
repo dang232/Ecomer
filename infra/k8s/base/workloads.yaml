@@ -2422,6 +2422,16 @@ spec:
         - name: KAFKA_SASL_PASSWORD
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: shipping-service-kafka-password}
+        - name: GHN_WEBHOOK_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: vnshop-runtime-secrets
+              key: ghn-webhook-token
+        - name: GHTK_WEBHOOK_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: vnshop-runtime-secrets
+              key: ghtk-webhook-token
         envFrom:
         - configMapRef:
             name: vnshop-app-config

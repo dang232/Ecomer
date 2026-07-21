@@ -49,6 +49,15 @@
   },
   "cart": {
     "title": "Giỏ hàng",
+    "merge": {
+      "title": "Gộp Giỏ Hàng",
+      "description": "Bạn có {{guestCount}} sản phẩm trong giỏ hàng khách và {{serverCount}} sản phẩm trong giỏ hàng đã lưu",
+      "mergeBtn": "Gộp Sản Phẩm",
+      "keepBtn": "Giữ Riêng",
+      "success": "Gộp giỏ hàng thành công",
+      "failed": "Không thể gộp giỏ hàng",
+      "variantWarning": "Một số sản phẩm không có lựa chọn biến thể, vui lòng kiểm tra trước khi tiếp tục"
+    },
     "addToCart": "+ Thêm vào giỏ hàng",
     "titleWithCount": "Giỏ hàng ({{count}} sản phẩm)",
     "loginPromptTitle": "Đăng nhập để xem giỏ hàng",
@@ -1697,5 +1706,83 @@
     "reload": "Tải lại trang",
     "retry": "Thử lại",
     "retrying": "Đang thử lại…"
+  },
+  "return": {
+    "request": {
+      "title": "Yêu cầu trả hàng",
+      "backToOrders": "Quay lại đơn hàng",
+      "orderIdLabel": "Mã đơn hàng",
+      "orderIdPlaceholder": "Nhập mã đơn hàng",
+      "orderIdHint": "Tìm mã đơn hàng trong trang đơn hàng của bạn",
+      "reasonLabel": "Lý do trả hàng",
+      "selectReasonOption": "Chọn lý do",
+      "reasonDetailLabel": "Mô tả chi tiết (tùy chọn)",
+      "reasonDetailPlaceholder": "Mô tả thêm chi tiết để người bán xử lý nhanh hơn...",
+      "pickupTypeLabel": "Hình thức trả hàng",
+      "pickup": "Nhân viên đến lấy",
+      "dropoff": "Tự mang đến cửa hàng",
+      "photoLabel": "Hình ảnh minh chứng (tùy chọn)",
+      "addPhoto": "Thêm",
+      "removePhoto": "Xóa",
+      "photoHint": "Tải lên hình ảnh sản phẩm để hỗ trợ xử lý nhanh hơn",
+      "photoUploadHint": "Tính năng tải ảnh sẽ sớm có mặt",
+      "footnote": "Sau khi gửi yêu cầu, người bán có thể xác nhận hoặc từ chối. Nếu không có phản hồi trong 3 ngày, bạn có thể mở khiếu nại.",
+      "submit": "Gửi yêu cầu",
+      "submitting": "Đang gửi...",
+      "success": "Đã gửi yêu cầu trả hàng",
+      "error": "Không thể gửi yêu cầu trả hàng",
+      "selectOrder": "Vui lòng nhập mã đơn hàng",
+      "selectReason": "Vui lòng chọn lý do trả hàng",
+      "reasonTooShort": "Mô tả phải có ít nhất 10 ký tự"
+    },
+    "status": {
+      "title": "Danh sách trả hàng",
+      "loadError": "Không tải được danh sách trả hàng",
+      "empty": "Bạn chưa có yêu cầu trả hàng nào",
+      "viewOrders": "Xem đơn hàng",
+      "requested": "Chờ xử lý",
+      "approved": "Đã duyệt",
+      "rejected": "Từ chối",
+      "completed": "Hoàn tất",
+      "disputed": "Khiếu nại"
+    },
+    "detail": {
+      "title": "Chi tiết trả hàng",
+      "notFound": "Không tìm thấy yêu cầu trả hàng",
+      "orderId": "Đơn hàng",
+      "reason": "Lý do",
+      "refundAmount": "Số tiền hoàn",
+      "requestedAt": "Ngày yêu cầu"
+    },
+    "dispute": {
+      "title": "Khiếu nại",
+      "placeholder": "Mô tả chi tiết lý do khiếu nại...",
+      "submit": "Gửi khiếu nại",
+      "submitting": "Đang gửi...",
+      "success": "Đã gửi khiếu nại",
+      "error": "Không thể gửi khiếu nại",
+      "reasonTooShort": "Mô tả phải có ít nhất 10 ký tự"
+    },
+    "reason": {
+      "damaged": "Hàng bị hư hỏng",
+      "wrong_item": "Nhận sai sản phẩm",
+      "changed_mind": "Đổi ý",
+      "not_as_described": "Không đúng mô tả",
+      "other": "Lý do khác"
+    },
+    "seller": {
+      "title": "Quản lý trả hàng",
+      "pending": "Chờ xử lý",
+      "approve": "Duyệt",
+      "reject": "Từ chối",
+      "complete": "Hoàn tất",
+      "approveSuccess": "Đã duyệt yêu cầu trả hàng",
+      "approveError": "Không thể duyệt yêu cầu trả hàng",
+      "rejectSuccess": "Đã từ chối yêu cầu trả hàng",
+      "rejectError": "Không thể từ chối yêu cầu trả hàng",
+      "completeSuccess": "Đã hoàn tất trả hàng",
+      "completeError": "Không thể hoàn tất trả hàng",
+      "empty": "Không có yêu cầu trả hàng nào"
+    }
   }
 }

@@ -12,6 +12,7 @@ import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -19,6 +20,7 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 @Component
+@ConditionalOnProperty(name = "grpc.server.enabled", havingValue = "true", matchIfMissing = true)
 public class GrpcShippingServer extends ShippingServiceGrpc.ShippingServiceImplBase {
 
     private static final Logger log = LoggerFactory.getLogger(GrpcShippingServer.class);

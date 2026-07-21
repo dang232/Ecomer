@@ -1,5 +1,5 @@
 package com.vnshop.shippingservice.domain.port.out;
 
-public interface ShippingEventPublisherPort {
+public interface ShippingCancellationEventPublisherPort {
     void publishCancelled(String orderId, String sagaId, String reason);
 }

@@ -57,6 +57,12 @@ const SellerDetailPage = lazy(() =>
 const PasswordResetPage = lazy(() =>
   import("./pages/PasswordResetPage").then((m) => ({ default: m.PasswordResetPage })),
 );
+const ReturnRequestPage = lazy(() =>
+  import("./pages/ReturnRequestPage").then((m) => ({ default: m.ReturnRequestPageWrapper })),
+);
+const ReturnStatusPage = lazy(() =>
+  import("./pages/ReturnStatusPage").then((m) => ({ default: m.ReturnStatusPageWrapper })),
+);
 const NotificationsPage = lazy(() =>
   import("./pages/NotificationsPage").then((m) => ({ default: m.NotificationsPageRoute })),
 );
@@ -135,6 +141,14 @@ export const router = createBrowserRouter([
           void queryClient.prefetchQuery(orderDetailOptions(params.id));
           return null;
         },
+      },
+      {
+        path: "returns",
+        element: guardedWithBoundary(createElement(ReturnStatusPage)),
+      },
+      {
+        path: "returns/new",
+        element: guardedWithBoundary(createElement(ReturnRequestPage)),
       },
       {
         path: "profile",

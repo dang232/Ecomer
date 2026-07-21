@@ -1376,11 +1376,13 @@ services:
       # GHN (Giao Hàng Nhanh) credentials — https://dev.ghn.vn
       GHN_BASE_URL: ${GHN_BASE_URL:-https://dev-online-gateway.ghn.vn}
       GHN_TOKEN: ${GHN_TOKEN:-}
+      GHN_WEBHOOK_TOKEN: ${GHN_WEBHOOK_TOKEN:-}
       GHN_SHOP_ID: ${GHN_SHOP_ID:-}
       GHN_SERVICE_TYPE_ID: ${GHN_SERVICE_TYPE_ID:-2}
       # GHTK (Giao Hàng Tiết Kiệm) credentials — https://giaohangtietkiem.vn
       GHTK_BASE_URL: ${GHTK_BASE_URL:-https://services.giaohangtietkiem.vn}
       GHTK_TOKEN: ${GHTK_TOKEN:-}
+      GHTK_WEBHOOK_TOKEN: ${GHTK_WEBHOOK_TOKEN:-}
       GHTK_PARTNER_CODE: ${GHTK_PARTNER_CODE:-}
     volumes:
       - ./infra/kafka/certs/kafka.truststore.jks:/etc/kafka/secrets/kafka.truststore.jks:ro

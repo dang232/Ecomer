@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1783757381383,
+  "lastScanned": 1784630998057,
   "projectRoot": "C:\\Users\\dangq\\OneDrive\\Documents\\GitHub\\Full-Stack-E-commerce\\fe",
   "techStack": {
     "languages": [
@@ -39,12 +39,12 @@
       },
       {
         "name": "vite",
-        "version": "6.3.5",
+        "version": "7.3.6",
         "category": "build"
       },
       {
         "name": "vitest",
-        "version": "2.1.9",
+        "version": "4.1.10",
         "category": "testing"
       }
     ],
@@ -52,8 +52,8 @@
     "runtime": null
   },
   "build": {
-    "buildCommand": "cd \"C:\\Users\\dangq\\OneDrive\\Documents\\GitHub\\Full-Stack-E-commerce\\fe\" && npx tsc --noEmit 2>&1 | head -5",
-    "testCommand": "cd \"C:\\Users\\dangq\\OneDrive\\Documents\\GitHub\\Full-Stack-E-commerce\\fe\" && npx vitest run src/app/lib/image-url.test.ts 2>&1 | tail -5",
+    "buildCommand": "pnpm build",
+    "testCommand": "cd C:/Users/dangq/OneDrive/Documents/GitHub/Full-Stack-E-commerce/fe && npx vitest run 2>&1 | tail -30",
     "lintCommand": "pnpm lint",
     "devCommand": "pnpm dev",
     "scripts": {
@@ -65,7 +65,9 @@
       "test:watch": "vitest",
       "lint": "eslint .",
       "lint:i18n": "node scripts/check-i18n-keys.mjs",
-      "lint:tokens": "node scripts/check-design-tokens.mjs",
+      "tokens:generate": "node ../scripts/generate-design-tokens.mjs",
+      "tokens:check": "node --test ../scripts/generate-design-tokens.test.mjs",
+      "lint:tokens": "npm run tokens:check && node scripts/check-design-tokens.mjs",
       "lint:all": "npm run lint && npm run lint:i18n && npm run lint:tokens",
       "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\" \"e2e/**/*.{ts,tsx}\"",
       "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\" \"e2e/**/*.{ts,tsx}\"",
@@ -98,20 +100,11 @@
   },
   "customNotes": [],
   "directoryMap": {
-    "coverage": {
-      "path": "coverage",
-      "purpose": null,
-      "fileCount": 1,
-      "lastAccessed": 1783757381202,
-      "keyFiles": [
-        "lcov.info"
-      ]
-    },
     "dist": {
       "path": "dist",
       "purpose": "Distribution/build output",
       "fileCount": 3,
-      "lastAccessed": 1783757381249,
+      "lastAccessed": 1784630998016,
       "keyFiles": [
         "index.html",
         "robots.txt",
@@ -121,8 +114,8 @@
     "e2e": {
       "path": "e2e",
       "purpose": null,
-      "fileCount": 46,
-      "lastAccessed": 1783757381252,
+      "fileCount": 48,
+      "lastAccessed": 1784630998026,
       "keyFiles": [
         "a11y.spec.ts",
         "admin-coupon-crud-ui.spec.ts",
@@ -135,7 +128,7 @@
       "path": "guidelines",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1783757381258,
+      "lastAccessed": 1784630998027,
       "keyFiles": [
         "Guidelines.md"
       ]
@@ -144,7 +137,7 @@
       "path": "playwright-report",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1783757381265,
+      "lastAccessed": 1784630998028,
       "keyFiles": [
         "index.html"
       ]
@@ -153,7 +146,7 @@
       "path": "public",
       "purpose": "Public files",
       "fileCount": 2,
-      "lastAccessed": 1783757381288,
+      "lastAccessed": 1784630998028,
       "keyFiles": [
         "robots.txt",
         "silent-check-sso.html"
@@ -163,7 +156,7 @@
       "path": "scripts",
       "purpose": "Build/utility scripts",
       "fileCount": 6,
-      "lastAccessed": 1783757381290,
+      "lastAccessed": 1784630998029,
       "keyFiles": [
         "check-design-tokens.mjs",
         "check-i18n-keys.mjs",
@@ -176,7 +169,7 @@
       "path": "src",
       "purpose": "Source code",
       "fileCount": 3,
-      "lastAccessed": 1783757381313,
+      "lastAccessed": 1784630998030,
       "keyFiles": [
         "main.tsx",
         "test-setup.ts",
@@ -187,27 +180,28 @@
       "path": "test-results",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1783757381339,
+      "lastAccessed": 1784630998030,
       "keyFiles": []
     },
     "dist\\assets": {
       "path": "dist\\assets",
       "purpose": "Static assets",
-      "fileCount": 59,
-      "lastAccessed": 1783757381356,
+      "fileCount": 61,
+      "lastAccessed": 1784630998031,
       "keyFiles": [
-        "arrow-right-BWLRMqC3.js",
-        "CartPage-BvDfe5oT.js",
-        "chevron-left-Bk-0OwLk.js"
+        "AccessDeniedPage-kZOCnlG3.js",
+        "arrow-left-U-SnAkI2.js",
+        "arrow-right-DyKCojK0.js"
       ]
     },
     "src\\app": {
       "path": "src\\app",
       "purpose": "Application code",
-      "fileCount": 2,
-      "lastAccessed": 1783757381376,
+      "fileCount": 3,
+      "lastAccessed": 1784630998034,
       "keyFiles": [
         "App.tsx",
+        "routes.test.ts",
         "routes.ts"
       ]
     },
@@ -215,7 +209,7 @@
       "path": "src\\utils",
       "purpose": "Utility functions",
       "fileCount": 1,
-      "lastAccessed": 1783757381381,
+      "lastAccessed": 1784630998034,
       "keyFiles": [
         "meta-tags.ts"
       ]
@@ -223,219 +217,39 @@
   },
   "hotPaths": [
     {
-      "path": "src\\app\\hooks\\use-cart.ts",
-      "accessCount": 17,
-      "lastAccessed": 1783760078637,
-      "type": "file"
-    },
-    {
-      "path": "src\\app\\pages\\SearchPage.tsx",
-      "accessCount": 15,
-      "lastAccessed": 1783853880458,
-      "type": "file"
-    },
-    {
-      "path": "src\\app\\pages\\ProductPage.tsx",
-      "accessCount": 12,
-      "lastAccessed": 1783837480929,
-      "type": "file"
-    },
-    {
-      "path": "src\\app\\lib\\api\\product-mapper.ts",
-      "accessCount": 11,
-      "lastAccessed": 1783838267720,
-      "type": "file"
-    },
-    {
-      "path": "src\\app\\components\\RecentlyViewedGrid.tsx",
-      "accessCount": 9,
-      "lastAccessed": 1783837669795,
-      "type": "file"
-    },
-    {
-      "path": "src\\features\\videos\\components\\VideoPlayer.tsx",
-      "accessCount": 7,
-      "lastAccessed": 1783837093594,
-      "type": "file"
-    },
-    {
-      "path": "src\\app",
-      "accessCount": 6,
-      "lastAccessed": 1783838239706,
-      "type": "directory"
-    },
-    {
-      "path": "src\\app\\components\\notifications\\notification-icon.tsx",
-      "accessCount": 5,
-      "lastAccessed": 1783837591148,
-      "type": "file"
-    },
-    {
-      "path": "src\\features\\videos\\hooks\\useVideoStatus.ts",
-      "accessCount": 4,
-      "lastAccessed": 1783836961856,
-      "type": "file"
-    },
-    {
-      "path": "src\\features\\videos\\hooks\\useVideoUpload.ts",
-      "accessCount": 3,
-      "lastAccessed": 1783836971515,
-      "type": "file"
-    },
-    {
-      "path": "src\\features\\videos\\components\\VideoUploadDropzone.tsx",
-      "accessCount": 3,
-      "lastAccessed": 1783836972587,
-      "type": "file"
-    },
-    {
-      "path": "src\\app\\types\\ui.ts",
-      "accessCount": 3,
-      "lastAccessed": 1783838206348,
-      "type": "file"
-    },
-    {
-      "path": "src\\app\\hooks\\use-search.ts",
-      "accessCount": 3,
-      "lastAccessed": 1783852363671,
-      "type": "file"
-    },
-    {
-      "path": "src\\app\\pages\\PasswordResetPage.tsx",
-      "accessCount": 3,
-      "lastAccessed": 1783852430559,
-      "type": "file"
-    },
-    {
-      "path": "src\\app\\lib\\auth\\native-auth.ts",
-      "accessCount": 2,
-      "lastAccessed": 1783757548621,
-      "type": "file"
-    },
-    {
       "path": "src\\app\\hooks\\use-cart.test.tsx",
-      "accessCount": 2,
-      "lastAccessed": 1783759932541,
+      "accessCount": 4,
+      "lastAccessed": 1784631166542,
       "type": "file"
     },
     {
-      "path": "src\\app\\pages\\admin",
+      "path": "",
       "accessCount": 2,
-      "lastAccessed": 1783837123639,
+      "lastAccessed": 1784631029687,
       "type": "directory"
     },
     {
-      "path": "src\\app\\components\\ui\\confirm-dialog.tsx",
-      "accessCount": 2,
-      "lastAccessed": 1783837179207,
-      "type": "file"
-    },
-    {
-      "path": "src\\app\\pages\\admin\\VideoAppeals.tsx",
-      "accessCount": 2,
-      "lastAccessed": 1783837182167,
-      "type": "file"
-    },
-    {
-      "path": "src\\app\\pages\\admin\\VideoModeration.tsx",
-      "accessCount": 2,
-      "lastAccessed": 1783837183251,
-      "type": "file"
-    },
-    {
-      "path": "src\\app\\lib\\i18n\\en.json",
-      "accessCount": 2,
-      "lastAccessed": 1783852335882,
-      "type": "directory"
-    },
-    {
-      "path": "src\\app\\lib\\image-url.test.ts",
-      "accessCount": 2,
-      "lastAccessed": 1784281265582,
-      "type": "file"
-    },
-    {
-      "path": "src\\app\\lib\\api\\endpoints\\products.ts",
+      "path": "src\\app\\test-utils\\render-with-query-client.tsx",
       "accessCount": 1,
-      "lastAccessed": 1783757437564,
+      "lastAccessed": 1784631019257,
       "type": "file"
     },
     {
-      "path": "eslint.config.js",
+      "path": "src\\app\\lib\\api\\endpoints\\cart.ts",
       "accessCount": 1,
-      "lastAccessed": 1783757468939,
+      "lastAccessed": 1784631029656,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\lib\\api\\endpoints\\sellers.test.ts",
+      "accessCount": 1,
+      "lastAccessed": 1784631039008,
       "type": "file"
     },
     {
       "path": "src\\app\\lib\\api\\client.ts",
       "accessCount": 1,
-      "lastAccessed": 1783757647651,
-      "type": "file"
-    },
-    {
-      "path": "src\\app\\types\\api",
-      "accessCount": 1,
-      "lastAccessed": 1783757833857,
-      "type": "directory"
-    },
-    {
-      "path": "src\\app\\types\\api\\product.ts",
-      "accessCount": 1,
-      "lastAccessed": 1783757843764,
-      "type": "file"
-    },
-    {
-      "path": "src\\app\\types\\api\\index.ts",
-      "accessCount": 1,
-      "lastAccessed": 1783757895586,
-      "type": "directory"
-    },
-    {
-      "path": "src\\app\\types\\api\\branded-ids.ts",
-      "accessCount": 1,
-      "lastAccessed": 1783758292864,
-      "type": "directory"
-    },
-    {
-      "path": "package.json",
-      "accessCount": 1,
-      "lastAccessed": 1783836587260,
-      "type": "directory"
-    },
-    {
-      "path": "src\\utils\\meta-tags.ts",
-      "accessCount": 1,
-      "lastAccessed": 1783837180309,
-      "type": "file"
-    },
-    {
-      "path": "src\\app\\types",
-      "accessCount": 1,
-      "lastAccessed": 1783838216570,
-      "type": "directory"
-    },
-    {
-      "path": "src\\app\\lib\\api",
-      "accessCount": 1,
-      "lastAccessed": 1783838229734,
-      "type": "directory"
-    },
-    {
-      "path": "src\\app\\pages\\Root.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1783852337738,
-      "type": "file"
-    },
-    {
-      "path": "src\\app\\lib\\api\\endpoints\\search.ts",
-      "accessCount": 1,
-      "lastAccessed": 1783852379287,
-      "type": "file"
-    },
-    {
-      "path": "src\\app\\lib\\image-url.ts",
-      "accessCount": 1,
-      "lastAccessed": 1783852386305,
+      "lastAccessed": 1784631039187,
       "type": "file"
     }
   ],

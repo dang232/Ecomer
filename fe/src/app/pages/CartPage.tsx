@@ -18,6 +18,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
+import { GuestCartMergeDialog } from "../components/GuestCartMergeDialog";
 import { ImageWithFallback } from "../components/image-with-fallback";
 import { RecentlyViewedGrid } from "../components/RecentlyViewedGrid";
 import { useAppConfig } from "../hooks/use-app-config";
@@ -34,8 +35,25 @@ export function CartPage() {
   const navigate = useNavigate();
   const { ready, authenticated, login } = useAuth();
   const config = useAppConfig();
-  const { items, itemCount, totalAmount, isLoading, isHydrating, error, updateItem, removeItem } =
-    useCart();
+  const {
+    items,
+    itemCount,
+    totalAmount,
+    isLoading,
+    isHydrating,
+    error,
+    updateItem,
+    removeItem,
+    showMergeDialog,
+    isMerging,
+    requestMerge,
+    executeMerge,
+    keepSeparate,
+    guestItemCount,
+    serverItemCount,
+    hasItemsWithoutVariant,
+    isGuest,
+  } = useCart();
   const [coupon, setCoupon] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [couponDiscount, setCouponDiscount] = useState(0);
@@ -81,6 +99,27 @@ export function CartPage() {
     setCouponError("");
     setCoupon("");
     couponMutation.reset();
+  };
+
+  // Merge dialog handlers
+  const handleMerge = async () => {
+    const success = await executeMerge();
+    if (success) {
+      toast.success(t("cart.merge.success"));
+    } else {
+      toast.error(t("cart.merge.failed"));
+    }
+  };
+
+  const handleKeepSeparate = () => {
+    keepSeparate();
+  };
+
+  const handleRequestMerge = () => {
+    if (hasItemsWithoutVariant) {
+      toast.warning(t("cart.merge.variantWarning"));
+    }
+    requestMerge();
   };
 
   const MAX_ITEM_QTY = 99;
@@ -398,7 +437,7 @@ export function CartPage() {
             ) : null}
           </div>
 
-          {/* Guest banner */}
+          {/* Guest banner - show login prompt for guests */}
           {!authenticated ? (
             <div className="mt-5 mb-3 flex items-center justify-between gap-3 rounded-[var(--radius-lg)] px-4 py-3 bg-primary-light border border-primary/20">
               <div className="flex items-center gap-2 min-w-0">
@@ -410,6 +449,27 @@ export function CartPage() {
                 className="shrink-0 px-3 py-1.5 rounded-[var(--radius-md)] text-xs font-semibold text-white bg-primary hover:bg-primary-hover transition-colors"
               >
                 {t("cart.loginBtn")}
+              </button>
+            </div>
+          ) : null}
+
+          {/* Merge cart banner for authenticated users with both guest and server cart items */}
+          {authenticated && !isGuest && guestItemCount > 0 && serverItemCount > 0 ? (
+            <div className="mt-5 mb-3 flex items-center justify-between gap-3 rounded-[var(--radius-lg)] px-4 py-3 bg-primary-light border border-primary/20">
+              <div className="flex items-center gap-2 min-w-0">
+                <ShoppingBag size={16} className="text-primary shrink-0" />
+                <span className="text-sm font-medium text-primary">
+                  {t("cart.merge.description", {
+                    guestCount: guestItemCount,
+                    serverCount: serverItemCount,
+                  })}
+                </span>
+              </div>
+              <button
+                onClick={handleRequestMerge}
+                className="shrink-0 px-3 py-1.5 rounded-[var(--radius-md)] text-xs font-semibold text-white bg-primary hover:bg-primary-hover transition-colors"
+              >
+                {t("cart.merge.mergeBtn")}
               </button>
             </div>
           ) : null}
@@ -460,6 +520,17 @@ export function CartPage() {
           </div>
         </div>
       </div>
+
+      {/* Merge Cart Dialog */}
+      <GuestCartMergeDialog
+        open={showMergeDialog}
+        onClose={keepSeparate}
+        onMerge={handleMerge}
+        onKeepSeparate={handleKeepSeparate}
+        guestItemCount={guestItemCount}
+        serverItemCount={serverItemCount}
+        isMerging={isMerging}
+      />
     </div>
   );
 }

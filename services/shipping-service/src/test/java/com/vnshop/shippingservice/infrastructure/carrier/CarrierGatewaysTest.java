@@ -27,7 +27,7 @@ class CarrierGatewaysTest {
     void ghnGatewayMapsQuoteLabelAndTracking() {
         FakeCarrierHttpClient client = new FakeCarrierHttpClient();
         client.postResponse = new GhnCarrierGateway.GhnFeeResponse(new GhnCarrierGateway.GhnFeeData(45_000L));
-        GhnCarrierGateway gateway = new GhnCarrierGateway(client, new GhnProperties("https://ghn.test", "token", "123", "2"));
+        GhnCarrierGateway gateway = new GhnCarrierGateway(client, new GhnProperties("https://ghn.test", "token", "123", "2", null));
 
         RateQuote quote = gateway.quote(new RateQuoteRequest(CarrierCode.GHN, origin, destination, parcel, 1_000_000L));
 
@@ -53,7 +53,7 @@ class CarrierGatewaysTest {
     void ghtkGatewayMapsQuoteLabelAndTracking() {
         FakeCarrierHttpClient client = new FakeCarrierHttpClient();
         client.postResponse = new GhtkCarrierGateway.GhtkFeeResponse(new GhtkCarrierGateway.GhtkFee(31_000L, "48h"));
-        GhtkCarrierGateway gateway = new GhtkCarrierGateway(client, new GhtkProperties("https://ghtk.test", "ghtk-token", "partner"));
+        GhtkCarrierGateway gateway = new GhtkCarrierGateway(client, new GhtkProperties("https://ghtk.test", "ghtk-token", "partner", "ghtk-token"));
 
         RateQuote quote = gateway.quote(new RateQuoteRequest(CarrierCode.GHTK, origin, destination, parcel, 800_000L));
 
@@ -103,7 +103,7 @@ class CarrierGatewaysTest {
     @Test
     void ghnGatewayMapsStatusLogsToEvents() {
         FakeCarrierHttpClient client = new FakeCarrierHttpClient();
-        GhnCarrierGateway gateway = new GhnCarrierGateway(client, new GhnProperties("https://ghn.test", "token", "123", "2"));
+        GhnCarrierGateway gateway = new GhnCarrierGateway(client, new GhnProperties("https://ghn.test", "token", "123", "2", null));
 
         List<GhnCarrierGateway.GhnStatusLog> logs = List.of(
                 new GhnCarrierGateway.GhnStatusLog("2026-05-15T08:00:00Z", "picked_up", "Kho HCM", "Đã nhận hàng"),
@@ -125,7 +125,7 @@ class CarrierGatewaysTest {
     @Test
     void ghnGatewayThrowsNotFoundWhenDataIsNull() {
         FakeCarrierHttpClient client = new FakeCarrierHttpClient();
-        GhnCarrierGateway gateway = new GhnCarrierGateway(client, new GhnProperties("https://ghn.test", "token", "123", "2"));
+        GhnCarrierGateway gateway = new GhnCarrierGateway(client, new GhnProperties("https://ghn.test", "token", "123", "2", null));
 
         client.postResponse = new GhnCarrierGateway.GhnTrackingResponse(null);
 
@@ -137,7 +137,7 @@ class CarrierGatewaysTest {
     @Test
     void ghtkGatewayMapsLogEntriesToEvents() {
         FakeCarrierHttpClient client = new FakeCarrierHttpClient();
-        GhtkCarrierGateway gateway = new GhtkCarrierGateway(client, new GhtkProperties("https://ghtk.test", "ghtk-token", "partner"));
+        GhtkCarrierGateway gateway = new GhtkCarrierGateway(client, new GhtkProperties("https://ghtk.test", "ghtk-token", "partner", "ghtk-token"));
 
         List<GhtkCarrierGateway.GhtkLogEntry> log = List.of(
                 new GhtkCarrierGateway.GhtkLogEntry("2026-05-15T07:00:00Z", "2", "Đã lấy hàng"),
@@ -158,7 +158,7 @@ class CarrierGatewaysTest {
     @Test
     void ghtkGatewayThrowsNotFoundWhenOrderIsNull() {
         FakeCarrierHttpClient client = new FakeCarrierHttpClient();
-        GhtkCarrierGateway gateway = new GhtkCarrierGateway(client, new GhtkProperties("https://ghtk.test", "ghtk-token", "partner"));
+        GhtkCarrierGateway gateway = new GhtkCarrierGateway(client, new GhtkProperties("https://ghtk.test", "ghtk-token", "partner", "ghtk-token"));
 
         client.getResponse = new GhtkCarrierGateway.GhtkTrackingResponse(null);
 

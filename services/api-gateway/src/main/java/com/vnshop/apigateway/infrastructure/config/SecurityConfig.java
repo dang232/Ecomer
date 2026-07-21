@@ -85,6 +85,7 @@ public class SecurityConfig {
                         "/payment/methods", "/coupons").permitAll()
                 .pathMatchers(HttpMethod.POST, "/reviews/seller-summaries", "/products/counts",
                         "/coupons/validate", "/checkout/validate-coupon").permitAll()
+                .pathMatchers(HttpMethod.POST, "/webhooks/ghn", "/webhooks/ghtk").permitAll()
                 .pathMatchers("/auth/**", "/payment/*/callback", "/payment/*/ipn", "/payment/stripe/webhook").permitAll()
                 // The WebSocket handshake on /ws/messaging carries the JWT through
                 // a subprotocol because browsers can't set Authorization headers on
