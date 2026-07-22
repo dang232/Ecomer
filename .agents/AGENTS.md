@@ -29,7 +29,7 @@ Polyglot microservices marketplace (19 services, Spring Boot + NestJS + Python),
 
 ## Architecture Overview
 - **Gateway**: Spring Cloud Gateway `:8080` → routes all services
-- **Auth**: Keycloak 26.6 `:8085`, OIDC/OAuth2, httpOnly cookie flow
+- **Auth**: Keycloak 26.6 internal-only, native httpOnly-cookie auth through the gateway
 - **Java services**: Java 25 LTS, Spring Boot 4.1.0, Maven, virtual threads
 - **Node services**: NestJS 11, TypeScript, Redis
 - **Messaging**: Kafka 8.2.0, SASL_PLAINTEXT, per-service ACLs
@@ -82,7 +82,7 @@ node infra/scripts/seed-demo.mjs
 | `http://localhost:3000` | React SPA (docker) |
 | `http://localhost:5173` | React SPA (Vite dev) |
 | `http://localhost:8080` | API Gateway |
-| `http://localhost:8085` | Keycloak admin |
+| Docker network only | Keycloak identity provider; admin console is not host-exposed |
 | `http://localhost:9000` | MinIO console |
 | `http://localhost:9093` | Alertmanager |
 | `http://localhost:9200` | Elasticsearch |
