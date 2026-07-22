@@ -2,9 +2,15 @@ package com.vnshop.orderservice.infrastructure.event.payment;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vnshop.orderservice.domain.RefundLedgerEntry;
 import com.vnshop.orderservice.domain.Return;
 import com.vnshop.orderservice.domain.ReturnStatus;
+import com.vnshop.orderservice.domain.port.out.RefundLedgerRepositoryPort;
 import com.vnshop.orderservice.domain.port.out.ReturnRepositoryPort;
+import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -17,23 +23,28 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Closes the buyer-visible half of the refund saga. Payment-service publishes
- * {@code payment.refunded} after a successful gateway refund call; this listener
- * reads the event and flips the underlying Return from COMPLETED to REFUNDED
- * so the buyer's order page reflects the money having moved.
- *
- * <p>Idempotent: a redelivery for an already-REFUNDED return is a no-op.
+ * Closes the buyer-visible refund state and records durable financial evidence.
+ * A payment refund can be an order-level saga compensation without a return ID,
+ * so the ledger is written independently of the return state transition.
  */
 @Service
 public class PaymentRefundedListener {
     private static final Logger LOGGER = LoggerFactory.getLogger(PaymentRefundedListener.class);
 
     private final ReturnRepositoryPort returnRepository;
+    private final RefundLedgerRepositoryPort refundLedgerRepository;
     private final ObjectMapper objectMapper;
+    private final Clock clock;
 
-    public PaymentRefundedListener(ReturnRepositoryPort returnRepository, ObjectMapper objectMapper) {
+    public PaymentRefundedListener(
+            ReturnRepositoryPort returnRepository,
+            RefundLedgerRepositoryPort refundLedgerRepository,
+            ObjectMapper objectMapper,
+            Clock clock) {
         this.returnRepository = returnRepository;
+        this.refundLedgerRepository = refundLedgerRepository;
         this.objectMapper = objectMapper;
+        this.clock = clock;
     }
 
     @RetryableTopic(
@@ -46,34 +57,97 @@ public class PaymentRefundedListener {
     @Transactional
     public void onPaymentRefunded(String eventJson) {
         JsonNode payload = readTree(eventJson);
-        String returnIdRaw = text(payload, "returnId");
-        if (returnIdRaw == null || returnIdRaw.isBlank()) {
-            LOGGER.warn("payment.refunded missing returnId — skipping. payload={}", eventJson);
+        String refundId = text(payload, "refundId");
+        if (refundId == null || refundId.isBlank()) {
+            throw new IllegalArgumentException("payment.refunded requires refundId");
+        }
+
+        UUID orderId = parseUuid(text(payload, "orderId"));
+        if (orderId == null) {
+            throw new IllegalArgumentException("payment.refunded requires a valid orderId");
+        }
+
+        UUID returnId = parseOptionalUuid(payload, "returnId", refundId);
+
+        BigDecimal amount = parseAmount(payload, refundId);
+        if (amount == null) {
+            throw new IllegalArgumentException("payment.refunded requires a positive amount");
+        }
+        String currency = text(payload, "currency");
+        if (currency == null || currency.isBlank()) {
+            throw new IllegalArgumentException("payment.refunded requires currency");
+        }
+        if (!"VND".equalsIgnoreCase(currency)) {
+            throw new IllegalArgumentException("payment.refunded supports VND amounts only");
+        }
+        currency = currency.toUpperCase(Locale.ROOT);
+        String status = text(payload, "status");
+        if (status == null || status.isBlank()) {
+            status = "COMPLETED";
+        }
+        if (!"COMPLETED".equalsIgnoreCase(status)) {
+            LOGGER.warn("payment.refunded refundId={} has non-completed status={}; event ignored", refundId, status);
             return;
         }
-        UUID returnId = parseUuid(returnIdRaw);
+
+        if (refundLedgerRepository.existsByRefundId(refundId)) {
+            LOGGER.debug("payment.refunded refundId={} already recorded; duplicate ignored", refundId);
+            return;
+        }
+
+        refundLedgerRepository.save(new RefundLedgerEntry(
+                refundId,
+                orderId,
+                returnId,
+                text(payload, "sellerId"),
+                amount,
+                currency,
+                Instant.now(clock),
+                status.toUpperCase(Locale.ROOT)));
+
         if (returnId == null) {
-            LOGGER.warn("payment.refunded returnId={} not a valid UUID — skipping", returnIdRaw);
+            LOGGER.info("payment-refunded ledgered orderId={} refundId={} without return", orderId, refundId);
             return;
         }
+
         Optional<Return> maybeReturn = returnRepository.findById(returnId);
         if (maybeReturn.isEmpty()) {
-            LOGGER.warn("payment.refunded returnId={} not found — skipping", returnId);
+            LOGGER.warn("payment.refunded returnId={} not found; ledger retained for refundId={}", returnId, refundId);
             return;
         }
+
         Return orderReturn = maybeReturn.get();
         if (orderReturn.status() == ReturnStatus.REFUNDED) {
-            LOGGER.debug("payment.refunded returnId={} already REFUNDED — idempotent no-op", returnId);
+            LOGGER.debug("payment.refunded returnId={} already REFUNDED; ledger recorded", returnId);
             return;
         }
         if (orderReturn.status() != ReturnStatus.COMPLETED) {
-            LOGGER.warn("payment.refunded returnId={} in status {} — refund event ignored", returnId, orderReturn.status());
+            LOGGER.warn("payment.refunded returnId={} in status={}; ledger recorded", returnId, orderReturn.status());
             return;
         }
+
         orderReturn.markRefunded();
         returnRepository.save(orderReturn);
-        LOGGER.info("payment-refunded returnId={} orderId={} refundId={}",
-                returnId, text(payload, "orderId"), text(payload, "refundId"));
+        LOGGER.info("payment-refunded returnId={} orderId={} refundId={}", returnId, orderId, refundId);
+    }
+
+    private BigDecimal parseAmount(JsonNode payload, String refundId) {
+        String raw = text(payload, "amount");
+        if (raw == null || raw.isBlank()) {
+            LOGGER.warn("payment.refunded refundId={} has no amount; event rejected", refundId);
+            return null;
+        }
+        try {
+            BigDecimal amount = new BigDecimal(raw);
+            if (amount.signum() <= 0) {
+                LOGGER.warn("payment.refunded refundId={} has non-positive amount; event rejected", refundId);
+                return null;
+            }
+            return amount;
+        } catch (NumberFormatException exception) {
+            LOGGER.warn("payment.refunded refundId={} has invalid amount; event rejected", refundId);
+            return null;
+        }
     }
 
     private JsonNode readTree(String json) {
@@ -84,7 +158,23 @@ public class PaymentRefundedListener {
         }
     }
 
+    private static UUID parseOptionalUuid(JsonNode payload, String fieldName, String refundId) {
+        String raw = text(payload, fieldName);
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            return UUID.fromString(raw);
+        } catch (IllegalArgumentException ex) {
+            LOGGER.warn("payment.refunded refundId={} has invalid {}", refundId, fieldName);
+            return null;
+        }
+    }
+
     private static UUID parseUuid(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
         try {
             return UUID.fromString(raw);
         } catch (IllegalArgumentException ex) {
@@ -99,6 +189,6 @@ public class PaymentRefundedListener {
 
     @DltHandler
     public void handleDlt(String message) {
-        LOGGER.error("Message sent to DLT after retries exhausted: {}", message);
+        LOGGER.error("payment.refunded message sent to DLT after retries exhausted");
     }
 }
