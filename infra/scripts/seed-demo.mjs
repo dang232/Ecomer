@@ -6,15 +6,11 @@
  *   node infra/scripts/seed-demo.mjs            # add demo products (skip if catalog non-empty)
  *   FORCE=1 node infra/scripts/seed-demo.mjs    # add even if catalog is non-empty
  *
- * Auth: uses the `vnshop-api` Keycloak client (directAccessGrants enabled in
- * the realm import) with the seeded `seller1`/`test` user. All requests go
- * through the gateway at $GATEWAY (default http://localhost:8080).
+ * Auth: uses the gateway's native auth boundary with the seeded
+ * `seller1`/`test` user. All requests go through $GATEWAY.
  */
 
 const GATEWAY = process.env.GATEWAY ?? "http://localhost:8080";
-const KEYCLOAK = process.env.KEYCLOAK ?? "http://localhost:8085";
-const REALM = process.env.REALM ?? "vnshop";
-const CLIENT_ID = process.env.CLIENT_ID ?? "vnshop-api";
 const SELLER_USER = process.env.SELLER_USER ?? "seller1";
 const SELLER_PASS = process.env.SELLER_PASS ?? "test";
 const FORCE = process.env.FORCE === "1";
@@ -54,21 +50,23 @@ async function main() {
   }
 
   console.log(`==> requesting token for ${SELLER_USER}`);
-  const tokenRes = await fetch(`${KEYCLOAK}/realms/${REALM}/protocol/openid-connect/token`, {
+  const tokenRes = await fetch(`${GATEWAY}/auth/login`, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: CLIENT_ID,
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({
       username: SELLER_USER,
       password: SELLER_PASS,
-      grant_type: "password",
     }),
   });
   if (!tokenRes.ok) {
     console.error(`token request failed: ${tokenRes.status} ${await tokenRes.text()}`);
     process.exit(1);
   }
-  const { access_token: token } = await tokenRes.json();
+  const token = (await tokenRes.json())?.data?.accessToken;
+  if (!token) {
+    console.error("token response did not contain an access token");
+    process.exit(1);
+  }
 
   console.log("==> seeding products");
   let ok = 0;

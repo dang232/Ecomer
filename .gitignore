@@ -252,6 +252,9 @@ app.*.symbols
 !/docs/SPRINT-2026-07-MEDIUM-BLOCKERS.md
 !/docs/ULTRA-GOAL-REPORT-2026-07-10.md
 !/docs/gdt-integration-status.md
+!/docs/FE-DATA-SEARCH-REVIEW-2026-07-22.md
+!/docs/ADMIN-DASHBOARD-DATA-FLOW-FINDINGS.md
+!/docs/FE-DATA-SEARCH-BUSINESS-REVIEW-2026-07-22.pptx
 !/docs/operations/
 !/docs/operations/*.md
 /services/configuration-service/dist

@@ -11,13 +11,10 @@
  * Auth:
  *   Buyer is registered fresh each run (random email so reruns are idempotent).
  *   Seller is the seeded `seller1`/`test`. Admin is `admin1`/`test`.
- *   The `vnshop-api` Keycloak client supplies password-grant tokens.
+ *   The gateway's native auth boundary supplies short-lived access tokens.
  */
 
 const GATEWAY = process.env.GATEWAY ?? "http://localhost:8080";
-const KEYCLOAK = process.env.KEYCLOAK ?? "http://localhost:8085";
-const REALM = process.env.REALM ?? "vnshop";
-const CLIENT_ID = process.env.CLIENT_ID ?? "vnshop-api";
 
 const ONLY = process.env.ONLY ? new Set(process.env.ONLY.split(",")) : null;
 
@@ -97,12 +94,10 @@ async function http(method, path, { token, body, headers = {}, expect = 200 } = 
 }
 
 async function passwordToken(username, password) {
-  const res = await fetch(`${KEYCLOAK}/realms/${REALM}/protocol/openid-connect/token`, {
+  const res = await fetch(`${GATEWAY}/auth/login`, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "password",
-      client_id: CLIENT_ID,
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({
       username,
       password,
     }),
@@ -112,7 +107,9 @@ async function passwordToken(username, password) {
     throw new Error(`token grant failed for ${username}: ${res.status} ${truncate(text, 200)}`);
   }
   const json = await res.json();
-  return json.access_token;
+  const token = json?.data?.accessToken;
+  if (!token) throw new Error(`auth/login response did not contain accessToken for ${username}`);
+  return token;
 }
 
 function unwrap(envelope) {
