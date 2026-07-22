@@ -41,6 +41,22 @@ public class ProductJpaRepository implements ProductRepositoryPort {
     }
 
     @Override
+    public Map<String, String> findNamesByIds(Set<String> productIds) {
+        if (productIds == null || productIds.isEmpty()) {
+            return Map.of();
+        }
+        List<UUID> ids = productIds.stream()
+                .filter(id -> id != null && !id.isBlank())
+                .map(this::parseUuid)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .toList();
+        Map<String, String> names = new HashMap<>();
+        springDataRepository.findAllById(ids).forEach(entity -> names.put(entity.getId().toString(), entity.getName()));
+        return names;
+    }
+
+    @Override
     public List<Product> findBySellerId(String sellerId) {
         return springDataRepository.findBySellerId(sellerId).stream().map(ProductJpaEntity::toDomain).toList();
     }
@@ -132,5 +148,13 @@ public class ProductJpaRepository implements ProductRepositoryPort {
 
     private static String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value;
+    }
+
+    private Optional<UUID> parseUuid(String value) {
+        try {
+            return Optional.of(UUID.fromString(value));
+        } catch (IllegalArgumentException ex) {
+            return Optional.empty();
+        }
     }
 }

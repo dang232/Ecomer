@@ -1,6 +1,5 @@
-package com.vnshop.productservice.infrastructure.event;
+package com.vnshop.productservice.infrastructure.persistence;
 
-import com.vnshop.productservice.infrastructure.persistence.BaseJpaEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -9,11 +8,13 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import lombok.Getter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(schema = "product_svc", name = "product_event_outbox")
 @Getter
-class ProductEventOutboxJpaEntity extends BaseJpaEntity {
+public class ProductEventOutboxJpaEntity extends BaseJpaEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -22,6 +23,7 @@ class ProductEventOutboxJpaEntity extends BaseJpaEntity {
     private String productId;
 
     @Column(name = "payload", nullable = false, columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String payload;
 
     @Column(name = "published_at")
@@ -42,18 +44,18 @@ class ProductEventOutboxJpaEntity extends BaseJpaEntity {
     protected ProductEventOutboxJpaEntity() {
     }
 
-    ProductEventOutboxJpaEntity(String productId, String payload) {
+    public ProductEventOutboxJpaEntity(String productId, String payload) {
         this.productId = productId;
         this.payload = payload;
         this.nextAttemptAt = Instant.now();
     }
 
-    void markPublished() {
+    public void markPublished() {
         publishedAt = Instant.now();
         lastError = null;
     }
 
-    void recordFailure(int maxAttempts, Exception failure) {
+    public void recordFailure(int maxAttempts, Exception failure) {
         attemptCount++;
         lastError = failure.getClass().getSimpleName() + ": " + failure.getMessage();
         if (attemptCount >= maxAttempts) {

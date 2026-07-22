@@ -1,4 +1,4 @@
-package com.vnshop.productservice.infrastructure.event;
+package com.vnshop.productservice.infrastructure.persistence;
 
 import java.time.Instant;
 import java.util.List;
@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-interface ProductEventOutboxSpringDataRepository extends JpaRepository<ProductEventOutboxJpaEntity, Long> {
+public interface ProductEventOutboxSpringDataRepository extends JpaRepository<ProductEventOutboxJpaEntity, Long> {
     @Query("""
             SELECT e FROM ProductEventOutboxJpaEntity e
             WHERE e.dead = FALSE AND e.publishedAt IS NULL AND e.nextAttemptAt <= :now

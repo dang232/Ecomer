@@ -42,9 +42,29 @@ class ReviewJpaRepositoryTest {
     }
 
     @Test
+    void adminReviewSearchNormalizesTheOperatorQuery() {
+        ReviewJpaSpringDataRepository springData = mock(ReviewJpaSpringDataRepository.class);
+        QuestionJpaSpringDataRepository questions = mock(QuestionJpaSpringDataRepository.class);
+        when(springData.findByStatusAndQuery("PENDING", "headphones")).thenReturn(List.of());
+
+        assertThat(new ReviewJpaRepository(springData, questions)
+                .findByStatus(ReviewStatus.PENDING, "  HeadPhones "))
+                .isEmpty();
+
+        verify(springData).findByStatusAndQuery("PENDING", "headphones");
+    }
+
+    @Test
     void sellerAggregatesFilterOutUnapprovedReviews() throws NoSuchMethodException {
         assertThat(queryFor("findSellerReviewStats")).contains("r.status = 'APPROVED'");
         assertThat(queryFor("findSellerReviewStatsBatch")).contains("r.status = 'APPROVED'");
+    }
+
+    @Test
+    void ratingBackfillOnlySelectsExistingProductsWithApprovedReviews() throws NoSuchMethodException {
+        assertThat(queryFor("findProductIdsWithApprovedReviews"))
+                .contains("JOIN product_svc.products")
+                .contains("r.status = 'APPROVED'");
     }
 
     private static String queryFor(String methodName) throws NoSuchMethodException {

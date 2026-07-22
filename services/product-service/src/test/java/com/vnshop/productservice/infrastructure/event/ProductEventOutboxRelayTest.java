@@ -3,6 +3,8 @@ package com.vnshop.productservice.infrastructure.event;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vnshop.productservice.domain.ProductEvent;
 import com.vnshop.productservice.domain.port.out.ProductEventPublisherPort;
+import com.vnshop.productservice.infrastructure.persistence.ProductEventOutboxJpaEntity;
+import com.vnshop.productservice.infrastructure.persistence.ProductEventOutboxSpringDataRepository;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;

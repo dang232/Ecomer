@@ -10,12 +10,15 @@ import com.vnshop.productservice.application.UpdateProductEligibilityUseCase;
 import com.vnshop.productservice.application.PublishProductUseCase;
 import com.vnshop.productservice.application.image.ProductImageUploadService;
 import com.vnshop.productservice.application.review.AnswerQuestionUseCase;
+import com.vnshop.productservice.application.review.AdminReviewListUseCase;
 import com.vnshop.productservice.application.review.AskQuestionUseCase;
 import com.vnshop.productservice.application.review.CreateReviewUseCase;
 import com.vnshop.productservice.application.review.GetProductReviewsUseCase;
 import com.vnshop.productservice.application.review.GetQuestionsUseCase;
 import com.vnshop.productservice.application.review.ModerateReviewUseCase;
+import com.vnshop.productservice.application.review.ProductRatingProjectionService;
 import com.vnshop.productservice.application.review.SellerReviewSummaryUseCase;
+import com.vnshop.productservice.application.review.SellerReviewListUseCase;
 import com.vnshop.productservice.application.review.VoteHelpfulUseCase;
 import com.vnshop.productservice.application.review.image.ReviewImageUploadService;
 import com.vnshop.productservice.application.storage.ObjectValidationPolicy;
@@ -112,16 +115,26 @@ public class UseCaseConfig {
     }
 
     @Bean
+    ProductRatingProjectionService productRatingProjectionService(
+            ProductRepositoryPort productRepositoryPort,
+            ProductEventOutboxPort productEventOutboxPort,
+            ReviewRepositoryPort reviewRepositoryPort) {
+        return new ProductRatingProjectionService(productRepositoryPort, productEventOutboxPort, reviewRepositoryPort);
+    }
+
+    @Bean
     CreateReviewUseCase createReviewUseCase(
             ReviewRepositoryPort reviewRepositoryPort,
             ContentSanitizerPort contentSanitizer,
             PurchaseVerificationPort purchaseVerificationPort,
-            ReviewModerationPort reviewModerationPort) {
+            ReviewModerationPort reviewModerationPort,
+            ProductRatingProjectionService productRatingProjectionService) {
         return new CreateReviewUseCase(
                 reviewRepositoryPort,
                 contentSanitizer,
                 purchaseVerificationPort,
-                reviewModerationPort);
+                reviewModerationPort,
+                productRatingProjectionService);
     }
 
     @Bean
@@ -131,8 +144,17 @@ public class UseCaseConfig {
     }
 
     @Bean
-    ModerateReviewUseCase moderateReviewUseCase(ReviewRepositoryPort reviewRepositoryPort) {
-        return new ModerateReviewUseCase(reviewRepositoryPort);
+    ModerateReviewUseCase moderateReviewUseCase(ReviewRepositoryPort reviewRepositoryPort,
+            ProductRatingProjectionService productRatingProjectionService) {
+        return new ModerateReviewUseCase(reviewRepositoryPort, productRatingProjectionService);
+    }
+
+    @Bean
+    AdminReviewListUseCase adminReviewListUseCase(
+            ReviewRepositoryPort reviewRepositoryPort,
+            BuyerProfileLookupPort buyerProfileLookupPort,
+            ProductRepositoryPort productRepositoryPort) {
+        return new AdminReviewListUseCase(reviewRepositoryPort, buyerProfileLookupPort, productRepositoryPort);
     }
 
     @Bean
@@ -159,6 +181,14 @@ public class UseCaseConfig {
     @Bean
     SellerReviewSummaryUseCase sellerReviewSummaryUseCase(ReviewRepositoryPort reviewRepositoryPort) {
         return new SellerReviewSummaryUseCase(reviewRepositoryPort);
+    }
+
+    @Bean
+    SellerReviewListUseCase sellerReviewListUseCase(
+            ReviewRepositoryPort reviewRepositoryPort,
+            BuyerProfileLookupPort buyerProfileLookupPort,
+            ProductRepositoryPort productRepositoryPort) {
+        return new SellerReviewListUseCase(reviewRepositoryPort, buyerProfileLookupPort, productRepositoryPort);
     }
 
     @Bean

@@ -3,6 +3,8 @@ package com.vnshop.productservice.infrastructure.persistence.review;
 import com.vnshop.productservice.domain.review.ReviewStatus;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,9 +16,81 @@ public interface ReviewJpaSpringDataRepository extends JpaRepository<ReviewJpaEn
 
     List<ReviewJpaEntity> findByProductIdAndStatus(String productId, ReviewStatus status);
 
+    @Query(value = """
+            SELECT AVG(r.rating), COUNT(r.review_id)
+            FROM product_svc.reviews r
+            WHERE r.product_id = :productId
+              AND r.status = 'APPROVED'
+            """, nativeQuery = true)
+    List<Object[]> findProductReviewStats(@Param("productId") String productId);
+
+    @Query(value = """
+            SELECT DISTINCT r.product_id
+            FROM product_svc.reviews r
+            JOIN product_svc.products p ON CAST(p.id AS VARCHAR) = r.product_id
+            WHERE r.status = 'APPROVED'
+            ORDER BY r.product_id
+            """, nativeQuery = true)
+    List<String> findProductIdsWithApprovedReviews();
+
     List<ReviewJpaEntity> findByBuyerId(String buyerId);
 
     List<ReviewJpaEntity> findByStatus(ReviewStatus status);
+
+    @Query(value = """
+            SELECT r.*
+            FROM product_svc.reviews r
+            LEFT JOIN product_svc.products p ON CAST(p.id AS VARCHAR) = r.product_id
+            WHERE r.status = :status
+              AND (
+                    :query = ''
+                    OR lower(CAST(r.review_id AS text)) LIKE CONCAT('%', lower(:query), '%')
+                    OR lower(r.product_id) LIKE CONCAT('%', lower(:query), '%')
+                    OR lower(r.buyer_id) LIKE CONCAT('%', lower(:query), '%')
+                    OR lower(COALESCE(r.order_id, '')) LIKE CONCAT('%', lower(:query), '%')
+                    OR lower(COALESCE(r.text, '')) LIKE CONCAT('%', lower(:query), '%')
+                    OR lower(COALESCE(p.name, '')) LIKE CONCAT('%', lower(:query), '%')
+                  )
+            ORDER BY r.created_at DESC, r.review_id DESC
+            """, nativeQuery = true)
+    List<ReviewJpaEntity> findByStatusAndQuery(@Param("status") String status, @Param("query") String query);
+
+    @Query(value = """
+            SELECT r.*
+            FROM product_svc.reviews r
+            JOIN product_svc.products p ON CAST(p.id AS VARCHAR) = r.product_id
+            WHERE p.seller_id = :sellerId
+              AND r.status = 'APPROVED'
+              AND (
+                    :query = ''
+                    OR lower(CAST(r.review_id AS text)) LIKE CONCAT('%', lower(:query), '%')
+                    OR lower(r.product_id) LIKE CONCAT('%', lower(:query), '%')
+                    OR lower(COALESCE(r.order_id, '')) LIKE CONCAT('%', lower(:query), '%')
+                    OR lower(COALESCE(r.text, '')) LIKE CONCAT('%', lower(:query), '%')
+                    OR lower(COALESCE(p.name, '')) LIKE CONCAT('%', lower(:query), '%')
+                  )
+            ORDER BY r.created_at DESC, r.review_id DESC
+            """,
+            countQuery = """
+            SELECT COUNT(*)
+            FROM product_svc.reviews r
+            JOIN product_svc.products p ON CAST(p.id AS VARCHAR) = r.product_id
+            WHERE p.seller_id = :sellerId
+              AND r.status = 'APPROVED'
+              AND (
+                    :query = ''
+                    OR lower(CAST(r.review_id AS text)) LIKE CONCAT('%', lower(:query), '%')
+                    OR lower(r.product_id) LIKE CONCAT('%', lower(:query), '%')
+                    OR lower(COALESCE(r.order_id, '')) LIKE CONCAT('%', lower(:query), '%')
+                    OR lower(COALESCE(r.text, '')) LIKE CONCAT('%', lower(:query), '%')
+                    OR lower(COALESCE(p.name, '')) LIKE CONCAT('%', lower(:query), '%')
+                  )
+            """,
+            nativeQuery = true)
+    Page<ReviewJpaEntity> findApprovedBySellerId(
+            @Param("sellerId") String sellerId,
+            @Param("query") String query,
+            Pageable pageable);
 
     /**
      * Returns [[AVG(rating), COUNT(review_id)]] across all reviews whose

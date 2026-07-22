@@ -18,6 +18,10 @@ public interface ProductRepositoryPort {
 
     Optional<Product> findById(UUID productId);
 
+    default Map<String, String> findNamesByIds(Set<String> productIds) {
+        return Map.of();
+    }
+
     List<Product> findBySellerId(String sellerId);
 
     List<Product> findByCategory(String categoryId);

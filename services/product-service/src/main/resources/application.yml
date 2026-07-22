@@ -41,6 +41,8 @@ spring:
       # the wire. Spring Kafka's default StringSerializer (and did) threw
       # ClassCastException on every product create/update before this.
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: false
     consumer:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
@@ -108,6 +110,13 @@ review:
     enabled: ${REVIEW_PURCHASE_EVENTS_ENABLED:true}
     topic: ${REVIEW_PURCHASE_EVENTS_TOPIC:order.delivered}
     group-id: ${REVIEW_PURCHASE_EVENTS_GROUP_ID:product-service-review-purchases}
+
+product:
+  review-rating-projection:
+    backfill:
+      enabled: ${PRODUCT_REVIEW_RATING_PROJECTION_BACKFILL_ENABLED:true}
+      initial-delay-ms: ${PRODUCT_REVIEW_RATING_PROJECTION_BACKFILL_INITIAL_DELAY_MS:5000}
+      retry-delay-ms: ${PRODUCT_REVIEW_RATING_PROJECTION_BACKFILL_RETRY_DELAY_MS:60000}
 ---
 spring:
   config:

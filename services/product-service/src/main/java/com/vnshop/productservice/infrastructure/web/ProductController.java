@@ -102,6 +102,10 @@ public class ProductController {
         deleteProductUseCase.delete(id, JwtPrincipalUtil.currentSellerId());
     }
 
+    /**
+     * @deprecated Use cursor-based {@code /products/v2} for buyer catalog reads.
+     */
+    @Deprecated(since = "2026.07", forRemoval = false)
     @GetMapping("/products")
     public ApiResponse<Page<ProductResponse>> findProducts(
             @RequestParam(required = false) String categoryId,

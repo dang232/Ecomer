@@ -16,16 +16,27 @@ public class CreateReviewUseCase {
     private final ContentSanitizerPort contentSanitizer;
     private final PurchaseVerificationPort purchaseVerification;
     private final ReviewModerationPort reviewModeration;
+    private final ProductRatingProjectionService productRatingProjectionService;
 
     public CreateReviewUseCase(
             ReviewRepositoryPort reviewRepositoryPort,
             ContentSanitizerPort contentSanitizer,
             PurchaseVerificationPort purchaseVerification,
             ReviewModerationPort reviewModeration) {
+        this(reviewRepositoryPort, contentSanitizer, purchaseVerification, reviewModeration, null);
+    }
+
+    public CreateReviewUseCase(
+            ReviewRepositoryPort reviewRepositoryPort,
+            ContentSanitizerPort contentSanitizer,
+            PurchaseVerificationPort purchaseVerification,
+            ReviewModerationPort reviewModeration,
+            ProductRatingProjectionService productRatingProjectionService) {
         this.reviewRepositoryPort = Objects.requireNonNull(reviewRepositoryPort, "reviewRepositoryPort is required");
         this.contentSanitizer = Objects.requireNonNull(contentSanitizer, "contentSanitizer is required");
         this.purchaseVerification = Objects.requireNonNull(purchaseVerification, "purchaseVerification is required");
         this.reviewModeration = Objects.requireNonNull(reviewModeration, "reviewModeration is required");
+        this.productRatingProjectionService = productRatingProjectionService;
     }
 
     public Review create(CreateReviewCommand command) {
@@ -53,8 +64,12 @@ public class CreateReviewUseCase {
                 command.images(),
                 verifiedPurchase
         );
-        return reviewRepositoryPort.save(
+        Review saved = reviewRepositoryPort.save(
                 initialStatus == ReviewStatus.PENDING ? review : review.withStatus(initialStatus));
+        if (saved.status() == ReviewStatus.APPROVED && productRatingProjectionService != null) {
+            productRatingProjectionService.publish(saved.productId());
+        }
+        return saved;
     }
 
 }

@@ -4,11 +4,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vnshop.productservice.domain.ProductEvent;
 import com.vnshop.productservice.domain.port.out.ProductEventOutboxPort;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import com.vnshop.productservice.infrastructure.persistence.ProductEventOutboxJpaEntity;
+import com.vnshop.productservice.infrastructure.persistence.ProductEventOutboxSpringDataRepository;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
 @Repository
-@ConditionalOnBean(ProductEventOutboxSpringDataRepository.class)
+@ConditionalOnProperty(name = "spring.data.jpa.repositories.enabled", havingValue = "true", matchIfMissing = true)
 class ProductEventOutboxAdapter implements ProductEventOutboxPort {
     private final ProductEventOutboxSpringDataRepository repository;
     private final ObjectMapper objectMapper;

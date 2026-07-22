@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vnshop.productservice.domain.ProductEvent;
 import com.vnshop.productservice.domain.port.out.ProductEventPublisherPort;
+import com.vnshop.productservice.infrastructure.persistence.ProductEventOutboxJpaEntity;
+import com.vnshop.productservice.infrastructure.persistence.ProductEventOutboxSpringDataRepository;
 import java.time.Instant;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -11,14 +13,14 @@ import java.util.concurrent.TimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@ConditionalOnBean(ProductEventOutboxSpringDataRepository.class)
+@ConditionalOnProperty(name = "spring.data.jpa.repositories.enabled", havingValue = "true", matchIfMissing = true)
 class ProductEventOutboxRelay {
     private static final Logger LOGGER = LoggerFactory.getLogger(ProductEventOutboxRelay.class);
     private final ProductEventOutboxSpringDataRepository repository;

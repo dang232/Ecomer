@@ -27,6 +27,9 @@ public class KafkaSerializationConfig {
             KafkaProperties kafkaProperties, ObjectMapper objectMapper) {
         Map<String, Object> properties = kafkaProperties.buildProducerProperties();
         JsonSerializer<Object> valueSerializer = new JsonSerializer<>(objectMapper);
+        // Consumers bind to their local event type; Java package type headers
+        // would point them at product-service classes and fail deserialization.
+        valueSerializer.setAddTypeInfo(false);
         @SuppressWarnings("unchecked")
         Serializer<Object> keySerializer = (Serializer<Object>) (Serializer<?>) new StringSerializer();
         return new DefaultKafkaProducerFactory<>(properties, keySerializer, valueSerializer);

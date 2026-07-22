@@ -29,6 +29,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api-docs", "/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/reviews/seller/me").hasRole("SELLER")
                         .requestMatchers(HttpMethod.GET, "/products/**", "/categories/**", "/reviews/**", "/questions/**", "/sellers/**", "/api/v1/videos").permitAll()
                         .requestMatchers(HttpMethod.POST, "/reviews/seller-summaries").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/prometheus", "/actuator/info").permitAll()

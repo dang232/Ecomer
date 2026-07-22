@@ -2,6 +2,7 @@ package com.vnshop.productservice.domain.review.port.out;
 
 import com.vnshop.productservice.domain.review.ProductQuestion;
 import com.vnshop.productservice.domain.review.Review;
+import com.vnshop.productservice.domain.review.ProductReviewSummary;
 import com.vnshop.productservice.domain.review.ReviewStatus;
 import com.vnshop.productservice.domain.review.SellerReviewSummary;
 
@@ -10,6 +11,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface ReviewRepositoryPort {
     Review save(Review review);
@@ -18,13 +21,34 @@ public interface ReviewRepositoryPort {
 
     List<Review> findByProductId(String productId);
 
+    default ProductReviewSummary getProductReviewSummary(String productId) {
+        return ProductReviewSummary.empty();
+    }
+
+    /** Returns products whose approved reviews need a rating projection. */
+    default List<String> findProductIdsWithApprovedReviews() {
+        return List.of();
+    }
+
     List<Review> findByBuyerId(String buyerId);
 
     List<Review> findByStatus(ReviewStatus status);
 
+    default List<Review> findByStatus(ReviewStatus status, String query) {
+        return findByStatus(status);
+    }
+
+    default Page<Review> findApprovedBySellerId(String sellerId, String query, Pageable pageable) {
+        throw new UnsupportedOperationException("seller review listing is not available for this repository");
+    }
+
     Optional<Review> findReviewById(UUID reviewId);
 
     Review moderate(UUID reviewId, ReviewStatus status);
+
+    default Review moderate(UUID reviewId, ReviewStatus status, String rejectionReason) {
+        return moderate(reviewId, status).withRejectionReason(rejectionReason);
+    }
 
     ProductQuestion saveQuestion(ProductQuestion question);
 
