@@ -36,7 +36,7 @@
 		<tomcat.version>11.0.22</tomcat.version>
 		<grpc.version>1.81.0</grpc.version>
 		<protobuf.version>4.35.1</protobuf.version>
-		<postgresql.version>42.7.11</postgresql.version>
+		<postgresql.version>42.7.12</postgresql.version>
 	</properties>
 	<dependencyManagement>
 		<dependencies>

@@ -31,7 +31,7 @@
 		<jackson3.version>3.1.4</jackson3.version>
 		<java.version>25</java.version>
 		<opentelemetry.javaagent.version>2.27.0</opentelemetry.javaagent.version>
-		<postgresql.version>42.7.11</postgresql.version>
+		<postgresql.version>42.7.12</postgresql.version>
 		<tomcat.version>11.0.22</tomcat.version>
 		<netty.version>4.2.15.Final</netty.version>
 		<spring-kafka.version>4.0.6</spring-kafka.version>

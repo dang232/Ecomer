@@ -34,7 +34,7 @@
 		<tomcat.version>11.0.22</tomcat.version>
 		<grpc.version>1.82.2</grpc.version>
 		<protobuf.version>3.25.5</protobuf.version>
-		<postgresql.version>42.7.11</postgresql.version>
+		<postgresql.version>42.7.12</postgresql.version>
 		<netty.version>4.2.15.Final</netty.version>
 		<spring-kafka.version>4.0.6</spring-kafka.version>
 	</properties>
