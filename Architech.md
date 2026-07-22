@@ -1,6 +1,6 @@
 # VNShop Architecture and Service Guide
 
-> Status snapshot: 2026-07-22. This document describes the repository as it exists at `main`.
+> Status snapshot: 2026-07-22. This document describes the repository after the production-readiness closure pass.
 > It is an engineering reference, not a production-readiness approval. The readiness review is
 > recorded in [`docs/PRODUCTION-READINESS-REVIEW.md`](docs/PRODUCTION-READINESS-REVIEW.md).
 
@@ -124,7 +124,7 @@ environment.
 - **Dependencies:** PostgreSQL schema `order_svc`, Redis, Kafka, inventory/payment/shipping gRPC clients, product and coupon ports, and configuration-service.
 - **Events:** Coordinates order, payment, inventory, shipping, return, refund, payout, and invoice events through outbox-backed transitions.
 - **Boundary:** It owns order lifecycle state; it does not own payment ledger balances, stock, shipment state, or seller wallet balances.
-- **Readiness:** It has the widest money-path surface and the strongest test coverage in the repository. Production requires durable outbox relay/claim monitoring, Kafka ACLs, gRPC target configuration, idempotency, and end-to-end compensation tests.
+- **Readiness:** It has the widest money-path surface and the strongest test coverage in the repository. The admin dashboard is served by a single `GET /admin/dashboard/report` snapshot plus an ADMIN-only CSV export; confirmed refunds are recorded in the idempotent `order_svc.refund_ledger` projection and exposed as `refundedAmount`/`realizedRevenue`. Production still requires migration validation, durable outbox relay/claim monitoring, Kafka ACLs, gRPC target configuration, idempotency, and end-to-end compensation tests.
 
 #### `coupon-service` - port 8088 (legacy)
 
@@ -369,6 +369,24 @@ transactional use case
 
 The outbox boundary matters: Kafka is not the source of truth for an order, payment, or accepted
 carrier callback. The owning database is the source of truth; Kafka is the delivery mechanism.
+
+### 9.3 Operator read-model boundaries
+
+Operator pages do not query the public catalog index for private records and do not fan out from the
+browser one UUID at a time. Each owning service builds its response projection before the gateway
+returns it:
+
+| Workflow | Owning service | Contract and data path |
+| --- | --- | --- |
+| Admin order queue | `order-service` | `GET /admin/orders?q=&status=&page=&size=` reads the bounded order summary page, batches buyer IDs to `user-service /users/public-profiles`, batches seller IDs to `user-service /sellers/public-profiles`, then returns `buyerName` and `sellerName` alongside secondary IDs. |
+| Admin dispute queue | `order-service` | `GET /admin/disputes/open?q=` reads dispute records, joins the owning return and order summary, batches buyer/shop labels through `UserDirectoryPort`, and returns order number, buyer/shop names, and request time. |
+| Admin payout queue | `seller-finance-service` | `GET /admin/finance/payouts/pending?q=` and `/completed?q=` query payout state locally, then use the configured `SellerDirectoryPort` to resolve `sellerName`. A directory outage leaves the payout ID intact and the label explicitly unavailable. |
+| Seller review queue | `product-service` | `GET /reviews/seller/me?q=&page=&size=` applies the authenticated seller scope in SQL, reads approved reviews, and batch-enriches buyer names and product names before returning the Spring page. |
+| Admin review moderation | `product-service` | `GET /admin/reviews/pending?q=` searches pending reviews in the product read model and returns buyer/product projections through the same service-owned enrichment path. |
+| Cart seller display | `cart-service` | Add/merge reads the product snapshot, obtains the seller shop label from `user-service`, and persists `sellerId`/`sellerName` in the Redis/PostgreSQL cart snapshot. Existing pre-contract items remain backward-compatible and show the generic label until refreshed. |
+
+`search-service` remains intentionally limited to public product/category discovery. It must not become
+the index for admin users, orders, payouts, disputes, or moderation records.
 
 ## 10. Service Code Map
 

@@ -1,6 +1,6 @@
 # Production Readiness Review
 
-> Review date: 2026-07-22
+> Review date: 2026-07-23
 > Scope: repository-wide review of local fallbacks, hardcoded local infrastructure, provider modes, and deployment placeholders.
 > Review mode: independent code-quality and architecture lanes plus repository evidence inspection.
 
@@ -12,6 +12,13 @@ The application architecture is substantial and the main domain paths are implem
 deployment still contains non-production defaults and incomplete promotion artifacts. The most important
 issues are deployment-level: production Kustomize keeps stub/demo provider modes, image digests are all
 zero placeholders, and the runtime SealedSecret has no encrypted data.
+
+The admin-dashboard closure round is now code-complete for the repository-owned contract:
+`GET /admin/dashboard/report` provides one `asOf` snapshot, confirmed refunds are recorded in
+the idempotent order-service refund ledger, `realizedRevenue` is exposed separately from
+`paidGmv`, and the ADMIN-only CSV export can reuse the report `asOf` for the same numbers.
+Migration, gateway, database,
+and browser evidence for that round is still `blocked-external` because Docker is unavailable.
 
 ## Review method
 

@@ -2,7 +2,7 @@
 
 A polyglot microservices e-commerce platform demonstrating DDD, CQRS, hexagonal architecture, and event-driven sagas, with a React SPA and Flutter mobile app.
 
-VNShop is a portfolio full-stack project for a Vietnamese multi-seller marketplace inspired by Shopee, Lazada, and Tiki. It ships with: 19 services (Spring Boot + NestJS), per-service Postgres, Kafka (SASL-authenticated + per-service ACLs) + saga + outbox, Keycloak-backed httpOnly-cookie auth, a React + Vite SPA, and a Flutter mobile app with OneSignal push notifications and VietQR/MoMo payment integration. Two end-to-end test suites gate every change — `e2e-day.mjs` (65/65 API endpoints) and Playwright (108/108 browser scenarios).
+VNShop is a portfolio full-stack project for a Vietnamese multi-seller marketplace inspired by Shopee, Lazada, and Tiki. It ships with: 19 services (Spring Boot + NestJS), per-service Postgres, Kafka (SASL-authenticated + per-service ACLs) + saga + outbox, Keycloak-backed httpOnly-cookie auth, a React + Vite SPA, and a Flutter mobile app with OneSignal push notifications and VietQR/MoMo payment integration. The latest local Docker evidence run passed `e2e-day.mjs` (66/66 API checks) and Playwright (202 passed, 2 skipped, 204 total).
 
 ## System Requirements
 
@@ -17,7 +17,10 @@ VNShop is a portfolio full-stack project for a Vietnamese multi-seller marketpla
 | --- | --- |
 | [HANDOFF.md](HANDOFF.md) | **Start here.** Single-page pickup doc for someone new to the codebase. |
 | [Architech.md](Architech.md) | Source-linked service architecture, code maps, end-to-end workflows, state machines, fallbacks, and deployment model. |
+| [Admin dashboard data-flow findings](docs/ADMIN-DASHBOARD-DATA-FLOW-FINDINGS.md) | v2 report snapshot, refund ledger, realized revenue, CSV export, seller-name enrichment, and verification gates. |
 | [Production readiness review](docs/PRODUCTION-READINESS-REVIEW.md) | Dated review of local fallbacks, hardcoded infrastructure, provider modes, and release blockers. |
+| [Full-stack evidence review](fe/e2e/evidence/full-audit/EVIDENCE-REVIEW.md) | Final API/Playwright/Agent Browser proof, independent review findings, fixes, and remaining release blockers. |
+| [Final verification record](fe/e2e/evidence/full-audit/FINAL-VERIFICATION.md) | Exact commands, counts, Docker readiness evidence, and the final local-vs-production gate decision. |
 | [CI pipeline](docs/CI-PIPELINE.md) | Required GitHub Actions jobs, local reproduction commands, and release-gate behavior. |
 | [Architecture doc](docs/architect/SYSTEM-ARCHITECTURE.md) | Full system design, bounded contexts, API conventions |
 | [Status reality](docs/STATUS-REALITY-2026-05-14.md) | Historical reconciliation of service health, feature coverage, and known gaps |
@@ -63,7 +66,7 @@ flowchart TB
 
     subgraph edge [Edge]
         GW["Spring Cloud Gateway<br/>:8080<br/>CORS, JWT validation<br/>rate limit, circuit breaker"]
-        KC["Keycloak 26 :8085<br/>OIDC / OAuth<br/>JWT issuer (vnshop realm)"]
+        KC["Keycloak 26 internal-only<br/>OIDC / OAuth provider<br/>JWT issuer (vnshop realm)"]
     end
 
     subgraph core [Core Services]
@@ -139,7 +142,9 @@ Historical baseline unit tests (2026-06-21):
 - **Production-readiness reliability closure** (2026-07-22). Payment callbacks, shipping webhooks, product events, and search projection repair now use durable delivery boundaries; Kafka failures remain retryable instead of being acknowledged early. Missing inventory projections reject reservation, and notification retries persist retry/DLQ state.
 - **Shipping webhook hardening** (2026-07-22). GHN/GHTK callbacks use explicit public routes, shared application workflow, typed provider/security/retry configuration, fail-closed signature verification, idempotent durable acceptance, and `503` responses when durable delivery cannot be recorded. The live carrier adapter is wired, while the checkout contract still needs carrier-required address and parcel fields.
 - **Consent-gated cart merge** (2026-07-22). Guest and server quantities are combined by intent through one authenticated atomic/idempotent merge operation; the browser effect cannot bypass the user's keep-separate choice.
+- **Service-owned operator read models** (2026-07-22). Admin orders and disputes are contextualized by `order-service`, payouts by `seller-finance-service`, and review queues by `product-service`; buyer/shop/product labels are batch-resolved through `user-service` public-profile APIs instead of frontend UUID fallbacks. The remaining operator risk is bounded pagination and live PostgreSQL integration coverage. See [`docs/FE-DATA-SEARCH-REVIEW-2026-07-22.md`](docs/FE-DATA-SEARCH-REVIEW-2026-07-22.md) and [`Architech.md`](Architech.md).
 - **CI and runtime hardening** (2026-07-22). The required `CI Gate` aggregates repository, frontend, mobile, Java, Node, Python, protobuf, secret-scan, and container checks. Notification runtime dependencies are pinned and included in its image. See [`docs/CI-PIPELINE.md`](docs/CI-PIPELINE.md).
+- **Admin dashboard financial closure** (2026-07-23). The dashboard now reads one server-snapshotted v2 report, records idempotent confirmed refunds in `order_svc.refund_ledger`, exposes `refundedAmount` and `realizedRevenue`, and downloads a bounded CSV using the page's `asOf` snapshot. Runtime migration, gateway, and browser evidence remains blocked while Docker is unavailable. See [`docs/ADMIN-DASHBOARD-DATA-FLOW-FINDINGS.md`](docs/ADMIN-DASHBOARD-DATA-FLOW-FINDINGS.md).
 
 ### Previous shipped (2026-06-09 → 2026-06-21)
 
@@ -177,7 +182,7 @@ Historical baseline unit tests (2026-06-21):
 ```mermaid
 flowchart TB
   GW[api-gateway :8080]
-  KC[Keycloak :8085]
+  KC[Keycloak internal-only]
   FE[frontend :3000]
   MOB[Flutter Mobile]
 
@@ -230,7 +235,7 @@ flowchart TB
 | Node services | Node.js 24 LTS, NestJS 11 |
 | Frontend | React 18.3, Vite 6.3, TanStack Query 5, react-router 7, i18next 26, zod 4, Tailwind v4 |
 | Mobile | Flutter 3.44, BLoC state management, Dio HTTP, OneSignal push |
-| Identity | Keycloak 26.6 (`vnshop` realm), OIDC / OAuth2, JWT, ROPC for native login |
+| Identity | Keycloak 26.6 (`vnshop` realm) internal-only, native cookie auth via gateway, JWT |
 | Data stores | PostgreSQL 17.9 (per-service), Redis 8.6, Elasticsearch 9.4.0, MinIO (S3-compatible) |
 | Messaging | Kafka (`confluentinc/cp-kafka:8.2.0`), SASL_PLAINTEXT + per-service ACLs, outbox pattern, saga orchestration |
 | Payments | COD, VietQR, SePay (live); Stripe, PayPal (sandbox-ready, full refund saga); VNPay deferred; MoMo fully implemented (`MOMO_ENABLED=false` default) |
@@ -250,7 +255,7 @@ Stand up everything (infrastructure + 18 app services + frontend):
 docker compose --profile apps up -d
 ```
 
-One-time post-import setup for Keycloak admin client (idempotent):
+One-time post-import setup for the internal Keycloak admin client (idempotent; no host port is published):
 
 ```bash
 bash infra/scripts/setup-keycloak-admin-client.sh
@@ -284,7 +289,7 @@ If you see 503s on either suite, Spring Cloud Gateway's Resilience4j breaker has
 | `http://localhost:3000` | Storefront SPA (React + Vite, dockerised bundle) |
 | `http://localhost:5173` | Storefront SPA (Vite dev server, optional alternative) |
 | `http://localhost:8080` | API gateway |
-| `http://localhost:8085` | Keycloak admin console |
+| Docker network only | Keycloak 26.6 identity provider; the admin console is not host-exposed |
 | `http://localhost:9200` | Elasticsearch |
 | `http://localhost:16686` | Jaeger UI |
 | `http://localhost:9000` | MinIO console |
@@ -295,7 +300,7 @@ If you see 503s on either suite, Spring Cloud Gateway's Resilience4j breaker has
 
 | System | Username | Password |
 | --- | --- | --- |
-| Keycloak admin | `admin` | `admin` |
+| Keycloak bootstrap admin | `admin` | `admin` (container-only; use a controlled tunnel for administration) |
 | PostgreSQL (all per-service DBs) | `vnshop` | `vnshop` |
 | MinIO root | `minioadmin` | `minioadmin` |
 
@@ -317,7 +322,7 @@ If you see 503s on either suite, Spring Cloud Gateway's Resilience4j breaker has
 8082 product-service
 8083 inventory-service
 8084 cart-service
-8085 keycloak
+8085 keycloak (internal Docker port; not published)
 8086 search-service
 8087 notification-service
 8088 coupon-service          (archived local migration source; never deployed)

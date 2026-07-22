@@ -17,6 +17,7 @@ VNShop is a Vietnamese e-commerce platform built on a microservices backbone. Th
 | [TRADE-OFFS.md](TRADE-OFFS.md) | Documented architectural decisions with rationale and known downsides |
 | [BUGS-AND-GOTCHAS.md](BUGS-AND-GOTCHAS.md) | Hard-learned lessons, runtime surprises, and known bugs from all sessions |
 | [TIPS-AND-TRICKS.md](TIPS-AND-TRICKS.md) | Patterns and practices for Spring Boot, Kafka, MongoDB, Redis, WebSocket, React, testing, security, Docker |
+| [Admin dashboard data-flow findings](../ADMIN-DASHBOARD-DATA-FLOW-FINDINGS.md) | Confirmed dashboard metric defects, refund-flow gap, repair order, and verification gates |
 
 ## Quick orientation
 
