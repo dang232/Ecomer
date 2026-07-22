@@ -1,17 +1,18 @@
 # VNShop Web (frontend)
 
-React 18 + Vite 6 + Tailwind v4 SPA. Talks to the backend through the Spring Cloud Gateway at `:8080`. Authenticates against Keycloak (`vnshop` realm) using `keycloak-js` PKCE.
+React 18 + Vite 6 + Tailwind v4 SPA. Talks to the backend through the Spring Cloud Gateway at `:8080`. Authenticates through the gateway's native httpOnly-cookie boundary; Keycloak stays internal to the service network.
 
 ## Quick start (local)
 
 ```bash
 cp .env.example .env.local
-# edit .env.local if your gateway/Keycloak run somewhere else
+# edit .env.local if your gateway runs somewhere else
 npm install
 npm run dev
 ```
 
-App runs at http://localhost:5173 (Vite default). Sign in via the Keycloak redirect.
+App runs at http://localhost:5173 (Vite default). Sign in through the gateway's
+native form; Keycloak is not a browser configuration surface.
 
 ## Scripts
 
@@ -31,7 +32,7 @@ src/
     ├── pages/                # one file per top-level page
     ├── components/           # ui + domain components (incl. error boundary)
     ├── hooks/
-    │   ├── use-auth.tsx      # keycloak-js wrapper
+    │   ├── use-auth.tsx      # native cookie-auth wrapper
     │   ├── use-cart.ts       # TanStack Query around /cart
     │   ├── use-orders.ts
     │   └── use-wishlist.ts   # localStorage (until BE-8 ships)
@@ -41,7 +42,7 @@ src/
     │   │   ├── envelope.ts   # Zod schema + ApiError class
     │   │   └── endpoints/    # one file per backend domain
     │   ├── auth/
-    │   │   ├── keycloak.ts   # singleton Keycloak instance
+    │   │   ├── native-auth.ts # gateway login/refresh/logout boundary
     │   │   └── role-guard.tsx
     │   └── query-client.ts
     └── types/api.ts          # shared DTO schemas
@@ -64,7 +65,9 @@ Tracked in the project plan as BE-1…BE-10. Most relevant for FE work:
 - Wishlist API (`F36`) — `WishlistPage` is local-only via `localStorage` until `/users/me/wishlist` ships.
 - Carrier tracking (`/shipping/track/*`) — order detail surfaces `subOrders[*].trackingCode` only.
 - Push/SSE channel — notifications poll every 30s (Page Visibility-gated) until a stream endpoint exists.
-- Keycloak client `vnshop-web` (PKCE, redirect `http://localhost:3000/*` and `http://localhost:5173/*`) needs to be present in the realm import.
+- Keycloak remains internal to the service network. The gateway exposes only
+  selected protocol resources for optional broker/reset flows; the admin console
+  and direct container port are not exposed.
 
 ## Docker
 

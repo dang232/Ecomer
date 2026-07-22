@@ -63,7 +63,6 @@ export class AuthError extends Error {
 /** Module-level live reference. Kept in sync by the AuthProvider so the api client can read the current token without going through React. */
 let liveTokenSet: TokenSet | null = null;
 let inFlightRefresh: Promise<TokenSet> | null = null;
-let tokenRefreshHandler: (() => Promise<TokenSet>) | null = null;
 
 export function getAccessToken(): string | null {
   return liveTokenSet?.accessToken ?? null;
@@ -71,10 +70,6 @@ export function getAccessToken(): string | null {
 
 export function setLiveTokenSet(next: TokenSet | null): void {
   liveTokenSet = next;
-}
-
-export function setTokenRefreshHandler(handler: (() => Promise<TokenSet>) | null): void {
-  tokenRefreshHandler = handler;
 }
 
 interface AuthSessionResponse {
@@ -179,7 +174,6 @@ export async function passwordLogin(username: string, password: string): Promise
 export async function refreshTokens(): Promise<TokenSet> {
   if (inFlightRefresh) return inFlightRefresh;
   const pending = (async () => {
-    if (tokenRefreshHandler) return tokenRefreshHandler();
     const res = await postAuth(apiUrl("/auth/refresh"), undefined, csrfAuthHeader());
     return readEnvelope(res, "refresh_failed");
   })();

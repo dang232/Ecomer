@@ -141,46 +141,48 @@ export function SellerDashboard({
             {t("seller.dashboard.revenue30dLoading")}
           </p>
         ) : hasRevenue ? (
-          <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={chartData}>
-              <defs>
-                <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis
-                dataKey="day"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
-              />
-              <YAxis
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
-                tickFormatter={(v: number) => `${(v / 1000000).toFixed(0)}tr`}
-              />
-              <Tooltip
-                formatter={(v: number) => formatPrice(v)}
-                contentStyle={{
-                  borderRadius: "var(--radius-lg)",
-                  border: "1px solid var(--border)",
-                  boxShadow: "var(--shadow-lg)",
-                  background: "var(--card)",
-                  color: "var(--foreground)",
-                }}
-              />
-              <Area
-                type="monotone"
-                dataKey="revenue"
-                stroke="var(--primary)"
-                strokeWidth={2.5}
-                fill="url(#revenueGrad)"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+          <div data-testid="seller-revenue-chart">
+            <ResponsiveContainer width="100%" height={200}>
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis
+                  dataKey="day"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+                  tickFormatter={(v: number) => `${(v / 1000000).toFixed(0)}tr`}
+                />
+                <Tooltip
+                  formatter={(v: number) => formatPrice(v)}
+                  contentStyle={{
+                    borderRadius: "var(--radius-lg)",
+                    border: "1px solid var(--border)",
+                    boxShadow: "var(--shadow-lg)",
+                    background: "var(--card)",
+                    color: "var(--foreground)",
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="var(--primary)"
+                  strokeWidth={2.5}
+                  fill="url(#revenueGrad)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         ) : (
           <p className="text-sm text-muted-foreground py-12 text-center">
             {t("seller.dashboard.revenue30dEmpty")}
@@ -196,32 +198,34 @@ export function SellerDashboard({
             {t("seller.dashboard.orders30dLoading")}
           </p>
         ) : hasRevenue ? (
-          <ResponsiveContainer width="100%" height={160}>
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-              <XAxis
-                dataKey="day"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
-              />
-              <YAxis
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
-              />
-              <Tooltip
-                contentStyle={{
-                  borderRadius: "var(--radius-lg)",
-                  border: "1px solid var(--border)",
-                  boxShadow: "var(--shadow-lg)",
-                  background: "var(--card)",
-                  color: "var(--foreground)",
-                }}
-              />
-              <Bar dataKey="orders" fill="var(--accent)" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <div data-testid="seller-orders-chart">
+            <ResponsiveContainer width="100%" height={160}>
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                <XAxis
+                  dataKey="day"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: "var(--radius-lg)",
+                    border: "1px solid var(--border)",
+                    boxShadow: "var(--shadow-lg)",
+                    background: "var(--card)",
+                    color: "var(--foreground)",
+                  }}
+                />
+                <Bar dataKey="orders" fill="var(--accent)" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         ) : (
           <p className="text-sm text-muted-foreground py-10 text-center">
             {t("seller.dashboard.orders30dEmpty")}

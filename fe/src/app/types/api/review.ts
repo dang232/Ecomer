@@ -4,7 +4,7 @@ import { productIdSchema } from "./branded-ids";
 
 // BE review-service / product-service ReviewResponse(reviewId, productId,
 // buyerId, userName, userAvatarUrl, orderId, rating, text, images,
-// verifiedPurchase, helpfulVotes, status, createdAt). FE consumers use
+// verifiedPurchase, helpfulVotes, status, rejectionReason, createdAt). FE consumers use
 // review.id, review.userId, review.userName, review.userAvatarUrl,
 // review.comment, review.helpful — aliased through the transform.
 export const reviewSchema = z
@@ -27,6 +27,8 @@ export const reviewSchema = z
     orderId: z.string().nullable().optional(),
     verifiedPurchase: z.boolean().optional(),
     status: z.string().optional(),
+    rejectionReason: z.string().nullable().optional(),
+    productName: z.string().nullable().optional(),
     productId: productIdSchema,
     rating: z.number(),
     images: z.array(z.string()).optional(),
@@ -50,9 +52,30 @@ export const reviewSchema = z
     helpful: raw.helpful ?? raw.helpfulVotes ?? 0,
     verifiedPurchase: raw.verifiedPurchase,
     status: raw.status,
+    rejectionReason: raw.rejectionReason ?? null,
+    productName: raw.productName ?? null,
     createdAt: raw.createdAt,
   }));
 export type Review = z.infer<typeof reviewSchema>;
+
+export const reviewPageSchema = z
+  .object({
+    content: z.array(reviewSchema).default([]),
+    number: z.number().optional(),
+    page: z.number().optional(),
+    size: z.number().default(20),
+    totalElements: z.number().default(0),
+    totalPages: z.number().default(0),
+  })
+  .passthrough()
+  .transform((raw) => ({
+    content: raw.content,
+    page: raw.page ?? raw.number ?? 0,
+    size: raw.size,
+    totalElements: raw.totalElements,
+    totalPages: raw.totalPages,
+  }));
+export type ReviewPage = z.infer<typeof reviewPageSchema>;
 
 export const questionSchema = z
   .object({

@@ -216,7 +216,7 @@ export function CartPage() {
     (acc, item) => {
       const sid = item.sellerId ?? "_";
       if (!acc[sid]) {
-        acc[sid] = { sellerName: item.sellerId ?? t("cart.sellerFallback"), items: [] };
+        acc[sid] = { sellerName: item.sellerName ?? t("cart.sellerFallback"), items: [] };
       }
       acc[sid].items.push(item);
       return acc;
@@ -276,10 +276,10 @@ export function CartPage() {
                   </button>
 
                   {/* Seller */}
-                  {item.sellerId ? (
+                  {item.sellerName ? (
                     <span className="text-[11px] text-muted-foreground flex items-center gap-1 mt-1">
                       <Store size={12} />
-                      {item.sellerId}
+                      {item.sellerName}
                     </span>
                   ) : null}
 

@@ -1,3 +1,4 @@
+import { IconSearch } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -11,9 +12,10 @@ export function DisputesQueue() {
   const qc = useQueryClient();
   const { t } = useTranslation();
   const [resolveFor, setResolveFor] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const disputesQuery = useQuery({
-    queryKey: ["admin", "disputes"],
-    queryFn: adminOpenDisputes,
+    queryKey: ["admin", "disputes", search],
+    queryFn: () => adminOpenDisputes({ q: search || undefined }),
     retry: false,
   });
 
@@ -23,7 +25,7 @@ export function DisputesQueue() {
       body,
     }: {
       id: string;
-      body: { resolution: string; refundAmount?: number };
+      body: { adminResolution: string };
     }) => adminResolveDispute(id, body),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["admin", "disputes"] });
@@ -54,28 +56,26 @@ export function DisputesQueue() {
             type: "textarea",
             required: true,
           },
-          {
-            key: "refundAmount",
-            label: t("admin.disputes.resolveDialog.refundLabel"),
-            placeholder: t("admin.disputes.resolveDialog.refundPlaceholder"),
-            type: "number",
-            required: false,
-            helper: t("admin.disputes.resolveDialog.refundHelper"),
-          },
         ]}
         onClose={() => setResolveFor(null)}
-        onSubmit={({ resolution, refundAmount }) => {
+        onSubmit={({ resolution }) => {
           if (!resolveFor) return;
-          const body: { resolution: string; refundAmount?: number } = { resolution };
-          if (refundAmount) {
-            const parsed = Number(refundAmount.replace(/\D/g, ""));
-            if (parsed > 0) body.refundAmount = parsed;
-          }
-          resolve.mutate({ id: resolveFor, body });
+          resolve.mutate({ id: resolveFor, body: { adminResolution: resolution } });
         }}
         isSubmitting={resolve.isPending}
       />
       <h2 className="text-xl font-bold text-foreground">{t("admin.disputes.title")}</h2>
+
+      <div className="flex items-center gap-2 bg-card border border-border rounded-xl px-3 py-2 shadow-sm">
+        <IconSearch size={14} className="text-muted-foreground" aria-hidden="true" />
+        <input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder={t("admin.disputes.searchPlaceholder")}
+          aria-label={t("admin.disputes.searchPlaceholder")}
+          className="flex-1 text-sm outline-none bg-transparent"
+        />
+      </div>
 
       {disputesQuery.isLoading ? (
         <p className="text-sm text-muted-foreground">{t("admin.disputes.loading")}</p>
@@ -93,7 +93,11 @@ export function DisputesQueue() {
               <div>
                 <p className="text-xs font-mono text-muted-foreground">{d.id}</p>
                 <p className="text-sm font-semibold text-foreground">
-                  {t("admin.disputes.orderLabel", { id: d.returnId })}
+                  {t("admin.disputes.orderLabel", { id: d.orderNumber ?? d.returnId })}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {d.buyerName ?? t("admin.disputes.buyerFallback")}
+                  {d.sellerName ? ` · ${d.sellerName}` : ""}
                 </p>
                 <p className="text-xs text-muted-foreground">{d.createdAt ?? ""}</p>
               </div>

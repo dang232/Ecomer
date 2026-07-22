@@ -79,6 +79,7 @@ function NavItem({
 
 export function SellerPage() {
   const [activeTab, setActiveTab] = useState<SellerTab>("dashboard");
+  const [orderSearch, setOrderSearch] = useState("");
   const { t } = useTranslation();
 
   const profileQuery = useQuery({
@@ -88,8 +89,8 @@ export function SellerPage() {
   });
 
   const pendingQuery = useQuery({
-    queryKey: ["seller", "pending-orders"],
-    queryFn: sellerPendingOrders,
+    queryKey: ["seller", "pending-orders", orderSearch],
+    queryFn: () => sellerPendingOrders({ q: orderSearch || undefined }),
     refetchInterval: 60_000,
     retry: false,
   });
@@ -226,6 +227,8 @@ export function SellerPage() {
             {activeTab === "orders" ? (
               <SellerOrders
                 orders={pendingOrders}
+                search={orderSearch}
+                onSearch={setOrderSearch}
                 isLoading={pendingQuery.isLoading}
                 error={pendingQuery.error}
                 onRetry={() => void pendingQuery.refetch()}

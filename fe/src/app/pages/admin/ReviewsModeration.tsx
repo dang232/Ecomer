@@ -1,4 +1,4 @@
-import { IconCircleCheck, IconStar, IconCircleX } from "@tabler/icons-react";
+import { IconCircleCheck, IconSearch, IconStar, IconCircleX } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -16,9 +16,11 @@ export function ReviewsModeration() {
   const qc = useQueryClient();
   const { t } = useTranslation();
   const [rejectFor, setRejectFor] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const reviewsQuery = useQuery({
-    queryKey: ["admin", "reviews", "pending"],
-    queryFn: adminPendingReviews,
+    queryKey: ["admin", "reviews", "pending", appliedSearch],
+    queryFn: () => adminPendingReviews({ q: appliedSearch || undefined }),
     retry: false,
   });
 
@@ -70,6 +72,23 @@ export function ReviewsModeration() {
       />
       <h2 className="text-xl font-bold text-foreground">{t("admin.reviewsModeration.title")}</h2>
 
+      <form
+        className="flex items-center gap-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          setAppliedSearch(search.trim());
+        }}
+      >
+        <IconSearch size={16} className="text-muted-foreground" aria-hidden="true" />
+        <input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder={t("admin.reviewsModeration.searchPlaceholder")}
+          aria-label={t("admin.reviewsModeration.searchPlaceholder")}
+          className="h-10 flex-1 rounded-lg border border-border bg-card px-3 text-sm text-foreground"
+        />
+      </form>
+
       {reviewsQuery.isLoading ? (
         <p className="text-sm text-muted-foreground">{t("admin.reviewsModeration.loading")}</p>
       ) : null}
@@ -88,7 +107,7 @@ export function ReviewsModeration() {
             <div className="flex items-start justify-between gap-3 mb-3">
               <div>
                 <p className="text-xs font-mono text-muted-foreground">
-                  {t("admin.reviewsModeration.productPrefix", { id: r.productId })}
+                  {r.productName ?? t("admin.reviewsModeration.productPrefix", { id: r.productId })}
                 </p>
                 <p className="text-sm font-semibold text-foreground">
                   {r.userName ?? r.userId ?? t("admin.reviewsModeration.anonGuest")}

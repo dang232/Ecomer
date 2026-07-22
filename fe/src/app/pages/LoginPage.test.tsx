@@ -28,8 +28,8 @@ function renderLogin(initialEntry = "/login") {
   );
 }
 
-describe("LoginPage OIDC routing", () => {
-  const login = vi.fn();
+describe("LoginPage native auth", () => {
+  const loginWithPassword = vi.fn();
   const beginOAuthLogin = vi.fn();
 
   beforeEach(() => {
@@ -38,28 +38,36 @@ describe("LoginPage OIDC routing", () => {
       ready: true,
       authenticated: false,
       roles: [],
-      login,
+      loginWithPassword,
       beginOAuthLogin,
     });
   });
 
-  it("starts OIDC with the sanitized requested destination", () => {
+  it("submits credentials through the native auth boundary", async () => {
     renderLogin("/login?next=%2Forders%3Fstatus%3DSHIPPED");
 
-    fireEvent.click(screen.getByRole("button", { name: /continue to sign in/i }));
+    fireEvent.change(screen.getByLabelText(/email or username/i), {
+      target: { value: "buyer1" },
+    });
+    fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: "test" } });
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
 
-    expect(login).toHaveBeenCalledWith("/orders?status=SHIPPED");
+    expect(loginWithPassword).toHaveBeenCalledWith("buyer1", "test");
   });
 
-  it("fails a malicious return destination closed to the storefront", () => {
+  it("keeps a malicious return destination out of the auth request", () => {
     renderLogin("/login?next=https%3A%2F%2Fattacker.invalid");
 
-    fireEvent.click(screen.getByRole("button", { name: /continue to sign in/i }));
+    fireEvent.change(screen.getByLabelText(/email or username/i), {
+      target: { value: "buyer1" },
+    });
+    fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: "test" } });
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
 
-    expect(login).toHaveBeenCalledWith("/");
+    expect(loginWithPassword).toHaveBeenCalledWith("buyer1", "test");
   });
 
-  it("uses Keycloak identity-provider hints only for enabled providers", () => {
+  it("uses the gateway OAuth boundary only for enabled providers", () => {
     renderLogin();
 
     fireEvent.click(screen.getByRole("button", { name: "google" }));
@@ -73,7 +81,7 @@ describe("LoginPage OIDC routing", () => {
       ready: true,
       authenticated: true,
       roles: ["ADMIN"],
-      login,
+      loginWithPassword,
       beginOAuthLogin,
     });
 

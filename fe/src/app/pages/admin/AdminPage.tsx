@@ -67,22 +67,22 @@ export function AdminPage() {
   // Pull pending counts for sidebar badges (best effort).
   const sellersQuery = useQuery({
     queryKey: ["admin", "sellers"],
-    queryFn: adminListSellers,
+    queryFn: () => adminListSellers(),
     retry: false,
   });
   const reviewsQuery = useQuery({
     queryKey: ["admin", "reviews", "pending"],
-    queryFn: adminPendingReviews,
+    queryFn: () => adminPendingReviews(),
     retry: false,
   });
   const disputesQuery = useQuery({
     queryKey: ["admin", "disputes"],
-    queryFn: adminOpenDisputes,
+    queryFn: () => adminOpenDisputes(),
     retry: false,
   });
   const payoutsQuery = useQuery({
     queryKey: ["admin", "payouts", "pending"],
-    queryFn: adminPendingPayouts,
+    queryFn: () => adminPendingPayouts(),
     retry: false,
   });
   // BA audit 2026-06-16 P1-13: pending counts for video moderation Queue + Appeals
@@ -106,7 +106,7 @@ export function AdminPage() {
       disputes: disputesQuery.data?.length ?? 0,
       payouts: payoutsQuery.data?.length ?? 0,
       videoModeration: videoModerationQuery.data?.totalElements ?? 0,
-      videoAppeals: videoAppealsQuery.data?.length ?? 0,
+      videoAppeals: videoAppealsQuery.data?.totalElements ?? 0,
     }),
     [
       sellersQuery.data,

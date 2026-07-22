@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const useAuthMock = vi.fn();
 const registerMock = vi.fn();
+const loginWithPasswordMock = vi.fn();
 
 vi.mock("../hooks/use-auth", () => ({
   useAuth: () => useAuthMock(),
@@ -116,10 +117,12 @@ const fillRequiredFields = (overrides: { phone?: string } = {}) => {
 describe("RegisterPage phone field (CountryPhoneInput)", () => {
   beforeEach(() => {
     registerMock.mockResolvedValue(undefined);
+    loginWithPasswordMock.mockResolvedValue(undefined);
     useAuthMock.mockReturnValue({
       ready: true,
       authenticated: false,
       register: registerMock,
+      loginWithPassword: loginWithPasswordMock,
     });
   });
 

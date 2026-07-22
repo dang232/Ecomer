@@ -1,4 +1,11 @@
-import { IconBan, IconCheck, IconRefresh } from "@tabler/icons-react";
+import {
+  IconBan,
+  IconCheck,
+  IconChevronLeft,
+  IconChevronRight,
+  IconRefresh,
+  IconSearch,
+} from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -54,20 +61,35 @@ function statusColor(status: string): string {
 export function OrderManagement() {
   const qc = useQueryClient();
   const { t } = useTranslation();
+  const defaultRefundReason = t("admin.orders.refundDefaultReason", {
+    defaultValue: "Admin approved refund",
+  });
   const [statusFilter, setStatusFilter] = useState("");
+  const [query, setQuery] = useState("");
+  const [appliedQuery, setAppliedQuery] = useState("");
+  const [page, setPage] = useState(0);
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
   const [refundOrderId, setRefundOrderId] = useState<string | null>(null);
 
   const {
-    data: orders = [],
+    data: orderPage,
     isLoading,
     isError,
     error,
   } = useQuery({
-    queryKey: ["admin", "orders", statusFilter],
-    queryFn: () => adminListOrders({ status: statusFilter || undefined }),
+    queryKey: ["admin", "orders", statusFilter, appliedQuery, page],
+    queryFn: () =>
+      adminListOrders({
+        status: statusFilter || undefined,
+        q: appliedQuery || undefined,
+        page,
+        size: 50,
+      }),
     retry: false,
   });
+
+  const orders = orderPage?.content ?? [];
+  const totalPages = orderPage?.totalPages ?? 0;
 
   const cancel = useMutation({
     mutationFn: (id: string) => adminCancelOrder(id),
@@ -80,7 +102,7 @@ export function OrderManagement() {
   });
 
   const refund = useMutation({
-    mutationFn: (id: string) => adminRefundOrder(id),
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => adminRefundOrder(id, reason),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["admin", "orders"] });
       toast.success(t("admin.orders.refundOk"));
@@ -111,7 +133,10 @@ export function OrderManagement() {
           {STATUS_OPTIONS.map((opt) => (
             <button
               key={opt.value}
-              onClick={() => setStatusFilter(opt.value)}
+              onClick={() => {
+                setStatusFilter(opt.value);
+                setPage(0);
+              }}
               className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
               style={
                 statusFilter === opt.value
@@ -127,6 +152,33 @@ export function OrderManagement() {
             </button>
           ))}
         </div>
+        <form
+          className="mt-3 flex gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setAppliedQuery(query.trim());
+            setPage(0);
+          }}
+        >
+          <label htmlFor="admin-order-search" className="sr-only">
+            {t("admin.orders.search")}
+          </label>
+          <input
+            id="admin-order-search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={t("admin.orders.searchPlaceholder")}
+            className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          <button
+            type="submit"
+            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-white"
+            style={{ background: "var(--admin-primary)" }}
+          >
+            <IconSearch size={15} aria-hidden="true" />
+            {t("admin.orders.search")}
+          </button>
+        </form>
       </div>
 
       {isLoading ? (
@@ -153,12 +205,15 @@ export function OrderManagement() {
                 <div className="min-w-0 flex-1">
                   {/* P2-10: title attr for hover-tooltip on truncated id */}
                   <p className="text-sm font-semibold text-foreground truncate" title={o.orderId}>
-                    {o.orderId}
+                    {o.orderNumber ?? o.orderId}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {t("admin.orders.buyer")}: {o.buyerId || "—"} ·{" "}
+                    {t("admin.orders.buyer")}: {o.buyerName ?? o.buyerId ?? "—"} ·{" "}
                     {o.totalAmount?.toLocaleString("vi-VN") ?? "—"} ₫ · {o.itemCount ?? 0}{" "}
                     {t("admin.orders.items")}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("admin.orders.seller")}: {o.sellerName ?? o.sellerId ?? "-"}
                   </p>
                   {o.createdAt ? (
                     <p className="text-xs text-muted-foreground">
@@ -210,6 +265,27 @@ export function OrderManagement() {
               </div>
             ))}
           </div>
+          {totalPages > 1 ? (
+            <div className="flex items-center justify-between border-t border-border px-5 py-3 text-xs text-muted-foreground">
+              <button
+                type="button"
+                onClick={() => setPage((current) => Math.max(current - 1, 0))}
+                disabled={page === 0}
+                className="inline-flex items-center gap-1 rounded border border-border px-2 py-1 disabled:opacity-40"
+              >
+                <IconChevronLeft size={14} aria-hidden="true" /> {t("admin.orders.previous")}
+              </button>
+              <span>{t("admin.orders.page", { page: page + 1, pages: totalPages })}</span>
+              <button
+                type="button"
+                onClick={() => setPage((current) => Math.min(current + 1, totalPages - 1))}
+                disabled={page + 1 >= totalPages}
+                className="inline-flex items-center gap-1 rounded border border-border px-2 py-1 disabled:opacity-40"
+              >
+                {t("admin.orders.next")} <IconChevronRight size={14} aria-hidden="true" />
+              </button>
+            </div>
+          ) : null}
         </div>
       )}
 
@@ -220,7 +296,9 @@ export function OrderManagement() {
           setRefundOrderId(null);
         }}
         onConfirm={(_reason) => {
-          if (refundOrderId) refund.mutate(refundOrderId);
+          if (refundOrderId) {
+            refund.mutate({ id: refundOrderId, reason: _reason?.trim() || defaultRefundReason });
+          }
         }}
         variant="danger"
         reasonField

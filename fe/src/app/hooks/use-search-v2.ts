@@ -1,6 +1,5 @@
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 
-import { catalogV2Enabled } from "../lib/api/catalog-flags";
 import { searchProductsV2, type CursorSearchParams } from "../lib/api/endpoints/search";
 
 export const searchV2Options = (params: CursorSearchParams, enabled = true) => ({
@@ -12,7 +11,7 @@ export const searchV2Options = (params: CursorSearchParams, enabled = true) => (
     lastPage.data.hasMore ? (lastPage.data.nextCursor ?? undefined) : undefined,
   placeholderData: keepPreviousData,
   staleTime: 10_000,
-  enabled: enabled && catalogV2Enabled,
+  enabled,
 });
 
 /** Cursor-aware search hook. React Query deduplicates identical queries and aborts obsolete pages. */

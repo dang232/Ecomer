@@ -26,7 +26,7 @@ function renderRoute(initialEntry: string, element: React.ReactElement) {
 }
 
 describe("RequireAuth", () => {
-  it("renders nothing while keycloak is initialising", () => {
+  it("renders nothing while the native session is initialising", () => {
     useAuthMock.mockReturnValue({ ready: false, authenticated: false, roles: [] });
     const { container } = renderRoute(
       "/protected",

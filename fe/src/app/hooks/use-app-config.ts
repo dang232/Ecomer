@@ -116,18 +116,27 @@ function secureUrl(value: string, protocol: "https:" | "wss:", path: string): UR
     const url = new URL(value);
     const hostname = url.hostname.toLowerCase();
     const ipAddress = /^(?:\d{1,3}\.){3}\d{1,3}$/.test(hostname) || hostname.includes(":");
+    const localHttp =
+      allowInsecureLocalRuntimeConfig && hostname === "localhost" && url.protocol === "http:";
+    const localWs =
+      allowInsecureLocalRuntimeConfig && hostname === "localhost" && url.protocol === "ws:";
+    const validProtocol = url.protocol === protocol || (protocol === "https:" ? localHttp : localWs);
+    const validPort =
+      url.protocol === protocol
+        ? url.port === "" || url.port === "443"
+        : (localHttp || localWs) && url.port !== "";
     if (
-      url.protocol !== protocol ||
-      (url.port !== "" && url.port !== "443") ||
+      !validProtocol ||
+      !validPort ||
       url.pathname !== path ||
       url.username !== "" ||
       url.password !== "" ||
       url.search !== "" ||
       url.hash !== "" ||
       hostname.includes("*") ||
-      hostname === "localhost" ||
+      (!localHttp && !localWs && hostname === "localhost") ||
       hostname.endsWith(".localhost") ||
-      ipAddress
+      (!allowInsecureLocalRuntimeConfig && ipAddress)
     ) {
       return null;
     }
@@ -187,6 +196,7 @@ export const MAINTENANCE_CONFIG: AppConfig = {
 };
 
 const env = import.meta.env as Record<string, string | undefined>;
+const allowInsecureLocalRuntimeConfig = env.VITE_ALLOW_INSECURE_RUNTIME_CONFIG === "true";
 const CONFIG_URL = env.VITE_RUNTIME_CONFIG_URL ?? "/runtime-config.json";
 
 export async function fetchConfig(signal?: AbortSignal): Promise<AppConfig> {

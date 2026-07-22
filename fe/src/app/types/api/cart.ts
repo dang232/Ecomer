@@ -23,6 +23,7 @@ export const cartItemSchema = z
     subtotal: moneyToNumber.optional(),
     quantity: z.number(),
     sellerId: sellerIdSchema.optional(),
+    sellerName: z.string().optional(),
     variantId: z.string().nullable().optional(), // BE returns variantId for variant items
     variantSku: z.string().nullable().optional(),
     // Legacy aliases — keep accepting them in case the BE shape regresses.
@@ -38,6 +39,7 @@ export const cartItemSchema = z
     price: raw.price ?? raw.unitPrice ?? 0,
     quantity: raw.quantity,
     sellerId: raw.sellerId,
+    ...(raw.sellerName !== undefined ? { sellerName: raw.sellerName } : {}),
     variantId: raw.variantId ?? raw.variantSku ?? undefined,
   }));
 

@@ -39,7 +39,7 @@ export interface UseSearchResult {
   refetch: () => Promise<unknown>;
 }
 
-/** Backend-driven search. Caller is responsible for any local fallback when error is set. */
+/** @deprecated Buyer catalog search uses useSearchV2. */
 export function useSearch(params: SearchParams, enabled = true): UseSearchResult {
   // `enabled` is runtime-dependent so it is merged at call-site.
   const query = useQuery({ ...searchOptions(params), enabled });

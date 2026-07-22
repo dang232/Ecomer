@@ -15,9 +15,8 @@ import type { AdminUser, AdminOrderSummary } from "../../types/api";
 
 export function UserManagement() {
   const { t } = useTranslation();
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [results, setResults] = useState<AdminUser[] | null>(null);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<{ content: AdminUser[]; page: number; totalPages: number } | null>(null);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [orderHistory, setOrderHistory] = useState<{
@@ -30,7 +29,10 @@ export function UserManagement() {
     mutationFn: (id: string) => adminBanUser(id),
     onSuccess: (updated) => {
       setResults(
-        (prev) => prev?.map((u) => (u.keycloakId === updated.keycloakId ? updated : u)) ?? null,
+        (prev) =>
+          prev
+            ? { ...prev, content: prev.content.map((u) => (u.keycloakId === updated.keycloakId ? updated : u)) }
+            : null,
       );
       toast.success(t("admin.users.banOk"));
     },
@@ -41,7 +43,10 @@ export function UserManagement() {
     mutationFn: (id: string) => adminUnbanUser(id),
     onSuccess: (updated) => {
       setResults(
-        (prev) => prev?.map((u) => (u.keycloakId === updated.keycloakId ? updated : u)) ?? null,
+        (prev) =>
+          prev
+            ? { ...prev, content: prev.content.map((u) => (u.keycloakId === updated.keycloakId ? updated : u)) }
+            : null,
       );
       toast.success(t("admin.users.unbanOk"));
     },
@@ -50,14 +55,11 @@ export function UserManagement() {
   });
 
   async function handleSearch() {
-    if (!email.trim() && !phone.trim()) return;
+    if (!query.trim()) return;
     setSearching(true);
     setSearchError(null);
     try {
-      const data = await adminSearchUsers({
-        email: email.trim() || undefined,
-        phone: phone.trim() || undefined,
-      });
+      const data = await adminSearchUsers({ q: query.trim(), page: 0, size: 50 });
       setResults(data);
     } catch (err) {
       setSearchError(err instanceof ApiError ? err.message : t("admin.users.searchErr"));
@@ -83,26 +85,16 @@ export function UserManagement() {
       <h2 className="text-xl font-bold text-foreground">{t("admin.users.title")}</h2>
 
       <div className="bg-card rounded-2xl shadow-sm p-4 space-y-3">
-        <div className="flex gap-3 flex-wrap">
+          <div className="flex gap-3 flex-wrap">
           <div className="flex items-center gap-2 bg-background border border-border rounded-xl px-3 py-2 flex-1 min-w-48">
             <IconSearch size={14} className="text-muted-foreground shrink-0" aria-hidden="true" />
             <input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && void handleSearch()}
-              placeholder={t("admin.users.emailPlaceholder")}
+              placeholder={t("admin.users.searchPlaceholder")}
               className="flex-1 text-sm outline-none bg-transparent"
-              aria-label={t("admin.users.emailPlaceholder")}
-            />
-          </div>
-          <div className="flex items-center gap-2 bg-background border border-border rounded-xl px-3 py-2 flex-1 min-w-48">
-            <input
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && void handleSearch()}
-              placeholder={t("admin.users.phonePlaceholder")}
-              className="flex-1 text-sm outline-none bg-transparent"
-              aria-label={t("admin.users.phonePlaceholder")}
+              aria-label={t("admin.users.searchPlaceholder")}
             />
           </div>
           <button
@@ -118,23 +110,24 @@ export function UserManagement() {
       </div>
 
       {results !== null ? (
-        results.length === 0 ? (
+        results.content.length === 0 ? (
           <div className="bg-card rounded-2xl p-8 text-center shadow-sm">
             <p className="text-sm text-muted-foreground">{t("admin.users.empty")}</p>
           </div>
         ) : (
           <div className="bg-card rounded-2xl shadow-sm overflow-hidden">
             <div className="divide-y divide-gray-50">
-              {results.map((u) => (
+              {results.content.map((u) => (
                 <div
                   key={u.keycloakId}
                   className="px-5 py-4 flex items-center justify-between gap-4"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-foreground truncate">
-                      {u.name ?? u.keycloakId}
+                      {u.name ?? u.email ?? t("admin.users.unknownName")}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
+                      {u.email ? `${u.email} · ` : ""}
                       {u.phone ? u.phone : t("admin.users.noPhone")}
                       {u.banned ? (
                         <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-600">
@@ -173,6 +166,11 @@ export function UserManagement() {
                 </div>
               ))}
             </div>
+            {results.totalPages > 1 ? (
+              <p className="px-5 py-3 text-xs text-muted-foreground border-t border-border">
+                {t("admin.users.page", { page: results.page + 1, pages: results.totalPages })}
+              </p>
+            ) : null}
           </div>
         )
       ) : null}

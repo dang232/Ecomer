@@ -234,6 +234,7 @@ export function Navbar() {
 
         {/* Right actions */}
         <div className="flex items-center gap-1.5 ml-auto">
+          <LanguageSwitcher />
           <NotificationBell />
 
           <button

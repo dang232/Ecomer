@@ -12,6 +12,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { useAuth } from "../hooks/use-auth";
@@ -41,7 +42,7 @@ interface VNShopContextType {
   wishlist: string[];
   toggleWishlist: (productId: string) => void;
   isWishlisted: (productId: string) => boolean;
-  // Auth — backed by Keycloak.
+  // Auth — backed by the gateway's native cookie session.
   user: User | null;
   isLoggedIn: boolean;
   logout: () => void;
@@ -60,6 +61,7 @@ function pickRole(roles: string[]): "buyer" | "seller" | "admin" {
 
 export function VNShopProvider({ children }: { children: ReactNode }) {
   const auth = useAuth();
+  const { t } = useTranslation();
   const wishlistStore = useWishlist();
   const cart = useCart();
   // /users/me carries the buyer's avatarUrl (uploaded via the profile camera
@@ -87,31 +89,44 @@ export function VNShopProvider({ children }: { children: ReactNode }) {
       quantity = 1,
       variant?: { color?: string; size?: string; variantId?: string },
     ) => {
+      if (!auth.authenticated) {
+        toast.error(t("context.loginToAddCart"), {
+          action: {
+            label: t("context.loginLabel"),
+            onClick: () => {
+              window.location.href = "/login";
+            },
+          },
+        });
+        return;
+      }
       const variantDesc = [variant?.color, variant?.size].filter(Boolean).join(", ");
       cart.addItem(
         { productId: product.id, quantity, variantId: variant?.variantId },
         {
           onSuccess: () =>
             toast.success(
-              `Đã thêm "${product.name.slice(0, 30)}${product.name.length > 30 ? "..." : ""}" vào giỏ hàng`,
+              t("context.addedToCart", {
+                name: `${product.name.slice(0, 30)}${product.name.length > 30 ? "..." : ""}`,
+              }),
               {
                 description: variantDesc
-                  ? `${variantDesc} · Số lượng: ${quantity}`
-                  : `Số lượng: ${quantity}`,
+                  ? t("context.addedToCartVariant", { variantDesc, quantity })
+                  : t("context.addedToCartQty", { quantity }),
               },
             ),
         },
       );
     },
-    [cart],
+    [auth.authenticated, cart, t],
   );
 
   const toggleWishlist = useCallback(
     (productId: string) => {
       if (!auth.authenticated) {
-        toast.error("Vui lòng đăng nhập để lưu sản phẩm", {
+        toast.error(t("context.loginToSave"), {
           action: {
-            label: "Đăng nhập",
+            label: t("context.loginLabel"),
             onClick: () => {
               window.location.href = "/login";
             },
@@ -120,10 +135,10 @@ export function VNShopProvider({ children }: { children: ReactNode }) {
         return;
       }
       const added = wishlistStore.toggle(productId);
-      if (added) toast.success("Đã thêm vào danh sách yêu thích");
-      else toast.info("Đã xóa khỏi danh sách yêu thích");
+      if (added) toast.success(t("context.addedToWishlist"));
+      else toast.info(t("context.removedFromWishlist"));
     },
-    [auth.authenticated, wishlistStore],
+    [auth.authenticated, wishlistStore, t],
   );
 
   const isWishlisted = useCallback(

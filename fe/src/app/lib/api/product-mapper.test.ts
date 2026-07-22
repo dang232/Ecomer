@@ -42,6 +42,12 @@ describe("fromServer with ProductSummary", () => {
     expect(result.colors).toBeUndefined();
     expect(result.sizes).toBeUndefined();
   });
+
+  it("preserves server rating data for cards and rating filters", () => {
+    const result = fromServer({ ...summary, rating: 4, reviewCount: 1 });
+    expect(result.rating).toBe(4);
+    expect(result.reviewCount).toBe(1);
+  });
 });
 
 // ---------------------------------------------------------------------------

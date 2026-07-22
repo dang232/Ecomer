@@ -1,6 +1,5 @@
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 
-import { catalogV2Enabled } from "../lib/api/catalog-flags";
 import { productListV2, type ProductListV2Params } from "../lib/api/endpoints/products";
 
 export const productV2Options = (params: ProductListV2Params, enabled = true) => ({
@@ -12,10 +11,10 @@ export const productV2Options = (params: ProductListV2Params, enabled = true) =>
     lastPage.data.hasMore ? (lastPage.data.nextCursor ?? undefined) : undefined,
   placeholderData: keepPreviousData,
   staleTime: 30_000,
-  enabled: enabled && catalogV2Enabled,
+  enabled,
 });
 
-/** Cursor-aware product catalog hook. The legacy product hook remains unchanged. */
+/** Default cursor-aware product catalog hook. */
 export function useProductsV2(params: ProductListV2Params = {}, enabled = true) {
   return useInfiniteQuery(productV2Options(params, enabled));
 }
