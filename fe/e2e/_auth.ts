@@ -15,7 +15,9 @@ export async function loginViaOidc(page: Page, username: string, password = "tes
   });
   await page.locator("#username").fill(username);
   await page.locator("#password").fill(password);
-  await page.getByRole("button", { name: /sign in|continue to sign in|\u0110\u0103ng nh\u1eadp/i }).click();
+  await page
+    .getByRole("button", { name: /sign in|continue to sign in|\u0110\u0103ng nh\u1eadp/i })
+    .click();
   await expect
     .poll(() => new URL(page.url()).pathname, {
       timeout: 30_000,

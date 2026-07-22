@@ -89,7 +89,7 @@ export function RegisterPage() {
           phone: parseOptionalPhone(phone, phoneCountry) ?? undefined,
         });
         await loginWithPassword(email.trim(), password);
-    void navigate(next, { replace: true });
+        void navigate(next, { replace: true });
       } catch (err) {
         const errorCode =
           err && typeof err === "object" && "errorCode" in err

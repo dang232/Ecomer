@@ -47,8 +47,12 @@ test.describe("Authentication Flows", () => {
     await page.goto("/login");
     await page.locator("#username").fill("invalid@vnshop.local");
     await page.locator("#password").fill("wrongpassword123");
-    await page.getByRole("button", { name: /sign in|continue to sign in|\u0110\u0103ng nh\u1eadp/i }).click();
-    await expect(page.getByText(/Invalid (username or password|user credentials)/i)).toBeVisible({ timeout: 10_000 });
+    await page
+      .getByRole("button", { name: /sign in|continue to sign in|\u0110\u0103ng nh\u1eadp/i })
+      .click();
+    await expect(page.getByText(/Invalid (username or password|user credentials)/i)).toBeVisible({
+      timeout: 10_000,
+    });
     await expect(page).toHaveURL(/\/login/);
   });
 
@@ -63,7 +67,9 @@ test.describe("Authentication Flows", () => {
     const user = await seedBuyer(page.request);
     await loginViaOidc(page, user.email, PASSWORD);
     await page.getByRole("button", { name: /account menu|user menu/i }).click();
-    await page.getByRole("menuitem", { name: /log out|sign out|\u0111\u0103ng xu\u1ea5t/i }).click();
+    await page
+      .getByRole("menuitem", { name: /log out|sign out|\u0111\u0103ng xu\u1ea5t/i })
+      .click();
     await expect(
       page.getByRole("link", { name: /^(Log in|\u0110\u0103ng nh\u1eadp)$/i }).first(),
     ).toBeVisible({

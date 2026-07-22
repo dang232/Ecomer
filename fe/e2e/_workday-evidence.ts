@@ -257,7 +257,10 @@ export async function logoutViaUserMenu(page: Page): Promise<void> {
   if (await logoutButton.isVisible().catch(() => false)) {
     await logoutButton.click();
   } else {
-    await page.getByRole("menuitem", { name: /^(Log out|Đăng xuất)$/i }).first().click();
+    await page
+      .getByRole("menuitem", { name: /^(Log out|Đăng xuất)$/i })
+      .first()
+      .click();
   }
   await expect(page.getByRole("link", { name: /^(Log in|Đăng nhập)$/i }).first()).toBeVisible({
     timeout: 15_000,

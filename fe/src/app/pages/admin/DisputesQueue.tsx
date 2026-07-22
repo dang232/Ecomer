@@ -20,13 +20,8 @@ export function DisputesQueue() {
   });
 
   const resolve = useMutation({
-    mutationFn: ({
-      id,
-      body,
-    }: {
-      id: string;
-      body: { adminResolution: string };
-    }) => adminResolveDispute(id, body),
+    mutationFn: ({ id, body }: { id: string; body: { adminResolution: string } }) =>
+      adminResolveDispute(id, body),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["admin", "disputes"] });
       toast.success(t("admin.disputes.resolveOk"));

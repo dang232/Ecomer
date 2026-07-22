@@ -16,7 +16,11 @@ import type { AdminUser, AdminOrderSummary } from "../../types/api";
 export function UserManagement() {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<{ content: AdminUser[]; page: number; totalPages: number } | null>(null);
+  const [results, setResults] = useState<{
+    content: AdminUser[];
+    page: number;
+    totalPages: number;
+  } | null>(null);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [orderHistory, setOrderHistory] = useState<{
@@ -28,11 +32,13 @@ export function UserManagement() {
   const ban = useMutation({
     mutationFn: (id: string) => adminBanUser(id),
     onSuccess: (updated) => {
-      setResults(
-        (prev) =>
-          prev
-            ? { ...prev, content: prev.content.map((u) => (u.keycloakId === updated.keycloakId ? updated : u)) }
-            : null,
+      setResults((prev) =>
+        prev
+          ? {
+              ...prev,
+              content: prev.content.map((u) => (u.keycloakId === updated.keycloakId ? updated : u)),
+            }
+          : null,
       );
       toast.success(t("admin.users.banOk"));
     },
@@ -42,11 +48,13 @@ export function UserManagement() {
   const unban = useMutation({
     mutationFn: (id: string) => adminUnbanUser(id),
     onSuccess: (updated) => {
-      setResults(
-        (prev) =>
-          prev
-            ? { ...prev, content: prev.content.map((u) => (u.keycloakId === updated.keycloakId ? updated : u)) }
-            : null,
+      setResults((prev) =>
+        prev
+          ? {
+              ...prev,
+              content: prev.content.map((u) => (u.keycloakId === updated.keycloakId ? updated : u)),
+            }
+          : null,
       );
       toast.success(t("admin.users.unbanOk"));
     },
@@ -85,7 +93,7 @@ export function UserManagement() {
       <h2 className="text-xl font-bold text-foreground">{t("admin.users.title")}</h2>
 
       <div className="bg-card rounded-2xl shadow-sm p-4 space-y-3">
-          <div className="flex gap-3 flex-wrap">
+        <div className="flex gap-3 flex-wrap">
           <div className="flex items-center gap-2 bg-background border border-border rounded-xl px-3 py-2 flex-1 min-w-48">
             <IconSearch size={14} className="text-muted-foreground shrink-0" aria-hidden="true" />
             <input

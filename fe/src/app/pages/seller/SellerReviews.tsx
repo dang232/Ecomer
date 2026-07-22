@@ -1,4 +1,10 @@
-import { IconChevronLeft, IconChevronRight, IconMessage, IconSearch, IconStar } from "@tabler/icons-react";
+import {
+  IconChevronLeft,
+  IconChevronRight,
+  IconMessage,
+  IconSearch,
+  IconStar,
+} from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -82,7 +88,9 @@ export function SellerReviews() {
                 ))}
               </div>
             </div>
-            {review.comment ? <p className="mt-3 text-sm text-foreground">{review.comment}</p> : null}
+            {review.comment ? (
+              <p className="mt-3 text-sm text-foreground">{review.comment}</p>
+            ) : null}
           </article>
         ))}
       </div>
@@ -96,7 +104,9 @@ export function SellerReviews() {
           >
             <IconChevronLeft size={14} aria-hidden="true" /> {t("seller.reviewsTab.previous")}
           </button>
-          <span>{t("seller.reviewsTab.page", { page: page + 1, pages: reviewPage.totalPages })}</span>
+          <span>
+            {t("seller.reviewsTab.page", { page: page + 1, pages: reviewPage.totalPages })}
+          </span>
           <button
             type="button"
             onClick={() => setPage((current) => Math.min(current + 1, reviewPage.totalPages - 1))}

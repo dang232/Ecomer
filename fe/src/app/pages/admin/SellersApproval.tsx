@@ -52,9 +52,7 @@ export function SellersApproval() {
 
   const sellers = sellersQuery.data ?? [];
 
-  const detailSeller = detailFor
-    ? (sellers.find((s) => s.id === detailFor) ?? null)
-    : null;
+  const detailSeller = detailFor ? (sellers.find((s) => s.id === detailFor) ?? null) : null;
 
   return (
     <div className="space-y-5">

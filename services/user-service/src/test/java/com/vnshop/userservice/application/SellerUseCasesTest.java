@@ -63,7 +63,7 @@ class SellerUseCasesTest {
     @Test
     void listPending_returnsPendingSellers() {
         List<SellerProfile> pending = List.of(seller("s1"), seller("s2"));
-        when(userRepositoryPort.findPendingSellers()).thenReturn(pending);
+        when(userRepositoryPort.findPendingSellers(null)).thenReturn(pending);
 
         ListPendingSellersUseCase useCase = new ListPendingSellersUseCase(userRepositoryPort);
         List<SellerProfile> result = useCase.listPending();

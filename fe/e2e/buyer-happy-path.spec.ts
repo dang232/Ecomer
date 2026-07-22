@@ -39,8 +39,12 @@ test.describe("buyer happy path", () => {
     await page.goto("/login");
     await page.locator("#username").fill("does-not-exist@vnshop.local");
     await page.locator("#password").fill("definitely-not-the-password");
-    await page.getByRole("button", { name: /sign in|continue to sign in|\u0111\u0103ng nh\u1eadp/i }).click();
-    await expect(page.getByText(/Invalid (username or password|user credentials)/i)).toBeVisible({ timeout: 10_000 });
+    await page
+      .getByRole("button", { name: /sign in|continue to sign in|\u0111\u0103ng nh\u1eadp/i })
+      .click();
+    await expect(page.getByText(/Invalid (username or password|user credentials)/i)).toBeVisible({
+      timeout: 10_000,
+    });
     await expect(page).toHaveURL(/\/login/);
   });
 });

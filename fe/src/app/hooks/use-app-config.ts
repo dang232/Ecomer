@@ -120,7 +120,8 @@ function secureUrl(value: string, protocol: "https:" | "wss:", path: string): UR
       allowInsecureLocalRuntimeConfig && hostname === "localhost" && url.protocol === "http:";
     const localWs =
       allowInsecureLocalRuntimeConfig && hostname === "localhost" && url.protocol === "ws:";
-    const validProtocol = url.protocol === protocol || (protocol === "https:" ? localHttp : localWs);
+    const validProtocol =
+      url.protocol === protocol || (protocol === "https:" ? localHttp : localWs);
     const validPort =
       url.protocol === protocol
         ? url.port === "" || url.port === "443"

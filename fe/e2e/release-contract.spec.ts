@@ -62,7 +62,8 @@ test.describe("staging release contract", () => {
     await page.locator("#username").fill(buyerUsername);
     await page.locator("#password").fill(buyerPassword);
     const loginResponsePromise = page.waitForResponse(
-      (response) => response.url().endsWith("/auth/login") && response.request().method() === "POST",
+      (response) =>
+        response.url().endsWith("/auth/login") && response.request().method() === "POST",
     );
     await page.getByRole("button", { name: /sign in|continue to sign in/i }).click();
     const loginResponse = await loginResponsePromise;
