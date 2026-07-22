@@ -108,8 +108,8 @@ export class ConfigurationService {
       websocket: {
         notificationsPath: '/ws/notifications',
         messagingPath: '/ws/messaging',
-        notificationsUri: `wss://${api.hostname}/ws/notifications`,
-        messagingUri: `wss://${api.hostname}/ws/messaging`,
+        notificationsUri: `${api.protocol === 'https:' ? 'wss' : 'ws'}://${api.host}/ws/notifications`,
+        messagingUri: `${api.protocol === 'https:' ? 'wss' : 'ws'}://${api.host}/ws/messaging`,
         maxReconnectAttempts: this.positiveInteger('WS_MAX_RECONNECT', 5),
         reconnectBaseMs: this.positiveInteger('WS_RECONNECT_BASE_MS', 2000),
         reconnectCapMs: this.positiveInteger('WS_RECONNECT_CAP_MS', 30000),
@@ -135,17 +135,18 @@ export class ConfigurationService {
     }
 
     const hostname = url.hostname.toLowerCase();
+    const allowInsecureLocal = process.env.RUNTIME_CONFIG_ALLOW_INSECURE === 'true';
+    const localHttp = allowInsecureLocal && hostname === 'localhost' && url.protocol === 'http:';
     const invalid =
-      url.protocol !== 'https:' ||
-      (url.port !== '' && url.port !== '443') ||
+      (url.protocol !== 'https:' && !localHttp) ||
+      (url.protocol === 'https:' ? url.port !== '' && url.port !== '443' : !localHttp || url.port === '') ||
       url.pathname !== '/' ||
       url.username !== '' ||
       url.password !== '' ||
       url.search !== '' ||
       url.hash !== '' ||
       hostname.includes('*') ||
-      hostname === 'localhost' ||
-      hostname.endsWith('.localhost') ||
+      (!localHttp && (hostname === 'localhost' || hostname.endsWith('.localhost'))) ||
       isIP(hostname) !== 0;
 
     if (invalid) {

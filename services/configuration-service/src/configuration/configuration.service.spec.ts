@@ -40,6 +40,28 @@ describe('ConfigurationService public runtime contract', () => {
     expect(Date.parse(config.expiresAt)).toBeGreaterThan(Date.parse(config.generatedAt));
   });
 
+  it('supports localhost HTTP and WS only with the explicit local opt-in', () => {
+    process.env = {
+      ...process.env,
+      WEB_ORIGIN: 'http://localhost:3000',
+      API_ORIGIN: 'http://localhost:8080',
+      AUTH_ORIGIN: 'http://localhost:8085',
+      RUNTIME_CONFIG_ALLOW_INSECURE: 'true',
+    };
+
+    const config = new ConfigurationService().getPublicConfig();
+
+    expect(config).toMatchObject({
+      webUri: 'http://localhost:3000/',
+      apiUri: 'http://localhost:8080/',
+      auth: { issuerUri: 'http://localhost:8085/realms/vnshop' },
+      websocket: {
+        notificationsUri: 'ws://localhost:8080/ws/notifications',
+        messagingUri: 'ws://localhost:8080/ws/messaging',
+      },
+    });
+  });
+
   it('defaults to portfolio-safe provider modes', () => {
     const config = new ConfigurationService().getPublicConfig();
     const providers = Object.fromEntries(config.providers.map((provider) => [provider.id, provider]));
