@@ -2,6 +2,8 @@ package com.vnshop.orderservice.infrastructure.config;
 
 import com.vnshop.orderservice.application.AcceptOrderUseCase;
 import com.vnshop.orderservice.application.AdminOrderUseCase;
+import com.vnshop.orderservice.application.AdminRefundUseCase;
+import com.vnshop.orderservice.application.DashboardCsvExporter;
 import com.vnshop.orderservice.application.ConfirmDeliveryUseCase;
 import com.vnshop.orderservice.application.ApproveReturnUseCase;
 import com.vnshop.orderservice.application.CalculateCheckoutUseCase;
@@ -25,6 +27,7 @@ import com.vnshop.orderservice.application.SellerOrderQueryUseCase;
 import com.vnshop.orderservice.application.ShipOrderUseCase;
 import com.vnshop.orderservice.application.ViewOrderUseCase;
 import com.vnshop.orderservice.domain.port.out.OrderSummaryQueryPort;
+import com.vnshop.orderservice.domain.port.out.UserDirectoryPort;
 import com.vnshop.orderservice.domain.port.out.CommissionTierLookupPort;
 import com.vnshop.orderservice.domain.port.out.CartRepositoryPort;
 import com.vnshop.orderservice.domain.port.out.DashboardAnalyticsPort;
@@ -60,10 +63,11 @@ public class UseCaseConfig {
             OrderSummaryQueryPort orderSummaryQueryPort,
             InventoryReservationPort inventoryReservationPort,
             OrderEventPublisherPort orderEventPublisherPort,
-            CouponRedemptionService couponRedemptionService
+            CouponRedemptionService couponRedemptionService,
+            UserDirectoryPort userDirectoryPort
     ) {
         return new AdminOrderUseCase(orderRepositoryPort, orderSummaryQueryPort, inventoryReservationPort,
-                orderEventPublisherPort, couponRedemptionService);
+                orderEventPublisherPort, couponRedemptionService, userDirectoryPort);
     }
 
     @Bean
@@ -127,8 +131,11 @@ public class UseCaseConfig {
     }
 
     @Bean
-    GetDashboardUseCase getDashboardUseCase(DashboardAnalyticsPort analytics) {
-        return new GetDashboardUseCase(analytics);
+    GetDashboardUseCase getDashboardUseCase(
+            DashboardAnalyticsPort analytics,
+            UserDirectoryPort userDirectoryPort,
+            Clock clock) {
+        return new GetDashboardUseCase(analytics, userDirectoryPort, clock);
     }
 
     @Bean
@@ -145,8 +152,13 @@ public class UseCaseConfig {
     }
 
     @Bean
-    ListOpenDisputesUseCase listOpenDisputesUseCase(DisputeRepositoryPort disputeRepositoryPort) {
-        return new ListOpenDisputesUseCase(disputeRepositoryPort);
+    ListOpenDisputesUseCase listOpenDisputesUseCase(
+            DisputeRepositoryPort disputeRepositoryPort,
+            ReturnRepositoryPort returnRepositoryPort,
+            OrderSummaryQueryPort orderSummaryQueryPort,
+            UserDirectoryPort userDirectoryPort) {
+        return new ListOpenDisputesUseCase(disputeRepositoryPort, returnRepositoryPort,
+                orderSummaryQueryPort, userDirectoryPort);
     }
 
     @Bean
@@ -226,6 +238,21 @@ public class UseCaseConfig {
             RefundRequestPort refundRequestPort
     ) {
         return new CompleteReturnUseCase(returnRepositoryPort, orderRepositoryPort, refundRequestPort);
+    }
+
+    @Bean
+    AdminRefundUseCase adminRefundUseCase(
+            OrderRepositoryPort orderRepositoryPort,
+            ReturnRepositoryPort returnRepositoryPort,
+            ApproveReturnUseCase approveReturnUseCase,
+            CompleteReturnUseCase completeReturnUseCase) {
+        return new AdminRefundUseCase(orderRepositoryPort, returnRepositoryPort,
+                approveReturnUseCase, completeReturnUseCase);
+    }
+
+    @Bean
+    DashboardCsvExporter dashboardCsvExporter() {
+        return new DashboardCsvExporter();
     }
 
     @Bean

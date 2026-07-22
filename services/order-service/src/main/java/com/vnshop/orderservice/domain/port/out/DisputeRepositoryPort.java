@@ -13,5 +13,9 @@ public interface DisputeRepositoryPort {
 
     List<Dispute> findByStatus(String status);
 
+    default List<Dispute> findByStatus(String status, String query) {
+        return findByStatus(status);
+    }
+
     Optional<Dispute> findByReturnId(String returnId);
 }

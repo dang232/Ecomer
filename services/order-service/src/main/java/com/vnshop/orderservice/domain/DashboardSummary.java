@@ -5,10 +5,12 @@ import java.time.LocalDate;
 
 public record DashboardSummary(
         long totalOrders,
-        BigDecimal totalRevenue,
+        BigDecimal paidGmv,
+        BigDecimal refundedAmount,
+        BigDecimal realizedRevenue,
         long activeBuyers,
         long activeSellers,
-        BigDecimal avgOrderValue,
+        BigDecimal avgPaidOrderValue,
         LocalDate periodStart,
         LocalDate periodEnd
 ) {

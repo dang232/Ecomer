@@ -12,9 +12,13 @@ public record RevenueTimeSeriesResponse(List<PointResponse> points) {
                 .toList());
     }
 
-    public record PointResponse(LocalDate date, BigDecimal revenue) {
+    public record PointResponse(
+            LocalDate date,
+            BigDecimal paidGmv,
+            BigDecimal refundedAmount,
+            BigDecimal realizedRevenue) {
         static PointResponse fromDomain(RevenueTimeSeries.Point point) {
-            return new PointResponse(point.date(), point.revenue());
+            return new PointResponse(point.date(), point.paidGmv(), point.refundedAmount(), point.realizedRevenue());
         }
     }
 }

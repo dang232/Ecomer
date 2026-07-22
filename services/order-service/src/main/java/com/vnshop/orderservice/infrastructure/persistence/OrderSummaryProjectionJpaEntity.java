@@ -18,6 +18,9 @@ public class OrderSummaryProjectionJpaEntity {
     @Column(name = "order_id", length = 36, nullable = false)
     private String orderId;
 
+    @Column(name = "order_number", length = 255)
+    private String orderNumber;
+
     @Column(name = "buyer_id", length = 36)
     private String buyerId;
 
@@ -42,12 +45,13 @@ public class OrderSummaryProjectionJpaEntity {
     public OrderSummaryProjectionJpaEntity() {}
 
     public OrderSummaryProjection toDomain() {
-        return new OrderSummaryProjection(orderId, buyerId, sellerId, status, totalAmount, itemCount, createdAt, updatedAt);
+        return new OrderSummaryProjection(orderId, orderNumber, buyerId, sellerId, status, totalAmount, itemCount, createdAt, updatedAt);
     }
 
     public static OrderSummaryProjectionJpaEntity fromDomain(OrderSummaryProjection p) {
         var entity = new OrderSummaryProjectionJpaEntity();
         entity.setOrderId(p.orderId());
+        entity.setOrderNumber(p.orderNumber());
         entity.setBuyerId(p.buyerId());
         entity.setSellerId(p.sellerId());
         entity.setStatus(p.status());

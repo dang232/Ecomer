@@ -6,20 +6,24 @@ import java.time.LocalDate;
 
 public record DashboardSummaryResponse(
         long totalOrders,
-        BigDecimal totalRevenue,
+        BigDecimal paidGmv,
+        BigDecimal refundedAmount,
+        BigDecimal realizedRevenue,
         long activeBuyers,
         long activeSellers,
-        BigDecimal avgOrderValue,
+        BigDecimal avgPaidOrderValue,
         LocalDate periodStart,
         LocalDate periodEnd
 ) {
     static DashboardSummaryResponse fromDomain(DashboardSummary summary) {
         return new DashboardSummaryResponse(
                 summary.totalOrders(),
-                summary.totalRevenue(),
+                summary.paidGmv(),
+                summary.refundedAmount(),
+                summary.realizedRevenue(),
                 summary.activeBuyers(),
                 summary.activeSellers(),
-                summary.avgOrderValue(),
+                summary.avgPaidOrderValue(),
                 summary.periodStart(),
                 summary.periodEnd()
         );

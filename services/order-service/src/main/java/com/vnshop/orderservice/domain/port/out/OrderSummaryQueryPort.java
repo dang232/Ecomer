@@ -4,8 +4,8 @@ import com.vnshop.orderservice.domain.projection.OrderSummaryProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-import java.util.List;
 import java.util.Optional;
+import java.util.List;
 
 /**
  * Port for querying order summary projections from the read model.
@@ -16,9 +16,5 @@ public interface OrderSummaryQueryPort {
     Page<OrderSummaryProjection> findByBuyerId(String buyerId, String status, Pageable pageable);
     Optional<OrderSummaryProjection> findByOrderId(String orderId);
 
-    /**
-     * Admin-only: returns all orders, optionally filtered by fulfillment status.
-     * Implementations should limit result size to prevent runaway queries.
-     */
-    List<OrderSummaryProjection> findAll(String status);
+    Page<OrderSummaryProjection> findAll(String query, String status, Pageable pageable);
 }

@@ -1,74 +1,180 @@
 package com.vnshop.orderservice.application;
 
+import com.vnshop.orderservice.domain.DashboardGranularity;
+import com.vnshop.orderservice.domain.DashboardReport;
+import com.vnshop.orderservice.domain.DashboardQuery;
 import com.vnshop.orderservice.domain.DashboardSummary;
 import com.vnshop.orderservice.domain.RevenueTimeSeries;
-import com.vnshop.orderservice.domain.TopItem;
+import com.vnshop.orderservice.domain.TopProduct;
+import com.vnshop.orderservice.domain.TopSeller;
 import com.vnshop.orderservice.domain.port.out.DashboardAnalyticsPort;
+import com.vnshop.orderservice.domain.port.out.UserDirectoryPort;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
+import java.time.DayOfWeek;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Objects;
+import java.util.Set;
+import java.util.TreeMap;
 
 /**
- * Dashboard read-side projections. Previously decorated with {@code @Cacheable},
- * but Spring Cache + Redis + Jackson polymorphic typing could not be made to
- * round-trip the domain records cleanly under Boot 4 / Spring 7 / Jackson 2.21
- * — first call wrote, second call returned a {@code LinkedHashMap} that ClassCast'd.
- * Recomputing on every request is acceptable: each method is one Postgres query
- * and dashboard queries are admin-only, low-traffic. Add caching back if/when
- * traffic warrants it, but use a typed serializer (e.g. one per method).
+ * Admin dashboard read model. Money is paid GMV: payment-completed order
+ * totals before refund deductions. Product rankings are quantities, not money.
  */
 public class GetDashboardUseCase {
-    private static final int DAYS_IN_PERIOD = 30;
-    private static final int TOP_ITEM_LIMIT = 10;
-
     private final DashboardAnalyticsPort analytics;
+    private final UserDirectoryPort userDirectoryPort;
+    private final Clock clock;
 
     public GetDashboardUseCase(DashboardAnalyticsPort analytics) {
-        this.analytics = analytics;
+        this(analytics, (buyers, sellers) -> UserDirectoryPort.DirectorySnapshot.empty(), Clock.systemUTC());
+    }
+
+    public GetDashboardUseCase(
+            DashboardAnalyticsPort analytics,
+            UserDirectoryPort userDirectoryPort,
+            Clock clock
+    ) {
+        this.analytics = Objects.requireNonNull(analytics, "analytics is required");
+        this.userDirectoryPort = Objects.requireNonNull(userDirectoryPort, "userDirectoryPort is required");
+        this.clock = Objects.requireNonNull(clock, "clock is required");
     }
 
     public DashboardSummary summary() {
-        LocalDate periodEnd = LocalDate.now();
-        LocalDate periodStart = periodEnd.minusDays(DAYS_IN_PERIOD - 1L);
-        long totalOrders = analytics.countByDateBetween(periodStart, periodEnd);
-        BigDecimal totalRevenue = analytics.sumRevenueByDateBetween(periodStart, periodEnd);
-        long activeBuyers = analytics.countDistinctBuyerId(periodStart, periodEnd);
-        long activeSellers = analytics.countDistinctSellerId(periodStart, periodEnd);
-        BigDecimal averageOrderValue = totalOrders == 0
-                ? BigDecimal.ZERO
-                : totalRevenue.divide(BigDecimal.valueOf(totalOrders), 2, RoundingMode.HALF_UP);
+        return summary(defaultQuery());
+    }
 
-        return new DashboardSummary(totalOrders, totalRevenue, activeBuyers, activeSellers, averageOrderValue, periodStart, periodEnd);
+    public DashboardSummary summary(DashboardQuery query) {
+        return summary(query, Instant.now(clock));
+    }
+
+    public DashboardSummary summary(DashboardQuery query, Instant asOf) {
+        long totalOrders = analytics.countPaidOrdersBetween(query.from(), query.to(), asOf);
+        BigDecimal paidGmv = analytics.sumPaidGmvByDateBetween(query.from(), query.to(), asOf);
+        BigDecimal refundedAmount = analytics.sumRefundedAmountBetween(query.from(), query.to(), asOf);
+        BigDecimal realizedRevenue = paidGmv.subtract(refundedAmount);
+        long activeBuyers = analytics.countDistinctPaidBuyerId(query.from(), query.to(), asOf);
+        long activeSellers = analytics.countDistinctPaidSellerId(query.from(), query.to(), asOf);
+        BigDecimal averagePaidOrderValue = totalOrders == 0
+                ? BigDecimal.ZERO
+                : paidGmv.divide(BigDecimal.valueOf(totalOrders), 2, RoundingMode.HALF_UP);
+
+        return new DashboardSummary(
+                totalOrders,
+                paidGmv,
+                refundedAmount,
+                realizedRevenue,
+                activeBuyers,
+                activeSellers,
+                averagePaidOrderValue,
+                query.from(),
+                query.to());
     }
 
     public RevenueTimeSeries revenue() {
-        LocalDate periodEnd = LocalDate.now();
-        LocalDate periodStart = periodEnd.minusDays(DAYS_IN_PERIOD - 1L);
-        Map<LocalDate, BigDecimal> revenueByDate = analytics.revenueByDateBetween(periodStart, periodEnd).stream()
-                .collect(Collectors.toMap(DashboardAnalyticsPort.RevenueByDate::date, DashboardAnalyticsPort.RevenueByDate::revenue));
-        List<RevenueTimeSeries.Point> points = new ArrayList<>();
+        return revenue(defaultQuery());
+    }
 
-        for (LocalDate date = periodStart; !date.isAfter(periodEnd); date = date.plusDays(1)) {
-            points.add(new RevenueTimeSeries.Point(date, revenueByDate.getOrDefault(date, BigDecimal.ZERO)));
+    public RevenueTimeSeries revenue(DashboardQuery query) {
+        return revenue(query, Instant.now(clock));
+    }
+
+    public RevenueTimeSeries revenue(DashboardQuery query, Instant asOf) {
+        Map<LocalDate, BigDecimal> daily = new HashMap<>();
+        Map<LocalDate, BigDecimal> refunded = new HashMap<>();
+        analytics.paidGmvByDateBetween(query.from(), query.to(), asOf).forEach(row ->
+                daily.merge(row.date(), row.revenue(), BigDecimal::add));
+        analytics.refundedAmountByDateBetween(query.from(), query.to(), asOf).forEach(row ->
+                refunded.merge(row.date(), row.amount(), BigDecimal::add));
+
+        if (query.granularity() == DashboardGranularity.DAY) {
+            List<RevenueTimeSeries.Point> points = new ArrayList<>();
+            for (LocalDate date = query.from(); !date.isAfter(query.to()); date = date.plusDays(1)) {
+                BigDecimal paid = daily.getOrDefault(date, BigDecimal.ZERO);
+                BigDecimal refund = refunded.getOrDefault(date, BigDecimal.ZERO);
+                points.add(new RevenueTimeSeries.Point(date, paid, refund, paid.subtract(refund)));
+            }
+            return new RevenueTimeSeries(points);
         }
 
-        return new RevenueTimeSeries(points);
+        Map<LocalDate, BigDecimal> buckets = new TreeMap<>();
+        Map<LocalDate, BigDecimal> refundBuckets = new TreeMap<>();
+        for (LocalDate date = query.from(); !date.isAfter(query.to()); date = date.plusDays(1)) {
+            LocalDate bucket = bucketStart(date, query.granularity());
+            buckets.merge(bucket, daily.getOrDefault(date, BigDecimal.ZERO), BigDecimal::add);
+            refundBuckets.merge(bucket, refunded.getOrDefault(date, BigDecimal.ZERO), BigDecimal::add);
+        }
+        return new RevenueTimeSeries(buckets.entrySet().stream()
+                .map(entry -> new RevenueTimeSeries.Point(
+                        entry.getKey(),
+                        entry.getValue(),
+                        refundBuckets.getOrDefault(entry.getKey(), BigDecimal.ZERO),
+                        entry.getValue().subtract(refundBuckets.getOrDefault(entry.getKey(), BigDecimal.ZERO))))
+                .toList());
     }
 
-    public List<TopItem> topProducts() {
-        return analytics.topProducts(TOP_ITEM_LIMIT).stream()
-                .map(m -> new TopItem(m.id(), m.name(), m.value()))
+    public List<TopProduct> topProducts() {
+        return topProducts(defaultQuery());
+    }
+
+    public List<TopProduct> topProducts(DashboardQuery query) {
+        return topProducts(query, Instant.now(clock));
+    }
+
+    public List<TopProduct> topProducts(DashboardQuery query, Instant asOf) {
+        return analytics.topProductsByUnitsSold(query.from(), query.to(), query.limit(), asOf).stream()
+                .map(metric -> new TopProduct(metric.id(), metric.name(), metric.value().longValue()))
                 .toList();
     }
 
-    public List<TopItem> topSellers() {
-        return analytics.topSellers(TOP_ITEM_LIMIT).stream()
-                .map(m -> new TopItem(m.id(), m.name(), m.value()))
+    public List<TopSeller> topSellers() {
+        return topSellers(defaultQuery());
+    }
+
+    public List<TopSeller> topSellers(DashboardQuery query) {
+        return topSellers(query, Instant.now(clock));
+    }
+
+    public List<TopSeller> topSellers(DashboardQuery query, Instant asOf) {
+        List<DashboardAnalyticsPort.TopMetric> metrics = analytics.topSellersByPaidGmv(
+                query.from(), query.to(), query.limit(), asOf);
+        var sellerIds = metrics.stream().map(DashboardAnalyticsPort.TopMetric::id).collect(java.util.stream.Collectors.toSet());
+        var names = userDirectoryPort.lookup(Set.of(), sellerIds).sellerNames();
+        return metrics.stream()
+                .map(metric -> new TopSeller(metric.id(), names.get(metric.id()), metric.value()))
                 .toList();
+    }
+
+    public DashboardReport report(DashboardQuery query) {
+        Instant asOf = query.asOf() == null ? Instant.now(clock) : query.asOf();
+        DashboardQuery snapshotQuery = query.withAsOf(asOf);
+        return new DashboardReport(
+                asOf,
+                snapshotQuery.from(),
+                snapshotQuery.to(),
+                summary(snapshotQuery, asOf),
+                revenue(snapshotQuery, asOf),
+                topProducts(snapshotQuery, asOf),
+                topSellers(snapshotQuery, asOf));
+    }
+
+    private DashboardQuery defaultQuery() {
+        return DashboardQuery.defaultFor(LocalDate.now(clock));
+    }
+
+    private static LocalDate bucketStart(LocalDate date, DashboardGranularity granularity) {
+        return switch (granularity) {
+            case WEEK -> date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+            case MONTH -> date.withDayOfMonth(1);
+            case DAY -> date;
+        };
     }
 }

@@ -16,13 +16,14 @@ public class ProjectionPortAdapter implements ProjectionPort {
 
     @Override
     @Transactional
-    public void upsertOrderSummary(String orderId, String status, String buyerId, String sellerId,
+    public void upsertOrderSummary(String orderId, String orderNumber, String status, String buyerId, String sellerId,
                                    BigDecimal totalAmount, int itemCount) {
         OrderSummaryProjectionJpaEntity existing = em.find(OrderSummaryProjectionJpaEntity.class, orderId);
         Instant now = Instant.now();
 
         if (existing != null) {
             existing.setStatus(status);
+            if (orderNumber != null) existing.setOrderNumber(orderNumber);
             existing.setUpdatedAt(now);
             if (buyerId != null) existing.setBuyerId(buyerId);
             if (sellerId != null) existing.setSellerId(sellerId);
@@ -32,6 +33,7 @@ public class ProjectionPortAdapter implements ProjectionPort {
         } else {
             OrderSummaryProjectionJpaEntity entity = new OrderSummaryProjectionJpaEntity();
             entity.setOrderId(orderId);
+            entity.setOrderNumber(orderNumber);
             entity.setStatus(status);
             entity.setBuyerId(buyerId);
             entity.setSellerId(sellerId);

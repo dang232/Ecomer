@@ -95,7 +95,9 @@ public final class TestFakes {
 
         @Override
         public Optional<Return> findBySubOrderId(Long subOrderId) {
-            return Optional.empty();
+            return returns.values().stream()
+                    .filter(orderReturn -> subOrderId.equals(orderReturn.subOrderId()))
+                    .findFirst();
         }
     }
 }

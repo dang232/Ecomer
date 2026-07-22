@@ -7,6 +7,6 @@ import java.math.BigDecimal;
  * Decouples projector logic from JPA entity specifics.
  */
 public interface ProjectionPort {
-    void upsertOrderSummary(String orderId, String status, String buyerId, String sellerId,
+    void upsertOrderSummary(String orderId, String orderNumber, String status, String buyerId, String sellerId,
                             BigDecimal totalAmount, int itemCount);
 }

@@ -31,7 +31,11 @@ public class ListPendingOrdersUseCase {
     }
 
     public List<Order> listPendingBySeller(String sellerId) {
-        return orderRepositoryPort.findBySellerIdAndFulfillmentStatusIn(sellerId, ACTIONABLE);
+        return listPendingBySeller(sellerId, null);
+    }
+
+    public List<Order> listPendingBySeller(String sellerId, String query) {
+        return orderRepositoryPort.findBySellerIdAndFulfillmentStatusIn(sellerId, ACTIONABLE, query);
     }
 
     public String orderIdFromSubOrderId(Long subOrderId) {

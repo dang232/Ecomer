@@ -8,6 +8,7 @@ import jakarta.persistence.TypedQuery;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -67,64 +68,37 @@ public class OrderSummaryQueryPortAdapter implements OrderSummaryQueryPort {
     }
 
     @Override
-    public List<OrderSummaryProjection> findAll(String status) {
+    public Page<OrderSummaryProjection> findAll(String query, String status, Pageable pageable) {
+        String normalizedQuery = query == null ? "" : query.trim().toLowerCase();
         boolean hasStatus = status != null && !status.isBlank();
-        String filter = hasStatus
-                ? "WHERE EXISTS (SELECT 1 FROM order_svc.sub_orders filter_so "
-                    + "WHERE filter_so.order_id = o.id AND filter_so.fulfillment_status = :status)"
-                : "";
-        String sql = """
-                SELECT o.id::text,
-                       o.buyer_id,
-                       MIN(so.seller_id),
-                       CASE
-                           WHEN MAX(CASE WHEN so.fulfillment_status = 'PENDING_ACCEPTANCE' THEN 1 ELSE 0 END) = 1
-                               THEN 'PENDING_ACCEPTANCE'
-                           WHEN MAX(CASE WHEN so.fulfillment_status = 'ACCEPTED' THEN 1 ELSE 0 END) = 1
-                               THEN 'ACCEPTED'
-                           WHEN MAX(CASE WHEN so.fulfillment_status = 'PACKED' THEN 1 ELSE 0 END) = 1
-                               THEN 'PACKED'
-                           WHEN MAX(CASE WHEN so.fulfillment_status = 'SHIPPED' THEN 1 ELSE 0 END) = 1
-                               THEN 'SHIPPED'
-                           WHEN MAX(CASE WHEN so.fulfillment_status = 'DELIVERED' THEN 1 ELSE 0 END) = 1
-                               THEN 'DELIVERED'
-                           WHEN MAX(CASE WHEN so.fulfillment_status = 'REJECTED' THEN 1 ELSE 0 END) = 1
-                               THEN 'REJECTED'
-                           WHEN MAX(CASE WHEN so.fulfillment_status = 'CANCELLED' THEN 1 ELSE 0 END) = 1
-                               THEN 'CANCELLED'
-                           ELSE 'UNKNOWN'
-                       END,
-                       o.final_amount,
-                       COALESCE(SUM(oi.quantity), 0),
-                       o.created_at,
-                       o.updated_at
-                FROM order_svc.orders o
-                LEFT JOIN order_svc.sub_orders so ON so.order_id = o.id
-                LEFT JOIN order_svc.order_items oi ON oi.sub_order_id = so.id
-                %s
-                GROUP BY o.id, o.buyer_id, o.final_amount, o.created_at, o.updated_at
-                ORDER BY o.created_at DESC
-                LIMIT 200
-                """.formatted(filter);
+        String where = "WHERE (:term = '' OR lower(coalesce(o.orderId, '')) LIKE :likeTerm "
+                + "OR lower(coalesce(o.orderNumber, '')) LIKE :likeTerm "
+                + "OR lower(coalesce(o.buyerId, '')) LIKE :likeTerm "
+                + "OR lower(coalesce(o.sellerId, '')) LIKE :likeTerm)"
+                + (hasStatus ? " AND o.status = :status" : "");
 
-        var query = entityManager.createNativeQuery(sql);
-        if (hasStatus) query.setParameter("status", status);
-        return ((List<?>) query.getResultList()).stream()
-                .map(OrderSummaryQueryPortAdapter::toAdminProjection)
+        TypedQuery<Long> countQuery = entityManager.createQuery(
+                "SELECT COUNT(o) FROM OrderSummaryProjectionJpaEntity o " + where, Long.class)
+                .setParameter("term", normalizedQuery)
+                .setParameter("likeTerm", "%" + normalizedQuery + "%");
+        if (hasStatus) countQuery.setParameter("status", status);
+        long total = countQuery.getSingleResult();
+
+        int pageSize = Math.min(Math.max(pageable.getPageSize(), 1), 200);
+        Pageable bounded = PageRequest.of(pageable.getPageNumber(), pageSize);
+        TypedQuery<OrderSummaryProjectionJpaEntity> dataQuery = entityManager.createQuery(
+                "SELECT o FROM OrderSummaryProjectionJpaEntity o " + where + " ORDER BY o.createdAt DESC",
+                OrderSummaryProjectionJpaEntity.class)
+                .setParameter("term", normalizedQuery)
+                .setParameter("likeTerm", "%" + normalizedQuery + "%")
+                .setFirstResult((int) bounded.getOffset())
+                .setMaxResults(bounded.getPageSize());
+        if (hasStatus) dataQuery.setParameter("status", status);
+
+        List<OrderSummaryProjection> content = dataQuery.getResultStream()
+                .map(OrderSummaryProjectionJpaEntity::toDomain)
                 .toList();
-    }
-
-    private static OrderSummaryProjection toAdminProjection(Object row) {
-        Object[] values = (Object[]) row;
-        return new OrderSummaryProjection(
-                (String) values[0],
-                (String) values[1],
-                (String) values[2],
-                (String) values[3],
-                (java.math.BigDecimal) values[4],
-                ((Number) values[5]).intValue(),
-                toInstant(values[6]),
-                toInstant(values[7]));
+        return new PageImpl<>(content, bounded, total);
     }
 
     private static Instant toInstant(Object value) {
