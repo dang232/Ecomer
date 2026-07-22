@@ -17,6 +17,8 @@ interface PersistedCartItem {
   unitPrice: PersistedMoney;
   quantity: number;
   addedAt: string;
+  sellerId?: string;
+  sellerName?: string;
 }
 
 interface PersistedCart {
@@ -102,6 +104,8 @@ export class CartRedisRepository implements CartRepository {
         item.quantity,
         new Date(item.addedAt),
         item.variantId,
+        item.sellerId,
+        item.sellerName,
       ),
     );
     return Cart.fromPersistence(persisted.userId, items, new Date(persisted.updatedAt));
@@ -121,6 +125,8 @@ export class CartRedisRepository implements CartRepository {
         },
         quantity: item.quantity,
         addedAt: item.addedAt.toISOString(),
+        sellerId: item.sellerId,
+        sellerName: item.sellerName,
       })),
       updatedAt: cart.updatedAt.toISOString(),
       ...(processedMergeKeys ? { processedMergeKeys } : {}),

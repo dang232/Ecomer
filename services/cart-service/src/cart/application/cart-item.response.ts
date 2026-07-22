@@ -9,4 +9,6 @@ export interface CartItemResponse {
   quantity: number;
   subtotal: MoneyResponse;
   addedAt: string;
+  sellerId?: string;
+  sellerName?: string;
 }

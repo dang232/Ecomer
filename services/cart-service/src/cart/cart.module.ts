@@ -50,6 +50,8 @@ export { REDIS_CLIENT } from './redis-client.token';
       useFactory: (configService: ConfigService): ProductClientPort =>
         new ProductHttpClientAdapter(
           configService.get<string>('PRODUCT_SERVICE_URL'),
+          configService.get<string>('USER_SERVICE_URL') ?? 'http://user-service:8081',
+          Number(configService.get<string>('USER_SERVICE_TIMEOUT_MS') ?? '2000'),
         ),
       inject: [ConfigService],
     },

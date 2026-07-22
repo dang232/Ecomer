@@ -10,6 +10,8 @@ export class CartItem {
     private _quantity: number,
     public readonly addedAt: Date,
     private readonly _variantId: string | null,
+    public readonly sellerId?: string,
+    public readonly sellerName?: string,
   ) {}
 
   /** Returns the composite key used to distinguish line items in a cart. */
@@ -24,6 +26,8 @@ export class CartItem {
     unitPrice: Money,
     quantity: number,
     variantId?: string | null,
+    sellerId?: string,
+    sellerName?: string,
   ): CartItem {
     if (quantity < 1) {
       throw new InvalidCartOperationException(
@@ -43,6 +47,8 @@ export class CartItem {
       quantity,
       new Date(),
       variantId ?? null,
+      sellerId,
+      sellerName,
     );
   }
 
@@ -54,6 +60,8 @@ export class CartItem {
     quantity: number,
     addedAt: Date,
     variantId?: string | null,
+    sellerId?: string,
+    sellerName?: string,
   ): CartItem {
     return new CartItem(
       productId,
@@ -63,6 +71,8 @@ export class CartItem {
       quantity,
       addedAt,
       variantId ?? null,
+      sellerId,
+      sellerName,
     );
   }
 

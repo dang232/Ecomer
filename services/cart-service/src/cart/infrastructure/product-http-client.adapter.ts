@@ -26,6 +26,7 @@ interface ProductServiceImage {
 interface ProductServiceResponse {
   id?: string;
   productId?: string;
+  sellerId?: string;
   name?: string;
   productName?: string;
   // Legacy/optional top-level fields kept for tolerance — newer
@@ -100,9 +101,13 @@ function pickImage(product: ProductServiceResponse, variantId?: string | null): 
 export class ProductHttpClientAdapter implements ProductClientPort {
   private readonly circuitBreaker: CircuitBreaker;
   private readonly productServiceUrl: string | undefined;
+  private readonly userServiceUrl: string | undefined;
+  private readonly userServiceTimeoutMs: number;
 
-  constructor(productServiceUrl?: string) {
+  constructor(productServiceUrl?: string, userServiceUrl?: string, userServiceTimeoutMs = 2000) {
     this.productServiceUrl = productServiceUrl;
+    this.userServiceUrl = userServiceUrl;
+    this.userServiceTimeoutMs = userServiceTimeoutMs;
     // Configure circuit breaker with sensible defaults
     this.circuitBreaker = new CircuitBreaker(this.fetchProduct.bind(this), {
       timeout: 3000, // If product service doesn't respond in 3s, trip the circuit
@@ -154,6 +159,8 @@ export class ProductHttpClientAdapter implements ProductClientPort {
         productName: product.productName ?? product.name ?? productId,
         productImage: pickImage(product, variantId),
         unitPrice: Money.of(amount, currency),
+        sellerId: product.sellerId,
+        sellerName: await this.fetchSellerName(product.sellerId),
       };
     } catch (error) {
       // Re-throw domain/validation exceptions — these indicate a bad request,
@@ -172,6 +179,20 @@ export class ProductHttpClientAdapter implements ProductClientPort {
         productImage: '',
         unitPrice: Money.zero('VND'),
       };
+    }
+  }
+
+  private async fetchSellerName(sellerId?: string): Promise<string | undefined> {
+    if (!sellerId || !this.userServiceUrl) return undefined;
+    try {
+      const response = await fetch(`${this.userServiceUrl}/sellers/${encodeURIComponent(sellerId)}`, {
+        signal: AbortSignal.timeout(this.userServiceTimeoutMs),
+      });
+      if (!response.ok) return undefined;
+      const payload = (await response.json()) as { data?: { shopName?: string } };
+      return payload.data?.shopName?.trim() || undefined;
+    } catch {
+      return undefined;
     }
   }
 }

@@ -5,4 +5,6 @@ export interface ProductSnapshot {
   productName: string;
   productImage: string;
   unitPrice: Money;
+  sellerId?: string;
+  sellerName?: string;
 }

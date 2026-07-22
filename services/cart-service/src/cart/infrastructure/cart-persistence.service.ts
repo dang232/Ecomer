@@ -22,6 +22,8 @@ interface PersistedCartItem {
   unitPrice: PersistedMoney;
   quantity: number;
   addedAt: string;
+  sellerId?: string;
+  sellerName?: string;
 }
 
 interface PersistedCart {
@@ -208,8 +210,10 @@ export class CartPersistenceService implements CartRepository {
         productName: item.productName,
         productImage: item.productImage,
         unitPrice: { amount: item.unitPrice.amount, currency: item.unitPrice.currency },
-        quantity: item.quantity,
-        addedAt: item.addedAt.toISOString(),
+          quantity: item.quantity,
+          addedAt: item.addedAt.toISOString(),
+          sellerId: item.sellerId,
+          sellerName: item.sellerName,
       })),
       updatedAt: cart.updatedAt.toISOString(),
     };
@@ -235,6 +239,8 @@ export class CartPersistenceService implements CartRepository {
         item.quantity,
         new Date(item.addedAt),
         item.variantId,
+        item.sellerId,
+        item.sellerName,
       ),
     );
     return Cart.fromPersistence(entity.userId, items, entity.updatedAt);
@@ -250,6 +256,8 @@ export class CartPersistenceService implements CartRepository {
         item.quantity,
         new Date(item.addedAt),
         item.variantId,
+        item.sellerId,
+        item.sellerName,
       ),
     );
     return Cart.fromPersistence(
@@ -276,6 +284,8 @@ export class CartPersistenceService implements CartRepository {
         unitPrice: { amount: item.unitPrice.amount, currency: item.unitPrice.currency },
         quantity: item.quantity,
         addedAt: item.addedAt.toISOString(),
+        sellerId: item.sellerId,
+        sellerName: item.sellerName,
       })),
       updatedAt: cart.updatedAt.toISOString(),
       ...(processedMergeKeys ? { processedMergeKeys } : {}),

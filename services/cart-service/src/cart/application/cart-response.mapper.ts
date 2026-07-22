@@ -22,6 +22,8 @@ function toCartItemResponse(item: CartItem): CartItemResponse {
     quantity: item.quantity,
     subtotal: toMoneyResponse(item.subtotal),
     addedAt: item.addedAt.toISOString(),
+    sellerId: item.sellerId,
+    sellerName: item.sellerName,
   };
 }
 
