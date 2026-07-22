@@ -102,6 +102,10 @@ kafka:
       group-id: seller-finance-service-refund
 
 vnshop:
+  user-service:
+    base-url: ${USER_SERVICE_URL:http://user-service:8081}
+    connect-timeout-ms: ${USER_SERVICE_CONNECT_TIMEOUT_MS:1000}
+    read-timeout-ms: ${USER_SERVICE_READ_TIMEOUT_MS:2000}
   commission:
     tiers:
       STANDARD: "0.10"

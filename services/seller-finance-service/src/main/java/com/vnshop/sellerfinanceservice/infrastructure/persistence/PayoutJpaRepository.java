@@ -33,8 +33,24 @@ public class PayoutJpaRepository implements PayoutRepositoryPort {
     }
 
     @Override
+    public List<Payout> findByStatus(PayoutStatus status, String query) {
+        String normalized = query == null ? "" : query.trim().toLowerCase();
+        return repository.findByStatusAndQuery(status, normalized, "%" + normalized + "%").stream()
+                .map(PayoutJpaEntity::toDomain)
+                .toList();
+    }
+
+    @Override
     public List<Payout> findCompleted() {
         return repository.findByStatusOrderByCompletedAtDesc(PayoutStatus.COMPLETED).stream()
+                .map(PayoutJpaEntity::toDomain)
+                .toList();
+    }
+
+    @Override
+    public List<Payout> findCompleted(String query) {
+        String normalized = query == null ? "" : query.trim().toLowerCase();
+        return repository.findCompletedAndQuery(PayoutStatus.COMPLETED, normalized, "%" + normalized + "%").stream()
                 .map(PayoutJpaEntity::toDomain)
                 .toList();
     }

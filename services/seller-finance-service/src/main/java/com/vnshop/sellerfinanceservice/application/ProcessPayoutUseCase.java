@@ -46,11 +46,23 @@ public class ProcessPayoutUseCase {
     }
 
     public List<Payout> pending() {
-        return payoutRepository.findByStatus(PayoutStatus.PENDING);
+        return pending(null);
+    }
+
+    public List<Payout> pending(String query) {
+        return query == null || query.isBlank()
+                ? payoutRepository.findByStatus(PayoutStatus.PENDING)
+                : payoutRepository.findByStatus(PayoutStatus.PENDING, query);
     }
 
     public List<Payout> completed() {
-        return payoutRepository.findCompleted();
+        return completed(null);
+    }
+
+    public List<Payout> completed(String query) {
+        return query == null || query.isBlank()
+                ? payoutRepository.findCompleted()
+                : payoutRepository.findCompleted(query);
     }
 
     private Payout findPayout(String payoutId) {
