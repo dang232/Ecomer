@@ -26,7 +26,7 @@ public interface ProductReadModelRepository extends JpaRepository<ProductReadMod
               and (:verifiedOnly is null or product.verified = :verifiedOnly)
               and (:officialOnly is null or product.isOfficial = :officialOnly)
               and (:anchorCreatedAt is null or product.createdAt < :anchorCreatedAt
-                   or (product.createdAt = :anchorCreatedAt and product.productId < :anchorProductId))
+                   or (product.createdAt = :anchorCreatedAt and product.productId < cast(:anchorProductId as string)))
             order by product.createdAt desc, product.productId desc
             """)
     List<ProductReadModelJpaEntity> searchAfterNewest(
@@ -56,7 +56,7 @@ public interface ProductReadModelRepository extends JpaRepository<ProductReadMod
               and (:verifiedOnly is null or product.verified = :verifiedOnly)
               and (:officialOnly is null or product.isOfficial = :officialOnly)
               and (:anchorPrice is null or product.minPrice > :anchorPrice
-                   or (product.minPrice = :anchorPrice and product.productId > :anchorProductId))
+                   or (product.minPrice = :anchorPrice and product.productId > cast(:anchorProductId as string)))
             order by product.minPrice asc, product.productId asc
             """)
     List<ProductReadModelJpaEntity> searchAfterPriceLow(
@@ -86,7 +86,7 @@ public interface ProductReadModelRepository extends JpaRepository<ProductReadMod
               and (:verifiedOnly is null or product.verified = :verifiedOnly)
               and (:officialOnly is null or product.isOfficial = :officialOnly)
               and (:anchorPrice is null or product.minPrice < :anchorPrice
-                   or (product.minPrice = :anchorPrice and product.productId < :anchorProductId))
+                   or (product.minPrice = :anchorPrice and product.productId < cast(:anchorProductId as string)))
             order by product.minPrice desc, product.productId desc
             """)
     List<ProductReadModelJpaEntity> searchAfterPriceHigh(

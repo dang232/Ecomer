@@ -34,10 +34,9 @@ public class SearchController {
      * stale FE never produces a 500. Values mirror the FE sortBy enum on
      * SearchPage.tsx (price-low, price-high, rating, newest).
      *
-     * <p>{@code rating} is currently mapped to the default sort because the
-     * read model doesn't carry a rating column yet — the BE accepts the
-     * key without 500'ing, the actual rating-aware ranking lands when the
-     * read-model schema gains the column.
+     * <p>{@code rating} remains mapped to the default sort until the cursor
+     * contract gains a rating anchor. Rating values themselves are projected
+     * in the V2 response and are available to the frontend filter.
      */
     private static final Map<String, Sort> SORT_BY = Map.of(
             "price-low", Sort.by(Sort.Direction.ASC, "minPrice"),
@@ -54,6 +53,11 @@ public class SearchController {
         this.searchProductsUseCase = searchProductsUseCase;
     }
 
+    /**
+     * @deprecated Use cursor-based {@code /search/v2}. Kept for external
+     * clients during the compatibility window; the FE no longer calls it.
+     */
+    @Deprecated(since = "2026.07", forRemoval = false)
     @GetMapping("/search")
     public ApiResponse<Page<SearchProductResponse>> search(
             @RequestParam(name = "q", required = false) String query,

@@ -40,7 +40,11 @@ public class ProductEventConsumer {
     }
 
     @Transactional
-    @KafkaListener(topics = "product-events", groupId = "search-service", concurrency = "12")
+    @KafkaListener(
+            topics = "product-events",
+            groupId = "search-service",
+            concurrency = "12",
+            containerFactory = "productEventKafkaListenerContainerFactory")
     public void consume(ProductEvent event) {
         String eventId = event.deduplicationId();
         if (processedEventRepository.existsById(eventId)) {
@@ -53,9 +57,22 @@ public class ProductEventConsumer {
             productReadModelRepository.deleteById(event.productId());
             projectOrQueueRepair(event, () -> indexDeleteToElasticsearch(event.productId()));
         } else {
-            productReadModelRepository.save(ProductReadModelJpaEntity.fromEvent(event.productId(), event.payload()));
+            productReadModelRepository.save(readModelFromEvent(event));
             projectOrQueueRepair(event, () -> indexUpsertToElasticsearch(event.productId(), event.payload()));
         }
+    }
+
+    private ProductReadModelJpaEntity readModelFromEvent(ProductEvent event) {
+        ProductReadModelJpaEntity next = ProductReadModelJpaEntity.fromEvent(event.productId(), event.payload());
+        productReadModelRepository.findById(event.productId()).ifPresent(previous -> {
+            if (!event.payload().containsKey("averageRating")) {
+                next.setAverageRating(previous.getAverageRating());
+            }
+            if (!event.payload().containsKey("reviewCount")) {
+                next.setReviewCount(previous.getReviewCount());
+            }
+        });
+        return next;
     }
 
     private void projectOrQueueRepair(ProductEvent event, Runnable projection) {
@@ -73,6 +90,14 @@ public class ProductEventConsumer {
     private void indexUpsertToElasticsearch(String productId, Map<String, Object> payload) {
         try {
             ProductDocument doc = ProductDocument.fromEvent(productId, payload);
+            productElasticsearchRepository.findById(productId).ifPresent(previous -> {
+                if (!payload.containsKey("averageRating")) {
+                    doc.setAverageRating(previous.getAverageRating());
+                }
+                if (!payload.containsKey("reviewCount")) {
+                    doc.setReviewCount(previous.getReviewCount());
+                }
+            });
             productElasticsearchRepository.save(doc);
             LOGGER.debug("Indexed product {} into Elasticsearch", productId);
         } catch (Exception ex) {

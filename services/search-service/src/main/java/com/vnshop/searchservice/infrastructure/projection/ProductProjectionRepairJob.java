@@ -62,6 +62,8 @@ public class ProductProjectionRepairJob {
         payload.put("status", model.status());
         payload.put("minPrice", model.minPrice());
         payload.put("maxPrice", model.maxPrice());
+        payload.put("averageRating", model.averageRating());
+        payload.put("reviewCount", model.reviewCount());
         payload.put("variantCount", model.variantCount());
         payload.put("imageUrl", model.imageUrl());
         payload.put("stock", model.stock());

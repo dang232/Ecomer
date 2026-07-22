@@ -349,7 +349,7 @@ public class ElasticsearchSearchAdapter implements SearchRepository {
                 co.elastic.clients.elasticsearch._types.SortOptions.of(s -> s
                         .field(f -> f.field(field).order(direction))),
                 co.elastic.clients.elasticsearch._types.SortOptions.of(s -> s
-                        .field(f -> f.field("_id").order(direction)))
+                        .field(f -> f.field("id.keyword").order(direction)))
         );
     }
 
@@ -377,6 +377,8 @@ public class ElasticsearchSearchAdapter implements SearchRepository {
                 doc.getStatus(),
                 doc.getPrice(),    // ES stores a single price; map to both min and max
                 doc.getPrice(),
+                doc.getAverageRating(),
+                doc.getReviewCount(),
                 0,                 // variantCount not stored in ES document
                 doc.getImageUrls() == null || doc.getImageUrls().isEmpty()
                         ? null
