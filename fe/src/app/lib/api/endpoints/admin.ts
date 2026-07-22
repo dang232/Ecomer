@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import {
   adminOrderSummarySchema,
+  adminPageSchema,
   adminPayoutSchema,
   adminUserSchema,
   adminVideoAppealItemSchema,
@@ -10,6 +11,7 @@ import {
   adminVideoPreviewSchema,
   couponSchema,
   dashboardRevenuePointSchema,
+  dashboardReportSchema,
   dashboardSummarySchema,
   dashboardTopProductSchema,
   dashboardTopSellerSchema,
@@ -24,8 +26,12 @@ import { api } from "../client";
 export type { DashboardSummary };
 
 // User management
-export const adminSearchUsers = (params: { email?: string; phone?: string }) =>
-  api.get("/admin/users", z.array(adminUserSchema), params);
+export const adminSearchUsers = (params: { q?: string; page?: number; size?: number } = {}) =>
+  api.get("/admin/users", adminPageSchema(adminUserSchema), {
+    q: params.q,
+    page: params.page ?? 0,
+    size: params.size ?? 50,
+  });
 export const adminBanUser = (id: string) =>
   api.post(`/admin/users/${encodeURIComponent(id)}/ban`, adminUserSchema);
 export const adminUnbanUser = (id: string) =>
@@ -37,22 +43,29 @@ export const adminUserOrders = (buyerId: string) =>
   );
 
 // Order management
-export const adminListOrders = (params: { status?: string } = {}) =>
-  api.get("/admin/orders", z.array(adminOrderSummarySchema), params);
+export const adminListOrders = (
+  params: { q?: string; status?: string; page?: number; size?: number } = {},
+) => api.get("/admin/orders", adminPageSchema(adminOrderSummarySchema), params);
 export const adminCancelOrder = (id: string) =>
   api.post(`/admin/orders/${encodeURIComponent(id)}/cancel`, z.unknown());
-export const adminRefundOrder = (id: string) =>
-  api.post(`/admin/orders/${encodeURIComponent(id)}/refund`, z.unknown());
+export const adminRefundOrder = (id: string, reason: string) =>
+  api.post(
+    `/admin/orders/${encodeURIComponent(id)}/refund`,
+    z.object({ orderId: z.string(), returnIds: z.array(z.string()) }),
+    { reason },
+  );
 export const adminChangeOrderStatus = (id: string, status: string) =>
   api.patch(`/admin/orders/${encodeURIComponent(id)}/status`, z.unknown(), { status });
 
-export const adminListSellers = () => api.get("/admin/sellers", z.array(sellerSummarySchema));
+export const adminListSellers = (params: { q?: string } = {}) =>
+  api.get("/admin/sellers", z.array(sellerSummarySchema), params);
 export const adminApproveSeller = (id: string) =>
   api.post(`/admin/sellers/${encodeURIComponent(id)}/approve`, sellerSummarySchema);
 export const adminRejectSeller = (id: string, body: { reason: string }) =>
   api.post(`/admin/sellers/${encodeURIComponent(id)}/reject`, sellerSummarySchema, body);
 
-export const adminPendingReviews = () => api.get("/admin/reviews/pending", z.array(reviewSchema));
+export const adminPendingReviews = (params: { q?: string } = {}) =>
+  api.get("/admin/reviews/pending", z.array(reviewSchema), params);
 export const adminApproveReview = (id: string) =>
   api.put(`/admin/reviews/${encodeURIComponent(id)}/approve`, reviewSchema);
 export const adminRejectReview = (id: string, body: { reason: string }) =>
@@ -83,16 +96,15 @@ export const adminUpdateCoupon = (id: string, body: CouponWriteBody) =>
 export const adminDeactivateCoupon = (id: string) =>
   api.post(`/admin/coupons/${encodeURIComponent(id)}/deactivate`, couponSchema);
 
-export const adminOpenDisputes = () => api.get("/admin/disputes/open", z.array(disputeSchema));
-export const adminResolveDispute = (
-  id: string,
-  body: { resolution: string; refundAmount?: number },
-) => api.post(`/admin/disputes/${encodeURIComponent(id)}/resolve`, disputeSchema, body);
+export const adminOpenDisputes = (params: { q?: string } = {}) =>
+  api.get("/admin/disputes/open", z.array(disputeSchema), params);
+export const adminResolveDispute = (id: string, body: { adminResolution: string }) =>
+  api.post(`/admin/disputes/${encodeURIComponent(id)}/resolve`, disputeSchema, body);
 
-export const adminPendingPayouts = () =>
-  api.get("/admin/finance/payouts/pending", z.array(adminPayoutSchema));
-export const adminCompletedPayouts = () =>
-  api.get("/admin/finance/payouts/completed", z.array(adminPayoutSchema));
+export const adminPendingPayouts = (params: { q?: string } = {}) =>
+  api.get("/admin/finance/payouts/pending", z.array(adminPayoutSchema), params);
+export const adminCompletedPayouts = (params: { q?: string } = {}) =>
+  api.get("/admin/finance/payouts/completed", z.array(adminPayoutSchema), params);
 export const adminCompletePayout = (id: string) =>
   api.post(`/admin/finance/payouts/${encodeURIComponent(id)}/complete`, adminPayoutSchema);
 export const adminFailPayout = (id: string, body: { reason: string }) =>
@@ -100,22 +112,36 @@ export const adminFailPayout = (id: string, body: { reason: string }) =>
 
 // Dashboard
 //
-// Backend names for the same conceptual KPI vary (`totalRevenue` vs `revenue`).
-// The dashboard summary schema (in types/api/admin.ts) accepts every alias and
-// the consumer just reads `.totalRevenue`, so the UI no longer needs runtime
-// key probing.
-export const dashboardSummary = () => api.get("/admin/dashboard/summary", dashboardSummarySchema);
+// Dashboard endpoints use the v2 typed metric contract and share the same
+// period/granularity/limit query shape.
+export type DashboardQueryParams = {
+  from?: string;
+  to?: string;
+  granularity?: "day" | "week" | "month";
+  limit?: number;
+  asOf?: string;
+};
+
+export const dashboardSummary = (params: Pick<DashboardQueryParams, "from" | "to"> = {}) =>
+  api.get("/admin/dashboard/summary", dashboardSummarySchema, params);
+export const dashboardReport = (params: DashboardQueryParams = {}) =>
+  api.get("/admin/dashboard/report", dashboardReportSchema, params);
+export const dashboardExport = (params: DashboardQueryParams = {}) =>
+  api.getBlob("/admin/dashboard/export", params);
+export const dashboardRevenueResponseSchema = z
+  .union([
+    z.array(dashboardRevenuePointSchema),
+    z.object({ points: z.array(dashboardRevenuePointSchema) }).passthrough(),
+  ])
+  .transform((response) => (Array.isArray(response) ? response : response.points));
+
 export const dashboardRevenue = (
-  params: { from?: string; to?: string; granularity?: "day" | "week" | "month" } = {},
-) => api.get("/admin/dashboard/revenue", z.array(dashboardRevenuePointSchema), params);
-export const dashboardTopProducts = (params: { limit?: number } = {}) =>
-  api.get("/admin/dashboard/top-products", z.array(dashboardTopProductSchema), {
-    limit: params.limit ?? 10,
-  });
-export const dashboardTopSellers = (params: { limit?: number } = {}) =>
-  api.get("/admin/dashboard/top-sellers", z.array(dashboardTopSellerSchema), {
-    limit: params.limit ?? 10,
-  });
+  params: Pick<DashboardQueryParams, "from" | "to" | "granularity"> = {},
+) => api.get("/admin/dashboard/revenue", dashboardRevenueResponseSchema, params);
+export const dashboardTopProducts = (params: DashboardQueryParams = {}) =>
+  api.get("/admin/dashboard/top-products", z.array(dashboardTopProductSchema), params);
+export const dashboardTopSellers = (params: DashboardQueryParams = {}) =>
+  api.get("/admin/dashboard/top-sellers", z.array(dashboardTopSellerSchema), params);
 
 // ─── Video admin ───────────────────────────────────────────────────────────────
 
@@ -148,9 +174,12 @@ export const adminRejectVideo = (videoId: string, body: { reason: string }) =>
     body,
   );
 
-/** GET /admin/videos/appeal-queue — list of APPEAL_PENDING videos (flat array). */
+/** GET /admin/videos/appeal-queue — paginated APPEAL_PENDING videos. */
 export const adminVideoAppealsQueue = () =>
-  api.get("/admin/videos/appeal-queue", z.array(adminVideoAppealItemSchema));
+  api.get("/admin/videos/appeal-queue", adminPageSchema(adminVideoAppealItemSchema), {
+    page: 0,
+    size: 50,
+  });
 
 /** POST /admin/videos/{videoId}/appeal/approve — re-publish after appeal. */
 export const adminApproveAppeal = (videoId: string) =>

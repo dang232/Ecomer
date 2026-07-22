@@ -473,6 +473,8 @@
       "errorUnavailable": "This social login provider is currently unavailable."
     },
     "form": {
+      "username": "Email or username",
+      "password": "Password",
       "identifierLabel": "Email or username",
       "identifierPlaceholder": "you@example.com",
       "passwordLabel": "Password",
@@ -679,20 +681,30 @@
       "title": "Admin Dashboard",
       "subtitle": "Live data from the platform",
       "exportReport": "Export report",
+      "exporting": "Exporting...",
+      "exportFailed": "Could not export the dashboard report.",
       "kpiLoadFail": "Couldn't load KPIs: {{message}}",
       "kpiLoadFailFriendly": "Couldn't load the dashboard. Check your connection and try again.",
       "retry": "Retry",
       "kpi": {
+        "paidGmv": "Paid GMV",
+        "refundedAmount": "Refunded amount",
+        "realizedRevenue": "Realized revenue",
+        "activeBuyers": "Active buyers (30 days)",
+        "paidOrders": "Paid orders",
+        "activeSellers": "Active sellers (30 days)",
         "totalRevenue": "Total revenue",
         "totalUsers": "Users",
         "totalOrders": "Orders",
         "totalSellers": "Sellers"
       },
-      "revenueTitle": "Revenue over time",
+      "revenueTitle": "Paid GMV over time",
       "loading": "Loading...",
       "revenueEmpty": "No revenue data yet",
-      "topProducts": "Top products",
+      "topProducts": "Top products by units sold",
       "topSellers": "Top sellers",
+      "units": "units",
+      "unknownShop": "Unknown shop",
       "noData": "No data yet"
     },
     "sellers": {
@@ -736,6 +748,7 @@
       }
     },
     "reviewsModeration": {
+      "searchPlaceholder": "Search review, product, buyer, or comment",
       "title": "Review moderation",
       "loading": "Loading...",
       "empty": "No reviews to moderate",
@@ -799,7 +812,9 @@
       "title": "Disputes",
       "loading": "Loading...",
       "empty": "No open disputes",
+      "searchPlaceholder": "Search by dispute, return, or buyer reason...",
       "orderLabel": "Order: {{id}}",
+      "buyerFallback": "Buyer context unavailable",
       "resolve": "Resolve",
       "resolveOk": "Dispute resolved",
       "resolveErr": "Couldn't resolve",
@@ -815,6 +830,7 @@
       }
     },
     "orders": {
+      "refundDefaultReason": "Admin approved refund",
       "title": "Order Queue",
       "loading": "Loading orders...",
       "loadErr": "Couldn't load orders: {{message}}",
@@ -826,6 +842,12 @@
       "statusOk": "Order status updated",
       "statusErr": "Couldn't update status",
       "buyer": "Buyer",
+      "seller": "Seller",
+      "search": "Search",
+      "searchPlaceholder": "Search by order number, buyer, seller, or ID...",
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {{page}} of {{pages}}",
       "items": "Items",
       "cancel": "Cancel",
       "refund": "Refund",
@@ -865,7 +887,10 @@
       "orderHistoryFor": "Order history for {{name}}",
       "close": "Close",
       "emailPlaceholder": "Search by email...",
-      "phonePlaceholder": "Search by phone..."
+      "phonePlaceholder": "Search by phone...",
+      "searchPlaceholder": "Search by name, email, phone, or ID...",
+      "unknownName": "Unnamed buyer",
+      "page": "Page {{page}} of {{pages}}"
     },
     "payouts": {
       "title": "Payout requests",
@@ -1107,7 +1132,16 @@
       "payoutErr": "Couldn't submit request"
     },
     "reviewsTab": {
-      "comingSoon": "Reviews inbox will land once the backend ships its own endpoint."
+      "title": "Customer reviews",
+      "subtitle": "Feedback for products in your shop",
+      "searchPlaceholder": "Search product, review, or order",
+      "loading": "Loading reviews...",
+      "empty": "No customer reviews found",
+      "anonymous": "Anonymous buyer",
+      "productFallback": "Product",
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {{page}} of {{pages}}"
     },
     "settings": {
       "title": "Shop settings",
@@ -1249,6 +1283,7 @@
     "security": {
       "title": "Account security",
       "subtitle": "Passwords, 2FA and signed-in devices are managed by Keycloak.",
+      "nativeBoundary": "Password and session security are handled by VNShop's protected account service.",
       "openKeycloak": "Open Keycloak account console"
     }
   },

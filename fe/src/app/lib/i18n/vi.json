@@ -473,6 +473,8 @@
       "errorUnavailable": "Nhà cung cấp đăng nhập này hiện không khả dụng."
     },
     "form": {
+      "username": "Email hoặc tên đăng nhập",
+      "password": "Mật khẩu",
       "identifierLabel": "Email hoặc tên đăng nhập",
       "identifierPlaceholder": "ban@example.com",
       "passwordLabel": "Mật khẩu",
@@ -679,20 +681,30 @@
       "title": "Admin Dashboard",
       "subtitle": "Dữ liệu thời gian thực từ máy chủ",
       "exportReport": "Xuất báo cáo",
+      "exporting": "Đang xuất...",
+      "exportFailed": "Không thể xuất báo cáo dashboard.",
       "kpiLoadFail": "Không tải được KPI: {{message}}",
       "kpiLoadFailFriendly": "Không tải được dashboard. Kiểm tra kết nối và thử lại.",
       "retry": "Thử lại",
       "kpi": {
+        "paidGmv": "GMV da thanh toan",
+        "refundedAmount": "So tien da hoan",
+        "realizedRevenue": "Doanh thu thuc te",
+        "activeBuyers": "Nguoi mua hoat dong (30 ngay)",
+        "paidOrders": "Don da thanh toan",
+        "activeSellers": "Nguoi ban hoat dong (30 ngay)",
         "totalRevenue": "Tổng doanh thu",
         "totalUsers": "Người dùng",
         "totalOrders": "Đơn hàng",
         "totalSellers": "Người bán"
       },
-      "revenueTitle": "Doanh thu theo thời gian",
+      "revenueTitle": "GMV đã thanh toán theo thời gian",
       "loading": "Đang tải...",
       "revenueEmpty": "Chưa có dữ liệu doanh thu",
-      "topProducts": "Sản phẩm bán chạy",
+      "topProducts": "Sản phẩm theo số lượng bán",
       "topSellers": "Người bán dẫn đầu",
+      "units": "sản phẩm",
+      "unknownShop": "Cửa hàng chưa xác định",
       "noData": "Chưa có dữ liệu"
     },
     "sellers": {
@@ -736,6 +748,7 @@
       }
     },
     "reviewsModeration": {
+      "searchPlaceholder": "Tìm theo đánh giá, sản phẩm, người mua hoặc bình luận",
       "title": "Kiểm duyệt đánh giá",
       "loading": "Đang tải...",
       "empty": "Không có đánh giá nào cần duyệt",
@@ -799,7 +812,9 @@
       "title": "Khiếu nại",
       "loading": "Đang tải...",
       "empty": "Không có khiếu nại nào đang mở",
+      "searchPlaceholder": "Tìm theo khiếu nại, yêu cầu trả hàng hoặc lý do của người mua...",
       "orderLabel": "Đơn hàng: {{id}}",
+      "buyerFallback": "Chưa có thông tin người mua",
       "resolve": "Giải quyết",
       "resolveOk": "Đã giải quyết khiếu nại",
       "resolveErr": "Không thể giải quyết",
@@ -815,6 +830,7 @@
       }
     },
     "orders": {
+      "refundDefaultReason": "Hoan tien theo phe duyet cua quan tri vien",
       "title": "Hàng chờ đơn hàng",
       "loading": "Đang tải đơn hàng...",
       "loadErr": "Không tải được đơn hàng: {{message}}",
@@ -826,6 +842,12 @@
       "statusOk": "Đã cập nhật trạng thái đơn hàng",
       "statusErr": "Không thể cập nhật trạng thái",
       "buyer": "Người mua",
+      "search": "Tìm kiếm",
+      "searchPlaceholder": "Tìm theo mã đơn, người mua, người bán hoặc ID...",
+      "previous": "Trang trước",
+      "next": "Trang sau",
+      "page": "Trang {{page}} / {{pages}}",
+      "seller": "Người bán",
       "items": "Sản phẩm",
       "cancel": "Huỷ",
       "refund": "Hoàn tiền",
@@ -865,7 +887,10 @@
       "orderHistoryFor": "Lịch sử đơn của {{name}}",
       "close": "Đóng",
       "emailPlaceholder": "Tìm theo email...",
-      "phonePlaceholder": "Tìm theo số điện thoại..."
+      "phonePlaceholder": "Tìm theo số điện thoại...",
+      "searchPlaceholder": "Tìm theo tên, email, số điện thoại hoặc ID...",
+      "unknownName": "Người mua chưa có tên",
+      "page": "Trang {{page}} / {{pages}}"
     },
     "payouts": {
       "title": "Yêu cầu rút tiền",
@@ -1107,6 +1132,16 @@
       "payoutErr": "Không thể gửi yêu cầu"
     },
     "reviewsTab": {
+      "title": "Đánh giá của khách hàng",
+      "subtitle": "Phản hồi về sản phẩm trong Shop",
+      "searchPlaceholder": "Tìm theo sản phẩm, đánh giá hoặc đơn hàng",
+      "loading": "Đang tải đánh giá...",
+      "empty": "Chưa tìm thấy đánh giá của khách hàng",
+      "anonymous": "Người mua ẩn danh",
+      "productFallback": "Sản phẩm",
+      "previous": "Trang trước",
+      "page": "Trang {{page}} / {{pages}}",
+      "next": "Trang sau",
       "comingSoon": "Inbox đánh giá sẽ được hỗ trợ khi backend cung cấp endpoint riêng."
     },
     "settings": {
@@ -1249,6 +1284,7 @@
     "security": {
       "title": "Bảo mật tài khoản",
       "subtitle": "Mật khẩu, xác thực 2 lớp và thiết bị đăng nhập do Keycloak quản lý.",
+      "nativeBoundary": "Mật khẩu và bảo mật phiên đăng nhập được quản lý bởi dịch vụ tài khoản VNShop.",
       "openKeycloak": "Mở trang quản lý tài khoản Keycloak"
     }
   },
