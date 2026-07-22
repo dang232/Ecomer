@@ -14,6 +14,10 @@ public class ListPendingSellersUseCase {
     }
 
     public List<SellerProfile> listPending() {
-        return userRepositoryPort.findPendingSellers();
+        return listPending(null);
+    }
+
+    public List<SellerProfile> listPending(String query) {
+        return userRepositoryPort.findPendingSellers(query);
     }
 }

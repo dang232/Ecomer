@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -28,8 +29,8 @@ public class AdminSellerController {
     }
 
     @GetMapping
-    public ApiResponse<List<SellerProfileResponse>> pendingSellers() {
-        return ApiResponse.ok(listPendingSellersUseCase.listPending().stream()
+    public ApiResponse<List<SellerProfileResponse>> pendingSellers(@RequestParam(required = false) String q) {
+        return ApiResponse.ok(listPendingSellersUseCase.listPending(q).stream()
                 .map(SellerProfileResponse::fromDomain)
                 .toList());
     }

@@ -9,7 +9,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 
 @RestController
 @RequestMapping("/admin/users")
@@ -23,14 +25,12 @@ public class AdminUserController {
     }
 
     @GetMapping
-    public ApiResponse<List<BuyerProfileResponse>> searchUsers(
-            @RequestParam(required = false) String email,
-            @RequestParam(required = false) String phone
+    public ApiResponse<Page<BuyerProfileResponse>> searchUsers(
+            @RequestParam(required = false, name = "q") String query,
+            @PageableDefault(size = 50, sort = "name") Pageable pageable
     ) {
         return ApiResponse.ok(
-                adminUserUseCase.searchUsers(email, phone).stream()
-                        .map(BuyerProfileResponse::fromDomain)
-                        .toList()
+                adminUserUseCase.searchUsers(query, pageable).map(BuyerProfileResponse::fromDomain)
         );
     }
 

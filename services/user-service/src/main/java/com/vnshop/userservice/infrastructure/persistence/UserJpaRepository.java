@@ -8,6 +8,9 @@ import jakarta.transaction.Transactional;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -70,11 +73,47 @@ public class UserJpaRepository implements UserRepositoryPort {
     }
 
     @Override
+    public List<SellerProfile> findSellersByIds(List<String> sellerIds) {
+        if (sellerIds == null || sellerIds.isEmpty()) {
+            return List.of();
+        }
+        return entityManager.createQuery(
+                        "select seller from SellerProfileJpaEntity seller where seller.keycloakId in :sellerIds",
+                        SellerProfileJpaEntity.class)
+                .setParameter("sellerIds", sellerIds)
+                .getResultList()
+                .stream()
+                .map(SellerProfileJpaEntity::toDomain)
+                .toList();
+    }
+
+    @Override
     public List<SellerProfile> findPendingSellers() {
         return entityManager.createQuery(
                         "select seller from SellerProfileJpaEntity seller where seller.approved = false",
                         SellerProfileJpaEntity.class
                 )
+                .getResultList()
+                .stream()
+                .map(SellerProfileJpaEntity::toDomain)
+                .toList();
+    }
+
+    @Override
+    public List<SellerProfile> findPendingSellers(String query) {
+        String normalized = query == null ? "" : query.trim().toLowerCase();
+        String term = "%" + normalized + "%";
+        return entityManager.createQuery(
+                        "select seller from SellerProfileJpaEntity seller "
+                                + "where seller.approved = false and (:term = '' "
+                                + "or lower(seller.keycloakId) like :likeTerm "
+                                + "or lower(seller.shopName) like :likeTerm "
+                                + "or lower(seller.bankName) like :likeTerm) "
+                                + "order by seller.createdAt desc",
+                        SellerProfileJpaEntity.class)
+                .setParameter("term", normalized)
+                .setParameter("likeTerm", term)
+                .setMaxResults(200)
                 .getResultList()
                 .stream()
                 .map(SellerProfileJpaEntity::toDomain)
@@ -111,35 +150,33 @@ public class UserJpaRepository implements UserRepositoryPort {
     }
 
     @Override
-    public List<BuyerProfile> searchBuyers(String email, String phone) {
-        boolean hasEmail = email != null && !email.isBlank();
-        boolean hasPhone = phone != null && !phone.isBlank();
-        if (!hasEmail && !hasPhone) {
-            return List.of();
+    public Page<BuyerProfile> searchBuyers(String query, Pageable pageable) {
+        if (query == null || query.isBlank()) {
+            return Page.empty(pageable);
         }
-        if (hasEmail) {
-            // keycloakId is the Keycloak subject UUID; email-based lookup goes
-            // through Keycloak. For the MVP we match on the `name` field which
-            // is populated with the user's display name / email prefix.
-            return entityManager.createQuery(
-                            "select b from BuyerProfileJpaEntity b left join fetch b.addresses where lower(b.name) like lower(:term)",
-                            BuyerProfileJpaEntity.class
-                    )
-                    .setParameter("term", "%" + email + "%")
-                    .getResultList()
-                    .stream()
-                    .map(BuyerProfileJpaEntity::toDomain)
-                    .toList();
-        }
-        return entityManager.createQuery(
-                        "select b from BuyerProfileJpaEntity b left join fetch b.addresses where b.phone like :term",
+        String term = "%" + query.trim().toLowerCase() + "%";
+        String predicate = "where lower(coalesce(b.keycloakId, '')) like :term "
+                + "or lower(coalesce(b.email, '')) like :term "
+                + "or lower(coalesce(b.name, '')) like :term "
+                + "or lower(coalesce(b.phone, '')) like :term";
+        long total = entityManager.createQuery(
+                        "select count(b) from BuyerProfileJpaEntity b " + predicate,
+                        Long.class
+                )
+                .setParameter("term", term)
+                .getSingleResult();
+        List<BuyerProfile> content = entityManager.createQuery(
+                        "select b from BuyerProfileJpaEntity b " + predicate + " order by lower(coalesce(b.name, '')) asc, b.keycloakId asc",
                         BuyerProfileJpaEntity.class
                 )
-                .setParameter("term", "%" + phone + "%")
+                .setParameter("term", term)
+                .setFirstResult((int) pageable.getOffset())
+                .setMaxResults(pageable.getPageSize())
                 .getResultList()
                 .stream()
                 .map(BuyerProfileJpaEntity::toDomain)
                 .toList();
+        return new PageImpl<>(content, pageable, total);
     }
 
     @Override

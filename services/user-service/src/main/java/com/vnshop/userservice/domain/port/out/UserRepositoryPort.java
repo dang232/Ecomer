@@ -5,6 +5,8 @@ import com.vnshop.userservice.domain.SellerProfile;
 
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface UserRepositoryPort {
     BuyerProfile saveBuyer(BuyerProfile buyerProfile);
@@ -18,17 +20,21 @@ public interface UserRepositoryPort {
      */
     List<BuyerProfile> findBuyersByKeycloakIds(List<String> keycloakIds);
 
-    /**
-     * Admin search by email (keycloakId prefix match) or phone substring.
-     * Both params are optional; if both are null/blank, returns an empty list.
-     */
-    List<BuyerProfile> searchBuyers(String email, String phone);
+    /** Admin directory search across persisted identity and display fields. */
+    Page<BuyerProfile> searchBuyers(String query, Pageable pageable);
 
     SellerProfile saveSeller(SellerProfile sellerProfile);
 
     Optional<SellerProfile> findSellerById(String sellerId);
 
+    /** Batch lookup for service-owned public seller display projections. */
+    List<SellerProfile> findSellersByIds(List<String> sellerIds);
+
     List<SellerProfile> findPendingSellers();
+
+    default List<SellerProfile> findPendingSellers(String query) {
+        return findPendingSellers();
+    }
 
     SellerProfile updateSeller(SellerProfile sellerProfile);
 

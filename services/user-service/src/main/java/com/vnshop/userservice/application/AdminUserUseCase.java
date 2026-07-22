@@ -4,8 +4,9 @@ import com.vnshop.userservice.domain.BuyerProfile;
 import com.vnshop.userservice.domain.port.out.UserRepositoryPort;
 import com.vnshop.userservice.infrastructure.keycloak.KeycloakAdminClient;
 
-import java.util.List;
 import java.util.Objects;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public class AdminUserUseCase {
 
@@ -17,8 +18,8 @@ public class AdminUserUseCase {
         this.keycloakAdminClient = Objects.requireNonNull(keycloakAdminClient, "keycloakAdminClient is required");
     }
 
-    public List<BuyerProfile> searchUsers(String email, String phone) {
-        return userRepository.searchBuyers(email, phone);
+    public Page<BuyerProfile> searchUsers(String query, Pageable pageable) {
+        return userRepository.searchBuyers(query, pageable);
     }
 
     public BuyerProfile banUser(String keycloakId) {

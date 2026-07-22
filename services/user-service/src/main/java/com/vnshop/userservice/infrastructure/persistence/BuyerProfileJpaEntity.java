@@ -28,6 +28,9 @@ public class BuyerProfileJpaEntity extends BaseJpaEntity {
     @Column(nullable = false, unique = true)
     private String keycloakId;
 
+    @Column(length = 320)
+    private String email;
+
     private String name;
 
     private String phone;
@@ -43,8 +46,9 @@ public class BuyerProfileJpaEntity extends BaseJpaEntity {
     protected BuyerProfileJpaEntity() {
     }
 
-    public BuyerProfileJpaEntity(String keycloakId, String name, String phone, String avatarUrl) {
+    public BuyerProfileJpaEntity(String keycloakId, String email, String name, String phone, String avatarUrl) {
         this.keycloakId = keycloakId;
+        this.email = email;
         this.name = name;
         this.phone = phone;
         this.avatarUrl = avatarUrl;
@@ -54,6 +58,7 @@ public class BuyerProfileJpaEntity extends BaseJpaEntity {
     static BuyerProfileJpaEntity fromDomain(BuyerProfile buyerProfile) {
         BuyerProfileJpaEntity entity = new BuyerProfileJpaEntity(
                 buyerProfile.keycloakId(),
+                buyerProfile.email(),
                 buyerProfile.name(),
                 buyerProfile.phone() == null ? null : buyerProfile.phone().value(),
                 buyerProfile.avatarUrl()
@@ -66,6 +71,7 @@ public class BuyerProfileJpaEntity extends BaseJpaEntity {
     BuyerProfile toDomain() {
         return new BuyerProfile(
                 keycloakId,
+                email,
                 name,
                 phone == null ? null : new PhoneNumber(phone),
                 avatarUrl,

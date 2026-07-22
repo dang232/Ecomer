@@ -18,6 +18,7 @@ public class RegisterBuyerUseCase {
         // controller, so `command.phone()` is either a valid PhoneNumber or null.
         BuyerProfile buyerProfile = new BuyerProfile(
                 command.keycloakId(),
+                command.email(),
                 command.name().value(),
                 command.phone(),
                 command.avatarUrl(),

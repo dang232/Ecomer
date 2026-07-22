@@ -10,8 +10,12 @@ import com.vnshop.userservice.domain.PhoneNumber;
  */
 public record RegisterBuyerCommand(
         String keycloakId,
+        String email,
         FullName name,
         PhoneNumber phone,
         String avatarUrl
 ) {
+    public RegisterBuyerCommand(String keycloakId, FullName name, PhoneNumber phone, String avatarUrl) {
+        this(keycloakId, null, name, phone, avatarUrl);
+    }
 }
