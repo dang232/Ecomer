@@ -16,7 +16,7 @@ import { expectNoGlobalError } from "./_helpers";
  */
 
 test.describe("navbar UI", () => {
-  test("Logo button navigates to / from any route", async ({ page }) => {
+  test("Logo link navigates to / from any route", async ({ page }) => {
     await page.goto("/search");
     await expect(
       page.getByText(/All products|Tất cả sản phẩm|No products found/i).first(),
@@ -24,7 +24,7 @@ test.describe("navbar UI", () => {
 
     // Click the VNShop logo — its accessible name is "VNShop home".
     await page
-      .getByRole("button", { name: /VNShop home/i })
+      .getByRole("link", { name: /VNShop home/i })
       .first()
       .click();
     await expect
@@ -51,15 +51,15 @@ test.describe("navbar UI", () => {
       .click();
     await expect.poll(() => page.url(), { timeout: 10_000 }).toMatch(/cat=fashion/);
 
-    // "All Categories" CTA → /search.
+    // The footer's "All Categories" link → /search.
     await page
-      .getByRole("button", { name: /VNShop home/i })
+      .getByRole("link", { name: /VNShop home/i })
       .first()
       .click();
     await expect.poll(() => new URL(page.url()).pathname).toBe("/");
 
     await page
-      .getByRole("button", { name: /^(All Categories|Tất cả danh mục)$/i })
+      .getByRole("link", { name: /^(All Categories|Tất cả danh mục)$/i })
       .first()
       .click();
     await expect.poll(() => new URL(page.url()).pathname, { timeout: 10_000 }).toBe("/search");
@@ -75,7 +75,7 @@ test.describe("navbar UI", () => {
     const page: Page = await context.newPage();
     try {
       await page.goto("/");
-      await expect(page.getByRole("button", { name: /VNShop home/i }).first()).toBeVisible({
+      await expect(page.getByRole("link", { name: /VNShop home/i }).first()).toBeVisible({
         timeout: 20_000,
       });
 
@@ -87,7 +87,7 @@ test.describe("navbar UI", () => {
       // Drawer renders the nav row "Home" plus sub-links. Match the Home
       // entry — its drawer instance is the second one (the desktop nav is
       // hidden at this width).
-      await expect(page.getByRole("button", { name: /^(Home|Trang Chủ)$/i }).first()).toBeVisible({
+      await expect(page.getByRole("link", { name: /^(Home|Trang Chủ)$/i }).first()).toBeVisible({
         timeout: 10_000,
       });
 

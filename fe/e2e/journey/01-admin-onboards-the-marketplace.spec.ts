@@ -41,6 +41,7 @@ const COUPON_DISCOUNT_VND = 50_000;
 
 test.use({
   video: "on",
+  trace: "off",
   actionTimeout: 30_000,
 });
 

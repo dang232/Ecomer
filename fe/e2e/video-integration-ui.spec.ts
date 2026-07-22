@@ -3,6 +3,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { expectNoGlobalError } from "./_helpers";
+import { loginViaOidc } from "./_auth";
 
 /**
  * E2E spec for Video FE Integration — proves the video UI wiring renders
@@ -24,19 +25,22 @@ async function screenshot(page: Page, slug: string) {
   screenshotIdx++;
   const filename = `${String(screenshotIdx).padStart(2, "0")}-${slug}.png`;
   await fs.mkdir(screenshotDir, { recursive: true });
-  await page.screenshot({ path: path.join(screenshotDir, filename), fullPage: false });
+  const outputPath = path.join(screenshotDir, filename);
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      await page.screenshot({ path: outputPath, fullPage: false });
+      return;
+    } catch (error) {
+      lastError = error;
+      await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)));
+    }
+  }
+  throw lastError;
 }
 
 async function loginViaUI(page: Page, username: string) {
-  await page.goto("/login");
-  await expect(page.locator("#identifier")).toBeVisible({ timeout: 15_000 });
-  await page.locator("#identifier").fill(username);
-  await page.locator("#password").fill("test");
-  await page.locator("button[type='submit']").first().click();
-  await page.waitForURL((url) => !url.pathname.includes("/login"), { timeout: 15_000 });
-  // The SPA's native-auth.ts reads the non-httpOnly vnshop_csrf cookie and
-  // attaches the X-CSRF-Token header on /auth/refresh and /auth/logout.
-  // No monkey-patch required — verify the real header is being sent.
+  await loginViaOidc(page, username);
 }
 
 // ─── Admin: Video Moderation tab renders ───────────────────────────────────

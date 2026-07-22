@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
 import { expectNoGlobalError } from "./_helpers";
+import { loginViaOidc } from "./_auth";
 
 /**
  * UI-driven QA spec for the /orders tab filter.
@@ -91,6 +92,7 @@ test.describe("orders tab filter UI", () => {
     const orderId = await placePendingOrder(page.request, buyer);
     const idShort = orderId.slice(0, 8);
 
+    await loginViaOidc(page, buyer.email, PASSWORD);
     await page.goto("/orders");
     await expect(page.getByText(/Order ID|Mã đơn/i).first()).toBeVisible({ timeout: 20_000 });
 
@@ -100,7 +102,7 @@ test.describe("orders tab filter UI", () => {
     });
 
     // Click the "Pending" tab — same order still visible (it's pending).
-    await page.getByRole("button", { name: /^(Pending|Chờ xác nhận)$/i }).click();
+    await page.getByRole("tab", { name: /^(Pending|Chờ xác nhận)/i }).click();
     await expect(page.locator("div", { hasText: idShort }).first()).toBeVisible({
       timeout: 10_000,
     });
@@ -112,12 +114,13 @@ test.describe("orders tab filter UI", () => {
     const buyer = await seedBuyer(page.request);
     await placePendingOrder(page.request, buyer);
 
+    await loginViaOidc(page, buyer.email, PASSWORD);
     await page.goto("/orders");
     await expect(page.getByText(/Order ID|Mã đơn/i).first()).toBeVisible({ timeout: 20_000 });
 
     // Click "Delivered" — buyer's only order is pending, so this filter
     // hides it. The empty-state copy renders OR the tab body is empty.
-    await page.getByRole("button", { name: /^(Delivered|Đã giao)$/i }).click();
+    await page.getByRole("tab", { name: /^(Delivered|Đã giao)/i }).click();
 
     // After tab switch, the empty-state copy should appear. The page uses
     // "No orders to show" / "Không có đơn hàng nào" for the empty filtered

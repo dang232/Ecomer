@@ -1,5 +1,6 @@
-import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import { expectNoGlobalError } from "./_helpers";
+import { loginViaOidc } from "./_auth";
 
 /**
  * UI-driven QA spec for the seller products tab.
@@ -14,25 +15,9 @@ import { expectNoGlobalError } from "./_helpers";
  * No backend mutation needed; seller1 is a seeded fixture.
  */
 
-const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
-
-interface AuthResult {
-  accessToken: string;
-}
-
-async function loginAsSeller(request: APIRequestContext): Promise<AuthResult> {
-  const r = await request.post(`${apiURL}/auth/login`, {
-    data: { username: "seller1", password: "test" },
-  });
-  expect(r.ok(), `seller login: ${r.status()}`).toBeTruthy();
-  const accessToken = (await r.json())?.data?.accessToken;
-  expect(accessToken).toBeTruthy();
-  return { accessToken };
-}
-
 test.describe("seller products UI", () => {
   test("Products tab renders the table chrome (header columns + Add CTA)", async ({ page }) => {
-    await loginAsSeller(page.request);
+    await loginViaOidc(page, "seller1");
     await page.goto("/seller");
 
     await expect(

@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { loginViaOidc } from "./_auth";
 
 /**
  * UI-driven QA spec for the buyer cart flow.
@@ -67,7 +68,8 @@ async function addToCart(
   expect(r.ok(), `add to cart: ${r.status()} ${await r.text()}`).toBeTruthy();
 }
 
-async function loadCartAuthenticated(page: Page): Promise<void> {
+async function loadCartAuthenticated(page: Page, email: string): Promise<void> {
+  await loginViaOidc(page, email, PASSWORD);
   await page.goto("/cart");
   // Must NOT show the global error fallback. EITHER the empty-cart copy OR
   // the cart row is acceptable; the bug fix is proven by NEITHER throwing.
@@ -81,7 +83,7 @@ test.describe("cart page UI — buyer flow", () => {
     const buyer = await seedBuyer(page.request);
     const product = await firstProduct(page.request);
     await addToCart(page.request, buyer, product.id);
-    await loadCartAuthenticated(page);
+    await loadCartAuthenticated(page, buyer.email);
 
     // The pre-b9af48b4 bug: cart items rendered as the raw productId UUID
     // with 0₫ because cart-service's product-enrichment branch fell through
@@ -116,7 +118,7 @@ test.describe("cart page UI — buyer flow", () => {
     const buyer = await seedBuyer(page.request);
     const product = await firstProduct(page.request);
     await addToCart(page.request, buyer, product.id, 1);
-    await loadCartAuthenticated(page);
+    await loadCartAuthenticated(page, buyer.email);
 
     await expect(page.getByText(product.name, { exact: false })).toBeVisible({
       timeout: 15_000,
@@ -143,7 +145,7 @@ test.describe("cart page UI — buyer flow", () => {
     const buyer = await seedBuyer(page.request);
     const product = await firstProduct(page.request);
     await addToCart(page.request, buyer, product.id, 1);
-    await loadCartAuthenticated(page);
+    await loadCartAuthenticated(page, buyer.email);
 
     await expect(page.getByText(product.name, { exact: false })).toBeVisible({
       timeout: 15_000,

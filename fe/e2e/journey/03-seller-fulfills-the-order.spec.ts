@@ -59,6 +59,7 @@ const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
 
 test.use({
   video: "on",
+  trace: "off",
   actionTimeout: 30_000,
 });
 
@@ -190,6 +191,12 @@ test.describe.serial("Chapter 3 — Seller fulfills the order", () => {
             .getByRole("button", { name: /^(Accept|Chấp nhận)/i })
             .first()
             .click();
+
+          // Accept is protected by a confirmation dialog. Submit it before
+          // asserting the mutation toast or the order remains pending.
+          const confirmDialog = page.getByRole("dialog", { name: /Confirm Order|Xác nhận đơn/i });
+          await expect(confirmDialog).toBeVisible({ timeout: 10_000 });
+          await confirmDialog.getByRole("button", { name: /^(Confirm|Xác nhận)$/i }).click();
 
           // i18n key is `seller.orders.acceptOk` — VI: "Đã chấp nhận đơn",
           // EN: "Order accepted" (approximations; match liberally).

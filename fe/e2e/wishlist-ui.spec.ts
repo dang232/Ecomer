@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
 import { expectNoGlobalError } from "./_helpers";
+import { loginViaOidc } from "./_auth";
 
 /**
  * UI-driven QA spec for the wishlist page.
@@ -84,6 +85,7 @@ test.describe("wishlist page UI", () => {
     const product = await firstProduct(page.request);
     await addToWishlist(page.request, buyer, product.id);
 
+    await loginViaOidc(page, buyer.email, PASSWORD);
     await page.goto("/wishlist");
     // Wait for wishlist content — the product name is the canonical signal
     // that wishlist + product enrichment both succeeded.

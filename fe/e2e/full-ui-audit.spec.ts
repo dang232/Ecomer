@@ -2,6 +2,7 @@ import { test, Page } from "@playwright/test";
 import { mkdir } from "fs/promises";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import { loginViaOidc } from "./_auth";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -9,26 +10,32 @@ const DIR = join(__dirname, "evidence", "audit");
 
 async function snap(page: Page, name: string, full = true) {
   await mkdir(DIR, { recursive: true });
-  await page.screenshot({ path: join(DIR, `${name}.png`), fullPage: full });
+  const outputPath = join(DIR, `${name}.png`);
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      await page.screenshot({ path: outputPath, fullPage: full });
+      return;
+    } catch (error) {
+      lastError = error;
+      await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)));
+    }
+  }
+  throw lastError;
 }
 
 async function loginAs(page: Page, email: string) {
-  await page.goto("/login");
-  await page.waitForLoadState("networkidle");
-  await page.fill("#identifier", email);
-  await page.fill("#password", "password123");
-  await page.locator('button[type="submit"]').click();
-  await page.waitForTimeout(4000);
+  await loginViaOidc(page, email, "test");
 }
 
 // ─── GUEST FLOWS ──────────────────────────────────────────────────
 test("08 — Login: wrong credentials error UX", async ({ page }) => {
   await page.goto("/login");
   await page.waitForLoadState("networkidle");
-  await page.fill("#identifier", "fake@test.com");
-  await page.fill("#password", "wrongpassword");
-  await page.locator('button[type="submit"]').click();
-  await page.waitForTimeout(5000);
+  await page.locator("#username").fill("fake@test.com");
+  await page.locator("#password").fill("wrongpassword");
+  await page.getByRole("button", { name: /sign in|continue to sign in/i }).click();
+  await page.waitForTimeout(1000);
   await snap(page, "08-login-wrong-credentials", false);
 });
 
@@ -215,7 +222,7 @@ test("29 — Seller: Products tab", async ({ page }) => {
   await loginAs(page, "seller1@vnshop.local");
   await page.goto("/seller");
   await page.waitForLoadState("networkidle");
-  await page.locator("nav >> text=Products").first().click();
+  await page.getByRole("button", { name: /^Products$/i }).click();
   await page.waitForTimeout(2000);
   await snap(page, "29-seller-products-tab");
 });
@@ -224,7 +231,7 @@ test("30 — Seller: Orders tab", async ({ page }) => {
   await loginAs(page, "seller1@vnshop.local");
   await page.goto("/seller");
   await page.waitForLoadState("networkidle");
-  await page.locator("nav >> text=Orders").first().click();
+  await page.getByRole("button", { name: /^Orders$/i }).click();
   await page.waitForTimeout(2000);
   await snap(page, "30-seller-orders-tab");
 });
@@ -233,7 +240,7 @@ test("31 — Seller: Reviews tab", async ({ page }) => {
   await loginAs(page, "seller1@vnshop.local");
   await page.goto("/seller");
   await page.waitForLoadState("networkidle");
-  await page.locator("nav >> text=Reviews").first().click();
+  await page.getByRole("button", { name: /^Reviews$/i }).click();
   await page.waitForTimeout(2000);
   await snap(page, "31-seller-reviews-tab");
 });
@@ -242,7 +249,7 @@ test("32 — Seller: Wallet tab", async ({ page }) => {
   await loginAs(page, "seller1@vnshop.local");
   await page.goto("/seller");
   await page.waitForLoadState("networkidle");
-  await page.locator("nav >> text=Wallet").first().click();
+  await page.getByRole("button", { name: /^Wallet$/i }).click();
   await page.waitForTimeout(2000);
   await snap(page, "32-seller-wallet-tab");
 });
@@ -251,7 +258,7 @@ test("33 — Seller: Settings tab", async ({ page }) => {
   await loginAs(page, "seller1@vnshop.local");
   await page.goto("/seller");
   await page.waitForLoadState("networkidle");
-  await page.locator("nav >> text=Settings").first().click();
+  await page.getByRole("button", { name: /^Settings$/i }).click();
   await page.waitForTimeout(2000);
   await snap(page, "33-seller-settings-tab");
 });
@@ -268,7 +275,7 @@ test("35 — Admin: Approve Sellers", async ({ page }) => {
   await loginAs(page, "admin1@vnshop.local");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
-  await page.locator("nav >> text=/Approve Sellers|admin\\.nav\\.sellers/").first().click();
+  await page.getByRole("button", { name: /Approve Sellers/i }).click();
   await page.waitForTimeout(2000);
   await snap(page, "35-admin-approve-sellers");
 });
@@ -277,7 +284,7 @@ test("36 — Admin: Moderation", async ({ page }) => {
   await loginAs(page, "admin1@vnshop.local");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
-  await page.locator("nav >> text=Moderation").first().click();
+  await page.getByRole("button", { name: /^Moderation(?:,|$)/i }).click();
   await page.waitForTimeout(2000);
   await snap(page, "36-admin-moderation");
 });
@@ -286,7 +293,7 @@ test("37 — Admin: Coupons", async ({ page }) => {
   await loginAs(page, "admin1@vnshop.local");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
-  await page.locator("nav >> text=Coupons").first().click();
+  await page.getByRole("button", { name: /^Coupons$/i }).click();
   await page.waitForTimeout(2000);
   await snap(page, "37-admin-coupons");
 });
@@ -295,7 +302,7 @@ test("38 — Admin: Disputes", async ({ page }) => {
   await loginAs(page, "admin1@vnshop.local");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
-  await page.locator("nav >> text=Disputes").first().click();
+  await page.getByRole("button", { name: /^Disputes$/i }).click();
   await page.waitForTimeout(2000);
   await snap(page, "38-admin-disputes");
 });
@@ -304,7 +311,7 @@ test("39 — Admin: Payouts", async ({ page }) => {
   await loginAs(page, "admin1@vnshop.local");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
-  await page.locator("nav >> text=Payouts").first().click();
+  await page.getByRole("button", { name: /^Payouts$/i }).click();
   await page.waitForTimeout(2000);
   await snap(page, "39-admin-payouts");
 });
@@ -313,7 +320,7 @@ test("40 — Admin: Users tab", async ({ page }) => {
   await loginAs(page, "admin1@vnshop.local");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
-  await page.locator("nav >> text=/admin\\.nav\\.users|Users/").first().click();
+  await page.getByRole("button", { name: /^Users$/i }).click();
   await page.waitForTimeout(2000);
   await snap(page, "40-admin-users-tab");
 });
@@ -322,7 +329,7 @@ test("41 — Admin: Orders tab", async ({ page }) => {
   await loginAs(page, "admin1@vnshop.local");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
-  await page.locator("nav >> text=/admin\\.nav\\.orders|Orders/").first().click();
+  await page.getByRole("button", { name: /^Orders$/i }).click();
   await page.waitForTimeout(2000);
   await snap(page, "41-admin-orders-tab");
 });
@@ -331,7 +338,7 @@ test("42 — Admin: Health tab", async ({ page }) => {
   await loginAs(page, "admin1@vnshop.local");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
-  await page.locator("nav >> text=/admin\\.nav\\.health|System Health/").first().click();
+  await page.getByRole("button", { name: /^System Health$/i }).click();
   await page.waitForTimeout(2000);
   await snap(page, "42-admin-health-tab");
 });

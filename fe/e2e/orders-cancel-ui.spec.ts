@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { loginViaOidc } from "./_auth";
 
 /**
  * UI-driven QA spec for the buyer orders flow.
@@ -113,9 +114,8 @@ async function placePendingCodOrder(
   return orderId;
 }
 
-async function loadOrdersAuthenticated(page: Page): Promise<void> {
-  // Cookie is already on the browser context from page.request.post('/auth/login').
-  // The SPA's auth bootstrap will refresh on mount and pick it up.
+async function loadOrdersAuthenticated(page: Page, email: string): Promise<void> {
+  await loginViaOidc(page, email, PASSWORD);
   await page.goto("/orders");
   // Wait for the orders list to render (or the login prompt — either is a real
   // signal of what happened).
@@ -128,7 +128,7 @@ test.describe("orders page UI — cancel flow", () => {
   test("pending row renders item-count line, NOT a permanent loading state", async ({ page }) => {
     const buyer = await seedBuyer(page.request);
     const orderId = await placePendingCodOrder(page.request, buyer);
-    await loadOrdersAuthenticated(page);
+    await loadOrdersAuthenticated(page, buyer.email);
 
     const row = page
       .locator("[data-testid='order-card'], div", { hasText: orderId.slice(0, 8) })
@@ -155,7 +155,7 @@ test.describe("orders page UI — cancel flow", () => {
   test("Cancel button click round-trips to BE and shows the success toast", async ({ page }) => {
     const buyer = await seedBuyer(page.request);
     await placePendingCodOrder(page.request, buyer);
-    await loadOrdersAuthenticated(page);
+    await loadOrdersAuthenticated(page, buyer.email);
 
     // The fresh buyer has exactly one order. The "Cancel" button appears on
     // pending rows only. The regex anchored with $ avoids matching the
@@ -163,6 +163,12 @@ test.describe("orders page UI — cancel flow", () => {
     const cancelBtn = page.getByRole("button", { name: /^(cancel|hủy đơn)$/i });
     await expect(cancelBtn).toBeVisible({ timeout: 10_000 });
     await cancelBtn.click();
+    const confirmDialog = page.getByRole("dialog");
+    await expect(confirmDialog).toBeVisible({ timeout: 5_000 });
+    await confirmDialog
+      .getByRole("button", { name: /cancel|hủy đơn/i })
+      .last()
+      .click();
 
     // Sonner success toast is the FE's confirmation that the BE returned 200.
     // This is the contract the user actually cares about (the visible bug

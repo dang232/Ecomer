@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { loginViaOidc } from "./_auth";
 
 const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
 
@@ -12,14 +13,7 @@ const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
  */
 test.describe("authenticated routes", () => {
   test.beforeEach(async ({ page }) => {
-    // Bootstrap the auth state by hitting the FE-native form. localStorage
-    // ends up populated with a real Keycloak token set, exactly as a real
-    // user would after signing in.
-    await page.goto("/login");
-    await page.locator("#identifier").fill("seller1");
-    await page.locator("#password").fill("test");
-    await page.getByRole("button", { name: /sign in|đăng nhập/i }).click();
-    await expect.poll(() => new URL(page.url()).pathname, { timeout: 30_000 }).toBe("/");
+    await loginViaOidc(page, "seller1");
   });
 
   test("/orders renders without bouncing to /login", async ({ page }) => {

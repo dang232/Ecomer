@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { loginViaOidc } from "./_auth";
 
 /**
  * Role-gated route smoke. Covers two surfaces:
@@ -12,17 +13,9 @@ import { test, expect } from "@playwright/test";
  * the gated path — i.e. RequireRole did NOT redirect away.
  */
 
-async function loginAs(page: import("@playwright/test").Page, username: string, password = "test") {
-  await page.goto("/login");
-  await page.locator("#identifier").fill(username);
-  await page.locator("#password").fill(password);
-  await page.getByRole("button", { name: /sign in|đăng nhập/i }).click();
-  await expect.poll(() => new URL(page.url()).pathname, { timeout: 30_000 }).toBe("/");
-}
-
 test.describe("seller routes", () => {
   test("/seller renders for a SELLER user", async ({ page }) => {
-    await loginAs(page, "seller1");
+    await loginViaOidc(page, "seller1");
     await page.goto("/seller");
     // RequireRole sends non-sellers to / — confirming we stay under /seller
     // is sufficient for the smoke. The page itself renders multi-tab navigation.
@@ -32,14 +25,14 @@ test.describe("seller routes", () => {
 
 test.describe("admin routes", () => {
   test("/admin renders for an ADMIN user", async ({ page }) => {
-    await loginAs(page, "admin1");
+    await loginViaOidc(page, "admin1");
     await page.goto("/admin");
     await expect.poll(() => new URL(page.url()).pathname, { timeout: 15_000 }).toMatch(/^\/admin/);
   });
 
   test("buyer is redirected away from /admin", async ({ page }) => {
     // seller1 has SELLER + BUYER but not ADMIN, so RequireRole bounces.
-    await loginAs(page, "seller1");
+    await loginViaOidc(page, "seller1");
     await page.goto("/admin");
     // Expect to land somewhere other than /admin (RequireRole's fallback is /).
     await expect

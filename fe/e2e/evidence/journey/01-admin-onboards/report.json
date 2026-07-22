@@ -18,24 +18,60 @@
       }
     ]
   },
-  "rows": [],
+  "rows": [
+    {
+      "index": 1,
+      "acCode": "AC-1.1",
+      "outcome": "Admin opens the pending sellers queue and sees the new application",
+      "slug": "01-ac-1-1-admin-opens-the-pending-sellers-queue-and-sees-the-ne.png",
+      "status": "PASS"
+    },
+    {
+      "index": 2,
+      "acCode": "AC-1.1",
+      "outcome": "Admin clicks Approve and the application leaves the pending queue",
+      "slug": "02-ac-1-1-admin-clicks-approve-and-the-application-leaves-the-p.png",
+      "status": "PASS"
+    },
+    {
+      "index": 3,
+      "acCode": "AC-1.2",
+      "outcome": "Approved seller appears in the public sellers list within 30 s",
+      "slug": "03-ac-1-2-approved-seller-appears-in-the-public-sellers-list-wi.png",
+      "status": "PASS"
+    },
+    {
+      "index": 4,
+      "acCode": "AC-1.3",
+      "outcome": "Admin publishes coupon JRN936800 (50,000 VND fixed discount, 30-day TTL)",
+      "slug": "04-ac-1-3-admin-publishes-coupon-jrn936800-50-000-vnd-fixed-dis.png",
+      "status": "PASS"
+    },
+    {
+      "index": 5,
+      "acCode": "AC-1.3",
+      "outcome": "Admin logs out and the journey state is persisted for the next chapter",
+      "slug": "05-ac-1-3-admin-logs-out-and-the-journey-state-is-persisted-for.png",
+      "status": "PASS"
+    }
+  ],
   "acStatuses": [
     {
       "code": "AC-1.1",
       "outcome": "Admin can review a pending seller's application and approve them",
-      "status": "NOT_RUN"
+      "status": "PASS"
     },
     {
       "code": "AC-1.2",
       "outcome": "An approved seller appears in the public sellers list within 30 s",
-      "status": "NOT_RUN"
+      "status": "PASS"
     },
     {
       "code": "AC-1.3",
       "outcome": "Admin can publish a fixed-discount coupon that is immediately redeemable at checkout",
-      "status": "NOT_RUN"
+      "status": "PASS"
     }
   ],
-  "verdict": "PARTIAL",
-  "generatedAt": "2026-06-12T00:08:17.152Z"
+  "verdict": "PASS",
+  "generatedAt": "2026-07-22T03:29:03.041Z"
 }

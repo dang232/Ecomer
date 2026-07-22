@@ -1,6 +1,7 @@
-import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { expectNoGlobalError } from "./_helpers";
+import { loginViaOidc } from "./_auth";
 
 /**
  * WCAG 2.1 AA accessibility gate for the three primary personas.
@@ -42,22 +43,6 @@ import { expectNoGlobalError } from "./_helpers";
  *    upstream should opt out via that attribute (documented in
  *    docs/a11y/axe-exclusions.md).
  */
-
-const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
-
-interface AuthResult {
-  accessToken: string;
-}
-
-async function login(request: APIRequestContext, username: string): Promise<AuthResult> {
-  const r = await request.post(`${apiURL}/auth/login`, {
-    data: { username, password: "test" },
-  });
-  expect(r.ok(), `${username} login: ${r.status()} ${await r.text()}`).toBeTruthy();
-  const accessToken = (await r.json())?.data?.accessToken;
-  expect(accessToken, `${username} returned no accessToken`).toBeTruthy();
-  return { accessToken };
-}
 
 // The user-service CsrfProtectionFilter requires an X-CSRF-Token header on
 // /auth/refresh and /auth/logout. Same pattern as fe/e2e/video-integration-ui.spec.ts.
@@ -149,7 +134,7 @@ test.describe("a11y — seller dashboard", () => {
   test("Seller dashboard passes axe-core wcag2a + wcag2aa (no serious/critical)", async ({
     page,
   }) => {
-    await login(page.request, "seller1");
+    await loginViaOidc(page, "seller1");
     await page.goto("/seller");
     await installCsrfPatch(page);
 
@@ -166,7 +151,7 @@ test.describe("a11y — seller dashboard", () => {
 
 test.describe("a11y — admin panel", () => {
   test("Admin panel passes axe-core wcag2a + wcag2aa (no serious/critical)", async ({ page }) => {
-    await login(page.request, "admin1");
+    await loginViaOidc(page, "admin1");
     await page.goto("/admin");
     await installCsrfPatch(page);
 

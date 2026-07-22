@@ -93,21 +93,16 @@ test.describe("theme + i18n persistence UI", () => {
     const darkBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
     expect(darkBg).not.toBe(lightBg);
 
-    // Hard-reload. The toggle is local state inside vnshop-context (not
-    // persisted), so the FE re-mounts in light mode by default. This test
-    // documents the actual behaviour rather than asserting a persisted
-    // preference that doesn't exist.
+    // Hard-reload. vnshop-context persists the preference under
+    // `vnshop:theme`, so the dark class and computed background should remain.
     await page.reload();
     await expect(
       page.getByRole("button", { name: /switch to (dark|light) mode/i }).first(),
     ).toBeVisible({ timeout: 20_000 });
 
     const reloadedBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-    // The body background returns to its initial computed value. We don't
-    // strictly assert it equals the original lightBg (Tailwind v4's @theme
-    // inline + browser color rounding can differ), but it should NOT match
-    // the dark-mode bg from before reload.
-    expect(reloadedBg).not.toBe(darkBg);
+    await expect.poll(() => isDarkClassPresent(page), { timeout: 5_000 }).toBe(true);
+    expect(reloadedBg).toBe(darkBg);
 
     await expectNoGlobalError(page);
   });

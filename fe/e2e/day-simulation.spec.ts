@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { loginViaOidc, registerAndLoginViaOidc } from "./_auth";
 
 /**
  * Day-in-the-life simulation: drives every documented user flow end-to-end
@@ -27,7 +28,7 @@ interface AuthResult {
 async function registerBuyer(request: APIRequestContext): Promise<AuthResult> {
   const stamp = Date.now() + Math.floor(Math.random() * 1_000);
   const email = `e2e_day_${stamp}@vnshop.local`;
-  const r = await request.post(`${apiURL}/auth/register`, {
+  let r = await request.post(`${apiURL}/auth/register`, {
     data: {
       firstName: "Day",
       lastName: "Sim",
@@ -35,12 +36,29 @@ async function registerBuyer(request: APIRequestContext): Promise<AuthResult> {
       password: PASSWORD,
     },
   });
+  for (let attempt = 0; r.status() === 429 && attempt < 5; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 500 * 2 ** attempt));
+    r = await request.post(`${apiURL}/auth/register`, {
+      data: {
+        firstName: "Day",
+        lastName: "Sim",
+        email,
+        password: PASSWORD,
+      },
+    });
+  }
   expect(r.ok(), `register failed: ${r.status()} ${await r.text()}`).toBeTruthy();
   // /auth/register returns {userId, email} — no token. Log in for the
   // access token (the Keycloak ROPC grant via /auth/login).
-  const login = await request.post(`${apiURL}/auth/login`, {
+  let login = await request.post(`${apiURL}/auth/login`, {
     data: { username: email, password: PASSWORD },
   });
+  for (let attempt = 0; login.status() === 429 && attempt < 5; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 500 * 2 ** attempt));
+    login = await request.post(`${apiURL}/auth/login`, {
+      data: { username: email, password: PASSWORD },
+    });
+  }
   expect(
     login.ok(),
     `post-register login failed: ${login.status()} ${await login.text()}`,
@@ -306,20 +324,25 @@ test.describe("day simulation — buyer", () => {
   }) => {
     const stamp = Date.now();
     const email = `e2e_day_ui_${stamp}@vnshop.local`;
-    await page.goto("/register");
-    await page.locator("#firstName").fill("Day");
-    await page.locator("#lastName").fill("UI");
-    await page.locator("#email").fill(email);
-    await page.locator("#password").fill(PASSWORD);
-    await page.locator("#confirm").fill(PASSWORD);
-    await page.getByRole("button", { name: /create account|tạo tài khoản/i }).click();
-    await expect.poll(() => new URL(page.url()).pathname, { timeout: 30_000 }).toBe("/");
+    await registerAndLoginViaOidc(page, {
+      firstName: "Day",
+      lastName: "UI",
+      email,
+      password: PASSWORD,
+    });
 
     const product = await firstProduct(request);
     await page.goto(`/product/${product.id}`);
     const addBtn = page.getByRole("button", { name: /add to cart|thêm vào giỏ/i }).first();
     await expect(addBtn).toBeVisible({ timeout: 15_000 });
+    const addResponsePromise = page.waitForResponse(
+      (response) =>
+        response.url().includes("/cart/items") && response.request().method() === "POST",
+      { timeout: 15_000 },
+    );
     await addBtn.click();
+    const addResponse = await addResponsePromise;
+    expect(addResponse.ok(), `add to cart failed: ${addResponse.status()}`).toBeTruthy();
 
     await page.goto("/cart");
     await expect(page.getByText(/your cart is empty|giỏ hàng trống/i)).toHaveCount(0, {
@@ -361,11 +384,7 @@ test.describe("day simulation — seller", () => {
   });
 
   test("seller UI: dashboard renders without crash", async ({ page }) => {
-    await page.goto("/login");
-    await page.locator("#identifier").fill("seller1");
-    await page.locator("#password").fill("test");
-    await page.getByRole("button", { name: /sign in|đăng nhập/i }).click();
-    await expect.poll(() => new URL(page.url()).pathname, { timeout: 30_000 }).toBe("/");
+    await loginViaOidc(page, "seller1", "test");
 
     await page.goto("/seller");
     await expect(page.locator("body")).not.toContainText(/something went wrong|đã xảy ra lỗi/i, {

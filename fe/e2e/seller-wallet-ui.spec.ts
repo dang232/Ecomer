@@ -1,5 +1,6 @@
-import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import { expectNoGlobalError } from "./_helpers";
+import { loginViaOidc } from "./_auth";
 
 /**
  * UI-driven QA spec for the seller wallet page.
@@ -17,23 +18,9 @@ import { expectNoGlobalError } from "./_helpers";
 
 const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
 
-interface AuthResult {
-  accessToken: string;
-}
-
-async function loginAsSeller(request: APIRequestContext): Promise<AuthResult> {
-  const r = await request.post(`${apiURL}/auth/login`, {
-    data: { username: "seller1", password: "test" },
-  });
-  expect(r.ok(), `seller login: ${r.status()}`).toBeTruthy();
-  const accessToken = (await r.json())?.data?.accessToken;
-  expect(accessToken).toBeTruthy();
-  return { accessToken };
-}
-
 test.describe("seller wallet UI", () => {
   test("Wallet tab renders the balance card and history section", async ({ page }) => {
-    await loginAsSeller(page.request);
+    await loginViaOidc(page, "seller1");
     await page.goto("/seller");
 
     await expect(
@@ -65,7 +52,13 @@ test.describe("seller wallet UI", () => {
   });
 
   test("Withdraw button follows the live seller balance", async ({ page }) => {
-    const { accessToken } = await loginAsSeller(page.request);
+    await loginViaOidc(page, "seller1");
+    const loginResponse = await page.request.post(`${apiURL}/auth/login`, {
+      data: { username: "seller1", password: "test" },
+    });
+    expect(loginResponse.ok(), `seller login: ${loginResponse.status()}`).toBeTruthy();
+    const accessToken = (await loginResponse.json())?.data?.accessToken as string;
+    expect(accessToken).toBeTruthy();
     const walletResponse = await page.request.get(`${apiURL}/sellers/me/finance/wallet`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });

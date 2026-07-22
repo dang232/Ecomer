@@ -28,40 +28,73 @@
       "acCode": "AC-6.1",
       "outcome": "Predecessor chapter 5 left a PENDING payoutId in state.json",
       "slug": "01-ac-6-1-predecessor-chapter-5-left-a-pending-payoutid-in-stat.png",
-      "status": "BLOCKED",
-      "errorMessage": "journey state missing required keys: payoutId, payoutAmountVnd — a previous chapter must run first"
+      "status": "PASS"
+    },
+    {
+      "index": 2,
+      "acCode": "AC-6.3",
+      "outcome": "Capture seller1's pendingBalance before admin closes the payout",
+      "slug": "02-ac-6-3-capture-seller1-s-pendingbalance-before-admin-closes-.png",
+      "status": "PASS"
+    },
+    {
+      "index": 3,
+      "acCode": "AC-6.1",
+      "outcome": "Admin opens the Payouts tab and the seller's pending payout is listed",
+      "slug": "03-ac-6-1-admin-opens-the-payouts-tab-and-the-seller-s-pending-.png",
+      "status": "PASS"
+    },
+    {
+      "index": 4,
+      "acCode": "AC-6.2",
+      "outcome": "Admin clicks Complete on the row and the payout leaves the pending queue",
+      "slug": "04-ac-6-2-admin-clicks-complete-on-the-row-and-the-payout-leave.png",
+      "status": "PASS"
+    },
+    {
+      "index": 5,
+      "acCode": "AC-6.3",
+      "outcome": "Seller's pendingBalance drops by exactly the payout amount",
+      "slug": "05-ac-6-3-seller-s-pendingbalance-drops-by-exactly-the-payout-a.png",
+      "status": "PASS"
+    },
+    {
+      "index": 6,
+      "acCode": "AC-6.4",
+      "outcome": "Completed tab surfaces the audit row, and the BE /completed endpoint returns the captured admin",
+      "slug": "06-ac-6-4-completed-tab-surfaces-the-audit-row-and-the-be-compl.png",
+      "status": "PASS"
+    },
+    {
+      "index": 7,
+      "acCode": "AC-6.3",
+      "outcome": "Admin logs out — journey complete; chapter 6 leaves no new state",
+      "slug": "07-ac-6-3-admin-logs-out-journey-complete-chapter-6-leaves-no-n.png",
+      "status": "PASS"
     }
   ],
   "acStatuses": [
     {
       "code": "AC-6.1",
       "outcome": "Admin's payout queue surfaces the seller's pending payout with the right amount",
-      "status": "BLOCKED",
-      "failingStep": {
-        "index": 1,
-        "acCode": "AC-6.1",
-        "outcome": "Predecessor chapter 5 left a PENDING payoutId in state.json",
-        "slug": "01-ac-6-1-predecessor-chapter-5-left-a-pending-payoutid-in-stat.png",
-        "status": "BLOCKED",
-        "errorMessage": "journey state missing required keys: payoutId, payoutAmountVnd — a previous chapter must run first"
-      }
+      "status": "PASS"
     },
     {
       "code": "AC-6.2",
       "outcome": "Admin can mark the payout complete and the payout leaves the pending queue",
-      "status": "NOT_RUN"
+      "status": "PASS"
     },
     {
       "code": "AC-6.3",
       "outcome": "Seller's wallet pendingBalance drops by exactly the payout amount once the projection settles",
-      "status": "NOT_RUN"
+      "status": "PASS"
     },
     {
       "code": "AC-6.4",
       "outcome": "Completed-payout audit trail surfaces who completed the payout and when, on the Completed tab and the BE /completed endpoint",
-      "status": "NOT_RUN"
+      "status": "PASS"
     }
   ],
-  "verdict": "BLOCKED",
-  "generatedAt": "2026-06-12T00:08:22.207Z"
+  "verdict": "PASS",
+  "generatedAt": "2026-07-22T03:29:38.566Z"
 }

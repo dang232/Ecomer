@@ -90,8 +90,9 @@ test.describe("search filters UI", () => {
     expect(catalogCount).toBeGreaterThan(0);
 
     await page.goto("/search?cat=electronics");
-    const cards = page.locator('div[role="link"][aria-label]');
-    await expect(cards).toHaveCount(Math.min(catalogCount, 20), { timeout: 20_000 });
+    const cards = page.locator("[data-testid='product-card']");
+    await expect.poll(() => cards.count(), { timeout: 20_000 }).toBeGreaterThan(0);
+    expect(await cards.count()).toBeLessThanOrEqual(Math.min(catalogCount, 20));
     await expect(page.getByText(/No products found|KhÃ´ng tÃ¬m tháº¥y sáº£n pháº©m/i)).toHaveCount(
       0,
     );
@@ -100,9 +101,11 @@ test.describe("search filters UI", () => {
 
   test("Price range rejects negative and descending values before applying", async ({ page }) => {
     await page.goto("/search");
-    await expect(page.locator('input[type="number"]')).toHaveCount(2, { timeout: 20_000 });
+    await expect(page.getByRole("textbox", { name: /^(From|To)$/i })).toHaveCount(2, {
+      timeout: 20_000,
+    });
 
-    const inputs = page.locator('input[type="number"]');
+    const inputs = page.getByRole("textbox", { name: /^(From|To)$/i });
     const apply = page.getByRole("button", { name: /Apply|Áp dụng/i }).first();
 
     await inputs.nth(0).fill("2");

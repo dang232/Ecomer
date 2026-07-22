@@ -40,6 +40,7 @@ const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
 
 test.use({
   video: "on",
+  trace: "off",
   actionTimeout: 30_000,
 });
 

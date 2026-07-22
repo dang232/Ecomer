@@ -46,14 +46,11 @@ test.describe("smoke", () => {
     ).toBeVisible({ timeout: 15_000 });
   });
 
-  test("/login renders the native form and links to /register", async ({ page }) => {
+  test("/login renders the native auth form and links to /register", async ({ page }) => {
     await page.goto("/login");
     await expect(page).toHaveURL(/\/login/);
 
-    // Form fields use stable ids from LoginPage; this avoids the brand-panel
-    // duplicate-label situation when running the docker bundle.
-    await expect(page.locator("#identifier")).toBeVisible();
-    await expect(page.locator("#password")).toBeVisible();
+    await expect(page.getByText(/sign in to vnshop|Đăng nhập VNShop/i)).toBeVisible();
     await expect(page.getByRole("button", { name: /sign in|đăng nhập/i }).first()).toBeVisible();
 
     await page

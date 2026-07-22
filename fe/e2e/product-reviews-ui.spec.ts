@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { loginViaOidc } from "./_auth";
 
 const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
 const password = "Test1234!";
@@ -25,11 +26,7 @@ test("buyer can select a rating, submit a comment, and see live review totals", 
   expect(reviewsResponse.ok()).toBeTruthy();
   const liveReviews = (await reviewsResponse.json())?.data ?? [];
 
-  await page.goto("/login");
-  await page.locator("#identifier").fill(email);
-  await page.locator("#password").fill(password);
-  await page.getByRole("button", { name: /sign in/i }).click();
-  await expect.poll(() => new URL(page.url()).pathname, { timeout: 30_000 }).toBe("/");
+  await loginViaOidc(page, email, password);
 
   await page.goto(`/product/${product.id}`);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 20_000 });
@@ -39,12 +36,12 @@ test("buyer can select a rating, submit a comment, and see live review totals", 
   await expect(reviewsTab).toHaveText(`Reviews (${liveReviews.length})`);
   await expect(page.getByTestId("review-summary")).toContainText(String(liveReviews.length));
 
-  const stars = page.getByRole("button", { name: /^Rate \d stars?$/ });
+  const stars = page.getByRole("radio", { name: /^\d stars$/ });
   await expect(stars).toHaveCount(5);
-  await expect(stars.nth(4)).toHaveAttribute("aria-pressed", "true");
+  await expect(stars.nth(4)).toBeChecked();
   await stars.nth(2).click();
-  await expect(stars.nth(2)).toHaveAttribute("aria-pressed", "true");
-  await expect(stars.nth(3)).toHaveAttribute("aria-pressed", "false");
+  await expect(stars.nth(2)).toBeChecked();
+  await expect(stars.nth(3)).not.toBeChecked();
 
   const submit = page.getByRole("button", { name: /submit review/i });
   await expect(submit).toBeDisabled();

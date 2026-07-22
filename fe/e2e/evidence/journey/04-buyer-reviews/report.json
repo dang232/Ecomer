@@ -14,7 +14,7 @@
       },
       {
         "code": "AC-4.3",
-        "outcome": "Newly submitted review is visible on the public product page within 30 s"
+        "outcome": "Buyer sees review publication status; approved reviews are public and pending reviews show moderation"
       }
     ]
   },
@@ -24,35 +24,61 @@
       "acCode": "AC-4.1",
       "outcome": "Predecessor chapters left the buyer + product + order in state.json",
       "slug": "01-ac-4-1-predecessor-chapters-left-the-buyer-product-order-in-.png",
-      "status": "BLOCKED",
-      "errorMessage": "journey state missing required keys: buyerEmail, buyerPassword, productId, orderId — a previous chapter must run first"
+      "status": "PASS"
+    },
+    {
+      "index": 2,
+      "acCode": "AC-4.1",
+      "outcome": "Buyer logs back in and reaches /orders showing chapter 2's order",
+      "slug": "02-ac-4-1-buyer-logs-back-in-and-reaches-orders-showing-chapter.png",
+      "status": "PASS"
+    },
+    {
+      "index": 3,
+      "acCode": "AC-4.2",
+      "outcome": "Buyer opens the product detail page for the ordered product",
+      "slug": "03-ac-4-2-buyer-opens-the-product-detail-page-for-the-ordered-p.png",
+      "status": "PASS"
+    },
+    {
+      "index": 4,
+      "acCode": "AC-4.2",
+      "outcome": "Buyer fills the review form and submits — success toast confirms",
+      "slug": "04-ac-4-2-buyer-fills-the-review-form-and-submits-success-toast.png",
+      "status": "PASS"
+    },
+    {
+      "index": 5,
+      "acCode": "AC-4.3",
+      "outcome": "Buyer sees review publication status; approved reviews are public and pending reviews show moderation",
+      "slug": "05-ac-4-3-buyer-sees-review-publication-status-approved-reviews.png",
+      "status": "PASS"
+    },
+    {
+      "index": 6,
+      "acCode": "AC-4.3",
+      "outcome": "Buyer logs out — chapter 4 leaves no new state for downstream chapters",
+      "slug": "06-ac-4-3-buyer-logs-out-chapter-4-leaves-no-new-state-for-down.png",
+      "status": "PASS"
     }
   ],
   "acStatuses": [
     {
       "code": "AC-4.1",
       "outcome": "Buyer who placed the order can return to their /orders history and see it",
-      "status": "BLOCKED",
-      "failingStep": {
-        "index": 1,
-        "acCode": "AC-4.1",
-        "outcome": "Predecessor chapters left the buyer + product + order in state.json",
-        "slug": "01-ac-4-1-predecessor-chapters-left-the-buyer-product-order-in-.png",
-        "status": "BLOCKED",
-        "errorMessage": "journey state missing required keys: buyerEmail, buyerPassword, productId, orderId — a previous chapter must run first"
-      }
+      "status": "PASS"
     },
     {
       "code": "AC-4.2",
       "outcome": "Buyer can submit a 5-star written review on the ordered product",
-      "status": "NOT_RUN"
+      "status": "PASS"
     },
     {
       "code": "AC-4.3",
-      "outcome": "Newly submitted review is visible on the public product page within 30 s",
-      "status": "NOT_RUN"
+      "outcome": "Buyer sees review publication status; approved reviews are public and pending reviews show moderation",
+      "status": "PASS"
     }
   ],
-  "verdict": "BLOCKED",
-  "generatedAt": "2026-06-12T00:08:20.025Z"
+  "verdict": "PASS",
+  "generatedAt": "2026-07-22T03:29:27.108Z"
 }

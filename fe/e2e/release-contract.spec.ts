@@ -33,7 +33,7 @@ const expectedIssuer = process.env.E2E_CA_ISSUER ?? "vnshop-ci-root";
 test.describe("staging release contract", () => {
   test.skip(!releaseContract, "enabled only by the staging promotion gate");
 
-  test("proves TLS, runtime configuration, OIDC, API auth, and WebSockets", async ({
+  test("proves TLS, runtime configuration, native API auth, and WebSockets", async ({
     context,
     page,
   }) => {
@@ -59,24 +59,14 @@ test.describe("staging release contract", () => {
     page.on("websocket", (socket) => websocketUrls.add(socket.url()));
 
     await page.goto("/login");
-    const authRequestPromise = page.waitForRequest((request) =>
-      request.url().includes("/protocol/openid-connect/auth"),
-    );
-    await page.getByRole("button", { name: /continue to sign in/i }).click();
-    const authRequest = await authRequestPromise;
-    const authorizationUrl = new URL(authRequest.url());
-    expect(authorizationUrl.origin + authorizationUrl.pathname).toBe(
-      `${config.auth.issuerUri}/protocol/openid-connect/auth`,
-    );
-    expect(authorizationUrl.searchParams.get("response_type")).toBe("code");
-    expect(authorizationUrl.searchParams.get("code_challenge_method")).toBe("S256");
-    expect(authorizationUrl.searchParams.get("code_challenge")).toMatch(/^[A-Za-z0-9_-]{43,128}$/);
-    expect(authorizationUrl.searchParams.get("redirect_uri")).toBe(config.auth.callbackUri);
-    expect(authorizationUrl.searchParams.get("client_id")).toBe(config.auth.clientId);
-
     await page.locator("#username").fill(buyerUsername);
     await page.locator("#password").fill(buyerPassword);
-    await page.locator("#kc-login").click();
+    const loginResponsePromise = page.waitForResponse(
+      (response) => response.url().endsWith("/auth/login") && response.request().method() === "POST",
+    );
+    await page.getByRole("button", { name: /sign in|continue to sign in/i }).click();
+    const loginResponse = await loginResponsePromise;
+    expect(loginResponse.ok(), `POST /auth/login returned ${loginResponse.status()}`).toBe(true);
     await page.waitForURL((url) => url.origin === new URL(config.webUri).origin, {
       timeout: 30_000,
     });
@@ -84,7 +74,7 @@ test.describe("staging release contract", () => {
     const sessionCookies = await context.cookies();
     expect(
       sessionCookies.length,
-      "OIDC flow must establish at least one secure session cookie",
+      "native auth must establish at least one secure session cookie",
     ).toBeGreaterThan(0);
     for (const cookie of sessionCookies) {
       expect(cookie.secure, `${cookie.name} must be Secure`).toBe(true);
@@ -123,7 +113,7 @@ function expectRuntimeConfig(config: RuntimeConfig): void {
   expect(config.runtimeConfigUri).toBe("https://web.vnshop.invalid/runtime-config.json");
   expect(config.webUri).toBe("https://web.vnshop.invalid/");
   expect(config.apiUri).toBe("https://api.vnshop.invalid/");
-  expect(config.auth.issuerUri).toBe("https://auth.vnshop.invalid/realms/vnshop");
+  expect(config.auth.issuerUri).toBe("https://api.vnshop.invalid/realms/vnshop");
   expect(config.auth.callbackUri).toBe("https://web.vnshop.invalid/auth/callback");
   expect(config.auth.logoutUri).toBe("https://web.vnshop.invalid/");
   expect(config.websocket.notificationsUri).toBe("wss://api.vnshop.invalid/ws/notifications");

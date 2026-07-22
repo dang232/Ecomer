@@ -1,6 +1,7 @@
 import { test, expect, type Page, type ConsoleMessage } from "@playwright/test";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { loginViaOidc, registerAndLoginViaOidc } from "./_auth";
 
 /**
  * UX screenshot sweep — visits every reachable page in the FE and writes a
@@ -71,24 +72,18 @@ async function snap(page: Page, captured: Captured, slug: string) {
 }
 
 async function login(page: Page, identifier: string, password: string) {
-  await page.goto("/login");
-  await page.locator("#identifier").fill(identifier);
-  await page.locator("#password").fill(password);
-  await page.getByRole("button", { name: /sign in|đăng nhập/i }).click();
-  await expect.poll(() => new URL(page.url()).pathname, { timeout: 30_000 }).toBe("/");
+  await loginViaOidc(page, identifier, password);
 }
 
 async function registerFreshBuyer(page: Page): Promise<string> {
   const stamp = Date.now();
   const email = `e2e_sweep_${stamp}@vnshop.local`;
-  await page.goto("/register");
-  await page.locator("#firstName").fill("Sweep");
-  await page.locator("#lastName").fill("Tester");
-  await page.locator("#email").fill(email);
-  await page.locator("#password").fill(PASSWORD);
-  await page.locator("#confirm").fill(PASSWORD);
-  await page.getByRole("button", { name: /create account|tạo tài khoản/i }).click();
-  await expect.poll(() => new URL(page.url()).pathname, { timeout: 30_000 }).toBe("/");
+  await registerAndLoginViaOidc(page, {
+    firstName: "Sweep",
+    lastName: "Tester",
+    email,
+    password: PASSWORD,
+  });
   return email;
 }
 
@@ -193,22 +188,13 @@ test.describe("UX sweep — authenticated buyer", () => {
     await page.goto("/profile");
     await snap(page, c, "24-profile-info");
 
-    await page
-      .getByRole("button", { name: /^addresses$|^địa chỉ$/i })
-      .click()
-      .catch(() => {});
+    await page.getByRole("tab", { name: /^addresses$|^địa chỉ$/i }).click();
     await snap(page, c, "25-profile-addresses");
 
-    await page
-      .getByRole("button", { name: /payment methods|phương thức thanh toán/i })
-      .click()
-      .catch(() => {});
+    await page.getByRole("tab", { name: /payment methods|phương thức thanh toán/i }).click();
     await snap(page, c, "26-profile-payment");
 
-    await page
-      .getByRole("button", { name: /security|bảo mật/i })
-      .click()
-      .catch(() => {});
+    await page.getByRole("tab", { name: /security|bảo mật/i }).click();
     await snap(page, c, "27-profile-security");
   });
 
@@ -270,10 +256,7 @@ test.describe("UX sweep — admin", () => {
     const c = attachCapture(page);
     // Try the seeded admin login. If it bounces back to /login, skip the
     // suite — we don't want a red because the realm hasn't been seeded.
-    await page.goto("/login");
-    await page.locator("#identifier").fill("admin1");
-    await page.locator("#password").fill("test");
-    await page.getByRole("button", { name: /sign in|đăng nhập/i }).click();
+    await loginViaOidc(page, "admin1", "test");
     await page.waitForTimeout(2_000);
     if (new URL(page.url()).pathname !== "/") {
       test.skip(true, "no admin user seeded — skipping admin sweep");

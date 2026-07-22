@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
 import { expectNoGlobalError } from "./_helpers";
+import { loginViaOidc } from "./_auth";
 
 /**
  * UI-driven QA spec for the Profile → Addresses tab.
@@ -54,7 +55,8 @@ async function seedAddressViaApi(
 
 test.describe("profile addresses UI", () => {
   test("Add address form opens and accepts a valid submission", async ({ page }) => {
-    await seedBuyer(page.request);
+    const buyer = await seedBuyer(page.request);
+    await loginViaOidc(page, buyer.email, PASSWORD);
     await page.goto("/profile");
 
     // Wait for shell, then click Addresses tab.
@@ -62,7 +64,7 @@ test.describe("profile addresses UI", () => {
       page.getByRole("heading", { name: /Personal info|Thông tin cá nhân/i }),
     ).toBeVisible({ timeout: 20_000 });
 
-    await page.getByRole("button", { name: /^(Addresses|Địa chỉ)$/i }).click();
+    await page.getByRole("tab", { name: /^(Addresses|Địa chỉ)$/i }).click();
 
     // Empty-state copy renders for a new buyer.
     await expect(
@@ -103,14 +105,15 @@ test.describe("profile addresses UI", () => {
   });
 
   test("Submitting the address form with empty street + city blocks", async ({ page }) => {
-    await seedBuyer(page.request);
+    const buyer = await seedBuyer(page.request);
+    await loginViaOidc(page, buyer.email, PASSWORD);
     await page.goto("/profile");
 
     await expect(
       page.getByRole("heading", { name: /Personal info|Thông tin cá nhân/i }),
     ).toBeVisible({ timeout: 20_000 });
 
-    await page.getByRole("button", { name: /^(Addresses|Địa chỉ)$/i }).click();
+    await page.getByRole("tab", { name: /^(Addresses|Địa chỉ)$/i }).click();
     await page.getByRole("button", { name: /Add address|Thêm địa chỉ/i }).click();
 
     // Click Save without filling — FE shows a validation toast.
@@ -151,11 +154,12 @@ test.describe("profile addresses UI", () => {
       isDefault: false,
     });
 
+    await loginViaOidc(page, buyer.email, PASSWORD);
     await page.goto("/profile");
     await expect(
       page.getByRole("heading", { name: /Personal info|Thông tin cá nhân/i }),
     ).toBeVisible({ timeout: 20_000 });
-    await page.getByRole("button", { name: /^(Addresses|Địa chỉ)$/i }).click();
+    await page.getByRole("tab", { name: /^(Addresses|Địa chỉ)$/i }).click();
 
     // Both addresses are visible.
     await expect(page.getByText("1 Default Street")).toBeVisible({ timeout: 10_000 });
@@ -212,11 +216,12 @@ test.describe("profile addresses UI", () => {
       isDefault: false,
     });
 
+    await loginViaOidc(page, buyer.email, PASSWORD);
     await page.goto("/profile");
     await expect(
       page.getByRole("heading", { name: /Personal info|Thông tin cá nhân/i }),
     ).toBeVisible({ timeout: 20_000 });
-    await page.getByRole("button", { name: /^(Addresses|Địa chỉ)$/i }).click();
+    await page.getByRole("tab", { name: /^(Addresses|Địa chỉ)$/i }).click();
 
     await expect(page.getByText("99 Delete Me Street")).toBeVisible({ timeout: 10_000 });
 

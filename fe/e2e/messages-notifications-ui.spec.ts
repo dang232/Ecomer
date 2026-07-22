@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
 import { expectNoGlobalError } from "./_helpers";
+import { loginViaOidc } from "./_auth";
 
 /**
  * UI-driven QA spec for the messaging page + notifications bell.
@@ -53,7 +54,8 @@ test.describe("messages + notifications UI", () => {
   });
 
   test("/messages for an authed buyer renders the thread list shell", async ({ page }) => {
-    await seedBuyer(page.request);
+    const buyer = await seedBuyer(page.request);
+    await loginViaOidc(page, buyer.email, PASSWORD);
     await page.goto("/messages");
 
     // The thread list header is always visible; the body is either the
@@ -77,7 +79,8 @@ test.describe("messages + notifications UI", () => {
   });
 
   test("Notification bell button is visible in the header for authed buyers", async ({ page }) => {
-    await seedBuyer(page.request);
+    const buyer = await seedBuyer(page.request);
+    await loginViaOidc(page, buyer.email, PASSWORD);
     await page.goto("/");
 
     // The bell button aria-label is the localized "Notifications" / "Thông báo".

@@ -1,5 +1,6 @@
-import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import { expectNoGlobalError } from "./_helpers";
+import { loginViaOidc } from "./_auth";
 
 /**
  * UI-driven QA spec for the seller orders queue.
@@ -14,25 +15,9 @@ import { expectNoGlobalError } from "./_helpers";
  * Uses the seeded seller1 Keycloak account.
  */
 
-const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
-
-interface AuthResult {
-  accessToken: string;
-}
-
-async function loginAsSeller(request: APIRequestContext): Promise<AuthResult> {
-  const r = await request.post(`${apiURL}/auth/login`, {
-    data: { username: "seller1", password: "test" },
-  });
-  expect(r.ok(), `seller login: ${r.status()} ${await r.text()}`).toBeTruthy();
-  const accessToken = (await r.json())?.data?.accessToken;
-  expect(accessToken).toBeTruthy();
-  return { accessToken };
-}
-
 test.describe("seller orders queue UI", () => {
   test("/seller dashboard renders for seller1 without the global error", async ({ page }) => {
-    await loginAsSeller(page.request);
+    await loginViaOidc(page, "seller1");
     await page.goto("/seller");
 
     // Either the dashboard tab content OR the seller-channel layout shell.
@@ -47,7 +32,7 @@ test.describe("seller orders queue UI", () => {
   test("Orders tab renders queue header (proves /seller/orders/pending parses)", async ({
     page,
   }) => {
-    await loginAsSeller(page.request);
+    await loginViaOidc(page, "seller1");
     await page.goto("/seller");
 
     // Wait for the seller shell to mount before clicking the Orders tab.
