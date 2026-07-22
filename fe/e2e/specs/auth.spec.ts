@@ -1,12 +1,12 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
 import { expectNoGlobalError } from "../_helpers";
-import { loginViaOidc, registerAndLoginViaOidc } from "../_auth";
+import { loginViaOidc, registerAndLoginViaOidc, uniqueTestId } from "../_auth";
 
 const PASSWORD = "Test1234!";
 const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
 
 async function seedBuyer(request: APIRequestContext): Promise<{ email: string }> {
-  const email = `e2e_spec_auth_${Date.now()}_${Math.floor(Math.random() * 1000)}@vnshop.local`;
+  const email = `e2e_spec_auth_${uniqueTestId()}@vnshop.local`;
   const reg = await request.post(`${apiURL}/auth/register`, {
     data: { firstName: "Spec", lastName: "Auth", email, password: PASSWORD },
   });

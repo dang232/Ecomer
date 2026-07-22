@@ -1,5 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
-import { loginViaOidc } from "./_auth";
+import { loginViaOidc, uniqueTestId } from "./_auth";
 
 /**
  * UI-driven QA spec for the buyer orders flow.
@@ -35,7 +35,7 @@ interface SeededBuyer {
 }
 
 async function seedBuyer(request: APIRequestContext): Promise<SeededBuyer> {
-  const stamp = Date.now() + Math.floor(Math.random() * 1_000);
+  const stamp = uniqueTestId();
   const email = `e2e_qa_orders_${stamp}@vnshop.local`;
 
   const reg = await request.post(`${apiURL}/auth/register`, {
@@ -87,7 +87,7 @@ async function placePendingCodOrder(
   expect(addr.ok(), `address: ${addr.status()} ${await addr.text()}`).toBeTruthy();
 
   // Place a COD order — no external gateway, lands as PENDING immediately.
-  const idem = `qa-cancel-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const idem = `qa-cancel-${uniqueTestId()}`;
   const place = await request.post(`${apiURL}/orders`, {
     headers: { ...headers, "Idempotency-Key": idem },
     data: {

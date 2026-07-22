@@ -1,6 +1,6 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
 import { expectNoGlobalError } from "./_helpers";
-import { loginViaOidc } from "./_auth";
+import { loginViaOidc, uniqueTestId } from "./_auth";
 
 /**
  * UI-driven QA spec for the messaging page + notifications bell.
@@ -24,7 +24,7 @@ interface SeededBuyer {
 }
 
 async function seedBuyer(request: APIRequestContext): Promise<SeededBuyer> {
-  const stamp = Date.now() + Math.floor(Math.random() * 1_000);
+  const stamp = uniqueTestId();
   const email = `e2e_qa_msg_${stamp}@vnshop.local`;
   const reg = await request.post(`${apiURL}/auth/register`, {
     data: { firstName: "QA", lastName: "Msg", email, password: PASSWORD },

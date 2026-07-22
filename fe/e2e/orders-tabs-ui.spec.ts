@@ -1,6 +1,6 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
 import { expectNoGlobalError } from "./_helpers";
-import { loginViaOidc } from "./_auth";
+import { loginViaOidc, uniqueTestId } from "./_auth";
 
 /**
  * UI-driven QA spec for the /orders tab filter.
@@ -24,7 +24,7 @@ interface SeededBuyer {
 }
 
 async function seedBuyer(request: APIRequestContext): Promise<SeededBuyer> {
-  const stamp = Date.now() + Math.floor(Math.random() * 1_000);
+  const stamp = uniqueTestId();
   const email = `e2e_qa_orders_tabs_${stamp}@vnshop.local`;
   const reg = await request.post(`${apiURL}/auth/register`, {
     data: { firstName: "QA", lastName: "Tabs", email, password: PASSWORD },
@@ -61,7 +61,7 @@ async function placePendingOrder(request: APIRequestContext, buyer: SeededBuyer)
     data: { ...address, isDefault: true },
   });
 
-  const idem = `qa-tabs-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const idem = `qa-tabs-${uniqueTestId()}`;
   const place = await request.post(`${apiURL}/orders`, {
     headers: { ...headers, "Idempotency-Key": idem },
     data: {

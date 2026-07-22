@@ -1,4 +1,9 @@
 import { expect, type Page } from "@playwright/test";
+import { randomUUID } from "node:crypto";
+
+export function uniqueTestId(): string {
+  return `${Date.now()}-${randomUUID()}`;
+}
 
 /**
  * Complete the browser login used by the deployed SPA. Credentials go through
