@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { randomUUID } from "node:crypto";
 import { loginViaOidc, registerAndLoginViaOidc } from "./_auth";
 
 /**
@@ -26,7 +27,7 @@ interface AuthResult {
 }
 
 async function registerBuyer(request: APIRequestContext): Promise<AuthResult> {
-  const stamp = Date.now() + Math.floor(Math.random() * 1_000);
+  const stamp = `${Date.now()}-${randomUUID()}`;
   const email = `e2e_day_${stamp}@vnshop.local`;
   let r = await request.post(`${apiURL}/auth/register`, {
     data: {
@@ -197,7 +198,7 @@ test.describe("day simulation — buyer", () => {
     // resolves sellerId / name / unitPrice / image server-side from the
     // product-service. Closes the price-tampering security finding —
     // the client cannot influence the recorded order total.
-    const idem = `day-sim-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const idem = `day-sim-${Date.now()}-${randomUUID()}`;
     const place = await request.post(`${apiURL}/orders`, {
       headers: { ...headers, "Idempotency-Key": idem },
       data: {
@@ -523,7 +524,7 @@ test.describe("day simulation — payment-method shells", () => {
     const product = await firstProduct(request);
 
     // Step 1: buyer A places a COD order.
-    const idem = `idor-return-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const idem = `idor-return-${Date.now()}-${randomUUID()}`;
     const place = await request.post(`${apiURL}/orders`, {
       headers: { ...headersA, "Idempotency-Key": idem },
       data: {
@@ -631,7 +632,7 @@ test.describe("day simulation — payment-method shells", () => {
 
     // Buyer A places a real order so the BE has a row to probe.
     const product = await firstProduct(request);
-    const idem = `idor-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const idem = `idor-test-${Date.now()}-${randomUUID()}`;
     const place = await request.post(`${apiURL}/orders`, {
       headers: { ...headersA, "Idempotency-Key": idem },
       data: {
