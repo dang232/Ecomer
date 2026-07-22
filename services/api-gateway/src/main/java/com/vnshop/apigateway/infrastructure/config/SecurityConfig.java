@@ -79,6 +79,9 @@ public class SecurityConfig {
                 // cross-origin POST/PUT — permit it on every path so the
                 // CORS filter has a chance to respond with allow-origin.
                 .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                // Seller review management is a protected read model even
+                // though public product reviews share the /reviews prefix.
+                .pathMatchers(HttpMethod.GET, "/reviews/seller/me").hasRole("SELLER")
                 .pathMatchers(HttpMethod.GET, "/products/**", "/categories/**", "/search/**",
                         "/reviews/**", "/questions/**", "/recommendations/**", "/health",
                         "/api/config", "/api/config/public", "/sellers", "/sellers/*", "/flash-sale/active",
@@ -86,7 +89,7 @@ public class SecurityConfig {
                 .pathMatchers(HttpMethod.POST, "/reviews/seller-summaries", "/products/counts",
                         "/coupons/validate", "/checkout/validate-coupon").permitAll()
                 .pathMatchers(HttpMethod.POST, "/webhooks/ghn", "/webhooks/ghtk").permitAll()
-                .pathMatchers("/auth/**", "/payment/*/callback", "/payment/*/ipn", "/payment/stripe/webhook").permitAll()
+                .pathMatchers("/auth/**", "/realms/**", "/resources/**", "/payment/*/callback", "/payment/*/ipn", "/payment/stripe/webhook").permitAll()
                 // The WebSocket handshake on /ws/messaging carries the JWT through
                 // a subprotocol because browsers can't set Authorization headers on
                 // `new WebSocket(...)`, so it cannot pass the gateway's resource
@@ -103,8 +106,8 @@ public class SecurityConfig {
                 .pathMatchers("/seller/**", "/sellers/me/**").hasRole("SELLER")
                 .anyExchange().authenticated()
             )
-            // The SPA acquires tokens directly from Keycloak (PKCE) and sends them as Bearer.
-            // No oauth2Login (no client registration) — gateway is purely a JWT-validating proxy.
+            // The SPA obtains access tokens through user-service. The gateway
+            // still validates the resulting JWT on protected resource routes.
             .oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
             )
