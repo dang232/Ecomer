@@ -44,7 +44,7 @@ Each term in an allocation and each calculated output carries the same currency.
 2. A prepaid order becomes financially eligible only from a verified provider capture fact from `payment-service` and the applicable fulfillment-release fact.
 3. A COD order becomes financially eligible only after `shipping-service` publishes verified COD collection. Delivery alone, an order status change, a carrier label, or buyer confirmation is not collection truth.
 4. `seller-finance-service` posts the seller payable only from the required verified facts. It calculates the payable from the frozen commercial allocation, not from a mutable order total or a wallet balance.
-5. Posted journals and postings are append-only. Refunds, chargebacks, reserves, corrections, and reversals create compensating postings; they do not update or delete posted history.
+5. Posted journals and postings are append-only. Refunds, chargebacks, reserves, corrections, and reversals create compensating postings; they do not update or delete posted history. Every correction or reversal links its original journal and posting identifiers and the source-fact reference that required it.
 
 ## Refunds, Chargebacks, and Reserves
 
@@ -56,11 +56,17 @@ Each term in an allocation and each calculated output carries the same currency.
 
 A payout can use only funds that are posted, available, and not reserved. It has a stable idempotency key that is retained across retries. Duplicate delivery returns the prior result; an invalid or unknown event schema creates no posting, payout, idempotency mutation, or replacement key.
 
-Bank account numbers, account-holder data, and provider destination identifiers are confidential. Finance events, APIs, logs, audit views, support exports, and release evidence must use masked destinations only. Production configuration must fail closed when a required provider, payout, encryption, or destination-masking setting is absent or invalid.
+Raw bank account numbers and account-holder data must never be stored in plaintext in seller-finance storage or exposed through public APIs, logs, metrics, browser state, screenshots, or E2E evidence. Store destination data only in encrypted or otherwise protected seller-finance storage, and use masked values everywhere outside controlled payout integrations. Finance events, APIs, logs, audit views, support exports, and release evidence must use masked destinations only. Production configuration must fail closed when a required provider, payout, encryption, or destination-masking setting is absent or invalid.
 
 ## Event Handling
 
-Event consumers validate the schema before they mutate any state. They use a stable, source-derived idempotency key only after the event is recognized as valid. Unknown schema versions, invalid payloads, missing required financial fields, and currency mismatches are rejected to a diagnosable failure path with no ledger or idempotency mutation.
+Event consumers validate the schema before they mutate any state. They use a stable, source-derived idempotency key only after the event is recognized as valid. A missing source event ID, missing source idempotency ID, or unknown major schema version goes to a diagnosable retry/DLT path with no journal, posting, payout, idempotency, replacement-key, or other financial mutation. Invalid payloads, missing required financial fields, and currency mismatches follow the same no-mutation rule.
+
+## Settlement Legacy API Compatibility
+
+The compatibility window covers the legacy seller wallet and payout APIs: `GET /sellers/me/finance/wallet`, `GET /sellers/me/finance/payouts`, and `POST /sellers/me/finance/payouts`; and the legacy admin payout queue and decision APIs: `GET /admin/finance/payouts/pending`, `GET /admin/finance/payouts/completed`, `POST /admin/finance/payouts/{payoutId}/complete`, and `POST /admin/finance/payouts/{payoutId}/fail`.
+
+New web flows use versioned settlement APIs now and must not introduce new legacy calls. The legacy contract remains only through the settlement release and the required financial-record retention period. It may sunset only after the migration release is complete, retained ledger and payout records remain accessible for their required retention period, and two subsequent stable releases show no legacy API use. After expiry, the legacy paths fail closed: they reject requests without a fallback payment, payout, journal, or state mutation.
 
 ## Task 14 Stale-Documentation Cleanup
 

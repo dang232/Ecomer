@@ -42,7 +42,7 @@ Fulfillment is where marketplaces become operational businesses. It's also where
 │                                    │        │     or 7d auto)    │
 │                                    │        │        │           │
 │                                    │        │        ↓           │
-│                                    │        │  ESCROW_RELEASED   │
+│                                    │        │ RELEASE_FACT_RECORDED │
 │                                    │        │        │           │
 │                                    │        │        ↓           │
 │                                    │        │     COMPLETED      │
@@ -57,6 +57,8 @@ Fulfillment is where marketplaces become operational businesses. It's also where
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+Confirmation and auto-confirmation record a fulfillment-release fact; neither transfers seller money. Prepaid settlement eligibility requires verified provider capture plus that release fact. COD settlement eligibility requires verified COD collection plus that release fact. `seller-finance-service` posts a seller payable only after the required facts are verified.
 
 ---
 
@@ -85,12 +87,12 @@ Fulfillment is where marketplaces become operational businesses. It's also where
 |---|---|---|---|
 | Seller accepts order | Seller | 24 hours | Auto-reject + refund |
 | Seller ships order | Seller | 48 hours after accept | Warning → penalty after 3 violations |
-| Buyer confirms receipt | Buyer | 7 days after delivered | Auto-confirm, settlement review becomes eligible |
+| Buyer confirms receipt | Buyer | 7 days after delivered | Auto-confirm records a fulfillment-release fact; settlement eligibility follows verified finance facts |
 | Buyer opens dispute | Buyer | 15 days after delivered | Window closes, cannot dispute |
 | Seller responds to dispute | Seller | 48 hours | Auto-escalate to admin |
 | Admin resolves dispute | Admin | 72 hours | Escalate to senior |
 | Refund processed | Platform | 3 business days | SLA violation |
-| Seller payout | Platform | 3 days after confirmed | SLA violation |
+| Seller payout | Platform | 3 days after funds are posted, available, and unreserved | SLA violation |
 
 ---
 
@@ -162,7 +164,7 @@ Fulfillment is where marketplaces become operational businesses. It's also where
       ↓
 [Available actions based on state:]
   ├── SHIPPED: "Track package" → carrier tracking page
-  ├── DELIVERED: "Confirm receipt" → releases escrow
+  ├── DELIVERED: "Confirm receipt" → records a fulfillment-release fact; it does not transfer funds
   ├── DELIVERED: "Report problem" → opens dispute
   └── CONFIRMED: "Write review" → review form
 ```
