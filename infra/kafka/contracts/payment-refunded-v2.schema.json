@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Payment refunded v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["eventId", "eventType", "schemaVersion", "occurredAt", "producer", "aggregateId", "correlationId", "causationId", "payload"],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid" },
+    "eventType": { "const": "PAYMENT_REFUNDED" },
+    "schemaVersion": { "const": 2 },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "producer": { "const": "payment-service" },
+    "aggregateId": { "type": "string", "format": "uuid" },
+    "correlationId": { "type": "string", "format": "uuid" },
+    "causationId": { "type": "string", "format": "uuid" },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["refundId", "paymentId", "orderId", "providerRefundId", "amount", "currency", "refundedAt"],
+      "properties": {
+        "refundId": { "type": "string", "format": "uuid" },
+        "paymentId": { "type": "string", "format": "uuid" },
+        "orderId": { "type": "string", "format": "uuid" },
+        "providerRefundId": { "type": "string", "minLength": 1 },
+        "amount": { "type": "integer", "minimum": 1 },
+        "currency": { "const": "VND" },
+        "refundedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

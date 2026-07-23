@@ -51,6 +51,17 @@ Compose and Dokploy are local or archived paths and provide no release evidence.
 - [ ] Prometheus has one readiness target per artifact and the 99.0% SLO and
   backup-age alerts are loaded.
 
+## Marketplace Settlement Release Gates
+
+- [ ] **COD collection truth:** verified carrier collection evidence proves that COD seller settlement cannot complete from order creation, delivery, or buyer confirmation alone.
+- [ ] **Ledger balance:** the append-only journal trial balance is proven for each affected currency, including compensating refund, chargeback, and reserve postings.
+- [ ] **Backfill evidence:** reconciliation records prove source counts, amounts, currencies, idempotency keys, rejects, and rerun behavior for every finance backfill.
+- [ ] **Payout idempotency:** duplicate request and provider-delivery tests prove one payout outcome per stable idempotency key; invalid or unknown schemas leave ledger and idempotency state unchanged.
+- [ ] **Provider/manual evidence:** verified provider capture, refund, and chargeback evidence, plus the approved manual-operational evidence path, are retained for the release.
+- [ ] **Projection drift:** source facts, ledger balances, payout projections, and operator read models reconcile within the approved tolerance.
+- [ ] **DLT health:** dead-letter topic depth, age, replay procedure, and alerting are healthy; unreconciled finance messages block release.
+- [ ] **Destination masking:** production API, logs, exports, support views, and release evidence prove bank destinations are masked; missing or invalid payout, encryption, provider, or masking configuration fails closed.
+
 ## Production And Rollback
 
 - [ ] The protected production PR contains only the unchanged lock, generated
