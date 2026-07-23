@@ -18,12 +18,12 @@ class PaymentMigrationIntegrationTest {
     private JdbcTemplate jdbcTemplate;
 
     @Test
-    void appliesFlywayMigrationsThroughVersionSixteen() {
+    void appliesFlywayMigrationsThroughVersionSeventeen() {
         String version = jdbcTemplate.queryForObject(
             "select version from payment_svc.flyway_schema_history where success order by installed_rank desc limit 1",
             String.class
         );
 
-        assertThat(version).isEqualTo("16");
+        assertThat(version).isEqualTo("17");
     }
 }
