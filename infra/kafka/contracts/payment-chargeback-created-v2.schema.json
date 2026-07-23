@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Payment chargeback created v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["eventId", "eventType", "schemaVersion", "occurredAt", "producer", "aggregateId", "correlationId", "causationId", "payload"],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid" },
+    "eventType": { "const": "PAYMENT_CHARGEBACK_CREATED" },
+    "schemaVersion": { "const": 2 },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "producer": { "const": "payment-service" },
+    "aggregateId": { "type": "string", "format": "uuid" },
+    "correlationId": { "type": "string", "format": "uuid" },
+    "causationId": { "type": "string", "format": "uuid" },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["chargebackId", "paymentId", "orderId", "providerChargebackId", "amount", "currency", "reason", "dueAt"],
+      "properties": {
+        "chargebackId": { "type": "string", "format": "uuid" },
+        "paymentId": { "type": "string", "format": "uuid" },
+        "orderId": { "type": "string", "format": "uuid" },
+        "providerChargebackId": { "type": "string", "minLength": 1 },
+        "amount": { "type": "integer", "minimum": 1 },
+        "currency": { "const": "VND" },
+        "reason": { "type": "string", "minLength": 1 },
+        "dueAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

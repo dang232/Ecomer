@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Seller finance adjustment v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["eventId", "eventType", "schemaVersion", "occurredAt", "producer", "aggregateId", "correlationId", "causationId", "payload"],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid" },
+    "eventType": { "const": "SELLER_FINANCE_ADJUSTMENT" },
+    "schemaVersion": { "const": 1 },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "producer": { "const": "order-service" },
+    "aggregateId": { "type": "string", "minLength": 1 },
+    "correlationId": { "type": "string", "minLength": 1 },
+    "causationId": { "type": "string", "minLength": 1 },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["adjustmentId", "adjustmentType", "allocationId", "allocationVersion", "orderId", "subOrderId", "sellerId", "reversalId", "currency", "components"],
+      "properties": {
+        "adjustmentId": { "type": "string", "format": "uuid" },
+        "adjustmentType": { "enum": ["CREDIT", "RELEASE", "REFUND_REVERSAL", "CHARGEBACK_HOLD", "CHARGEBACK_RELEASE", "CHARGEBACK_FINALIZE"] },
+        "allocationId": { "type": "string", "format": "uuid" },
+        "allocationVersion": { "type": "integer", "minimum": 1 },
+        "orderId": { "type": "string", "format": "uuid" },
+        "subOrderId": { "type": "string", "format": "uuid" },
+        "sellerId": { "type": "string", "minLength": 1 },
+        "reversalId": { "type": ["string", "null"], "format": "uuid" },
+        "currency": { "const": "VND" },
+        "components": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 1 }
+        }
+      }
+    }
+  }
+}
