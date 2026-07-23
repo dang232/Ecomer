@@ -33,11 +33,11 @@
           "required": ["itemGmvAmount", "sellerFundedDiscountAmount", "sellerShippingPayableAmount", "sellerTaxPayableAmount", "platformCommissionAmount", "sellerPayableAmount"],
           "properties": {
             "itemGmvAmount": { "type": "integer", "minimum": 1 },
-            "sellerFundedDiscountAmount": { "type": "integer", "minimum": 1 },
-            "sellerShippingPayableAmount": { "type": "integer", "minimum": 1 },
-            "sellerTaxPayableAmount": { "type": "integer", "minimum": 1 },
-            "platformCommissionAmount": { "type": "integer", "minimum": 1 },
-            "sellerPayableAmount": { "type": "integer", "minimum": 1 }
+            "sellerFundedDiscountAmount": { "type": "integer", "minimum": 0 },
+            "sellerShippingPayableAmount": { "type": "integer", "minimum": 0 },
+            "sellerTaxPayableAmount": { "type": "integer", "minimum": 0 },
+            "platformCommissionAmount": { "type": "integer", "minimum": 0 },
+            "sellerPayableAmount": { "type": "integer", "minimum": 0 }
           }
         }
       }
