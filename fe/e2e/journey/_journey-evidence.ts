@@ -286,16 +286,25 @@ export async function finalizeChapterReport(chapterId: ChapterId): Promise<void>
   lines.push("- `video.webm` — full session recording (gitignored)");
   lines.push("- `screenshots/` — one `NN-slug.png` per step, regenerated each run");
 
-  await fs.writeFile(
-    path.join(chapterDir(chapterId), "REPORT.md"),
-    `${lines.join("\n")}\n`,
-    "utf8",
-  );
-  await fs.writeFile(
+  await writeEvidenceFile(path.join(chapterDir(chapterId), "REPORT.md"), `${lines.join("\n")}\n`);
+  await writeEvidenceFile(
     path.join(chapterDir(chapterId), "report.json"),
     `${JSON.stringify({ meta: safeMeta, rows, acStatuses, verdict, generatedAt: new Date().toISOString() }, null, 2)}\n`,
-    "utf8",
   );
+}
+
+async function writeEvidenceFile(filePath: string, content: string): Promise<void> {
+  // OneDrive can briefly hold a freshly-written evidence file while syncing.
+  // Retry transient filesystem failures so they do not mask the test result.
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      await fs.writeFile(filePath, content, "utf8");
+      return;
+    } catch (error) {
+      if (attempt === 3) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)));
+    }
+  }
 }
 
 function stakeholderSummary(meta: ChapterMeta, acs: AcStatus[]): string {

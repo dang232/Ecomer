@@ -46,7 +46,7 @@ class RouteConfigTest {
         RouteConfig config = new RouteConfig(
                 "http://product", "http://user", "http://search", "http://inventory", "http://cart",
                 "http://order", "http://payment", "http://shipping", "http://notification",
-                "http://finance", "http://recommendations", "http://messaging", "http://monitoring", "http://configuration");
+                "http://finance", "http://recommendations", "http://messaging", "http://monitoring", "http://configuration", "http://coupon", "http://keycloak");
         TieredRateLimiter limiter = new TieredRateLimiter(mock(org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter.class),
                 mock(org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter.class));
         RouteLocator locator = config.gatewayRoutes(new RouteLocatorBuilder(context), limiter, limiter, limiter, limiter,
@@ -56,7 +56,10 @@ class RouteConfigTest {
 
         assertThat(routes).isNotNull().extracting(Route::getId)
                 .contains("products", "search", "flash-sale-reserve", "flash-sale-stock", "flash-sale-active",
-                        "recommendations", "monitoring", "configuration");
+                "recommendations", "monitoring", "configuration");
+        assertThat(route(routes, "keycloak-oidc").getUri()).isEqualTo(URI.create("http://keycloak:80"));
+        assertThat(matches(route(routes, "keycloak-oidc"), "/realms/vnshop/protocol/openid-connect/auth")).isTrue();
+        assertThat(matches(route(routes, "keycloak-oidc"), "/admin/master/console/")).isFalse();
         assertThat(route(routes, "products").getUri()).isEqualTo(URI.create("http://product:80"));
         assertThat(route(routes, "search").getUri()).isEqualTo(URI.create("http://search:80"));
         assertThat(route(routes, "flash-sale-reserve").getUri()).isEqualTo(URI.create("http://inventory:80"));
@@ -75,10 +78,13 @@ class RouteConfigTest {
         assertThat(matches(route(routes, "shipping-webhooks"), "/webhooks/ghtk")).isTrue();
         assertThat(matches(route(routes, "shipping-webhooks"), "/webhooks/unknown")).isFalse();
         assertThat(route(routes, "checkout").getUri()).isEqualTo(URI.create("http://order:80"));
-        assertThat(matches(route(routes, "checkout"), "/checkout/apply-coupon")).isTrue();
-        assertThat(route(routes, "coupons").getUri()).isEqualTo(URI.create("http://order:80"));
+        assertThat(route(routes, "checkout-coupons").getUri()).isEqualTo(URI.create("http://coupon:80"));
+        assertThat(matches(route(routes, "checkout-coupons"), "/checkout/apply-coupon")).isTrue();
+        assertThat(matches(route(routes, "checkout-coupons"), "/checkout/validate-coupon")).isTrue();
+        assertThat(matches(route(routes, "checkout"), "/checkout/payment-methods")).isTrue();
+        assertThat(route(routes, "coupons").getUri()).isEqualTo(URI.create("http://coupon:80"));
         assertThat(matches(route(routes, "coupons"), "/coupons/validate")).isTrue();
-        assertThat(route(routes, "admin-coupons").getUri()).isEqualTo(URI.create("http://order:80"));
+        assertThat(route(routes, "admin-coupons").getUri()).isEqualTo(URI.create("http://coupon:80"));
     }
 
     private static Route route(List<Route> routes, String id) {

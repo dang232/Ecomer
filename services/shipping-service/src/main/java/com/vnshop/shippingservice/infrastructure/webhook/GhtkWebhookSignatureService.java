@@ -1,10 +1,12 @@
 package com.vnshop.shippingservice.infrastructure.webhook;
 
 import com.vnshop.shippingservice.infrastructure.carrier.GhtkProperties;
-import com.vnshop.shippingservice.infrastructure.config.CarrierProperties;
+import com.vnshop.shippingservice.infrastructure.config.WebhookSecurityProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.StandardEnvironment;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.Mac;
@@ -23,32 +25,36 @@ public class GhtkWebhookSignatureService {
     private static final String HMAC_SHA256 = "HmacSHA256";
 
     private final GhtkProperties properties;
-    private final CarrierProperties carrierProperties;
+    private final WebhookSecurityProperties webhookSecurityProperties;
+    private final Environment environment;
 
     @Autowired
     public GhtkWebhookSignatureService(
             GhtkProperties properties,
-            CarrierProperties carrierProperties) {
+            WebhookSecurityProperties webhookSecurityProperties,
+            Environment environment) {
         this.properties = properties;
-        this.carrierProperties = carrierProperties;
+        this.webhookSecurityProperties = webhookSecurityProperties;
+        this.environment = environment;
     }
 
     public GhtkWebhookSignatureService(GhtkProperties properties) {
-        this(properties, new CarrierProperties("stub"));
+        this(properties, new WebhookSecurityProperties(false), new StandardEnvironment());
     }
 
     /**
      * Validates the GHTK webhook signature.
-     * Returns true if no signature is required (development mode) or if signature is valid.
+     * Credentials are required unless the local-only opt-in is enabled in a local/dev profile.
      */
     public boolean isValid(GhtkWebhookPayload payload, String signature) {
         String configuredToken = properties.webhookToken();
         if (configuredToken == null || configuredToken.isBlank()) {
-            boolean localStub = !"live".equalsIgnoreCase(carrierProperties.mode());
-            if (!localStub) {
-                LOG.error("GHTK webhook token is not configured while carrier mode is live");
+            if (isInsecureLocalMode()) {
+                LOG.warn("Accepting GHTK webhook without credentials because explicit local-only opt-in is enabled");
+                return true;
             }
-            return localStub && (signature == null || signature.isBlank());
+            LOG.error("GHTK webhook token is not configured");
+            return false;
         }
 
         if (signature == null || signature.isBlank()) {
@@ -84,5 +90,10 @@ public class GhtkWebhookSignatureService {
         } catch (Exception e) {
             throw new RuntimeException("Failed to compute signature", e);
         }
+    }
+
+    private boolean isInsecureLocalMode() {
+        return webhookSecurityProperties.allowInsecureLocal()
+                && environment.matchesProfiles("local", "dev");
     }
 }

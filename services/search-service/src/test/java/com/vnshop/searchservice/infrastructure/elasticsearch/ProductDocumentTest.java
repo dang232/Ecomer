@@ -14,12 +14,16 @@ class ProductDocumentTest {
                 Map.of(
                         "name", "Headphones",
                         "imageUrl", "https://cdn.example/headphones.jpg",
-                        "stock", 9
+                        "stock", 9,
+                        "averageRating", 4.5,
+                        "reviewCount", 8
                 )
         );
 
         assertThat(document.getImageUrls())
                 .containsExactly("https://cdn.example/headphones.jpg");
         assertThat(document.getStock()).isEqualTo(9);
+        assertThat(document.getAverageRating()).isEqualTo(4.5f);
+        assertThat(document.getReviewCount()).isEqualTo(8);
     }
 }

@@ -1,6 +1,7 @@
 package com.vnshop.productservice.infrastructure.persistence.review;
 
 import com.vnshop.productservice.domain.review.ProductQuestion;
+import com.vnshop.productservice.domain.review.ProductReviewSummary;
 import com.vnshop.productservice.domain.review.Review;
 import com.vnshop.productservice.domain.review.ReviewStatus;
 import com.vnshop.productservice.domain.review.SellerReviewSummary;
@@ -14,6 +15,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Repository
 public class ReviewJpaRepository implements ReviewRepositoryPort {
@@ -44,6 +47,23 @@ public class ReviewJpaRepository implements ReviewRepositoryPort {
     }
 
     @Override
+    public ProductReviewSummary getProductReviewSummary(String productId) {
+        List<Object[]> rows = reviewRepository.findProductReviewStats(productId);
+        if (rows.isEmpty()) {
+            return ProductReviewSummary.empty();
+        }
+        Object[] row = rows.getFirst();
+        long count = row.length < 2 || row[1] == null ? 0L : ((Number) row[1]).longValue();
+        Double average = count == 0 || row[0] == null ? null : ((Number) row[0]).doubleValue();
+        return new ProductReviewSummary(average, count);
+    }
+
+    @Override
+    public List<String> findProductIdsWithApprovedReviews() {
+        return reviewRepository.findProductIdsWithApprovedReviews();
+    }
+
+    @Override
     public List<Review> findByBuyerId(String buyerId) {
         return reviewRepository.findByBuyerId(buyerId).stream().map(ReviewJpaEntity::toDomain).toList();
     }
@@ -54,15 +74,36 @@ public class ReviewJpaRepository implements ReviewRepositoryPort {
     }
 
     @Override
+    public List<Review> findByStatus(ReviewStatus status, String query) {
+        String normalizedQuery = query == null ? "" : query.trim().toLowerCase();
+        return reviewRepository.findByStatusAndQuery(status.name(), normalizedQuery).stream()
+                .map(ReviewJpaEntity::toDomain)
+                .toList();
+    }
+
+    @Override
+    public Page<Review> findApprovedBySellerId(String sellerId, String query, Pageable pageable) {
+        String normalizedSellerId = sellerId == null ? "" : sellerId.trim();
+        String normalizedQuery = query == null ? "" : query.trim().toLowerCase();
+        return reviewRepository.findApprovedBySellerId(normalizedSellerId, normalizedQuery, pageable)
+                .map(ReviewJpaEntity::toDomain);
+    }
+
+    @Override
     public Optional<Review> findReviewById(UUID reviewId) {
         return reviewRepository.findById(reviewId).map(ReviewJpaEntity::toDomain);
     }
 
     @Override
     public Review moderate(UUID reviewId, ReviewStatus status) {
+        return moderate(reviewId, status, null);
+    }
+
+    @Override
+    public Review moderate(UUID reviewId, ReviewStatus status, String rejectionReason) {
         Review review = findReviewById(reviewId)
                 .orElseThrow(() -> new IllegalArgumentException("review not found: " + reviewId));
-        return save(review.withStatus(status));
+        return save(review.withStatus(status).withRejectionReason(rejectionReason));
     }
 
     @Override
@@ -110,4 +151,3 @@ public class ReviewJpaRepository implements ReviewRepositoryPort {
         return result;
     }
 }
-

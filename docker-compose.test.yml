@@ -84,13 +84,12 @@ services:
       context: ./fe
       args:
         VITE_API_URL: http://localhost:8080
-        VITE_KEYCLOAK_URL: http://localhost:8085
     ports:
-      - "3000:80"
+      - "3000:8080"
     depends_on:
       - product-service-test
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost/ || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/healthz || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10

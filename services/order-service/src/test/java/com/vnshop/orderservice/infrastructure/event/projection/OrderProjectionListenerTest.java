@@ -40,6 +40,7 @@ class OrderProjectionListenerTest {
 
         verify(projectionPort).upsertOrderSummary(
                 "00000000-0000-0000-0000-000000000001",
+                null,
                 "CONFIRMED",
                 "buyer-1",
                 "seller-1",

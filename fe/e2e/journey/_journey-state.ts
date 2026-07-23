@@ -57,7 +57,21 @@ export async function writeJourneyState(patch: Partial<JourneyState>): Promise<v
   const current = await readJourneyState();
   const next = { ...current, ...patch };
   await fs.mkdir(path.dirname(stateFile), { recursive: true });
-  await fs.writeFile(stateFile, `${JSON.stringify(next, null, 2)}\n`, "utf8");
+  await writeStateFile(`${JSON.stringify(next, null, 2)}\n`);
+}
+
+async function writeStateFile(contents: string): Promise<void> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      await fs.writeFile(stateFile, contents, "utf8");
+      return;
+    } catch (error) {
+      lastError = error;
+      await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)));
+    }
+  }
+  throw lastError;
 }
 
 /**
@@ -82,5 +96,5 @@ export async function requireJourneyState<K extends keyof JourneyState>(
 
 export async function resetJourneyState(): Promise<void> {
   await fs.mkdir(path.dirname(stateFile), { recursive: true });
-  await fs.writeFile(stateFile, "{}\n", "utf8");
+  await writeStateFile("{}\n");
 }

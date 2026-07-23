@@ -234,15 +234,15 @@ export async function loginAsSeededUser(
   await expect(page.getByText(/Sign in to VNShop|Đăng nhập VNShop/i).first()).toBeVisible({
     timeout: 20_000,
   });
-  await page.locator("#identifier").fill(username);
+  await page.locator("#username").fill(username);
   await page.locator("#password").fill(password);
   await page.getByRole("button", { name: /^(Sign in|Đăng nhập)$/i }).click();
   await expect
     .poll(() => new URL(page.url()).pathname, {
       timeout: 30_000,
-      message: `login as ${username} did not navigate to /`,
+      message: `login as ${username} did not navigate to the SPA`,
     })
-    .toBe("/");
+    .toBe(username === "admin1" ? "/admin" : "/");
 }
 
 /**
@@ -253,10 +253,15 @@ export async function logoutViaUserMenu(page: Page): Promise<void> {
   const menuTrigger = page.getByRole("button", { name: /account menu|user menu/i }).first();
   await expect(menuTrigger).toBeVisible({ timeout: 10_000 });
   await menuTrigger.click();
-  await page
-    .getByRole("button", { name: /^(Log out|Đăng xuất)$/i })
-    .first()
-    .click();
+  const logoutButton = page.getByRole("button", { name: /^(Log out|Đăng xuất)$/i }).first();
+  if (await logoutButton.isVisible().catch(() => false)) {
+    await logoutButton.click();
+  } else {
+    await page
+      .getByRole("menuitem", { name: /^(Log out|Đăng xuất)$/i })
+      .first()
+      .click();
+  }
   await expect(page.getByRole("link", { name: /^(Log in|Đăng nhập)$/i }).first()).toBeVisible({
     timeout: 15_000,
   });

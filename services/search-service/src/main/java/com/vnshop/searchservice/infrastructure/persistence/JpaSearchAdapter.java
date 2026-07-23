@@ -6,7 +6,9 @@ import com.vnshop.searchservice.application.CursorSort;
 import com.vnshop.searchservice.application.SearchCursor;
 import com.vnshop.searchservice.domain.ProductReadModel;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
@@ -46,22 +48,30 @@ public class JpaSearchAdapter implements SearchRepository {
         String normalizedQuery = blankToNull(query);
         String normalizedCategory = blankToNull(categoryId);
         String normalizedBrand = blankToNull(brand);
+        if (cursor == null) {
+            Sort initialSort = switch (sort) {
+                case NEWEST -> Sort.by(Sort.Direction.DESC, "createdAt");
+                case PRICE_LOW -> Sort.by(Sort.Direction.ASC, "minPrice");
+                case PRICE_HIGH -> Sort.by(Sort.Direction.DESC, "minPrice");
+            };
+            return repository.searchPaged(
+                    normalizedQuery, normalizedCategory, normalizedBrand,
+                    minPrice, maxPrice, sameDay, verifiedOnly, officialOnly,
+                    PageRequest.of(0, limit, initialSort)).getContent();
+        }
         List<ProductReadModelJpaEntity> entities = switch (sort) {
             case NEWEST -> repository.searchAfterNewest(
                     normalizedQuery, normalizedCategory, normalizedBrand, minPrice, maxPrice,
                     sameDay, verifiedOnly, officialOnly,
-                    cursor == null ? null : cursor.createdAt(),
-                    cursor == null ? null : cursor.productId(), pageable);
+                    cursor.createdAt(), cursor.productId(), pageable);
             case PRICE_LOW -> repository.searchAfterPriceLow(
                     normalizedQuery, normalizedCategory, normalizedBrand, minPrice, maxPrice,
                     sameDay, verifiedOnly, officialOnly,
-                    cursor == null ? null : cursor.price(),
-                    cursor == null ? null : cursor.productId(), pageable);
+                    cursor.price(), cursor.productId(), pageable);
             case PRICE_HIGH -> repository.searchAfterPriceHigh(
                     normalizedQuery, normalizedCategory, normalizedBrand, minPrice, maxPrice,
                     sameDay, verifiedOnly, officialOnly,
-                    cursor == null ? null : cursor.price(),
-                    cursor == null ? null : cursor.productId(), pageable);
+                    cursor.price(), cursor.productId(), pageable);
         };
         return entities.stream().map(ProductReadModelJpaEntity::toDomain).toList();
     }

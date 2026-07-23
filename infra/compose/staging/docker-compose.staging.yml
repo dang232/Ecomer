@@ -97,8 +97,8 @@ services:
       KC_DB_USERNAME: vnshop
       KC_DB_PASSWORD: vnshop123
       STAGING: "true"
-    ports:
-      - "8185:8080"
+    expose:
+      - "8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -228,6 +228,9 @@ services:
       <<: *staging-env
       SERVER_PORT: 8084
       REDIS_HOST: redis
+      PRODUCT_SERVICE_URL: http://product-service:8082
+      USER_SERVICE_URL: http://user-service:8081
+      USER_SERVICE_TIMEOUT_MS: ${USER_SERVICE_TIMEOUT_MS:-2000}
       KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/vnshop
 
   search-service:

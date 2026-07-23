@@ -39,7 +39,7 @@ class PaymentCallbackOutboxRelayTest {
         when(kafkaTemplate.send(any(String.class), any(String.class), any()))
                 .thenReturn(CompletableFuture.completedFuture(mock(SendResult.class)));
 
-        PaymentCallbackOutboxRelay relay = new PaymentCallbackOutboxRelay(outbox, providerOf(kafkaTemplate), 50);
+        PaymentCallbackOutboxRelay relay = relay(outbox, kafkaTemplate);
         relay.publishPending();
 
         verify(kafkaTemplate).send(eq(PaymentCallbackOutboxRelay.TOPIC), eq("order-1"), any(PaymentCompletedEvent.class));
@@ -57,7 +57,7 @@ class PaymentCallbackOutboxRelayTest {
         when(kafkaTemplate.send(any(String.class), any(String.class), any()))
                 .thenThrow(new RuntimeException("kafka down"));
 
-        PaymentCallbackOutboxRelay relay = new PaymentCallbackOutboxRelay(outbox, providerOf(kafkaTemplate), 50);
+        PaymentCallbackOutboxRelay relay = relay(outbox, kafkaTemplate);
         relay.publishPending();
 
         assertThat(outbox.publishedIds).isEmpty();
@@ -71,7 +71,7 @@ class PaymentCallbackOutboxRelayTest {
         ObjectProvider<KafkaTemplate<String, Object>> empty = mock(ObjectProvider.class);
         when(empty.getIfAvailable()).thenReturn(null);
 
-        PaymentCallbackOutboxRelay relay = new PaymentCallbackOutboxRelay(outbox, empty, 50);
+        PaymentCallbackOutboxRelay relay = new PaymentCallbackOutboxRelay(outbox, empty, 50, 50);
         relay.publishPending();
 
         assertThat(outbox.publishedIds).isEmpty();
@@ -88,11 +88,46 @@ class PaymentCallbackOutboxRelayTest {
         when(kafkaTemplate.send(any(String.class), any(String.class), any()))
                 .thenReturn(CompletableFuture.completedFuture(mock(SendResult.class)));
 
-        PaymentCallbackOutboxRelay relay = new PaymentCallbackOutboxRelay(outbox, providerOf(kafkaTemplate), 2);
+        PaymentCallbackOutboxRelay relay = new PaymentCallbackOutboxRelay(outbox, providerOf(kafkaTemplate), 2, 50);
         relay.publishPending();
 
         verify(kafkaTemplate, times(2)).send(any(String.class), any(String.class), any());
         assertThat(outbox.publishedIds).hasSize(2);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void leavesRowRetryableWhenKafkaAcknowledgementFails() {
+        InMemoryOutbox outbox = new InMemoryOutbox();
+        outbox.savePending("PAYPAL", "order-1");
+        KafkaTemplate<String, Object> kafkaTemplate = mock(KafkaTemplate.class);
+        CompletableFuture<SendResult<String, Object>> failed = new CompletableFuture<>();
+        failed.completeExceptionally(new RuntimeException("broker rejected record"));
+        when(kafkaTemplate.send(any(String.class), any(String.class), any())).thenReturn(failed);
+
+        relay(outbox, kafkaTemplate).publishPending();
+
+        assertThat(outbox.publishedIds).isEmpty();
+        assertThat(outbox.failureAttempts).containsEntry(1L, 1);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void leavesRowRetryableWhenKafkaAcknowledgementTimesOut() {
+        InMemoryOutbox outbox = new InMemoryOutbox();
+        outbox.savePending("PAYPAL", "order-1");
+        KafkaTemplate<String, Object> kafkaTemplate = mock(KafkaTemplate.class);
+        when(kafkaTemplate.send(any(String.class), any(String.class), any())).thenReturn(new CompletableFuture<>());
+
+        new PaymentCallbackOutboxRelay(outbox, providerOf(kafkaTemplate), 50, 1).publishPending();
+
+        assertThat(outbox.publishedIds).isEmpty();
+        assertThat(outbox.failureAttempts).containsEntry(1L, 1);
+    }
+
+    private static PaymentCallbackOutboxRelay relay(
+            InMemoryOutbox outbox, KafkaTemplate<String, Object> kafkaTemplate) {
+        return new PaymentCallbackOutboxRelay(outbox, providerOf(kafkaTemplate), 50, 50);
     }
 
     @SuppressWarnings("unchecked")
@@ -105,6 +140,7 @@ class PaymentCallbackOutboxRelayTest {
     private static final class InMemoryOutbox implements PaymentCallbackOutbox {
         private final Map<Long, PaymentCallbackOutboxRecord> rows = new HashMap<>();
         private final Set<Long> publishedIds = new HashSet<>();
+        private final Map<Long, Integer> failureAttempts = new HashMap<>();
         private long nextId = 1;
 
         void savePending(String provider, String orderId) {
@@ -156,6 +192,7 @@ class PaymentCallbackOutboxRelayTest {
 
         @Override
         public void recordFailure(Long id, int attemptCount, String error, java.time.Instant nextAttemptAt, boolean dead) {
+            failureAttempts.put(id, attemptCount);
         }
     }
 }

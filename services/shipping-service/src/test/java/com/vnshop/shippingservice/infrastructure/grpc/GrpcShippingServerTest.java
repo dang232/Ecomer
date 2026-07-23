@@ -3,30 +3,50 @@ package com.vnshop.shippingservice.infrastructure.grpc;
 import com.vnshop.proto.shipping.ShippingRequest;
 import com.vnshop.proto.shipping.ShippingResponse;
 import com.vnshop.proto.shipping.ShippingServiceGrpc;
+import com.vnshop.shippingservice.application.CreateLabelUseCase;
+import com.vnshop.shippingservice.domain.CarrierCode;
+import com.vnshop.shippingservice.domain.ShippingAddress;
+import com.vnshop.shippingservice.domain.model.LabelRequest;
+import com.vnshop.shippingservice.domain.model.RateQuote;
+import com.vnshop.shippingservice.domain.model.RateQuoteRequest;
+import com.vnshop.shippingservice.domain.model.ShippingLabel;
+import com.vnshop.shippingservice.domain.model.TrackingInfo;
+import com.vnshop.shippingservice.domain.model.TrackingRequest;
+import com.vnshop.shippingservice.domain.port.out.CarrierGatewayPort;
+import com.vnshop.shippingservice.domain.port.out.CarrierLabelPolicyPort;
+import com.vnshop.shippingservice.infrastructure.config.ShippingCheckoutProperties;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import io.grpc.StatusRuntimeException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class GrpcShippingServerTest {
     private Server server;
     private ManagedChannel channel;
     private ShippingServiceGrpc.ShippingServiceBlockingStub stub;
+    private CapturingGateway gateway;
 
     @BeforeEach
     void setUp() throws IOException {
-        GrpcShippingServer service = new GrpcShippingServer();
-        service.port = 0; // random port
+        gateway = new CapturingGateway();
+        CarrierLabelPolicyPort policy = () -> true;
+        GrpcShippingServer service = new GrpcShippingServer(
+                new CreateLabelUseCase(gateway, policy),
+                new ShippingCheckoutProperties(CarrierCode.GHTK,
+                        new ShippingAddress("Seller", "0900000000", "1 Origin", "W1", "D1", "HCM")));
         server = ServerBuilder.forPort(0).addService(service).build().start();
-        channel = ManagedChannelBuilder.forAddress("localhost", server.getPort())
-                .usePlaintext().build();
+        channel = ManagedChannelBuilder.forAddress("localhost", server.getPort()).usePlaintext().build();
         stub = ShippingServiceGrpc.newBlockingStub(channel);
     }
 
@@ -37,113 +57,83 @@ class GrpcShippingServerTest {
     }
 
     @Test
-    void requestShippingReturnsLabels() {
-        ShippingResponse response = stub.requestShipping(ShippingRequest.newBuilder()
-                .setOrderId("ord-1001")
-                .addSubOrders(com.vnshop.proto.shipping.SubOrder.newBuilder()
-                        .setSellerId("seller-1")
-                        .addItems(com.vnshop.proto.shipping.SubOrderItem.newBuilder()
-                                .setProductId("prod-1")
-                                .setVariant("red")
-                                .setQuantity(2)
-                                .build())
-                        .setShippingAddress(com.vnshop.proto.shipping.ShippingAddress.newBuilder()
-                                .setFullName("Nguyen Van A")
-                                .setPhone("0901234567")
-                                .setStreet("123 Le Loi")
-                                .setCity("Ho Chi Minh")
-                                .setProvince("Ho Chi Minh")
-                                .build())
-                        .build())
-                .build());
+    void requestShippingCreatesCarrierLabelFromGrpcFields() {
+        ShippingResponse response = stub.requestShipping(validRequest());
 
         assertTrue(response.getSuccess());
-        assertFalse(response.getLabelsList().isEmpty());
         assertEquals(1, response.getLabelsCount());
+        assertEquals("TRACK-ord-1001", response.getLabels(0).getTrackingCode());
+        assertEquals("GHTK", response.getLabels(0).getCarrier());
+        assertTrue(response.getLabels(0).getEstimatedDelivery().isBlank());
 
-        var label = response.getLabels(0);
-        assertNotNull(label.getTrackingCode());
-        assertFalse(label.getTrackingCode().isBlank());
-        assertNotNull(label.getCarrier());
-        assertFalse(label.getCarrier().isBlank());
-        assertNotNull(label.getEstimatedDelivery());
-        assertFalse(label.getEstimatedDelivery().isBlank());
+        LabelRequest sent = gateway.lastRequest;
+        assertEquals(com.vnshop.shippingservice.domain.model.CarrierCode.GHTK, sent.carrier());
+        assertEquals("ord-1001", sent.orderId());
+        assertEquals("Nguyen Van A", sent.toAddress().name());
+        assertEquals("0901234567", sent.toAddress().phone());
+        assertEquals("123 Le Loi", sent.toAddress().street());
+        assertEquals("Ho Chi Minh", sent.toAddress().district());
+        assertEquals("Ho Chi Minh", sent.toAddress().province());
+        assertEquals("prod-1:red x2", sent.itemDescription());
+        assertEquals(null, sent.parcel());
+    }
+
+    @Test
+    void requestShippingPropagatesCarrierFailure() {
+        gateway.failure = new IllegalStateException("carrier unavailable");
+
+        StatusRuntimeException exception = assertThrows(StatusRuntimeException.class,
+                () -> stub.requestShipping(validRequest()));
+
+        assertEquals(io.grpc.Status.Code.FAILED_PRECONDITION, exception.getStatus().getCode());
+        assertTrue(exception.getStatus().getDescription().contains("carrier unavailable"));
     }
 
     @Test
     void requestShippingFailsWithEmptySubOrders() {
-        assertThrows(Exception.class, () -> stub.requestShipping(
-                ShippingRequest.newBuilder()
-                        .setOrderId("ord-1002")
-                        .build()));
+        StatusRuntimeException exception = assertThrows(StatusRuntimeException.class, () -> stub.requestShipping(
+                ShippingRequest.newBuilder().setOrderId("ord-1002").build()));
+
+        assertEquals(io.grpc.Status.Code.INVALID_ARGUMENT, exception.getStatus().getCode());
     }
 
     @Test
     void requestShippingFailsWithBlankOrderId() {
-        assertThrows(Exception.class, () -> stub.requestShipping(
-                ShippingRequest.newBuilder()
-                        .setOrderId("")
-                        .addSubOrders(com.vnshop.proto.shipping.SubOrder.newBuilder()
-                                .setSellerId("seller-1")
-                                .addItems(com.vnshop.proto.shipping.SubOrderItem.newBuilder()
-                                        .setProductId("p1")
-                                        .setQuantity(1)
-                                        .build())
-                                .setShippingAddress(com.vnshop.proto.shipping.ShippingAddress.newBuilder()
-                                        .setFullName("Test")
-                                        .setPhone("000")
-                                        .setStreet("Street")
-                                        .setCity("City")
-                                        .setProvince("Province")
-                                        .build())
-                                .build())
-                        .build()));
+        StatusRuntimeException exception = assertThrows(StatusRuntimeException.class, () -> stub.requestShipping(
+                validRequest().toBuilder().setOrderId("").build()));
+
+        assertEquals(io.grpc.Status.Code.INVALID_ARGUMENT, exception.getStatus().getCode());
     }
 
-    @Test
-    void labelsAreNonEmptyForValidRequest() {
-        ShippingResponse response = stub.requestShipping(ShippingRequest.newBuilder()
-                .setOrderId("ord-1003")
+    private static ShippingRequest validRequest() {
+        return ShippingRequest.newBuilder()
+                .setOrderId("ord-1001")
                 .addSubOrders(com.vnshop.proto.shipping.SubOrder.newBuilder()
                         .setSellerId("seller-1")
                         .addItems(com.vnshop.proto.shipping.SubOrderItem.newBuilder()
-                                .setProductId("prod-1")
-                                .setQuantity(1)
-                                .build())
+                                .setProductId("prod-1").setVariant("red").setQuantity(2).build())
                         .setShippingAddress(com.vnshop.proto.shipping.ShippingAddress.newBuilder()
-                                .setFullName("Tran Thi B")
-                                .setPhone("0912345678")
-                                .setStreet("456 Nguyen Hue")
-                                .setCity("Ha Noi")
-                                .setProvince("Ha Noi")
+                                .setFullName("Nguyen Van A").setPhone("0901234567")
+                                .setStreet("123 Le Loi").setCity("Ho Chi Minh").setProvince("Ho Chi Minh")
                                 .build())
                         .build())
-                .addSubOrders(com.vnshop.proto.shipping.SubOrder.newBuilder()
-                        .setSellerId("seller-2")
-                        .addItems(com.vnshop.proto.shipping.SubOrderItem.newBuilder()
-                                .setProductId("prod-2")
-                                .setVariant("blue")
-                                .setQuantity(3)
-                                .build())
-                        .setShippingAddress(com.vnshop.proto.shipping.ShippingAddress.newBuilder()
-                                .setFullName("Le Van C")
-                                .setPhone("0923456789")
-                                .setStreet("789 Tran Hung Dao")
-                                .setCity("Da Nang")
-                                .setProvince("Da Nang")
-                                .build())
-                        .build())
-                .build());
+                .build();
+    }
 
-        assertTrue(response.getSuccess());
-        assertEquals(2, response.getLabelsCount());
-        response.getLabelsList().forEach(label -> {
-            assertNotNull(label.getTrackingCode());
-            assertFalse(label.getTrackingCode().isBlank());
-            assertNotNull(label.getCarrier());
-            assertFalse(label.getCarrier().isBlank());
-            assertNotNull(label.getEstimatedDelivery());
-            assertFalse(label.getEstimatedDelivery().isBlank());
-        });
+    private static final class CapturingGateway implements CarrierGatewayPort {
+        private LabelRequest lastRequest;
+        private RuntimeException failure;
+
+        @Override public RateQuote quote(RateQuoteRequest request) { throw new UnsupportedOperationException(); }
+        @Override public TrackingInfo track(TrackingRequest request) { throw new UnsupportedOperationException(); }
+
+        @Override
+        public ShippingLabel createLabel(LabelRequest request) {
+            lastRequest = request;
+            if (failure != null) {
+                throw failure;
+            }
+            return new ShippingLabel(request.carrier(), request.orderId(), "TRACK-" + request.orderId(), null, 30_000L);
+        }
     }
 }

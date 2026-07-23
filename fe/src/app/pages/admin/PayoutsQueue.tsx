@@ -34,16 +34,16 @@ export function PayoutsQueue() {
   const tabRefs = { pending: pendingBtnRef, completed: completedBtnRef };
 
   const pendingQuery = useQuery({
-    queryKey: ["admin", "payouts", "pending"],
-    queryFn: adminPendingPayouts,
+    queryKey: ["admin", "payouts", "pending", search],
+    queryFn: () => adminPendingPayouts({ q: search || undefined }),
     retry: false,
   });
   // Completed list is only fetched while its tab is active. The pending
   // tab is the hot path; loading the completed history on every dashboard
   // visit would burn a request the admin doesn't always need.
   const completedQuery = useQuery({
-    queryKey: ["admin", "payouts", "completed"],
-    queryFn: adminCompletedPayouts,
+    queryKey: ["admin", "payouts", "completed", search],
+    queryFn: () => adminCompletedPayouts({ q: search || undefined }),
     enabled: tab === "completed",
     retry: false,
   });
@@ -96,13 +96,7 @@ export function PayoutsQueue() {
     [tab],
   );
 
-  const filtered = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (term.length === 0) return activeList;
-    return activeList.filter(
-      (p) => p.sellerId.toLowerCase().includes(term) || p.id.toLowerCase().includes(term),
-    );
-  }, [activeList, search]);
+  const filtered = activeList;
 
   const sorted = useMemo(() => {
     if (sortBy === "amount") {

@@ -5,16 +5,12 @@
 #   bash infra/scripts/seed-demo.sh           # add demo products
 #   FORCE=1 bash infra/scripts/seed-demo.sh   # add even if catalog is non-empty
 #
-# Auth: uses the `vnshop-api` Keycloak client (directAccessGrants enabled in the
-# realm import) with the seeded `seller1`/`test` user. All requests go through
-# the gateway at $GATEWAY (default http://localhost:8080).
+# Auth: uses the gateway's native auth boundary with the seeded `seller1`/`test`
+# user. All requests go through the gateway at $GATEWAY.
 
 set -euo pipefail
 
 GATEWAY="${GATEWAY:-http://localhost:8080}"
-KEYCLOAK="${KEYCLOAK:-http://localhost:8085}"
-REALM="${REALM:-vnshop}"
-CLIENT_ID="${CLIENT_ID:-vnshop-api}"
 SELLER_USER="${SELLER_USER:-seller1}"
 SELLER_PASS="${SELLER_PASS:-test}"
 
@@ -36,11 +32,9 @@ fi
 
 echo "==> requesting token for ${SELLER_USER}"
 TOKEN=$(curl -fsS \
-  -d "client_id=${CLIENT_ID}" \
-  -d "username=${SELLER_USER}" \
-  -d "password=${SELLER_PASS}" \
-  -d "grant_type=password" \
-  "${KEYCLOAK}/realms/${REALM}/protocol/openid-connect/token" | jq -r .access_token)
+  -H "Content-Type: application/json" \
+  -d "{\"username\":\"${SELLER_USER}\",\"password\":\"${SELLER_PASS}\"}" \
+  "${GATEWAY}/auth/login" | jq -r .data.accessToken)
 
 if [ -z "${TOKEN}" ] || [ "${TOKEN}" = "null" ]; then
   echo "failed to obtain access token" >&2

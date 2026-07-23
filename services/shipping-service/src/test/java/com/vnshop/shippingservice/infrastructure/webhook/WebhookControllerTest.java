@@ -6,11 +6,13 @@ import com.vnshop.shippingservice.domain.model.CarrierWebhookOutboxRecord;
 import com.vnshop.shippingservice.domain.port.out.CarrierWebhookOutboxPort;
 import com.vnshop.shippingservice.infrastructure.carrier.GhnProperties;
 import com.vnshop.shippingservice.infrastructure.carrier.GhtkProperties;
+import com.vnshop.shippingservice.infrastructure.config.WebhookSecurityProperties;
 import com.vnshop.shippingservice.infrastructure.web.GhnWebhookController;
 import com.vnshop.shippingservice.infrastructure.web.GhtkWebhookController;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.core.env.StandardEnvironment;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -39,11 +41,11 @@ class WebhookControllerTest {
 
         GhtkProperties ghtkProps = new GhtkProperties("https://test.ghtk.vn", null, "test", null);
         ghtkMockMvc = MockMvcBuilders.standaloneSetup(new GhtkWebhookController(
-                useCase, new GhtkWebhookSignatureService(ghtkProps), new GhtkWebhookMapper())).build();
+                useCase, ghtkValidator(ghtkProps), new GhtkWebhookMapper())).build();
 
         GhnProperties ghnProps = new GhnProperties("https://test.ghn.vn", null, "12345", "2", null);
         ghnMockMvc = MockMvcBuilders.standaloneSetup(new GhnWebhookController(
-                useCase, new GhnWebhookSignatureService(ghnProps), new GhnWebhookMapper())).build();
+                useCase, ghnValidator(ghnProps), new GhnWebhookMapper())).build();
     }
 
     @Test
@@ -164,7 +166,7 @@ class WebhookControllerTest {
         ReceiveCarrierWebhookUseCase useCase = new ReceiveCarrierWebhookUseCase(new FailingOutbox());
         GhtkWebhookController controller = new GhtkWebhookController(
                 useCase,
-                new GhtkWebhookSignatureService(new GhtkProperties("https://test.ghtk.vn", null, "test", null)),
+                ghtkValidator(new GhtkProperties("https://test.ghtk.vn", null, "test", null)),
                 new GhtkWebhookMapper());
 
         MockMvcBuilders.standaloneSetup(controller).build().perform(post("/webhooks/ghtk")
@@ -172,6 +174,33 @@ class WebhookControllerTest {
                         .content("{\"label_id\":\"GHTK-FAIL\",\"status\":\"delivering\"}"))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.status").value("error"));
+    }
+
+    @Test
+    void missingCredentialsFailClosedWithoutTheLocalOptIn() throws Exception {
+        GhnWebhookController controller = new GhnWebhookController(
+                new ReceiveCarrierWebhookUseCase(outbox),
+                new GhnWebhookSignatureService(new GhnProperties("https://test.ghn.vn", null, "12345", "2", null)),
+                new GhnWebhookMapper());
+
+        MockMvcBuilders.standaloneSetup(controller).build().perform(post("/webhooks/ghn")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"OrderCode\":\"GHN-NO-CREDENTIALS\",\"Status\":\"Delivered\"}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    private static GhnWebhookSignatureService ghnValidator(GhnProperties properties) {
+        return new GhnWebhookSignatureService(properties, new WebhookSecurityProperties(true), localEnvironment());
+    }
+
+    private static GhtkWebhookSignatureService ghtkValidator(GhtkProperties properties) {
+        return new GhtkWebhookSignatureService(properties, new WebhookSecurityProperties(true), localEnvironment());
+    }
+
+    private static StandardEnvironment localEnvironment() {
+        StandardEnvironment environment = new StandardEnvironment();
+        environment.setActiveProfiles("local");
+        return environment;
     }
 
     private static class InMemoryOutbox implements CarrierWebhookOutboxPort {

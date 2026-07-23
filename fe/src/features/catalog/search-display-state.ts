@@ -1,7 +1,7 @@
 import { resolveAsyncStatus, type AsyncStatus } from "../../shared/ui/async-state-model";
 
 export type SearchDataSource = "search" | "catalog";
-export type SearchNotice = "search-unavailable" | "index-updating" | null;
+export type SearchNotice = "search-unavailable" | null;
 
 interface SearchSourceInput {
   searchEnabled: boolean;
@@ -32,19 +32,10 @@ export function resolveSearchDataSource(input: SearchSourceInput): {
     return { source: "catalog", notice: null };
   }
 
-  if (input.searchHasError && input.searchProductCount > 0) {
-    return { source: "search", notice: "search-unavailable" };
-  }
-
-  if (input.searchHasError) {
-    return { source: "catalog", notice: "search-unavailable" };
-  }
-
-  if (!input.searchLoading && input.searchTotalElements === 0 && input.catalogProductCount > 0) {
-    return { source: "catalog", notice: "index-updating" };
-  }
-
-  return { source: "search", notice: null };
+  return {
+    source: "search",
+    notice: input.searchHasError ? "search-unavailable" : null,
+  };
 }
 
 export function resolveSearchDisplayState(input: SearchDisplayInput): SearchDisplayState {

@@ -26,6 +26,7 @@ export class NotificationMapper {
       deliveryStatus: DeliveryStatus.fromValue(doc.deliveryStatus),
       createdAt: doc.createdAt,
       retryCount: doc.retryCount ?? 0,
+      nextRetryAt: doc.nextRetryAt ?? null,
     });
   }
 
@@ -46,6 +47,7 @@ export class NotificationMapper {
       readAt: notification.readAt,
       createdAt: notification.createdAt,
       retryCount: notification.retryCount,
+      nextRetryAt: notification.nextRetryAt,
       expiresAt: new Date(
         notification.createdAt.getTime() + 90 * 24 * 60 * 60 * 1000,
       ), // 90 days TTL

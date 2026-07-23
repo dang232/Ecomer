@@ -1,16 +1,28 @@
 package com.vnshop.productservice.application;
 
 import com.vnshop.productservice.domain.Product;
+import com.vnshop.productservice.domain.review.ProductReviewSummary;
 
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-final class ProductEventPayload {
+public final class ProductEventPayload {
     private ProductEventPayload() {
     }
 
-    static Map<String, Object> from(Product product) {
+    public static Map<String, Object> from(Product product) {
+        return basePayload(product);
+    }
+
+    public static Map<String, Object> from(Product product, ProductReviewSummary reviewSummary) {
+        Map<String, Object> payload = basePayload(product);
+        payload.put("reviewCount", reviewSummary.reviewCount());
+        putIfNotNull(payload, "averageRating", reviewSummary.averageRating());
+        return payload;
+    }
+
+    private static Map<String, Object> basePayload(Product product) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("sellerId", product.sellerId());
         putIfNotNull(payload, "name", product.name());

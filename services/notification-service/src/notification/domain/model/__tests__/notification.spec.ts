@@ -53,6 +53,16 @@ describe('Notification aggregate', () => {
     expect(n.deliveryStatus.getValue()).toBe(DeliveryStatusValue.QUEUED);
   });
 
+  it('persists a scheduled retry only while the notification is failed', () => {
+    const n = Notification.create(baseProps);
+    const nextRetryAt = new Date('2026-01-01T00:00:01.000Z');
+    n.markFailed(nextRetryAt);
+    expect(n.nextRetryAt).toEqual(nextRetryAt);
+
+    n.retry();
+    expect(n.nextRetryAt).toBeNull();
+  });
+
   it('transitions FAILED -> DLQ', () => {
     const n = Notification.create(baseProps);
     n.markFailed();

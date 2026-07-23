@@ -20,30 +20,56 @@
       "acCode": "AC-3.1",
       "outcome": "Predecessor chapter has placed an order (state.json check)",
       "slug": "01-ac-3-1-predecessor-chapter-has-placed-an-order-state-json-ch.png",
-      "status": "BLOCKED",
-      "errorMessage": "journey state missing required keys: orderId — a previous chapter must run first"
+      "status": "PASS"
+    },
+    {
+      "index": 2,
+      "acCode": "AC-3.1",
+      "outcome": "Seller's pending queue includes Chapter 2's order within 30 s",
+      "slug": "02-ac-3-1-seller-s-pending-queue-includes-chapter-2-s-order-wit.png",
+      "status": "PASS"
+    },
+    {
+      "index": 3,
+      "acCode": "AC-3.1",
+      "outcome": "Seller logs into the SPA and the Orders tab renders the pending row",
+      "slug": "03-ac-3-1-seller-logs-into-the-spa-and-the-orders-tab-renders-t.png",
+      "status": "PASS"
+    },
+    {
+      "index": 4,
+      "acCode": "AC-3.2",
+      "outcome": "Seller clicks Accept on the row and the toast confirms the round-trip",
+      "slug": "04-ac-3-2-seller-clicks-accept-on-the-row-and-the-toast-confirm.png",
+      "status": "PASS"
+    },
+    {
+      "index": 5,
+      "acCode": "AC-3.2",
+      "outcome": "Seller ships the accepted order with a tracking number, summary toast confirms",
+      "slug": "05-ac-3-2-seller-ships-the-accepted-order-with-a-tracking-numbe.png",
+      "status": "PASS"
+    },
+    {
+      "index": 6,
+      "acCode": "AC-3.2",
+      "outcome": "Seller logs out and the journey state is persisted for the next chapter",
+      "slug": "06-ac-3-2-seller-logs-out-and-the-journey-state-is-persisted-fo.png",
+      "status": "PASS"
     }
   ],
   "acStatuses": [
     {
       "code": "AC-3.1",
       "outcome": "A seller sees the buyer's new order in their pending queue within 30 s",
-      "status": "BLOCKED",
-      "failingStep": {
-        "index": 1,
-        "acCode": "AC-3.1",
-        "outcome": "Predecessor chapter has placed an order (state.json check)",
-        "slug": "01-ac-3-1-predecessor-chapter-has-placed-an-order-state-json-ch.png",
-        "status": "BLOCKED",
-        "errorMessage": "journey state missing required keys: orderId — a previous chapter must run first"
-      }
+      "status": "PASS"
     },
     {
       "code": "AC-3.2",
       "outcome": "A seller can accept and ship the order with a tracking number",
-      "status": "NOT_RUN"
+      "status": "PASS"
     }
   ],
-  "verdict": "BLOCKED",
-  "generatedAt": "2026-06-12T00:08:18.985Z"
+  "verdict": "PASS",
+  "generatedAt": "2026-07-22T03:29:21.123Z"
 }

@@ -31,6 +31,7 @@ import {
 
 test.use({
   video: "on",
+  trace: "off",
   actionTimeout: 30_000,
 });
 

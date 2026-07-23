@@ -47,11 +47,15 @@ type TabId = (typeof STATUS_TABS)[number]["id"];
 
 export function SellerOrders({
   orders,
+  search,
+  onSearch,
   isLoading,
   error,
   onRetry,
 }: {
   orders: PendingSubOrder[];
+  search: string;
+  onSearch: (value: string) => void;
   isLoading: boolean;
   error: unknown;
   onRetry?: () => void;
@@ -62,7 +66,6 @@ export function SellerOrders({
   const [rejectFor, setRejectFor] = useState<string | null>(null);
   const [confirmOrderId, setConfirmOrderId] = useState<string | null>(null);
   const [tab, setTab] = useState<TabId>("all");
-  const [search, setSearch] = useState("");
 
   const accept = useMutation({
     mutationFn: (subOrderId: string) => sellerAcceptOrder(subOrderId),
@@ -100,13 +103,11 @@ export function SellerOrders({
 
   const filtered = useMemo(() => {
     const tabMatcher = STATUS_TABS.find((s) => s.id === tab)?.match ?? (() => true);
-    const term = search.trim().toLowerCase();
     return orders.filter((o) => {
       if (!tabMatcher(o.status)) return false;
-      if (term.length === 0) return true;
-      return o.id.toLowerCase().includes(term) || String(o.orderId).toLowerCase().includes(term);
+      return true;
     });
-  }, [orders, tab, search]);
+  }, [orders, tab]);
 
   return (
     <div className="space-y-5">
@@ -185,7 +186,7 @@ export function SellerOrders({
           <IconSearch size={14} className="text-muted-foreground" aria-hidden="true" />
           <input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => onSearch(e.target.value)}
             placeholder={t("seller.orders.searchPlaceholder")}
             className="flex-1 text-sm outline-none bg-transparent"
             aria-label={t("seller.orders.searchPlaceholder")}

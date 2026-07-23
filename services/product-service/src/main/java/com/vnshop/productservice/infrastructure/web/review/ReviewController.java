@@ -5,6 +5,7 @@ import com.vnshop.productservice.application.review.CreateReviewCommand;
 import com.vnshop.productservice.application.review.CreateReviewUseCase;
 import com.vnshop.productservice.application.review.GetProductReviewsUseCase;
 import com.vnshop.productservice.application.review.SellerReviewSummaryUseCase;
+import com.vnshop.productservice.application.review.SellerReviewListUseCase;
 import com.vnshop.productservice.application.review.VoteHelpfulUseCase;
 import com.vnshop.productservice.domain.review.SellerReviewSummary;
 import com.vnshop.productservice.infrastructure.config.JwtPrincipalUtil;
@@ -17,8 +18,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 
 import java.util.List;
 import java.util.UUID;
@@ -30,13 +35,16 @@ public class ReviewController {
     private final GetProductReviewsUseCase getProductReviewsUseCase;
     private final VoteHelpfulUseCase voteHelpfulUseCase;
     private final SellerReviewSummaryUseCase sellerReviewSummaryUseCase;
+    private final SellerReviewListUseCase sellerReviewListUseCase;
 
     public ReviewController(CreateReviewUseCase createReviewUseCase, GetProductReviewsUseCase getProductReviewsUseCase,
-            VoteHelpfulUseCase voteHelpfulUseCase, SellerReviewSummaryUseCase sellerReviewSummaryUseCase) {
+            VoteHelpfulUseCase voteHelpfulUseCase, SellerReviewSummaryUseCase sellerReviewSummaryUseCase,
+            SellerReviewListUseCase sellerReviewListUseCase) {
         this.createReviewUseCase = createReviewUseCase;
         this.getProductReviewsUseCase = getProductReviewsUseCase;
         this.voteHelpfulUseCase = voteHelpfulUseCase;
         this.sellerReviewSummaryUseCase = sellerReviewSummaryUseCase;
+        this.sellerReviewListUseCase = sellerReviewListUseCase;
     }
 
     @GetMapping("/product/{productId}")
@@ -47,6 +55,15 @@ public class ReviewController {
     @GetMapping("/seller/{sellerId}/summary")
     public ApiResponse<SellerReviewSummary> sellerSummary(@PathVariable String sellerId) {
         return ApiResponse.ok(sellerReviewSummaryUseCase.getSummary(sellerId));
+    }
+
+    @GetMapping("/seller/me")
+    @PreAuthorize("hasRole('SELLER')")
+    public ApiResponse<Page<ReviewResponse>> sellerReviews(
+            @RequestParam(value = "q", required = false) String query,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ApiResponse.ok(sellerReviewListUseCase.list(JwtPrincipalUtil.currentSellerId(), query, pageable)
+                .map(ReviewResponse::fromEnriched));
     }
 
     @PostMapping("/seller-summaries")

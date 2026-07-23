@@ -6,26 +6,20 @@ import { ApiError } from "../lib/api/envelope";
 import type { JwtClaims, TokenSet } from "../lib/auth/native-auth";
 
 const mocks = vi.hoisted(() => ({
-  createOidcClient: vi.fn(),
   decodeJwt: vi.fn(),
   setLiveTokenSet: vi.fn(),
-  setTokenRefreshHandler: vi.fn(),
   registerUser: vi.fn(),
-  init: vi.fn(),
-  login: vi.fn(),
-  logout: vi.fn(),
-  refresh: vi.fn(),
-}));
-
-vi.mock("../lib/auth/oidc-client", () => ({
-  createOidcClient: (...args: unknown[]) => mocks.createOidcClient(...args),
+  passwordLogin: vi.fn(),
+  refreshTokens: vi.fn(),
+  revokeTokens: vi.fn(),
 }));
 
 vi.mock("../lib/auth/native-auth", () => ({
   decodeJwt: (token: string) => mocks.decodeJwt(token),
   setLiveTokenSet: (tokenSet: TokenSet | null) => mocks.setLiveTokenSet(tokenSet),
-  setTokenRefreshHandler: (handler: (() => Promise<TokenSet>) | null) =>
-    mocks.setTokenRefreshHandler(handler),
+  passwordLogin: (...args: unknown[]) => mocks.passwordLogin(...args),
+  refreshTokens: (...args: unknown[]) => mocks.refreshTokens(...args),
+  revokeTokens: (...args: unknown[]) => mocks.revokeTokens(...args),
   AuthError: class AuthError extends Error {
     constructor(
       readonly statusCode: number,
@@ -39,17 +33,6 @@ vi.mock("../lib/auth/native-auth", () => ({
 
 vi.mock("../lib/api/endpoints/auth", () => ({
   registerUser: (...args: unknown[]) => mocks.registerUser(...args),
-}));
-
-vi.mock("./use-app-config", () => ({
-  useAppConfig: () => ({
-    auth: {
-      issuerUri: "https://auth.vnshop.invalid/realms/vnshop",
-      callbackUri: "https://shop.vnshop.invalid/auth/callback",
-      logoutUri: "https://shop.vnshop.invalid/",
-      clientId: "vnshop-web",
-    },
-  }),
 }));
 
 import { AuthProvider, useAuth, useHasRole } from "./use-auth";
@@ -69,19 +52,14 @@ function Wrapper({ children }: { children: ReactNode }) {
   return <AuthProvider>{children}</AuthProvider>;
 }
 
-describe("AuthProvider OIDC session", () => {
+describe("AuthProvider native session", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.createOidcClient.mockReturnValue({
-      init: mocks.init,
-      login: mocks.login,
-      logout: mocks.logout,
-      refresh: mocks.refresh,
-    });
-    mocks.init.mockResolvedValue(tokenSet);
-    mocks.refresh.mockResolvedValue(tokenSet);
+    mocks.refreshTokens.mockResolvedValue(tokenSet);
+    mocks.passwordLogin.mockResolvedValue(tokenSet);
     mocks.decodeJwt.mockReturnValue(claims);
     mocks.registerUser.mockResolvedValue(undefined);
+    mocks.revokeTokens.mockResolvedValue(undefined);
   });
 
   it("initializes from validated runtime config and exposes token claims", async () => {
@@ -89,20 +67,15 @@ describe("AuthProvider OIDC session", () => {
 
     await waitFor(() => expect(result.current.ready).toBe(true));
 
-    expect(mocks.createOidcClient).toHaveBeenCalledWith({
-      issuerUri: "https://auth.vnshop.invalid/realms/vnshop",
-      callbackUri: "https://shop.vnshop.invalid/auth/callback",
-      logoutUri: "https://shop.vnshop.invalid/",
-      clientId: "vnshop-web",
-    });
+    expect(mocks.refreshTokens).toHaveBeenCalledTimes(1);
     expect(result.current.authenticated).toBe(true);
     expect(result.current.profile?.email).toBe("buyer@vnshop.invalid");
     expect(result.current.roles).toEqual(["BUYER"]);
     expect(mocks.setLiveTokenSet).toHaveBeenCalledWith(tokenSet);
   });
 
-  it("becomes ready and unauthenticated when no OIDC session exists", async () => {
-    mocks.init.mockResolvedValueOnce(null);
+  it("becomes ready and unauthenticated when no cookie session exists", async () => {
+    mocks.refreshTokens.mockRejectedValueOnce(new Error("no session"));
     const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
 
     await waitFor(() => expect(result.current.ready).toBe(true));
@@ -111,15 +84,14 @@ describe("AuthProvider OIDC session", () => {
     expect(result.current.token).toBeUndefined();
   });
 
-  it("delegates sign-in and identity-provider hints to Keycloak", async () => {
+  it("logs in through the user-service cookie boundary", async () => {
     const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
     await waitFor(() => expect(result.current.ready).toBe(true));
 
-    act(() => result.current.login("/orders"));
-    act(() => result.current.beginOAuthLogin("google", "/profile"));
+    await act(async () => result.current.loginWithPassword("buyer1", "test"));
 
-    expect(mocks.login).toHaveBeenNthCalledWith(1, "/orders");
-    expect(mocks.login).toHaveBeenNthCalledWith(2, "/profile", "google");
+    expect(mocks.passwordLogin).toHaveBeenCalledWith("buyer1", "test");
+    expect(mocks.setLiveTokenSet).toHaveBeenLastCalledWith(tokenSet);
   });
 
   it("registers through the compatible API without creating a password session", async () => {
@@ -135,7 +107,7 @@ describe("AuthProvider OIDC session", () => {
     await act(async () => result.current.register(input));
 
     expect(mocks.registerUser).toHaveBeenCalledWith(input);
-    expect(mocks.login).not.toHaveBeenCalled();
+    expect(mocks.passwordLogin).not.toHaveBeenCalled();
   });
 
   it("preserves API registration errors as AuthError details", async () => {
@@ -159,22 +131,12 @@ describe("AuthProvider OIDC session", () => {
     });
   });
 
-  it("registers OIDC refresh for API retries and performs exact-provider logout", async () => {
+  it("refreshes the cookie session and performs best-effort logout", async () => {
     const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
     await waitFor(() => expect(result.current.ready).toBe(true));
-    const refreshHandler = mocks.setTokenRefreshHandler.mock.calls.find(
-      ([handler]) => typeof handler === "function",
-    )?.[0] as (() => Promise<TokenSet>) | undefined;
-
-    let refreshed: TokenSet | undefined;
-    await act(async () => {
-      refreshed = await refreshHandler?.();
-    });
-    expect(refreshed).toEqual(tokenSet);
     act(() => result.current.logout());
 
-    expect(mocks.refresh).toHaveBeenCalled();
-    expect(mocks.logout).toHaveBeenCalledTimes(1);
+    expect(mocks.revokeTokens).toHaveBeenCalledTimes(1);
     expect(result.current.authenticated).toBe(false);
   });
 

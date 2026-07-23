@@ -9,9 +9,9 @@ RUN npm run build
 FROM node:24-alpine AS runner
 RUN apk upgrade --no-cache && apk add --no-cache curl && addgroup -S vnshop && adduser -S -G vnshop vnshop
 WORKDIR /app
-COPY --from=builder /workspace/node_modules ./node_modules
 COPY --from=builder /workspace/dist ./dist
 COPY package*.json ./
+RUN npm ci --omit=dev --ignore-scripts && rm -f package-lock.json
 RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 RUN chown -R vnshop:vnshop /app
 USER vnshop

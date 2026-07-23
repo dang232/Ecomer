@@ -1,6 +1,7 @@
 package com.vnshop.orderservice.infrastructure.persistence;
 
 import com.vnshop.orderservice.domain.Order;
+import com.vnshop.orderservice.domain.PaymentStatus;
 import com.vnshop.orderservice.domain.port.out.OrderRepositoryPort;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
@@ -84,6 +85,18 @@ public class OrderJpaRepository implements OrderRepositoryPort {
                 .toList();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<Order> findBySellerIdAndFulfillmentStatusIn(
+            String sellerId, List<com.vnshop.orderservice.domain.FulfillmentStatus> statuses, String query) {
+        String normalized = query == null ? "" : query.trim().toLowerCase();
+        return springDataRepository.findBySellerIdAndFulfillmentStatusInAndQuery(
+                        sellerId, statuses, normalized, "%" + normalized + "%")
+                .stream()
+                .map(OrderJpaEntity::toDomain)
+                .toList();
+    }
+
     public long countByDateBetween(LocalDate startDate, LocalDate endDate) {
         return springDataRepository.countByCreatedAtBetween(startInstant(startDate), endInstant(endDate));
     }
@@ -116,12 +129,102 @@ public class OrderJpaRepository implements OrderRepositoryPort {
         return springDataRepository.sellerRevenueByDateBetween(sellerId, startInstant(startDate), endInstant(endDate));
     }
 
+    public long countPaidOrdersBetween(LocalDate startDate, LocalDate endDate) {
+        return springDataRepository.countByCreatedAtBetweenAndPaymentStatus(
+                startInstant(startDate), endInstant(endDate), PaymentStatus.COMPLETED);
+    }
+
+    public long countPaidOrdersBetween(LocalDate startDate, LocalDate endDate, Instant asOf) {
+        Instant start = startInstant(startDate);
+        Instant effectiveEnd = effectiveEnd(endDate, asOf);
+        return effectiveEnd.isBefore(start) ? 0 : springDataRepository.countByCreatedAtBetweenAndPaymentStatus(
+                start, effectiveEnd, PaymentStatus.COMPLETED);
+    }
+
+    public BigDecimal sumPaidGmvByDateBetween(LocalDate startDate, LocalDate endDate) {
+        return springDataRepository.sumPaidGmvByCreatedAtBetween(
+                startInstant(startDate), endInstant(endDate), PaymentStatus.COMPLETED);
+    }
+
+    public BigDecimal sumPaidGmvByDateBetween(LocalDate startDate, LocalDate endDate, Instant asOf) {
+        Instant start = startInstant(startDate);
+        Instant effectiveEnd = effectiveEnd(endDate, asOf);
+        return effectiveEnd.isBefore(start) ? BigDecimal.ZERO : springDataRepository.sumPaidGmvByCreatedAtBetween(
+                start, effectiveEnd, PaymentStatus.COMPLETED);
+    }
+
+    public long countDistinctPaidBuyerId(LocalDate startDate, LocalDate endDate) {
+        return springDataRepository.countDistinctPaidBuyerIdByCreatedAtBetween(
+                startInstant(startDate), endInstant(endDate), PaymentStatus.COMPLETED);
+    }
+
+    public long countDistinctPaidBuyerId(LocalDate startDate, LocalDate endDate, Instant asOf) {
+        Instant start = startInstant(startDate);
+        Instant effectiveEnd = effectiveEnd(endDate, asOf);
+        return effectiveEnd.isBefore(start) ? 0 : springDataRepository.countDistinctPaidBuyerIdByCreatedAtBetween(
+                start, effectiveEnd, PaymentStatus.COMPLETED);
+    }
+
+    public long countDistinctPaidSellerId(LocalDate startDate, LocalDate endDate) {
+        return springDataRepository.countDistinctPaidSellerIdByCreatedAtBetween(
+                startInstant(startDate), endInstant(endDate), PaymentStatus.COMPLETED);
+    }
+
+    public long countDistinctPaidSellerId(LocalDate startDate, LocalDate endDate, Instant asOf) {
+        Instant start = startInstant(startDate);
+        Instant effectiveEnd = effectiveEnd(endDate, asOf);
+        return effectiveEnd.isBefore(start) ? 0 : springDataRepository.countDistinctPaidSellerIdByCreatedAtBetween(
+                start, effectiveEnd, PaymentStatus.COMPLETED);
+    }
+
+    public List<RevenueByDate> paidGmvByDateBetween(LocalDate startDate, LocalDate endDate) {
+        return springDataRepository.paidGmvByDateBetween(
+                startInstant(startDate), endInstant(endDate), PaymentStatus.COMPLETED);
+    }
+
+    public List<RevenueByDate> paidGmvByDateBetween(LocalDate startDate, LocalDate endDate, Instant asOf) {
+        Instant start = startInstant(startDate);
+        Instant effectiveEnd = effectiveEnd(endDate, asOf);
+        return effectiveEnd.isBefore(start) ? List.of() : springDataRepository.paidGmvByDateBetween(
+                start, effectiveEnd, PaymentStatus.COMPLETED);
+    }
+
+    public List<TopMetric> topProductsByUnitsSold(LocalDate startDate, LocalDate endDate, int limit) {
+        return springDataRepository.topProductsByUnitsSold(
+                startInstant(startDate), endInstant(endDate), PaymentStatus.COMPLETED, PageRequest.of(0, limit));
+    }
+
+    public List<TopMetric> topProductsByUnitsSold(
+            LocalDate startDate, LocalDate endDate, int limit, Instant asOf) {
+        Instant start = startInstant(startDate);
+        Instant effectiveEnd = effectiveEnd(endDate, asOf);
+        return effectiveEnd.isBefore(start) ? List.of() : springDataRepository.topProductsByUnitsSold(
+                start, effectiveEnd, PaymentStatus.COMPLETED, PageRequest.of(0, limit));
+    }
+
+    public List<TopMetric> topSellersByPaidGmv(LocalDate startDate, LocalDate endDate, int limit) {
+        return springDataRepository.topSellersByPaidGmv(
+                startInstant(startDate), endInstant(endDate), PaymentStatus.COMPLETED, PageRequest.of(0, limit));
+    }
+
+    public List<TopMetric> topSellersByPaidGmv(
+            LocalDate startDate, LocalDate endDate, int limit, Instant asOf) {
+        Instant start = startInstant(startDate);
+        Instant effectiveEnd = effectiveEnd(endDate, asOf);
+        return effectiveEnd.isBefore(start) ? List.of() : springDataRepository.topSellersByPaidGmv(
+                start, effectiveEnd, PaymentStatus.COMPLETED, PageRequest.of(0, limit));
+    }
+
     private static Instant startInstant(LocalDate date) {
         return date.atStartOfDay().toInstant(ZoneOffset.UTC);
     }
 
     private static Instant endInstant(LocalDate date) {
         return date.plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC).minusNanos(1);
+    }
+
+    private static Instant effectiveEnd(LocalDate endDate, Instant asOf) {
+        return endInstant(endDate).isBefore(asOf) ? endInstant(endDate) : asOf;
     }
 
     public record RevenueByDate(LocalDate date, BigDecimal revenue) {

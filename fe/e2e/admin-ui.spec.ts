@@ -1,5 +1,6 @@
-import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { expectNoGlobalError } from "./_helpers";
+import { loginViaOidc } from "./_auth";
 
 /**
  * UI-driven QA spec for the admin console.
@@ -14,22 +15,6 @@ import { expectNoGlobalError } from "./_helpers";
  *     copy (NOT a Zod parse error)
  */
 
-const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
-
-interface AuthResult {
-  accessToken: string;
-}
-
-async function loginAsAdmin(request: APIRequestContext): Promise<AuthResult> {
-  const r = await request.post(`${apiURL}/auth/login`, {
-    data: { username: "admin1", password: "test" },
-  });
-  expect(r.ok(), `admin login: ${r.status()} ${await r.text()}`).toBeTruthy();
-  const accessToken = (await r.json())?.data?.accessToken;
-  expect(accessToken).toBeTruthy();
-  return { accessToken };
-}
-
 async function expectTabRenders(page: Page, tabName: RegExp, contentSignal: RegExp) {
   const tab = page.getByRole("button", { name: tabName }).first();
   await expect(tab).toBeVisible({ timeout: 10_000 });
@@ -42,7 +27,7 @@ async function expectTabRenders(page: Page, tabName: RegExp, contentSignal: RegE
 
 test.describe("admin console UI", () => {
   test("/admin renders for admin1 with the dashboard tab as default", async ({ page }) => {
-    await loginAsAdmin(page.request);
+    await loginViaOidc(page, "admin1");
     await page.goto("/admin");
 
     await expect(page.getByText(/Admin Dashboard|Tổng quan|Admin Console/i).first()).toBeVisible({
@@ -53,7 +38,7 @@ test.describe("admin console UI", () => {
   });
 
   test("Sellers tab loads (locks in sellerSummarySchema fix)", async ({ page }) => {
-    await loginAsAdmin(page.request);
+    await loginViaOidc(page, "admin1");
     await page.goto("/admin");
     // Wait for shell.
     await expect(page.getByText(/Admin Dashboard|Tổng quan|Admin Console/i).first()).toBeVisible({
@@ -73,7 +58,7 @@ test.describe("admin console UI", () => {
   test("Coupons tab loads (locks in couponSchema Long-id coercion + envelope wrap)", async ({
     page,
   }) => {
-    await loginAsAdmin(page.request);
+    await loginViaOidc(page, "admin1");
     await page.goto("/admin");
     await expect(page.getByText(/Admin Dashboard|Tổng quan|Admin Console/i).first()).toBeVisible({
       timeout: 20_000,
@@ -87,7 +72,7 @@ test.describe("admin console UI", () => {
   });
 
   test("Disputes tab loads (locks in disputeSchema disputeId→id alias)", async ({ page }) => {
-    await loginAsAdmin(page.request);
+    await loginViaOidc(page, "admin1");
     await page.goto("/admin");
     await expect(page.getByText(/Admin Dashboard|Tổng quan|Admin Console/i).first()).toBeVisible({
       timeout: 20_000,
@@ -101,7 +86,7 @@ test.describe("admin console UI", () => {
   });
 
   test("Payouts tab loads (locks in adminPayoutSchema payoutId→id alias)", async ({ page }) => {
-    await loginAsAdmin(page.request);
+    await loginViaOidc(page, "admin1");
     await page.goto("/admin");
     await expect(page.getByText(/Admin Dashboard|Tổng quan|Admin Console/i).first()).toBeVisible({
       timeout: 20_000,

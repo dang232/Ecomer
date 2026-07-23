@@ -1,10 +1,11 @@
-import type { z } from "zod";
+import { z } from "zod";
 
 import { apiUrl } from "../runtime-endpoints";
 
 import { ApiError, type ApiMeta } from "./envelope";
 import {
   authInterceptor,
+  blobResponseInterceptor,
   contentTypeInterceptor,
   correlationIdInterceptor,
   envelopeInterceptor,
@@ -89,6 +90,7 @@ export interface RequestOptions<TSchema extends z.ZodType> {
   credentials?: RequestCredentials;
   /** Enables conditional requests for anonymous public GETs. */
   publicCache?: boolean;
+  responseType?: "json" | "blob";
 }
 
 export interface ApiResult<T> {
@@ -341,12 +343,15 @@ async function executeRequest<TSchema extends z.ZodType>(
       }
     }
 
-    const responseChain: readonly ResponseInterceptor[] = [
-      jsonParseInterceptor,
-      telemetryInterceptor,
-      errorStatusInterceptor,
-      envelopeInterceptor(opts.schema),
-    ];
+    const responseChain: readonly ResponseInterceptor[] =
+      opts.responseType === "blob"
+        ? [blobResponseInterceptor, telemetryInterceptor, errorStatusInterceptor]
+        : [
+            jsonParseInterceptor,
+            telemetryInterceptor,
+            errorStatusInterceptor,
+            envelopeInterceptor(opts.schema),
+          ];
 
     let finalCtx: ResponseContext;
     try {
@@ -428,6 +433,19 @@ export const api = {
       query,
       ...opts,
       publicCache: opts?.auth === false,
+    }),
+  getBlob: (
+    path: string,
+    query?: Record<string, string | number | boolean | undefined | null>,
+    opts?: Pick<RequestOptions<z.ZodType>, "auth" | "signal" | "credentials">,
+  ): Promise<Blob> =>
+    request({
+      method: "GET",
+      path,
+      schema: z.custom<Blob>(),
+      query,
+      responseType: "blob",
+      ...opts,
     }),
   post: <T extends z.ZodType>(
     path: string,

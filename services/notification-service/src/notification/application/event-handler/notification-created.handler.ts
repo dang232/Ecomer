@@ -31,10 +31,12 @@ import {
   SmsChannelPort,
 } from '../../domain/port/outbound/sms-channel.port';
 import { Notification } from '../../domain/model/notification';
+import { DefaultDeliveryPolicy } from '../../domain/service/delivery-policy';
 
 @Injectable()
 export class NotificationCreatedHandler {
   private readonly logger = new Logger(NotificationCreatedHandler.name);
+  private readonly deliveryPolicy = new DefaultDeliveryPolicy();
 
   /* istanbul ignore next */
   constructor(
@@ -111,7 +113,7 @@ export class NotificationCreatedHandler {
           `Sent notification ${notification.id} to ${event.userId}`,
         );
       } catch (err) {
-        notification.markFailed();
+        this.markRetryableFailure(notification);
         await this.repo.save(notification);
         await this.registry.enqueueOffline(event.userId, notification.id);
         this.logger.warn(`Delivery failed for ${notification.id}: ${err}`);
@@ -124,6 +126,20 @@ export class NotificationCreatedHandler {
         `User ${event.userId} offline — queued ${notification.id}`,
       );
     }
+  }
+
+  private markRetryableFailure(notification: Notification): void {
+    const maxRetries = this.deliveryPolicy.getMaxRetries(notification.priority);
+    const shouldRetry = notification.canRetry(maxRetries);
+    const nextRetryAt = shouldRetry
+      ? new Date(
+          Date.now() +
+            this.deliveryPolicy.getRetryDelayMs(notification.retryCount),
+        )
+      : null;
+
+    notification.markFailed(nextRetryAt);
+    if (!shouldRetry) notification.moveToDlq();
   }
 
   private async dispatchEmail(

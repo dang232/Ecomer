@@ -2,7 +2,7 @@
 
 A polyglot microservices e-commerce platform demonstrating DDD, CQRS, hexagonal architecture, and event-driven sagas, with a React SPA and Flutter mobile app.
 
-VNShop is a portfolio full-stack project for a Vietnamese multi-seller marketplace inspired by Shopee, Lazada, and Tiki. It ships with: 19 services (Spring Boot + NestJS), per-service Postgres, Kafka (SASL-authenticated + per-service ACLs) + saga + outbox, Keycloak-backed httpOnly-cookie auth, a React + Vite SPA, and a Flutter mobile app with OneSignal push notifications and VietQR/MoMo payment integration. Two end-to-end test suites gate every change — `e2e-day.mjs` (65/65 API endpoints) and Playwright (108/108 browser scenarios).
+VNShop is a portfolio full-stack project for a Vietnamese multi-seller marketplace inspired by Shopee, Lazada, and Tiki. It ships with: 19 services (Spring Boot + NestJS), per-service Postgres, Kafka (SASL-authenticated + per-service ACLs) + saga + outbox, Keycloak-backed httpOnly-cookie auth, a React + Vite SPA, and a Flutter mobile app with OneSignal push notifications and VietQR/MoMo payment integration. The latest local Docker evidence run passed `e2e-day.mjs` (66/66 API checks) and Playwright (202 passed, 2 skipped, 204 total).
 
 ## System Requirements
 
@@ -16,17 +16,44 @@ VNShop is a portfolio full-stack project for a Vietnamese multi-seller marketpla
 | Resource | Use it for |
 | --- | --- |
 | [HANDOFF.md](HANDOFF.md) | **Start here.** Single-page pickup doc for someone new to the codebase. |
-| [Architecture doc](.sisyphus/ARCHITECTURE.md) | Full system design, bounded contexts, API conventions |
-| [Status doc](.sisyphus/STATUS.md) | Per-service health, feature coverage, NFR audit, roadmap |
+| [Architech.md](Architech.md) | Source-linked service architecture, code maps, end-to-end workflows, state machines, fallbacks, and deployment model. |
+| [Admin dashboard data-flow findings](docs/ADMIN-DASHBOARD-DATA-FLOW-FINDINGS.md) | v2 report snapshot, refund ledger, realized revenue, CSV export, seller-name enrichment, and verification gates. |
+| [Production readiness review](docs/PRODUCTION-READINESS-REVIEW.md) | Dated review of local fallbacks, hardcoded infrastructure, provider modes, and release blockers. |
+| [Full-stack evidence review](fe/e2e/evidence/full-audit/EVIDENCE-REVIEW.md) | Final API/Playwright/Agent Browser proof, independent review findings, fixes, and remaining release blockers. |
+| [Final verification record](fe/e2e/evidence/full-audit/FINAL-VERIFICATION.md) | Exact commands, counts, Docker readiness evidence, and the final local-vs-production gate decision. |
+| [CI pipeline](docs/CI-PIPELINE.md) | Required GitHub Actions jobs, local reproduction commands, and release-gate behavior. |
+| [Architecture doc](docs/architect/SYSTEM-ARCHITECTURE.md) | Full system design, bounded contexts, API conventions |
+| [Status reality](docs/STATUS-REALITY-2026-05-14.md) | Historical reconciliation of service health, feature coverage, and known gaps |
 | [Audit summary 2026-05-21](docs/AUDIT-SUMMARY-2026-05-21.md) | Consolidated security audit ledger (pt12 → pt23) — 18 findings closed across 7 services |
-| [Status reality 2026-05-14](docs/STATUS-REALITY-2026-05-14.md) | Reconciliation of older gap-analysis docs against the current tree |
 | [E2E audit 2026-05-18](docs/E2E-AUDIT-2026-05-18.md) | What `e2e-day.mjs` and Playwright cover, plus the bugs fixed during the buildout |
-| [Latest session handover](docs/SESSION-HANDOVER-2026-06-09.md) | Most recent change set (centralized configuration service, Docker/Kafka infra fixes) |
+| [Latest session handover](docs/SESSION-HANDOVER-2026-07-10.md) | July implementation handover and current operational follow-ups |
+| [Penetration test report](docs/PENETRATION-TESTING-REPORT-2026-07-11.md) | Security verification results and remaining findings |
+| [Release and recovery runbook](docs/operations/release-and-recovery.md) | Release, rollback, and recovery operating procedure |
 | [Frontend README](fe/README.md) | React + Vite SPA setup, scripts, layout |
 | [Mobile README](vnshop_mobile/README.md) | Flutter mobile app setup, payment integration |
 | [Docker Compose](docker-compose.yml) | Local infrastructure and service definitions |
 
-For a chronological view of what shipped, walk the handover series in `docs/SESSION-HANDOVER-2026-05-{17..29}-pt{0..44}.md` and `docs/SESSION-HANDOVER-2026-06-*.md`. For the day-to-day pickup case, [HANDOFF.md](HANDOFF.md) is enough.
+For a chronological view of what shipped, walk the handover series in `docs/SESSION-HANDOVER-2026-05-{17..29}-pt{0..44}.md`, `docs/SESSION-HANDOVER-2026-06-*.md`, and the July handover reports. For the day-to-day pickup case, [HANDOFF.md](HANDOFF.md) is enough.
+
+## Current Production Readiness
+
+The repository has a working local integration topology and substantial domain/test coverage. The
+2026-07-22 closure round completed the main repository-owned reliability fixes: carrier webhook
+authentication and durable acceptance, Kafka acknowledgement handling, product event delivery and
+search repair, atomic authenticated cart merge, fail-closed inventory reservation, and notification
+retry persistence. The detailed implementation evidence is maintained in
+[`docs/PRODUCTION-READINESS-REVIEW.md`](docs/PRODUCTION-READINESS-REVIEW.md).
+
+The Kubernetes promotion artifacts are still **not production-ready**. Before treating a deployment as
+live, resolve the empty SealedSecret, replace all-zero image digests, select live carrier/payment modes,
+provide independent provider secrets, secure the shared Kafka and Elasticsearch topology, and remove or
+gate server-side localhost/stub/demo fallbacks. Live shipping checkout also needs the missing carrier
+contract fields in the order-to-shipping gRPC request. The execution order and proof gates are in
+[`docs/PRODUCTION-READINESS-CLOSURE-PLAN.md`](docs/PRODUCTION-READINESS-CLOSURE-PLAN.md).
+
+Local-only values are intentional in `.env.example` and `infra/compose/staging/docker-compose.staging.yml`.
+They are documented for developer setup and must never be copied into shared staging or production. The
+architecture source of truth for service ownership and cross-service contracts is [`Architech.md`](Architech.md).
 
 ## Architecture Overview
 
@@ -39,7 +66,7 @@ flowchart TB
 
     subgraph edge [Edge]
         GW["Spring Cloud Gateway<br/>:8080<br/>CORS, JWT validation<br/>rate limit, circuit breaker"]
-        KC["Keycloak 26 :8085<br/>OIDC / OAuth<br/>JWT issuer (vnshop realm)"]
+        KC["Keycloak 26 internal-only<br/>OIDC / OAuth provider<br/>JWT issuer (vnshop realm)"]
     end
 
     subgraph core [Core Services]
@@ -83,14 +110,20 @@ flowchart TB
 
 ## Project Status
 
-Two end-to-end gates run green at the current HEAD:
+The repository records these baseline integration gates:
 
 | Suite | Result | Coverage |
 | --- | --- | --- |
 | `node infra/scripts/e2e-day.mjs` | **65/65 PASS** | Single-day flow: register → login (buyer/seller/admin) → catalog → public sellers → seller fulfilment → cart → wishlist → checkout (live shipping rate quote) → order → coupon validate + apply → admin seller approval → saga compensation (cancel + return + refund) → messaging WebSocket handshake → reviews + Q&A → recommendations → admin dashboards → user profile → video moderation |
 | `cd fe && npx playwright test` | **108/108 PASS** | Real browser against dockerised FE: smoke, buyer happy path, authenticated routes, role guards, search, public sellers, guest cart, seller dashboard, admin panel, video integration, journey flows |
 
-Per-service unit tests at HEAD (2026-06-21):
+The July 22 closure verification was focused on the changed reliability paths. Java shipping,
+inventory, payment outbox, order adapter, product outbox, and search repair tests passed. Cart tests
+and typechecks passed in both the cart service and frontend; notification passed 27 suites / 271 tests.
+The cart E2E module graph is healthy but its full run remains environment-gated on `DATABASE_URL`,
+PostgreSQL, and Redis.
+
+Historical baseline unit tests (2026-06-21):
 
 | Service | Tests |
 | --- | --- |
@@ -103,9 +136,15 @@ Per-service unit tests at HEAD (2026-06-21):
 | FE vitest | 169/169 |
 | FE typecheck | 0 errors |
 
-### Recent shipped (2026-07-10 → )
+### Recent shipped (2026-07-10 through 2026-07-22)
 
 - **Flutter mobile app** (2026-07-10). VNShop mobile app with VietQR/MoMo payment integration, OneSignal push notifications, BLoC state management, Vietnamese/English localization, and Material 3 design system.
+- **Production-readiness reliability closure** (2026-07-22). Payment callbacks, shipping webhooks, product events, and search projection repair now use durable delivery boundaries; Kafka failures remain retryable instead of being acknowledged early. Missing inventory projections reject reservation, and notification retries persist retry/DLQ state.
+- **Shipping webhook hardening** (2026-07-22). GHN/GHTK callbacks use explicit public routes, shared application workflow, typed provider/security/retry configuration, fail-closed signature verification, idempotent durable acceptance, and `503` responses when durable delivery cannot be recorded. The live carrier adapter is wired, while the checkout contract still needs carrier-required address and parcel fields.
+- **Consent-gated cart merge** (2026-07-22). Guest and server quantities are combined by intent through one authenticated atomic/idempotent merge operation; the browser effect cannot bypass the user's keep-separate choice.
+- **Service-owned operator read models** (2026-07-22). Admin orders and disputes are contextualized by `order-service`, payouts by `seller-finance-service`, and review queues by `product-service`; buyer/shop/product labels are batch-resolved through `user-service` public-profile APIs instead of frontend UUID fallbacks. The remaining operator risk is bounded pagination and live PostgreSQL integration coverage. See [`docs/FE-DATA-SEARCH-REVIEW-2026-07-22.md`](docs/FE-DATA-SEARCH-REVIEW-2026-07-22.md) and [`Architech.md`](Architech.md).
+- **CI and runtime hardening** (2026-07-22). The required `CI Gate` aggregates repository, frontend, mobile, Java, Node, Python, protobuf, secret-scan, and container checks. Notification runtime dependencies are pinned and included in its image. See [`docs/CI-PIPELINE.md`](docs/CI-PIPELINE.md).
+- **Admin dashboard financial closure** (2026-07-23). The dashboard now reads one server-snapshotted v2 report, records idempotent confirmed refunds in `order_svc.refund_ledger`, exposes `refundedAmount` and `realizedRevenue`, and downloads a bounded CSV using the page's `asOf` snapshot. Runtime migration, gateway, and browser evidence remains blocked while Docker is unavailable. See [`docs/ADMIN-DASHBOARD-DATA-FLOW-FINDINGS.md`](docs/ADMIN-DASHBOARD-DATA-FLOW-FINDINGS.md).
 
 ### Previous shipped (2026-06-09 → 2026-06-21)
 
@@ -129,20 +168,21 @@ Per-service unit tests at HEAD (2026-06-21):
 | 3 | Per-seller commission tier on SubOrder | Design ready, hardcoded to STANDARD | Business decision |
 | 4 | VNPay payment method | Phase 3 | Business registration (MST + GPKD) |
 | 5 | Notifications inbox (FE bell) | Kafka consumer + FE bell icon shipped | — |
-| 6 | Real GHN/GHTK shipping adapter | Live adapters implemented (`CARRIER_MODE=stub` default) | API key |
+| 6 | Complete live GHN/GHTK checkout contract | Carrier gateways, label use case, typed live configuration, webhook security, and durable events implemented; gRPC request still lacks carrier-required contact, ward, district, province-code, parcel, and amount fields | Provider contract and credentials |
 | 7 | Native password reset / 2FA | Bounces to Keycloak account console | Design decision |
 | 8 | Email verification flow | Currently auto-verified on register | Design decision |
 | 9 | Hero/promo/trending CMS for HomePage | Stubs via `<ComingSoonCard>` | Content strategy |
-| 10 | Config hot-reload without restart | Hot-reload via `POST /api/config/reload` | Webhook/event push |
+| 10 | Automatic config propagation | Manual hot-reload via `POST /api/config/reload` works; push/event propagation is not implemented | Webhook/event push |
 | 11 | Remaining OWASP findings (32/50) | Tracked in security audit docs | Architectural effort |
 | 12 | monitoring-service TypeORM drift | `service_id` column missing in entity | Schema fix |
+| 13 | Production deployment contract | Kubernetes secrets, image digests, provider modes, Kafka/Elasticsearch security, and public origin validation remain external release gates | Staging/production operations |
 
 ### Service ownership at HEAD
 
 ```mermaid
 flowchart TB
   GW[api-gateway :8080]
-  KC[Keycloak :8085]
+  KC[Keycloak internal-only]
   FE[frontend :3000]
   MOB[Flutter Mobile]
 
@@ -195,7 +235,7 @@ flowchart TB
 | Node services | Node.js 24 LTS, NestJS 11 |
 | Frontend | React 18.3, Vite 6.3, TanStack Query 5, react-router 7, i18next 26, zod 4, Tailwind v4 |
 | Mobile | Flutter 3.44, BLoC state management, Dio HTTP, OneSignal push |
-| Identity | Keycloak 26.6 (`vnshop` realm), OIDC / OAuth2, JWT, ROPC for native login |
+| Identity | Keycloak 26.6 (`vnshop` realm) internal-only, native cookie auth via gateway, JWT |
 | Data stores | PostgreSQL 17.9 (per-service), Redis 8.6, Elasticsearch 9.4.0, MinIO (S3-compatible) |
 | Messaging | Kafka (`confluentinc/cp-kafka:8.2.0`), SASL_PLAINTEXT + per-service ACLs, outbox pattern, saga orchestration |
 | Payments | COD, VietQR, SePay (live); Stripe, PayPal (sandbox-ready, full refund saga); VNPay deferred; MoMo fully implemented (`MOMO_ENABLED=false` default) |
@@ -215,7 +255,7 @@ Stand up everything (infrastructure + 18 app services + frontend):
 docker compose --profile apps up -d
 ```
 
-One-time post-import setup for Keycloak admin client (idempotent):
+One-time post-import setup for the internal Keycloak admin client (idempotent; no host port is published):
 
 ```bash
 bash infra/scripts/setup-keycloak-admin-client.sh
@@ -249,7 +289,7 @@ If you see 503s on either suite, Spring Cloud Gateway's Resilience4j breaker has
 | `http://localhost:3000` | Storefront SPA (React + Vite, dockerised bundle) |
 | `http://localhost:5173` | Storefront SPA (Vite dev server, optional alternative) |
 | `http://localhost:8080` | API gateway |
-| `http://localhost:8085` | Keycloak admin console |
+| Docker network only | Keycloak 26.6 identity provider; the admin console is not host-exposed |
 | `http://localhost:9200` | Elasticsearch |
 | `http://localhost:16686` | Jaeger UI |
 | `http://localhost:9000` | MinIO console |
@@ -260,7 +300,7 @@ If you see 503s on either suite, Spring Cloud Gateway's Resilience4j breaker has
 
 | System | Username | Password |
 | --- | --- | --- |
-| Keycloak admin | `admin` | `admin` |
+| Keycloak bootstrap admin | `admin` | `admin` (container-only; use a controlled tunnel for administration) |
 | PostgreSQL (all per-service DBs) | `vnshop` | `vnshop` |
 | MinIO root | `minioadmin` | `minioadmin` |
 
@@ -282,7 +322,7 @@ If you see 503s on either suite, Spring Cloud Gateway's Resilience4j breaker has
 8082 product-service
 8083 inventory-service
 8084 cart-service
-8085 keycloak
+8085 keycloak (internal Docker port; not published)
 8086 search-service
 8087 notification-service
 8088 coupon-service          (archived local migration source; never deployed)
@@ -316,6 +356,9 @@ docker compose --profile apps down
 ```
 
 ## Service Map
+
+This is the quick ownership map. See [`Architech.md`](Architech.md) for the full service boundaries,
+dependencies, contracts, deployment topology, and per-service production notes.
 
 | Service | Port | Tech | Profile | Owns |
 | --- | ---: | --- | --- | --- |
@@ -384,6 +427,12 @@ When adding behavior, start in the domain model, expose it through an applicatio
 ## Production characteristics now in place
 
 - **Centralized configuration service.** Business constants (currency, invoice templates, payment methods, shipping thresholds) live in `services/configuration-service/config/services.yml`. Java services fetch on startup via `ConfigServiceClient` with local `application.yml` fallback. Hot-reload via `POST /api/config/reload`.
+- **Typed shipping configuration.** Carrier mode, carrier endpoints, checkout policy, webhook secrets, retry limits, and acknowledgement timeouts are bound through validated shipping configuration instead of controller-level constants.
+- **Durable webhook delivery.** GHN/GHTK callbacks are accepted idempotently into the shipping outbox and return success only after durable storage; Kafka publication waits for acknowledgement and returns a retryable failure when delivery cannot be confirmed.
+- **Durable product projections.** Product lifecycle events use a producer outbox, while search projection failures enter a repair queue instead of being silently marked complete.
+- **Atomic cart merge.** The authenticated merge endpoint is consent-gated, idempotent, concurrency-safe, and sums guest quantities with server quantities in one persistence operation.
+- **Fail-closed stock reservation.** A missing inventory projection rejects checkout rather than allowing an untracked reservation.
+- **Notification retry state.** Failed notification delivery is persisted with retry and dead-letter transitions so provider outages remain observable and replayable.
 - **Kafka SASL + ACL authentication.** Broker runs SASL_PLAINTEXT with per-service credentials (`svc-order`, `svc-payment`, etc.) and `StandardAuthorizer` ACLs. Prevents cross-context event forgery. Auto-topic creation disabled.
 - **httpOnly cookie auth.** Refresh tokens live in the `vnshop_rt` cookie (HttpOnly, SameSite=Lax, Path=/auth, configurable Secure) issued by user-service. Access tokens are JS-memory-only. XSS can't bootstrap a new session.
 - **Resilience4j** circuit breaker + retry on the user-service → product-service stats adapter (sliding window 10, failure rate 50%, 10s open, 3 half-open trial, 3-attempt retry with 200ms exponential backoff).
@@ -468,7 +517,7 @@ docs/                      # Status reality, audits, session handovers
 
 ## How to Develop
 
-1. Read [`.sisyphus/ARCHITECTURE.md`](.sisyphus/ARCHITECTURE.md) before changing service boundaries, domain rules, or integration flows.
+1. Read [`Architech.md`](Architech.md) before changing service boundaries, domain rules, or integration flows.
 2. Read the latest session handover in [`docs/`](docs/) for the most recent change set, durable rules, and known issues.
 3. Start with the domain model. Add or change value objects, aggregate methods, and domain services before touching controllers or persistence.
 4. Add application use cases around domain behavior. Depend on ports, not adapters.

@@ -28,40 +28,94 @@
       "acCode": "AC-2.1",
       "outcome": "Predecessor chapter has published a coupon (state.json check)",
       "slug": "01-ac-2-1-predecessor-chapter-has-published-a-coupon-state-json.png",
-      "status": "BLOCKED",
-      "errorMessage": "journey state missing required keys: couponCode, couponDiscountVnd — a previous chapter must run first"
+      "status": "PASS"
+    },
+    {
+      "index": 2,
+      "acCode": "AC-2.1",
+      "outcome": "Visitor lands on the public store home page",
+      "slug": "02-ac-2-1-visitor-lands-on-the-public-store-home-page.png",
+      "status": "PASS"
+    },
+    {
+      "index": 3,
+      "acCode": "AC-2.1",
+      "outcome": "Visitor registers a fresh buyer account and is signed in",
+      "slug": "03-ac-2-1-visitor-registers-a-fresh-buyer-account-and-is-signed.png",
+      "status": "PASS"
+    },
+    {
+      "index": 4,
+      "acCode": "AC-2.1",
+      "outcome": "Buyer opens a real seeded product and adds it to their cart",
+      "slug": "04-ac-2-1-buyer-opens-a-real-seeded-product-and-adds-it-to-thei.png",
+      "status": "PASS"
+    },
+    {
+      "index": 5,
+      "acCode": "AC-2.4",
+      "outcome": "Product is discoverable via /search within 30 s of being browsable on /products",
+      "slug": "05-ac-2-4-product-is-discoverable-via-search-within-30-s-of-bei.png",
+      "status": "PASS"
+    },
+    {
+      "index": 6,
+      "acCode": "AC-2.2",
+      "outcome": "Buyer adds a delivery address and enters the checkout 4-step panel",
+      "slug": "06-ac-2-2-buyer-adds-a-delivery-address-and-enters-the-checkout.png",
+      "status": "PASS"
+    },
+    {
+      "index": 7,
+      "acCode": "AC-2.2",
+      "outcome": "Buyer captures the pre-coupon total shown on the checkout summary",
+      "slug": "07-ac-2-2-buyer-captures-the-pre-coupon-total-shown-on-the-chec.png",
+      "status": "PASS"
+    },
+    {
+      "index": 8,
+      "acCode": "AC-2.2",
+      "outcome": "Coupon applies and the discount line drops the total by exactly the published amount",
+      "slug": "08-ac-2-2-coupon-applies-and-the-discount-line-drops-the-total-.png",
+      "status": "PASS"
+    },
+    {
+      "index": 9,
+      "acCode": "AC-2.3",
+      "outcome": "Buyer places a COD order and receives a confirmation",
+      "slug": "09-ac-2-3-buyer-places-a-cod-order-and-receives-a-confirmation.png",
+      "status": "PASS"
+    },
+    {
+      "index": 10,
+      "acCode": "AC-2.3",
+      "outcome": "Buyer's order history shows the new order and the chapter state is persisted",
+      "slug": "10-ac-2-3-buyer-s-order-history-shows-the-new-order-and-the-cha.png",
+      "status": "PASS"
     }
   ],
   "acStatuses": [
     {
       "code": "AC-2.1",
       "outcome": "A new visitor can register and start shopping in a single browser session",
-      "status": "BLOCKED",
-      "failingStep": {
-        "index": 1,
-        "acCode": "AC-2.1",
-        "outcome": "Predecessor chapter has published a coupon (state.json check)",
-        "slug": "01-ac-2-1-predecessor-chapter-has-published-a-coupon-state-json.png",
-        "status": "BLOCKED",
-        "errorMessage": "journey state missing required keys: couponCode, couponDiscountVnd — a previous chapter must run first"
-      }
+      "status": "PASS"
     },
     {
       "code": "AC-2.2",
       "outcome": "A coupon applied at checkout reduces the order total by exactly the published discount",
-      "status": "NOT_RUN"
+      "status": "PASS"
     },
     {
       "code": "AC-2.3",
       "outcome": "A placed COD order is visible in the buyer's order history within 30 s",
-      "status": "NOT_RUN"
+      "status": "PASS"
     },
     {
       "code": "AC-2.4",
       "outcome": "A product the buyer can browse via /products is also discoverable via /search within 30 s — proves the kafka product-event → search-index projection is live",
-      "status": "NOT_RUN"
+      "status": "PASS"
     }
   ],
-  "verdict": "BLOCKED",
-  "generatedAt": "2026-06-12T00:08:17.951Z"
+  "verdict": "PASS",
+  "generatedAt": "2026-07-22T03:29:13.545Z"
 }

@@ -20,4 +20,5 @@ public class ShippingApplicationConfiguration {
     QuoteShippingOptionsUseCase quoteShippingOptionsUseCase(CarrierGatewayPort carrierGateway) {
         return new QuoteShippingOptionsUseCase(carrierGateway);
     }
+
 }

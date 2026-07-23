@@ -21,6 +21,7 @@ export interface NotificationRepository {
   save(notification: Notification): Promise<void>;
   findById(id: string): Promise<Notification | null>;
   findByIds(ids: string[]): Promise<Notification[]>;
+  findDueRetries(now: Date, limit: number): Promise<Notification[]>;
   findByIdAndUserId(id: string, userId: string): Promise<Notification | null>;
   findByIdempotencyKey(key: string): Promise<Notification | null>;
   findByUser(

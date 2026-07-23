@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
 import { expectNoGlobalError } from "./_helpers";
+import { loginViaOidc, uniqueTestId } from "./_auth";
 
 /**
  * UI-driven QA spec for the wishlist page.
@@ -21,7 +22,7 @@ interface SeededBuyer {
 }
 
 async function seedBuyer(request: APIRequestContext): Promise<SeededBuyer> {
-  const stamp = Date.now() + Math.floor(Math.random() * 1_000);
+  const stamp = uniqueTestId();
   const email = `e2e_qa_wish_${stamp}@vnshop.local`;
   const reg = await request.post(`${apiURL}/auth/register`, {
     data: { firstName: "QA", lastName: "Wish", email, password: PASSWORD },
@@ -84,6 +85,7 @@ test.describe("wishlist page UI", () => {
     const product = await firstProduct(page.request);
     await addToWishlist(page.request, buyer, product.id);
 
+    await loginViaOidc(page, buyer.email, PASSWORD);
     await page.goto("/wishlist");
     // Wait for wishlist content — the product name is the canonical signal
     // that wishlist + product enrichment both succeeded.

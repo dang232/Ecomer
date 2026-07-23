@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { addressSchema } from "./shared";
 
-// BE returns BuyerProfileResponse(keycloakId, name, phone, avatarUrl, addresses)
+// BE returns BuyerProfileResponse(keycloakId, email, name, phone, avatarUrl, addresses)
 // — no `id`, no `email`, and phone may be null. Email lives only in Keycloak so
 // pages that need it pull from useAuth().profile.email, not from this endpoint.
 //

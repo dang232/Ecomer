@@ -34,6 +34,7 @@ export interface NotificationProps {
   deliveryStatus: DeliveryStatus;
   createdAt: Date;
   retryCount: number;
+  nextRetryAt: Date | null;
 }
 
 export class Notification {
@@ -53,6 +54,7 @@ export class Notification {
   private _readAt: Date | null;
   private _deliveryStatus: DeliveryStatus;
   private _retryCount: number;
+  private _nextRetryAt: Date | null;
   private readonly _domainEvents: DomainEvent[] = [];
 
   private constructor(props: NotificationProps) {
@@ -71,6 +73,7 @@ export class Notification {
     this._readAt = props.readAt;
     this._deliveryStatus = props.deliveryStatus;
     this._retryCount = props.retryCount;
+    this._nextRetryAt = props.nextRetryAt;
   }
 
   static create(props: CreateNotificationProps): Notification {
@@ -90,6 +93,7 @@ export class Notification {
       deliveryStatus: DeliveryStatus.queued(),
       createdAt: new Date(),
       retryCount: 0,
+      nextRetryAt: null,
     });
     notification._domainEvents.push(
       new NotificationCreatedEvent(
@@ -121,6 +125,10 @@ export class Notification {
     return this._retryCount;
   }
 
+  get nextRetryAt(): Date | null {
+    return this._nextRetryAt;
+  }
+
   markSent(): void {
     this._deliveryStatus = this._deliveryStatus.transitionTo(
       DeliveryStatusValue.SENT,
@@ -139,22 +147,25 @@ export class Notification {
     );
   }
 
-  markFailed(): void {
+  markFailed(nextRetryAt: Date | null = null): void {
     this._deliveryStatus = this._deliveryStatus.transitionTo(
       DeliveryStatusValue.FAILED,
     );
+    this._nextRetryAt = nextRetryAt;
   }
 
   retry(): void {
     this._deliveryStatus = this._deliveryStatus.transitionTo(
       DeliveryStatusValue.QUEUED,
     );
+    this._nextRetryAt = null;
   }
 
   moveToDlq(): void {
     this._deliveryStatus = this._deliveryStatus.transitionTo(
       DeliveryStatusValue.DLQ,
     );
+    this._nextRetryAt = null;
   }
 
   markRead(): void {

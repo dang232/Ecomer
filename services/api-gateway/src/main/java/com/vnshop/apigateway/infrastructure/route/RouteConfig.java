@@ -10,12 +10,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * The gateway is a pure JWT-validating reverse proxy: the SPA acquires tokens directly
- * from Keycloak via PKCE and sends them as Bearer headers, which the resource-server
- * filter validates. The previous TokenRelay setup (which required an OAuth2 client
- * registration that did OIDC discovery at boot) has been dropped because it
- * (a) wasn't actually used by the SPA flow and (b) failed when KC_HOSTNAME differs
- * between in-network JWKS fetches and external token issuance.
+ * The gateway is the public edge for the SPA and native cookie-auth boundary.
+ * Keycloak remains network-internal; only the public OIDC protocol and static
+ * login resources are selectively proxied when an external identity provider
+ * flow is enabled. The admin console path is intentionally not routed.
  *
  * <p>The Authorization header is forwarded to downstream services automatically by
  * Spring Cloud Gateway, so dropping TokenRelay does not lose anything.
@@ -45,6 +43,8 @@ public class RouteConfig {
     private final String messagingServiceUri;
     private final String monitoringServiceUri;
     private final String configurationServiceUri;
+    private final String couponServiceUri;
+    private final String keycloakServiceUri;
 
     public RouteConfig(
         @Value("${vnshop.routes.product-service:http://product-service:8082}") String productServiceUri,
@@ -60,7 +60,9 @@ public class RouteConfig {
         @Value("${vnshop.routes.recommendations-service:http://recommendations-service:8094}") String recommendationsServiceUri,
         @Value("${vnshop.routes.messaging-service:http://messaging-service:8095}") String messagingServiceUri,
         @Value("${vnshop.routes.monitoring-service:http://monitoring-service-v2:8096}") String monitoringServiceUri,
-        @Value("${vnshop.routes.configuration-service:http://configuration-service:8097}") String configurationServiceUri
+        @Value("${vnshop.routes.configuration-service:http://configuration-service:8097}") String configurationServiceUri,
+        @Value("${vnshop.routes.coupon-service:http://coupon-service:8088}") String couponServiceUri,
+        @Value("${vnshop.routes.keycloak:http://keycloak:8080}") String keycloakServiceUri
     ) {
         this.productServiceUri = productServiceUri;
         this.userServiceUri = userServiceUri;
@@ -76,6 +78,8 @@ public class RouteConfig {
         this.messagingServiceUri = messagingServiceUri;
         this.monitoringServiceUri = monitoringServiceUri;
         this.configurationServiceUri = configurationServiceUri;
+        this.couponServiceUri = couponServiceUri;
+        this.keycloakServiceUri = keycloakServiceUri;
     }
 
     @Bean
@@ -92,6 +96,12 @@ public class RouteConfig {
         KeyResolver tieredKeyResolver
     ) {
         return builder.routes()
+            // Only realm protocol endpoints and their static login assets are
+            // public. /admin/** is deliberately absent, so the Keycloak admin
+            // console cannot be reached through the gateway.
+            .route("keycloak-oidc", route -> route.path("/realms/**", "/resources/**")
+                .filters(filters -> rateLimited(filters, "keycloak", authRateLimiter, tieredKeyResolver))
+                .uri(keycloakServiceUri))
             .route("products", route -> route.path("/products/**")
                 .filters(filters -> rateLimited(filters, "product-service", generalRateLimiter, tieredKeyResolver))
                 .uri(productServiceUri))
@@ -157,6 +167,12 @@ public class RouteConfig {
             .route("seller-orders", route -> route.path("/seller/orders/**")
                 .filters(filters -> resilient(filters, "order-service"))
                 .uri(orderServiceUri))
+            // Coupon validation and consumption belong to coupon-service even
+            // though the API keeps the checkout URL for the buyer workflow.
+            // Keep this specific route before the general checkout route.
+            .route("checkout-coupons", route -> route.path("/checkout/validate-coupon", "/checkout/apply-coupon")
+                .filters(filters -> resilient(filters, "coupon-service"))
+                .uri(couponServiceUri))
             .route("checkout", route -> route.path("/checkout/**")
                 .filters(filters -> resilient(filters, "order-service"))
                 .uri(orderServiceUri))
@@ -198,8 +214,8 @@ public class RouteConfig {
             .route("messaging-ws", route -> route.path("/ws/messaging")
                 .uri(messagingServiceUri))
             .route("coupons", route -> route.path("/coupons/**")
-                .filters(filters -> resilient(filters, "order-service"))
-                .uri(orderServiceUri))
+                .filters(filters -> resilient(filters, "coupon-service"))
+                .uri(couponServiceUri))
             .route("reviews", route -> route.path("/reviews/**")
                 .filters(filters -> resilient(filters, "product-service"))
                 .uri(productServiceUri))
@@ -246,8 +262,8 @@ public class RouteConfig {
                 .filters(filters -> resilient(filters, "order-service"))
                 .uri(orderServiceUri))
             .route("admin-coupons", route -> route.path("/admin/coupons/**")
-                .filters(filters -> resilient(filters, "order-service"))
-                .uri(orderServiceUri))
+                .filters(filters -> resilient(filters, "coupon-service"))
+                .uri(couponServiceUri))
             .route("admin-finance", route -> route.path("/admin/finance/**")
                 .filters(filters -> resilient(filters, "seller-finance-service"))
                 .uri(sellerFinanceServiceUri))

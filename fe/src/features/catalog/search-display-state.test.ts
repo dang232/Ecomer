@@ -37,7 +37,7 @@ describe("resolveSearchDisplayState", () => {
     ).toEqual({ source: "search", status: "loading", notice: null });
   });
 
-  it("shows catalog results with a warning when search is unavailable", () => {
+  it("keeps previously loaded V2 results with a warning when search is unavailable", () => {
     expect(
       resolveSearchDisplayState({
         ...baseState,
@@ -46,10 +46,10 @@ describe("resolveSearchDisplayState", () => {
         searchProductCount: 0,
         visibleProductCount: 8,
       }),
-    ).toEqual({ source: "catalog", status: "ready", notice: "search-unavailable" });
+    ).toEqual({ source: "search", status: "ready", notice: "search-unavailable" });
   });
 
-  it("renders an error when search and its catalog fallback have no usable data", () => {
+  it("renders an error when V2 search has no usable data", () => {
     expect(
       resolveSearchDisplayState({
         ...baseState,
@@ -59,18 +59,18 @@ describe("resolveSearchDisplayState", () => {
         catalogProductCount: 0,
         visibleProductCount: 0,
       }),
-    ).toEqual({ source: "catalog", status: "error", notice: "search-unavailable" });
+    ).toEqual({ source: "search", status: "error", notice: "search-unavailable" });
   });
 
-  it("uses catalog results while an empty search index catches up", () => {
+  it("renders an empty state when V2 search has no matches", () => {
     expect(
       resolveSearchDisplayState({
         ...baseState,
         searchTotalElements: 0,
         searchProductCount: 0,
-        visibleProductCount: 8,
+        visibleProductCount: 0,
       }),
-    ).toEqual({ source: "catalog", status: "ready", notice: "index-updating" });
+    ).toEqual({ source: "search", status: "empty", notice: null });
   });
 
   it("distinguishes a successful empty response from a failed request", () => {

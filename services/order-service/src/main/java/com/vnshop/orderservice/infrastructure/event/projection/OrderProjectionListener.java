@@ -46,6 +46,7 @@ public class OrderProjectionListener {
         }
 
         String eventType = textOrDefault(payload, "eventType", text(envelope, "eventType"));
+        String orderNumber = text(payload, "orderNumber");
         String status = projectStatus(eventType, payload);
         String buyerId = text(payload, "buyerId");
 
@@ -53,7 +54,7 @@ public class OrderProjectionListener {
         String firstSellerId = firstSellerId(payload);
         int itemCount = itemCount(payload);
 
-        projectionPort.upsertOrderSummary(orderId, status, buyerId, firstSellerId, totalAmount, itemCount);
+        projectionPort.upsertOrderSummary(orderId, orderNumber, status, buyerId, firstSellerId, totalAmount, itemCount);
         LOG.debug("Projected {} for order {} (status={})", eventType, orderId, status);
     }
 

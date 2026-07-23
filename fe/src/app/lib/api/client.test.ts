@@ -220,6 +220,21 @@ describe("request", () => {
     expect(u.searchParams.has("category")).toBe(false);
   });
 
+  it("returns a binary response without applying the JSON envelope contract", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      new Response("section,value\nsummary,900000\n", {
+        status: 200,
+        headers: { "content-type": "text/csv" },
+      }),
+    );
+
+    const blob = await api.getBlob("/admin/dashboard/export", { from: "2026-07-01" });
+
+    expect(await blob.text()).toBe("section,value\nsummary,900000\n");
+    const [url] = fetchSpy.mock.calls[0];
+    expect(new URL(String(url)).searchParams.get("from")).toBe("2026-07-01");
+  });
+
   it("returns response metadata without changing the legacy data result", async () => {
     fetchSpy.mockResolvedValueOnce(
       mockResponse({

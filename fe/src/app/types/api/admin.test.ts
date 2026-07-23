@@ -1,52 +1,125 @@
 import { describe, expect, it } from "vitest";
 
-import { adminPayoutSchema } from "./admin";
+import { dashboardRevenueResponseSchema } from "../../lib/api/endpoints/admin";
 
-describe("adminPayoutSchema", () => {
-  it("parses a PENDING row from the live BE shape", () => {
-    const parsed = adminPayoutSchema.parse({
-      payoutId: "p-1",
-      sellerId: "s-1",
-      amount: 125.5,
-      status: "PENDING",
-      createdAt: "2026-05-14T00:00:00Z",
-      completedBy: null,
-      completedAt: null,
-    });
-    expect(parsed.id).toBe("p-1");
-    expect(parsed.requestedAt).toBe("2026-05-14T00:00:00Z");
-    expect(parsed.completedBy).toBeUndefined();
-    expect(parsed.completedAt).toBeUndefined();
+import {
+  dashboardRevenuePointSchema,
+  dashboardReportSchema,
+  dashboardSummarySchema,
+  dashboardTopProductSchema,
+  dashboardTopSellerSchema,
+} from "./admin";
+
+describe("admin dashboard response contracts", () => {
+  it("requires the v2 summary metric names", () => {
+    expect(
+      dashboardSummarySchema.parse({
+        totalOrders: 3,
+        paidGmv: 1250000,
+        refundedAmount: 100000,
+        realizedRevenue: 1150000,
+        activeBuyers: 2,
+        activeSellers: 1,
+        avgPaidOrderValue: 416666.67,
+        periodStart: "2026-07-17",
+        periodEnd: "2026-07-23",
+      }),
+    ).toMatchObject({ paidGmv: 1250000, activeBuyers: 2 });
+    expect(() => dashboardSummarySchema.parse({ totalRevenue: 1250000 })).toThrow();
   });
 
-  it("surfaces completedBy and completedAt on a COMPLETED row", () => {
-    const parsed = adminPayoutSchema.parse({
-      payoutId: "p-2",
-      sellerId: "s-1",
-      amount: 80,
-      status: "COMPLETED",
-      createdAt: "2026-05-14T00:00:00Z",
-      completedBy: "admin-42",
-      completedAt: "2026-05-24T08:30:00Z",
+  it("accepts the v2 paid GMV revenue point", () => {
+    expect(
+      dashboardRevenuePointSchema.parse({
+        date: "2026-07-22",
+        paidGmv: 675875000,
+        refundedAmount: 0,
+        realizedRevenue: 675875000,
+      }),
+    ).toEqual({
+      date: "2026-07-22",
+      paidGmv: 675875000,
+      refundedAmount: 0,
+      realizedRevenue: 675875000,
     });
-    expect(parsed.id).toBe("p-2");
-    expect(parsed.completedBy).toBe("admin-42");
-    expect(parsed.completedAt).toBe("2026-05-24T08:30:00Z");
   });
 
-  it("accepts a legacy COMPLETED row with no audit fields", () => {
-    // Rows that predate the V5 migration have no captured admin id —
-    // historical history must still parse so the Completed tab can
-    // render them (the UI shows an unknown-admin label in that case).
-    const parsed = adminPayoutSchema.parse({
-      id: "p-old",
-      sellerId: "s-1",
-      amount: 50,
-      status: "COMPLETED",
-      requestedAt: "2026-05-10T00:00:00Z",
+  it("unwraps the backend revenue points envelope", () => {
+    expect(
+      dashboardRevenueResponseSchema.parse({
+        points: [
+          { date: "2026-07-22", paidGmv: 675875000, refundedAmount: 0, realizedRevenue: 675875000 },
+        ],
+      }),
+    ).toEqual([
+      {
+        date: "2026-07-22",
+        paidGmv: 675875000,
+        refundedAmount: 0,
+        realizedRevenue: 675875000,
+      },
+    ]);
+  });
+
+  it("keeps product units separate from money", () => {
+    expect(
+      dashboardTopProductSchema.parse({
+        productId: "2b0a8522-4310-4665-9874-bf37a5481667",
+        name: "Headphones",
+        unitsSold: 230,
+      }),
+    ).toEqual({
+      productId: "2b0a8522-4310-4665-9874-bf37a5481667",
+      name: "Headphones",
+      unitsSold: 230,
     });
-    expect(parsed.id).toBe("p-old");
-    expect(parsed.completedBy).toBeUndefined();
-    expect(parsed.completedAt).toBeUndefined();
+  });
+
+  it("accepts the v2 seller paid GMV contract", () => {
+    expect(
+      dashboardTopSellerSchema.parse({
+        sellerId: "2fa79e15-2e29-4b94-903e-15cc20fe36dc",
+        shopName: "Seller",
+        paidGmv: 2023315000,
+      }),
+    ).toEqual({
+      sellerId: "2fa79e15-2e29-4b94-903e-15cc20fe36dc",
+      shopName: "Seller",
+      paidGmv: 2023315000,
+    });
+  });
+
+  it("accepts one atomic dashboard report snapshot", () => {
+    const summary = {
+      totalOrders: 3,
+      paidGmv: 1250000,
+      refundedAmount: 100000,
+      realizedRevenue: 1150000,
+      activeBuyers: 2,
+      activeSellers: 1,
+      avgPaidOrderValue: 416666.67,
+      periodStart: "2026-07-17",
+      periodEnd: "2026-07-23",
+    };
+    expect(
+      dashboardReportSchema.parse({
+        asOf: "2026-07-23T12:00:00.000Z",
+        periodStart: "2026-07-17",
+        periodEnd: "2026-07-23",
+        summary,
+        revenue: {
+          points: [
+            {
+              date: "2026-07-22",
+              paidGmv: 1250000,
+              refundedAmount: 100000,
+              realizedRevenue: 1150000,
+            },
+          ],
+        },
+        topProducts: [],
+        topSellers: [],
+      }),
+    ).toMatchObject({ asOf: "2026-07-23T12:00:00.000Z", summary: { realizedRevenue: 1150000 } });
   });
 });

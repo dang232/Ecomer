@@ -19,6 +19,8 @@ import { CartPersistenceService } from './infrastructure/cart-persistence.servic
 import { ProductHttpClientAdapter } from './infrastructure/product-http-client.adapter';
 import { REDIS_CLIENT } from './redis-client.token';
 
+export { REDIS_CLIENT } from './redis-client.token';
+
 @Module({
   imports: [MikroOrmModule.forFeature([CartMikroOrmEntity])],
   controllers: [CartController],
@@ -48,6 +50,8 @@ import { REDIS_CLIENT } from './redis-client.token';
       useFactory: (configService: ConfigService): ProductClientPort =>
         new ProductHttpClientAdapter(
           configService.get<string>('PRODUCT_SERVICE_URL'),
+          configService.get<string>('USER_SERVICE_URL') ?? 'http://user-service:8081',
+          Number(configService.get<string>('USER_SERVICE_TIMEOUT_MS') ?? '2000'),
         ),
       inject: [ConfigService],
     },
@@ -85,9 +89,11 @@ import { REDIS_CLIENT } from './redis-client.token';
     },
     {
       provide: MergeCartUseCase,
-      useFactory: (repository: CartRepository): MergeCartUseCase =>
-        new MergeCartUseCase(repository),
-      inject: [CART_REPOSITORY],
+      useFactory: (
+        repository: CartRepository,
+        productClient: ProductClientPort,
+      ): MergeCartUseCase => new MergeCartUseCase(repository, productClient),
+      inject: [CART_REPOSITORY, PRODUCT_CLIENT],
     },
   ],
 })

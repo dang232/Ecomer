@@ -17,6 +17,7 @@ export interface ProductListParams {
   sellerId?: string;
 }
 
+/** @deprecated Use productListV2 for buyer catalog reads. */
 export const productList = (params: ProductListParams = {}) =>
   api.get(
     "/products",
@@ -49,7 +50,7 @@ export interface ProductListV2Params {
 
 const productListV2Schema = cursorPageSchema(productSummarySchema);
 
-/** Opt-in cursor catalog read; legacy productList remains unchanged. */
+/** Default cursor catalog read. */
 export const productListV2 = (params: ProductListV2Params = {}, signal?: AbortSignal) =>
   api.getWithMeta(
     "/products/v2",

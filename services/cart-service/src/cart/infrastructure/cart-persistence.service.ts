@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { EntityManager, OptimisticLockError } from '@mikro-orm/core';
+import { EntityManager, LockMode, OptimisticLockError } from '@mikro-orm/core';
 import Redis from 'ioredis';
 import { Cart } from '../domain/cart';
 import { CartItem } from '../domain/cart-item';
@@ -22,12 +22,15 @@ interface PersistedCartItem {
   unitPrice: PersistedMoney;
   quantity: number;
   addedAt: string;
+  sellerId?: string;
+  sellerName?: string;
 }
 
 interface PersistedCart {
   userId: string;
   items: PersistedCartItem[];
   updatedAt: string;
+  processedMergeKeys?: string[];
 }
 
 /**
@@ -115,6 +118,78 @@ export class CartPersistenceService implements CartRepository {
       );
   }
 
+  /**
+   * Persist the merged user cart and remove its guest source in one database
+   * transaction. The processed key is stored with the user cart so a retried
+   * request returns the prior cart instead of adding quantities again.
+   */
+  async mergeGuestCart(
+    userId: string,
+    guestCart: Cart,
+    idempotencyKey: string,
+  ): Promise<Cart> {
+    const guestUserId = guestCart.userId;
+    const merged = await this.em.transactional(async (em) => {
+      const userEntity = await em.findOne(
+        CartMikroOrmEntity,
+        { userId },
+        { lockMode: LockMode.PESSIMISTIC_WRITE },
+      );
+      const priorMergeKeys = this.processedMergeKeys(userEntity);
+      if (priorMergeKeys.includes(idempotencyKey)) {
+        return userEntity ? this.toDomain(userEntity) : Cart.create(userId);
+      }
+
+      let guestEntity = await em.findOne(
+        CartMikroOrmEntity,
+        { userId: guestUserId },
+        { lockMode: LockMode.PESSIMISTIC_WRITE },
+      );
+      if (!guestEntity) {
+        guestEntity = em.create(CartMikroOrmEntity, {
+          userId: guestUserId,
+          items: this.itemsToJson(guestCart),
+          updatedAt: guestCart.updatedAt,
+          version: 1,
+        });
+        await em.persistAndFlush(guestEntity);
+      }
+
+      const userCart = userEntity ? this.toDomain(userEntity) : Cart.create(userId);
+      const persistedGuest = this.toDomain(guestEntity);
+      for (const item of persistedGuest.items) {
+        userCart.addItem(item);
+      }
+
+      const processedMergeKeys = [...priorMergeKeys, idempotencyKey].slice(-100);
+      if (userEntity) {
+        userEntity.items = this.itemsToJson(userCart, processedMergeKeys);
+        userEntity.updatedAt = userCart.updatedAt;
+      } else {
+        await em.persist(
+          em.create(CartMikroOrmEntity, {
+            userId,
+            items: this.itemsToJson(userCart, processedMergeKeys),
+            updatedAt: userCart.updatedAt,
+            version: 1,
+          }),
+        );
+      }
+      em.remove(guestEntity);
+      await em.flush();
+      return userCart;
+    });
+
+    await Promise.all(
+      [userId, guestUserId].map((ownerId) =>
+        this.redis.del(this.redisKey(ownerId)).catch((err: unknown) =>
+          this.logger.warn(`Redis del failed (non-fatal): ${String(err)}`),
+        ),
+      ),
+    );
+    return merged;
+  }
+
   private async getFromRedis(userId: string): Promise<Cart | null> {
     try {
       const value = await this.redis.get(this.redisKey(userId));
@@ -135,8 +210,10 @@ export class CartPersistenceService implements CartRepository {
         productName: item.productName,
         productImage: item.productImage,
         unitPrice: { amount: item.unitPrice.amount, currency: item.unitPrice.currency },
-        quantity: item.quantity,
-        addedAt: item.addedAt.toISOString(),
+          quantity: item.quantity,
+          addedAt: item.addedAt.toISOString(),
+          sellerId: item.sellerId,
+          sellerName: item.sellerName,
       })),
       updatedAt: cart.updatedAt.toISOString(),
     };
@@ -162,6 +239,8 @@ export class CartPersistenceService implements CartRepository {
         item.quantity,
         new Date(item.addedAt),
         item.variantId,
+        item.sellerId,
+        item.sellerName,
       ),
     );
     return Cart.fromPersistence(entity.userId, items, entity.updatedAt);
@@ -177,6 +256,8 @@ export class CartPersistenceService implements CartRepository {
         item.quantity,
         new Date(item.addedAt),
         item.variantId,
+        item.sellerId,
+        item.sellerName,
       ),
     );
     return Cart.fromPersistence(
@@ -186,7 +267,13 @@ export class CartPersistenceService implements CartRepository {
     );
   }
 
-  private itemsToJson(cart: Cart): PersistedCart {
+  private processedMergeKeys(entity: CartMikroOrmEntity | null): string[] {
+    if (!entity || !entity.items || typeof entity.items !== 'object') return [];
+    const keys = (entity.items as PersistedCart).processedMergeKeys;
+    return Array.isArray(keys) && keys.every((key) => typeof key === 'string') ? keys : [];
+  }
+
+  private itemsToJson(cart: Cart, processedMergeKeys?: string[]): PersistedCart {
     return {
       userId: cart.userId,
       items: cart.items.map((item) => ({
@@ -197,8 +284,11 @@ export class CartPersistenceService implements CartRepository {
         unitPrice: { amount: item.unitPrice.amount, currency: item.unitPrice.currency },
         quantity: item.quantity,
         addedAt: item.addedAt.toISOString(),
+        sellerId: item.sellerId,
+        sellerName: item.sellerName,
       })),
       updatedAt: cart.updatedAt.toISOString(),
+      ...(processedMergeKeys ? { processedMergeKeys } : {}),
     };
   }
 }

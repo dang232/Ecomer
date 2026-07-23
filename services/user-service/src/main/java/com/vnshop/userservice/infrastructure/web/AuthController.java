@@ -62,6 +62,7 @@ public class AuthController {
         try {
             registerBuyerUseCase.register(new RegisterBuyerCommand(
                     userId,
+                    request.email(),
                     FullName.of(request.firstName(), request.lastName()),
                     PhoneNumber.parseOrNull(request.phone()),
                     null));

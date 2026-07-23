@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
 import { expectNoGlobalError } from "./_helpers";
+import { loginViaOidc, uniqueTestId } from "./_auth";
 
 /**
  * UI-driven QA spec for the checkout flow.
@@ -26,7 +27,7 @@ interface SeededBuyer {
 }
 
 async function seedBuyer(request: APIRequestContext): Promise<SeededBuyer> {
-  const stamp = Date.now() + Math.floor(Math.random() * 1_000);
+  const stamp = uniqueTestId();
   const email = `e2e_qa_checkout_${stamp}@vnshop.local`;
   const reg = await request.post(`${apiURL}/auth/register`, {
     data: { firstName: "QA", lastName: "Checkout", email, password: PASSWORD },
@@ -77,7 +78,8 @@ async function addAddress(request: APIRequestContext, buyer: SeededBuyer): Promi
 
 test.describe("checkout flow UI", () => {
   test("Empty cart on /checkout shows the empty-state CTA", async ({ page }) => {
-    await seedBuyer(page.request);
+    const buyer = await seedBuyer(page.request);
+    await loginViaOidc(page, buyer.email, PASSWORD);
     await page.goto("/checkout");
 
     await expect(page.getByText(/Your cart is empty|Giỏ hàng trống/i)).toBeVisible({
@@ -90,6 +92,7 @@ test.describe("checkout flow UI", () => {
     const buyer = await seedBuyer(page.request);
     const productId = await firstProductId(page.request);
     await addToCart(page.request, buyer, productId);
+    await loginViaOidc(page, buyer.email, PASSWORD);
 
     await page.goto("/checkout");
 
@@ -109,6 +112,7 @@ test.describe("checkout flow UI", () => {
     const productId = await firstProductId(page.request);
     await addToCart(page.request, buyer, productId);
     await addAddress(page.request, buyer);
+    await loginViaOidc(page, buyer.email, PASSWORD);
 
     await page.goto("/checkout");
 

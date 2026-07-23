@@ -123,6 +123,12 @@ export const jsonParseInterceptor: ResponseInterceptor = async (ctx) => {
   }
 };
 
+/** Reads a successful binary response without applying the JSON envelope contract. */
+export const blobResponseInterceptor: ResponseInterceptor = async (ctx) => ({
+  ...ctx,
+  parsed: await ctx.response.blob(),
+});
+
 /** Maps non-2xx responses to `ApiError`, pulling errorCode/message from the body when present. */
 export const errorStatusInterceptor: ResponseInterceptor = (ctx) => {
   if (ctx.response.status === 304) return ctx;

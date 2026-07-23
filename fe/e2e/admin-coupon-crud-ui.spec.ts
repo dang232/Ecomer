@@ -1,5 +1,6 @@
-import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { expectNoGlobalError } from "./_helpers";
+import { loginViaOidc } from "./_auth";
 
 /**
  * UI-driven QA spec for the admin coupon CRUD flow.
@@ -14,22 +15,6 @@ import { expectNoGlobalError } from "./_helpers";
  * the create mutation goes through the FE form → BE → list refresh,
  * and any drift on either side fails this test.
  */
-
-const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
-
-interface AuthResult {
-  accessToken: string;
-}
-
-async function loginAsAdmin(request: APIRequestContext): Promise<AuthResult> {
-  const r = await request.post(`${apiURL}/auth/login`, {
-    data: { username: "admin1", password: "test" },
-  });
-  expect(r.ok(), `admin login: ${r.status()}`).toBeTruthy();
-  const accessToken = (await r.json())?.data?.accessToken;
-  expect(accessToken).toBeTruthy();
-  return { accessToken };
-}
 
 async function gotoCouponsTab(page: Page): Promise<void> {
   await page.goto("/admin");
@@ -46,7 +31,7 @@ async function gotoCouponsTab(page: Page): Promise<void> {
 
 test.describe("admin coupon CRUD UI", () => {
   test("Empty code triggers inline validation toast (no BE round-trip)", async ({ page }) => {
-    await loginAsAdmin(page.request);
+    await loginViaOidc(page, "admin1");
     await gotoCouponsTab(page);
 
     // Open the dialog.
@@ -73,7 +58,7 @@ test.describe("admin coupon CRUD UI", () => {
   });
 
   test("Creating a FIXED coupon round-trips and the row appears in the table", async ({ page }) => {
-    await loginAsAdmin(page.request);
+    await loginViaOidc(page, "admin1");
     await gotoCouponsTab(page);
 
     // Generate a unique code so re-runs don't collide with previously
@@ -118,7 +103,7 @@ test.describe("admin coupon CRUD UI", () => {
   });
 
   test("Deactivating an active coupon flips its status badge to Paused", async ({ page }) => {
-    await loginAsAdmin(page.request);
+    await loginViaOidc(page, "admin1");
     await gotoCouponsTab(page);
 
     // Create a coupon first (mirrors the previous test's setup so this can

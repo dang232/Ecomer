@@ -1,5 +1,5 @@
 import { AlertCircle, ArrowRight, LockKeyhole, Store } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useNavigate, useSearchParams } from "react-router";
 
@@ -17,11 +17,36 @@ export function LoginPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const config = useAppConfig();
-  const { ready, authenticated, roles, login, beginOAuthLogin } = useAuth();
+  const { ready, authenticated, roles, loginWithPassword, beginOAuthLogin } = useAuth();
   const { t } = useTranslation();
   const rawNext = params.get("next");
   const next = sanitizeRedirect(rawNext);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (submitting) return;
+    setError(null);
+    setSubmitting(true);
+    void (async () => {
+      try {
+        await loginWithPassword(username.trim(), password);
+      } catch (loginError) {
+        setError(
+          loginError instanceof Error
+            ? loginError.message
+            : t("login.form.errorGeneric", {
+                defaultValue: "Sign-in could not be completed. Please try again.",
+              }),
+        );
+      } finally {
+        setSubmitting(false);
+      }
+    })();
+  };
 
   useEffect(() => {
     const errorCode = params.get("oauthError");
@@ -83,16 +108,45 @@ export function LoginPage() {
           </div>
         ) : null}
 
-        <button
-          type="button"
-          disabled={!ready}
-          onClick={() => login(next)}
-          className="mt-6 flex w-full items-center justify-center gap-2 rounded-[var(--radius-lg)] bg-primary px-4 py-3 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <LockKeyhole className="h-4 w-4" aria-hidden="true" />
-          {t("login.form.submit", { defaultValue: "Continue to sign in" })}
-          <ArrowRight className="h-4 w-4" aria-hidden="true" />
-        </button>
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4" noValidate>
+          <label className="block text-sm font-medium" htmlFor="username">
+            {t("login.form.username", { defaultValue: "Email or username" })}
+          </label>
+          <input
+            id="username"
+            name="username"
+            type="text"
+            autoComplete="username"
+            required
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+            className="w-full rounded-[var(--radius-lg)] border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
+          />
+          <label className="block text-sm font-medium" htmlFor="password">
+            {t("login.form.password", { defaultValue: "Password" })}
+          </label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            className="w-full rounded-[var(--radius-lg)] border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
+          />
+          <button
+            type="submit"
+            disabled={!ready || submitting || !username.trim() || !password}
+            className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-lg)] bg-primary px-4 py-3 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <LockKeyhole className="h-4 w-4" aria-hidden="true" />
+            {submitting
+              ? t("login.form.submitting", { defaultValue: "Signing in..." })
+              : t("login.form.submit", { defaultValue: "Sign in" })}
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </form>
 
         <div className="my-5 flex items-center gap-3" aria-hidden="true">
           <span className="h-px flex-1 bg-border" />

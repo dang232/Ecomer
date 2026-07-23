@@ -14,7 +14,15 @@ public interface PayoutRepositoryPort {
 
     List<Payout> findByStatus(PayoutStatus status);
 
+    default List<Payout> findByStatus(PayoutStatus status, String query) {
+        return findByStatus(status);
+    }
+
     List<Payout> findCompleted();
+
+    default List<Payout> findCompleted(String query) {
+        return findCompleted();
+    }
 
     List<Payout> findBySellerId(String sellerId);
 }

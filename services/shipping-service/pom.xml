@@ -36,10 +36,17 @@
 		<tomcat.version>11.0.22</tomcat.version>
 		<grpc.version>1.82.2</grpc.version>
 		<protobuf.version>3.25.5</protobuf.version>
-		<postgresql.version>42.7.11</postgresql.version>
+		<postgresql.version>42.7.12</postgresql.version>
 	</properties>
 	<dependencyManagement>
 		<dependencies>
+			<dependency>
+				<groupId>io.grpc</groupId>
+				<artifactId>grpc-bom</artifactId>
+				<version>${grpc.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
 			<!-- Jackson CVE-2026-54512, CVE-2026-54513 -->
 			<dependency>
 				<groupId>com.fasterxml.jackson.core</groupId>

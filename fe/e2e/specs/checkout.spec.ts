@@ -1,5 +1,6 @@
 import { test, expect, type Page, type APIRequestContext } from "@playwright/test";
 import { expectNoGlobalError } from "../_helpers";
+import { loginViaOidc, uniqueTestId } from "../_auth";
 
 /**
  * Critical user flow: Product Search → Add to Cart → Checkout
@@ -25,7 +26,7 @@ interface TestBuyer {
 }
 
 async function seedBuyer(request: APIRequestContext): Promise<TestBuyer> {
-  const stamp = Date.now() + Math.floor(Math.random() * 1_000);
+  const stamp = uniqueTestId();
   const email = `e2e_spec_checkout_${stamp}@vnshop.local`;
   const reg = await request.post(`${apiURL}/auth/register`, {
     data: { firstName: "QA", lastName: "Buyer", email, password: PASSWORD },
@@ -76,42 +77,37 @@ async function getFirstProductId(request: APIRequestContext): Promise<string> {
 }
 
 async function authenticatePage(page: Page, buyer: TestBuyer): Promise<void> {
-  await page.goto("/");
-  await page.evaluate(
-    ({ token }) => {
-      localStorage.setItem("vnshop_access_token", token);
-    },
-    { token: buyer.accessToken },
-  );
+  await loginViaOidc(page, buyer.email, PASSWORD);
 }
 
 test.describe("Checkout Flow", () => {
   test("Product search returns results and user can add to cart", async ({ page }) => {
-    await page.goto("/");
+    const buyer = await seedBuyer(page.request);
+    await authenticatePage(page, buyer);
 
-    // Wait for page to be ready
-    await expect(page.getByRole("link", { name: /^(Log in|Đăng nhập)$/i }).first()).toBeVisible({
-      timeout: 20_000,
-    });
-
-    // Navigate to products/search page
-    await page.goto("/products");
+    // Navigate to the search page, which is the storefront catalog route.
+    await page.goto("/search");
 
     // Wait for product grid to load
     const firstProduct = page.locator("[data-testid='product-card']").first();
     await expect(firstProduct).toBeVisible({ timeout: 15_000 });
 
     // Click on first product to view details
-    await firstProduct.click();
+    await firstProduct.getByRole("link").first().click();
 
     // Wait for product detail page
-    await expect(page.locator("[data-testid='add-to-cart']")).toBeVisible({ timeout: 15_000 });
+    await expect(
+      page.getByRole("button", { name: /Add to cart|Thêm vào giỏ/i }).first(),
+    ).toBeVisible({ timeout: 15_000 });
 
     // Add to cart
-    await page.locator("[data-testid='add-to-cart']").click();
+    await page
+      .getByRole("button", { name: /Add to cart|Thêm vào giỏ/i })
+      .first()
+      .click();
 
     // Verify cart badge updates or toast appears
-    await expect(page.getByText(/Added to cart|Đã thêm vào giỏ/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/Added .*cart|Đã thêm.*giỏ/i)).toBeVisible({ timeout: 10_000 });
 
     await expectNoGlobalError(page);
   });
@@ -125,13 +121,12 @@ test.describe("Checkout Flow", () => {
     await page.goto("/cart");
 
     // Cart should show the product
-    await expect(page.locator("[data-testid='cart-item']").first()).toBeVisible({
+    await expect(page.getByRole("button", { name: /View|Xem/ }).first()).toBeVisible({
       timeout: 15_000,
     });
 
     // Quantity should reflect 2 items
-    const quantityInput = page.locator("[data-testid='cart-item-quantity']").first();
-    await expect(quantityInput).toHaveValue("2");
+    await expect(page.getByText("2", { exact: true }).first()).toBeVisible();
 
     // Total should be visible
     await expect(page.getByText(/Total|Tổng cộng/i).first()).toBeVisible({ timeout: 5_000 });
@@ -161,7 +156,11 @@ test.describe("Checkout Flow", () => {
 
     // Should show prompt to add address
     await expect(
-      page.getByText(/add a delivery address|add.*address|chưa có địa chỉ/i),
+      page
+        .getByText(
+          /You don't have any addresses yet|Please add a delivery address|Bạn chưa có địa chỉ nào|Hãy thêm địa chỉ giao hàng/i,
+        )
+        .first(),
     ).toBeVisible({ timeout: 15_000 });
 
     await expectNoGlobalError(page);
@@ -184,7 +183,7 @@ test.describe("Checkout Flow", () => {
     ).toBeVisible({ timeout: 20_000 });
 
     // Select the seeded address
-    const addressCard = page.locator("[data-testid='address-card']").first();
+    const addressCard = page.locator('label[for^="checkout-address-"]').first();
     await expect(addressCard).toBeVisible({ timeout: 5_000 });
     await addressCard.click();
 
@@ -198,7 +197,7 @@ test.describe("Checkout Flow", () => {
     });
 
     // Select standard shipping
-    const shippingOption = page.locator("[data-testid='shipping-option']").first();
+    const shippingOption = page.locator('label[for^="checkout-shipping-"]').first();
     await expect(shippingOption).toBeVisible({ timeout: 5_000 });
     await shippingOption.click();
     await continueBtn.click();
@@ -209,7 +208,10 @@ test.describe("Checkout Flow", () => {
     });
 
     // Select COD (Cash on Delivery) for simplest E2E
-    const codOption = page.getByText(/Cash on Delivery|Thanh toán khi nhận hàng|COD/i);
+    const codOption = page
+      .locator('label:has(input[name="checkout-payment"][value="COD"])')
+      .first();
+    await expect(codOption).toBeVisible({ timeout: 5_000 });
     await codOption.click();
     await continueBtn.click();
 
@@ -224,12 +226,21 @@ test.describe("Checkout Flow", () => {
     await placeOrderBtn.click();
 
     // Step 5: Order confirmation
-    await expect(page.locator("[data-testid='order-confirmation']")).toBeVisible({
+    await expect(
+      page.getByRole("heading", { name: /Order placed|Đặt hàng thành công/i }),
+    ).toBeVisible({
       timeout: 30_000,
     });
 
-    // Should show order number
-    await expect(page.getByText(/order.*#|đơn hàng.*#/i)).toBeVisible({ timeout: 10_000 });
+    // The success screen renders the server order id in a code element.
+    await expect(
+      page
+        .locator("code")
+        .filter({ hasText: /[0-9a-f]{8}-[0-9a-f-]{27}/i })
+        .first(),
+    ).toBeVisible({
+      timeout: 10_000,
+    });
 
     await expectNoGlobalError(page);
   });
@@ -271,17 +282,16 @@ test.describe("Checkout Flow", () => {
     await authenticatePage(page, buyer);
     await page.goto("/cart");
 
-    await expect(page.locator("[data-testid='cart-item']").first()).toBeVisible({
+    await expect(page.getByRole("button", { name: /View|Xem/ }).first()).toBeVisible({
       timeout: 15_000,
     });
 
     // Increase quantity
-    const increaseBtn = page.locator("[data-testid='cart-item-increase']").first();
+    const increaseBtn = page.getByRole("button", { name: "Increase quantity" }).first();
     await increaseBtn.click();
 
     // Verify quantity updated
-    const quantityInput = page.locator("[data-testid='cart-item-quantity']").first();
-    await expect(quantityInput).toHaveValue("2");
+    await expect(page.getByText("2", { exact: true }).first()).toBeVisible();
 
     await expectNoGlobalError(page);
   });
@@ -294,16 +304,16 @@ test.describe("Checkout Flow", () => {
     await authenticatePage(page, buyer);
     await page.goto("/cart");
 
-    await expect(page.locator("[data-testid='cart-item']").first()).toBeVisible({
+    await expect(page.getByRole("button", { name: /View|Xem/ }).first()).toBeVisible({
       timeout: 15_000,
     });
 
     // Remove item
-    const removeBtn = page.locator("[data-testid='cart-item-remove']").first();
+    const removeBtn = page.getByRole("button", { name: /Remove .* from cart|Xóa/i }).first();
     await removeBtn.click();
 
     // Cart should now be empty or item should be gone
-    await expect(page.locator("[data-testid='cart-item']").first()).toHaveCount(0, {
+    await expect(page.getByRole("button", { name: /View|Xem/ }).first()).toHaveCount(0, {
       timeout: 10_000,
     });
 

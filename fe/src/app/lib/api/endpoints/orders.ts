@@ -97,8 +97,10 @@ function firstSubOrder(order: Order): PendingSubOrder {
   };
 }
 
-export const sellerPendingOrders = async (): Promise<PendingSubOrder[]> => {
-  const orders = await api.get("/seller/orders/pending", z.array(orderSchema));
+export const sellerPendingOrders = async (
+  params: { q?: string } = {},
+): Promise<PendingSubOrder[]> => {
+  const orders = await api.get("/seller/orders/pending", z.array(orderSchema), params);
   return flattenToPendingSubOrders(orders);
 };
 

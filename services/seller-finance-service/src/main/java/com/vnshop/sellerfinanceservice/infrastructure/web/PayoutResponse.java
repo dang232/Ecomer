@@ -12,8 +12,13 @@ public record PayoutResponse(
         String status,
         Instant createdAt,
         String completedBy,
-        Instant completedAt) {
+        Instant completedAt,
+        String sellerName) {
     static PayoutResponse fromDomain(Payout payout) {
+        return fromDomain(payout, null);
+    }
+
+    static PayoutResponse fromDomain(Payout payout, String sellerName) {
         return new PayoutResponse(
                 payout.payoutId().toString(),
                 payout.sellerId(),
@@ -21,6 +26,7 @@ public record PayoutResponse(
                 payout.status().name(),
                 payout.createdAt(),
                 payout.completedBy(),
-                payout.completedAt());
+                payout.completedAt(),
+                sellerName);
     }
 }

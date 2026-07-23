@@ -20,30 +20,56 @@
       "acCode": "AC-5.1",
       "outcome": "Predecessor chapters left a fulfilled order in state.json",
       "slug": "01-ac-5-1-predecessor-chapters-left-a-fulfilled-order-in-state-.png",
-      "status": "BLOCKED",
-      "errorMessage": "journey state missing required keys: orderId, subOrderId — a previous chapter must run first"
+      "status": "PASS"
+    },
+    {
+      "index": 2,
+      "acCode": "AC-5.1",
+      "outcome": "Seller's wallet shows positive available balance from chapter 3's fulfillment",
+      "slug": "02-ac-5-1-seller-s-wallet-shows-positive-available-balance-from.png",
+      "status": "PASS"
+    },
+    {
+      "index": 3,
+      "acCode": "AC-5.1",
+      "outcome": "Seller logs into the SPA and the Wallet tab shows the same balance",
+      "slug": "03-ac-5-1-seller-logs-into-the-spa-and-the-wallet-tab-shows-the.png",
+      "status": "PASS"
+    },
+    {
+      "index": 4,
+      "acCode": "AC-5.1",
+      "outcome": "Seller submits a payout request for the full balance (97271100 ₫)",
+      "slug": "04-ac-5-1-seller-submits-a-payout-request-for-the-full-balance-.png",
+      "status": "PASS"
+    },
+    {
+      "index": 5,
+      "acCode": "AC-5.2",
+      "outcome": "Submitted payout appears in admin's pending payout queue",
+      "slug": "05-ac-5-2-submitted-payout-appears-in-admin-s-pending-payout-qu.png",
+      "status": "PASS"
+    },
+    {
+      "index": 6,
+      "acCode": "AC-5.2",
+      "outcome": "Seller logs out — chapter state persists payoutId for chapter 6",
+      "slug": "06-ac-5-2-seller-logs-out-chapter-state-persists-payoutid-for-c.png",
+      "status": "PASS"
     }
   ],
   "acStatuses": [
     {
       "code": "AC-5.1",
       "outcome": "Seller with positive wallet balance can submit a payout request",
-      "status": "BLOCKED",
-      "failingStep": {
-        "index": 1,
-        "acCode": "AC-5.1",
-        "outcome": "Predecessor chapters left a fulfilled order in state.json",
-        "slug": "01-ac-5-1-predecessor-chapters-left-a-fulfilled-order-in-state-.png",
-        "status": "BLOCKED",
-        "errorMessage": "journey state missing required keys: orderId, subOrderId — a previous chapter must run first"
-      }
+      "status": "PASS"
     },
     {
       "code": "AC-5.2",
       "outcome": "Submitted payout immediately appears in admin's pending payout queue",
-      "status": "NOT_RUN"
+      "status": "PASS"
     }
   ],
-  "verdict": "BLOCKED",
-  "generatedAt": "2026-06-12T00:08:21.052Z"
+  "verdict": "PASS",
+  "generatedAt": "2026-07-22T03:29:32.739Z"
 }

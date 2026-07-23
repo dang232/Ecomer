@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { loginViaOidc } from "./_auth";
 
 /**
  * Network diagnostic: walk the main pages logged-in as buyer1 and report
@@ -24,11 +25,9 @@ test.describe("network diagnostic", () => {
       }
     });
 
-    // Login as buyer1 via the API to seed the cookie, then drive the SPA.
-    const loginRes = await page.request.post("http://localhost:8080/auth/login", {
-      data: { username: "buyer1", password: "test" },
-    });
-    expect(loginRes.ok()).toBeTruthy();
+    // Use the same browser OIDC path as a real user so route diagnostics cover
+    // the deployed session and callback contract.
+    await loginViaOidc(page, "buyer1", "test");
 
     // Walk the main routes. The SPA does its own bootstrap on first paint,
     // so we just need to land + wait for network idle on each.

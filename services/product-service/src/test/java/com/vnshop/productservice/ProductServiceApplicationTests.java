@@ -13,6 +13,7 @@ import com.vnshop.productservice.domain.port.out.CategoryRepositoryPort;
 import com.vnshop.productservice.domain.port.out.ObjectMetadataRepositoryPort;
 import com.vnshop.productservice.domain.port.out.ObjectStoragePort;
 import com.vnshop.productservice.domain.port.out.ProductRepositoryPort;
+import com.vnshop.productservice.domain.port.out.ProductEventOutboxPort;
 import com.vnshop.productservice.domain.review.port.out.BuyerProfileLookupPort;
 import com.vnshop.productservice.domain.review.port.out.PurchaseVerificationPort;
 import com.vnshop.productservice.domain.review.port.out.ReviewRepositoryPort;
@@ -46,6 +47,9 @@ class ProductServiceApplicationTests {
 
     @MockitoBean
     private ProductRepositoryPort productRepositoryPort;
+
+    @MockitoBean
+    private ProductEventOutboxPort productEventOutboxPort;
 
     @MockitoBean
     private ReviewRepositoryPort reviewRepositoryPort;

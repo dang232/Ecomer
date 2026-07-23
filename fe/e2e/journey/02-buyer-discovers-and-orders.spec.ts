@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { registerAndLoginViaOidc } from "../_auth";
 
 import {
   bizStep,
@@ -52,6 +53,7 @@ const PASSWORD = "Test1234!";
 
 test.use({
   video: "on",
+  trace: "off",
   actionTimeout: 30_000,
 });
 
@@ -143,22 +145,12 @@ test.describe.serial("Chapter 2 — Buyer discovers and orders", () => {
         "AC-2.1",
         `Visitor registers a fresh buyer account and is signed in`,
         async () => {
-          await page.goto("/register");
-          await expect(
-            page.getByText(/Create your VNShop account|Tạo tài khoản VNShop/i).first(),
-          ).toBeVisible({ timeout: 20_000 });
-          await page.locator("#firstName").fill("Journey");
-          await page.locator("#lastName").fill("Buyer");
-          await page.locator("#email").fill(buyerEmail);
-          await page.locator("#password").fill(PASSWORD);
-          await page.locator("#confirm").fill(PASSWORD);
-          await page.getByRole("button", { name: /create account|tạo tài khoản/i }).click();
-          await expect
-            .poll(() => new URL(page.url()).pathname, {
-              timeout: 30_000,
-              message: "register did not navigate to /",
-            })
-            .toBe("/");
+          await registerAndLoginViaOidc(page, {
+            firstName: "Journey",
+            lastName: "Buyer",
+            email: buyerEmail,
+            password: PASSWORD,
+          });
           await expect(
             page.getByRole("link", { name: /^(Log in|Đăng nhập)$/i }).first(),
           ).toHaveCount(0, { timeout: 10_000 });
@@ -175,9 +167,20 @@ test.describe.serial("Chapter 2 — Buyer discovers and orders", () => {
           // know the exact unit price ahead of the coupon math assertions.
           // Product price lives on the first variant (`variants[0].priceAmount`)
           // — there's no top-level `price` field on ProductResponse.
-          const r = await page.request.get(`${apiURL}/products?size=1`);
+          const r = await page.request.get(`${apiURL}/products?size=50`);
           expect(r.ok(), `products: ${r.status()}`).toBeTruthy();
-          const p = (await r.json())?.data?.content?.[0];
+          const catalog = (await r.json())?.data?.content ?? [];
+          const search = await page.request.get(
+            `${apiURL}/search?q=${encodeURIComponent("E2E Test Product")}&size=50`,
+          );
+          expect(search.ok(), `search: ${search.status()}`).toBeTruthy();
+          const indexed = (await search.json())?.data?.content ?? [];
+          const indexedId = indexed.find((candidate: { id?: string }) =>
+            catalog.some(
+              (candidateProduct: { id?: string }) => candidateProduct.id === candidate.id,
+            ),
+          )?.id;
+          const p = catalog.find((candidate: { id?: string }) => candidate.id === indexedId);
           expect(p?.id, "expected at least one seeded product").toBeTruthy();
           productId = p.id;
           productName = p.name;

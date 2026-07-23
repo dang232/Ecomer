@@ -55,9 +55,8 @@ test.describe("home page UI", () => {
     const sectionMatchers = [
       /Product Categories|Danh Mục Sản Phẩm/i, // Categories
       /Trending|Đang Hot/i, // Trending bar
-      /Best Sellers|Bán Chạy Nhất/i, // Bestsellers sidebar
-      /Recommended for You|Gợi Ý Cho Bạn/i, // Products section
-      /Download VNShop App|Tải App VNShop/i, // App banner
+      /Top Sellers|Best Sellers|Bán Chạy Nhất/i, // Seller showcase
+      /Free shipping|100% authentic|30-day returns|24\/7 support|Miễn phí vận chuyển/i, // Trust bar
     ];
 
     for (const matcher of sectionMatchers) {
@@ -80,7 +79,7 @@ test.describe("home page UI", () => {
 
     // The Design System link in the footer is icon + label. The icon is
     // a lucide Palette svg. Click goes to /design-system.
-    const designLink = page.getByRole("button", { name: /Design System/i }).first();
+    const designLink = page.getByRole("link", { name: /Design System/i }).first();
     await expect(designLink).toBeVisible({ timeout: 10_000 });
 
     // Just verify the button with "Design System" text exists — the icon

@@ -198,7 +198,10 @@ vi.mock("../../lib/api/endpoints/admin", () => ({
 vi.mock("@tabler/icons-react", () => ({
   IconBan: () => createElement("span", null, "ban"),
   IconCheck: () => createElement("span", null, "check"),
+  IconChevronLeft: () => createElement("span", null, "previous"),
+  IconChevronRight: () => createElement("span", null, "next"),
   IconRefresh: () => createElement("span", null, "refresh"),
+  IconSearch: () => createElement("span", null, "search"),
 }));
 
 // Mock sonner toast
@@ -214,16 +217,22 @@ describe("OrderManagement — P2-10 truncated orderId title tooltip", () => {
 
     // Configure useQuery to return a single order
     vi.mocked(useQuery).mockReturnValue({
-      data: [
-        {
-          orderId,
-          buyerId: "buyer-1",
-          totalAmount: 100000,
-          itemCount: 2,
-          status: "PENDING_ACCEPTANCE",
-          createdAt: "2024-06-01T00:00:00Z",
-        },
-      ],
+      data: {
+        content: [
+          {
+            orderId,
+            buyerId: "buyer-1",
+            totalAmount: 100000,
+            itemCount: 2,
+            status: "PENDING_ACCEPTANCE",
+            createdAt: "2024-06-01T00:00:00Z",
+          },
+        ],
+        page: 0,
+        size: 50,
+        totalElements: 1,
+        totalPages: 1,
+      },
       isLoading: false,
       isError: false,
     } as ReturnType<typeof useQuery>);

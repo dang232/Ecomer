@@ -419,6 +419,42 @@ describe('NotificationCreatedHandler', () => {
     );
 
     expect(mockChannel.sendToUser).not.toHaveBeenCalled();
+    expect(notification.deliveryStatus.getValue()).toBe('QUEUED');
+    expect(mockRepo.save).not.toHaveBeenCalled();
+  });
+
+  it('does not report success when every channel is disabled', async () => {
+    const notification = Notification.create({
+      userId: 'user-disabled',
+      type: NotificationType.ORDER_CREATED,
+      title: 'T',
+      body: 'B',
+    });
+    mockRepo.findById.mockResolvedValue(notification);
+
+    await handler.handle(
+      new NotificationCreatedEvent(
+        notification.id,
+        notification.userId,
+        notification.type,
+        [
+          NotificationChannel.IN_APP,
+          NotificationChannel.EMAIL,
+          NotificationChannel.PUSH,
+          NotificationChannel.SMS,
+        ],
+        'user@example.com',
+        'device-token',
+        '+84900000000',
+      ),
+    );
+
+    expect(notification.deliveryStatus.getValue()).toBe('QUEUED');
+    expect(mockChannel.sendToUser).not.toHaveBeenCalled();
+    expect(mockEmailChannel.send).not.toHaveBeenCalled();
+    expect(mockPushChannel.send).not.toHaveBeenCalled();
+    expect(mockSmsChannel.send).not.toHaveBeenCalled();
+    expect(mockRepo.save).not.toHaveBeenCalled();
   });
 
   it('returns early when notification is not found', async () => {

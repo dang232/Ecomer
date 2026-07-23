@@ -15,6 +15,8 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverterAdapter;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.security.web.server.csrf.CookieServerCsrfTokenRepository;
+import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
@@ -22,6 +24,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Set;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -31,6 +34,12 @@ import java.util.stream.Stream;
 @EnableWebFluxSecurity
 @EnableReactiveMethodSecurity
 public class SecurityConfig {
+
+    private static final Set<HttpMethod> SAFE_METHODS = Set.of(
+            HttpMethod.GET, HttpMethod.HEAD, HttpMethod.OPTIONS, HttpMethod.TRACE);
+    private static final String REFRESH_TOKEN_COOKIE = "vnshop_rt";
+    private static final String CSRF_COOKIE = "vnshop_csrf";
+    private static final String CSRF_HEADER = "X-CSRF-Token";
 
     /**
      * Define an explicit reactive CORS configuration source so Spring
@@ -73,12 +82,17 @@ public class SecurityConfig {
             // the security chain explicitly makes that filter contribute
             // its headers before the chain finishes.
             .cors(org.springframework.security.config.Customizer.withDefaults())
-            .csrf(csrf -> csrf.disable())
+            .csrf(csrf -> csrf
+                .csrfTokenRepository(csrfTokenRepository())
+                .requireCsrfProtectionMatcher(this::requiresCsrfProtection))
             .authorizeExchange(exchanges -> exchanges
                 // Browsers send a no-auth OPTIONS preflight before any
                 // cross-origin POST/PUT — permit it on every path so the
                 // CORS filter has a chance to respond with allow-origin.
                 .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                // Seller review management is a protected read model even
+                // though public product reviews share the /reviews prefix.
+                .pathMatchers(HttpMethod.GET, "/reviews/seller/me").hasRole("SELLER")
                 .pathMatchers(HttpMethod.GET, "/products/**", "/categories/**", "/search/**",
                         "/reviews/**", "/questions/**", "/recommendations/**", "/health",
                         "/api/config", "/api/config/public", "/sellers", "/sellers/*", "/flash-sale/active",
@@ -86,7 +100,7 @@ public class SecurityConfig {
                 .pathMatchers(HttpMethod.POST, "/reviews/seller-summaries", "/products/counts",
                         "/coupons/validate", "/checkout/validate-coupon").permitAll()
                 .pathMatchers(HttpMethod.POST, "/webhooks/ghn", "/webhooks/ghtk").permitAll()
-                .pathMatchers("/auth/**", "/payment/*/callback", "/payment/*/ipn", "/payment/stripe/webhook").permitAll()
+                .pathMatchers("/auth/**", "/realms/**", "/resources/**", "/payment/*/callback", "/payment/*/ipn", "/payment/stripe/webhook").permitAll()
                 // The WebSocket handshake on /ws/messaging carries the JWT through
                 // a subprotocol because browsers can't set Authorization headers on
                 // `new WebSocket(...)`, so it cannot pass the gateway's resource
@@ -103,8 +117,8 @@ public class SecurityConfig {
                 .pathMatchers("/seller/**", "/sellers/me/**").hasRole("SELLER")
                 .anyExchange().authenticated()
             )
-            // The SPA acquires tokens directly from Keycloak (PKCE) and sends them as Bearer.
-            // No oauth2Login (no client registration) — gateway is purely a JWT-validating proxy.
+            // The SPA obtains access tokens through user-service. The gateway
+            // still validates the resulting JWT on protected resource routes.
             .oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
             )
@@ -132,6 +146,24 @@ public class SecurityConfig {
                     "camera=(), microphone=(), geolocation=()"))
             )
             .build();
+    }
+
+    private CookieServerCsrfTokenRepository csrfTokenRepository() {
+        CookieServerCsrfTokenRepository repository = CookieServerCsrfTokenRepository.withHttpOnlyFalse();
+        repository.setCookieName(CSRF_COOKIE);
+        repository.setHeaderName(CSRF_HEADER);
+        repository.setCookiePath("/");
+        return repository;
+    }
+
+    private reactor.core.publisher.Mono<ServerWebExchangeMatcher.MatchResult> requiresCsrfProtection(
+            org.springframework.web.server.ServerWebExchange exchange) {
+        var request = exchange.getRequest();
+        boolean cookieAuthenticated = request.getCookies().containsKey(REFRESH_TOKEN_COOKIE);
+        boolean stateChanging = request.getMethod() != null && !SAFE_METHODS.contains(request.getMethod());
+        return cookieAuthenticated && stateChanging
+                ? ServerWebExchangeMatcher.MatchResult.match()
+                : ServerWebExchangeMatcher.MatchResult.notMatch();
     }
 
     @Bean

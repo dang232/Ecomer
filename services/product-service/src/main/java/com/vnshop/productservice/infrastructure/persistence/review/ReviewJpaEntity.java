@@ -68,6 +68,9 @@ public class ReviewJpaEntity extends BaseJpaEntity {
     @Column(name = "status", nullable = false, length = 32)
     private ReviewStatus status;
 
+    @Column(name = "rejection_reason", length = 1000)
+    private String rejectionReason;
+
 
     protected ReviewJpaEntity() {
     }
@@ -85,12 +88,13 @@ public class ReviewJpaEntity extends BaseJpaEntity {
         entity.helpfulVotes = review.helpfulVotes();
         entity.helpfulVoterIds = new HashSet<>(review.helpfulVoterIds());
         entity.status = review.status();
+        entity.rejectionReason = review.rejectionReason();
         entity.restoreCreatedAt(review.createdAt());
         return entity;
     }
 
     public Review toDomain() {
         return new Review(reviewId, productId, buyerId, orderId, rating, text, images, verifiedPurchase,
-                helpfulVotes, helpfulVoterIds, status, getCreatedAt());
+                helpfulVotes, helpfulVoterIds, status, rejectionReason, getCreatedAt());
     }
 }

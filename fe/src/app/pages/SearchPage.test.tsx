@@ -4,9 +4,8 @@ import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  catalogRefetch: vi.fn(),
-  searchRefetch: vi.fn(),
-  searchError: null as unknown,
+  v2SearchRefetch: vi.fn(),
+  v2Error: null as unknown,
   v2FetchNextPage: vi.fn(),
   v2HasNextPage: false,
   v2SearchData: undefined as
@@ -72,12 +71,12 @@ vi.mock("../hooks/use-search-facets", () => ({
 vi.mock("../hooks/use-search-v2", () => ({
   useSearchV2: () => ({
     data: mocks.v2SearchData,
-    error: null,
+    error: mocks.v2Error,
     isLoading: false,
     hasNextPage: mocks.v2HasNextPage,
     isFetchingNextPage: false,
     fetchNextPage: mocks.v2FetchNextPage,
-    refetch: vi.fn(),
+    refetch: mocks.v2SearchRefetch,
   }),
 }));
 
@@ -106,12 +105,11 @@ function renderPage(entry = "/search") {
 }
 
 beforeEach(() => {
-  mocks.catalogRefetch.mockReset();
-  mocks.searchRefetch.mockReset();
+  mocks.v2SearchRefetch.mockReset();
+  mocks.v2Error = null;
   mocks.v2FetchNextPage.mockReset();
   mocks.v2HasNextPage = false;
   mocks.v2SearchData = undefined;
-  mocks.searchError = null;
 });
 
 describe("SearchPage", () => {
@@ -124,15 +122,14 @@ describe("SearchPage", () => {
     expect(screen.getByRole("button", { name: "Show results" })).toBeInTheDocument();
   });
 
-  it("retries search and catalog requests after a blocking search failure", () => {
-    mocks.searchError = new Error("search unavailable");
+  it("retries only the active V2 search after a blocking search failure", () => {
+    mocks.v2Error = new Error("search unavailable");
     renderPage("/search?q=phone");
 
     expect(screen.getByText("Products could not be loaded")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
 
-    expect(mocks.searchRefetch).toHaveBeenCalledTimes(1);
-    expect(mocks.catalogRefetch).toHaveBeenCalledTimes(1);
+    expect(mocks.v2SearchRefetch).toHaveBeenCalledTimes(1);
   });
 
   it("uses cursor results and loads the next page for supported v2 searches", () => {
@@ -158,6 +155,33 @@ describe("SearchPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Load more" }));
     expect(mocks.v2FetchNextPage).toHaveBeenCalledTimes(1);
-    expect(mocks.searchRefetch).not.toHaveBeenCalled();
+    expect(mocks.v2SearchRefetch).not.toHaveBeenCalled();
+  });
+
+  it("uses the projected rating and review count for the star filter", () => {
+    mocks.v2SearchData = {
+      pages: [
+        {
+          data: {
+            items: [
+              {
+                id: "product-sony",
+                name: "Tai nghe Sony WH-1000XM5",
+                description: "Headphones",
+                price: 8990000,
+                rating: 4,
+                reviewCount: 1,
+                variants: [],
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    renderPage("/search?q=Sony&minRating=4");
+
+    expect(screen.getByText("Tai nghe Sony WH-1000XM5")).toBeInTheDocument();
+    expect(screen.getByText("4")).toBeInTheDocument();
   });
 });

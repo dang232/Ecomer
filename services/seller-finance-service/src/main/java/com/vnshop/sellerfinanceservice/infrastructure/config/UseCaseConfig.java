@@ -1,6 +1,7 @@
 package com.vnshop.sellerfinanceservice.infrastructure.config;
 
 import com.vnshop.sellerfinanceservice.application.CreditWalletUseCase;
+import com.vnshop.sellerfinanceservice.application.AdminPayoutReadUseCase;
 import com.vnshop.sellerfinanceservice.application.GetSellerPayoutsUseCase;
 import com.vnshop.sellerfinanceservice.application.ListPayoutsUseCase;
 import com.vnshop.sellerfinanceservice.application.ProcessPayoutUseCase;
@@ -9,6 +10,7 @@ import com.vnshop.sellerfinanceservice.application.RequestPayoutUseCase;
 import com.vnshop.sellerfinanceservice.application.ViewWalletUseCase;
 import com.vnshop.sellerfinanceservice.domain.CommissionCalculator;
 import com.vnshop.sellerfinanceservice.domain.port.out.PayoutRepositoryPort;
+import com.vnshop.sellerfinanceservice.domain.port.out.SellerDirectoryPort;
 import com.vnshop.sellerfinanceservice.domain.port.out.SellerWalletRepositoryPort;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,6 +35,13 @@ public class UseCaseConfig {
     @Bean
     RequestPayoutUseCase requestPayoutUseCase(SellerWalletRepositoryPort walletRepositoryPort, PayoutRepositoryPort payoutRepositoryPort) {
         return new RequestPayoutUseCase(walletRepositoryPort, payoutRepositoryPort);
+    }
+
+    @Bean
+    AdminPayoutReadUseCase adminPayoutReadUseCase(
+            PayoutRepositoryPort payoutRepositoryPort,
+            SellerDirectoryPort sellerDirectoryPort) {
+        return new AdminPayoutReadUseCase(payoutRepositoryPort, sellerDirectoryPort);
     }
 
     @Bean

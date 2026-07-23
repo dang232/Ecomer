@@ -8,7 +8,7 @@ import java.util.List;
 
 public record ReviewResponse(String reviewId, String productId, String buyerId, String userName, String userAvatarUrl,
         String orderId, int rating, String text, List<String> images, boolean verifiedPurchase, int helpfulVotes,
-        String status, Instant createdAt) {
+        String status, String rejectionReason, Instant createdAt, String productName) {
 
     static ReviewResponse fromDomain(Review review) {
         // Used by mutation endpoints (POST /reviews, PUT helpful) where the
@@ -19,7 +19,7 @@ public record ReviewResponse(String reviewId, String productId, String buyerId, 
         return new ReviewResponse(review.reviewId().toString(), review.productId(), review.buyerId(),
                 null, null,
                 review.orderId(), review.rating(), review.text(), review.images(), review.verifiedPurchase(),
-                review.helpfulVotes(), review.status().name(), review.createdAt());
+                review.helpfulVotes(), review.status().name(), review.rejectionReason(), review.createdAt(), null);
     }
 
     static ReviewResponse fromEnriched(EnrichedReview enriched) {
@@ -27,6 +27,6 @@ public record ReviewResponse(String reviewId, String productId, String buyerId, 
         return new ReviewResponse(review.reviewId().toString(), review.productId(), review.buyerId(),
                 enriched.userName(), enriched.userAvatarUrl(),
                 review.orderId(), review.rating(), review.text(), review.images(), review.verifiedPurchase(),
-                review.helpfulVotes(), review.status().name(), review.createdAt());
+                review.helpfulVotes(), review.status().name(), review.rejectionReason(), review.createdAt(), enriched.productName());
     }
 }

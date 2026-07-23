@@ -17,6 +17,13 @@ class ProductReadModelRepositoryContractTest {
         assertThat(queryFor("brandFacets")).contains("product.status = 'ACTIVE'");
     }
 
+    @Test
+    void cursorQueriesTypeNullableProductIdAnchorsForPostgres() throws NoSuchMethodException {
+        assertThat(queryFor("searchAfterNewest")).contains("cast(:anchorProductId as string)");
+        assertThat(queryFor("searchAfterPriceLow")).contains("cast(:anchorProductId as string)");
+        assertThat(queryFor("searchAfterPriceHigh")).contains("cast(:anchorProductId as string)");
+    }
+
     private static String queryFor(String methodName) throws NoSuchMethodException {
         Method method = java.util.Arrays.stream(ProductReadModelRepository.class.getMethods())
                 .filter(candidate -> candidate.getName().equals(methodName))

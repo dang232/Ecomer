@@ -244,7 +244,7 @@ export function VideoAppeals() {
   const approveAppeal = useApproveAppeal();
   const rejectAppeal = useRejectAppeal();
 
-  const items = appealsQuery.data ?? [];
+  const items = appealsQuery.data?.content ?? [];
 
   return (
     <div className="space-y-5">
@@ -276,9 +276,9 @@ export function VideoAppeals() {
 
       <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
         {t("admin.videoAppeals.title")}
-        {!appealsQuery.isLoading && (appealsQuery.data?.length ?? 0) > 0 ? (
+        {!appealsQuery.isLoading && (appealsQuery.data?.totalElements ?? 0) > 0 ? (
           <span className="text-xs font-medium text-muted-foreground bg-muted rounded-full px-2 py-0.5">
-            {appealsQuery.data?.length}
+            {appealsQuery.data?.totalElements}
           </span>
         ) : null}
       </h2>

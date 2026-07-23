@@ -33,6 +33,13 @@ public class DisputeJpaRepository implements DisputeRepositoryPort {
  }
 
  @Override
+ public List<Dispute> findByStatus(String status, String query) {
+ String normalized = query == null ? "" : query.trim().toLowerCase();
+ return springDataRepository.findByStatusAndQuery(DisputeStatus.valueOf(status), normalized, "%" + normalized + "%")
+         .stream().map(DisputeJpaEntity::toDomain).toList();
+ }
+
+ @Override
  public Optional<Dispute> findByReturnId(String returnId) {
  UUID returnUuid;
  try {

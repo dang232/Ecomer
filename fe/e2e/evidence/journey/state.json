@@ -1,1 +1,17 @@
-{}
+{
+  "approvedSellerKeycloakId": "703fdcc1-143b-4dc3-970f-740bc39a4b0c",
+  "approvedSellerEmail": "e2e_journey_seller_1784690936352@vnshop.local",
+  "approvedSellerPassword": "Test1234!",
+  "couponCode": "JRN936800",
+  "couponDiscountVnd": 50000,
+  "buyerEmail": "e2e_journey_buyer_1784690943263@vnshop.local",
+  "buyerPassword": "Test1234!",
+  "productId": "f222cb6b-ddda-44ed-83b4-9e5b44ec203c",
+  "productName": "E2E Test Product 1784675007185",
+  "productUnitPriceVnd": 199000,
+  "orderId": "9cfcfbce-5892-4a76-923c-020760f7f7fc",
+  "orderTotalVnd": 169000,
+  "subOrderId": 458,
+  "payoutId": "295f41b2-0d9f-42a3-aa37-f56c7d714556",
+  "payoutAmountVnd": 97271100
+}

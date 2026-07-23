@@ -19,11 +19,19 @@ public class Review {
     private final int helpfulVotes;
     private final Set<String> helpfulVoterIds;
     private final ReviewStatus status;
+    private final String rejectionReason;
     private final Instant createdAt;
 
     public Review(UUID reviewId, String productId, String buyerId, String orderId, int rating, String text,
             List<String> images, boolean verifiedPurchase, int helpfulVotes, Set<String> helpfulVoterIds,
             ReviewStatus status, Instant createdAt) {
+        this(reviewId, productId, buyerId, orderId, rating, text, images, verifiedPurchase, helpfulVotes,
+                helpfulVoterIds, status, null, createdAt);
+    }
+
+    public Review(UUID reviewId, String productId, String buyerId, String orderId, int rating, String text,
+            List<String> images, boolean verifiedPurchase, int helpfulVotes, Set<String> helpfulVoterIds,
+            ReviewStatus status, String rejectionReason, Instant createdAt) {
         this.reviewId = Objects.requireNonNull(reviewId, "reviewId is required");
         this.productId = requireNonBlank(productId, "productId");
         this.buyerId = requireNonBlank(buyerId, "buyerId");
@@ -40,6 +48,7 @@ public class Review {
         this.helpfulVotes = requireNonNegative(helpfulVotes, "helpfulVotes");
         this.helpfulVoterIds = helpfulVoterIds == null ? Set.of() : Set.copyOf(helpfulVoterIds);
         this.status = Objects.requireNonNull(status, "status is required");
+        this.rejectionReason = normalizeOptional(rejectionReason);
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt is required");
     }
 
@@ -51,7 +60,12 @@ public class Review {
 
     public Review withStatus(ReviewStatus nextStatus) {
         return new Review(reviewId, productId, buyerId, orderId, rating, text, images, verifiedPurchase,
-                helpfulVotes, helpfulVoterIds, nextStatus, createdAt);
+                helpfulVotes, helpfulVoterIds, nextStatus, rejectionReason, createdAt);
+    }
+
+    public Review withRejectionReason(String reason) {
+        return new Review(reviewId, productId, buyerId, orderId, rating, text, images, verifiedPurchase,
+                helpfulVotes, helpfulVoterIds, status, reason, createdAt);
     }
 
     /**
@@ -113,6 +127,10 @@ public class Review {
         return status;
     }
 
+    public String rejectionReason() {
+        return rejectionReason;
+    }
+
     public Instant createdAt() {
         return createdAt;
     }
@@ -122,6 +140,10 @@ public class Review {
             throw new IllegalArgumentException(fieldName + " is required");
         }
         return value;
+    }
+
+    private static String normalizeOptional(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
     private static int requireRating(int value) {

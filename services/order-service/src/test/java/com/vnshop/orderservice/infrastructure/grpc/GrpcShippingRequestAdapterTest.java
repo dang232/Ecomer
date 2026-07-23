@@ -20,6 +20,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.verify;
@@ -86,6 +87,10 @@ class GrpcShippingRequestAdapterTest {
 
         ShippingResponse response = ShippingResponse.newBuilder()
                 .setSuccess(true)
+                .addLabels(com.vnshop.proto.shipping.ShippingLabel.newBuilder()
+                        .setTrackingCode("TRACK-002")
+                        .setCarrier("GHN")
+                        .build())
                 .build();
         when(shippingStub.requestShipping(any())).thenReturn(response);
 
@@ -113,6 +118,10 @@ class GrpcShippingRequestAdapterTest {
 
         ShippingResponse response = ShippingResponse.newBuilder()
                 .setSuccess(true)
+                .addLabels(com.vnshop.proto.shipping.ShippingLabel.newBuilder()
+                        .setTrackingCode("TRACK-003")
+                        .setCarrier("GHN")
+                        .build())
                 .build();
         when(shippingStub.requestShipping(any())).thenReturn(response);
 
@@ -126,5 +135,29 @@ class GrpcShippingRequestAdapterTest {
         assertEquals(2, sentSub.getItemsCount());
         assertEquals("prod-3", sentSub.getItems(0).getProductId());
         assertEquals("prod-4", sentSub.getItems(1).getProductId());
+    }
+
+    @Test
+    void shouldFailSoTheOrderSagaCanCompensateWhenShippingRejectsTheRequest() {
+        Address address = new Address("123 Main St", "Ward 1", "District X", "Hanoi");
+        OrderItem item = new OrderItem("prod-1", "sku-red", "seller-1", "T-Shirt", 1,
+                new Money(new BigDecimal("100000")), "https://img.example.com/tshirt.jpg");
+        SubOrder subOrder = new SubOrder("seller-1", List.of(item));
+        when(shippingStub.requestShipping(any())).thenReturn(ShippingResponse.newBuilder().setSuccess(false).build());
+
+        assertThrows(IllegalStateException.class,
+                () -> adapter.requestShipping("order-rejected", subOrder, address));
+    }
+
+    @Test
+    void shouldFailSoTheOrderSagaCanCompensateWhenNoLabelIsReturned() {
+        Address address = new Address("123 Main St", "Ward 1", "District X", "Hanoi");
+        OrderItem item = new OrderItem("prod-1", "sku-red", "seller-1", "T-Shirt", 1,
+                new Money(new BigDecimal("100000")), "https://img.example.com/tshirt.jpg");
+        SubOrder subOrder = new SubOrder("seller-1", List.of(item));
+        when(shippingStub.requestShipping(any())).thenReturn(ShippingResponse.newBuilder().setSuccess(true).build());
+
+        assertThrows(IllegalStateException.class,
+                () -> adapter.requestShipping("order-no-label", subOrder, address));
     }
 }

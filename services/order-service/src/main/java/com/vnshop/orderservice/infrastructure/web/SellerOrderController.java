@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -41,8 +42,8 @@ public class SellerOrderController {
 
     @PreAuthorize("hasRole('SELLER')")
     @GetMapping("/pending")
-    public ApiResponse<List<OrderResponse>> pending() {
-        return ApiResponse.ok(listPendingOrdersUseCase.listPendingBySeller(JwtPrincipalUtil.currentSellerId()).stream()
+    public ApiResponse<List<OrderResponse>> pending(@RequestParam(required = false) String q) {
+        return ApiResponse.ok(listPendingOrdersUseCase.listPendingBySeller(JwtPrincipalUtil.currentSellerId(), q).stream()
                 .map(OrderResponse::fromDomain)
                 .toList());
     }

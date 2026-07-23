@@ -2,11 +2,12 @@ import { z } from "zod";
 
 import { productIdSchema, sellerIdSchema } from "./branded-ids";
 
-// BE user-service BuyerProfileResponse(keycloakId, name, phone, avatarUrl, banned).
+// BE user-service BuyerProfileResponse(keycloakId, email, name, phone, avatarUrl, banned).
 // Used by admin user management panel.
 export const adminUserSchema = z
   .object({
     keycloakId: z.string(),
+    email: z.string().nullable().optional(),
     name: z.string().nullable().optional(),
     phone: z.string().nullable().optional(),
     avatarUrl: z.string().nullable().optional(),
@@ -15,6 +16,7 @@ export const adminUserSchema = z
   .passthrough()
   .transform((raw) => ({
     keycloakId: raw.keycloakId,
+    email: raw.email ?? undefined,
     name: raw.name ?? undefined,
     phone: raw.phone ?? undefined,
     avatarUrl: raw.avatarUrl ?? undefined,
@@ -22,13 +24,46 @@ export const adminUserSchema = z
   }));
 export type AdminUser = z.infer<typeof adminUserSchema>;
 
-// BE order-service OrderSummaryProjection(orderId, buyerId, sellerId, status,
-// totalAmount, itemCount, createdAt, updatedAt). Used by admin order management.
+export function adminPageSchema<T extends z.ZodType>(itemSchema: T) {
+  return z
+    .object({
+      content: z.array(itemSchema).default([]),
+      page: z.number().optional(),
+      number: z.number().optional(),
+      size: z.number().default(50),
+      totalElements: z.number().default(0),
+      totalPages: z.number().default(0),
+    })
+    .passthrough()
+    .transform((raw) => ({
+      content: raw.content,
+      page: raw.page ?? raw.number ?? 0,
+      size: raw.size,
+      totalElements: raw.totalElements,
+      totalPages: raw.totalPages,
+    }));
+}
+
+export type AdminPage<T> = {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
+
+// BE order-service OrderSummaryProjection(orderId, orderNumber, buyerId,
+// sellerId, status, totalAmount, itemCount, createdAt, updatedAt). Used by
+// admin order management. IDs remain available for drill-down, while the
+// stable order number is the primary operator-facing reference.
 export const adminOrderSummarySchema = z
   .object({
     orderId: z.string(),
+    orderNumber: z.string().nullable().optional(),
     buyerId: z.string().optional(),
+    buyerName: z.string().nullable().optional(),
     sellerId: z.string().nullable().optional(),
+    sellerName: z.string().nullable().optional(),
     status: z.string().optional(),
     totalAmount: z.number().nullable().optional(),
     itemCount: z.number().optional(),
@@ -38,8 +73,11 @@ export const adminOrderSummarySchema = z
   .passthrough()
   .transform((raw) => ({
     orderId: raw.orderId,
+    orderNumber: raw.orderNumber ?? undefined,
     buyerId: raw.buyerId ?? "",
+    buyerName: raw.buyerName ?? undefined,
     sellerId: raw.sellerId ?? undefined,
+    sellerName: raw.sellerName ?? undefined,
     status: raw.status ?? "PENDING_ACCEPTANCE",
     totalAmount: raw.totalAmount ?? 0,
     itemCount: raw.itemCount ?? 0,
@@ -143,6 +181,12 @@ export const disputeSchema = z
     resolvedBy: z.string().nullable().optional(),
     returnId: z.string(),
     status: z.string(),
+    orderId: z.string().nullable().optional(),
+    orderNumber: z.string().nullable().optional(),
+    buyerId: z.string().nullable().optional(),
+    buyerName: z.string().nullable().optional(),
+    sellerId: z.string().nullable().optional(),
+    sellerName: z.string().nullable().optional(),
   })
   .passthrough()
   .transform((raw) => ({
@@ -154,6 +198,12 @@ export const disputeSchema = z
     adminResolution: raw.adminResolution ?? undefined,
     resolvedBy: raw.resolvedBy ?? undefined,
     createdAt: raw.createdAt,
+    orderId: raw.orderId ?? undefined,
+    orderNumber: raw.orderNumber ?? undefined,
+    buyerId: raw.buyerId ?? undefined,
+    buyerName: raw.buyerName ?? undefined,
+    sellerId: raw.sellerId ?? undefined,
+    sellerName: raw.sellerName ?? undefined,
   }));
 export type Dispute = z.infer<typeof disputeSchema>;
 
@@ -193,56 +243,54 @@ export const adminPayoutSchema = z
 export type AdminPayout = z.infer<typeof adminPayoutSchema>;
 
 /**
- * Dashboard summary KPIs. Backend names for the same conceptual KPI vary
- * (`totalRevenue` vs `revenue`). Each field accepts every alias we have seen
- * and the consumer just reads `.totalRevenue`, so the UI no longer needs
- * runtime key probing.
- *
- * NB: order-service DashboardSummaryResponse currently has no totalUsers or
- * totalSellers — those KPIs render as null/em-dash on the dashboard until
- * cross-service aggregation lands. activeBuyers/activeSellers are the actual
- * BE field names; FE doesn't read them yet but we accept them.
+ * Dashboard summary KPIs use the v2 wire contract. `paidGmv` is gross paid
+ * value; realized revenue is reduced by idempotent completed refunds.
  */
-export const dashboardSummarySchema = z
-  .object({
-    totalRevenue: z.number().optional(),
-    revenue: z.number().optional(),
-    total: z.number().optional(),
-    totalUsers: z.number().optional(),
-    users: z.number().optional(),
-    activeBuyers: z.number().optional(),
-    totalOrders: z.number().optional(),
-    orders: z.number().optional(),
-    totalSellers: z.number().optional(),
-    sellers: z.number().optional(),
-    activeSellers: z.number().optional(),
-    avgOrderValue: z.number().optional(),
-    periodStart: z.string().optional(),
-    periodEnd: z.string().optional(),
-  })
-  .passthrough()
-  .transform((s) => ({
-    totalRevenue: s.totalRevenue ?? s.revenue ?? s.total ?? null,
-    totalUsers: s.totalUsers ?? s.users ?? s.activeBuyers ?? null,
-    totalOrders: s.totalOrders ?? s.orders ?? null,
-    totalSellers: s.totalSellers ?? s.sellers ?? s.activeSellers ?? null,
-  }));
+export const dashboardSummarySchema = z.object({
+  totalOrders: z.number(),
+  paidGmv: z.number(),
+  refundedAmount: z.number(),
+  realizedRevenue: z.number(),
+  activeBuyers: z.number(),
+  activeSellers: z.number(),
+  avgPaidOrderValue: z.number(),
+  periodStart: z.string(),
+  periodEnd: z.string(),
+});
 export type DashboardSummary = z.infer<typeof dashboardSummarySchema>;
 
-export const dashboardRevenuePointSchema = z
-  .object({ date: z.string(), amount: z.number() })
-  .passthrough();
+export const dashboardRevenuePointSchema = z.object({
+  date: z.string(),
+  paidGmv: z.number(),
+  refundedAmount: z.number(),
+  realizedRevenue: z.number(),
+});
 export type DashboardRevenuePoint = z.infer<typeof dashboardRevenuePointSchema>;
 
-export const dashboardTopProductSchema = z
-  .object({ productId: productIdSchema, name: z.string().optional(), revenue: z.number() })
-  .passthrough();
+export const dashboardTopProductSchema = z.object({
+  productId: productIdSchema,
+  name: z.string(),
+  unitsSold: z.number(),
+});
 export type DashboardTopProduct = z.infer<typeof dashboardTopProductSchema>;
 
-export const dashboardTopSellerSchema = z
-  .object({ sellerId: sellerIdSchema, shopName: z.string().optional(), revenue: z.number() })
-  .passthrough();
+export const dashboardTopSellerSchema = z.object({
+  sellerId: sellerIdSchema,
+  shopName: z.string().nullable(),
+  paidGmv: z.number(),
+});
 export type DashboardTopSeller = z.infer<typeof dashboardTopSellerSchema>;
+
+export const dashboardReportSchema = z.object({
+  asOf: z.string().datetime(),
+  periodStart: z.string(),
+  periodEnd: z.string(),
+  summary: dashboardSummarySchema,
+  revenue: z.object({ points: z.array(dashboardRevenuePointSchema) }),
+  topProducts: z.array(dashboardTopProductSchema),
+  topSellers: z.array(dashboardTopSellerSchema),
+});
+export type DashboardReport = z.infer<typeof dashboardReportSchema>;
 
 /**
  * Video admin — moderation queue & appeals.
@@ -281,8 +329,10 @@ export const adminVideoModerationQueuePageSchema = z.object({
 });
 export type AdminVideoModerationQueuePage = z.infer<typeof adminVideoModerationQueuePageSchema>;
 
-/** GET /admin/videos/{videoId}/preview — returns the presigned URL string directly. */
-export const adminVideoPreviewSchema = z.object({ url: z.string() });
+/** Accept the current string response and the normalized object response. */
+export const adminVideoPreviewSchema = z
+  .union([z.string(), z.object({ url: z.string(), expiresAt: z.string().optional() })])
+  .transform((raw) => (typeof raw === "string" ? { url: raw } : raw));
 export type AdminVideoPreview = z.infer<typeof adminVideoPreviewSchema>;
 
 export const adminVideoAppealItemSchema = z.object({

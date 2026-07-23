@@ -26,13 +26,6 @@ spec:
                 name: vnshop-api-gateway
                 port:
                   number: 8080
-          - path: /auth
-            pathType: Prefix
-            backend:
-              service:
-                name: keycloak
-                port:
-                  number: 8085
           - path: /grafana
             pathType: Prefix
             backend:

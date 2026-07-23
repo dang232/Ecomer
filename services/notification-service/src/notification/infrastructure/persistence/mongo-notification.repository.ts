@@ -8,6 +8,7 @@ import {
 } from '../../domain/port/outbound/notification.repository';
 import { Notification } from '../../domain/model/notification';
 import { NotificationType } from '../../domain/model/notification-type.enum';
+import { DeliveryStatusValue } from '../../domain/model/delivery-status';
 import { NotificationSchemaClass } from './mongo-notification.schema';
 import { NotificationMapper } from './notification.mapper';
 
@@ -36,6 +37,20 @@ export class MongoNotificationRepository implements NotificationRepository {
   async findByIds(ids: string[]): Promise<Notification[]> {
     if (ids.length === 0) return [];
     const docs = await this.model.find({ id: { $in: ids } }).lean();
+    return docs.map((d) =>
+      NotificationMapper.toDomain(d as unknown as NotificationSchemaClass),
+    );
+  }
+
+  async findDueRetries(now: Date, limit: number): Promise<Notification[]> {
+    const docs = await this.model
+      .find({
+        deliveryStatus: DeliveryStatusValue.FAILED,
+        nextRetryAt: { $lte: now },
+      })
+      .sort({ nextRetryAt: 1 })
+      .limit(limit)
+      .lean();
     return docs.map((d) =>
       NotificationMapper.toDomain(d as unknown as NotificationSchemaClass),
     );

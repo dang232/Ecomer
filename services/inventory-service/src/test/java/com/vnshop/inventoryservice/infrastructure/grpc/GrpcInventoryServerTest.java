@@ -52,15 +52,15 @@ class GrpcInventoryServerTest {
     }
 
     @Test
-    void reserveAllowsOrderWhenStockIsNotProjectedYet() {
+    void reserveRejectsOrderWhenStockIsNotProjectedYet() {
         // No row in stock_levels for "p1" — pragmatic compromise: allow with warn
         ReserveResponse response = stub.reserve(ReserveRequest.newBuilder()
             .setOrderId("ord-1")
             .addItems(OrderItem.newBuilder().setProductId("p1").setQuantity(1).build())
             .build());
 
-        assertTrue(response.getSuccess());
-        assertEquals(1, response.getReservedItems());
+        assertFalse(response.getSuccess());
+        assertEquals(0, response.getReservedItems());
     }
 
     @Test

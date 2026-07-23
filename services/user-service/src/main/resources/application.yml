@@ -98,7 +98,7 @@ resilience4j:
 
 keycloak:
   # Browser-facing Keycloak URL. Internal service calls still use keycloak:8080.
-  public-base-url: ${KEYCLOAK_PUBLIC_BASE_URL:http://localhost:8085}
+  public-base-url: ${KEYCLOAK_PUBLIC_BASE_URL:http://localhost:8080}
   admin:
     base-url: ${KEYCLOAK_ADMIN_BASE_URL:http://keycloak:8080}
     realm: ${KEYCLOAK_ADMIN_REALM:vnshop}

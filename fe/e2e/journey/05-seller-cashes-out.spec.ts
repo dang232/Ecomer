@@ -44,6 +44,7 @@ const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
 
 test.use({
   video: "on",
+  trace: "off",
   actionTimeout: 30_000,
 });
 
@@ -182,7 +183,7 @@ test.describe.serial("Chapter 5 — Seller cashes out", () => {
             .getByPlaceholder(/Số tài khoản|Bank account|0123456789|tài khoản ngân hàng/i)
             .first();
           await expect(bankInput).toBeVisible({ timeout: 10_000 });
-          await bankInput.fill("0123456789-VCB");
+          await bankInput.fill("0123456789");
 
           await page
             .getByRole("button", {

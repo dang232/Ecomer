@@ -43,4 +43,9 @@ public interface OrderRepositoryPort {
                 .flatMap(s -> findBySellerIdAndFulfillmentStatus(sellerId, s).stream())
                 .toList();
     }
+
+    default List<Order> findBySellerIdAndFulfillmentStatusIn(
+            String sellerId, List<FulfillmentStatus> statuses, String query) {
+        return findBySellerIdAndFulfillmentStatusIn(sellerId, statuses);
+    }
 }

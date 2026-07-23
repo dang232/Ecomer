@@ -16,11 +16,15 @@ class ProductReadModelJpaEntityTest {
                         "name", "Headphones",
                         "status", "ACTIVE",
                         "imageUrl", "https://cdn.example/headphones.jpg",
-                        "stock", 9
+                        "stock", 9,
+                        "averageRating", 4.0,
+                        "reviewCount", 12
                 )
         ).toDomain();
 
         assertThat(model.imageUrl()).isEqualTo("https://cdn.example/headphones.jpg");
         assertThat(model.stock()).isEqualTo(9);
+        assertThat(model.averageRating()).isEqualTo(4.0f);
+        assertThat(model.reviewCount()).isEqualTo(12);
     }
 }

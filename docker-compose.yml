@@ -344,10 +344,11 @@ services:
       KAFKA_SEARCH_PASSWORD: ${KAFKA_SEARCH_PASSWORD:?KAFKA_SEARCH_PASSWORD must be set}
       KAFKA_RECOMMENDATIONS_PASSWORD: ${KAFKA_RECOMMENDATIONS_PASSWORD:?KAFKA_RECOMMENDATIONS_PASSWORD must be set}
       KAFKA_INVOICE_PASSWORD: ${KAFKA_INVOICE_PASSWORD:?KAFKA_INVOICE_PASSWORD must be set}
+      KAFKA_MESSAGING_PASSWORD: ${KAFKA_MESSAGING_PASSWORD:?KAFKA_MESSAGING_PASSWORD must be set}
       KAFKA_VIDEO_TRANSCODER_PASSWORD: ${KAFKA_VIDEO_TRANSCODER_PASSWORD:?KAFKA_VIDEO_TRANSCODER_PASSWORD must be set}
       KAFKA_VIDEO_MODERATOR_PASSWORD: ${KAFKA_VIDEO_MODERATOR_PASSWORD:?KAFKA_VIDEO_MODERATOR_PASSWORD must be set}
       KAFKA_SSL_CLIENT_AUTH: none
-    entrypoint: ["/bin/sh", "-c", "sed -e \"s/\\$${KAFKA_ADMIN_PASSWORD}/$KAFKA_ADMIN_PASSWORD/g\" -e \"s/\\$${KAFKA_ORDER_PASSWORD}/$KAFKA_ORDER_PASSWORD/g\" -e \"s/\\$${KAFKA_PAYMENT_PASSWORD}/$KAFKA_PAYMENT_PASSWORD/g\" -e \"s/\\$${KAFKA_INVENTORY_PASSWORD}/$KAFKA_INVENTORY_PASSWORD/g\" -e \"s/\\$${KAFKA_PRODUCT_PASSWORD}/$KAFKA_PRODUCT_PASSWORD/g\" -e \"s/\\$${KAFKA_SHIPPING_PASSWORD}/$KAFKA_SHIPPING_PASSWORD/g\" -e \"s/\\$${KAFKA_FINANCE_PASSWORD}/$KAFKA_FINANCE_PASSWORD/g\" -e \"s/\\$${KAFKA_SEARCH_PASSWORD}/$KAFKA_SEARCH_PASSWORD/g\" -e \"s/\\$${KAFKA_RECOMMENDATIONS_PASSWORD}/$KAFKA_RECOMMENDATIONS_PASSWORD/g\" -e \"s/\\$${KAFKA_INVOICE_PASSWORD}/$KAFKA_INVOICE_PASSWORD/g\" -e \"s/\\$${KAFKA_VIDEO_TRANSCODER_PASSWORD}/$KAFKA_VIDEO_TRANSCODER_PASSWORD/g\" -e \"s/\\$${KAFKA_VIDEO_MODERATOR_PASSWORD}/$KAFKA_VIDEO_MODERATOR_PASSWORD/g\" /etc/kafka/kafka_server_jaas.conf.template > /etc/kafka/kafka_server_jaas.conf && exec /etc/confluent/docker/run"]
+    entrypoint: ["/bin/sh", "-c", "sed -e \"s/\\$${KAFKA_ADMIN_PASSWORD}/$KAFKA_ADMIN_PASSWORD/g\" -e \"s/\\$${KAFKA_ORDER_PASSWORD}/$KAFKA_ORDER_PASSWORD/g\" -e \"s/\\$${KAFKA_PAYMENT_PASSWORD}/$KAFKA_PAYMENT_PASSWORD/g\" -e \"s/\\$${KAFKA_INVENTORY_PASSWORD}/$KAFKA_INVENTORY_PASSWORD/g\" -e \"s/\\$${KAFKA_PRODUCT_PASSWORD}/$KAFKA_PRODUCT_PASSWORD/g\" -e \"s/\\$${KAFKA_SHIPPING_PASSWORD}/$KAFKA_SHIPPING_PASSWORD/g\" -e \"s/\\$${KAFKA_FINANCE_PASSWORD}/$KAFKA_FINANCE_PASSWORD/g\" -e \"s/\\$${KAFKA_SEARCH_PASSWORD}/$KAFKA_SEARCH_PASSWORD/g\" -e \"s/\\$${KAFKA_RECOMMENDATIONS_PASSWORD}/$KAFKA_RECOMMENDATIONS_PASSWORD/g\" -e \"s/\\$${KAFKA_INVOICE_PASSWORD}/$KAFKA_INVOICE_PASSWORD/g\" -e \"s/\\$${KAFKA_MESSAGING_PASSWORD}/$KAFKA_MESSAGING_PASSWORD/g\" -e \"s/\\$${KAFKA_VIDEO_TRANSCODER_PASSWORD}/$KAFKA_VIDEO_TRANSCODER_PASSWORD/g\" -e \"s/\\$${KAFKA_VIDEO_MODERATOR_PASSWORD}/$KAFKA_VIDEO_MODERATOR_PASSWORD/g\" /etc/kafka/kafka_server_jaas.conf.template > /etc/kafka/kafka_server_jaas.conf && exec /etc/confluent/docker/run"]
     volumes:
       - kafka-data:/var/lib/kafka/data
       - ./infra/kafka/kafka_server_jaas.conf.template:/etc/kafka/kafka_server_jaas.conf.template:ro
@@ -394,10 +395,9 @@ services:
       # Exposes /health/{started,live,ready} on management port 9000 (per Keycloak 26 docs).
       # The image has no curl/wget, so the healthcheck below uses bash's /dev/tcp.
       KC_HEALTH_ENABLED: "true"
-      # Pin the issuer/frontchannel URL so tokens always carry iss=http://localhost:8085/...
-      # regardless of which Host header the request came in on. Services validate iss against
-      # this same URL but fetch JWKS via in-network http://keycloak:8080 (jwk-set-uri override).
-      KC_HOSTNAME: http://localhost:8085
+      # Keep the issuer stable for local JWT validation. Keycloak itself is
+      # network-internal; the browser uses the gateway's native auth boundary.
+      KC_HOSTNAME: http://localhost:8080
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "false"
       KC_HOSTNAME_STRICT: "false"
       KEYCLOAK_GATEWAY_CLIENT_SECRET: ${KEYCLOAK_GATEWAY_CLIENT_SECRET:-vnshop-gateway-secret-dev}
@@ -410,8 +410,8 @@ services:
       FACEBOOK_OAUTH_ENABLED: ${FACEBOOK_OAUTH_ENABLED:-false}
       FACEBOOK_OAUTH_CLIENT_ID: ${FACEBOOK_OAUTH_CLIENT_ID:-}
       FACEBOOK_OAUTH_CLIENT_SECRET: ${FACEBOOK_OAUTH_CLIENT_SECRET:-}
-    ports:
-      - "8085:8080"
+    expose:
+      - "8080"
     volumes:
       - ./infra/keycloak/vnshop-realm.json:/opt/keycloak/data/import/vnshop-realm.json:ro
     depends_on:
@@ -696,7 +696,7 @@ services:
     environment:
       SERVER_PORT: 8080
       REDIS_HOST: redis
-      KEYCLOAK_ISSUER_URI: http://localhost:8085/realms/vnshop
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
       OTEL_TRACES_SAMPLER: parentbased_traceidratio
@@ -720,13 +720,6 @@ services:
       args:
         # Vite inlines these at build time. Override per environment.
         VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
-        VITE_KEYCLOAK_URL: ${VITE_KEYCLOAK_URL:-http://localhost:8085}
-        VITE_KEYCLOAK_REALM: ${VITE_KEYCLOAK_REALM:-vnshop}
-        # vnshop-api is the public client with directAccessGrantsEnabled=true.
-        # The FE uses ROPC (native form -> Keycloak token endpoint) instead of
-        # the PKCE redirect flow, so vnshop-web (PKCE-only) won't work for
-        # passwordLogin / refreshTokens.
-        VITE_KEYCLOAK_CLIENT_ID: ${VITE_KEYCLOAK_CLIENT_ID:-vnshop-api}
         # Payment provider toggles + publishable creds. Vite inlines at build,
         # so adding/removing requires `up -d --build frontend`. Defaults are
         # `false`/empty so the success step renders the disabled-placeholder
@@ -735,9 +728,10 @@ services:
         VITE_STRIPE_PUBLISHABLE_KEY: ${VITE_STRIPE_PUBLISHABLE_KEY:-}
         VITE_PAYPAL_ENABLED: ${VITE_PAYPAL_ENABLED:-false}
         VITE_PAYPAL_CLIENT_ID: ${VITE_PAYPAL_CLIENT_ID:-}
+        VITE_ALLOW_INSECURE_RUNTIME_CONFIG: ${VITE_ALLOW_INSECURE_RUNTIME_CONFIG:-true}
     container_name: vnshop-frontend
     ports:
-      - "3000:80"
+      - "3000:8080"
     depends_on:
       api-gateway:
         condition: service_started
@@ -768,9 +762,9 @@ services:
       REDIS_HOST: redis
       REDIS_PASSWORD: ${REDIS_PASSWORD:-vnshop123}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      KEYCLOAK_ISSUER_URI: http://localhost:8085/realms/vnshop
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
-      KEYCLOAK_PUBLIC_BASE_URL: ${KEYCLOAK_PUBLIC_BASE_URL:-http://localhost:8085}
+      KEYCLOAK_PUBLIC_BASE_URL: ${KEYCLOAK_PUBLIC_BASE_URL:-http://localhost:8080}
       VNSHOP_AUTH_CALLBACK_BASE_URL: ${VNSHOP_AUTH_CALLBACK_BASE_URL:-http://localhost:8080/auth/oauth/callback}
       VNSHOP_FRONTEND_URL: ${VNSHOP_FRONTEND_URL:-http://localhost:3000}
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
@@ -829,7 +823,7 @@ services:
       KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
       KAFKA_SASL_USERNAME: svc-product
       KAFKA_SASL_PASSWORD: ${KAFKA_SVC_PRODUCT_PASSWORD:-kafka-product}
-      KEYCLOAK_ISSUER_URI: http://localhost:8085/realms/vnshop
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
       OTEL_TRACES_SAMPLER: parentbased_traceidratio
@@ -894,7 +888,7 @@ services:
       KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
       KAFKA_SASL_USERNAME: svc-inventory
       KAFKA_SASL_PASSWORD: ${KAFKA_SVC_INVENTORY_PASSWORD:-kafka-inventory}
-      KEYCLOAK_ISSUER_URI: http://localhost:8085/realms/vnshop
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
       OTEL_TRACES_SAMPLER: parentbased_traceidratio
@@ -929,7 +923,7 @@ services:
       REDIS_HOST: redis
       REDIS_PASSWORD: ${REDIS_PASSWORD:-vnshop123}
       DATABASE_URL: postgresql://vnshop:${POSTGRES_PASSWORD:-vnshop}@postgres-cart:5432/vnshop_cart
-      KEYCLOAK_ISSUER_URI: http://localhost:8085/realms/vnshop
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
       OTEL_TRACES_SAMPLER: parentbased_traceidratio
@@ -938,6 +932,8 @@ services:
       # offline-mode branch and every cart item shows the raw UUID as the
       # product name with 0₫. See product-http-client.adapter.ts.
       PRODUCT_SERVICE_URL: http://product-service:8082
+      USER_SERVICE_URL: http://user-service:8081
+      USER_SERVICE_TIMEOUT_MS: ${USER_SERVICE_TIMEOUT_MS:-2000}
     deploy:
       resources:
         limits:
@@ -957,6 +953,10 @@ services:
       - "8097:8097"
     environment:
       SERVER_PORT: 8097
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
+      API_ORIGIN: ${API_ORIGIN:-http://localhost:8080}
+      AUTH_ORIGIN: ${AUTH_ORIGIN:-http://localhost:8080}
+      RUNTIME_CONFIG_ALLOW_INSECURE: ${RUNTIME_CONFIG_ALLOW_INSECURE:-true}
       OPENAPI_ENABLED: ${SWAGGER_ENABLED:-true}
       BRAND_NAME: VNShop
       BRAND_TAGLINE: MARKETPLACE
@@ -1007,7 +1007,7 @@ services:
       REDIS_HOST: redis
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:?ELASTIC_PASSWORD must be set}
-      KEYCLOAK_ISSUER_URI: http://localhost:8085/realms/vnshop
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
       OTEL_TRACES_SAMPLER: parentbased_traceidratio
@@ -1054,7 +1054,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_SASL_USERNAME: svc-order
       KAFKA_SASL_PASSWORD: ${KAFKA_SVC_ORDER_PASSWORD:-kafka-order}
-      KEYCLOAK_ISSUER_URI: http://localhost:8085/realms/vnshop
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
       # Email channel (SES). Set EMAIL_ENABLED=true + AWS creds to activate.
       EMAIL_ENABLED: ${EMAIL_ENABLED:-false}
@@ -1099,7 +1099,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
       REDIS_HOST: redis
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      KEYCLOAK_ISSUER_URI: http://localhost:8085/realms/vnshop
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
       OTEL_TRACES_SAMPLER: parentbased_traceidratio
@@ -1139,7 +1139,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
       REDIS_HOST: redis
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      KEYCLOAK_ISSUER_URI: http://localhost:8085/realms/vnshop
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
       OTEL_TRACES_SAMPLER: parentbased_traceidratio
@@ -1225,7 +1225,7 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       REDIS_HOST: redis
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      KEYCLOAK_ISSUER_URI: http://localhost:8085/realms/vnshop
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
       OTEL_TRACES_SAMPLER: parentbased_traceidratio
@@ -1286,7 +1286,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
       REDIS_HOST: redis
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      KEYCLOAK_ISSUER_URI: http://localhost:8085/realms/vnshop
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
       OTEL_TRACES_SAMPLER: parentbased_traceidratio
@@ -1366,7 +1366,7 @@ services:
       KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
       KAFKA_SASL_USERNAME: svc-shipping
       KAFKA_SASL_PASSWORD: ${KAFKA_SVC_SHIPPING_PASSWORD:-kafka-shipping}
-      KEYCLOAK_ISSUER_URI: http://localhost:8085/realms/vnshop
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
       OTEL_TRACES_SAMPLER: parentbased_traceidratio
@@ -1421,9 +1421,9 @@ services:
       OTEL_TRACES_SAMPLER: parentbased_traceidratio
       OTEL_TRACES_SAMPLER_ARG: "1.0"
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      KAFKA_SASL_USERNAME: svc-order
-      KAFKA_SASL_PASSWORD: ${KAFKA_SVC_ORDER_PASSWORD:-kafka-order}
-      KEYCLOAK_ISSUER_URI: http://localhost:8085/realms/vnshop
+      KAFKA_SASL_USERNAME: svc-messaging
+      KAFKA_SASL_PASSWORD: ${KAFKA_SVC_MESSAGING_PASSWORD:-kafka-messaging}
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
     healthcheck:
       test: ["CMD-SHELL", "curl -fs http://localhost:8095/health || curl -fs http://localhost:8095 || exit 1"]

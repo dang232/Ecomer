@@ -8,6 +8,7 @@ import com.vnshop.userservice.application.RejectSellerUseCase;
 import com.vnshop.userservice.application.ListBuyerPublicProfilesUseCase;
 import com.vnshop.userservice.application.ListPendingSellersUseCase;
 import com.vnshop.userservice.application.ListPublicSellersUseCase;
+import com.vnshop.userservice.application.ListPublicSellerProfilesUseCase;
 import com.vnshop.userservice.application.ManageAddressUseCase;
 import com.vnshop.userservice.application.RegisterBuyerUseCase;
 import com.vnshop.userservice.application.RegisterSellerUseCase;
@@ -75,6 +76,11 @@ public class UseCaseConfig {
     @Bean
     ListBuyerPublicProfilesUseCase listBuyerPublicProfilesUseCase(UserRepositoryPort userRepositoryPort) {
         return new ListBuyerPublicProfilesUseCase(userRepositoryPort);
+    }
+
+    @Bean
+    ListPublicSellerProfilesUseCase listPublicSellerProfilesUseCase(UserRepositoryPort userRepositoryPort) {
+        return new ListPublicSellerProfilesUseCase(userRepositoryPort);
     }
 
     @Bean

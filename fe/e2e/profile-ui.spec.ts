@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { loginViaOidc, uniqueTestId } from "./_auth";
 
 /**
  * UI-driven QA spec for the buyer profile page.
@@ -26,7 +27,7 @@ interface SeededBuyer {
 }
 
 async function seedBuyer(request: APIRequestContext): Promise<SeededBuyer> {
-  const stamp = Date.now() + Math.floor(Math.random() * 1_000);
+  const stamp = uniqueTestId();
   const email = `e2e_qa_profile_${stamp}@vnshop.local`;
   const reg = await request.post(`${apiURL}/auth/register`, {
     data: { firstName: "QA", lastName: "Profile", email, password: PASSWORD },
@@ -41,7 +42,8 @@ async function seedBuyer(request: APIRequestContext): Promise<SeededBuyer> {
   return { email, accessToken };
 }
 
-async function loadProfileAuthenticated(page: Page): Promise<void> {
+async function loadProfileAuthenticated(page: Page, email: string): Promise<void> {
+  await loginViaOidc(page, email, PASSWORD);
   await page.goto("/profile");
   // Either the loaded profile content OR the login prompt is acceptable as a
   // "no global error fallback" signal — we then check which one rendered.
@@ -54,8 +56,8 @@ test.describe("profile page UI — buyer flow", () => {
   test("/profile loads without the global error fallback (post-pt28 schema fix)", async ({
     page,
   }) => {
-    await seedBuyer(page.request);
-    await loadProfileAuthenticated(page);
+    const buyer = await seedBuyer(page.request);
+    await loadProfileAuthenticated(page, buyer.email);
 
     // Pre-pt28 the page rendered the global error fallback because the
     // userProfileSchema required `id` and `email` strings, but BE returned
@@ -78,11 +80,11 @@ test.describe("profile page UI — buyer flow", () => {
   test("Addresses tab renders and the empty-state copy appears for a new buyer", async ({
     page,
   }) => {
-    await seedBuyer(page.request);
-    await loadProfileAuthenticated(page);
+    const buyer = await seedBuyer(page.request);
+    await loadProfileAuthenticated(page, buyer.email);
 
     // Click the Addresses tab.
-    await page.getByRole("button", { name: /^(Addresses|Địa chỉ)$/i }).click();
+    await page.getByRole("tab", { name: /^(Addresses|Địa chỉ)$/i }).click();
 
     // A fresh buyer has no addresses; the empty-state copy should appear.
     await expect(

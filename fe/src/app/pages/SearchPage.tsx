@@ -28,10 +28,7 @@ import { Skeleton } from "../../shared/ui/skeleton";
 import { Surface } from "../../shared/ui/surface";
 import { ProductCard } from "../components/product-card";
 import { categoryDisplayLabel, useCategories } from "../hooks/use-categories";
-import { useProducts } from "../hooks/use-products";
 import { useProductsV2 } from "../hooks/use-products-v2";
-import { useSearch } from "../hooks/use-search";
-import { useSearchFacets } from "../hooks/use-search-facets";
 import { useSearchV2 } from "../hooks/use-search-v2";
 import { catalogV2Enabled } from "../lib/api/catalog-flags";
 import { flattenCategoryTree } from "../lib/api/endpoints/categories";
@@ -174,10 +171,10 @@ export function SearchPage() {
     officialOnly,
     sortBy,
   });
-  // The v2 contract only exposes deterministic cursor sorts and does not yet
-  // carry the legacy flash/rating/free-shipping filters.
-  const v2Eligible =
-    catalogV2Enabled && sortBy !== "popular" && !isFlash && minRating === 0 && !freeShipOnly;
+  // V2 is the sole buyer catalog path. Unsupported legacy-only filters are
+  // still applied to the returned V2 page below until their server fields are
+  // added to the read model.
+  const v2Eligible = catalogV2Enabled;
   const useV2SearchPath = v2Eligible && searchEnabled;
   const useV2CatalogPath = v2Eligible && !searchEnabled;
   const v2Params = {
@@ -186,7 +183,8 @@ export function SearchPage() {
     brand: selectedBrand || undefined,
     minPrice: appliedPriceMin ? Number(appliedPriceMin) * 1000 : undefined,
     maxPrice: appliedPriceMax ? Number(appliedPriceMax) * 1000 : undefined,
-    sort: sortBy,
+    // V2 has no popularity metric yet; its default deterministic order is newest.
+    sort: sortBy === "popular" ? undefined : sortBy,
     sameDay: sameDay || undefined,
     verifiedOnly: verifiedOnly || undefined,
     officialOnly: officialOnly || undefined,
@@ -194,42 +192,11 @@ export function SearchPage() {
   };
   const searchV2 = useSearchV2({ ...v2Params, includeFacets: true }, useV2SearchPath);
   const productsV2 = useProductsV2(v2Params, useV2CatalogPath);
-  const v2SearchActive = useV2SearchPath && !searchV2.error;
-  const v2CatalogActive = useV2CatalogPath && !productsV2.error;
-  const legacySearchEnabled = searchEnabled && (!useV2SearchPath || Boolean(searchV2.error));
-  const legacyCatalogEnabled = !useV2CatalogPath || Boolean(productsV2.error);
-  // Spring Pageable is 0-based; currentPage is 1-based.
-  const search = useSearch(
-    {
-      q: query || undefined,
-      category: selectedCat || undefined,
-      brand: selectedBrand || undefined,
-      minPrice: appliedPriceMin ? Number(appliedPriceMin) * 1000 : undefined,
-      maxPrice: appliedPriceMax ? Number(appliedPriceMax) * 1000 : undefined,
-      sort: sortBy === "popular" ? undefined : sortBy,
-      page: currentPage - 1,
-      size: pageSize,
-      sameDay: sameDay || undefined,
-      verifiedOnly: verifiedOnly || undefined,
-      officialOnly: officialOnly || undefined,
-    },
-    legacySearchEnabled,
-  );
-
-  const { facets } = useSearchFacets({
-    q: query || undefined,
-    category: selectedCat || undefined,
-    brand: selectedBrand || undefined,
-    minPrice: appliedPriceMin ? Number(appliedPriceMin) * 1000 : undefined,
-    maxPrice: appliedPriceMax ? Number(appliedPriceMax) * 1000 : undefined,
-    sameDay: sameDay || undefined,
-    verifiedOnly: verifiedOnly || undefined,
-    officialOnly: officialOnly || undefined,
-    enabled: legacySearchEnabled,
-  });
-
-  const catalogQuery = useProducts({ categoryId: selectedCat || undefined }, legacyCatalogEnabled);
-  const localCatalog = catalogQuery.data ?? [];
+  // Keep the query modes mutually exclusive: a filtered view uses
+  // search-service V2; an unfiltered browse uses product-service V2.
+  const v2SearchActive = useV2SearchPath;
+  const v2CatalogActive = useV2CatalogPath;
+  const facets = searchV2.data?.pages[0]?.data.facets ?? { categories: [], brands: [] };
   const v2SearchProducts = useMemo(() => {
     const seen = new Set<string>();
     return (searchV2.data?.pages.flatMap((page) => page.data.items) ?? [])
@@ -250,13 +217,13 @@ export function SearchPage() {
       })
       .map(fromServer);
   }, [productsV2.data]);
-  const backendProducts = v2SearchActive ? v2SearchProducts : search.products;
-  const backendLoading = v2SearchActive ? searchV2.isLoading : search.isLoading;
-  const backendHasError = v2SearchActive ? false : Boolean(search.error);
-  const backendTotalElements = v2SearchActive ? v2SearchProducts.length : search.totalElements;
-  const catalogProducts = v2CatalogActive ? v2CatalogProducts : localCatalog;
-  const catalogLoading = v2CatalogActive ? productsV2.isLoading : catalogQuery.isLoading;
-  const catalogHasError = v2CatalogActive ? false : Boolean(catalogQuery.error);
+  const backendProducts = v2SearchActive ? v2SearchProducts : [];
+  const backendLoading = v2SearchActive && searchV2.isLoading;
+  const backendHasError = v2SearchActive && Boolean(searchV2.error);
+  const backendTotalElements = v2SearchProducts.length;
+  const catalogProducts = v2CatalogActive ? v2CatalogProducts : [];
+  const catalogLoading = v2CatalogActive && productsV2.isLoading;
+  const catalogHasError = v2CatalogActive && Boolean(productsV2.error);
   const { data: categories = [] } = useCategories();
   const flatCategories = useMemo(() => flattenCategoryTree(categories), [categories]);
 
@@ -270,13 +237,12 @@ export function SearchPage() {
   });
   const usedBackend = sourceState.source === "search";
   const catalog = usedBackend ? backendProducts : catalogProducts;
-  // A search can legitimately return zero items while the local catalog is
-  // available during index lag. In that case the displayed source is legacy
-  // fallback and must retain its local filtering/pagination behavior.
+  // V2 is the only displayed source. A failed or empty V2 result remains an
+  // explicit error/empty state instead of silently switching to legacy data.
   const v2DisplayActive = (v2SearchActive && usedBackend) || (v2CatalogActive && !usedBackend);
 
   const filtered = useMemo(() => {
-    if (v2DisplayActive) return catalog;
+    if (v2DisplayActive && !isFlash && minRating === 0 && !freeShipOnly) return catalog;
     let list = [...catalog];
     if (isFlash) list = list.filter((p) => (p.discount ?? 0) >= 20 || p.badge === "flash");
     if (!usedBackend) {
@@ -331,11 +297,12 @@ export function SearchPage() {
     isFlash,
   ]);
 
-  // Backend handles its own pagination; only slice locally for the fallback catalog.
+  // V2 owns pagination through cursors; local slicing is retained only for
+  // unsupported legacy-only filters applied to the current V2 page.
   const totalCount = v2DisplayActive
     ? filtered.length
     : usedBackend
-      ? search.totalElements
+      ? backendTotalElements
       : filtered.length;
   const totalPages = v2DisplayActive ? 1 : Math.max(1, Math.ceil(totalCount / pageSize));
   const paginated = usedBackend
@@ -357,8 +324,6 @@ export function SearchPage() {
     const requests: Promise<unknown>[] = [];
     if (useV2SearchPath) requests.push(searchV2.refetch());
     if (useV2CatalogPath) requests.push(productsV2.refetch());
-    if (legacyCatalogEnabled) requests.push(catalogQuery.refetch());
-    if (legacySearchEnabled) requests.push(search.refetch());
     void Promise.allSettled(requests);
   };
   const v2HasMore =
@@ -436,7 +401,7 @@ export function SearchPage() {
 
   const filterProps = {
     categories: flatCategories,
-    facets: v2SearchActive ? (searchV2.data?.pages[0]?.data.facets ?? facets) : facets,
+    facets,
     values: {
       selectedCategory: selectedCat,
       selectedBrand,
@@ -624,15 +589,10 @@ export function SearchPage() {
                 aria-hidden="true"
               />
               <p className="min-w-0 flex-1 text-sm text-[var(--color-warning-text)]">
-                {displayState.notice === "search-unavailable"
-                  ? t("search.fallbackUnavailable", {
-                      defaultValue:
-                        "Search is temporarily unavailable. Showing available catalog products.",
-                    })
-                  : t("search.fallbackIndexing", {
-                      defaultValue:
-                        "Search results are still updating. Showing available catalog products.",
-                    })}
+                {t("search.fallbackUnavailable", {
+                  defaultValue:
+                    "Search is temporarily unavailable. Showing previously loaded results.",
+                })}
               </p>
               <Button variant="ghost" size="sm" onClick={retryResults} className="shrink-0">
                 {t("common.refresh", { defaultValue: "Refresh" })}

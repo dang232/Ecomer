@@ -22,8 +22,8 @@ export function SellersApproval() {
   const [detailFor, setDetailFor] = useState<string | null>(null);
   const [rejectFor, setRejectFor] = useState<string | null>(null);
   const sellersQuery = useQuery({
-    queryKey: ["admin", "sellers"],
-    queryFn: adminListSellers,
+    queryKey: ["admin", "sellers", search],
+    queryFn: () => adminListSellers({ q: search || undefined }),
     retry: false,
   });
 
@@ -50,13 +50,9 @@ export function SellersApproval() {
       toast.error(err instanceof ApiError ? err.message : t("admin.sellers.rejectErr")),
   });
 
-  const filtered = (sellersQuery.data ?? []).filter((s) =>
-    s.shopName.toLowerCase().includes(search.toLowerCase()),
-  );
+  const sellers = sellersQuery.data ?? [];
 
-  const detailSeller = detailFor
-    ? ((sellersQuery.data ?? []).find((s) => s.id === detailFor) ?? null)
-    : null;
+  const detailSeller = detailFor ? (sellers.find((s) => s.id === detailFor) ?? null) : null;
 
   return (
     <div className="space-y-5">
@@ -108,7 +104,7 @@ export function SellersApproval() {
       {sellersQuery.error instanceof ApiError ? (
         <p className="text-sm text-red-600 dark:text-red-400">{sellersQuery.error.message}</p>
       ) : null}
-      {!sellersQuery.isLoading && filtered.length === 0 ? (
+      {!sellersQuery.isLoading && sellers.length === 0 ? (
         <div className="bg-card rounded-2xl p-8 text-center shadow-sm">
           <p className="text-sm text-muted-foreground">{t("admin.sellers.empty")}</p>
         </div>
@@ -116,7 +112,7 @@ export function SellersApproval() {
 
       <div className="bg-card rounded-2xl shadow-sm overflow-hidden">
         <div className="divide-y divide-gray-50">
-          {filtered.map((s) => {
+          {sellers.map((s) => {
             const tail = s.bankAccount ? s.bankAccount.slice(-4) : null;
             const bankLine =
               s.bankName && tail

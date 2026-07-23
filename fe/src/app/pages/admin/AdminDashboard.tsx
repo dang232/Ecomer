@@ -2,12 +2,12 @@ import {
   IconAlertCircle,
   IconChartBar,
   IconPackage,
-  IconRefresh,
   IconTrendingUp,
   IconUsers,
   IconWallet,
 } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Area,
@@ -22,43 +22,57 @@ import {
 } from "recharts";
 
 import { KPICard } from "../../components/kpi-card";
-import { ApiError } from "../../lib/api";
-import {
-  dashboardRevenue,
-  dashboardSummary,
-  dashboardTopProducts,
-  dashboardTopSellers,
-} from "../../lib/api/endpoints/admin";
+import { dashboardReport, dashboardExport } from "../../lib/api/endpoints/admin";
 import { formatPrice } from "../../lib/format";
-import { comingSoon } from "../../lib/ui/coming-soon";
 
 export function AdminDashboard() {
   const { t } = useTranslation();
-  const summaryQuery = useQuery({
-    queryKey: ["admin", "dashboard", "summary"],
-    queryFn: dashboardSummary,
-    retry: false,
-  });
-  const revenueQuery = useQuery({
-    queryKey: ["admin", "dashboard", "revenue"],
-    queryFn: () => dashboardRevenue({ granularity: "month" }),
-    retry: false,
-  });
-  const topProductsQuery = useQuery({
-    queryKey: ["admin", "dashboard", "top-products"],
-    queryFn: () => dashboardTopProducts({ limit: 5 }),
-    retry: false,
-  });
-  const topSellersQuery = useQuery({
-    queryKey: ["admin", "dashboard", "top-sellers"],
-    queryFn: () => dashboardTopSellers({ limit: 5 }),
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState(false);
+  const periodEnd = new Date().toISOString().slice(0, 10);
+  const periodStart = new Date(Date.now() - 29 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const dashboardParams = {
+    from: periodStart,
+    to: periodEnd,
+    granularity: "day" as const,
+    limit: 5,
+  };
+  const reportQuery = useQuery({
+    queryKey: ["admin", "dashboard", "report", periodStart, periodEnd],
+    queryFn: () => dashboardReport(dashboardParams),
     retry: false,
   });
 
-  const totalRevenue = summaryQuery.data?.totalRevenue ?? null;
-  const totalUsers = summaryQuery.data?.totalUsers ?? null;
-  const totalOrders = summaryQuery.data?.totalOrders ?? null;
-  const totalSellers = summaryQuery.data?.totalSellers ?? null;
+  const summary = reportQuery.data?.summary;
+  const paidGmv = summary?.paidGmv ?? null;
+  const refundedAmount = summary?.refundedAmount ?? null;
+  const realizedRevenue = summary?.realizedRevenue ?? null;
+  const activeBuyers = summary?.activeBuyers ?? null;
+  const totalOrders = summary?.totalOrders ?? null;
+  const activeSellers = summary?.activeSellers ?? null;
+  const revenue = reportQuery.data?.revenue.points ?? [];
+  const topProducts = reportQuery.data?.topProducts ?? [];
+  const topSellers = reportQuery.data?.topSellers ?? [];
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    setExportError(false);
+    try {
+      const blob = await dashboardExport({ ...dashboardParams, asOf: reportQuery.data?.asOf });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `vnshop-dashboard-${periodStart}-to-${periodEnd}.csv`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setExportError(true);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -68,14 +82,21 @@ export function AdminDashboard() {
           <p className="text-sm text-muted-foreground">{t("admin.dashboard.subtitle")}</p>
         </div>
         <button
-          onClick={() => comingSoon("Export", t)}
+          onClick={() => void handleExport()}
+          disabled={isExporting}
           className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border bg-card text-sm text-muted-foreground hover:bg-muted transition-colors"
         >
-          <IconChartBar size={15} /> {t("admin.dashboard.exportReport")}
+          <IconChartBar size={15} />{" "}
+          {isExporting ? t("admin.dashboard.exporting") : t("admin.dashboard.exportReport")}
         </button>
       </div>
+      {exportError ? (
+        <p role="alert" className="text-sm text-amber-700">
+          {t("admin.dashboard.exportFailed")}
+        </p>
+      ) : null}
 
-      {summaryQuery.error instanceof ApiError ? (
+      {reportQuery.isError ? (
         <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-4 text-sm text-amber-800 dark:text-amber-200 flex items-center gap-3">
           <IconAlertCircle size={18} className="shrink-0 text-amber-500" />
           <p className="flex-1">
@@ -85,88 +106,102 @@ export function AdminDashboard() {
           </p>
           <button
             type="button"
-            onClick={() => summaryQuery.refetch()}
+            onClick={() => reportQuery.refetch()}
             className="inline-flex items-center gap-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/50 border border-amber-300 dark:border-amber-700 px-3 py-1.5 text-xs font-medium text-amber-800 dark:text-amber-200 hover:bg-amber-200 dark:hover:bg-amber-900 transition-colors"
           >
-            <IconRefresh size={14} />
             {t("common.retry", { defaultValue: "Retry" })}
           </button>
         </div>
       ) : null}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
         <KPICard
           icon={IconTrendingUp}
-          label={t("admin.dashboard.kpi.totalRevenue")}
-          value={totalRevenue !== null ? formatPrice(totalRevenue) : "—"}
+          label={t("admin.dashboard.kpi.paidGmv")}
+          value={paidGmv !== null ? formatPrice(paidGmv) : "N/A"}
           color="var(--primary)"
         />
         <KPICard
           icon={IconUsers}
-          label={t("admin.dashboard.kpi.totalUsers")}
-          value={totalUsers !== null ? totalUsers.toLocaleString() : "—"}
+          label={t("admin.dashboard.kpi.activeBuyers")}
+          value={activeBuyers !== null ? activeBuyers.toLocaleString() : "N/A"}
           color="var(--info)"
         />
         <KPICard
+          icon={IconTrendingUp}
+          label={t("admin.dashboard.kpi.realizedRevenue")}
+          value={realizedRevenue !== null ? formatPrice(realizedRevenue) : "N/A"}
+          color="var(--success)"
+        />
+        <KPICard
+          icon={IconChartBar}
+          label={t("admin.dashboard.kpi.refundedAmount")}
+          value={refundedAmount !== null ? formatPrice(refundedAmount) : "N/A"}
+          color="var(--warning)"
+        />
+        <KPICard
           icon={IconPackage}
-          label={t("admin.dashboard.kpi.totalOrders")}
-          value={totalOrders !== null ? totalOrders.toLocaleString() : "—"}
+          label={t("admin.dashboard.kpi.paidOrders")}
+          value={totalOrders !== null ? totalOrders.toLocaleString() : "N/A"}
           color="var(--accent)"
         />
         <KPICard
           icon={IconWallet}
-          label={t("admin.dashboard.kpi.totalSellers")}
-          value={totalSellers !== null ? totalSellers.toLocaleString() : "—"}
+          label={t("admin.dashboard.kpi.activeSellers")}
+          value={activeSellers !== null ? activeSellers.toLocaleString() : "N/A"}
           color="var(--warning)"
         />
       </div>
 
       <div className="bg-card rounded-2xl p-5 shadow-sm">
         <h3 className="font-bold text-foreground mb-4">{t("admin.dashboard.revenueTitle")}</h3>
-        {revenueQuery.isLoading ? (
+        {reportQuery.isLoading ? (
           <p className="text-sm text-muted-foreground">{t("admin.dashboard.loading")}</p>
         ) : null}
-        {revenueQuery.data && revenueQuery.data.length > 0 ? (
-          <ResponsiveContainer width="100%" height={260}>
-            <AreaChart data={revenueQuery.data}>
-              <defs>
-                <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis
-                dataKey="date"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
-              />
-              <YAxis
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
-                tickFormatter={(v) => `${(v / 1_000_000).toFixed(0)}tr`}
-              />
-              <Tooltip
-                formatter={(v: number) => formatPrice(v)}
-                contentStyle={{
-                  borderRadius: "12px",
-                  border: "none",
-                  boxShadow: "0 4px 24px rgba(0,0,0,0.1)",
-                }}
-              />
-              <Area
-                type="monotone"
-                dataKey="amount"
-                color="var(--primary)"
-                strokeWidth={2.5}
-                fill="url(#revGrad)"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+        {!reportQuery.isError && revenue.length > 0 ? (
+          <div data-testid="admin-revenue-chart">
+            <ResponsiveContainer width="100%" height={260}>
+              <AreaChart data={revenue}>
+                <defs>
+                  <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis
+                  dataKey="date"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+                  tickFormatter={(v) => `${(v / 1_000_000).toFixed(0)}tr`}
+                />
+                <Tooltip
+                  formatter={(v: number) => formatPrice(v)}
+                  contentStyle={{
+                    borderRadius: "12px",
+                    border: "none",
+                    boxShadow: "0 4px 24px rgba(0,0,0,0.1)",
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="paidGmv"
+                  color="var(--primary)"
+                  strokeWidth={2.5}
+                  fill="url(#revGrad)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         ) : (
-          !revenueQuery.isLoading && (
+          !reportQuery.isLoading &&
+          !reportQuery.isError && (
             <p className="text-sm text-muted-foreground text-center py-12">
               {t("admin.dashboard.revenueEmpty")}
             </p>
@@ -177,29 +212,33 @@ export function AdminDashboard() {
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="bg-card rounded-2xl p-5 shadow-sm">
           <h3 className="font-bold text-foreground mb-4">{t("admin.dashboard.topProducts")}</h3>
-          {topProductsQuery.data && topProductsQuery.data.length > 0 ? (
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={topProductsQuery.data} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
-                <XAxis
-                  type="number"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "var(--muted-foreground)", fontSize: 10 }}
-                  tickFormatter={(v) => `${(v / 1_000_000).toFixed(0)}tr`}
-                />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
-                  width={120}
-                />
-                <Tooltip formatter={(v: number) => formatPrice(v)} />
-                <Bar dataKey="revenue" fill="var(--accent)" radius={[0, 6, 6, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          {topProducts.length > 0 ? (
+            <div data-testid="admin-top-products-chart">
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={topProducts} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+                  <XAxis
+                    type="number"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "var(--muted-foreground)", fontSize: 10 }}
+                    tickFormatter={(v: number) => v.toLocaleString()}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+                    width={120}
+                  />
+                  <Tooltip
+                    formatter={(v: number) => `${v.toLocaleString()} ${t("admin.dashboard.units")}`}
+                  />
+                  <Bar dataKey="unitsSold" fill="var(--accent)" radius={[0, 6, 6, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-8">
               {t("admin.dashboard.noData")}
@@ -209,9 +248,9 @@ export function AdminDashboard() {
 
         <div className="bg-card rounded-2xl p-5 shadow-sm">
           <h3 className="font-bold text-foreground mb-4">{t("admin.dashboard.topSellers")}</h3>
-          {topSellersQuery.data && topSellersQuery.data.length > 0 ? (
+          {topSellers.length > 0 ? (
             <div className="space-y-3">
-              {topSellersQuery.data.map((s, i) => (
+              {topSellers.map((s, i) => (
                 <div key={s.sellerId} className="flex items-center gap-3">
                   <span
                     className="w-6 text-center text-sm font-black"
@@ -221,11 +260,11 @@ export function AdminDashboard() {
                   </span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">
-                      {s.shopName ?? s.sellerId}
+                      {s.shopName ?? t("admin.dashboard.unknownShop")}
                     </p>
                   </div>
                   <span className="font-bold text-sm shrink-0" style={{ color: "var(--accent)" }}>
-                    {formatPrice(s.revenue)}
+                    {formatPrice(s.paidGmv)}
                   </span>
                 </div>
               ))}

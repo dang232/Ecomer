@@ -43,6 +43,7 @@ const PASSWORD = "Test1234!";
 
 test.use({
   video: "on",
+  trace: "off",
   // Workday driver runs tracing manually so the zip lands in
   // fe/e2e/evidence/buyer/ before afterAll resolves. Playwright's own
   // `trace: "on"` would finalize the zip too late.
@@ -174,10 +175,14 @@ test.describe.serial("Workday — buyer (guest → register → shop → order)"
           timeout: 20_000,
         });
         const addBtn = page.getByRole("button", { name: /add to cart|thêm vào giỏ/i }).first();
+        const addResponsePromise = page.waitForResponse(
+          (response) =>
+            response.url().includes("/cart/items") && response.request().method() === "POST",
+          { timeout: 15_000 },
+        );
         await addBtn.click();
-        // Authed add fires sonner with `Đã thêm "<name>" vào giỏ hàng`
-        // (vnshop-context.tsx hard-codes that copy in VI).
-        await expect(page.getByText(/vào giỏ hàng/i).first()).toBeVisible({ timeout: 15_000 });
+        const addResponse = await addResponsePromise;
+        expect(addResponse.ok(), `add to cart failed: ${addResponse.status()}`).toBeTruthy();
       });
 
       await step(page, "buyer", "Cart shows real product name and non-zero VND total", async () => {
@@ -220,7 +225,7 @@ test.describe.serial("Workday — buyer (guest → register → shop → order)"
         await expect(
           page.getByRole("heading", { name: /Personal info|Thông tin cá nhân/i }),
         ).toBeVisible({ timeout: 20_000 });
-        await page.getByRole("button", { name: /^(Addresses|Địa chỉ)$/i }).click();
+        await page.getByRole("tab", { name: /^(Addresses|Địa chỉ)$/i }).click();
         await page.getByRole("button", { name: /Add address|Thêm địa chỉ/i }).click();
         const street = page.getByLabel(/Street|Số nhà/i).first();
         await expect(street).toBeVisible({ timeout: 10_000 });
@@ -335,6 +340,9 @@ test.describe.serial("Workday — buyer (guest → register → shop → order)"
         const cancelBtn = page.getByRole("button", { name: /^(cancel|hủy đơn)$/i });
         await expect(cancelBtn).toBeVisible({ timeout: 15_000 });
         await cancelBtn.click();
+        const confirmDialog = page.getByRole("dialog");
+        await expect(confirmDialog).toBeVisible({ timeout: 5_000 });
+        await confirmDialog.getByRole("button", { name: /^hủy đơn$/i }).click();
         await expect(page.getByText(/Order cancelled|Đã huỷ đơn hàng/i)).toBeVisible({
           timeout: 15_000,
         });
@@ -374,7 +382,7 @@ test.describe.serial("Workday — buyer (guest → register → shop → order)"
         // (canonical public URL pattern from S3ObjectStorageAdapter#publicUrl).
         // The camera button replaces the gradient-letter placeholder with an
         // <img> when avatarUrl is non-empty.
-        const avatar = page.locator('img[alt][class*="rounded-2xl"]').first();
+        const avatar = page.locator('img[alt][class*="rounded-full"]').first();
         await expect(avatar).toBeVisible({ timeout: 10_000 });
         const src = await avatar.getAttribute("src");
         expect(src, "avatar img src must point at the avatars path").toMatch(/\/avatars\//);

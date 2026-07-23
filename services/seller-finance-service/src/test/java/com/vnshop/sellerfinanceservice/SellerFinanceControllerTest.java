@@ -11,6 +11,7 @@ import com.vnshop.sellerfinanceservice.domain.PayoutStatus;
 import com.vnshop.sellerfinanceservice.domain.SellerWallet;
 import com.vnshop.sellerfinanceservice.domain.port.out.PayoutRepositoryPort;
 import com.vnshop.sellerfinanceservice.domain.port.out.SellerWalletRepositoryPort;
+import com.vnshop.sellerfinanceservice.domain.port.out.SellerDirectoryPort;
 import com.vnshop.sellerfinanceservice.infrastructure.persistence.ProcessedOrderEventRepository;
 import com.vnshop.sellerfinanceservice.infrastructure.persistence.ProcessedRefundRepository;
 import java.math.BigDecimal;
@@ -54,6 +55,9 @@ class SellerFinanceControllerTest {
     private PayoutRepositoryPort payoutRepositoryPort;
 
     @MockitoBean
+    private SellerDirectoryPort sellerDirectoryPort;
+
+    @MockitoBean
     private ProcessedRefundRepository processedRefundRepository;
 
     @MockitoBean
@@ -72,6 +76,7 @@ class SellerFinanceControllerTest {
                 Map.of("sub", SELLER_ID, "realm_access", Map.of("roles", List.of("ADMIN", "SELLER")))
         );
         when(jwtDecoder.decode("token")).thenReturn(jwt);
+        when(sellerDirectoryPort.lookup(any())).thenReturn(Map.of(SELLER_ID, "Alice Shop"));
     }
 
     @Test
@@ -167,6 +172,7 @@ class SellerFinanceControllerTest {
         assertThat(row.get("status").asText()).isEqualTo("COMPLETED");
         assertThat(row.get("completedBy").asText()).isEqualTo("admin-42");
         assertThat(row.get("completedAt").asText()).isEqualTo(completedAt.toString());
+        assertThat(row.get("sellerName").asText()).isEqualTo("Alice Shop");
     }
 
     private HttpRequest.Builder authorizedRequest(String path) {

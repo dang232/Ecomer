@@ -323,12 +323,42 @@ describe("useCart", () => {
       expect(postCall).toBeDefined();
       const [, request] = postCall as [RequestInfo | URL, RequestInit];
       expect(request).toMatchObject({ method: "POST" });
-      expect(JSON.parse((request as RequestInit).body as string)).toEqual({
-        productId: "prod-1",
-        quantity: 2,
+      expect(JSON.parse((request as RequestInit).body as string)).toMatchObject({
+        sessionId: expect.any(String),
+        idempotencyKey: expect.any(String),
+        items: [{ productId: "prod-1", quantity: 2 }],
       });
       expect(result.current.items).toMatchObject([{ productId: "prod-1", quantity: 7 }]);
       expect(result.current.itemCount).toBe(7);
+    });
+
+    it("keeps the guest cart when the atomic merge endpoint fails", async () => {
+      useAuthMock.mockReturnValue({ ready: true, authenticated: true });
+      localStorage.setItem(
+        "vnshop:guest-cart",
+        JSON.stringify([
+          { productId: "prod-1", quantity: 2 },
+          { productId: "prod-2", quantity: 1, variantId: "variant-2" },
+        ]),
+      );
+      fetchSpy
+        .mockResolvedValueOnce(cartEnvelope({ items: [], itemCount: 0, totalAmount: 0 }))
+        .mockResolvedValueOnce(cartEnvelope({}, 500));
+
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
+
+      await waitFor(() => expect(result.current.isReady).toBe(true));
+      act(() => result.current.requestMerge());
+
+      await act(async () => {
+        await expect(result.current.executeMerge()).resolves.toBe(false);
+      });
+
+      expect(JSON.parse(localStorage.getItem("vnshop:guest-cart") ?? "[]")).toEqual([
+        { productId: "prod-1", quantity: 2 },
+        { productId: "prod-2", quantity: 1, variantId: "variant-2" },
+      ]);
     });
   });
 

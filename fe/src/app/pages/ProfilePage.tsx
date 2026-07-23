@@ -598,17 +598,12 @@ export function ProfilePage() {
                 {t("profile.security.title")}
               </h2>
               <p className="text-sm text-muted-foreground mb-4">{t("profile.security.subtitle")}</p>
-              <button
-                onClick={() => {
-                  const env = import.meta.env as Record<string, string | undefined>;
-                  const url = (env.VITE_KEYCLOAK_URL ?? "").replace(/\/$/, "");
-                  const realm = env.VITE_KEYCLOAK_REALM ?? "vnshop";
-                  window.open(`${url}/realms/${realm}/account`, "_blank", "noopener");
-                }}
-                className="px-4 py-2.5 rounded-[var(--radius-md)] bg-primary text-white text-sm font-semibold"
-              >
-                {t("profile.security.openKeycloak")}
-              </button>
+              <p className="rounded-[var(--radius-md)] border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+                {t("profile.security.nativeBoundary", {
+                  defaultValue:
+                    "Password and session security are handled by VNShop's protected account service.",
+                })}
+              </p>
             </div>
           ) : null}
         </div>

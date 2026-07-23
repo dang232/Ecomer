@@ -75,7 +75,7 @@ public class AuthSessionController {
             @Value("${vnshop.auth.cookie-secure:false}") boolean cookieSecure,
             @Value("${vnshop.auth.cookie-same-site:Strict}") String cookieSameSite,
             @Value("${vnshop.auth.callback-base-url:}") String callbackBaseUrl,
-            @Value("${keycloak.public-base-url:http://localhost:8085}") String keycloakPublicBaseUrl,
+            @Value("${keycloak.public-base-url:http://localhost:8080}") String keycloakPublicBaseUrl,
             @Value("${vnshop.auth.frontend-base-url:http://localhost:3000}") String frontendBaseUrl) {
         this.useCase = useCase;
         this.oauthState = oauthState;

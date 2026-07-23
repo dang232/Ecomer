@@ -62,6 +62,10 @@ spring:
           jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs}
 
 vnshop:
+  user-service:
+    base-url: ${USER_SERVICE_URL:http://user-service:8081}
+    connect-timeout-ms: ${USER_SERVICE_CONNECT_TIMEOUT_MS:1000}
+    read-timeout-ms: ${USER_SERVICE_READ_TIMEOUT_MS:2000}
   idempotency:
     ttl: 24h
   commission:

@@ -5,6 +5,9 @@ import com.vnshop.paymentservice.domain.port.out.PaymentCallbackOutbox;
 import jakarta.annotation.PostConstruct;
 import java.time.Instant;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -38,14 +41,17 @@ public class PaymentCallbackOutboxRelay {
     private final PaymentCallbackOutbox outbox;
     private final ObjectProvider<KafkaTemplate<String, Object>> kafkaTemplateProvider;
     private final int batchSize;
+    private final long sendTimeoutMs;
 
     public PaymentCallbackOutboxRelay(
             PaymentCallbackOutbox outbox,
             ObjectProvider<KafkaTemplate<String, Object>> kafkaTemplateProvider,
-            @Value("${payment.outbox.batch-size:50}") int batchSize) {
+            @Value("${payment.outbox.batch-size:50}") int batchSize,
+            @Value("${payment.outbox.send-timeout-ms:5000}") long sendTimeoutMs) {
         this.outbox = outbox;
         this.kafkaTemplateProvider = kafkaTemplateProvider;
         this.batchSize = batchSize;
+        this.sendTimeoutMs = sendTimeoutMs;
     }
 
     @PostConstruct
@@ -83,11 +89,19 @@ public class PaymentCallbackOutboxRelay {
                     record.externalCurrency(),
                     record.fxRate(),
                     record.fxRateAt());
-            kafkaTemplate.send(TOPIC, record.orderId(), event);
+            kafkaTemplate.send(TOPIC, record.orderId(), event).get(sendTimeoutMs, TimeUnit.MILLISECONDS);
             outbox.markPublished(record.id());
             LOGGER.debug("payment-callback-outbox published id={} provider={} orderId={}",
                     record.id(), record.provider(), record.orderId());
-        } catch (RuntimeException e) {
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            recordFailure(record, e);
+        } catch (ExecutionException | TimeoutException | RuntimeException e) {
+            recordFailure(record, e);
+        }
+    }
+
+    private void recordFailure(PaymentCallbackOutboxRecord record, Exception e) {
             int attempts = record.attemptCount() + 1;
             boolean isDead = attempts >= MAX_ATTEMPTS;
             long backoffSeconds = Math.min((long) Math.pow(2, attempts), 300);
@@ -102,6 +116,5 @@ public class PaymentCallbackOutboxRelay {
                 LOGGER.warn("payment-callback-outbox retry scheduled: id={} attempt={} nextIn={}s",
                         record.id(), attempts, backoffSeconds);
             }
-        }
     }
 }

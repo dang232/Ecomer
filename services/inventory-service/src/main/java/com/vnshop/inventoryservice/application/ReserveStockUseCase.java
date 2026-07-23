@@ -18,12 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
  * insufficient, every prior decrement performed in the same call is rolled
  * back by the surrounding {@link Transactional} boundary.
  *
- * <p>If a product has no row in {@code stock_levels} (nothing has projected
- * stock for it yet), the use case logs a structured warning and allows the
- * reservation to proceed without decrement. This is the pragmatic compromise
- * called out in the audit: brand-new products would otherwise fail to
- * checkout. Replacing this with a real product-event projection is a
- * follow-up.
+ * <p>A product must have a projected {@code stock_levels} row before it can
+ * be reserved. Local and test environments must seed stock explicitly.
  */
 public class ReserveStockUseCase {
     private static final Logger log = LoggerFactory.getLogger(ReserveStockUseCase.class);
@@ -54,18 +50,11 @@ public class ReserveStockUseCase {
 
         for (ReserveItem item : items) {
             DecrementOutcome outcome = port.tryDecrement(item.productId(), item.quantity());
-            if (outcome == DecrementOutcome.INSUFFICIENT) {
-                log.warn("Reserve denied: insufficient stock orderId={} productId={} qty={}",
+            if (outcome == DecrementOutcome.INSUFFICIENT || outcome == DecrementOutcome.NOT_PROJECTED) {
+                log.warn("Reserve denied: {} stock orderId={} productId={} qty={}",
+                        outcome == DecrementOutcome.NOT_PROJECTED ? "missing projected" : "insufficient",
                         orderId, item.productId(), item.quantity());
                 return ReserveStockResult.insufficient();
-            }
-            if (outcome == DecrementOutcome.NOT_PROJECTED) {
-                // Pragmatic compromise: allow the reservation through but log
-                // loudly so we know which products have not yet been
-                // projected. A product-service event projection is the
-                // proper fix.
-                log.warn("Reserve allowed without decrement: stock not projected for productId={} orderId={} qty={}",
-                        item.productId(), orderId, item.quantity());
             }
 
             StockReservation reservation = new StockReservation(

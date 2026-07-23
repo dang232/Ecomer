@@ -8,6 +8,7 @@ public class BuyerProfile {
     private static final int MAX_ADDRESSES = 5;
 
     private final String keycloakId;
+    private String email;
     private String name;
     private PhoneNumber phone;
     private String avatarUrl;
@@ -15,11 +16,20 @@ public class BuyerProfile {
     private final List<Address> addresses;
 
     public BuyerProfile(String keycloakId, String name, PhoneNumber phone, String avatarUrl, List<Address> addresses) {
-        this(keycloakId, name, phone, avatarUrl, false, addresses);
+        this(keycloakId, null, name, phone, avatarUrl, false, addresses);
     }
 
     public BuyerProfile(String keycloakId, String name, PhoneNumber phone, String avatarUrl, boolean banned, List<Address> addresses) {
+        this(keycloakId, null, name, phone, avatarUrl, banned, addresses);
+    }
+
+    public BuyerProfile(String keycloakId, String email, String name, PhoneNumber phone, String avatarUrl, List<Address> addresses) {
+        this(keycloakId, email, name, phone, avatarUrl, false, addresses);
+    }
+
+    public BuyerProfile(String keycloakId, String email, String name, PhoneNumber phone, String avatarUrl, boolean banned, List<Address> addresses) {
         this.keycloakId = requireNonBlank(keycloakId, "keycloakId");
+        this.email = normalizeOptional(email);
         this.name = name;
         this.phone = phone;
         this.avatarUrl = avatarUrl;
@@ -39,6 +49,10 @@ public class BuyerProfile {
 
     public String keycloakId() {
         return keycloakId;
+    }
+
+    public String email() {
+        return email;
     }
 
     public String name() {
@@ -92,5 +106,9 @@ public class BuyerProfile {
             throw new IllegalArgumentException(fieldName + " is required");
         }
         return value;
+    }
+
+    private static String normalizeOptional(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }

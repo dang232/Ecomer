@@ -68,6 +68,9 @@ export class NotificationSchemaClass {
 
   @Prop({ default: 0 })
   retryCount!: number;
+
+  @Prop({ type: Date, default: null })
+  nextRetryAt!: Date | null;
 }
 
 export const NotificationSchema = SchemaFactory.createForClass(
@@ -82,3 +85,4 @@ NotificationSchema.index({ userId: 1, type: 1, createdAt: -1 });
 NotificationSchema.index({ idempotencyKey: 1 }, { unique: true, sparse: true });
 NotificationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 NotificationSchema.index({ deliveryStatus: 1 });
+NotificationSchema.index({ deliveryStatus: 1, nextRetryAt: 1 });

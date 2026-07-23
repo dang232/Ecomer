@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { AddToCartUseCase } from '../application/add-to-cart.use-case';
 import { ClearCartUseCase } from '../application/clear-cart.use-case';
+import { MergeCartUseCase } from '../application/merge-cart.use-case';
 import { RemoveCartItemUseCase } from '../application/remove-cart-item.use-case';
 import { UpdateCartItemUseCase } from '../application/update-cart-item.use-case';
 import { ViewCartUseCase } from '../application/view-cart.use-case';
@@ -21,6 +22,7 @@ import { ApiResponse } from './api-response';
 import { CartExceptionFilter } from './cart.exception-filter';
 import type { AddCartItemRequest } from './add-cart-item.request';
 import type { UpdateCartItemRequest } from './update-cart-item.request';
+import type { MergeCartRequest } from './merge-cart.request';
 
 @Controller('cart')
 @UseFilters(CartExceptionFilter)
@@ -31,6 +33,7 @@ export class CartController {
     private readonly updateCartItemUseCase: UpdateCartItemUseCase,
     private readonly removeCartItemUseCase: RemoveCartItemUseCase,
     private readonly clearCartUseCase: ClearCartUseCase,
+    private readonly mergeCartUseCase: MergeCartUseCase,
   ) {}
 
   @Get()
@@ -59,6 +62,29 @@ export class CartController {
     });
 
     return ApiResponse.ok('Cart item added', cart);
+  }
+
+  @Post('merge')
+  async mergeCart(
+    @Headers('x-user-id') userId: string | undefined,
+    @Body() request: MergeCartRequest,
+  ): Promise<ApiResponse<CartResponse>> {
+    if (!request.sessionId || !request.idempotencyKey || !Array.isArray(request.items)) {
+      throw new BadRequestException('sessionId, idempotencyKey, and items are required');
+    }
+    if (request.items.some((item) => !item.productId || !Number.isInteger(item.quantity) || item.quantity < 1)) {
+      throw new BadRequestException('merge items must have a productId and positive integer quantity');
+    }
+
+    return ApiResponse.ok(
+      'Cart merged',
+      await this.mergeCartUseCase.execute(
+        this.requireUserId(userId),
+        request.sessionId,
+        request.items,
+        request.idempotencyKey,
+      ),
+    );
   }
 
   /**

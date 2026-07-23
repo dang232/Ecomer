@@ -15,14 +15,14 @@ import { ApiError } from "../lib/api/envelope";
 import {
   AuthError,
   decodeJwt,
+  passwordLogin,
+  refreshTokens,
+  revokeTokens,
   setLiveTokenSet,
-  setTokenRefreshHandler,
   type JwtClaims,
   type TokenSet,
 } from "../lib/auth/native-auth";
-import { createOidcClient } from "../lib/auth/oidc-client";
-
-import { useAppConfig } from "./use-app-config";
+import { apiUrl } from "../lib/runtime-endpoints";
 
 export type Role = "BUYER" | "SELLER" | "ADMIN";
 export type { RegisterInput };
@@ -43,12 +43,25 @@ interface AuthState {
   roles: Role[];
   subject: string | undefined;
   login: (redirectTo?: string) => void;
+  loginWithPassword: (username: string, password: string) => Promise<void>;
   beginOAuthLogin: (provider: "google" | "facebook", next?: string) => void;
   register: (input: RegisterInput) => Promise<void>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
+
+function safeReturnPath(value: string | undefined): string {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/";
+  try {
+    const parsed = new URL(value, window.location.origin);
+    return parsed.origin === window.location.origin
+      ? `${parsed.pathname}${parsed.search}${parsed.hash}`
+      : "/";
+  } catch {
+    return "/";
+  }
+}
 
 function parseRoles(claims: JwtClaims | null): Role[] {
   const realm = claims?.realm_access?.roles ?? [];
@@ -69,22 +82,6 @@ function profileFromClaims(claims: JwtClaims | null): AuthProfile | undefined {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const appConfig = useAppConfig();
-  const oidc = useMemo(
-    () =>
-      createOidcClient({
-        issuerUri: appConfig.auth.issuerUri,
-        callbackUri: appConfig.auth.callbackUri,
-        logoutUri: appConfig.auth.logoutUri,
-        clientId: appConfig.auth.clientId,
-      }),
-    [
-      appConfig.auth.callbackUri,
-      appConfig.auth.clientId,
-      appConfig.auth.issuerUri,
-      appConfig.auth.logoutUri,
-    ],
-  );
   const [ready, setReady] = useState(false);
   const [tokenSet, setTokenSet] = useState<TokenSet | null>(null);
   const refreshTimeoutRef = useRef<number | null>(null);
@@ -102,19 +99,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshSession = useCallback(async () => {
-    const next = await oidc.refresh();
+    const next = await refreshTokens();
     applyTokenSet(next);
     return next;
-  }, [applyTokenSet, oidc]);
+  }, [applyTokenSet]);
 
   useEffect(() => {
     let cancelled = false;
     setReady(false);
-    setTokenRefreshHandler(refreshSession);
     void (async () => {
       try {
-        const initial = await oidc.init();
-        if (!cancelled) applyTokenSet(initial);
+        await refreshSession();
       } catch {
         if (!cancelled) applyTokenSet(null);
       } finally {
@@ -123,9 +118,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })();
     return () => {
       cancelled = true;
-      setTokenRefreshHandler(null);
     };
-  }, [applyTokenSet, oidc, refreshSession]);
+  }, [applyTokenSet, refreshSession]);
 
   useEffect(() => {
     clearRefreshTimer();
@@ -157,20 +151,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [applyTokenSet, refreshSession, tokenSet]);
 
-  const login = useCallback(
-    (redirectTo?: string) => {
-      const next = redirectTo ?? window.location.pathname + window.location.search;
-      oidc.login(next);
+  const login = useCallback((redirectTo?: string) => {
+    const next = safeReturnPath(redirectTo ?? window.location.pathname + window.location.search);
+    window.location.assign(`/login?next=${encodeURIComponent(next)}`);
+  }, []);
+
+  const loginWithPassword = useCallback(
+    async (username: string, password: string) => {
+      const next = await passwordLogin(username, password);
+      applyTokenSet(next);
     },
-    [oidc],
+    [applyTokenSet],
   );
 
-  const beginOAuthLogin = useCallback(
-    (provider: "google" | "facebook", next?: string) => {
-      oidc.login(next, provider);
-    },
-    [oidc],
-  );
+  const beginOAuthLogin = useCallback((provider: "google" | "facebook", next?: string) => {
+    const returnPath = safeReturnPath(next ?? window.location.pathname + window.location.search);
+    const query = new URLSearchParams({ next: returnPath });
+    window.location.assign(apiUrl(`/auth/oauth/${provider}/start?${query.toString()}`));
+  }, []);
 
   const register = useCallback(async (input: RegisterInput) => {
     try {
@@ -185,8 +183,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     applyTokenSet(null);
-    oidc.logout();
-  }, [applyTokenSet, oidc]);
+    void revokeTokens();
+  }, [applyTokenSet]);
 
   const value = useMemo<AuthState>(() => {
     const claims = tokenSet ? decodeJwt(tokenSet.accessToken) : null;
@@ -198,11 +196,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       roles: parseRoles(claims),
       subject: claims?.sub,
       login,
+      loginWithPassword,
       beginOAuthLogin,
       register,
       logout,
     };
-  }, [beginOAuthLogin, login, logout, ready, register, tokenSet]);
+  }, [beginOAuthLogin, login, loginWithPassword, logout, ready, register, tokenSet]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

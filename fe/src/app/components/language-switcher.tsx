@@ -16,7 +16,7 @@ export function LanguageSwitcher() {
       onClick={() => {
         void i18n.changeLanguage(next);
       }}
-      className="px-2 py-1 rounded-md text-white/80 hover:text-white hover:bg-white/10 transition-colors text-xs font-semibold tracking-wide"
+      className="px-2 py-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors text-xs font-semibold tracking-wide"
       title={next === "vi" ? "Tiếng Việt" : "English"}
       aria-label={`Switch language to ${next.toUpperCase()}`}
     >

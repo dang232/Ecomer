@@ -12,5 +12,8 @@ import com.vnshop.productservice.domain.review.Review;
  * cross-service lookup fails or returns nothing for the buyer, the FE
  * renders an anonymous label rather than the buyerId UUID.</p>
  */
-public record EnrichedReview(Review review, String userName, String userAvatarUrl) {
+public record EnrichedReview(Review review, String userName, String userAvatarUrl, String productName) {
+    public EnrichedReview(Review review, String userName, String userAvatarUrl) {
+        this(review, userName, userAvatarUrl, null);
+    }
 }

@@ -29,18 +29,19 @@ public class ProductEventPublisher implements ProductEventPublisherPort {
     }
 
     @Override
-    public void publish(ProductEvent event) {
+    public CompletableFuture<SendResult<String, ProductEvent>> publish(ProductEvent event) {
         LOGGER.info("Publishing product event {} for product {}", event.eventType(), event.productId());
         try {
             CompletableFuture<SendResult<String, ProductEvent>> send =
                     kafkaTemplate.send(TOPIC, event.productId(), event);
-            send.whenComplete((result, error) -> {
+            return send.whenComplete((result, error) -> {
                 if (error != null) {
                     recordFailure(event, error);
                 }
             });
         } catch (RuntimeException exception) {
             recordFailure(event, exception);
+            return CompletableFuture.failedFuture(exception);
         }
     }
 

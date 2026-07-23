@@ -10,7 +10,7 @@
 
 ## OVERVIEW
 
-VNShop React SPA frontend. Single Page Application (SPA) built with React 18 and Vite 6. Communicates with the backend through Spring Cloud Gateway at `:8080`. Authenticates against Keycloak (`vnshop` realm) using `keycloak-js` PKCE flow.
+VNShop React SPA frontend. Single Page Application (SPA) built with React 18 and Vite 6. Communicates with the backend through Spring Cloud Gateway at `:8080`. Authenticates through the gateway's native httpOnly-cookie boundary; Keycloak stays internal to the service network.
 
 ## PORTS
 
@@ -19,7 +19,7 @@ VNShop React SPA frontend. Single Page Application (SPA) built with React 18 and
 | Dev server | 5173 | http://localhost:5173 |
 | Docker (nginx) | 3000 | http://localhost:3000 |
 | Gateway (backend) | 8080 | http://localhost:8080 |
-| Keycloak | 8085 | http://localhost:8085 |
+| Keycloak | internal | Docker network only; browser auth uses the gateway |
 
 ## QUICK START
 
@@ -64,7 +64,7 @@ fe/
 │   │   │   ├── facet-list.tsx
 │   │   │   └── image-with-fallback.tsx
 │   │   ├── hooks/                 # Custom React hooks
-│   │   │   ├── use-auth.tsx      # Keycloak wrapper
+│   │   │   ├── use-auth.tsx      # Native gateway auth state
 │   │   │   ├── use-cart.ts        # TanStack Query for cart
 │   │   │   ├── use-orders.ts
 │   │   │   ├── use-products.ts
@@ -104,7 +104,7 @@ fe/
 │   │   │   │       ├── coupons.ts
 │   │   │   │       └── recommendations.ts
 │   │   │   ├── auth/
-│   │   │   │   ├── keycloak.ts    # Keycloak singleton instance
+│   │   │   │   ├── native-auth.ts  # Gateway login/refresh/logout boundary
 │   │   │   │   └── role-guard.tsx # RequireAuth, RequireRole components
 │   │   │   ├── query-client.ts    # TanStack Query configuration
 │   │   │   ├── i18n/index.ts      # i18next configuration
@@ -186,11 +186,11 @@ fe/
 - Correlation IDs: `X-Correlation-Id` header for distributed tracing
 
 ### Authentication
-- Keycloak (`vnshop` realm) with PKCE flow
-- `keycloak-js` library
-- Tokens stored in memory (NOT localStorage)
+- Native gateway login, registration, refresh, and logout endpoints
+- Refresh token stored in an httpOnly, SameSite cookie; access token stays in memory
 - Gateway derives `x-user-id` from JWT bearer token
-- Required redirect URIs in Keycloak: `http://localhost:3000/*`, `http://localhost:5173/*`
+- Keycloak is internal to the Docker/Kubernetes service network; only selected OIDC
+  protocol resources are proxied for optional broker/reset flows, never the admin UI
 
 ### Styling
 - Tailwind CSS v4 with `@tailwindcss/vite` plugin
@@ -241,7 +241,7 @@ fe/
 | Animations | Motion | 12.23.24 |
 | E2E Testing | Playwright | 1.60.0 |
 | Unit Testing | Vitest | 2.1.9 |
-| Auth | Keycloak (keycloak-js) | - |
+| Auth | Gateway native cookie boundary + Keycloak server-side provider | - |
 
 ## WORKING IN FE/
 
@@ -329,9 +329,6 @@ All backend responses follow `ApiResponse<T>`:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `VITE_API_URL` | `http://localhost:8080` | Gateway URL |
-| `VITE_KEYCLOAK_URL` | - | Keycloak server URL |
-| `VITE_KEYCLOAK_REALM` | `vnshop` | Keycloak realm |
-| `VITE_KEYCLOAK_CLIENT_ID` | - | Keycloak client ID |
 
 ## KEY FILES
 
@@ -341,7 +338,7 @@ All backend responses follow `ApiResponse<T>`:
 | `src/app/App.tsx` | Root component with ErrorBoundary |
 | `src/app/routes.ts` | All routes with lazy loading and guards |
 | `src/app/lib/api/client.ts` | Fetch wrapper, ApiResponse decoding |
-| `src/app/lib/auth/keycloak.ts` | Keycloak singleton |
+| `src/app/lib/auth/native-auth.ts` | Gateway login/refresh/logout boundary |
 | `src/app/lib/auth/role-guard.tsx` | Auth/role guards |
 | `src/app/lib/query-client.ts` | TanStack Query setup |
 | `src/app/lib/i18n/index.ts` | i18next config |

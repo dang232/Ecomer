@@ -17,13 +17,18 @@ interface PersistedCartItem {
   unitPrice: PersistedMoney;
   quantity: number;
   addedAt: string;
+  sellerId?: string;
+  sellerName?: string;
 }
 
 interface PersistedCart {
   userId: string;
   items: PersistedCartItem[];
   updatedAt: string;
+  processedMergeKeys?: string[];
 }
+
+const THIRTY_DAYS_SECONDS = 30 * 24 * 60 * 60;
 
 export class CartRedisRepository implements CartRepository {
   constructor(private readonly redis: Redis) {}
@@ -35,24 +40,7 @@ export class CartRedisRepository implements CartRepository {
       return null;
     }
 
-    const persisted = JSON.parse(value) as PersistedCart;
-    const items = persisted.items.map((item) =>
-      CartItem.fromPersistence(
-        item.productId,
-        item.productName,
-        item.productImage,
-        Money.of(item.unitPrice.amount, item.unitPrice.currency),
-        item.quantity,
-        new Date(item.addedAt),
-        item.variantId,
-      ),
-    );
-
-    return Cart.fromPersistence(
-      persisted.userId,
-      items,
-      new Date(persisted.updatedAt),
-    );
+    return this.fromPersistence(JSON.parse(value) as PersistedCart);
   }
 
   async save(cart: Cart, ttlSeconds: number): Promise<void> {
@@ -67,11 +55,63 @@ export class CartRedisRepository implements CartRepository {
     await this.redis.del(this.key(userId));
   }
 
+  async mergeGuestCart(
+    userId: string,
+    guestCart: Cart,
+    idempotencyKey: string,
+  ): Promise<Cart> {
+    const userKey = this.key(userId);
+    const current = await this.redis.get(userKey);
+    const persisted = current ? (JSON.parse(current) as PersistedCart) : null;
+    const processedMergeKeys = persisted?.processedMergeKeys ?? [];
+    const userCart = persisted ? this.fromPersistence(persisted) : Cart.create(userId);
+
+    if (processedMergeKeys.includes(idempotencyKey)) {
+      return userCart;
+    }
+
+    for (const item of guestCart.items) {
+      userCart.addItem(item);
+    }
+
+    const results = await this.redis
+      .multi()
+      .setex(
+        userKey,
+        THIRTY_DAYS_SECONDS,
+        JSON.stringify(this.toPersistence(userCart, [...processedMergeKeys, idempotencyKey].slice(-100))),
+      )
+      .del(this.key(guestCart.userId))
+      .exec();
+
+    if (results === null) {
+      throw new Error('Concurrent cart merge was aborted');
+    }
+    return userCart;
+  }
+
   private key(userId: string): string {
     return `cart:${userId}`;
   }
 
-  private toPersistence(cart: Cart): PersistedCart {
+  private fromPersistence(persisted: PersistedCart): Cart {
+    const items = persisted.items.map((item) =>
+      CartItem.fromPersistence(
+        item.productId,
+        item.productName,
+        item.productImage,
+        Money.of(item.unitPrice.amount, item.unitPrice.currency),
+        item.quantity,
+        new Date(item.addedAt),
+        item.variantId,
+        item.sellerId,
+        item.sellerName,
+      ),
+    );
+    return Cart.fromPersistence(persisted.userId, items, new Date(persisted.updatedAt));
+  }
+
+  private toPersistence(cart: Cart, processedMergeKeys?: string[]): PersistedCart {
     return {
       userId: cart.userId,
       items: cart.items.map((item) => ({
@@ -85,8 +125,11 @@ export class CartRedisRepository implements CartRepository {
         },
         quantity: item.quantity,
         addedAt: item.addedAt.toISOString(),
+        sellerId: item.sellerId,
+        sellerName: item.sellerName,
       })),
       updatedAt: cart.updatedAt.toISOString(),
+      ...(processedMergeKeys ? { processedMergeKeys } : {}),
     };
   }
 }

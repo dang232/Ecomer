@@ -4,27 +4,29 @@ import com.vnshop.productservice.domain.Product;
 import com.vnshop.productservice.domain.ProductEvent;
 import com.vnshop.productservice.domain.ProductImage;
 import com.vnshop.productservice.domain.ProductVariant;
-import com.vnshop.productservice.domain.port.out.ProductEventPublisherPort;
+import com.vnshop.productservice.domain.port.out.ProductEventOutboxPort;
 import com.vnshop.productservice.domain.port.out.ProductRepositoryPort;
 import com.vnshop.productservice.infrastructure.sanitization.HtmlSanitizer;
 
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import org.springframework.transaction.annotation.Transactional;
 
 public class UpdateProductUseCase {
     private final ProductRepositoryPort productRepositoryPort;
-    private final ProductEventPublisherPort productEventPublisherPort;
+    private final ProductEventOutboxPort productEventOutboxPort;
     private final HtmlSanitizer htmlSanitizer;
 
     public UpdateProductUseCase(ProductRepositoryPort productRepositoryPort,
-                                ProductEventPublisherPort productEventPublisherPort,
+                                ProductEventOutboxPort productEventOutboxPort,
                                 HtmlSanitizer htmlSanitizer) {
         this.productRepositoryPort = Objects.requireNonNull(productRepositoryPort, "productRepositoryPort is required");
-        this.productEventPublisherPort = Objects.requireNonNull(productEventPublisherPort, "productEventPublisherPort is required");
+        this.productEventOutboxPort = Objects.requireNonNull(productEventOutboxPort, "productEventOutboxPort is required");
         this.htmlSanitizer = Objects.requireNonNull(htmlSanitizer, "htmlSanitizer is required");
     }
 
+    @Transactional
     public ProductResponse update(
             String sellerId,
             UUID productId,
@@ -51,7 +53,7 @@ public class UpdateProductUseCase {
             updated.setOutOfStock();
         }
         Product saved = productRepositoryPort.save(updated);
-        productEventPublisherPort.publish(new ProductEvent(
+        productEventOutboxPort.enqueue(new ProductEvent(
                 saved.productId().toString(),
                 ProductEvent.EventType.UPDATED,
                 null,

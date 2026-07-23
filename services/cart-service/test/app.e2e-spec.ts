@@ -47,7 +47,7 @@ describe('CartController (e2e)', () => {
   });
 
   afterEach(async () => {
-    await app.close();
+    await app?.close();
   });
 
   it('drives cart HTTP surface', async () => {
@@ -89,6 +89,29 @@ describe('CartController (e2e)', () => {
       .expect(({ body }: SupertestBody<ApiResponse<CartResponse>>) => {
         expect(body.success).toBe(true);
         expect(body.data?.itemCount).toBe(0);
+      });
+
+    const mergeRequest = {
+      sessionId: 'guest-session-1',
+      idempotencyKey: 'merge-attempt-1',
+      items: [{ productId: 'product-2', quantity: 2 }],
+    };
+    await request(app.getHttpServer())
+      .post('/cart/merge')
+      .set('x-user-id', 'user-1')
+      .send(mergeRequest)
+      .expect(201)
+      .expect(({ body }: SupertestBody<ApiResponse<CartResponse>>) => {
+        expect(body.data?.itemCount).toBe(2);
+      });
+
+    await request(app.getHttpServer())
+      .post('/cart/merge')
+      .set('x-user-id', 'user-1')
+      .send(mergeRequest)
+      .expect(201)
+      .expect(({ body }: SupertestBody<ApiResponse<CartResponse>>) => {
+        expect(body.data?.itemCount).toBe(2);
       });
   });
 

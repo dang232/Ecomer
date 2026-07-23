@@ -26,6 +26,7 @@ export interface SearchParams {
   officialOnly?: boolean;
 }
 
+/** @deprecated Use searchProductsV2 for all buyer catalog reads. */
 export const searchProducts = (params: SearchParams) =>
   api.get(
     "/search",
@@ -52,7 +53,7 @@ export interface CursorSearchParams extends Omit<SearchParams, "page" | "size"> 
   includeFacets?: boolean;
 }
 
-/** Opt-in v2 search. The result keeps response metadata for cache/cursor-aware callers. */
+/** Default cursor search. The result keeps response metadata for cache/cursor-aware callers. */
 export const searchProductsV2 = (params: CursorSearchParams, signal?: AbortSignal) =>
   api.getWithMeta(
     "/search/v2",

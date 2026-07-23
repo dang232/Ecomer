@@ -1,0 +1,167 @@
+version: 1
+name: full-stack-evidence-audit
+mode: yaml-step
+description: "Inventory, exercise, visually inspect, review, fix, and rerun every VNShop frontend and backend flow against Docker."
+params:
+  base_url: "http://localhost:3000"
+  gateway_url: "http://localhost:8080"
+  browser_session_prefix: "vnshop-audit"
+steps:
+  - id: inventory
+    name: Inventory frontend and backend flows
+    prompt: >-
+      Inspect the repository before testing. Build a complete flow inventory
+      from every fe/e2e/*.spec.ts file, infra/scripts/e2e-day.mjs, frontend
+      routes/pages, API gateway routes, and backend HTTP/WebSocket controllers.
+      Group the inventory by public visitor, buyer, seller, admin, payment,
+      shipping, media, notifications, messaging, returns, reviews, and
+      infrastructure. Mark each flow as covered by an existing test, only
+      covered by code, or uncovered. Write a precise markdown inventory with
+      file references and endpoint references to artifacts/flow-inventory.md.
+    produces:
+      - artifacts/flow-inventory.md
+    verify:
+      policy: content-heuristic
+      minSize: 2000
+      pattern: "Frontend"
+
+  - id: api-e2e
+    name: Run backend day flow
+    prompt: >-
+      With Docker already running, execute node infra/scripts/e2e-day.mjs from
+      the repository root. Preserve the complete stdout, exit status, and
+      timestamp in artifacts/api-e2e.log. Summarize every PASS, FAIL, and SKIP
+      by persona/domain in artifacts/api-e2e-summary.md. Do not hide failures
+      behind retries or replace a failed result with an assumption.
+    requires:
+      - inventory
+    context_from:
+      - inventory
+    produces:
+      - artifacts/api-e2e.log
+      - artifacts/api-e2e-summary.md
+    verify:
+      policy: prompt-verify
+      prompt: "Check the API log and summary. Confirm that every recorded result is accounted for and that any non-zero exit or FAIL is explicitly listed with its endpoint and response."
+
+  - id: playwright-e2e
+    name: Run all Playwright frontend flows
+    prompt: >-
+      From fe, run the complete Playwright suite with one worker against the
+      Docker frontend at {{ base_url }}. Capture JSON results, list/report
+      output, screenshots, traces, videos, console errors, failed network
+      requests, and the exact command in artifacts/playwright-results.json,
+      artifacts/playwright-run.log, and artifacts/playwright-evidence-index.md.
+      Include all specs, not only the workday persona specs. Keep the browser
+      evidence under the repository's existing fe/e2e/evidence structure or
+      copy it into the run artifacts without deleting prior evidence.
+    requires:
+      - inventory
+    context_from:
+      - inventory
+    produces:
+      - artifacts/playwright-results.json
+      - artifacts/playwright-run.log
+      - artifacts/playwright-evidence-index.md
+    verify:
+      policy: prompt-verify
+      prompt: "Review the Playwright result JSON and evidence index. Verify the test count, failed test list, skipped tests, and artifact paths agree exactly."
+
+  - id: browser-evidence
+    name: Perform agent-browser persona review
+    prompt: >-
+      Use agent-browser with isolated named sessions prefixed {{ browser_session_prefix }}
+      to inspect the running app at {{ base_url }}. Exercise representative
+      admin, buyer, and seller flows using accessibility snapshots and fresh
+      refs after every navigation. Capture full-page screenshots and snapshots
+      for login, home/catalog, product detail, cart, checkout, orders,
+      profile/address, seller dashboard/products/orders/wallet/storefront, and
+      admin dashboard/sellers/coupons/disputes/payouts. Record URL, visible
+      headings, console/runtime errors, failed requests, and screenshot paths
+      in artifacts/agent-browser-review.md. Close every browser session.
+      Treat visible fallback/local data, empty states, wrong role redirects,
+      broken links, and loading failures as findings rather than passing them.
+    requires:
+      - inventory
+    context_from:
+      - inventory
+    produces:
+      - artifacts/agent-browser-review.md
+      - artifacts/agent-browser-screenshots/
+    verify:
+      policy: content-heuristic
+      minSize: 1500
+      pattern: "admin"
+
+  - id: evidence-review
+    name: Independent evidence review agent
+    prompt: >-
+      Act as an independent hard-review agent. Read the flow inventory, API
+      results, Playwright JSON/log/evidence index, agent-browser review, and all
+      available screenshots/traces. Compare claimed UI behavior to backend
+      contracts and identify real defects: failures, false positives, stale
+      tests, local fallbacks, hardcoded data, wrong service ownership, security
+      gaps, missing loading/error states, and flows that were never exercised.
+      Rank findings by severity and confidence with exact file/line or endpoint
+      references. Separate product defects from test-harness defects and state
+      evidence for both. Write artifacts/evidence-review.md and an actionable
+      fix list in artifacts/fix-plan.md.
+    requires:
+      - api-e2e
+      - playwright-e2e
+      - browser-evidence
+    context_from:
+      - inventory
+      - api-e2e
+      - playwright-e2e
+      - browser-evidence
+    produces:
+      - artifacts/evidence-review.md
+      - artifacts/fix-plan.md
+    verify:
+      policy: prompt-verify
+      prompt: "Confirm that the review cites concrete evidence, ranks findings, distinguishes code defects from test issues, and includes a fix plan for every high or medium finding."
+
+  - id: fix-findings
+    name: Fix confirmed findings
+    prompt: >-
+      Implement the confirmed repo-caused fixes from artifacts/fix-plan.md.
+      Preserve user changes, follow existing architecture and configuration
+      patterns, add focused regression tests before or with each behavior fix,
+      and avoid weakening assertions or hiding failures. Update the evidence
+      report only when the rerun proves the change. Record changed files,
+      tests, and unresolved external blockers in artifacts/fix-log.md.
+    requires:
+      - evidence-review
+    context_from:
+      - evidence-review
+      - inventory
+    produces:
+      - artifacts/fix-log.md
+    verify:
+      policy: prompt-verify
+      prompt: "Review the fix log and diff. Confirm each claimed fix maps to a reviewed finding, includes a regression test or a documented reason it cannot be tested locally, and does not merely loosen an assertion."
+
+  - id: final-verify
+    name: Rerun full evidence suite
+    prompt: >-
+      Re-run Docker health checks, node infra/scripts/e2e-day.mjs, the complete
+      fe Playwright suite, and the focused changed-file unit/build checks.
+      Regenerate final JSON/log/evidence indexes and write
+      artifacts/final-verification.md with exact commands, counts, failures,
+      skipped flows, remaining risks, and links to screenshots/traces. The
+      final verdict must be PASS only when all required checks pass; otherwise
+      report BLOCKED with the first actionable failure.
+    requires:
+      - fix-findings
+    context_from:
+      - inventory
+      - evidence-review
+      - fix-findings
+    produces:
+      - artifacts/final-verification.md
+      - artifacts/final-playwright-results.json
+      - artifacts/final-api-e2e.log
+    verify:
+      policy: prompt-verify
+      prompt: "Validate the final report against the raw logs and result files. Confirm no failed test is omitted and that the PASS/BLOCKED verdict follows the stated gate."
