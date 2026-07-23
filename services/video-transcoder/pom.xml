@@ -18,7 +18,7 @@
 		<java.version>25</java.version>
 		<opentelemetry.javaagent.version>2.29.0</opentelemetry.javaagent.version>
 		<opentelemetry.version>1.64.0</opentelemetry.version>
-		<netty.version>4.2.15.Final</netty.version>
+		<netty.version>4.2.16.Final</netty.version>
 		<spring-kafka.version>4.0.6</spring-kafka.version>
 		<aws.sdk.version>2.48.3</aws.sdk.version>
 	</properties>
