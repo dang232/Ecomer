@@ -1,11 +1,11 @@
 package com.vnshop.paymentservice.application;
 
 import com.vnshop.paymentservice.domain.Payment;
+import com.vnshop.paymentservice.domain.PaymentCallbackHash;
+import com.vnshop.paymentservice.domain.PaymentCallbackLogEntry;
 import com.vnshop.paymentservice.domain.PaymentStatus;
+import com.vnshop.paymentservice.domain.port.out.PaymentCallbackLogPort;
 import com.vnshop.paymentservice.domain.port.out.PaymentRepositoryPort;
-import com.vnshop.paymentservice.infrastructure.gateway.PaymentCallbackAttempt;
-import com.vnshop.paymentservice.infrastructure.gateway.PaymentCallbackHasher;
-import com.vnshop.paymentservice.infrastructure.gateway.PaymentCallbackLogStore;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,12 +22,12 @@ public class ConfirmCodCollectionUseCase {
 
     private final PaymentRepositoryPort paymentRepository;
     private final PaymentPromotionService promotionService;
-    private final PaymentCallbackLogStore callbackLogStore;
+    private final PaymentCallbackLogPort callbackLogStore;
 
     public ConfirmCodCollectionUseCase(
             PaymentRepositoryPort paymentRepository,
             PaymentPromotionService promotionService,
-            PaymentCallbackLogStore callbackLogStore) {
+            PaymentCallbackLogPort callbackLogStore) {
         this.paymentRepository = Objects.requireNonNull(paymentRepository, "paymentRepository is required");
         this.promotionService = Objects.requireNonNull(promotionService, "promotionService is required");
         this.callbackLogStore = Objects.requireNonNull(callbackLogStore, "callbackLogStore is required");
@@ -60,12 +60,12 @@ public class ConfirmCodCollectionUseCase {
                 command.collectionId().toString(), command.collectedAt());
         paymentRepository.save(withCollection);
 
-        String payloadHash = PaymentCallbackHasher.sha256(command.canonical());
-        PaymentCallbackAttempt callback = callbackLogStore.findProcessed(
-                        COD_PROVIDER, command.collectionId().toString(), payloadHash, PaymentCallbackHasher.sha256(""))
-                .orElseGet(() -> callbackLogStore.save(new PaymentCallbackAttempt(
+        String payloadHash = PaymentCallbackHash.sha256(command.canonical());
+        PaymentCallbackLogEntry callback = callbackLogStore.findProcessed(
+                COD_PROVIDER, command.collectionId().toString(), payloadHash, PaymentCallbackHash.sha256(""))
+                .orElseGet(() -> callbackLogStore.save(new PaymentCallbackLogEntry(
                         command.collectionId(), COD_PROVIDER, command.collectionId().toString(), payloadHash,
-                        PaymentCallbackHasher.sha256(""), "{}", command.canonical(),
+                        PaymentCallbackHash.sha256(""), "{}", command.canonical(),
                         command.collectedAt(), "PROCESSED", false)));
 
         PaymentPromotionService.PromotionResult promoted = promotionService.promote(

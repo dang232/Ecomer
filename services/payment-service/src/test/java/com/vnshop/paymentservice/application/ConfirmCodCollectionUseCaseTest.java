@@ -1,6 +1,7 @@
 package com.vnshop.paymentservice.application;
 
 import com.vnshop.paymentservice.application.ledger.LedgerService;
+import com.vnshop.paymentservice.domain.PaymentCallbackLogEntry;
 import com.vnshop.paymentservice.domain.JournalEntry;
 import com.vnshop.paymentservice.domain.LedgerEntry;
 import com.vnshop.paymentservice.domain.Payment;
@@ -9,9 +10,8 @@ import com.vnshop.paymentservice.domain.PaymentMethod;
 import com.vnshop.paymentservice.domain.PaymentStatus;
 import com.vnshop.paymentservice.domain.port.out.LedgerRepositoryPort;
 import com.vnshop.paymentservice.domain.port.out.PaymentCallbackOutbox;
+import com.vnshop.paymentservice.domain.port.out.PaymentCallbackLogPort;
 import com.vnshop.paymentservice.domain.port.out.PaymentRepositoryPort;
-import com.vnshop.paymentservice.infrastructure.gateway.PaymentCallbackAttempt;
-import com.vnshop.paymentservice.infrastructure.gateway.PaymentCallbackLogStore;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -122,12 +122,12 @@ class ConfirmCodCollectionUseCaseTest {
         @Override public void recordFailure(Long id, int attemptCount, String error, Instant nextAttemptAt, boolean dead) { }
     }
 
-    private static final class CapturingCallbackLog implements PaymentCallbackLogStore {
-        private final List<PaymentCallbackAttempt> savedAttempts = new ArrayList<>();
-        @Override public Optional<PaymentCallbackAttempt> findProcessed(String provider, String eventId, String payloadHash, String signatureHash) {
+    private static final class CapturingCallbackLog implements PaymentCallbackLogPort {
+        private final List<PaymentCallbackLogEntry> savedAttempts = new ArrayList<>();
+        @Override public Optional<PaymentCallbackLogEntry> findProcessed(String provider, String eventId, String payloadHash, String signatureHash) {
             return savedAttempts.stream().filter(attempt -> attempt.eventId().equals(eventId)).findFirst();
         }
-        @Override public PaymentCallbackAttempt save(PaymentCallbackAttempt attempt) {
+        @Override public PaymentCallbackLogEntry save(PaymentCallbackLogEntry attempt) {
             savedAttempts.add(attempt); return attempt;
         }
     }
