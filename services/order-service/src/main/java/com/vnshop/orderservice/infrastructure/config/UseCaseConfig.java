@@ -11,6 +11,7 @@ import com.vnshop.orderservice.application.CancelOrderUseCase;
 import com.vnshop.orderservice.application.CheckoutOrderUseCase;
 import com.vnshop.orderservice.application.CompleteReturnUseCase;
 import com.vnshop.orderservice.application.CreateOrderUseCase;
+import com.vnshop.orderservice.application.finance.AllocateOrderFinancialsUseCase;
 import com.vnshop.orderservice.application.DisputeQueryUseCase;
 import com.vnshop.orderservice.application.DisputeUseCase;
 import com.vnshop.orderservice.application.GetDashboardUseCase;
@@ -47,6 +48,7 @@ import com.vnshop.orderservice.domain.port.out.ShippingRequestPort;
 import com.vnshop.orderservice.application.saga.SagaOrchestrator;
 import com.vnshop.orderservice.application.tax.TaxCalculationService;
 import com.vnshop.orderservice.domain.port.out.TaxRateLookupPort;
+import com.vnshop.orderservice.domain.port.out.SubOrderFinancialAllocationRepositoryPort;
 import java.time.Clock;
 import com.vnshop.orderservice.application.coupon.CouponManagementService;
 import com.vnshop.orderservice.application.coupon.CouponRedemptionService;
@@ -76,6 +78,12 @@ public class UseCaseConfig {
     }
 
     @Bean
+    AllocateOrderFinancialsUseCase allocateOrderFinancialsUseCase(
+            SubOrderFinancialAllocationRepositoryPort allocationRepositoryPort) {
+        return new AllocateOrderFinancialsUseCase(allocationRepositoryPort);
+    }
+
+    @Bean
     CreateOrderUseCase createOrderUseCase(
             OrderRepositoryPort orderRepositoryPort,
             InventoryReservationPort inventoryReservationPort,
@@ -87,11 +95,13 @@ public class UseCaseConfig {
             MetricsPort metricsPort,
             SagaOrchestrator sagaOrchestrator,
             TaxCalculationService taxCalculationService,
-            CouponRedemptionService couponRedemptionService
+            CouponRedemptionService couponRedemptionService,
+            AllocateOrderFinancialsUseCase allocateOrderFinancialsUseCase
     ) {
         return new CreateOrderUseCase(orderRepositoryPort, inventoryReservationPort, paymentRequestPort,
                 shippingRequestPort, orderEventPublisherPort, commissionTierLookupPort, cartRepositoryPort,
-                metricsPort, sagaOrchestrator, taxCalculationService, couponRedemptionService);
+                metricsPort, sagaOrchestrator, taxCalculationService, couponRedemptionService,
+                allocateOrderFinancialsUseCase);
     }
 
     @Bean

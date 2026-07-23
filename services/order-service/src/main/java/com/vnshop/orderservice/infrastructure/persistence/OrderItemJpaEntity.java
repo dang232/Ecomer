@@ -14,6 +14,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -56,6 +57,12 @@ public class OrderItemJpaEntity extends BaseJpaEntity {
     @Column(name = "image_url", length = 1024)
     private String imageUrl;
 
+    @Column(name = "tax_rate", precision = 5, scale = 4)
+    private BigDecimal taxRate;
+
+    @Column(name = "tax_amount", precision = 19, scale = 0)
+    private BigDecimal taxAmount;
+
     protected OrderItemJpaEntity() {
     }
 
@@ -69,10 +76,13 @@ public class OrderItemJpaEntity extends BaseJpaEntity {
         entity.quantity = item.quantity();
         entity.unitPrice = OrderJpaEntity.MoneyEmbeddable.fromDomain(item.unitPrice());
         entity.imageUrl = item.imageUrl();
+        entity.taxRate = item.taxRate();
+        entity.taxAmount = item.taxAmount();
         return entity;
     }
 
     OrderItem toDomain() {
-        return new OrderItem(productId, variantSku, sellerId, name, quantity, unitPrice.toDomain(), imageUrl);
+        return new OrderItem(productId, variantSku, sellerId, name, quantity, unitPrice.toDomain(), imageUrl,
+                taxRate, taxAmount);
     }
 }
