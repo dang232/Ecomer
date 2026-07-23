@@ -27,7 +27,7 @@
 		<url/>
 	</scm>
 	<properties>
-		<jackson.version>2.21.4</jackson.version>
+		<jackson.version>2.22.1</jackson.version>
 		<jackson3.version>3.1.4</jackson3.version>
 		<java.version>17</java.version>
 		<netty.version>4.2.16.Final</netty.version>
