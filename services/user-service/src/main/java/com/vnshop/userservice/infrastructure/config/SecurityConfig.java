@@ -12,9 +12,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.util.matcher.RequestMatcher;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.core.annotation.Order;
 
 import java.util.Collection;
@@ -38,12 +38,12 @@ public class SecurityConfig {
         // cookie, so they must be reachable before JWT authorization runs.
         return http
                 .securityMatcher("/auth/**")
-                // CsrfProtectionFilter is the single double-submit policy for
-                // these endpoints. The framework CsrfFilter would evaluate the
-                // anonymous request first and turn a valid cookie refresh into
-                // a 401 through the anonymous authentication entry point.
-                .csrf(csrf -> csrf.disable())
-                .addFilterBefore(new CsrfProtectionFilter(), UsernamePasswordAuthenticationFilter.class)
+                // Keep Spring Security's CSRF protection enabled for the same
+                // cookie-authenticated endpoints guarded by the API error filter.
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(csrfTokenRepository())
+                        .requireCsrfProtectionMatcher(csrfRequestMatcher()))
+                .addFilterBefore(new CsrfProtectionFilter(), CsrfFilter.class)
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
                 .build();
     }
@@ -55,7 +55,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(csrfTokenRepository())
                         .requireCsrfProtectionMatcher(csrfRequestMatcher()))
-                .addFilterBefore(new CsrfProtectionFilter(), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new CsrfProtectionFilter(), CsrfFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api-docs", "/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
