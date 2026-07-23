@@ -2,7 +2,7 @@
 
 ## Reader and Goal
 
-This policy is for engineers who create or review database changes for VNShop services. After reading it, they should be able to add a Flyway migration that can be validated in CI, deployed safely through staging, and rolled back with a prepared reverse migration.
+This policy is for engineers who create or review database changes for VNShop services. After reading it, they should be able to add a Flyway migration that can be validated in CI, deployed safely through staging, and recovered through a prepared incident procedure without rewriting Flyway history.
 
 ## Scope
 
@@ -16,7 +16,7 @@ Most Java services run Flyway from their service startup. Each service owns migr
 2. Never edit a merged or deployed migration. Add a new migration instead.
 3. `V` migrations must be backward compatible with the currently deployed application version.
 4. Destructive migrations are not allowed in normal `V` files.
-5. Every forward migration needs a prepared reverse `V` file before it can be deployed.
+5. Flyway scans forward-only additive migrations from `db/migration`. Prepared incident scripts live in `db/rollback` and are not in a Flyway scan path.
 6. A pre-migration backup is required before staging and production execution.
 7. CI must run `mvn flyway:validate` for the affected service before merge.
 8. Staging must run the exact migration artifact before production.
@@ -60,22 +60,17 @@ Before opening a migration PR:
 4. Keep migration runtime short. Avoid long locks during customer traffic.
 5. Add indexes with attention to table size and write volume.
 6. Keep data backfills bounded. Large backfills need batching and a runbook.
-7. Prepare the reverse migration as a separate `V` file in the same PR.
+7. Prepare a reviewed incident script in `db/rollback` when the migration needs an operational recovery procedure. Do not give the script a Flyway `V` version or place it in `db/migration`.
 8. Run `mvn flyway:validate` for the affected service.
 9. Test startup against a clean database and an already-migrated database.
 
 ## Rollback Policy
 
-Rollback means moving the database to a schema shape that supports the previous app version. It does not mean editing Flyway history.
+Rollback restores safe application behavior; it does not edit Flyway history or run a reverse migration through the normal Flyway scan.
 
-Each forward migration must have a reverse migration with its own later `V` number. Example:
+Forward migrations remain additive and forward-only in `db/migration`. Prepared, non-scanned incident scripts live in `db/rollback` beside the affected service. An incident script documents its paired forward migration, prerequisites, approval, verification, and the exact manual execution path. It is not named as a Flyway `V` migration and does not become part of normal startup.
 
-```text
-V12__add_inventory_reservation_expires_at.sql
-V13__rollback_add_inventory_reservation_expires_at.sql
-```
-
-The reverse file must undo only the forward migration it pairs with. If the forward migration added a nullable column, the reverse may drop that column only after incident command confirms no deployed code still needs it. If dropping is unsafe, the reverse migration should restore compatibility another way, such as restoring a previous view, default, index, or constraint.
+Ordinary rollback switches application feature modes or routes traffic to a compatible release while additive tables, columns, and journal history remain intact. A destructive incident action requires incident-command approval, proof that no running code needs the object, a verified backup/restore path, and an audit record. If cleanup remains necessary, introduce it later as an explicitly approved forward migration.
 
 Do not run ad hoc SQL in production unless incident command approves it and records the exact command. If emergency SQL is used, capture it as a later Flyway migration so environments do not drift.
 
@@ -118,7 +113,7 @@ A migration PR is not ready unless it answers these questions:
 
 1. Which service owns this schema change?
 2. Is the change backward compatible with the currently deployed app?
-3. What is the exact reverse migration file?
+3. Does `db/rollback` contain a reviewed, non-scanned incident script when recovery needs one?
 4. What backup will be taken before execution?
 5. Did `mvn flyway:validate` pass for the affected service?
 6. Did staging run before production?
