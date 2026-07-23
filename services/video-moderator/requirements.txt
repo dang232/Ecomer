@@ -14,7 +14,7 @@ nudenet==3.4.2
 onnxruntime==1.27.0
 
 # Database
-psycopg2-binary==2.9.10
+psycopg2-binary==2.9.12
 
 # Testing
 pytest==8.3.4
