@@ -60,8 +60,8 @@ public class ShippingWebhookOutboxAdapter implements CarrierWebhookOutboxPort {
     @Transactional(readOnly = true)
     public List<CarrierWebhookOutboxRecord> findPending(int batchSize) {
         return jdbcTemplate.query("""
-                SELECT id, carrier, event_id, order_id, tracking_code, status,
-                       status_text, event_timestamp, attempts, next_retry_at
+                 SELECT id, carrier, event_id, order_id, tracking_code, status,
+                       status_text, event_timestamp, payload, attempts, next_retry_at
                   FROM shipping_svc.carrier_webhook_outbox
                  WHERE state = 'PENDING'
                    AND (next_retry_at IS NULL OR next_retry_at <= now())
@@ -116,15 +116,13 @@ public class ShippingWebhookOutboxAdapter implements CarrierWebhookOutboxPort {
                 id);
     }
 
-    private CarrierWebhookOutboxRecord mapRecord(ResultSet resultSet, int rowNumber) throws SQLException {
-        CarrierWebhookEvent event = new CarrierWebhookEvent(
-                resultSet.getString("event_id"),
-                resultSet.getString("order_id"),
-                resultSet.getString("carrier"),
-                resultSet.getString("tracking_code"),
-                resultSet.getString("status"),
-                resultSet.getString("status_text"),
-                resultSet.getString("event_timestamp"));
+    CarrierWebhookOutboxRecord mapRecord(ResultSet resultSet, int rowNumber) throws SQLException {
+        CarrierWebhookEvent event;
+        try {
+            event = objectMapper.readValue(resultSet.getString("payload"), CarrierWebhookEvent.class);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Unable to deserialize carrier webhook event", exception);
+        }
         return new CarrierWebhookOutboxRecord(
                 resultSet.getObject("id", UUID.class),
                 event,

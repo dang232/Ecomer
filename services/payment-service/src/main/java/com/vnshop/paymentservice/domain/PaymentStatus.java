@@ -2,6 +2,7 @@ package com.vnshop.paymentservice.domain;
 
 public enum PaymentStatus {
     PENDING,
+    AWAITING_COLLECTION,
     COMPLETED,
     FAILED,
     REFUNDED,

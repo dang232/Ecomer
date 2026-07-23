@@ -35,6 +35,11 @@ public class PaymentJpaRepository implements PaymentRepositoryPort {
     }
 
     @Override
+    public Optional<Payment> findByOrderIdForUpdate(String orderId) {
+        return springDataRepository.findByOrderIdForUpdate(orderId).map(PaymentJpaEntity::toDomain);
+    }
+
+    @Override
     public List<Payment> findByStatus(PaymentStatus status) {
         return springDataRepository.findByStatus(status).stream()
                 .map(PaymentJpaEntity::toDomain)

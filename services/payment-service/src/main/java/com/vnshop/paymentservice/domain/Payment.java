@@ -18,13 +18,23 @@ public class Payment {
     private final String externalCurrency;
     private final BigDecimal fxRate;
     private final Instant fxRateAt;
+    private final String codCollectionEventId;
+    private final Instant codCollectedAt;
 
     public Payment(UUID paymentId, String orderId, String buyerId, BigDecimal amount, PaymentMethod method, PaymentStatus status, String transactionRef, Instant createdAt) {
-        this(paymentId, orderId, buyerId, amount, method, status, transactionRef, createdAt, null, null, null, null);
+        this(paymentId, orderId, buyerId, amount, method, status, transactionRef, createdAt,
+                null, null, null, null, null, null);
     }
 
     public Payment(UUID paymentId, String orderId, String buyerId, BigDecimal amount, PaymentMethod method, PaymentStatus status, String transactionRef, Instant createdAt,
                    BigDecimal externalAmount, String externalCurrency, BigDecimal fxRate, Instant fxRateAt) {
+        this(paymentId, orderId, buyerId, amount, method, status, transactionRef, createdAt,
+                externalAmount, externalCurrency, fxRate, fxRateAt, null, null);
+    }
+
+    public Payment(UUID paymentId, String orderId, String buyerId, BigDecimal amount, PaymentMethod method, PaymentStatus status, String transactionRef, Instant createdAt,
+                   BigDecimal externalAmount, String externalCurrency, BigDecimal fxRate, Instant fxRateAt,
+                   String codCollectionEventId, Instant codCollectedAt) {
         this.paymentId = Objects.requireNonNull(paymentId, "paymentId is required");
         this.orderId = requireNonBlank(orderId, "orderId");
         this.buyerId = requireNonBlank(buyerId, "buyerId");
@@ -37,6 +47,8 @@ public class Payment {
         this.externalCurrency = externalCurrency;
         this.fxRate = fxRate;
         this.fxRateAt = fxRateAt;
+        this.codCollectionEventId = codCollectionEventId;
+        this.codCollectedAt = codCollectedAt;
     }
 
     public static Payment pending(String orderId, String buyerId, BigDecimal amount, PaymentMethod method) {
@@ -44,11 +56,21 @@ public class Payment {
     }
 
     public Payment withResult(PaymentStatus status, String transactionRef) {
-        return new Payment(paymentId, orderId, buyerId, amount, method, status, transactionRef, createdAt, externalAmount, externalCurrency, fxRate, fxRateAt);
+        return new Payment(paymentId, orderId, buyerId, amount, method, status, transactionRef, createdAt,
+                externalAmount, externalCurrency, fxRate, fxRateAt, codCollectionEventId, codCollectedAt);
     }
 
     public Payment withFxDetails(BigDecimal externalAmount, String externalCurrency, BigDecimal fxRate, Instant fxRateAt) {
-        return new Payment(paymentId, orderId, buyerId, amount, method, status, transactionRef, createdAt, externalAmount, externalCurrency, fxRate, fxRateAt);
+        return new Payment(paymentId, orderId, buyerId, amount, method, status, transactionRef, createdAt,
+                externalAmount, externalCurrency, fxRate, fxRateAt, codCollectionEventId, codCollectedAt);
+    }
+
+    public Payment withCodCollection(String collectionEventId, Instant collectedAt) {
+        if (collectionEventId == null || collectionEventId.isBlank()) {
+            throw new IllegalArgumentException("collectionEventId is required");
+        }
+        return new Payment(paymentId, orderId, buyerId, amount, method, status, transactionRef, createdAt,
+                externalAmount, externalCurrency, fxRate, fxRateAt, collectionEventId, collectedAt);
     }
 
     public UUID paymentId() {
@@ -97,6 +119,14 @@ public class Payment {
 
     public Instant fxRateAt() {
         return fxRateAt;
+    }
+
+    public String codCollectionEventId() {
+        return codCollectionEventId;
+    }
+
+    public Instant codCollectedAt() {
+        return codCollectedAt;
     }
 
     private static String requireNonBlank(String value, String fieldName) {

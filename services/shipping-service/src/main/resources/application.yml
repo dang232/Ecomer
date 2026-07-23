@@ -105,6 +105,7 @@ shipping:
   events:
     cancelled-topic: ${SHIPPING_CANCELLED_TOPIC:shipping.cancelled}
     status-updated-topic: ${SHIPPING_STATUS_UPDATED_TOPIC:shipping.status.updated}
+    cod-collected-topic: ${SHIPPING_COD_COLLECTED_TOPIC:shipping.cod.collected}
 
 config-service:
   url: ${CONFIG_SERVICE_URL:http://configuration-service:8097}

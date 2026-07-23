@@ -17,6 +17,6 @@ public class CodPaymentMethodHandler implements PaymentMethodHandler {
 
     @Override
     public PaymentGatewayPort.GatewayPaymentResult processPayment(Payment payment) {
-        return new PaymentGatewayPort.GatewayPaymentResult(PaymentStatus.COMPLETED, "COD-" + payment.paymentId());
+        return new PaymentGatewayPort.GatewayPaymentResult(PaymentStatus.AWAITING_COLLECTION, "COD-" + payment.paymentId());
     }
 }

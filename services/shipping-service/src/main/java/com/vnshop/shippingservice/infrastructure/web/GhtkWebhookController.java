@@ -51,7 +51,10 @@ public class GhtkWebhookController {
                 first(form, "status", "status_id"),
                 first(form, "status_text", "reason"),
                 first(form, "updated_at", "action_time"),
-                first(form, "order_id", "order_code"));
+                first(form, "order_id", "order_code"),
+                decimal(form, "cod_collected_amount", "cod_collect_amount"),
+                first(form, "collection_id", "cod_collection_id"),
+                first(form, "currency"));
         return process(payload, signature);
     }
 
@@ -85,5 +88,10 @@ public class GhtkWebhookController {
             }
         }
         return null;
+    }
+
+    private java.math.BigDecimal decimal(Map<String, String> values, String... names) {
+        String value = first(values, names);
+        return value == null ? null : new java.math.BigDecimal(value);
     }
 }

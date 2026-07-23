@@ -8,6 +8,7 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 public record ShippingEventProperties(
         @NotBlank String cancelledTopic,
-        @NotBlank String statusUpdatedTopic
+        @NotBlank String statusUpdatedTopic,
+        @NotBlank String codCollectedTopic
 ) {
 }

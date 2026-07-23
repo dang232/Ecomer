@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 @Component
@@ -33,7 +34,8 @@ public class ShippingEventPublisher implements ShippingCancellationEventPublishe
 
     public ShippingEventPublisher(KafkaTemplate<String, String> kafkaTemplate, ObjectMapper objectMapper) {
         this(kafkaTemplate, objectMapper,
-                new ShippingEventProperties("shipping.cancelled", "shipping.status.updated"));
+                new ShippingEventProperties("shipping.cancelled", "shipping.status.updated",
+                        "shipping.cod.collected"));
     }
 
     @Override
@@ -63,9 +65,48 @@ public class ShippingEventPublisher implements ShippingCancellationEventPublishe
             payload.put("timestamp", event.eventTimestamp() == null
                     ? Instant.now().toString() : event.eventTimestamp());
             payload.put("eventTimestamp", Instant.now().toString());
-            return send(properties.statusUpdatedTopic(), event.orderId(), objectMapper.writeValueAsString(payload));
+            CompletableFuture<Void> statusFuture = send(
+                    properties.statusUpdatedTopic(), event.orderId(), objectMapper.writeValueAsString(payload));
+            if (!event.hasVerifiedCodCollection()) {
+                return statusFuture;
+            }
+            return statusFuture.thenCompose(ignored -> publishCodCollected(event));
         } catch (Exception e) {
             return CompletableFuture.failedFuture(e);
+        }
+    }
+
+    private CompletableFuture<Void> publishCodCollected(CarrierWebhookEvent event) {
+        try {
+            UUID orderId = UUID.fromString(event.orderId());
+            long amount = event.collectedCodAmount().setScale(0).longValueExact();
+            if (amount <= 0) {
+                return CompletableFuture.completedFuture(null);
+            }
+            Instant collectedAt = Instant.parse(event.eventTimestamp());
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("collectionId", event.codCollectionId());
+            payload.put("shipmentId", event.codShipmentId());
+            payload.put("orderId", orderId);
+            payload.put("carrier", event.carrier());
+            payload.put("amount", amount);
+            payload.put("currency", event.codCurrency().toUpperCase());
+            payload.put("collectedAt", collectedAt.toString());
+
+            Map<String, Object> envelope = new LinkedHashMap<>();
+            envelope.put("eventId", event.codCollectionId());
+            envelope.put("eventType", "SHIPPING_COD_COLLECTED");
+            envelope.put("schemaVersion", 1);
+            envelope.put("occurredAt", collectedAt.toString());
+            envelope.put("producer", "shipping-service");
+            envelope.put("aggregateId", event.codShipmentId());
+            envelope.put("correlationId", orderId);
+            envelope.put("causationId", UUID.nameUUIDFromBytes(
+                    (event.carrier() + ":" + event.eventId()).getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+            envelope.put("payload", payload);
+            return send(properties.codCollectedTopic(), event.orderId(), objectMapper.writeValueAsString(envelope));
+        } catch (Exception exception) {
+            return CompletableFuture.failedFuture(exception);
         }
     }
 

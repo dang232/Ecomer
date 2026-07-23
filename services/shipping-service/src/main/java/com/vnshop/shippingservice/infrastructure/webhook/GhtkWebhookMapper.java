@@ -16,7 +16,10 @@ public class GhtkWebhookMapper {
                 trackingCode,
                 mapStatus(payload.status()),
                 payload.statusText(),
-                payload.updatedAt());
+                payload.updatedAt(),
+                payload.codCollectedAmount(),
+                payload.collectionId(),
+                payload.currency());
     }
 
     public String mapStatus(String value) {
