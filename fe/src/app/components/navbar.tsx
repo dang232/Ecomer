@@ -351,9 +351,8 @@ export function Navbar() {
                       <button
                         role="menuitem"
                         onClick={() => {
-                          logout();
+                          logout("/");
                           setUserMenuOpen(false);
-                          void navigate("/");
                         }}
                         className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-error-light transition-colors text-left text-error"
                       >

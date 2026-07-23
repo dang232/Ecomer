@@ -427,5 +427,42 @@ describe("useCart", () => {
         { timeout: 3000 },
       );
     });
+
+    it("adds to the server while the initial cart read is still pending", async () => {
+      const initialCart = { items: [], itemCount: 0, totalAmount: 0 };
+      const updatedCart = {
+        items: [{ productId: "prod-2", quantity: 1, price: 50, name: "New Item" }],
+        itemCount: 1,
+        totalAmount: 50,
+      };
+      let resolveInitialCart!: (response: Response) => void;
+      const initialCartPending = new Promise<Response>((resolve) => {
+        resolveInitialCart = resolve;
+      });
+
+      useAuthMock.mockReturnValue({ ready: true, authenticated: true });
+      fetchSpy.mockImplementation(((_input: RequestInfo | URL, init?: RequestInit) => {
+        if (!init?.method || init.method === "GET") return initialCartPending;
+        return Promise.resolve(cartEnvelope(updatedCart));
+      }) as typeof fetch);
+      localStorage.removeItem("vnshop:guest-cart");
+
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
+
+      act(() => {
+        result.current.addItem({ productId: "prod-2", quantity: 1 });
+      });
+
+      await waitFor(() => {
+        const postCall = fetchSpy.mock.calls.find(
+          ([, request]) => (request as RequestInit | undefined)?.method === "POST",
+        );
+        expect(postCall).toBeDefined();
+      });
+
+      resolveInitialCart(cartEnvelope(initialCart));
+      await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2));
+    });
   });
 });

@@ -45,7 +45,7 @@ interface VNShopContextType {
   // Auth — backed by the gateway's native cookie session.
   user: User | null;
   isLoggedIn: boolean;
-  logout: () => void;
+  logout: (redirectTo?: string) => void;
   // Theme.
   isDark: boolean;
   toggleTheme: () => void;
@@ -146,10 +146,13 @@ export function VNShopProvider({ children }: { children: ReactNode }) {
     [wishlistStore],
   );
 
-  const logout = useCallback(() => {
-    toast.info("Đã đăng xuất khỏi tài khoản");
-    auth.logout();
-  }, [auth]);
+  const logout = useCallback(
+    (redirectTo?: string) => {
+      toast.info("Đã đăng xuất khỏi tài khoản");
+      auth.logout(redirectTo);
+    },
+    [auth],
+  );
 
   const toggleTheme = useCallback(() => {
     setIsDark((prev) => {

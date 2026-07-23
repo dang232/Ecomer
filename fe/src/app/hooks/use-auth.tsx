@@ -46,7 +46,7 @@ interface AuthState {
   loginWithPassword: (username: string, password: string) => Promise<void>;
   beginOAuthLogin: (provider: "google" | "facebook", next?: string) => void;
   register: (input: RegisterInput) => Promise<void>;
-  logout: () => void;
+  logout: (redirectTo?: string) => void;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -85,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [tokenSet, setTokenSet] = useState<TokenSet | null>(null);
   const refreshTimeoutRef = useRef<number | null>(null);
+  const logoutInProgressRef = useRef(false);
 
   const applyTokenSet = useCallback((next: TokenSet | null) => {
     setTokenSet(next);
@@ -100,7 +101,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshSession = useCallback(async () => {
     const next = await refreshTokens();
-    applyTokenSet(next);
+    // A refresh may have started immediately before logout. Do not let that
+    // late response re-install a session while the logout redirect is pending.
+    if (!logoutInProgressRef.current) applyTokenSet(next);
     return next;
   }, [applyTokenSet]);
 
@@ -127,7 +130,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const refreshSkewMs = 30_000;
     const delay = Math.max(1_000, tokenSet.accessExpiresAt - Date.now() - refreshSkewMs);
     refreshTimeoutRef.current = window.setTimeout(() => {
-      void refreshSession().catch(() => applyTokenSet(null));
+      void refreshSession().catch(() => {
+        if (!logoutInProgressRef.current) applyTokenSet(null);
+      });
     }, delay);
     return clearRefreshTimer;
   }, [applyTokenSet, clearRefreshTimer, refreshSession, tokenSet]);
@@ -140,8 +145,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const refreshVisibleSession = () => {
-      if (document.hidden || !tokenSet) return;
-      void refreshSession().catch(() => applyTokenSet(null));
+      if (document.hidden || !tokenSet || logoutInProgressRef.current) return;
+      void refreshSession().catch(() => {
+        if (!logoutInProgressRef.current) applyTokenSet(null);
+      });
     };
     document.addEventListener("visibilitychange", refreshVisibleSession);
     window.addEventListener("focus", refreshVisibleSession);
@@ -158,6 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginWithPassword = useCallback(
     async (username: string, password: string) => {
+      logoutInProgressRef.current = false;
       const next = await passwordLogin(username, password);
       applyTokenSet(next);
     },
@@ -181,10 +189,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const logout = useCallback(() => {
-    applyTokenSet(null);
-    void revokeTokens();
-  }, [applyTokenSet]);
+  const logout = useCallback(
+    (redirectTo?: string) => {
+      logoutInProgressRef.current = true;
+      if (!redirectTo) {
+        applyTokenSet(null);
+        void revokeTokens();
+        return;
+      }
+
+      // Keep the guarded route mounted until the cookie is revoked. Clearing
+      // auth first lets RequireRole redirect to /login before the requested
+      // storefront navigation can win.
+      void revokeTokens().finally(() => {
+        applyTokenSet(null);
+        window.location.replace(safeReturnPath(redirectTo));
+      });
+    },
+    [applyTokenSet],
+  );
 
   const value = useMemo<AuthState>(() => {
     const claims = tokenSet ? decodeJwt(tokenSet.accessToken) : null;

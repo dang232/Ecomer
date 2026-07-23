@@ -1,9 +1,7 @@
 import {
-  IconAlertCircle,
   IconChevronLeft,
   IconChevronRight,
   IconEdit,
-  IconFilter,
   IconPlus,
   IconSearch,
 } from "@tabler/icons-react";
@@ -12,9 +10,9 @@ import { useTranslation } from "react-i18next";
 
 import { SellerProductModal } from "../../components/seller-product-modal";
 import { useAuth } from "../../hooks/use-auth";
+import { useDebouncedValue } from "../../hooks/use-debounced-value";
 import { useProducts } from "../../hooks/use-products";
 import { formatPrice } from "../../lib/format";
-import { comingSoon } from "../../lib/ui/coming-soon";
 import { type Product } from "../../types/ui";
 
 const PAGE_SIZE = 24;
@@ -25,10 +23,14 @@ export function SellerProducts() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [page, setPage] = useState(0);
   const { subject: sellerId } = useAuth();
-  const { data: catalog = [], isLoading } = useProducts({ sellerId, page, size: PAGE_SIZE });
+  const debouncedSearch = useDebouncedValue(search.trim(), 300);
+  const { data: catalog = [], isLoading } = useProducts({
+    sellerId,
+    q: debouncedSearch || undefined,
+    page,
+    size: PAGE_SIZE,
+  });
   const { t } = useTranslation();
-
-  const filtered = catalog.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
   const hasMore = catalog.length === PAGE_SIZE;
 
   const handleSearchChange = (value: string) => {
@@ -54,16 +56,8 @@ export function SellerProducts() {
         </button>
       </div>
 
-      {/* Info banner – dev only */}
-      {import.meta.env.DEV ? (
-        <div className="rounded-[var(--radius-md)] bg-warning/10 border border-warning/30 p-3 text-xs text-foreground flex items-start gap-2">
-          <IconAlertCircle size={14} className="shrink-0 mt-0.5 text-warning" aria-hidden="true" />
-          <p>{t("seller.products.fallbackBanner")}</p>
-        </div>
-      ) : null}
-
-      {/* Search + filter row */}
-      <div className="flex gap-3">
+      {/* Search row */}
+      <div className="flex">
         <div className="flex-1 flex items-center gap-3 bg-card border border-border rounded-[var(--radius-md)] px-4 py-2.5">
           <IconSearch size={16} className="text-muted-foreground" aria-hidden="true" />
           <input
@@ -74,14 +68,6 @@ export function SellerProducts() {
             aria-label={t("seller.products.searchPlaceholder")}
           />
         </div>
-        <button
-          type="button"
-          onClick={() => comingSoon("Filtering", t)}
-          className="flex items-center gap-2 px-4 py-2.5 border border-border rounded-[var(--radius-md)] bg-card text-sm text-muted-foreground hover:bg-muted transition-colors"
-        >
-          <IconFilter size={15} aria-hidden="true" />
-          {t("seller.products.filter")}
-        </button>
       </div>
 
       {isLoading ? (
@@ -111,7 +97,7 @@ export function SellerProducts() {
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {filtered.map((p) => (
+            {catalog.map((p) => (
               <tr key={p.id} className="hover:bg-background transition-colors">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">

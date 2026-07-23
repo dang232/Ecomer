@@ -15,6 +15,7 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.core.annotation.Order;
 
 import java.util.Collection;
 import java.util.List;
@@ -30,6 +31,25 @@ public class SecurityConfig {
             "/auth/refresh", "/auth/logout");
 
     @Bean
+    @Order(1)
+    SecurityFilterChain authSecurityFilterChain(HttpSecurity http) throws Exception {
+        // Keep the cookie session boundary separate from bearer-token resource
+        // authorization. Refresh and logout authenticate with the httpOnly
+        // cookie, so they must be reachable before JWT authorization runs.
+        return http
+                .securityMatcher("/auth/**")
+                // CsrfProtectionFilter is the single double-submit policy for
+                // these endpoints. The framework CsrfFilter would evaluate the
+                // anonymous request first and turn a valid cookie refresh into
+                // a 401 through the anonymous authentication entry point.
+                .csrf(csrf -> csrf.disable())
+                .addFilterBefore(new CsrfProtectionFilter(), UsernamePasswordAuthenticationFilter.class)
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                .build();
+    }
+
+    @Bean
+    @Order(2)
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(csrf -> csrf
@@ -39,6 +59,11 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api-docs", "/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
+                        // These endpoints are the public cookie-auth boundary. Keep the
+                        // explicit method matchers alongside the namespace matcher so
+                        // refresh/logout never fall through to JWT authorization.
+                        .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/refresh", "/auth/logout")
+                        .permitAll()
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/sellers", "/sellers/{id}", "/sellers/public-profiles").permitAll()
                         .requestMatchers(HttpMethod.GET, "/users/public-profiles").permitAll()

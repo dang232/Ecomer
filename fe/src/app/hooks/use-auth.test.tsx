@@ -140,6 +140,26 @@ describe("AuthProvider native session", () => {
     expect(result.current.authenticated).toBe(false);
   });
 
+  it("does not let an in-flight refresh restore a session after logout", async () => {
+    const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
+    await waitFor(() => expect(result.current.ready).toBe(true));
+
+    let resolveRefresh!: (value: TokenSet) => void;
+    const pendingRefresh = new Promise<TokenSet>((resolve) => {
+      resolveRefresh = resolve;
+    });
+    mocks.refreshTokens.mockReturnValueOnce(pendingRefresh);
+
+    act(() => window.dispatchEvent(new Event("focus")));
+    expect(mocks.refreshTokens).toHaveBeenCalledTimes(2);
+
+    act(() => result.current.logout());
+    await act(async () => resolveRefresh(tokenSet));
+
+    await waitFor(() => expect(result.current.authenticated).toBe(false));
+    expect(mocks.setLiveTokenSet).toHaveBeenLastCalledWith(null);
+  });
+
   it("reports allowed roles only", async () => {
     const { result } = renderHook(() => useHasRole("BUYER"), { wrapper: Wrapper });
     await waitFor(() => expect(result.current).toBe(true));

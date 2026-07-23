@@ -82,6 +82,21 @@ describe("useProducts", () => {
     await waitFor(() => expect(result.current.data).toEqual([]));
     expect(result.current.error).toBeNull();
   });
+
+  it("forwards seller search to the server query", async () => {
+    productListMock.mockResolvedValue({ content: [], totalElements: 0 });
+
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(
+      () => useProducts({ sellerId: "seller-1", q: "headphones", page: 0, size: 24 }),
+      { wrapper: Wrapper },
+    );
+
+    await waitFor(() => expect(result.current.data).toEqual([]));
+    expect(productListMock).toHaveBeenCalledWith(
+      expect.objectContaining({ sellerId: "seller-1", q: "headphones", page: 0, size: 24 }),
+    );
+  });
 });
 
 describe("useProduct", () => {

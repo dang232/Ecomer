@@ -1016,7 +1016,9 @@
         "balance": "Wallet balance",
         "pending": "Pending orders",
         "views": "Shop views",
-        "rating": "Average rating"
+        "products": "Products",
+        "rating": "Average rating",
+        "noRating": "No ratings"
       },
       "revenue30dTitle": "Revenue (30 days)",
       "revenue30dHint": "Live from your order data",

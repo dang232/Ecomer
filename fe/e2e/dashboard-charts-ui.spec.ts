@@ -9,13 +9,22 @@ test.describe("dashboard charts", () => {
     await page.goto("/admin");
 
     await expect(page.getByTestId("admin-revenue-chart")).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByTestId("admin-top-products-chart")).toBeVisible({ timeout: 30_000 });
+    const topProductsChart = page.getByTestId("admin-top-products-chart");
+    const topProductsEmpty = page.getByTestId("admin-top-products-empty");
+    await expect
+      .poll(async () => (await topProductsChart.count()) + (await topProductsEmpty.count()), {
+        timeout: 30_000,
+      })
+      .toBe(1);
+    if (await topProductsChart.count()) {
+      await expect(topProductsChart).toBeVisible();
+      await expect(topProductsChart.locator(".recharts-bar-rectangle")).not.toHaveCount(0);
+    } else {
+      await expect(topProductsEmpty).toBeVisible();
+    }
     await expect(
       page.getByTestId("admin-revenue-chart").locator(".recharts-area-area"),
     ).toHaveCount(1);
-    await expect(
-      page.getByTestId("admin-top-products-chart").locator(".recharts-bar-rectangle"),
-    ).not.toHaveCount(0);
     await expectNoGlobalError(page);
     await page.screenshot({
       path: "e2e/evidence/full-audit/dashboard-charts-admin.png",

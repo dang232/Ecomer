@@ -320,7 +320,7 @@ export function ProfilePage() {
 
           {/* Logout */}
           <button
-            onClick={logout}
+            onClick={() => logout()}
             className="w-full mt-4 py-2.5 rounded-[var(--radius-md)] text-red-500 border border-red-200 flex items-center justify-center gap-2 text-sm font-medium hover:bg-red-50 transition-colors"
           >
             <LogOut size={16} /> {t("profile.logout")}
