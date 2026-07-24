@@ -302,7 +302,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Install pnpm
-        uses: pnpm/action-setup@9d7d2d0e8c09c6a0f4c7d1a1e3e3a5b8c0f8e8a0 # v4.0.0
+        uses: pnpm/action-setup@v4
         with:
           version: 9
 
