@@ -47,7 +47,7 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^26.1.1",
     "@types/opossum": "^8.1.9",
-    "@types/supertest": "^7.2.0",
+    "@types/supertest": "^7.2.1",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",
