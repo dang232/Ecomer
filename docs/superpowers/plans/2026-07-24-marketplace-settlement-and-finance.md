@@ -85,7 +85,7 @@ These defaults come from `docs/ba/02-TRUST.md` and `docs/ba/05-FULFILL.md` and m
 - Produces: the ownership, terminology, settlement, COD, refund, chargeback, reserve, and payout rules consumed by every later task.
 - Produces: a forward-only Flyway policy with non-scanned incident rollback scripts.
 
-- [ ] **Step 1: Write the ADR with explicit ownership and equations**
+- [x] **Step 1: Write the ADR with explicit ownership and equations**
 
 The ADR must include:
 
@@ -109,15 +109,15 @@ sellerPayableAmount =
   - platformCommissionAmount
 ```
 
-- [ ] **Step 2: Correct the rollback policy**
+- [x] **Step 2: Correct the rollback policy**
 
 Replace the rule that places a forward migration and its reverse migration in the same Flyway scan path. State that additive migrations remain in `db/migration`, prepared incident scripts live in `db/rollback`, and ordinary rollback switches application feature modes while leaving additive tables and journal history intact.
 
-- [ ] **Step 3: Add named release gates**
+- [x] **Step 3: Add named release gates**
 
 The no-go checklist must block production when COD collection truth, ledger balance, backfill evidence, payout idempotency, provider/manual evidence, projection drift, DLT health, or destination masking is unproven.
 
-- [ ] **Step 4: Verify documentation is internally consistent**
+- [x] **Step 4: Verify documentation is internally consistent**
 
 Run:
 
@@ -127,7 +127,7 @@ rg -n "reverse V|realizedRevenue|order.created.*credit|clamp.*zero|seller-financ
 
 Expected: every remaining match is either corrected in this task or listed in Task 14's stale-document cleanup.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add docs/MARKETPLACE-SETTLEMENT-LEDGER.md docs/adr/ADR-002-marketplace-finance-ownership.md docs/ba/05-FULFILL.md infra/migration-policy.md infra/production-no-go-checklist.md
@@ -155,7 +155,7 @@ git commit -m "docs(finance): define marketplace settlement policy"
 - Produces: JSON contract fixtures for independently deployed producers/consumers.
 - Produces: PostgreSQL and Kafka integration-test infrastructure matching order-service's existing Testcontainers pattern.
 
-- [ ] **Step 1: Define the finance adjustment contract**
+- [x] **Step 1: Define the finance adjustment contract**
 
 The schema requires:
 
@@ -186,19 +186,19 @@ The schema requires:
 
 All amounts are positive; `adjustmentType` determines accounting direction.
 
-- [ ] **Step 2: Add Testcontainers dependencies**
+- [x] **Step 2: Add Testcontainers dependencies**
 
 Add test-scoped `org.testcontainers:junit-jupiter`, `org.testcontainers:postgresql`, `org.testcontainers:kafka`, and `org.springframework.boot:spring-boot-testcontainers` to seller-finance and payment services.
 
-- [ ] **Step 3: Add clean-schema boot tests**
+- [x] **Step 3: Add clean-schema boot tests**
 
 Create `FinanceMigrationIntegrationTest` and `PaymentMigrationIntegrationTest`. Each test starts PostgreSQL, runs the service's Flyway history, and asserts the current schema version.
 
-- [ ] **Step 4: Extend CI**
+- [x] **Step 4: Extend CI**
 
 Add integration steps for seller-finance and payment beside the existing order migration test. Run `mvn verify`, not only isolated unit tests, for those services when their files or shared finance contracts change.
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 ```powershell
 Set-Location services/seller-finance-service
@@ -209,7 +209,7 @@ Set-Location ../payment-service
 
 Expected: both tests pass against fresh PostgreSQL containers.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add infra/kafka/contracts services/seller-finance-service/pom.xml services/payment-service/pom.xml services/seller-finance-service/src/test services/payment-service/src/test .github/workflows/ci.yml
@@ -237,7 +237,7 @@ git commit -m "test(finance): add contracts and integration harness"
 - Produces: `shipping.cod.collected` v1 only when collection evidence is verifiable.
 - Produces: ordinary durable `payment.completed` after COD collection, so downstream consumers do not need a COD special case.
 
-- [ ] **Step 1: Write failing COD tests**
+- [x] **Step 1: Write failing COD tests**
 
 Add tests proving:
 
@@ -250,19 +250,19 @@ verify(paymentCompletedPublisher, never()).publish(any());
 
 Add duplicate carrier-event and mismatched-amount tests.
 
-- [ ] **Step 2: Add `AWAITING_COLLECTION`**
+- [x] **Step 2: Add `AWAITING_COLLECTION`**
 
 `CodPaymentMethodHandler` returns `AWAITING_COLLECTION`, never `COMPLETED`. The payment record keeps its expected VND amount and a generated COD reference.
 
-- [ ] **Step 3: Publish verified collection**
+- [x] **Step 3: Publish verified collection**
 
 Shipping persists carrier event ID, order ID, tracking code, expected COD amount, collected amount, provider timestamp, and evidence status. A carrier status without actual collection evidence must not publish `shipping.cod.collected`; it remains operationally unresolved.
 
-- [ ] **Step 4: Promote COD idempotently**
+- [x] **Step 4: Promote COD idempotently**
 
 `ConfirmCodCollectionUseCase` locks the payment, checks method/status/order/currency/amount, persists the collection event ID, then promotes through the existing payment callback outbox so `payment.completed` remains durable.
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 ```powershell
 Set-Location services/payment-service
@@ -273,7 +273,7 @@ Set-Location ../shipping-service
 
 Expected: selecting COD creates no completed event; one verified collection creates exactly one completed event.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add services/payment-service services/shipping-service services/order-service/src/main/java/com/vnshop/orderservice/domain/PaymentStatus.java
@@ -315,15 +315,15 @@ public record FinancialComponents(
         String currency) {}
 ```
 
-- [ ] **Step 1: Write allocation tests**
+- [x] **Step 1: Write allocation tests**
 
 Cover one seller, multiple sellers, proportional discount allocation, deterministic remainder assignment by ascending `subOrderId`, frozen commission rates, tax persistence, and exact aggregate equality.
 
-- [ ] **Step 2: Add the allocation table**
+- [x] **Step 2: Add the allocation table**
 
 Use UUID allocation IDs, unique `(sub_order_id, allocation_version)`, explicit component columns, commission tier/rate, source `NATIVE_V1|LEGACY_BACKFILL`, and timestamps. Do not add cross-schema keys.
 
-- [ ] **Step 3: Implement deterministic allocation**
+- [x] **Step 3: Implement deterministic allocation**
 
 Require:
 
@@ -336,11 +336,11 @@ sum(taxChargedAmount) == order.taxTotal
 
 Persist the allocation in the same transaction as order creation.
 
-- [ ] **Step 4: Fix tax JPA mapping**
+- [x] **Step 4: Fix tax JPA mapping**
 
 Map the columns introduced by `V24__tax_rates.sql`; tests must round-trip order tax total and item tax data.
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 ```powershell
 Set-Location services/order-service
@@ -349,7 +349,7 @@ Set-Location services/order-service
 
 Expected: all allocation sums equal authoritative order totals exactly.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add services/order-service

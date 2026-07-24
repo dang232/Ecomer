@@ -11,7 +11,7 @@
   - buyer shipping/tax are not initially seller-payable;
   - proportional VND remainders are assigned by ascending generated sub-order ID.
 - Wired allocation after `orderRepository.save(...)` and before event publication in the existing `@Transactional` `CreateOrderUseCase.create(...)` boundary.
-- Preserved existing `CreateOrderUseCase` and `OrderItem` constructor call sites with compatibility constructors.
+- Preserved existing `OrderItem` constructor call sites with a compatibility constructor; the allocation dependency on `CreateOrderUseCase` is mandatory and all call sites provide it.
 - Added JPA mapping for `orders.tax_total` and `order_items.tax_rate` / `tax_amount`; tax calculation results now persist on the relevant order items.
 
 ## TDD Evidence
@@ -26,17 +26,11 @@
 
 ## Verification
 
-- Focused command: `./mvnw.cmd "-Dtest=AllocateOrderFinancialsUseCaseTest,CreateOrderUseCaseFinancialAllocationTest,OrderJpaEntityFinancialMappingTest,OrderServiceIntegrationTest" test`
-  - Allocation, order-creation, and JPA mapping tests passed (4 tests).
-  - `OrderServiceIntegrationTest` could not start because Testcontainers could not find a valid Docker environment.
-- Complete feasible order-service unit suite: `./mvnw.cmd "-Dtest=!OrderServiceIntegrationTest,!OrderServiceApplicationTests,*Test" test`
+- Complete feasible order-service unit suite before the hardening pass: `./mvnw.cmd "-Dtest=!OrderServiceIntegrationTest,!OrderServiceApplicationTests,*Test" test`
   - Passed: 186 tests, 0 failures, 0 errors.
+- The initial focused integration attempt was blocked by the older Testcontainers `1.20.4` BOM and Docker Desktop API detection. The BOM was aligned to `1.21.4` and the focused integration test was rerun successfully with Docker available.
 - `git diff --check`
   - Passed (no whitespace errors).
-
-## Constraint / Remaining Verification Gap
-
-The Testcontainers integration suite remains unexecuted in this workspace because Docker is unavailable. The failure is environmental (`Could not find a valid Docker environment`), before Flyway or JPA assertions run. Re-run the focused command with Docker available to verify the migration against PostgreSQL end-to-end.
 
 ## Reviewer Fixes (2026-07-24)
 
