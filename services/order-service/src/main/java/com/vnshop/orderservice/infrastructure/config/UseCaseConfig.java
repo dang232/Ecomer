@@ -50,6 +50,8 @@ import com.vnshop.orderservice.application.tax.TaxCalculationService;
 import com.vnshop.orderservice.domain.port.out.TaxRateLookupPort;
 import com.vnshop.orderservice.domain.port.out.SubOrderFinancialAllocationRepositoryPort;
 import com.vnshop.orderservice.domain.port.out.SellerFinanceAdjustmentPublisherPort;
+import com.vnshop.orderservice.domain.port.out.FinancialReversalRepositoryPort;
+import com.vnshop.orderservice.domain.port.out.SettlementHoldPublisherPort;
 import java.time.Clock;
 import com.vnshop.orderservice.application.coupon.CouponManagementService;
 import com.vnshop.orderservice.application.coupon.CouponRedemptionService;
@@ -235,8 +237,9 @@ public class UseCaseConfig {
     }
 
     @Bean
-    RequestReturnUseCase requestReturnUseCase(OrderRepositoryPort orderRepositoryPort, ReturnRepositoryPort returnRepositoryPort) {
-        return new RequestReturnUseCase(orderRepositoryPort, returnRepositoryPort);
+    RequestReturnUseCase requestReturnUseCase(OrderRepositoryPort orderRepositoryPort, ReturnRepositoryPort returnRepositoryPort,
+                                              SettlementHoldPublisherPort settlementHoldPublisherPort) {
+        return new RequestReturnUseCase(orderRepositoryPort, returnRepositoryPort, settlementHoldPublisherPort);
     }
 
     @Bean
@@ -245,8 +248,9 @@ public class UseCaseConfig {
     }
 
     @Bean
-    RejectReturnUseCase rejectReturnUseCase(ReturnRepositoryPort returnRepositoryPort, OrderRepositoryPort orderRepositoryPort) {
-        return new RejectReturnUseCase(returnRepositoryPort, orderRepositoryPort);
+    RejectReturnUseCase rejectReturnUseCase(ReturnRepositoryPort returnRepositoryPort, OrderRepositoryPort orderRepositoryPort,
+                                            SettlementHoldPublisherPort settlementHoldPublisherPort) {
+        return new RejectReturnUseCase(returnRepositoryPort, orderRepositoryPort, settlementHoldPublisherPort);
     }
 
     @Bean
@@ -255,10 +259,11 @@ public class UseCaseConfig {
             OrderRepositoryPort orderRepositoryPort,
             RefundRequestPort refundRequestPort,
             SubOrderFinancialAllocationRepositoryPort allocationRepositoryPort,
-            SellerFinanceAdjustmentPublisherPort sellerFinanceAdjustmentPublisherPort
+            SellerFinanceAdjustmentPublisherPort sellerFinanceAdjustmentPublisherPort,
+            FinancialReversalRepositoryPort financialReversalRepositoryPort
     ) {
         return new CompleteReturnUseCase(returnRepositoryPort, orderRepositoryPort, refundRequestPort,
-                allocationRepositoryPort, sellerFinanceAdjustmentPublisherPort);
+                allocationRepositoryPort, sellerFinanceAdjustmentPublisherPort, financialReversalRepositoryPort);
     }
 
     @Bean
@@ -277,8 +282,9 @@ public class UseCaseConfig {
     }
 
     @Bean
-    DisputeUseCase disputeUseCase(ReturnRepositoryPort returnRepositoryPort, DisputeRepositoryPort disputeRepositoryPort) {
-        return new DisputeUseCase(returnRepositoryPort, disputeRepositoryPort);
+    DisputeUseCase disputeUseCase(ReturnRepositoryPort returnRepositoryPort, DisputeRepositoryPort disputeRepositoryPort,
+                                  SettlementHoldPublisherPort settlementHoldPublisherPort) {
+        return new DisputeUseCase(returnRepositoryPort, disputeRepositoryPort, settlementHoldPublisherPort);
     }
 
     @Bean

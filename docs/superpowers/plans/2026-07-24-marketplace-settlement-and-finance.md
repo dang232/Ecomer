@@ -502,7 +502,7 @@ git commit -m "feat(finance): add immutable settlement ledger"
 
 Payment status adds `PARTIALLY_REFUNDED`. A payment becomes `REFUNDED` only when cumulative completed refunds equal captured amount. Provider idempotency uses `reversalId`, not payment ID.
 
-- [ ] **Step 2: Create allocation-linked reversals**
+- [x] **Step 2: Create allocation-linked reversals**
 
 `CompleteReturnUseCase` calculates buyer refund, seller-payable reversal, and commission reversal from the immutable allocation. Refund plus chargeback may never exceed the remaining allocation.
 
@@ -517,7 +517,7 @@ ACCEPTED  -> CHARGEBACK_FINALIZE
 
 Resolution publishes transactionally through payment-service's outbox.
 
-- [ ] **Step 4: Add seven-day settlement release**
+- [x] **Step 4: Add seven-day settlement release**
 
 The scheduler uses `FOR UPDATE SKIP LOCKED`, a bounded batch, and a stable release operation key. Open returns, disputes, fraud holds, or chargebacks block release.
 
@@ -525,7 +525,7 @@ The scheduler uses `FOR UPDATE SKIP LOCKED`, a bounded batch, and a stable relea
 
 Reversal funding order is settlement pending, available, reserve, then debt. Future credits clear debt before becoming available.
 
-- [ ] **Step 6: Verify**
+- [x] **Step 6: Verify**
 
 ```powershell
 Set-Location services/payment-service
@@ -536,7 +536,9 @@ Set-Location ../seller-finance-service
 .\mvnw.cmd "-Dtest=SettlementReleaseUseCaseTest,RefundReversalUseCaseTest,SellerWalletAdjustmentTest" test
 ```
 
-- [ ] **Step 7: Commit**
+The repository does not yet contain the three legacy-named listener tests in the original command. Equivalent focused coverage is provided by `PaymentCallbackOutboxRelayTest`, `PayPalRefundListenerTest`, `ChargebackAllocationSupportTest`, `SettlementReleaseUseCaseTest`, and the Docker-backed order/seller-finance integration tests recorded in `.superpowers/sdd/task-7-report.md`.
+
+- [x] **Step 7: Commit**
 
 ```powershell
 git add services/payment-service services/order-service services/seller-finance-service

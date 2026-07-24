@@ -18,6 +18,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import com.vnshop.sellerfinanceservice.domain.port.out.FinanceEventInboxPort;
 import com.vnshop.sellerfinanceservice.domain.port.out.LedgerRepositoryPort;
 import com.vnshop.sellerfinanceservice.domain.port.out.SellerWalletRepositoryPort;
+import com.vnshop.sellerfinanceservice.domain.port.out.SettlementReleaseCandidateRepositoryPort;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.springframework.context.annotation.Import;
 
@@ -40,6 +41,9 @@ class LedgerPersistenceIntegrationTest {
 
     @Autowired
     private SellerWalletRepositoryPort walletRepository;
+
+    @Autowired
+    private SettlementReleaseCandidateRepositoryPort settlementReleaseCandidateRepository;
 
     @Autowired
     private PlatformTransactionManager transactionManager;
@@ -130,6 +134,18 @@ class LedgerPersistenceIntegrationTest {
         assertThat(jdbcTemplate.queryForObject(
                 "select count(*) from seller_finance_svc.finance_event_inbox where event_id = ?",
                 Integer.class, adjustment.eventId())).isZero();
+    }
+
+    @Test
+    void persistsDeliverySnapshotAndLocksOnlyEligibleReleaseCandidates() {
+        FinancialAdjustment adjustment = credit(UUID.randomUUID(), UUID.randomUUID());
+        settlementReleaseCandidateRepository.recordAdjustment(adjustment);
+        settlementReleaseCandidateRepository.markDelivered(adjustment.orderId(), adjustment.subOrderId(),
+                Instant.now().minusSeconds(8 * 86_400L));
+
+        assertThat(settlementReleaseCandidateRepository.lockEligible(Instant.now(), 10))
+                .extracting(candidate -> candidate.allocationId())
+                .containsExactly(adjustment.allocationId());
     }
 
     private static FinancialAdjustment credit(UUID eventId, UUID orderId) {

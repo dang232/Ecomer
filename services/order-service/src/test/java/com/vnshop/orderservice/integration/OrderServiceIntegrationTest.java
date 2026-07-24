@@ -5,6 +5,8 @@ import com.vnshop.orderservice.domain.Money;
 import com.vnshop.orderservice.domain.Order;
 import com.vnshop.orderservice.domain.OrderItem;
 import com.vnshop.orderservice.domain.SubOrder;
+import com.vnshop.orderservice.domain.finance.FinancialReversal;
+import com.vnshop.orderservice.domain.port.out.FinancialReversalRepositoryPort;
 import com.vnshop.orderservice.infrastructure.persistence.OrderJpaRepository;
 import java.math.BigDecimal;
 import java.util.List;
@@ -35,6 +37,9 @@ class OrderServiceIntegrationTest {
 
     @Autowired
     private OrderJpaRepository orderRepository;
+
+    @Autowired
+    private FinancialReversalRepositoryPort financialReversalRepository;
 
     @Test
     void contextLoads() {
@@ -110,5 +115,38 @@ class OrderServiceIntegrationTest {
                     .isInstanceOf(SQLException.class)
                     .hasMessageContaining("sub_order_financial_allocations are immutable");
         }
+    }
+
+    @Test
+    void reservesRefundAndChargebackAgainstOneAllocationWithoutExceedingItsBuyerAmount() throws Exception {
+        UUID allocationId = UUID.randomUUID();
+        UUID orderId = UUID.randomUUID();
+        try (Connection connection = dataSource.getConnection(); Statement statement = connection.createStatement()) {
+            statement.executeUpdate("""
+                    INSERT INTO order_svc.sub_order_financial_allocations (
+                      allocation_id, allocation_version, order_id, sub_order_id, seller_id, commission_tier,
+                      frozen_commission_rate, item_gmv_amount, seller_funded_discount_amount,
+                      platform_funded_discount_amount, buyer_shipping_charge_amount, seller_shipping_payable_amount,
+                      tax_charged_amount, seller_tax_payable_amount, commission_base_amount,
+                      platform_commission_amount, seller_payable_amount, buyer_paid_amount, currency, source, allocated_at
+                    ) VALUES ('%s', 1, '%s', 888888, 'seller', 'STANDARD', 0.1000,
+                      100, 0, 0, 0, 0, 0, 0, 100, 10, 90, 100, 'VND', 'NATIVE_V1', CURRENT_TIMESTAMP)
+                    """.formatted(allocationId, orderId));
+        }
+
+        UUID refundId = UUID.randomUUID();
+        financialReversalRepository.reserve(new FinancialReversal(
+                refundId, allocationId, orderId, FinancialReversal.ReversalType.REFUND,
+                FinancialReversal.ReversalStatus.FINALIZED, new BigDecimal("60"), "VND",
+                java.time.Instant.now(), java.time.Instant.now()), new BigDecimal("100"));
+
+        assertThat(financialReversalRepository.remainingBuyerAmount(allocationId, new BigDecimal("100")))
+                .isEqualByComparingTo("40");
+        assertThatThrownBy(() -> financialReversalRepository.reserve(new FinancialReversal(
+                UUID.randomUUID(), allocationId, orderId, FinancialReversal.ReversalType.CHARGEBACK,
+                FinancialReversal.ReversalStatus.OPEN, new BigDecimal("50"), "VND",
+                java.time.Instant.now(), java.time.Instant.now()), new BigDecimal("100")))
+                .isInstanceOf(org.springframework.dao.InvalidDataAccessApiUsageException.class)
+                .hasMessageContaining("exceeds remaining allocation");
     }
 }

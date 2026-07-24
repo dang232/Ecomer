@@ -34,7 +34,7 @@
           "additionalProperties": false,
           "required": ["reason", "confirmedBy", "confirmedAt"],
           "properties": {
-            "reason": { "const": "BUYER_CONFIRMED" },
+            "reason": { "enum": ["BUYER_CONFIRMED", "AUTO_CONFIRMED"] },
             "confirmedBy": { "type": "string", "minLength": 1 },
             "confirmedAt": { "type": "string", "format": "date-time" }
           }

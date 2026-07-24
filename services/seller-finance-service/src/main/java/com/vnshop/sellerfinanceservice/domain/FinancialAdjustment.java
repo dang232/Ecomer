@@ -3,6 +3,7 @@ package com.vnshop.sellerfinanceservice.domain;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 public record FinancialAdjustment(
@@ -121,8 +122,8 @@ public record FinancialAdjustment(
 
     public record ReleaseMetadata(String reason, String confirmedBy, Instant confirmedAt) {
         public ReleaseMetadata {
-            if (!"BUYER_CONFIRMED".equals(reason)) {
-                throw new IllegalArgumentException("release reason must be BUYER_CONFIRMED");
+            if (!Set.of("BUYER_CONFIRMED", "AUTO_CONFIRMED").contains(reason)) {
+                throw new IllegalArgumentException("release reason must be BUYER_CONFIRMED or AUTO_CONFIRMED");
             }
             requireNonBlank(confirmedBy, "confirmedBy");
             Objects.requireNonNull(confirmedAt, "confirmedAt is required");

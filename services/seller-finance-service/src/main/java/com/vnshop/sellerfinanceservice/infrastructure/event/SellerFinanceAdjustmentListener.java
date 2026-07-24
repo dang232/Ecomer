@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vnshop.sellerfinanceservice.application.ApplyFinancialAdjustmentUseCase;
 import com.vnshop.sellerfinanceservice.domain.FinancialAdjustment;
+import com.vnshop.sellerfinanceservice.domain.port.out.SettlementReleaseCandidateRepositoryPort;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.math.BigDecimal;
@@ -20,6 +21,7 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.annotation.RetryableTopic;
 import org.springframework.kafka.retrytopic.DltStrategy;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Validates immutable seller-finance adjustment snapshots published by order-service.
@@ -54,17 +56,26 @@ public class SellerFinanceAdjustmentListener {
 
     private final ObjectMapper objectMapper;
     private final ApplyFinancialAdjustmentUseCase applyFinancialAdjustmentUseCase;
+    private final SettlementReleaseCandidateRepositoryPort candidateRepository;
 
     /** Validation-only constructor retained for contract tests and disabled consumers. */
     public SellerFinanceAdjustmentListener(ObjectMapper objectMapper) {
-        this(objectMapper, null);
+        this(objectMapper, null, null);
+    }
+
+    /** Compatibility constructor retained for application-level listener tests. */
+    public SellerFinanceAdjustmentListener(ObjectMapper objectMapper,
+                                          ApplyFinancialAdjustmentUseCase applyFinancialAdjustmentUseCase) {
+        this(objectMapper, applyFinancialAdjustmentUseCase, null);
     }
 
     @Autowired
     public SellerFinanceAdjustmentListener(ObjectMapper objectMapper,
-                                          ApplyFinancialAdjustmentUseCase applyFinancialAdjustmentUseCase) {
+                                          ApplyFinancialAdjustmentUseCase applyFinancialAdjustmentUseCase,
+                                          SettlementReleaseCandidateRepositoryPort candidateRepository) {
         this.objectMapper = objectMapper;
         this.applyFinancialAdjustmentUseCase = applyFinancialAdjustmentUseCase;
+        this.candidateRepository = candidateRepository;
     }
 
     @RetryableTopic(
@@ -73,6 +84,7 @@ public class SellerFinanceAdjustmentListener {
             dltTopicSuffix = ".DLT",
             retryTopicSuffix = ".retry")
     @KafkaListener(topics = "seller.finance.adjustment", groupId = "seller-finance-service-adjustment", concurrency = "6")
+    @Transactional
     public void onSellerFinanceAdjustment(String eventJson) {
         JsonNode outboxEnvelope = readTree(eventJson, "outbox envelope");
         JsonNode adjustmentEnvelope = unwrapPayload(outboxEnvelope);
@@ -80,8 +92,12 @@ public class SellerFinanceAdjustmentListener {
 
         JsonNode payload = adjustmentEnvelope.path("payload");
         validatePayload(payload);
+        FinancialAdjustment adjustment = toAdjustment(adjustmentEnvelope);
+        if (candidateRepository != null) {
+            candidateRepository.recordAdjustment(adjustment);
+        }
         if (applyFinancialAdjustmentUseCase != null) {
-            ApplyFinancialAdjustmentUseCase.ApplyResult result = applyFinancialAdjustmentUseCase.apply(toAdjustment(adjustmentEnvelope));
+            ApplyFinancialAdjustmentUseCase.ApplyResult result = applyFinancialAdjustmentUseCase.apply(adjustment);
             LOGGER.info("seller-finance-adjustment-applied eventId={} journalId={}",
                     requiredText(adjustmentEnvelope, "eventId"), result.journalId());
         }
@@ -260,7 +276,7 @@ public class SellerFinanceAdjustmentListener {
                 throw invalid("releaseMetadata is required for RELEASE");
             }
             requireExactFields(metadata, Set.of("reason", "confirmedBy", "confirmedAt"), "releaseMetadata");
-            if (!"BUYER_CONFIRMED".equals(requiredText(metadata, "reason"))) {
+            if (!Set.of("BUYER_CONFIRMED", "AUTO_CONFIRMED").contains(requiredText(metadata, "reason"))) {
                 throw invalid("releaseMetadata.reason is unsupported");
             }
             requiredText(metadata, "confirmedBy");

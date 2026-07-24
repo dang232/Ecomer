@@ -4,11 +4,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vnshop.orderservice.domain.Order;
 import com.vnshop.orderservice.domain.PaymentStatus;
+import com.vnshop.orderservice.domain.finance.FinancialReversal;
+import com.vnshop.orderservice.domain.finance.SubOrderFinancialAllocation;
 import com.vnshop.orderservice.domain.port.out.OrderRepositoryPort;
+import com.vnshop.orderservice.domain.port.out.FinancialReversalRepositoryPort;
 import com.vnshop.orderservice.domain.port.out.SellerFinanceAdjustmentPublisherPort;
 import com.vnshop.orderservice.domain.port.out.SubOrderFinancialAllocationRepositoryPort;
 import java.math.BigDecimal;
 import java.util.Optional;
+import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,9 +34,18 @@ public class ChargebackCreatedListener {
     private final ObjectMapper objectMapper;
     private final SubOrderFinancialAllocationRepositoryPort allocationRepository;
     private final SellerFinanceAdjustmentPublisherPort sellerFinancePublisher;
+    private final FinancialReversalRepositoryPort reversalRepository;
 
     public ChargebackCreatedListener(OrderRepositoryPort orderRepository, ObjectMapper objectMapper) {
-        this(orderRepository, objectMapper, null, null);
+        this(orderRepository, objectMapper, null, null, null);
+    }
+
+    public ChargebackCreatedListener(
+            OrderRepositoryPort orderRepository,
+            ObjectMapper objectMapper,
+            SubOrderFinancialAllocationRepositoryPort allocationRepository,
+            SellerFinanceAdjustmentPublisherPort sellerFinancePublisher) {
+        this(orderRepository, objectMapper, allocationRepository, sellerFinancePublisher, null);
     }
 
     @Autowired
@@ -39,11 +53,13 @@ public class ChargebackCreatedListener {
             OrderRepositoryPort orderRepository,
             ObjectMapper objectMapper,
             SubOrderFinancialAllocationRepositoryPort allocationRepository,
-            SellerFinanceAdjustmentPublisherPort sellerFinancePublisher) {
+            SellerFinanceAdjustmentPublisherPort sellerFinancePublisher,
+            FinancialReversalRepositoryPort reversalRepository) {
         this.orderRepository = orderRepository;
         this.objectMapper = objectMapper;
         this.allocationRepository = allocationRepository;
         this.sellerFinancePublisher = sellerFinancePublisher;
+        this.reversalRepository = reversalRepository;
     }
 
     @RetryableTopic(attempts = "3", dltStrategy = DltStrategy.FAIL_ON_ERROR,
@@ -71,11 +87,32 @@ public class ChargebackCreatedListener {
 
         UUID chargebackId = parseUuid(text(payload, "chargebackId"));
         if (chargebackId != null && allocationRepository != null && sellerFinancePublisher != null) {
-            ChargebackAllocationSupport.portions(
-                            allocationRepository.findByOrderId(orderId),
-                            decimal(payload, "challengedAmount"))
-                    .forEach(portion -> sellerFinancePublisher.publishChargebackHold(
-                            portion.allocation(), chargebackId, portion.components()));
+            if (reversalRepository != null && !reversalRepository.findByReversalId(chargebackId).isEmpty()) {
+                log.debug("payment.chargeback.created chargebackId={} already reserved; duplicate ignored", chargebackId);
+                return;
+            }
+            List<SubOrderFinancialAllocation> allocations = allocationRepository.findByOrderId(orderId);
+            if (reversalRepository == null) {
+                ChargebackAllocationSupport.portions(allocations, decimal(payload, "challengedAmount"))
+                        .forEach(portion -> sellerFinancePublisher.publishChargebackHold(
+                                portion.allocation(), chargebackId, portion.components()));
+            } else {
+                ChargebackAllocationSupport.portions(allocations, decimal(payload, "challengedAmount"),
+                                allocation -> reversalRepository.remainingBuyerAmount(
+                                        allocation.allocationId(), allocation.components().buyerPaidAmount()))
+                        .forEach(portion -> {
+                            FinancialReversal reservation = reversalRepository.reserve(
+                                    new FinancialReversal(chargebackId, portion.allocation().allocationId(), orderId,
+                                            FinancialReversal.ReversalType.CHARGEBACK,
+                                            FinancialReversal.ReversalStatus.OPEN,
+                                            portion.components().buyerPaidAmount(),
+                                            portion.components().currency(), Instant.now(), Instant.now()),
+                                    portion.allocation().components().buyerPaidAmount());
+                            sellerFinancePublisher.publishChargebackHold(
+                                    portion.allocation(), chargebackId,
+                                    portion.allocation().components().reversalForBuyerAmount(reservation.buyerAmount()));
+                        });
+            }
         }
         log.info("chargeback-disputed orderId={} chargebackId={} provider={}",
                 orderId, text(payload, "chargebackId"), text(payload, "provider"));

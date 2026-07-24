@@ -4,10 +4,14 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vnshop.orderservice.domain.Order;
 import com.vnshop.orderservice.domain.PaymentStatus;
+import com.vnshop.orderservice.domain.finance.FinancialReversal;
 import com.vnshop.orderservice.domain.port.out.OrderRepositoryPort;
+import com.vnshop.orderservice.domain.port.out.FinancialReversalRepositoryPort;
 import com.vnshop.orderservice.domain.port.out.SellerFinanceAdjustmentPublisherPort;
 import com.vnshop.orderservice.domain.port.out.SubOrderFinancialAllocationRepositoryPort;
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,9 +29,18 @@ public class ChargebackResolvedListener {
     private final ObjectMapper objectMapper;
     private final SubOrderFinancialAllocationRepositoryPort allocationRepository;
     private final SellerFinanceAdjustmentPublisherPort sellerFinancePublisher;
+    private final FinancialReversalRepositoryPort reversalRepository;
 
     public ChargebackResolvedListener(OrderRepositoryPort orderRepository, ObjectMapper objectMapper) {
-        this(orderRepository, objectMapper, null, null);
+        this(orderRepository, objectMapper, null, null, null);
+    }
+
+    public ChargebackResolvedListener(
+            OrderRepositoryPort orderRepository,
+            ObjectMapper objectMapper,
+            SubOrderFinancialAllocationRepositoryPort allocationRepository,
+            SellerFinanceAdjustmentPublisherPort sellerFinancePublisher) {
+        this(orderRepository, objectMapper, allocationRepository, sellerFinancePublisher, null);
     }
 
     @Autowired
@@ -35,11 +48,13 @@ public class ChargebackResolvedListener {
             OrderRepositoryPort orderRepository,
             ObjectMapper objectMapper,
             SubOrderFinancialAllocationRepositoryPort allocationRepository,
-            SellerFinanceAdjustmentPublisherPort sellerFinancePublisher) {
+            SellerFinanceAdjustmentPublisherPort sellerFinancePublisher,
+            FinancialReversalRepositoryPort reversalRepository) {
         this.orderRepository = orderRepository;
         this.objectMapper = objectMapper;
         this.allocationRepository = allocationRepository;
         this.sellerFinancePublisher = sellerFinancePublisher;
+        this.reversalRepository = reversalRepository;
     }
 
     @RetryableTopic(attempts = "3", dltStrategy = DltStrategy.FAIL_ON_ERROR,
@@ -63,14 +78,38 @@ public class ChargebackResolvedListener {
         }
 
         if (allocationRepository == null || sellerFinancePublisher == null) return;
+        List<com.vnshop.orderservice.domain.finance.SubOrderFinancialAllocation> allocations =
+                allocationRepository.findByOrderId(orderId);
+        if (reversalRepository != null) {
+            Map<UUID, com.vnshop.orderservice.domain.finance.SubOrderFinancialAllocation> byId = allocations.stream()
+                    .collect(java.util.stream.Collectors.toMap(
+                            com.vnshop.orderservice.domain.finance.SubOrderFinancialAllocation::allocationId,
+                            allocation -> allocation));
+            FinancialReversal.ReversalStatus nextStatus = "WON".equalsIgnoreCase(outcome)
+                    ? FinancialReversal.ReversalStatus.RELEASED
+                    : FinancialReversal.ReversalStatus.FINALIZED;
+            for (FinancialReversal reservation : reversalRepository.findByReversalId(chargebackId)) {
+                if (reservation.reversalType() != FinancialReversal.ReversalType.CHARGEBACK
+                        || reservation.status() != FinancialReversal.ReversalStatus.OPEN) continue;
+                var allocation = byId.get(reservation.allocationId());
+                if (allocation == null) continue;
+                FinancialReversal resolved = reversalRepository.resolve(
+                        chargebackId, reservation.allocationId(), nextStatus);
+                var components = allocation.components().reversalForBuyerAmount(resolved.buyerAmount());
+                if (nextStatus == FinancialReversal.ReversalStatus.RELEASED) {
+                    sellerFinancePublisher.publishChargebackRelease(allocation, chargebackId, components);
+                } else {
+                    sellerFinancePublisher.publishChargebackFinalize(allocation, chargebackId, components);
+                }
+            }
+            return;
+        }
         for (ChargebackAllocationSupport.Portion portion : ChargebackAllocationSupport.portions(
-                allocationRepository.findByOrderId(orderId), decimal(payload, "challengedAmount"))) {
+                allocations, decimal(payload, "challengedAmount"))) {
             if ("WON".equalsIgnoreCase(outcome)) {
-                sellerFinancePublisher.publishChargebackRelease(
-                        portion.allocation(), chargebackId, portion.components());
+                sellerFinancePublisher.publishChargebackRelease(portion.allocation(), chargebackId, portion.components());
             } else if ("LOST".equalsIgnoreCase(outcome) || "ACCEPTED".equalsIgnoreCase(outcome)) {
-                sellerFinancePublisher.publishChargebackFinalize(
-                        portion.allocation(), chargebackId, portion.components());
+                sellerFinancePublisher.publishChargebackFinalize(portion.allocation(), chargebackId, portion.components());
             }
         }
     }
