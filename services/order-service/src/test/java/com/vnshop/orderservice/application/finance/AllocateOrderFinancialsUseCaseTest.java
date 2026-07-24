@@ -64,7 +64,7 @@ class AllocateOrderFinancialsUseCaseTest {
                 1L, 0L, 0L);
 
         List<SubOrderFinancialAllocation> allocations =
-                new AllocateOrderFinancialsUseCase(ignored -> { }).allocate(order);
+                new AllocateOrderFinancialsUseCase(new RecordingAllocations()).allocate(order);
 
         assertThat(allocations).extracting(SubOrderFinancialAllocation::subOrderId)
                 .containsExactly(20L, 10L, 30L);
@@ -84,7 +84,7 @@ class AllocateOrderFinancialsUseCaseTest {
         Order order = order(List.of(first, second), 40L, 40L);
 
         List<SubOrderFinancialAllocation> allocations =
-                new AllocateOrderFinancialsUseCase(ignored -> { }).allocate(order);
+                new AllocateOrderFinancialsUseCase(new RecordingAllocations()).allocate(order);
 
         assertThat(allocations).extracting(a -> a.components().buyerShippingChargeAmount())
                 .containsExactly(new BigDecimal("9"), new BigDecimal("91"));
@@ -144,6 +144,11 @@ class AllocateOrderFinancialsUseCaseTest {
         @Override
         public void saveAll(List<SubOrderFinancialAllocation> allocations) {
             saved.addAll(allocations);
+        }
+
+        @Override
+        public List<SubOrderFinancialAllocation> findByOrderId(UUID orderId) {
+            return saved.stream().filter(allocation -> allocation.orderId().equals(orderId)).toList();
         }
     }
 }

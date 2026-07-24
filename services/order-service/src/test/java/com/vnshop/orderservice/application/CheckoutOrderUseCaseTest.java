@@ -19,6 +19,7 @@ import com.vnshop.orderservice.domain.port.out.PaymentRequestPort;
 import com.vnshop.orderservice.domain.port.out.ProductCatalogPort;
 import com.vnshop.orderservice.domain.port.out.CartRepositoryPort;
 import com.vnshop.orderservice.domain.port.out.ShippingRequestPort;
+import com.vnshop.orderservice.domain.port.out.SubOrderFinancialAllocationRepositoryPort;
 import com.vnshop.orderservice.application.saga.SagaOrchestrator;
 import com.vnshop.orderservice.application.tax.TaxCalculationService;
 import com.vnshop.orderservice.application.coupon.CouponRedemptionService;
@@ -82,7 +83,10 @@ class CheckoutOrderUseCaseTest {
         CreateOrderUseCase createOrderUseCase = new CreateOrderUseCase(
                 repository, inventory, payment, shipping, events, tierLookup, cart, noopMetrics,
                 sagaOrchestrator, taxService, couponRedemptionService,
-                new AllocateOrderFinancialsUseCase(ignored -> { }));
+                new AllocateOrderFinancialsUseCase(new SubOrderFinancialAllocationRepositoryPort() {
+                    @Override public void saveAll(List<com.vnshop.orderservice.domain.finance.SubOrderFinancialAllocation> ignored) { }
+                    @Override public List<com.vnshop.orderservice.domain.finance.SubOrderFinancialAllocation> findByOrderId(UUID ignored) { return List.of(); }
+                }));
         return new CheckoutOrderUseCase(catalog, createOrderUseCase);
     }
 

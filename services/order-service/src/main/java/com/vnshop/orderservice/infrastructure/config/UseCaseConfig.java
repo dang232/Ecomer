@@ -49,6 +49,7 @@ import com.vnshop.orderservice.application.saga.SagaOrchestrator;
 import com.vnshop.orderservice.application.tax.TaxCalculationService;
 import com.vnshop.orderservice.domain.port.out.TaxRateLookupPort;
 import com.vnshop.orderservice.domain.port.out.SubOrderFinancialAllocationRepositoryPort;
+import com.vnshop.orderservice.domain.port.out.SellerFinanceAdjustmentPublisherPort;
 import java.time.Clock;
 import com.vnshop.orderservice.application.coupon.CouponManagementService;
 import com.vnshop.orderservice.application.coupon.CouponRedemptionService;
@@ -56,6 +57,7 @@ import com.vnshop.orderservice.domain.coupon.CouponRepository;
 import com.vnshop.orderservice.domain.coupon.CouponUsageRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
 public class UseCaseConfig {
@@ -208,8 +210,14 @@ public class UseCaseConfig {
     }
 
     @Bean
-    ConfirmDeliveryUseCase confirmDeliveryUseCase(OrderRepositoryPort orderRepositoryPort, OrderEventPublisherPort orderEventPublisherPort) {
-        return new ConfirmDeliveryUseCase(orderRepositoryPort, orderEventPublisherPort);
+    ConfirmDeliveryUseCase confirmDeliveryUseCase(
+            OrderRepositoryPort orderRepositoryPort,
+            OrderEventPublisherPort orderEventPublisherPort,
+            SubOrderFinancialAllocationRepositoryPort allocationRepositoryPort,
+            SellerFinanceAdjustmentPublisherPort sellerFinanceAdjustmentPublisherPort,
+            @Value("${seller-finance.adjustments.enabled:false}") boolean sellerFinanceAdjustmentsEnabled) {
+        return new ConfirmDeliveryUseCase(orderRepositoryPort, orderEventPublisherPort, allocationRepositoryPort,
+                sellerFinanceAdjustmentPublisherPort, sellerFinanceAdjustmentsEnabled);
     }
 
     @Bean

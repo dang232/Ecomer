@@ -376,23 +376,25 @@ git commit -m "feat(order): snapshot seller financial allocations"
 - Producer flag: `SELLER_FINANCE_ADJUSTMENTS_ENABLED=false` until Task 6's consumer is deployed.
 - Consumer flag: `SELLER_FINANCE_ADJUSTMENT_CONSUMER_ENABLED=false` until migration verification passes.
 
-- [ ] **Step 1: Add serialization and rejection tests**
+- [x] **Step 1: Add serialization and rejection tests**
 
 Test all required IDs, exact components, schema version, timestamp, seller partition key, missing-ID rejection, and unknown-version DLT behavior.
 
-- [ ] **Step 2: Publish credit only after captured/collected payment**
+- [x] **Step 2: Publish credit only after captured/collected payment**
 
 One `payment.completed` creates one `CREDIT` adjustment per allocation. `order.created` creates none.
 
-- [ ] **Step 3: Publish release eligibility**
+- [x] **Step 3: Publish release eligibility**
 
 Delivery records `deliveredAt`; a later release use case emits `RELEASE` only after buyer confirmation or seven-day auto-confirm and only when no hold is open.
 
-- [ ] **Step 4: Keep legacy consumers disabled by configuration**
+The buyer-confirmed `RELEASE` publisher is wired in Task 5. Seven-day auto-confirm, hold-aware scheduling, and stable release operation idempotency remain implemented by Task 7's release scheduler.
+
+- [x] **Step 4: Keep legacy consumers disabled by configuration**
 
 Do not delete `OrderCreatedFinanceListener` yet. Add a fail-closed legacy-consumer flag so deployment can switch only after shadow comparison.
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 ```powershell
 Set-Location services/order-service
@@ -401,7 +403,7 @@ Set-Location ../seller-finance-service
 .\mvnw.cmd "-Dtest=SellerFinanceAdjustmentListenerContractTest" test
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add services/order-service services/seller-finance-service/src/main/java/com/vnshop/sellerfinanceservice/infrastructure/event services/seller-finance-service/src/main/resources/application.yml

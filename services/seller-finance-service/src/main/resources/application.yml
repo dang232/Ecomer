@@ -112,3 +112,9 @@ vnshop:
       VERIFIED: "0.08"
       PREFERRED: "0.05"
       MALL: "0.03"
+
+seller-finance:
+  adjustment-consumer:
+    enabled: ${SELLER_FINANCE_ADJUSTMENT_CONSUMER_ENABLED:false}
+  legacy-order-created-consumer:
+    enabled: ${SELLER_FINANCE_LEGACY_ORDER_CREATED_CONSUMER_ENABLED:false}

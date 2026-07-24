@@ -1,6 +1,7 @@
 package com.vnshop.orderservice.infrastructure.persistence;
 
 import com.vnshop.orderservice.domain.CommissionTier;
+import com.vnshop.orderservice.domain.finance.FinancialComponents;
 import com.vnshop.orderservice.domain.finance.SubOrderFinancialAllocation;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -55,5 +56,14 @@ public class SubOrderFinancialAllocationJpaEntity extends BaseJpaEntity {
         entity.buyerPaidAmount = components.buyerPaidAmount(); entity.currency = components.currency(); entity.source = allocation.source();
         entity.allocatedAt = allocation.createdAt();
         return entity;
+    }
+
+    SubOrderFinancialAllocation toDomain() {
+        return new SubOrderFinancialAllocation(allocationId, allocationVersion, orderId, subOrderId, sellerId,
+                commissionTier, frozenCommissionRate,
+                new FinancialComponents(itemGmvAmount, sellerFundedDiscountAmount, platformFundedDiscountAmount,
+                        buyerShippingChargeAmount, sellerShippingPayableAmount, taxChargedAmount, sellerTaxPayableAmount,
+                        commissionBaseAmount, platformCommissionAmount, sellerPayableAmount, buyerPaidAmount, currency),
+                source, allocatedAt);
     }
 }
