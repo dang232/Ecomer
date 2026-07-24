@@ -18,12 +18,12 @@ class FinanceMigrationIntegrationTest {
     private JdbcTemplate jdbcTemplate;
 
     @Test
-    void appliesFlywayMigrationsThroughVersionEight() {
+    void appliesFlywayMigrationsThroughVersionNine() {
         String version = jdbcTemplate.queryForObject(
             "select version from seller_finance_svc.flyway_schema_history where success order by installed_rank desc limit 1",
             String.class
         );
 
-        assertThat(version).isEqualTo("8");
+        assertThat(version).isEqualTo("9");
     }
 }
