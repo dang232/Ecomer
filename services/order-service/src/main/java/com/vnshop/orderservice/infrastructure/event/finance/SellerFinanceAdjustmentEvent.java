@@ -1,7 +1,7 @@
 package com.vnshop.orderservice.infrastructure.event.finance;
 
-import com.vnshop.orderservice.domain.finance.FinancialComponents;
 import com.vnshop.orderservice.domain.finance.SubOrderFinancialAllocation;
+import com.vnshop.orderservice.domain.finance.FinancialComponents;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -36,18 +36,58 @@ public record SellerFinanceAdjustmentEvent(
                 new ReleaseMetadata("BUYER_CONFIRMED", buyerId, occurredAt.toString()));
     }
 
+    public static SellerFinanceAdjustmentEvent reversal(
+            SubOrderFinancialAllocation allocation, UUID reversalId,
+            FinancialComponents components, Instant occurredAt) {
+        return create(allocation, "REFUND_REVERSAL", reversalId.toString(), occurredAt, null,
+                reversalId, components);
+    }
+
+    public static SellerFinanceAdjustmentEvent chargebackHold(
+            SubOrderFinancialAllocation allocation, UUID chargebackId,
+            FinancialComponents components, Instant occurredAt) {
+        return create(allocation, "CHARGEBACK_HOLD", chargebackId.toString(), occurredAt, null,
+                chargebackId, components);
+    }
+
+    public static SellerFinanceAdjustmentEvent chargebackRelease(
+            SubOrderFinancialAllocation allocation, UUID chargebackId,
+            FinancialComponents components, Instant occurredAt) {
+        return create(allocation, "CHARGEBACK_RELEASE", chargebackId.toString(), occurredAt, null,
+                chargebackId, components);
+    }
+
+    public static SellerFinanceAdjustmentEvent chargebackFinalize(
+            SubOrderFinancialAllocation allocation, UUID chargebackId,
+            FinancialComponents components, Instant occurredAt) {
+        return create(allocation, "CHARGEBACK_FINALIZE", chargebackId.toString(), occurredAt, null,
+                chargebackId, components);
+    }
+
     private static SellerFinanceAdjustmentEvent create(
             SubOrderFinancialAllocation allocation,
             String adjustmentType,
             String causationId,
             Instant occurredAt,
             ReleaseMetadata releaseMetadata) {
+        return create(allocation, adjustmentType, causationId, occurredAt, releaseMetadata,
+                null, allocation.components());
+    }
+
+    private static SellerFinanceAdjustmentEvent create(
+            SubOrderFinancialAllocation allocation,
+            String adjustmentType,
+            String causationId,
+            Instant occurredAt,
+            ReleaseMetadata releaseMetadata,
+            UUID reversalId,
+            FinancialComponents components) {
         return new SellerFinanceAdjustmentEvent(
                 UUID.randomUUID(), EVENT_TYPE, SCHEMA_VERSION, occurredAt.toString(), "order-service",
                 allocation.sellerId(), allocation.orderId().toString(), causationId,
-                new Payload(UUID.randomUUID(), adjustmentType, allocation.allocationId(), allocation.allocationVersion(),
+                new Payload(reversalId == null ? UUID.randomUUID() : reversalId, adjustmentType, allocation.allocationId(), allocation.allocationVersion(),
                         allocation.orderId(), allocation.subOrderId(), allocation.sellerId(), allocation.commissionTier().name(),
-                        allocation.frozenCommissionRate(), null, allocation.components().currency(), allocation.components(), releaseMetadata));
+                        allocation.frozenCommissionRate(), reversalId, components.currency(), components, releaseMetadata));
     }
 
     public record Payload(

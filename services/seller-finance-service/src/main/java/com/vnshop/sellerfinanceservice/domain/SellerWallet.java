@@ -78,9 +78,11 @@ public class SellerWallet {
     public void creditSettlement(BigDecimal amount, BigDecimal fee) {
         BigDecimal creditAmount = requirePositive(amount, "amount");
         BigDecimal feeAmount = requireNonNegative(fee, "fee");
-        settlementPendingBalance = settlementPendingBalance.add(creditAmount);
         totalEarned = totalEarned.add(creditAmount);
         totalFees = totalFees.add(feeAmount);
+        BigDecimal debtCleared = min(debtBalance, creditAmount);
+        debtBalance = debtBalance.subtract(debtCleared);
+        settlementPendingBalance = settlementPendingBalance.add(creditAmount.subtract(debtCleared));
     }
 
     /** Refund recovery consumes unsettled, available, reserve, payout-pending, then debt. */

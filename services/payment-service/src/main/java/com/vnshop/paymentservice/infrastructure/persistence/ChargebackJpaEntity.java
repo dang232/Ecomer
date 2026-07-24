@@ -13,6 +13,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDate;
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Getter
@@ -52,6 +53,15 @@ public class ChargebackJpaEntity extends BaseJpaEntity {
     @Column(name = "due_date")
     private LocalDate dueDate;
 
+    @Column(name = "challenged_amount", precision = 19, scale = 2)
+    private BigDecimal challengedAmount;
+
+    @Column(name = "currency", nullable = false, length = 3)
+    private String currency;
+
+    @Column(name = "provider_payment_id", length = 255)
+    private String providerPaymentId;
+
     protected ChargebackJpaEntity() {
     }
 
@@ -65,6 +75,9 @@ public class ChargebackJpaEntity extends BaseJpaEntity {
         entity.status = cb.status();
         entity.evidenceJson = cb.evidenceJson();
         entity.dueDate = cb.dueDate();
+        entity.challengedAmount = cb.challengedAmount();
+        entity.currency = cb.currency();
+        entity.providerPaymentId = cb.providerPaymentId();
         if (cb.createdAt() != null) {
             entity.setCreatedAt(cb.createdAt());
         }
@@ -80,7 +93,7 @@ public class ChargebackJpaEntity extends BaseJpaEntity {
                 reason,
                 status,
                 evidenceJson,
-                dueDate,
+                dueDate, challengedAmount, currency, providerPaymentId,
                 getCreatedAt(),
                 getUpdatedAt());
     }

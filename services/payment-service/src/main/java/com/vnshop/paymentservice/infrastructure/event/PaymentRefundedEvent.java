@@ -24,5 +24,14 @@ public record PaymentRefundedEvent(
         BigDecimal amount,
         String currency,
         String commissionTier,
-        String sagaId) {
+        String sagaId,
+        String reversalId) {
+
+    public PaymentRefundedEvent(
+            String provider, UUID paymentId, String orderId, String returnId, String sellerId,
+            String refundId, String captureId, String status, BigDecimal amount, String currency,
+            String commissionTier, String sagaId) {
+        this(provider, paymentId, orderId, returnId, sellerId, refundId, captureId, status,
+                amount, currency, commissionTier, sagaId, refundId);
+    }
 }

@@ -7,6 +7,9 @@ import com.vnshop.orderservice.domain.SubOrder;
 import com.vnshop.orderservice.domain.port.out.OrderRepositoryPort;
 import com.vnshop.orderservice.domain.port.out.RefundRequestPort;
 import com.vnshop.orderservice.domain.port.out.ReturnRepositoryPort;
+import com.vnshop.orderservice.domain.finance.SubOrderFinancialAllocation;
+import com.vnshop.orderservice.domain.port.out.SellerFinanceAdjustmentPublisherPort;
+import com.vnshop.orderservice.domain.port.out.SubOrderFinancialAllocationRepositoryPort;
 
 import java.util.Objects;
 import java.util.UUID;
@@ -15,11 +18,22 @@ public class CompleteReturnUseCase {
     private final ReturnRepositoryPort returnRepository;
     private final OrderRepositoryPort orderRepository;
     private final RefundRequestPort refundRequestPort;
+    private final SubOrderFinancialAllocationRepositoryPort allocationRepository;
+    private final SellerFinanceAdjustmentPublisherPort sellerFinancePublisher;
 
     public CompleteReturnUseCase(ReturnRepositoryPort returnRepository, OrderRepositoryPort orderRepository, RefundRequestPort refundRequestPort) {
+        this(returnRepository, orderRepository, refundRequestPort, null, null);
+    }
+
+    public CompleteReturnUseCase(ReturnRepositoryPort returnRepository, OrderRepositoryPort orderRepository,
+                                 RefundRequestPort refundRequestPort,
+                                 SubOrderFinancialAllocationRepositoryPort allocationRepository,
+                                 SellerFinanceAdjustmentPublisherPort sellerFinancePublisher) {
         this.returnRepository = Objects.requireNonNull(returnRepository, "returnRepository is required");
         this.orderRepository = Objects.requireNonNull(orderRepository, "orderRepository is required");
         this.refundRequestPort = Objects.requireNonNull(refundRequestPort, "refundRequestPort is required");
+        this.allocationRepository = allocationRepository;
+        this.sellerFinancePublisher = sellerFinancePublisher;
     }
 
     /**
@@ -43,7 +57,18 @@ public class CompleteReturnUseCase {
         Money refundAmount = targetSubOrder.itemsTotal();
         orderReturn.complete();
         Return savedReturn = returnRepository.save(orderReturn);
+        publishReversal(targetSubOrder, order, savedReturn, refundAmount);
         refundRequestPort.requestRefund(savedReturn, targetSubOrder.sellerId(), refundAmount, targetSubOrder.commissionTier());
         return savedReturn;
+    }
+
+    private void publishReversal(SubOrder targetSubOrder, Order order, Return orderReturn, Money refundAmount) {
+        if (allocationRepository == null || sellerFinancePublisher == null) return;
+        allocationRepository.findByOrderId(order.id()).stream()
+                .filter(allocation -> targetSubOrder.id().equals(allocation.subOrderId()))
+                .findFirst()
+                .ifPresent(allocation -> sellerFinancePublisher.publishReversal(
+                        allocation, orderReturn.returnId(),
+                        allocation.components().reversalForBuyerAmount(refundAmount.amount())));
     }
 }

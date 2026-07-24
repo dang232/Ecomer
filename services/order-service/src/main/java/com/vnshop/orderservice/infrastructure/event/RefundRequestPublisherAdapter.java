@@ -36,7 +36,8 @@ public class RefundRequestPublisherAdapter implements RefundRequestPort {
                 sellerId,
                 amount.amount().toPlainString(),
                 amount.currency(),
-                commissionTier.name()
+                commissionTier.name(),
+                orderReturn.returnId().toString()
         );
         repository.save(OutboxEventJpaEntity.fromDomain(OutboxEvent.pending("Return", orderReturn.returnId().toString(), EVENT_TYPE, toJson(event))));
         LOGGER.info("Refund event staged for return {} order {} seller {}", orderReturn.returnId(), orderReturn.orderId(), sellerId);
@@ -50,6 +51,9 @@ public class RefundRequestPublisherAdapter implements RefundRequestPort {
         }
     }
 
-    public record RefundRequestedEvent(String returnId, String orderId, Long subOrderId, String buyerId, String sellerId, String amount, String currency, String commissionTier) {
+    public record RefundRequestedEvent(String returnId, String orderId, Long subOrderId, String buyerId, String sellerId, String amount, String currency, String commissionTier, String reversalId) {
+        public RefundRequestedEvent(String returnId, String orderId, Long subOrderId, String buyerId, String sellerId, String amount, String currency, String commissionTier) {
+            this(returnId, orderId, subOrderId, buyerId, sellerId, amount, currency, commissionTier, returnId);
+        }
     }
 }

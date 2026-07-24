@@ -59,9 +59,27 @@ public record FinancialAdjustment(
         return adjustmentType.name();
     }
 
+    public UUID sourceOperationId() {
+        if (adjustmentType == AdjustmentType.REFUND_REVERSAL) {
+            return Objects.requireNonNull(reversalId, "reversalId is required for reversal");
+        }
+        if (adjustmentType == AdjustmentType.CHARGEBACK_HOLD
+                || adjustmentType == AdjustmentType.CHARGEBACK_RELEASE
+                || adjustmentType == AdjustmentType.CHARGEBACK_FINALIZE) {
+            UUID chargebackId = Objects.requireNonNull(reversalId, "reversalId is required for chargeback");
+            return UUID.nameUUIDFromBytes((chargebackId + ":" + allocationId + ":" + adjustmentType)
+                    .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        }
+        return adjustmentId;
+    }
+
     public enum AdjustmentType {
         CREDIT,
-        RELEASE
+        RELEASE,
+        REFUND_REVERSAL,
+        CHARGEBACK_HOLD,
+        CHARGEBACK_RELEASE,
+        CHARGEBACK_FINALIZE
     }
 
     public record Components(
@@ -89,9 +107,7 @@ public record FinancialAdjustment(
             requireNonNegative(platformCommissionAmount, "platformCommissionAmount");
             requireNonNegative(sellerPayableAmount, "sellerPayableAmount");
             requireNonNegative(buyerPaidAmount, "buyerPaidAmount");
-            if (itemGmvAmount.compareTo(BigDecimal.ZERO) <= 0) {
-                throw new IllegalArgumentException("itemGmvAmount must be greater than zero");
-            }
+            if (itemGmvAmount.compareTo(BigDecimal.ZERO) <= 0) throw new IllegalArgumentException("itemGmvAmount must be greater than zero");
             requireNonBlank(currency, "currency");
             if (!"VND".equals(currency)) {
                 throw new IllegalArgumentException("components.currency must be VND");

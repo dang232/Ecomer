@@ -80,9 +80,10 @@ public class UseCaseConfig {
     @Bean
     RefundPaymentUseCase refundPaymentUseCase(
             PaymentRepositoryPort paymentRepositoryPort,
-            List<RefundGatewayPort> refundGateways
+            List<RefundGatewayPort> refundGateways,
+            com.vnshop.paymentservice.domain.port.out.PaymentRefundRepositoryPort paymentRefundRepositoryPort
     ) {
-        return new RefundPaymentUseCase(paymentRepositoryPort, refundGateways);
+        return new RefundPaymentUseCase(paymentRepositoryPort, refundGateways, paymentRefundRepositoryPort);
     }
 
     /**

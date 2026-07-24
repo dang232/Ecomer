@@ -18,6 +18,8 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.Objects;
+import java.math.BigDecimal;
+import java.util.UUID;
 
 /**
  * Generic refund listener: handles all non-PayPal payment methods by routing
@@ -78,6 +80,7 @@ public class RefundRequestListener {
         String sagaId = text(payload, "sagaId");
         String reason = text(payload, "reason");
         String methodHint = text(payload, "paymentMethod");
+        String returnId = text(payload, "returnId");
 
         if (orderId == null || orderId.isBlank()) {
             log.warn("refund-listener skipping malformed event — missing orderId sagaId={}", sagaId);
@@ -91,11 +94,18 @@ public class RefundRequestListener {
             return;
         }
 
-        RefundPaymentCommand command = new RefundPaymentCommand(orderId, sagaId, reason);
+        UUID reversalId = parseUuid(text(payload, "reversalId"));
+        if (reversalId == null) reversalId = parseUuid(returnId);
+        if (reversalId == null) {
+            log.warn("refund-listener skipping malformed event: missing valid reversalId orderId={}", orderId);
+            return;
+        }
+        RefundPaymentCommand command = new RefundPaymentCommand(
+                orderId, sagaId, reason, reversalId, decimal(payload, "amount"));
 
         try {
             RefundPaymentUseCase.RefundResult result = refundPaymentUseCase.refund(command);
-            publishRefunded(result, sagaId);
+            publishRefunded(result, sagaId, returnId);
         } catch (OrderNotFoundException ex) {
             log.warn("refund-listener payment not found orderId={} sagaId={} — skipping", orderId, sagaId);
         } catch (PaymentNotRefundableException ex) {
@@ -104,20 +114,21 @@ public class RefundRequestListener {
         }
     }
 
-    private void publishRefunded(RefundPaymentUseCase.RefundResult result, String sagaId) {
+    private void publishRefunded(RefundPaymentUseCase.RefundResult result, String sagaId, String returnId) {
         PaymentRefundedEvent event = new PaymentRefundedEvent(
                 result.payment().method().name(),
                 result.payment().paymentId(),
                 result.payment().orderId(),
-                null,       // returnId — not available at this layer; order-service correlates via sagaId
+                returnId,
                 null,       // sellerId — not available at this layer
                 result.refundId(),
                 result.payment().transactionRef(),
-                "COMPLETED",
-                result.payment().amount(),
+                result.payment().status().name(),
+                result.amount(),
                 "VND",
                 null,       // commissionTier — not available at this layer
-                sagaId);
+                sagaId,
+                result.reversalId().toString());
         kafkaTemplate.send(REFUNDED_TOPIC, result.payment().orderId(), event);
         log.info("refund-listener published payment.refunded orderId={} refundId={} sagaId={}",
                 result.payment().orderId(), result.refundId(), sagaId);
@@ -134,6 +145,17 @@ public class RefundRequestListener {
     private static String text(JsonNode node, String fieldName) {
         JsonNode value = node.path(fieldName);
         return value.isMissingNode() || value.isNull() ? null : value.asText();
+    }
+
+    private static UUID parseUuid(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        try { return UUID.fromString(raw); } catch (IllegalArgumentException ignored) { return null; }
+    }
+
+    private static BigDecimal decimal(JsonNode node, String fieldName) {
+        JsonNode value = node.get(fieldName);
+        if (value == null || value.isNull() || value.asText().isBlank()) return null;
+        try { return new BigDecimal(value.asText()); } catch (NumberFormatException ignored) { return null; }
     }
 
     @DltHandler

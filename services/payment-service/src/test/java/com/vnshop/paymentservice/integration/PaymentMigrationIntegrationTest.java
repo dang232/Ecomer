@@ -24,6 +24,6 @@ class PaymentMigrationIntegrationTest {
             String.class
         );
 
-        assertThat(version).isEqualTo("17");
+        assertThat(version).isEqualTo("18");
     }
 }

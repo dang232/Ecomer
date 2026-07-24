@@ -69,6 +69,22 @@ public class AdminChargebackController {
         }
     }
 
+    @PostMapping("/{id}/resolve")
+    public ResponseEntity<ApiResponse<ChargebackResponse>> resolve(
+            @PathVariable UUID id,
+            @RequestBody Map<String, String> body) {
+        try {
+            Chargeback.ChargebackStatus status = Chargeback.ChargebackStatus.valueOf(
+                    Objects.toString(body.get("outcome"), "").toUpperCase(java.util.Locale.ROOT));
+            Chargeback updated = chargebackService.resolve(id, status);
+            return ResponseEntity.ok(ApiResponse.ok(ChargebackResponse.from(updated)));
+        } catch (ChargebackNotFoundException ex) {
+            return ResponseEntity.status(404).body(ApiResponse.error(ex.getMessage(), "NOT_FOUND"));
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(ex.getMessage(), "BAD_REQUEST"));
+        }
+    }
+
     public record ChargebackResponse(UUID id, String orderId, String provider,
                                      String reason, String status, String evidenceJson) {
         static ChargebackResponse from(Chargeback cb) {

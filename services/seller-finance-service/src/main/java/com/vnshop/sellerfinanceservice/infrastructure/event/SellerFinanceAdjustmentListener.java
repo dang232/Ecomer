@@ -200,7 +200,7 @@ public class SellerFinanceAdjustmentListener {
         requireExactFields(payload, PAYLOAD_FIELDS, "payload");
         requiredUuid(payload, "adjustmentId");
         String adjustmentType = requiredText(payload, "adjustmentType");
-        if (!Set.of("CREDIT", "RELEASE").contains(adjustmentType)) {
+        if (!Set.of("CREDIT", "RELEASE", "REFUND_REVERSAL", "CHARGEBACK_HOLD", "CHARGEBACK_RELEASE", "CHARGEBACK_FINALIZE").contains(adjustmentType)) {
             throw invalid("adjustmentType is unsupported");
         }
         requiredUuid(payload, "allocationId");
@@ -266,7 +266,7 @@ public class SellerFinanceAdjustmentListener {
             requiredText(metadata, "confirmedBy");
             requiredTimestamp(metadata, "confirmedAt");
         } else if (metadata == null || !metadata.isNull()) {
-            throw invalid("releaseMetadata must be null for CREDIT");
+            throw invalid("releaseMetadata must be null for non-RELEASE adjustments");
         }
     }
 

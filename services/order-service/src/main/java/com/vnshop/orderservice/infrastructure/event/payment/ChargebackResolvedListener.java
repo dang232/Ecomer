@@ -10,8 +10,6 @@ import com.vnshop.orderservice.domain.port.out.SubOrderFinancialAllocationReposi
 import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -20,22 +18,20 @@ import org.springframework.kafka.retrytopic.DltStrategy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Consumes chargeback-open events and stages both order and finance effects. */
+/** Applies the order and seller-finance effects of a resolved chargeback. */
 @Service
-public class ChargebackCreatedListener {
-    private static final Logger log = LoggerFactory.getLogger(ChargebackCreatedListener.class);
-
+public class ChargebackResolvedListener {
     private final OrderRepositoryPort orderRepository;
     private final ObjectMapper objectMapper;
     private final SubOrderFinancialAllocationRepositoryPort allocationRepository;
     private final SellerFinanceAdjustmentPublisherPort sellerFinancePublisher;
 
-    public ChargebackCreatedListener(OrderRepositoryPort orderRepository, ObjectMapper objectMapper) {
+    public ChargebackResolvedListener(OrderRepositoryPort orderRepository, ObjectMapper objectMapper) {
         this(orderRepository, objectMapper, null, null);
     }
 
     @Autowired
-    public ChargebackCreatedListener(
+    public ChargebackResolvedListener(
             OrderRepositoryPort orderRepository,
             ObjectMapper objectMapper,
             SubOrderFinancialAllocationRepositoryPort allocationRepository,
@@ -48,44 +44,42 @@ public class ChargebackCreatedListener {
 
     @RetryableTopic(attempts = "3", dltStrategy = DltStrategy.FAIL_ON_ERROR,
             dltTopicSuffix = ".DLT", retryTopicSuffix = ".retry")
-    @KafkaListener(topics = "payment.chargeback.created", groupId = "order-service-chargeback", concurrency = "3")
+    @KafkaListener(topics = "payment.chargeback.resolved", groupId = "order-service-chargeback-resolved", concurrency = "3")
     @Transactional
-    public void onChargebackCreated(String eventJson) {
+    public void onChargebackResolved(String eventJson) {
         JsonNode payload = readTree(eventJson);
         UUID orderId = parseUuid(text(payload, "orderId"));
-        if (orderId == null) {
-            log.warn("payment.chargeback.created missing valid orderId");
-            return;
-        }
+        UUID chargebackId = parseUuid(text(payload, "chargebackId"));
+        String outcome = text(payload, "outcome");
+        if (orderId == null || chargebackId == null || outcome == null) return;
 
         Optional<Order> maybeOrder = orderRepository.findById(orderId);
-        if (maybeOrder.isPresent()) {
+        if (maybeOrder.isPresent()
+                && "WON".equalsIgnoreCase(outcome)
+                && maybeOrder.get().paymentStatus() == PaymentStatus.DISPUTED) {
             Order order = maybeOrder.get();
-            if (order.paymentStatus() != PaymentStatus.DISPUTED) {
-                order.markPaymentDisputed();
-                orderRepository.save(order);
-            }
-        } else {
-            log.warn("payment.chargeback.created orderId={} not found", orderId);
+            order.markPaymentCompleted();
+            orderRepository.save(order);
         }
 
-        UUID chargebackId = parseUuid(text(payload, "chargebackId"));
-        if (chargebackId != null && allocationRepository != null && sellerFinancePublisher != null) {
-            ChargebackAllocationSupport.portions(
-                            allocationRepository.findByOrderId(orderId),
-                            decimal(payload, "challengedAmount"))
-                    .forEach(portion -> sellerFinancePublisher.publishChargebackHold(
-                            portion.allocation(), chargebackId, portion.components()));
+        if (allocationRepository == null || sellerFinancePublisher == null) return;
+        for (ChargebackAllocationSupport.Portion portion : ChargebackAllocationSupport.portions(
+                allocationRepository.findByOrderId(orderId), decimal(payload, "challengedAmount"))) {
+            if ("WON".equalsIgnoreCase(outcome)) {
+                sellerFinancePublisher.publishChargebackRelease(
+                        portion.allocation(), chargebackId, portion.components());
+            } else if ("LOST".equalsIgnoreCase(outcome) || "ACCEPTED".equalsIgnoreCase(outcome)) {
+                sellerFinancePublisher.publishChargebackFinalize(
+                        portion.allocation(), chargebackId, portion.components());
+            }
         }
-        log.info("chargeback-disputed orderId={} chargebackId={} provider={}",
-                orderId, text(payload, "chargebackId"), text(payload, "provider"));
     }
 
     private JsonNode readTree(String json) {
         try {
             return objectMapper.readTree(json);
         } catch (Exception ex) {
-            throw new IllegalArgumentException("payment.chargeback.created payload is not valid JSON", ex);
+            throw new IllegalArgumentException("payment.chargeback.resolved payload is not valid JSON", ex);
         }
     }
 
@@ -109,6 +103,6 @@ public class ChargebackCreatedListener {
 
     @DltHandler
     public void handleDlt(String message) {
-        log.error("payment.chargeback.created sent to DLT after retries exhausted: {}", message);
+        // DLT handling is intentionally observable through broker tooling.
     }
 }

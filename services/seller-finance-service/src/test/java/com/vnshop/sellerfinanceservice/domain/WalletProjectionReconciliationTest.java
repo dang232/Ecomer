@@ -73,4 +73,18 @@ class WalletProjectionReconciliationTest {
 
         assertThat(wallet.projectionEquationHolds()).isFalse();
     }
+
+    @Test
+    void futureCreditsClearDebtBeforeEnteringSettlementPending() {
+        SellerWallet wallet = new SellerWallet("seller-1");
+        wallet.creditSettlement(new BigDecimal("100"), BigDecimal.ZERO);
+        wallet.applyRefund(new BigDecimal("150"));
+
+        wallet.creditSettlement(new BigDecimal("60"), BigDecimal.ZERO);
+
+        assertThat(wallet.debtBalance()).isEqualByComparingTo("0");
+        assertThat(wallet.settlementPendingBalance()).isEqualByComparingTo("10");
+        assertThat(wallet.totalEarned()).isEqualByComparingTo("160");
+        assertThat(wallet.projectionEquationHolds()).isTrue();
+    }
 }

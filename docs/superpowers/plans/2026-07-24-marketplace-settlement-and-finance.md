@@ -498,7 +498,7 @@ git commit -m "feat(finance): add immutable settlement ledger"
 - Chargebacks publish opened and resolved events with challenged amount/currency and provider IDs.
 - Seller-finance applies exact reversals and never calls `CommissionCalculator` for historical transactions.
 
-- [ ] **Step 1: Add partial-refund persistence and tests**
+- [x] **Step 1: Add partial-refund persistence and tests**
 
 Payment status adds `PARTIALLY_REFUNDED`. A payment becomes `REFUNDED` only when cumulative completed refunds equal captured amount. Provider idempotency uses `reversalId`, not payment ID.
 
@@ -506,7 +506,7 @@ Payment status adds `PARTIALLY_REFUNDED`. A payment becomes `REFUNDED` only when
 
 `CompleteReturnUseCase` calculates buyer refund, seller-payable reversal, and commission reversal from the immutable allocation. Refund plus chargeback may never exceed the remaining allocation.
 
-- [ ] **Step 3: Add chargeback lifecycle**
+- [x] **Step 3: Add chargeback lifecycle**
 
 ```text
 OPEN      -> CHARGEBACK_HOLD
@@ -521,7 +521,7 @@ Resolution publishes transactionally through payment-service's outbox.
 
 The scheduler uses `FOR UPDATE SKIP LOCKED`, a bounded batch, and a stable release operation key. Open returns, disputes, fraud holds, or chargebacks block release.
 
-- [ ] **Step 5: Preserve seller debt**
+- [x] **Step 5: Preserve seller debt**
 
 Reversal funding order is settlement pending, available, reserve, then debt. Future credits clear debt before becoming available.
 

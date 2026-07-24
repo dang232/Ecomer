@@ -52,7 +52,7 @@ public class ApplyFinancialAdjustmentUseCase {
         }
 
         Optional<LedgerJournal> existingOperation = ledgerRepository.findBySourceOperation(
-                adjustment.sourceType(), adjustment.adjustmentId(), adjustment.operationType());
+                adjustment.sourceType(), adjustment.sourceOperationId(), adjustment.operationType());
         if (existingOperation.isPresent()) {
             UUID journalId = existingOperation.get().journalId();
             inboxRepository.record(adjustment.eventId(), journalId);
@@ -65,10 +65,11 @@ public class ApplyFinancialAdjustmentUseCase {
 
         SellerWallet wallet = walletRepository.findBySellerIdForUpdate(adjustment.sellerId())
                 .orElseGet(() -> new SellerWallet(adjustment.sellerId()));
-        if (adjustment.adjustmentType() == FinancialAdjustment.AdjustmentType.CREDIT) {
-            wallet.creditSettlement(adjustment.components().sellerPayableAmount(), adjustment.components().platformCommissionAmount());
-        } else {
-            wallet.releaseSettlement(adjustment.components().sellerPayableAmount());
+        switch (adjustment.adjustmentType()) {
+            case CREDIT -> wallet.creditSettlement(adjustment.components().sellerPayableAmount(), adjustment.components().platformCommissionAmount());
+            case RELEASE -> wallet.releaseSettlement(adjustment.components().sellerPayableAmount());
+            case REFUND_REVERSAL, CHARGEBACK_FINALIZE -> wallet.applyRefund(adjustment.components().sellerPayableAmount());
+            case CHARGEBACK_HOLD, CHARGEBACK_RELEASE -> { /* hold journals are projection-neutral until resolved */ }
         }
         walletRepository.save(wallet);
         failureInjector.after(FailurePoint.AFTER_PROJECTION);
@@ -94,14 +95,43 @@ public class ApplyFinancialAdjustmentUseCase {
             }
             postings = List.copyOf(creditPostings);
             journalType = LedgerJournalType.SELLER_CREDIT;
-        } else {
+        } else if (adjustment.adjustmentType() == FinancialAdjustment.AdjustmentType.RELEASE) {
             postings = List.of(
                     posting(LedgerAccountCode.SELLER_SETTLEMENT_PENDING, LedgerDirection.DEBIT, sellerPayable, adjustment.currency()),
                     posting(LedgerAccountCode.SELLER_AVAILABLE, LedgerDirection.CREDIT, sellerPayable, adjustment.currency()));
             journalType = LedgerJournalType.SETTLEMENT_RELEASE;
+        } else if (adjustment.adjustmentType() == FinancialAdjustment.AdjustmentType.REFUND_REVERSAL
+                || adjustment.adjustmentType() == FinancialAdjustment.AdjustmentType.CHARGEBACK_FINALIZE) {
+            java.util.ArrayList<LedgerPosting> reversalPostings = new java.util.ArrayList<>();
+            if (sellerPayable.signum() > 0) {
+                reversalPostings.add(posting(LedgerAccountCode.SELLER_SETTLEMENT_PENDING, LedgerDirection.DEBIT,
+                        sellerPayable, adjustment.currency()));
+                reversalPostings.add(posting(LedgerAccountCode.MARKETPLACE_CLEARING, LedgerDirection.CREDIT,
+                        sellerPayable, adjustment.currency()));
+            }
+            if (commission.signum() > 0) {
+                reversalPostings.add(posting(LedgerAccountCode.PLATFORM_COMMISSION_REVENUE, LedgerDirection.DEBIT,
+                        commission, adjustment.currency()));
+                reversalPostings.add(posting(LedgerAccountCode.MARKETPLACE_CLEARING, LedgerDirection.CREDIT,
+                        commission, adjustment.currency()));
+            }
+            if (reversalPostings.isEmpty()) {
+                throw new IllegalArgumentException("reversal must include a positive seller payable or commission amount");
+            }
+            postings = List.copyOf(reversalPostings);
+            journalType = adjustment.adjustmentType() == FinancialAdjustment.AdjustmentType.REFUND_REVERSAL
+                    ? LedgerJournalType.REFUND_REVERSAL : LedgerJournalType.CHARGEBACK_FINALIZE;
+        } else {
+            postings = List.of(
+                    posting(LedgerAccountCode.MARKETPLACE_CLEARING, LedgerDirection.DEBIT,
+                            sellerPayable, adjustment.currency()),
+                    posting(LedgerAccountCode.SELLER_RESERVE, LedgerDirection.CREDIT,
+                            sellerPayable, adjustment.currency()));
+            journalType = adjustment.adjustmentType() == FinancialAdjustment.AdjustmentType.CHARGEBACK_HOLD
+                    ? LedgerJournalType.CHARGEBACK_HOLD : LedgerJournalType.CHARGEBACK_RELEASE;
         }
         return new LedgerJournal(
-                UUID.randomUUID(), adjustment.sellerId(), adjustment.sourceType(), adjustment.adjustmentId(),
+                UUID.randomUUID(), adjustment.sellerId(), adjustment.sourceType(), adjustment.sourceOperationId(),
                 adjustment.operationType(), journalType, adjustment.occurredAt(), reversalId, postings);
     }
 

@@ -253,9 +253,12 @@ public class UseCaseConfig {
     CompleteReturnUseCase completeReturnUseCase(
             ReturnRepositoryPort returnRepositoryPort,
             OrderRepositoryPort orderRepositoryPort,
-            RefundRequestPort refundRequestPort
+            RefundRequestPort refundRequestPort,
+            SubOrderFinancialAllocationRepositoryPort allocationRepositoryPort,
+            SellerFinanceAdjustmentPublisherPort sellerFinanceAdjustmentPublisherPort
     ) {
-        return new CompleteReturnUseCase(returnRepositoryPort, orderRepositoryPort, refundRequestPort);
+        return new CompleteReturnUseCase(returnRepositoryPort, orderRepositoryPort, refundRequestPort,
+                allocationRepositoryPort, sellerFinanceAdjustmentPublisherPort);
     }
 
     @Bean

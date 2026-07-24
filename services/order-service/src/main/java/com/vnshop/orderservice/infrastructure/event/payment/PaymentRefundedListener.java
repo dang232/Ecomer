@@ -85,8 +85,11 @@ public class PaymentRefundedListener {
         if (status == null || status.isBlank()) {
             status = "COMPLETED";
         }
-        if (!"COMPLETED".equalsIgnoreCase(status)) {
-            LOGGER.warn("payment.refunded refundId={} has non-completed status={}; event ignored", refundId, status);
+        boolean partial = "PARTIALLY_REFUNDED".equalsIgnoreCase(status);
+        boolean completed = "COMPLETED".equalsIgnoreCase(status)
+                || "REFUNDED".equalsIgnoreCase(status);
+        if (!partial && !completed) {
+            LOGGER.warn("payment.refunded refundId={} has unsupported status={}; event ignored", refundId, status);
             return;
         }
 
@@ -105,7 +108,7 @@ public class PaymentRefundedListener {
                 Instant.now(clock),
                 status.toUpperCase(Locale.ROOT)));
 
-        if (returnId == null) {
+        if (returnId == null || partial) {
             LOGGER.info("payment-refunded ledgered orderId={} refundId={} without return", orderId, refundId);
             return;
         }
