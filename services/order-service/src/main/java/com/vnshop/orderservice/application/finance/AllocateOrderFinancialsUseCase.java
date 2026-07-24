@@ -37,8 +37,6 @@ public class AllocateOrderFinancialsUseCase {
                 SubOrder::id, subOrder -> subOrder.itemsTotal().amount()));
         BigDecimal totalGmv = order.itemsTotal().amount();
         Map<Long, BigDecimal> platformDiscounts = proportional(order.discount().amount(), itemGmv, totalGmv);
-        Map<Long, BigDecimal> buyerShipping = proportional(order.shippingTotal().amount(), itemGmv, totalGmv);
-        Map<Long, BigDecimal> taxes = proportional(order.taxTotal().amount(), itemGmv, totalGmv);
 
         List<SubOrderFinancialAllocation> allocations = order.subOrders().stream().map(subOrder -> {
             BigDecimal gmv = itemGmv.get(subOrder.id());
@@ -47,8 +45,10 @@ public class AllocateOrderFinancialsUseCase {
             BigDecimal rate = COMMISSION_RATES.get(subOrder.commissionTier());
             BigDecimal commission = commissionBase.multiply(rate).setScale(0, RoundingMode.HALF_UP);
             BigDecimal sellerPayable = commissionBase.subtract(commission);
-            BigDecimal shipping = buyerShipping.get(subOrder.id());
-            BigDecimal tax = taxes.get(subOrder.id());
+            BigDecimal shipping = subOrder.shippingCost().amount();
+            BigDecimal tax = subOrder.items().stream()
+                    .map(item -> item.taxAmount() == null ? BigDecimal.ZERO : item.taxAmount())
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
             FinancialComponents components = new FinancialComponents(gmv, BigDecimal.ZERO, platformDiscount,
                     shipping, BigDecimal.ZERO, tax, BigDecimal.ZERO, commissionBase, commission, sellerPayable,
                     gmv.subtract(platformDiscount).add(shipping).add(tax), "VND");
@@ -56,8 +56,31 @@ public class AllocateOrderFinancialsUseCase {
                     subOrder.sellerId(), subOrder.commissionTier(), rate, components,
                     SubOrderFinancialAllocation.Source.NATIVE_V1, Instant.now());
         }).toList();
+        verifyReconciliation(order, allocations);
         repository.saveAll(allocations);
         return allocations;
+    }
+
+    private static void verifyReconciliation(Order order, List<SubOrderFinancialAllocation> allocations) {
+        assertReconciles("buyer paid", order.finalAmount().amount(), allocations,
+                allocation -> allocation.components().buyerPaidAmount());
+        assertReconciles("platform-funded discount", order.discount().amount(), allocations,
+                allocation -> allocation.components().platformFundedDiscountAmount());
+        assertReconciles("buyer shipping", order.shippingTotal().amount(), allocations,
+                allocation -> allocation.components().buyerShippingChargeAmount());
+        assertReconciles("tax charged", order.taxTotal().amount(), allocations,
+                allocation -> allocation.components().taxChargedAmount());
+    }
+
+    private static void assertReconciles(
+            String component,
+            BigDecimal expected,
+            List<SubOrderFinancialAllocation> allocations,
+            java.util.function.Function<SubOrderFinancialAllocation, BigDecimal> value) {
+        BigDecimal actual = allocations.stream().map(value).reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (actual.compareTo(expected) != 0) {
+            throw new IllegalStateException(component + " allocations must reconcile with the order total");
+        }
     }
 
     private static Map<Long, BigDecimal> proportional(

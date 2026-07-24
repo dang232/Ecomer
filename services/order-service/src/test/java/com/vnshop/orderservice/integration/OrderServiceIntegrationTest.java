@@ -18,8 +18,11 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @Testcontainers
@@ -81,5 +84,31 @@ class OrderServiceIntegrationTest {
                 .extracting(order -> order.subOrders().getFirst().items())
                 .asList()
                 .hasSize(1);
+    }
+
+    @Test
+    void rejectsUpdatesAndDeletesOfFinancialAllocations() throws Exception {
+        UUID allocationId = UUID.randomUUID();
+        try (Connection connection = dataSource.getConnection(); Statement statement = connection.createStatement()) {
+            statement.executeUpdate("""
+                    INSERT INTO order_svc.sub_order_financial_allocations (
+                      allocation_id, allocation_version, order_id, sub_order_id, seller_id, commission_tier,
+                      frozen_commission_rate, item_gmv_amount, seller_funded_discount_amount,
+                      platform_funded_discount_amount, buyer_shipping_charge_amount, seller_shipping_payable_amount,
+                      tax_charged_amount, seller_tax_payable_amount, commission_base_amount,
+                      platform_commission_amount, seller_payable_amount, buyer_paid_amount, currency, source, allocated_at
+                    ) VALUES ('%s', 1, '%s', 999999, 'seller', 'STANDARD', 0.1000,
+                      100, 0, 0, 0, 0, 0, 0, 100, 10, 90, 100, 'VND', 'NATIVE_V1', CURRENT_TIMESTAMP)
+                    """.formatted(allocationId, UUID.randomUUID()));
+
+            assertThatThrownBy(() -> statement.executeUpdate("UPDATE order_svc.sub_order_financial_allocations "
+                    + "SET seller_id = 'changed' WHERE allocation_id = '" + allocationId + "'"))
+                    .isInstanceOf(SQLException.class)
+                    .hasMessageContaining("sub_order_financial_allocations are immutable");
+            assertThatThrownBy(() -> statement.executeUpdate("DELETE FROM order_svc.sub_order_financial_allocations "
+                    + "WHERE allocation_id = '" + allocationId + "'"))
+                    .isInstanceOf(SQLException.class)
+                    .hasMessageContaining("sub_order_financial_allocations are immutable");
+        }
     }
 }

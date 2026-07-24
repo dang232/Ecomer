@@ -28,3 +28,18 @@ CREATE TABLE order_svc.sub_order_financial_allocations (
 
 CREATE INDEX idx_sub_order_financial_allocations_order_id
     ON order_svc.sub_order_financial_allocations (order_id);
+
+CREATE OR REPLACE FUNCTION order_svc.prevent_sub_order_financial_allocations_mutation()
+RETURNS trigger AS $$
+BEGIN
+    RAISE EXCEPTION 'sub_order_financial_allocations are immutable';
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_prevent_sub_order_financial_allocations_update
+    BEFORE UPDATE ON order_svc.sub_order_financial_allocations
+    FOR EACH ROW EXECUTE FUNCTION order_svc.prevent_sub_order_financial_allocations_mutation();
+
+CREATE TRIGGER trg_prevent_sub_order_financial_allocations_delete
+    BEFORE DELETE ON order_svc.sub_order_financial_allocations
+    FOR EACH ROW EXECUTE FUNCTION order_svc.prevent_sub_order_financial_allocations_mutation();

@@ -21,8 +21,8 @@ class AllocateOrderFinancialsUseCaseTest {
     @Test
     void snapshotsAuthoritativeOrderTotalsAndFrozenTierRates() {
         Order order = order(List.of(
-                subOrder(11L, "seller-standard", 100L, CommissionTier.STANDARD),
-                subOrder(12L, "seller-mall", 300L, CommissionTier.MALL)),
+                subOrder(11L, "seller-standard", 100L, 10L, CommissionTier.STANDARD),
+                subOrder(12L, "seller-mall", 300L, 30L, CommissionTier.MALL)),
                 40L, 20L, 40L);
         RecordingAllocations repository = new RecordingAllocations();
 
@@ -72,6 +72,34 @@ class AllocateOrderFinancialsUseCaseTest {
                 .containsExactly(new BigDecimal("0"), new BigDecimal("1"), new BigDecimal("0"));
     }
 
+    @Test
+    void allocatesShippingAndTaxFromPersistedSubOrderAndLineItemAmounts() {
+        SubOrder first = new SubOrder(11L, "seller-a", List.of(
+                item("seller-a", 100L, 7L), item("seller-a", 100L, 4L)),
+                com.vnshop.orderservice.domain.FulfillmentStatus.PENDING_ACCEPTANCE, new Money(new BigDecimal("9")),
+                "STANDARD", null, null, CommissionTier.STANDARD);
+        SubOrder second = new SubOrder(12L, "seller-b", List.of(item("seller-b", 300L, 29L)),
+                com.vnshop.orderservice.domain.FulfillmentStatus.PENDING_ACCEPTANCE, new Money(new BigDecimal("91")),
+                "STANDARD", null, null, CommissionTier.STANDARD);
+        Order order = order(List.of(first, second), 40L, 40L);
+
+        List<SubOrderFinancialAllocation> allocations =
+                new AllocateOrderFinancialsUseCase(ignored -> { }).allocate(order);
+
+        assertThat(allocations).extracting(a -> a.components().buyerShippingChargeAmount())
+                .containsExactly(new BigDecimal("9"), new BigDecimal("91"));
+        assertThat(allocations).extracting(a -> a.components().taxChargedAmount())
+                .containsExactly(new BigDecimal("11"), new BigDecimal("29"));
+        assertThat(allocations.stream().map(a -> a.components().buyerPaidAmount())
+                .reduce(BigDecimal.ZERO, BigDecimal::add)).isEqualByComparingTo(order.finalAmount().amount());
+        assertThat(allocations.stream().map(a -> a.components().platformFundedDiscountAmount())
+                .reduce(BigDecimal.ZERO, BigDecimal::add)).isEqualByComparingTo(order.discount().amount());
+        assertThat(allocations.stream().map(a -> a.components().buyerShippingChargeAmount())
+                .reduce(BigDecimal.ZERO, BigDecimal::add)).isEqualByComparingTo(order.shippingTotal().amount());
+        assertThat(allocations.stream().map(a -> a.components().taxChargedAmount())
+                .reduce(BigDecimal.ZERO, BigDecimal::add)).isEqualByComparingTo(order.taxTotal().amount());
+    }
+
     private static Order order(List<SubOrder> subOrders, long discount, long shipping, long tax) {
         Order order = new Order(UUID.randomUUID(), "buyer", new Address("street", null, "district", "city"),
                 subOrders, "idempotency-" + UUID.randomUUID());
@@ -85,11 +113,29 @@ class AllocateOrderFinancialsUseCaseTest {
         return order;
     }
 
+    private static Order order(List<SubOrder> subOrders, long discount, long tax) {
+        Order order = new Order(UUID.randomUUID(), "buyer", new Address("street", null, "district", "city"),
+                subOrders, "idempotency-" + UUID.randomUUID());
+        order.calculateTotals();
+        order.applyDiscount(new Money(BigDecimal.valueOf(discount)));
+        order.applyTax(new Money(BigDecimal.valueOf(tax)));
+        return order;
+    }
+
     private static SubOrder subOrder(Long id, String sellerId, long amount, CommissionTier tier) {
-        return new SubOrder(id, sellerId, List.of(new OrderItem("product-" + sellerId, "sku", sellerId,
-                "Product", 1, new Money(BigDecimal.valueOf(amount)), null)),
+        return subOrder(id, sellerId, amount, 0L, tier);
+    }
+
+    private static SubOrder subOrder(Long id, String sellerId, long amount, long taxAmount, CommissionTier tier) {
+        return new SubOrder(id, sellerId, List.of(item(sellerId, amount, taxAmount)),
                 com.vnshop.orderservice.domain.FulfillmentStatus.PENDING_ACCEPTANCE, Money.ZERO,
                 "STANDARD", null, null, tier);
+    }
+
+    private static OrderItem item(String sellerId, long amount, long taxAmount) {
+        return new OrderItem("product-" + sellerId + '-' + amount + '-' + taxAmount, "sku", sellerId,
+                "Product", 1, new Money(BigDecimal.valueOf(amount)), null, new BigDecimal("0.10"),
+                BigDecimal.valueOf(taxAmount));
     }
 
     private static final class RecordingAllocations implements SubOrderFinancialAllocationRepositoryPort {

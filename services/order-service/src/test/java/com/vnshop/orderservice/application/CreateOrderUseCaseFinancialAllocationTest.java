@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.vnshop.orderservice.application.finance.AllocateOrderFinancialsUseCase;
 import com.vnshop.orderservice.application.saga.SagaOrchestrator;
@@ -35,6 +36,17 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 
 class CreateOrderUseCaseFinancialAllocationTest {
+
+    @Test
+    void requiresFinancialAllocationDependency() {
+        assertThatThrownBy(() -> new CreateOrderUseCase(mock(OrderRepositoryPort.class),
+                mock(InventoryReservationPort.class), mock(PaymentRequestPort.class), mock(ShippingRequestPort.class),
+                mock(OrderEventPublisherPort.class), standardTierLookup(), mock(CartRepositoryPort.class),
+                mock(MetricsPort.class), saga(), new TaxCalculationService((code, date) -> Optional.of(BigDecimal.ZERO)),
+                null, null))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessage("allocateOrderFinancialsUseCase is required");
+    }
 
     @Test
     void persistsAllocationsAfterOrderSaveAndBeforeOrderPublication() {

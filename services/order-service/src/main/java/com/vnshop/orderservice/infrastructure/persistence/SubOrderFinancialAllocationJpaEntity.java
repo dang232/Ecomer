@@ -12,12 +12,10 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.Getter;
-import lombok.Setter;
 
 @Entity
 @Table(schema = "order_svc", name = "sub_order_financial_allocations")
 @Getter
-@Setter
 public class SubOrderFinancialAllocationJpaEntity extends BaseJpaEntity {
     @Id @Column(name = "allocation_id", nullable = false) private UUID allocationId;
     @Column(name = "allocation_version", nullable = false) private int allocationVersion;

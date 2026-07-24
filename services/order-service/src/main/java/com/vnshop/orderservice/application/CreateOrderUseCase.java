@@ -72,41 +72,8 @@ public class CreateOrderUseCase {
         this.sagaOrchestrator = Objects.requireNonNull(sagaOrchestrator, "sagaOrchestrator is required");
         this.taxCalculationService = Objects.requireNonNull(taxCalculationService, "taxCalculationService is required");
         this.couponRedemptionService = couponRedemptionService;
-        this.allocateOrderFinancialsUseCase = allocateOrderFinancialsUseCase;
-    }
-
-    public CreateOrderUseCase(
-            OrderRepositoryPort orderRepository,
-            InventoryReservationPort inventoryReservationPort,
-            PaymentRequestPort paymentRequestPort,
-            ShippingRequestPort shippingRequestPort,
-            OrderEventPublisherPort orderEventPublisherPort,
-            CommissionTierLookupPort commissionTierLookupPort,
-            CartRepositoryPort cartRepositoryPort,
-            MetricsPort metricsPort,
-            SagaOrchestrator sagaOrchestrator,
-            TaxCalculationService taxCalculationService,
-            CouponRedemptionService couponRedemptionService
-    ) {
-        this(orderRepository, inventoryReservationPort, paymentRequestPort, shippingRequestPort,
-                orderEventPublisherPort, commissionTierLookupPort, cartRepositoryPort, metricsPort,
-                sagaOrchestrator, taxCalculationService, couponRedemptionService, null);
-    }
-
-    public CreateOrderUseCase(
-            OrderRepositoryPort orderRepository,
-            InventoryReservationPort inventoryReservationPort,
-            PaymentRequestPort paymentRequestPort,
-            ShippingRequestPort shippingRequestPort,
-            OrderEventPublisherPort orderEventPublisherPort,
-            CommissionTierLookupPort commissionTierLookupPort,
-            CartRepositoryPort cartRepositoryPort,
-            MetricsPort metricsPort,
-            SagaOrchestrator sagaOrchestrator,
-            TaxCalculationService taxCalculationService) {
-        this(orderRepository, inventoryReservationPort, paymentRequestPort, shippingRequestPort,
-                orderEventPublisherPort, commissionTierLookupPort, cartRepositoryPort, metricsPort,
-                sagaOrchestrator, taxCalculationService, null);
+        this.allocateOrderFinancialsUseCase = Objects.requireNonNull(
+                allocateOrderFinancialsUseCase, "allocateOrderFinancialsUseCase is required");
     }
 
     @Transactional
@@ -179,9 +146,7 @@ public class CreateOrderUseCase {
             sagaOrchestrator.stepCompleted(sagaId, "SHIPPING");
 
             Order savedOrder = orderRepository.save(order);
-            if (allocateOrderFinancialsUseCase != null) {
-                allocateOrderFinancialsUseCase.allocate(savedOrder);
-            }
+            allocateOrderFinancialsUseCase.allocate(savedOrder);
             orderEventPublisherPort.publishOrderCreated(savedOrder);
             cartRepositoryPort.clearCart(buyerId);
             metricsPort.recordOrderCreated();
