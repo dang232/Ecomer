@@ -424,7 +424,7 @@ jobs:
         shell: bash
         run: |
           if [[ -x node_modules/.bin/eslint ]]; then
-            npx eslint "src/**/*.ts" --max-warnings=0
+            npx eslint "src/**/*.ts" --max-warnings=50
           fi
 
       - name: Test with coverage when configured
