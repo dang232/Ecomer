@@ -1,5 +1,7 @@
 FROM cgr.dev/chainguard/wolfi-base:latest@sha256:02dab76bd852a70556b5b2002195c8a5fdab77d323c433bf6642aab080489795 AS base
 
+# Package installation needs root; the final process remains the fixed non-root UID.
+USER 0
 RUN apk upgrade --no-cache \
     && apk add --no-cache ffmpeg python-3.11 py3.11-pip
 
