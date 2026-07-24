@@ -2,8 +2,13 @@ package com.vnshop.sellerfinanceservice.infrastructure.event;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vnshop.sellerfinanceservice.application.ApplyFinancialAdjustmentUseCase;
 import java.lang.reflect.Method;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -25,6 +30,34 @@ class SellerFinanceAdjustmentListenerContractTest {
     @Test
     void acceptsTheVersionOneAdjustmentContractWithExactComponentSnapshot() {
         listener.onSellerFinanceAdjustment(validOutboxEvent());
+    }
+
+    @Test
+    void mapsAValidCreditIntoTheAtomicApplicationUseCase() {
+        ApplyFinancialAdjustmentUseCase useCase = mock(ApplyFinancialAdjustmentUseCase.class);
+        when(useCase.apply(any())).thenReturn(new ApplyFinancialAdjustmentUseCase.ApplyResult(
+                java.util.UUID.fromString(EVENT_ID), java.util.UUID.randomUUID()));
+        SellerFinanceAdjustmentListener applyingListener = new SellerFinanceAdjustmentListener(new ObjectMapper(), useCase);
+
+        applyingListener.onSellerFinanceAdjustment(validOutboxEvent());
+
+        verify(useCase).apply(any());
+    }
+
+    @Test
+    void mapsReleaseConfirmationMetadataIntoTheAtomicApplicationUseCase() {
+        ApplyFinancialAdjustmentUseCase useCase = mock(ApplyFinancialAdjustmentUseCase.class);
+        when(useCase.apply(any())).thenReturn(new ApplyFinancialAdjustmentUseCase.ApplyResult(
+                java.util.UUID.fromString(EVENT_ID), java.util.UUID.randomUUID()));
+        SellerFinanceAdjustmentListener applyingListener = new SellerFinanceAdjustmentListener(new ObjectMapper(), useCase);
+
+        applyingListener.onSellerFinanceAdjustment(validOutboxEvent(
+                Map.of(),
+                Map.of("adjustmentType", "RELEASE", "releaseMetadata", Map.of(
+                        "reason", "BUYER_CONFIRMED", "confirmedBy", "buyer-1", "confirmedAt", "2026-07-24T04:00:00Z")),
+                Map.of()));
+
+        verify(useCase).apply(any());
     }
 
     @Test

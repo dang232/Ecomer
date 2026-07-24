@@ -99,6 +99,31 @@ class SellerFinanceControllerTest {
     }
 
     @Test
+    void walletReturnsTheSeparateSettlementProjectionBuckets() throws Exception {
+        SellerWallet wallet = new SellerWallet(
+                SELLER_ID, new BigDecimal("60.00"), new BigDecimal("25.00"), new BigDecimal("5.00"),
+                new BigDecimal("10.00"), new BigDecimal("3.00"), new BigDecimal("2.00"),
+                new BigDecimal("1.00"), new BigDecimal("4.00"), new BigDecimal("100.00"), null, 7);
+        when(sellerWalletRepositoryPort.findBySellerId(SELLER_ID)).thenReturn(Optional.of(wallet));
+
+        HttpRequest request = authorizedRequest("/sellers/me/finance/wallet")
+                .GET()
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        JsonNode data = objectMapper.readTree(response.body()).get("data");
+
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(data.get("settlementPendingBalance").decimalValue()).isEqualByComparingTo("25.00");
+        assertThat(data.get("reserveBalance").decimalValue()).isEqualByComparingTo("5.00");
+        assertThat(data.get("payoutPendingBalance").decimalValue()).isEqualByComparingTo("10.00");
+        assertThat(data.get("debtBalance").decimalValue()).isEqualByComparingTo("3.00");
+        assertThat(data.get("totalFees").decimalValue()).isEqualByComparingTo("2.00");
+        assertThat(data.get("totalRefunded").decimalValue()).isEqualByComparingTo("1.00");
+        assertThat(data.get("totalPaidOut").decimalValue()).isEqualByComparingTo("4.00");
+    }
+
+    @Test
     void requestPayoutReturnsValidResponse() throws Exception {
         SellerWallet wallet = new SellerWallet(SELLER_ID, new BigDecimal("200.00"), BigDecimal.ZERO, new BigDecimal("200.00"), null);
         Payout savedPayout = new Payout(UUID.randomUUID(), SELLER_ID, new BigDecimal("125.50"), PayoutStatus.PENDING, Instant.parse("2026-05-14T00:00:00Z"));

@@ -431,11 +431,11 @@ git commit -m "feat(finance-events): add versioned seller adjustments"
 - Produces: balanced immutable journals and a rebuildable wallet projection.
 - Projection buckets: `settlementPending`, `available`, `reserve`, `payoutPending`, `debt`, `totalFees`, `totalRefunded`, `totalPaidOut`.
 
-- [ ] **Step 1: Write domain invariant tests**
+- [x] **Step 1: Write domain invariant tests**
 
 Test balanced-by-currency journals, positive posting amounts, unique source operation, linked reversal, no mutation, and exact wallet projection equations.
 
-- [ ] **Step 2: Add ledger schema**
+- [x] **Step 2: Add ledger schema**
 
 Create:
 
@@ -449,19 +449,19 @@ wallet_projection_checkpoints
 
 Add unique `(source_type, source_id, operation_type)`, immutable update/delete triggers, and deferred validation constraints.
 
-- [ ] **Step 3: Expand the wallet projection**
+- [x] **Step 3: Expand the wallet projection**
 
 Add projection columns and JPA `@Version`. Replace `pending_balance` semantics with separate settlement-pending and payout-pending values. Do not reinterpret old data yet; Task 13 owns opening balances.
 
-- [ ] **Step 4: Apply adjustments atomically**
+- [x] **Step 4: Apply adjustments atomically**
 
 Create `ApplyFinancialAdjustmentUseCase`. In one database transaction it records inbox identity, writes a balanced journal, updates the locked projection, and returns the existing result on idempotent replay.
 
-- [ ] **Step 5: Verify failure atomicity**
+- [x] **Step 5: Verify failure atomicity**
 
 Integration tests inject a failure after journal creation and after projection mutation. Both paths must roll back completely.
 
-- [ ] **Step 6: Verify**
+- [x] **Step 6: Verify**
 
 ```powershell
 Set-Location services/seller-finance-service
@@ -469,7 +469,7 @@ Set-Location services/seller-finance-service
 .\mvnw.cmd verify
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```powershell
 git add services/seller-finance-service

@@ -1,0 +1,14 @@
+package com.vnshop.sellerfinanceservice.domain;
+
+public enum LedgerJournalType {
+    SELLER_CREDIT,
+    SETTLEMENT_RELEASE,
+    REFUND_REVERSAL,
+    CHARGEBACK_HOLD,
+    CHARGEBACK_RELEASE,
+    CHARGEBACK_FINALIZE,
+    PAYOUT_RESERVATION,
+    PAYOUT_COMPLETION,
+    PAYOUT_FAILURE,
+    MIGRATION_OPENING_BALANCE
+}

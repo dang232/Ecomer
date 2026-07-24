@@ -1,0 +1,13 @@
+package com.vnshop.sellerfinanceservice.domain;
+
+public enum LedgerAccountCode {
+    MARKETPLACE_CLEARING,
+    SELLER_SETTLEMENT_PENDING,
+    SELLER_AVAILABLE,
+    SELLER_RESERVE,
+    SELLER_PAYOUT_PENDING,
+    SELLER_DEBT,
+    PLATFORM_COMMISSION_REVENUE,
+    SELLER_REFUNDED,
+    SELLER_PAID_OUT
+}

@@ -2,6 +2,8 @@ package com.vnshop.sellerfinanceservice.infrastructure.event;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vnshop.sellerfinanceservice.application.ApplyFinancialAdjustmentUseCase;
+import com.vnshop.sellerfinanceservice.domain.FinancialAdjustment;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.math.BigDecimal;
@@ -9,6 +11,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -50,9 +53,18 @@ public class SellerFinanceAdjustmentListener {
             "currency");
 
     private final ObjectMapper objectMapper;
+    private final ApplyFinancialAdjustmentUseCase applyFinancialAdjustmentUseCase;
 
+    /** Validation-only constructor retained for contract tests and disabled consumers. */
     public SellerFinanceAdjustmentListener(ObjectMapper objectMapper) {
+        this(objectMapper, null);
+    }
+
+    @Autowired
+    public SellerFinanceAdjustmentListener(ObjectMapper objectMapper,
+                                          ApplyFinancialAdjustmentUseCase applyFinancialAdjustmentUseCase) {
         this.objectMapper = objectMapper;
+        this.applyFinancialAdjustmentUseCase = applyFinancialAdjustmentUseCase;
     }
 
     @RetryableTopic(
@@ -68,6 +80,11 @@ public class SellerFinanceAdjustmentListener {
 
         JsonNode payload = adjustmentEnvelope.path("payload");
         validatePayload(payload);
+        if (applyFinancialAdjustmentUseCase != null) {
+            ApplyFinancialAdjustmentUseCase.ApplyResult result = applyFinancialAdjustmentUseCase.apply(toAdjustment(adjustmentEnvelope));
+            LOGGER.info("seller-finance-adjustment-applied eventId={} journalId={}",
+                    requiredText(adjustmentEnvelope, "eventId"), result.journalId());
+        }
         LOGGER.info("seller-finance-adjustment-validated eventId={} adjustmentId={} allocationId={} orderId={} subOrderId={} sellerId={} components={}",
                 requiredText(adjustmentEnvelope, "eventId"),
                 requiredText(payload, "adjustmentId"),
@@ -76,6 +93,62 @@ public class SellerFinanceAdjustmentListener {
                 payload.path("subOrderId").asLong(),
                 requiredText(payload, "sellerId"),
                 payload.path("components"));
+    }
+
+    private FinancialAdjustment toAdjustment(JsonNode envelope) {
+        JsonNode payload = envelope.path("payload");
+        String adjustmentType = requiredText(payload, "adjustmentType");
+        JsonNode components = payload.path("components");
+        FinancialAdjustment.Components componentSnapshot = new FinancialAdjustment.Components(
+                decimal(components, "itemGmvAmount"),
+                decimal(components, "sellerFundedDiscountAmount"),
+                decimal(components, "platformFundedDiscountAmount"),
+                decimal(components, "buyerShippingChargeAmount"),
+                decimal(components, "sellerShippingPayableAmount"),
+                decimal(components, "taxChargedAmount"),
+                decimal(components, "sellerTaxPayableAmount"),
+                decimal(components, "commissionBaseAmount"),
+                decimal(components, "platformCommissionAmount"),
+                decimal(components, "sellerPayableAmount"),
+                decimal(components, "buyerPaidAmount"),
+                requiredText(components, "currency"));
+        FinancialAdjustment.ReleaseMetadata releaseMetadata = null;
+        JsonNode rawReleaseMetadata = payload.get("releaseMetadata");
+        if (rawReleaseMetadata != null && rawReleaseMetadata.isObject()) {
+            releaseMetadata = new FinancialAdjustment.ReleaseMetadata(
+                    requiredText(rawReleaseMetadata, "reason"),
+                    requiredText(rawReleaseMetadata, "confirmedBy"),
+                    Instant.parse(requiredText(rawReleaseMetadata, "confirmedAt")));
+        }
+        return new FinancialAdjustment(
+                UUID.fromString(requiredText(envelope, "eventId")),
+                Instant.parse(requiredText(envelope, "occurredAt")),
+                UUID.fromString(requiredText(payload, "adjustmentId")),
+                FinancialAdjustment.AdjustmentType.valueOf(adjustmentType),
+                UUID.fromString(requiredText(payload, "allocationId")),
+                payload.path("allocationVersion").asInt(),
+                UUID.fromString(requiredText(payload, "orderId")),
+                payload.path("subOrderId").asLong(),
+                requiredText(payload, "sellerId"),
+                requiredText(payload, "commissionTier"),
+                payload.path("frozenCommissionRate").decimalValue(),
+                nullableUuid(payload, "reversalId"),
+                requiredText(payload, "currency"),
+                componentSnapshot,
+                releaseMetadata);
+    }
+
+    private static BigDecimal decimal(JsonNode node, String fieldName) {
+        JsonNode value = node.path(fieldName);
+        if (!value.isNumber()) {
+            throw invalid(fieldName + " must be numeric");
+        }
+        return value.decimalValue();
+    }
+
+    private static UUID nullableUuid(JsonNode node, String fieldName) {
+        JsonNode value = node.get(fieldName);
+        return value == null || value.isNull() ? null : UUID.fromString(value.asText());
     }
 
     @DltHandler

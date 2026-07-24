@@ -1,6 +1,7 @@
 package com.vnshop.sellerfinanceservice.infrastructure.config;
 
 import com.vnshop.sellerfinanceservice.application.CreditWalletUseCase;
+import com.vnshop.sellerfinanceservice.application.ApplyFinancialAdjustmentUseCase;
 import com.vnshop.sellerfinanceservice.application.AdminPayoutReadUseCase;
 import com.vnshop.sellerfinanceservice.application.GetSellerPayoutsUseCase;
 import com.vnshop.sellerfinanceservice.application.ListPayoutsUseCase;
@@ -10,6 +11,8 @@ import com.vnshop.sellerfinanceservice.application.RequestPayoutUseCase;
 import com.vnshop.sellerfinanceservice.application.ViewWalletUseCase;
 import com.vnshop.sellerfinanceservice.domain.CommissionCalculator;
 import com.vnshop.sellerfinanceservice.domain.port.out.PayoutRepositoryPort;
+import com.vnshop.sellerfinanceservice.domain.port.out.FinanceEventInboxPort;
+import com.vnshop.sellerfinanceservice.domain.port.out.LedgerRepositoryPort;
 import com.vnshop.sellerfinanceservice.domain.port.out.SellerDirectoryPort;
 import com.vnshop.sellerfinanceservice.domain.port.out.SellerWalletRepositoryPort;
 import org.springframework.context.annotation.Bean;
@@ -25,6 +28,14 @@ public class UseCaseConfig {
     @Bean
     CreditWalletUseCase creditWalletUseCase(SellerWalletRepositoryPort walletRepositoryPort, CommissionCalculator commissionCalculator) {
         return new CreditWalletUseCase(walletRepositoryPort, commissionCalculator);
+    }
+
+    @Bean
+    ApplyFinancialAdjustmentUseCase applyFinancialAdjustmentUseCase(
+            LedgerRepositoryPort ledgerRepositoryPort,
+            FinanceEventInboxPort financeEventInboxPort,
+            SellerWalletRepositoryPort walletRepositoryPort) {
+        return new ApplyFinancialAdjustmentUseCase(ledgerRepositoryPort, financeEventInboxPort, walletRepositoryPort);
     }
 
     @Bean
