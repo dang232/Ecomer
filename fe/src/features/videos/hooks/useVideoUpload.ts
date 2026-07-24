@@ -24,12 +24,7 @@ const LS_RESUME_KEY = "vnshop:video-upload-resume";
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type VideoUploadPhase =
-  | "idle"
-  | "validating"
-  | "initiating"
-  | "uploading"
-  | "complete"
-  | "error";
+  "idle" | "validating" | "initiating" | "uploading" | "complete" | "error";
 
 export interface VideoUploadState {
   phase: VideoUploadPhase;

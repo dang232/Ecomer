@@ -13,11 +13,7 @@ export interface BackendSearchCriteria {
 const SUPPORTED_SORTS = new Set(["popular", "price-low", "price-high", "newest"]);
 
 export type PriceRangeError =
-  | "min-negative"
-  | "max-negative"
-  | "min-greater-than-max"
-  | "min-invalid"
-  | "max-invalid";
+  "min-negative" | "max-negative" | "min-greater-than-max" | "min-invalid" | "max-invalid";
 
 function parseOptionalPrice(value: string): number | null {
   const trimmed = value.trim();

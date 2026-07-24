@@ -9,8 +9,7 @@ const mocks = vi.hoisted(() => ({
   v2FetchNextPage: vi.fn(),
   v2HasNextPage: false,
   v2SearchData: undefined as
-    | { pages: { data: { items: Record<string, unknown>[]; facets?: unknown } }[] }
-    | undefined,
+    { pages: { data: { items: Record<string, unknown>[]; facets?: unknown } }[] } | undefined,
 }));
 
 vi.mock("motion/react", () => ({
