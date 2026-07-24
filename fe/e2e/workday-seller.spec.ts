@@ -72,7 +72,7 @@ test.describe.serial("Workday — seller (login → console tour → logout)", (
         for (const matcher of [
           /Wallet balance|Số dư ví/i,
           /Pending orders|Đơn cần xử lý/i,
-          /Shop views|Lượt xem shop/i,
+          /Products|Sản phẩm/i,
           /Average rating|Điểm đánh giá/i,
         ]) {
           await expect(page.getByText(matcher).first()).toBeVisible({

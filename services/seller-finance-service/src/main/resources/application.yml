@@ -112,3 +112,13 @@ vnshop:
       VERIFIED: "0.08"
       PREFERRED: "0.05"
       MALL: "0.03"
+
+seller-finance:
+  adjustment-consumer:
+    enabled: ${SELLER_FINANCE_ADJUSTMENT_CONSUMER_ENABLED:true}
+  legacy-order-created-consumer:
+    enabled: ${SELLER_FINANCE_LEGACY_ORDER_CREATED_CONSUMER_ENABLED:false}
+  settlement-release:
+    enabled: ${SELLER_FINANCE_SETTLEMENT_RELEASE_ENABLED:true}
+    batch-size: ${SELLER_FINANCE_SETTLEMENT_RELEASE_BATCH_SIZE:100}
+    poll-interval-ms: ${SELLER_FINANCE_SETTLEMENT_RELEASE_POLL_INTERVAL_MS:60000}

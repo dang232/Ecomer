@@ -29,4 +29,10 @@ public interface RefundGatewayPort {
      * @return provider refund id
      */
     String refund(String paymentId, String gatewayTransactionId, BigDecimal amount, String reason);
+
+    /** Provider call with a business-stable idempotency key for partial refunds. */
+    default String refund(String paymentId, String gatewayTransactionId, BigDecimal amount,
+                          String reason, String reversalId) {
+        return refund(paymentId, gatewayTransactionId, amount, reason);
+    }
 }

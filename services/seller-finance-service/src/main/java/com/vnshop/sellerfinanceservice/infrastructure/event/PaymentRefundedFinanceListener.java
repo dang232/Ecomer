@@ -59,6 +59,11 @@ public class PaymentRefundedFinanceListener {
             LOGGER.warn("payment.refunded missing refundId — skipping. payload={}", eventJson);
             return;
         }
+        String reversalId = text(payload, "reversalId");
+        if (reversalId != null && !reversalId.isBlank()) {
+            LOGGER.debug("payment.refunded reversalId={} is handled by immutable seller-finance adjustment", reversalId);
+            return;
+        }
         // Idempotency: skip if this refundId was already processed.
         if (processedRefundRepository.existsById(refundId)) {
             LOGGER.info("payment.refunded refundId={} already processed — skipping", refundId);

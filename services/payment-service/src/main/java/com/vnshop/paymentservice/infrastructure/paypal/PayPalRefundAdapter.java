@@ -54,6 +54,11 @@ public class PayPalRefundAdapter implements RefundGatewayPort {
      */
     @Override
     public String refund(String paymentId, String gatewayTransactionId, BigDecimal amount, String reason) {
+        return refund(paymentId, gatewayTransactionId, amount, reason, paymentId);
+    }
+
+    @Override
+    public String refund(String paymentId, String gatewayTransactionId, BigDecimal amount, String reason, String reversalId) {
         Objects.requireNonNull(paymentId, "paymentId is required");
         Objects.requireNonNull(gatewayTransactionId, "gatewayTransactionId is required");
         Objects.requireNonNull(amount, "amount is required");
@@ -61,7 +66,7 @@ public class PayPalRefundAdapter implements RefundGatewayPort {
         BigDecimal rate = fxRatePort.rate("VND", "USD");
         BigDecimal usdAmount = amount.multiply(rate).setScale(2, RoundingMode.HALF_UP);
 
-        PayPalGateway.PayPalRefund refund = gateway.refund(gatewayTransactionId, usdAmount, paymentId);
+        PayPalGateway.PayPalRefund refund = gateway.refund(gatewayTransactionId, usdAmount, reversalId);
         log.info("paypal-refund-issued paymentId={} captureId={} refundId={} status={}",
                 paymentId, gatewayTransactionId, refund.refundId(), refund.status());
         return refund.refundId();

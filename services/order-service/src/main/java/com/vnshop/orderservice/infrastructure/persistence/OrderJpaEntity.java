@@ -66,6 +66,9 @@ public class OrderJpaEntity extends BaseJpaEntity {
     })
     private MoneyEmbeddable discount;
 
+    @Column(name = "tax_total", nullable = false, precision = 19, scale = 0)
+    private BigDecimal taxTotal;
+
     @Embedded
     @AttributeOverrides({
             @AttributeOverride(name = "amount", column = @Column(name = "final_amount", nullable = false, precision = 19, scale = 0)),
@@ -110,6 +113,7 @@ public class OrderJpaEntity extends BaseJpaEntity {
         entity.itemsTotal = MoneyEmbeddable.fromDomain(order.itemsTotal());
         entity.shippingTotal = MoneyEmbeddable.fromDomain(order.shippingTotal());
         entity.discount = MoneyEmbeddable.fromDomain(order.discount());
+        entity.taxTotal = order.taxTotal().amount();
         entity.finalAmount = MoneyEmbeddable.fromDomain(order.finalAmount());
         entity.paymentMethod = order.paymentMethod();
         entity.paymentStatus = order.paymentStatus();
@@ -134,6 +138,7 @@ public class OrderJpaEntity extends BaseJpaEntity {
                 itemsTotal.toDomain(),
                 shippingTotal.toDomain(),
                 discount.toDomain(),
+                new Money(taxTotal),
                 paymentMethod,
                 paymentStatus,
                 idempotencyKey

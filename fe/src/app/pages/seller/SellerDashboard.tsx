@@ -1,5 +1,5 @@
 import {
-  IconEye,
+  IconPackage,
   IconShoppingBag,
   IconStar,
   IconTrendingUp,
@@ -82,9 +82,15 @@ function KpiCardOD({ icon: Icon, label, value, trend, positive = true }: KpiCard
 export function SellerDashboard({
   pendingOrders,
   walletBalance,
+  productCount,
+  ratingAvg,
+  statsLoading,
 }: {
   pendingOrders: PendingSubOrder[];
   walletBalance: number | null;
+  productCount: number | null;
+  ratingAvg: number | null;
+  statsLoading: boolean;
 }) {
   const { points, isLoading: revenueLoading, error: revenueError } = useSellerRevenue({ days: 30 });
   const chartData = useMemo(() => toChartData(points), [points]);
@@ -110,8 +116,22 @@ export function SellerDashboard({
           label={t("seller.dashboard.kpi.pending")}
           value={String(pendingOrders.length)}
         />
-        <KpiCardOD icon={IconEye} label={t("seller.dashboard.kpi.views")} value="—" />
-        <KpiCardOD icon={IconStar} label={t("seller.dashboard.kpi.rating")} value="—" />
+        <KpiCardOD
+          icon={IconPackage}
+          label={t("seller.dashboard.kpi.products")}
+          value={statsLoading ? "..." : String(productCount ?? 0)}
+        />
+        <KpiCardOD
+          icon={IconStar}
+          label={t("seller.dashboard.kpi.rating")}
+          value={
+            statsLoading
+              ? "..."
+              : ratingAvg === null
+                ? t("seller.dashboard.kpi.noRating")
+                : ratingAvg.toFixed(1)
+          }
+        />
       </div>
 
       {/* Revenue chart */}

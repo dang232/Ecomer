@@ -58,6 +58,12 @@ public class PaymentJpaEntity extends BaseJpaEntity {
     @Column(name = "fx_rate_at")
     private Instant fxRateAt;
 
+    @Column(name = "cod_collection_event_id", length = 255)
+    private String codCollectionEventId;
+
+    @Column(name = "cod_collected_at")
+    private Instant codCollectedAt;
+
 
     protected PaymentJpaEntity() {
     }
@@ -75,6 +81,8 @@ public class PaymentJpaEntity extends BaseJpaEntity {
         entity.externalCurrency = payment.externalCurrency();
         entity.fxRate = payment.fxRate();
         entity.fxRateAt = payment.fxRateAt();
+        entity.codCollectionEventId = payment.codCollectionEventId();
+        entity.codCollectedAt = payment.codCollectedAt();
         // Seed createdAt from the domain so an UPDATE save (e.g. the admin
         // VietQR confirm path) doesn't return a managed entity with
         // createdAt=null. @PrePersist only fires on INSERT; merge() of a
@@ -86,6 +94,6 @@ public class PaymentJpaEntity extends BaseJpaEntity {
 
     public Payment toDomain() {
         return new Payment(paymentId, orderId, buyerId, amount, method, status, transactionRef, getCreatedAt(),
-                externalAmount, externalCurrency, fxRate, fxRateAt);
+                externalAmount, externalCurrency, fxRate, fxRateAt, codCollectionEventId, codCollectedAt);
     }
 }

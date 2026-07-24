@@ -48,8 +48,16 @@ public class UserDirectoryHttpClientAdapter implements UserDirectoryPort {
             }
             Map<String, String> result = new HashMap<>();
             for (JsonNode node : data) {
-                String id = node.path(idField).asText(null);
-                String displayName = node.path("displayName").asText(null);
+                // Accept the canonical batch projection and the public seller
+                // projection shape. This keeps the read model resilient while
+                // services roll forward independently.
+                String id = firstNonBlank(
+                        node.path(idField).asText(null),
+                        node.path("id").asText(null));
+                String displayName = firstNonBlank(
+                        node.path("displayName").asText(null),
+                        node.path("shopName").asText(null),
+                        node.path("name").asText(null));
                 if (id != null && !id.isBlank() && displayName != null && !displayName.isBlank()) {
                     result.put(id, displayName);
                 }
@@ -59,6 +67,15 @@ public class UserDirectoryHttpClientAdapter implements UserDirectoryPort {
             log.warn("user-service directory lookup failed (idsCount={}): {}", ids.size(), ex.getMessage());
             return Map.of();
         }
+    }
+
+    private static String firstNonBlank(String... candidates) {
+        for (String candidate : candidates) {
+            if (candidate != null && !candidate.isBlank()) {
+                return candidate;
+            }
+        }
+        return null;
     }
 
     @FunctionalInterface

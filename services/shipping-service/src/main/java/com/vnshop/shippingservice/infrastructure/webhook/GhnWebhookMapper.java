@@ -17,7 +17,10 @@ public class GhnWebhookMapper {
                 trackingCode,
                 mapStatus(payload.statusCode(), payload.status()),
                 payload.status(),
-                payload.updatedDate());
+                payload.updatedDate(),
+                payload.codCollectedAmount(),
+                payload.collectionId(),
+                payload.currency());
     }
 
     private String mapStatus(String statusCode, String status) {

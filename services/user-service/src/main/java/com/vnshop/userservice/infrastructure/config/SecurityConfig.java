@@ -12,9 +12,10 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.util.matcher.RequestMatcher;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.core.annotation.Order;
 
 import java.util.Collection;
 import java.util.List;
@@ -30,15 +31,39 @@ public class SecurityConfig {
             "/auth/refresh", "/auth/logout");
 
     @Bean
+    @Order(1)
+    SecurityFilterChain authSecurityFilterChain(HttpSecurity http) throws Exception {
+        // Keep the cookie session boundary separate from bearer-token resource
+        // authorization. Refresh and logout authenticate with the httpOnly
+        // cookie, so they must be reachable before JWT authorization runs.
+        return http
+                .securityMatcher("/auth/**")
+                // Keep Spring Security's CSRF protection enabled for the same
+                // cookie-authenticated endpoints guarded by the API error filter.
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(csrfTokenRepository())
+                        .requireCsrfProtectionMatcher(csrfRequestMatcher()))
+                .addFilterBefore(new CsrfProtectionFilter(), CsrfFilter.class)
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                .build();
+    }
+
+    @Bean
+    @Order(2)
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(csrfTokenRepository())
                         .requireCsrfProtectionMatcher(csrfRequestMatcher()))
-                .addFilterBefore(new CsrfProtectionFilter(), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new CsrfProtectionFilter(), CsrfFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api-docs", "/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
+                        // These endpoints are the public cookie-auth boundary. Keep the
+                        // explicit method matchers alongside the namespace matcher so
+                        // refresh/logout never fall through to JWT authorization.
+                        .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/refresh", "/auth/logout")
+                        .permitAll()
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/sellers", "/sellers/{id}", "/sellers/public-profiles").permitAll()
                         .requestMatchers(HttpMethod.GET, "/users/public-profiles").permitAll()

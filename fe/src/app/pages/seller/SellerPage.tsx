@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 
 import { sellerPendingOrders } from "../../lib/api/endpoints/orders";
 import { myPayouts, myWallet } from "../../lib/api/endpoints/seller-finance";
+import { getSeller } from "../../lib/api/endpoints/sellers";
 import { sellerProfile } from "../../lib/api/endpoints/users";
 
 import { SellerDashboard } from "./SellerDashboard";
@@ -85,6 +86,14 @@ export function SellerPage() {
   const profileQuery = useQuery({
     queryKey: ["seller", "profile"],
     queryFn: sellerProfile,
+    retry: false,
+  });
+
+  const sellerId = profileQuery.data?.id;
+  const publicStatsQuery = useQuery({
+    queryKey: ["seller", "public-stats", sellerId],
+    queryFn: () => getSeller(sellerId!),
+    enabled: Boolean(sellerId),
     retry: false,
   });
 
@@ -221,7 +230,13 @@ export function SellerPage() {
             transition={{ duration: 0.2 }}
           >
             {activeTab === "dashboard" ? (
-              <SellerDashboard pendingOrders={pendingOrders} walletBalance={balance} />
+              <SellerDashboard
+                pendingOrders={pendingOrders}
+                walletBalance={balance}
+                productCount={publicStatsQuery.data?.totalProducts ?? null}
+                ratingAvg={publicStatsQuery.data?.ratingAvg ?? null}
+                statsLoading={profileQuery.isLoading || publicStatsQuery.isLoading}
+              />
             ) : null}
             {activeTab === "products" ? <SellerProducts /> : null}
             {activeTab === "orders" ? (

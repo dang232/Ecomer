@@ -76,7 +76,8 @@ public class OrderEventPublisherAdapter implements OrderEventPublisherPort {
             java.math.BigDecimal totalAmount,
             int itemCount,
             java.util.List<SellerTotal> sellerTotals,
-            java.util.List<OrderEventItem> items
+            java.util.List<OrderEventItem> items,
+            String deliveredAt
     ) {
         static OrderEvent fromDomain(String eventType, Order order) {
             return fromDomain(eventType, order, null);
@@ -101,17 +102,22 @@ public class OrderEventPublisherAdapter implements OrderEventPublisherPort {
                             .mapToInt(item -> item.quantity())
                             .sum(),
                     subOrders.stream()
-                            .map(subOrder -> new SellerTotal(subOrder.sellerId(), subOrder.itemsTotal().amount(), subOrder.commissionTier().name()))
+                            .map(subOrder -> new SellerTotal(subOrder.id(), subOrder.sellerId(),
+                                    subOrder.itemsTotal().amount(), subOrder.commissionTier().name()))
                             .toList(),
                     subOrders.stream()
                             .flatMap(subOrder -> subOrder.items().stream()
                                     .map(item -> new OrderEventItem(item.productId(), item.sellerId(), item.quantity())))
-                            .toList()
+                            .toList(),
+                    deliveredSubOrder == null ? null : java.time.Instant.now().toString()
             );
         }
     }
 
-    public record SellerTotal(String sellerId, java.math.BigDecimal amount, String commissionTier) {
+    public record SellerTotal(Long subOrderId, String sellerId, java.math.BigDecimal amount, String commissionTier) {
+        public SellerTotal(String sellerId, java.math.BigDecimal amount, String commissionTier) {
+            this(null, sellerId, amount, commissionTier);
+        }
     }
 
     /**

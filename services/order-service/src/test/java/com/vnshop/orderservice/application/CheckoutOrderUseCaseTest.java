@@ -19,9 +19,11 @@ import com.vnshop.orderservice.domain.port.out.PaymentRequestPort;
 import com.vnshop.orderservice.domain.port.out.ProductCatalogPort;
 import com.vnshop.orderservice.domain.port.out.CartRepositoryPort;
 import com.vnshop.orderservice.domain.port.out.ShippingRequestPort;
+import com.vnshop.orderservice.domain.port.out.SubOrderFinancialAllocationRepositoryPort;
 import com.vnshop.orderservice.application.saga.SagaOrchestrator;
 import com.vnshop.orderservice.application.tax.TaxCalculationService;
 import com.vnshop.orderservice.application.coupon.CouponRedemptionService;
+import com.vnshop.orderservice.application.finance.AllocateOrderFinancialsUseCase;
 import com.vnshop.orderservice.domain.port.out.MetricsPort;
 import com.vnshop.orderservice.domain.port.out.OutboxPort;
 import com.vnshop.orderservice.domain.port.out.SagaCompensationPublisherPort;
@@ -80,7 +82,11 @@ class CheckoutOrderUseCaseTest {
         TaxCalculationService taxService = new TaxCalculationService((code, date) -> java.util.Optional.of(new java.math.BigDecimal("0.10")));
         CreateOrderUseCase createOrderUseCase = new CreateOrderUseCase(
                 repository, inventory, payment, shipping, events, tierLookup, cart, noopMetrics,
-                sagaOrchestrator, taxService, couponRedemptionService);
+                sagaOrchestrator, taxService, couponRedemptionService,
+                new AllocateOrderFinancialsUseCase(new SubOrderFinancialAllocationRepositoryPort() {
+                    @Override public void saveAll(List<com.vnshop.orderservice.domain.finance.SubOrderFinancialAllocation> ignored) { }
+                    @Override public List<com.vnshop.orderservice.domain.finance.SubOrderFinancialAllocation> findByOrderId(UUID ignored) { return List.of(); }
+                }));
         return new CheckoutOrderUseCase(catalog, createOrderUseCase);
     }
 
@@ -267,8 +273,20 @@ class CheckoutOrderUseCaseTest {
     private static final class FakeOrderRepository implements OrderRepositoryPort {
         private final Map<UUID, Order> byId = new HashMap<>();
         private final Map<String, Order> byIdem = new HashMap<>();
+        private long nextSubOrderId = 1L;
 
-        @Override public Order save(Order order) { byId.put(order.id(), order); byIdem.put(order.idempotencyKey(), order); return order; }
+        @Override
+        public Order save(Order order) {
+            List<SubOrder> persistedSubOrders = order.subOrders().stream().map(subOrder -> new SubOrder(nextSubOrderId++,
+                    subOrder.sellerId(), subOrder.items(), subOrder.fulfillmentStatus(), subOrder.shippingInfo(),
+                    subOrder.commissionTier())).toList();
+            Order persisted = new Order(order.id(), order.orderNumber(), order.buyerId(), order.shippingAddress(),
+                    persistedSubOrders, order.itemsTotal(), order.shippingTotal(), order.discount(), order.taxTotal(),
+                    order.paymentMethod(), order.paymentStatus(), order.idempotencyKey());
+            byId.put(persisted.id(), persisted);
+            byIdem.put(persisted.idempotencyKey(), persisted);
+            return persisted;
+        }
         @Override public Optional<Order> findById(UUID id) { return Optional.ofNullable(byId.get(id)); }
         @Override public Optional<Order> findByOrderNumber(String orderNumber) { return Optional.empty(); }
         @Override public Optional<Order> findByIdempotencyKey(String key) { return Optional.ofNullable(byIdem.get(key)); }

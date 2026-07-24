@@ -1,5 +1,8 @@
 package com.vnshop.paymentservice.application;
 
+import java.math.BigDecimal;
+import java.util.UUID;
+
 /**
  * Input command for {@link RefundPaymentUseCase}.
  *
@@ -12,5 +15,17 @@ package com.vnshop.paymentservice.application;
 public record RefundPaymentCommand(
         String orderId,
         String sagaId,
-        String reason) {
+        String reason,
+        UUID reversalId,
+        BigDecimal amount) {
+
+    /** Legacy full-refund command; callers should provide a stable reversal id. */
+    public RefundPaymentCommand(String orderId, String sagaId, String reason) {
+        this(orderId, sagaId, reason, stableLegacyReversalId(orderId, sagaId), null);
+    }
+
+    private static UUID stableLegacyReversalId(String orderId, String sagaId) {
+        return UUID.nameUUIDFromBytes((orderId + ":" + (sagaId == null ? "legacy" : sagaId))
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
 }

@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.time.LocalDate;
+import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Objects;
 
@@ -83,6 +84,10 @@ public class PayPalChargebackWebhookController {
         String orderId = extractOrderId(resource);
         String reason = Objects.toString(resource.get("reason"), "unspecified");
         LocalDate dueDate = null;
+        Map<?, ?> disputedTransaction = firstDisputedTransaction(resource);
+        BigDecimal challengedAmount = parseAmount(disputedTransaction.get("amount"));
+        String currency = Objects.toString(disputedTransaction.get("currency"), "VND");
+        String providerPaymentId = Objects.toString(disputedTransaction.get("seller_transaction_id"), null);
 
         Chargeback result;
         try {
@@ -91,7 +96,7 @@ public class PayPalChargebackWebhookController {
                     disputeId,
                     Chargeback.ChargebackProvider.PAYPAL,
                     reason,
-                    dueDate);
+                    dueDate, challengedAmount, currency.toUpperCase(java.util.Locale.ROOT), providerPaymentId);
         } catch (Exception ex) {
             log.error("paypal-chargeback-webhook-processing-failed eventId={} error={}", eventId, ex.getMessage());
             if (!eventId.isBlank()) {
@@ -120,6 +125,20 @@ public class PayPalChargebackWebhookController {
             }
         }
         return "UNKNOWN";
+    }
+
+    private Map<?, ?> firstDisputedTransaction(Map<?, ?> resource) {
+        Object value = resource.get("disputed_transactions");
+        if (value instanceof java.util.List<?> list && !list.isEmpty() && list.get(0) instanceof Map<?, ?> first) {
+            return first;
+        }
+        return Map.of();
+    }
+
+    private BigDecimal parseAmount(Object raw) {
+        if (raw instanceof Map<?, ?> map) raw = map.get("value");
+        if (raw == null) return null;
+        try { return new BigDecimal(raw.toString()); } catch (NumberFormatException ignored) { return null; }
     }
 
     public record ChargebackWebhookResponse(String outcome) {

@@ -2,6 +2,7 @@ package com.vnshop.paymentservice.domain;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.math.BigDecimal;
 import java.util.UUID;
 
 /**
@@ -18,6 +19,9 @@ public record Chargeback(
         ChargebackStatus status,
         String evidenceJson,
         LocalDate dueDate,
+        BigDecimal challengedAmount,
+        String currency,
+        String providerPaymentId,
         Instant createdAt,
         Instant updatedAt) {
 
@@ -31,11 +35,18 @@ public record Chargeback(
 
     public Chargeback withStatus(ChargebackStatus newStatus) {
         return new Chargeback(id, orderId, externalChargebackId, provider, reason,
-                newStatus, evidenceJson, dueDate, createdAt, updatedAt);
+                newStatus, evidenceJson, dueDate, challengedAmount, currency, providerPaymentId, createdAt, updatedAt);
     }
 
     public Chargeback withEvidence(String json) {
         return new Chargeback(id, orderId, externalChargebackId, provider, reason,
-                status, json, dueDate, createdAt, updatedAt);
+                status, json, dueDate, challengedAmount, currency, providerPaymentId, createdAt, updatedAt);
+    }
+
+    public Chargeback(UUID id, String orderId, String externalChargebackId, ChargebackProvider provider,
+                      String reason, ChargebackStatus status, String evidenceJson, LocalDate dueDate,
+                      Instant createdAt, Instant updatedAt) {
+        this(id, orderId, externalChargebackId, provider, reason, status, evidenceJson, dueDate,
+                null, "VND", null, createdAt, updatedAt);
     }
 }

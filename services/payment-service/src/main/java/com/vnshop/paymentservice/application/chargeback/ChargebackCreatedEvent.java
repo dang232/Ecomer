@@ -3,6 +3,7 @@ package com.vnshop.paymentservice.application.chargeback;
 import com.vnshop.paymentservice.domain.Chargeback;
 
 import java.time.LocalDate;
+import java.math.BigDecimal;
 import java.util.UUID;
 
 /**
@@ -16,7 +17,15 @@ public record ChargebackCreatedEvent(
         String provider,
         String reason,
         String status,
-        LocalDate dueDate) {
+        LocalDate dueDate,
+        BigDecimal challengedAmount,
+        String currency,
+        String providerPaymentId) {
+
+    public ChargebackCreatedEvent(UUID chargebackId, String orderId, String externalChargebackId,
+                                  String provider, String reason, String status, LocalDate dueDate) {
+        this(chargebackId, orderId, externalChargebackId, provider, reason, status, dueDate, null, "VND", null);
+    }
 
     public static ChargebackCreatedEvent from(Chargeback cb) {
         return new ChargebackCreatedEvent(
@@ -26,6 +35,6 @@ public record ChargebackCreatedEvent(
                 cb.provider().name(),
                 cb.reason(),
                 cb.status().name(),
-                cb.dueDate());
+                cb.dueDate(), cb.challengedAmount(), cb.currency(), cb.providerPaymentId());
     }
 }

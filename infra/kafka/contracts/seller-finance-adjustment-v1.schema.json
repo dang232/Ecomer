@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Seller finance adjustment v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["eventId", "eventType", "schemaVersion", "occurredAt", "producer", "aggregateId", "correlationId", "causationId", "payload"],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid" },
+    "eventType": { "const": "SELLER_FINANCE_ADJUSTMENT" },
+    "schemaVersion": { "const": 1 },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "producer": { "const": "order-service" },
+    "aggregateId": { "type": "string", "minLength": 1 },
+    "correlationId": { "type": "string", "minLength": 1 },
+    "causationId": { "type": "string", "minLength": 1 },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["adjustmentId", "adjustmentType", "allocationId", "allocationVersion", "orderId", "subOrderId", "sellerId", "commissionTier", "frozenCommissionRate", "reversalId", "currency", "components", "releaseMetadata"],
+      "properties": {
+        "adjustmentId": { "type": "string", "format": "uuid" },
+        "adjustmentType": { "enum": ["CREDIT", "RELEASE", "REFUND_REVERSAL", "CHARGEBACK_HOLD", "CHARGEBACK_RELEASE", "CHARGEBACK_FINALIZE"] },
+        "allocationId": { "type": "string", "format": "uuid" },
+        "allocationVersion": { "type": "integer", "minimum": 1 },
+        "orderId": { "type": "string", "format": "uuid" },
+        "subOrderId": { "type": "integer", "minimum": 1 },
+        "sellerId": { "type": "string", "minLength": 1 },
+        "commissionTier": { "enum": ["STANDARD", "VERIFIED", "PREFERRED", "MALL"] },
+        "frozenCommissionRate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "reversalId": { "type": ["string", "null"], "format": "uuid" },
+        "currency": { "const": "VND" },
+        "releaseMetadata": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["reason", "confirmedBy", "confirmedAt"],
+          "properties": {
+            "reason": { "enum": ["BUYER_CONFIRMED", "AUTO_CONFIRMED"] },
+            "confirmedBy": { "type": "string", "minLength": 1 },
+            "confirmedAt": { "type": "string", "format": "date-time" }
+          }
+        },
+        "components": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["itemGmvAmount", "sellerFundedDiscountAmount", "platformFundedDiscountAmount", "buyerShippingChargeAmount", "sellerShippingPayableAmount", "taxChargedAmount", "sellerTaxPayableAmount", "commissionBaseAmount", "platformCommissionAmount", "sellerPayableAmount", "buyerPaidAmount", "currency"],
+          "properties": {
+            "itemGmvAmount": { "type": "integer", "minimum": 1 },
+            "sellerFundedDiscountAmount": { "type": "integer", "minimum": 0 },
+            "platformFundedDiscountAmount": { "type": "integer", "minimum": 0 },
+            "buyerShippingChargeAmount": { "type": "integer", "minimum": 0 },
+            "sellerShippingPayableAmount": { "type": "integer", "minimum": 0 },
+            "taxChargedAmount": { "type": "integer", "minimum": 0 },
+            "sellerTaxPayableAmount": { "type": "integer", "minimum": 0 },
+            "commissionBaseAmount": { "type": "integer", "minimum": 0 },
+            "platformCommissionAmount": { "type": "integer", "minimum": 0 },
+            "sellerPayableAmount": { "type": "integer", "minimum": 0 },
+            "buyerPaidAmount": { "type": "integer", "minimum": 0 },
+            "currency": { "const": "VND" }
+          }
+        }
+      }
+    }
+  }
+}

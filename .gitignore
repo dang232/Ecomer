@@ -257,5 +257,10 @@ app.*.symbols
 !/docs/FE-DATA-SEARCH-BUSINESS-REVIEW-2026-07-22.pptx
 !/docs/operations/
 !/docs/operations/*.md
+!/docs/superpowers/
+/docs/superpowers/*
+!/docs/superpowers/plans/
+/docs/superpowers/plans/*
+!/docs/superpowers/plans/2026-07-24-marketplace-settlement-and-finance.md
 /services/configuration-service/dist
 /services/product-service/.omc

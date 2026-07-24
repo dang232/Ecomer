@@ -11,6 +11,7 @@ import com.vnshop.orderservice.application.CancelOrderUseCase;
 import com.vnshop.orderservice.application.CheckoutOrderUseCase;
 import com.vnshop.orderservice.application.CompleteReturnUseCase;
 import com.vnshop.orderservice.application.CreateOrderUseCase;
+import com.vnshop.orderservice.application.finance.AllocateOrderFinancialsUseCase;
 import com.vnshop.orderservice.application.DisputeQueryUseCase;
 import com.vnshop.orderservice.application.DisputeUseCase;
 import com.vnshop.orderservice.application.GetDashboardUseCase;
@@ -47,6 +48,10 @@ import com.vnshop.orderservice.domain.port.out.ShippingRequestPort;
 import com.vnshop.orderservice.application.saga.SagaOrchestrator;
 import com.vnshop.orderservice.application.tax.TaxCalculationService;
 import com.vnshop.orderservice.domain.port.out.TaxRateLookupPort;
+import com.vnshop.orderservice.domain.port.out.SubOrderFinancialAllocationRepositoryPort;
+import com.vnshop.orderservice.domain.port.out.SellerFinanceAdjustmentPublisherPort;
+import com.vnshop.orderservice.domain.port.out.FinancialReversalRepositoryPort;
+import com.vnshop.orderservice.domain.port.out.SettlementHoldPublisherPort;
 import java.time.Clock;
 import com.vnshop.orderservice.application.coupon.CouponManagementService;
 import com.vnshop.orderservice.application.coupon.CouponRedemptionService;
@@ -54,6 +59,7 @@ import com.vnshop.orderservice.domain.coupon.CouponRepository;
 import com.vnshop.orderservice.domain.coupon.CouponUsageRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
 public class UseCaseConfig {
@@ -76,6 +82,12 @@ public class UseCaseConfig {
     }
 
     @Bean
+    AllocateOrderFinancialsUseCase allocateOrderFinancialsUseCase(
+            SubOrderFinancialAllocationRepositoryPort allocationRepositoryPort) {
+        return new AllocateOrderFinancialsUseCase(allocationRepositoryPort);
+    }
+
+    @Bean
     CreateOrderUseCase createOrderUseCase(
             OrderRepositoryPort orderRepositoryPort,
             InventoryReservationPort inventoryReservationPort,
@@ -87,11 +99,13 @@ public class UseCaseConfig {
             MetricsPort metricsPort,
             SagaOrchestrator sagaOrchestrator,
             TaxCalculationService taxCalculationService,
-            CouponRedemptionService couponRedemptionService
+            CouponRedemptionService couponRedemptionService,
+            AllocateOrderFinancialsUseCase allocateOrderFinancialsUseCase
     ) {
         return new CreateOrderUseCase(orderRepositoryPort, inventoryReservationPort, paymentRequestPort,
                 shippingRequestPort, orderEventPublisherPort, commissionTierLookupPort, cartRepositoryPort,
-                metricsPort, sagaOrchestrator, taxCalculationService, couponRedemptionService);
+                metricsPort, sagaOrchestrator, taxCalculationService, couponRedemptionService,
+                allocateOrderFinancialsUseCase);
     }
 
     @Bean
@@ -198,8 +212,14 @@ public class UseCaseConfig {
     }
 
     @Bean
-    ConfirmDeliveryUseCase confirmDeliveryUseCase(OrderRepositoryPort orderRepositoryPort, OrderEventPublisherPort orderEventPublisherPort) {
-        return new ConfirmDeliveryUseCase(orderRepositoryPort, orderEventPublisherPort);
+    ConfirmDeliveryUseCase confirmDeliveryUseCase(
+            OrderRepositoryPort orderRepositoryPort,
+            OrderEventPublisherPort orderEventPublisherPort,
+            SubOrderFinancialAllocationRepositoryPort allocationRepositoryPort,
+            SellerFinanceAdjustmentPublisherPort sellerFinanceAdjustmentPublisherPort,
+            @Value("${seller-finance.adjustments.enabled:false}") boolean sellerFinanceAdjustmentsEnabled) {
+        return new ConfirmDeliveryUseCase(orderRepositoryPort, orderEventPublisherPort, allocationRepositoryPort,
+                sellerFinanceAdjustmentPublisherPort, sellerFinanceAdjustmentsEnabled);
     }
 
     @Bean
@@ -217,8 +237,9 @@ public class UseCaseConfig {
     }
 
     @Bean
-    RequestReturnUseCase requestReturnUseCase(OrderRepositoryPort orderRepositoryPort, ReturnRepositoryPort returnRepositoryPort) {
-        return new RequestReturnUseCase(orderRepositoryPort, returnRepositoryPort);
+    RequestReturnUseCase requestReturnUseCase(OrderRepositoryPort orderRepositoryPort, ReturnRepositoryPort returnRepositoryPort,
+                                              SettlementHoldPublisherPort settlementHoldPublisherPort) {
+        return new RequestReturnUseCase(orderRepositoryPort, returnRepositoryPort, settlementHoldPublisherPort);
     }
 
     @Bean
@@ -227,17 +248,22 @@ public class UseCaseConfig {
     }
 
     @Bean
-    RejectReturnUseCase rejectReturnUseCase(ReturnRepositoryPort returnRepositoryPort, OrderRepositoryPort orderRepositoryPort) {
-        return new RejectReturnUseCase(returnRepositoryPort, orderRepositoryPort);
+    RejectReturnUseCase rejectReturnUseCase(ReturnRepositoryPort returnRepositoryPort, OrderRepositoryPort orderRepositoryPort,
+                                            SettlementHoldPublisherPort settlementHoldPublisherPort) {
+        return new RejectReturnUseCase(returnRepositoryPort, orderRepositoryPort, settlementHoldPublisherPort);
     }
 
     @Bean
     CompleteReturnUseCase completeReturnUseCase(
             ReturnRepositoryPort returnRepositoryPort,
             OrderRepositoryPort orderRepositoryPort,
-            RefundRequestPort refundRequestPort
+            RefundRequestPort refundRequestPort,
+            SubOrderFinancialAllocationRepositoryPort allocationRepositoryPort,
+            SellerFinanceAdjustmentPublisherPort sellerFinanceAdjustmentPublisherPort,
+            FinancialReversalRepositoryPort financialReversalRepositoryPort
     ) {
-        return new CompleteReturnUseCase(returnRepositoryPort, orderRepositoryPort, refundRequestPort);
+        return new CompleteReturnUseCase(returnRepositoryPort, orderRepositoryPort, refundRequestPort,
+                allocationRepositoryPort, sellerFinanceAdjustmentPublisherPort, financialReversalRepositoryPort);
     }
 
     @Bean
@@ -256,8 +282,9 @@ public class UseCaseConfig {
     }
 
     @Bean
-    DisputeUseCase disputeUseCase(ReturnRepositoryPort returnRepositoryPort, DisputeRepositoryPort disputeRepositoryPort) {
-        return new DisputeUseCase(returnRepositoryPort, disputeRepositoryPort);
+    DisputeUseCase disputeUseCase(ReturnRepositoryPort returnRepositoryPort, DisputeRepositoryPort disputeRepositoryPort,
+                                  SettlementHoldPublisherPort settlementHoldPublisherPort) {
+        return new DisputeUseCase(returnRepositoryPort, disputeRepositoryPort, settlementHoldPublisherPort);
     }
 
     @Bean

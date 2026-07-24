@@ -16,6 +16,15 @@ public interface PaymentRepositoryPort {
 
     Optional<Payment> findByOrderId(String orderId);
 
+    /**
+     * Loads the payment under a write lock for state transitions driven by
+     * externally delivered evidence. In-memory adapters may use the ordinary
+     * lookup; the JPA adapter overrides this with a pessimistic lock.
+     */
+    default Optional<Payment> findByOrderIdForUpdate(String orderId) {
+        return findByOrderId(orderId);
+    }
+
     List<Payment> findByStatus(PaymentStatus status);
 
     List<Payment> findByMethodAndStatusAndCreatedAtBefore(PaymentMethod method, PaymentStatus status, Instant before);

@@ -118,6 +118,8 @@ public class FraudDetectionService {
         // Publish fraud-flagged event via outbox (topic: order.fraud-flagged)
         String payload = buildFraudPayload(order, reasons);
         outboxPort.publish(AGGREGATE_TYPE, order.id().toString(), EVENT_TYPE, payload);
+        outboxPort.publish(AGGREGATE_TYPE, order.id().toString(), "SETTLEMENT_HOLD",
+                buildSettlementHoldPayload(order));
 
         LOG.warn("fraud-check FLAGGED orderId={} reasons={}", order.id(), reasons);
         return FraudCheckResult.flagged(reasons);
@@ -141,5 +143,10 @@ public class FraudDetectionService {
         }
         sb.append("]}");
         return sb.toString();
+    }
+
+    private static String buildSettlementHoldPayload(Order order) {
+        return "{\"orderId\":\"" + order.id() + "\",\"subOrderId\":null"
+                + ",\"holdType\":\"FRAUD\",\"open\":true}";
     }
 }

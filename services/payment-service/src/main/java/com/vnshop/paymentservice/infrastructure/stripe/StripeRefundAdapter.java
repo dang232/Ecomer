@@ -56,6 +56,11 @@ public class StripeRefundAdapter implements RefundGatewayPort {
      */
     @Override
     public String refund(String paymentId, String gatewayTransactionId, BigDecimal amount, String reason) {
+        return refund(paymentId, gatewayTransactionId, amount, reason, paymentId);
+    }
+
+    @Override
+    public String refund(String paymentId, String gatewayTransactionId, BigDecimal amount, String reason, String reversalId) {
         Objects.requireNonNull(paymentId, "paymentId is required");
         Objects.requireNonNull(gatewayTransactionId, "gatewayTransactionId is required");
         Objects.requireNonNull(amount, "amount is required");
@@ -81,7 +86,7 @@ public class StripeRefundAdapter implements RefundGatewayPort {
 
         RequestOptions options = RequestOptions.builder()
                 .setApiKey(properties.secretKey())
-                .setIdempotencyKey("refund-" + paymentId)
+                .setIdempotencyKey("refund-" + reversalId)
                 .build();
 
         try {

@@ -42,7 +42,7 @@ Fulfillment is where marketplaces become operational businesses. It's also where
 │                                    │        │     or 7d auto)    │
 │                                    │        │        │           │
 │                                    │        │        ↓           │
-│                                    │        │  ESCROW_RELEASED   │
+│                                    │        │ RELEASE_FACT_RECORDED │
 │                                    │        │        │           │
 │                                    │        │        ↓           │
 │                                    │        │     COMPLETED      │
@@ -57,6 +57,8 @@ Fulfillment is where marketplaces become operational businesses. It's also where
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+Confirmation and auto-confirmation record a fulfillment-release fact; neither transfers seller money. Prepaid settlement eligibility requires verified provider capture plus that release fact. COD settlement eligibility requires verified COD collection plus that release fact. `seller-finance-service` posts a seller payable only after the required facts are verified.
 
 ---
 
@@ -73,8 +75,8 @@ Fulfillment is where marketplaces become operational businesses. It's also where
 | In Transit | "Your order is on the way" | — | — | Push |
 | Out for Delivery | "Arriving today!" | — | — | Push |
 | Delivered | "Delivered — Confirm receipt" | "Buyer received order" | — | In-app, push, email |
-| Auto-confirmed (7d) | "Order auto-confirmed" | "Payment released" | — | In-app |
-| Buyer Confirmed | "Thanks for confirming!" | "Payment released" | — | In-app |
+| Auto-confirmed (7d) | "Order auto-confirmed" | "Settlement review started" | — | In-app |
+| Buyer Confirmed | "Thanks for confirming!" | "Settlement review started" | — | In-app |
 | Dispute Opened | "Dispute #X opened" | "Buyer disputed order #X — respond within 48h" | "New dispute" | In-app, email |
 
 ---
@@ -85,12 +87,12 @@ Fulfillment is where marketplaces become operational businesses. It's also where
 |---|---|---|---|
 | Seller accepts order | Seller | 24 hours | Auto-reject + refund |
 | Seller ships order | Seller | 48 hours after accept | Warning → penalty after 3 violations |
-| Buyer confirms receipt | Buyer | 7 days after delivered | Auto-confirm, escrow released |
+| Buyer confirms receipt | Buyer | 7 days after delivered | Auto-confirm records a fulfillment-release fact; settlement eligibility follows verified finance facts |
 | Buyer opens dispute | Buyer | 15 days after delivered | Window closes, cannot dispute |
 | Seller responds to dispute | Seller | 48 hours | Auto-escalate to admin |
 | Admin resolves dispute | Admin | 72 hours | Escalate to senior |
 | Refund processed | Platform | 3 business days | SLA violation |
-| Seller payout | Platform | 3 days after confirmed | SLA violation |
+| Seller payout | Platform | 3 days after funds are posted, available, and unreserved | SLA violation |
 
 ---
 
@@ -115,9 +117,9 @@ Fulfillment is where marketplaces become operational businesses. It's also where
       ↓
 [Track delivery status]
       ↓
-[Await buyer confirmation or auto-release]
+[Await settlement eligibility]
       ↓
-[Funds credited to seller wallet]
+[Seller payable is posted from verified finance facts]
 ```
 
 ### Seller Requirements per State
@@ -130,7 +132,7 @@ Fulfillment is where marketplaces become operational businesses. It's also where
 | Shipped | Tracking status, estimated delivery | View tracking |
 | Delivered | Confirmation countdown timer | Wait |
 | Disputed | Buyer's complaint + evidence | Respond with evidence |
-| Completed | Revenue credited to wallet | Request payout |
+| Completed | Settlement status and any reserve hold | Request payout only from available posted funds |
 
 ### Current State (Seller)
 
@@ -162,7 +164,7 @@ Fulfillment is where marketplaces become operational businesses. It's also where
       ↓
 [Available actions based on state:]
   ├── SHIPPED: "Track package" → carrier tracking page
-  ├── DELIVERED: "Confirm receipt" → releases escrow
+  ├── DELIVERED: "Confirm receipt" → records a fulfillment-release fact; it does not transfer funds
   ├── DELIVERED: "Report problem" → opens dispute
   └── CONFIRMED: "Write review" → review form
 ```
@@ -196,42 +198,40 @@ Fulfillment is where marketplaces become operational businesses. It's also where
 
 ---
 
-## Escrow Logic
+## Settlement and Collection Logic
 
-### Escrow States
+### Settlement States
 
 ```
 ┌─────────────────────────────────────────────────┐
-│ Payment Method   │ Escrow Behavior              │
+│ Payment Method   │ Settlement Behavior          │
 ├──────────────────┼──────────────────────────────┤
-│ VietQR/MoMo/Card │ Funds captured → held        │
-│                  │ → released on confirm/auto    │
+│ Prepaid          │ Verified capture → held       │
+│                  │ → eligible after release fact │
 ├──────────────────┼──────────────────────────────┤
-│ COD              │ No escrow (cash on delivery)  │
-│                  │ Seller bears non-payment risk │
+│ COD              │ Verified delivery alone does   │
+│                  │ not settle; verified carrier  │
+│                  │ collection is required        │
 ├──────────────────┼──────────────────────────────┤
-│ PayPal           │ PayPal holds → capture on     │
-│                  │ confirm (authorize model)     │
-├──────────────────┼──────────────────────────────┤
-│ Stripe           │ Payment intent → capture on   │
-│                  │ confirm (authorize model)     │
+│ All methods      │ seller-finance posts append-  │
+│                  │ only payable/reserve journals │
 └──────────────────┴──────────────────────────────┘
 ```
 
-### Escrow Visibility to Buyer
+### Settlement Visibility to Buyer
 
-The escrow status MUST be visible on the order detail page:
+The settlement status MUST be visible on the order detail page without exposing bank data:
 
 ```
 ┌─────────────────────────────────────────────────┐
-│ Payment Status                                  │
+│ Payment and Settlement Status                   │
 │                                                 │
 │ [●━━━━━━●━━━━━━●━━━━━━○]                        │
-│  Paid    Held    Shipped  Released              │
+│  Captured  Held  Delivered  Eligible             │
 │                                                 │
-│ "Your payment is held securely by VNShop.       │
-│  It will be released to the seller once you     │
-│  confirm delivery."                             │
+│ "Seller settlement follows verified payment or  │
+│  COD collection and the applicable release      │
+│  rules."                                        │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -239,12 +239,11 @@ The escrow status MUST be visible on the order detail page:
 
 | Feature | Status | Gap |
 |---|---|---|
-| Escrow logic in backend | ⚠️ Partial (payment-service captures) | Verify auth+capture split |
-| Escrow release on confirm | ❌ No confirm trigger | P0 |
-| Auto-release after 7 days | ❌ No scheduled job | P0 |
-| Escrow visibility to buyer | ❌ Not shown in UI | P0 |
-| COD handling (no escrow) | ✅ COD completes immediately | OK |
-| Dispute freezes escrow | ❌ Not implemented | P0 |
+| Settlement ledger | ❌ Not implemented | P0: append-only postings from verified facts |
+| Prepaid release | ❌ No settlement trigger | P0: require verified capture and release fact |
+| COD collection verification | ❌ No collection fact | P0: delivery alone must not settle COD |
+| Settlement visibility to buyer | ❌ Not shown in UI | P0: show status without bank data |
+| Reserve and dispute hold | ❌ Not implemented | P0: explicit journaled reserve/reversal |
 
 ---
 
@@ -313,8 +312,8 @@ Given order status is DELIVERED
 When buyer clicks "Confirm Receipt"
 Then:
   - Order status changes to CONFIRMED
-  - Escrow is released to seller wallet
-  - Seller receives notification: "Payment for order #X released"
+  - A fulfillment-release fact is available for settlement review
+  - Seller receives notification: "Order #X is being reviewed for settlement"
   - Buyer is prompted: "Write a review?"
   - Dispute window starts (15 days)
 ```
@@ -326,7 +325,7 @@ Given order status is DELIVERED
 And buyer has NOT confirmed within 7 days
 Then:
   - System auto-confirms the order
-  - Escrow released to seller
+  - A fulfillment-release fact is available for settlement review
   - Buyer receives: "Order #X auto-confirmed. If you have issues, you can still open a dispute within 15 days."
 ```
 

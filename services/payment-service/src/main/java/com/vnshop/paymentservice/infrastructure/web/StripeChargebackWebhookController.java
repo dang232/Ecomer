@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.math.BigDecimal;
 import java.util.Objects;
 
 /**
@@ -100,7 +101,10 @@ public class StripeChargebackWebhookController {
                     dispute.getId(),
                     Chargeback.ChargebackProvider.STRIPE,
                     dispute.getReason() != null ? dispute.getReason() : "unspecified",
-                    dueDate);
+                    dueDate,
+                    dispute.getAmount() == null ? null : BigDecimal.valueOf(dispute.getAmount()),
+                    dispute.getCurrency() == null ? "VND" : dispute.getCurrency().toUpperCase(java.util.Locale.ROOT),
+                    dispute.getPaymentIntent());
         } catch (Exception ex) {
             log.error("stripe-chargeback-webhook-processing-failed event={} error={}", event.getId(), ex.getMessage());
             webhookIdempotencyService.storePendingForRetry(event.getId(), "STRIPE", event.getType(), payload);

@@ -240,7 +240,10 @@ export function AdminDashboard() {
               </ResponsiveContainer>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground text-center py-8">
+            <p
+              data-testid="admin-top-products-empty"
+              className="text-sm text-muted-foreground text-center py-8"
+            >
               {t("admin.dashboard.noData")}
             </p>
           )}

@@ -1,24 +1,28 @@
 package com.vnshop.shippingservice.infrastructure.carrier;
 
-import com.vnshop.shippingservice.ShippingServiceApplication;
 import com.vnshop.shippingservice.domain.model.CarrierCode;
 import com.vnshop.shippingservice.domain.model.Parcel;
 import com.vnshop.shippingservice.domain.model.RateQuote;
 import com.vnshop.shippingservice.domain.model.RateQuoteRequest;
 import com.vnshop.shippingservice.domain.model.ShippingAddress;
+import com.vnshop.shippingservice.infrastructure.config.CarrierProperties;
 import com.vnshop.shippingservice.domain.port.out.CarrierGatewayPort;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Import;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class CarrierModeSelectionTest {
-    private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-            .withUserConfiguration(ShippingServiceApplication.class)
+    private final WebApplicationContextRunner contextRunner = new WebApplicationContextRunner()
+            .withUserConfiguration(CarrierTestConfiguration.class)
             .withPropertyValues(
                     "spring.autoconfigure.exclude=org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration,org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration,org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration,org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration",
+                    "shipping.carrier.mode=stub",
                     "shipping.carrier.ghn.base-url=https://ghn.test",
                     "shipping.carrier.ghn.token=token",
                     "shipping.carrier.ghn.shop-id=123",
@@ -64,5 +68,11 @@ class CarrierModeSelectionTest {
         public <T> T get(String url, Map<String, String> headers, Class<T> responseType) {
             throw new UnsupportedOperationException("not used");
         }
+    }
+
+    @TestConfiguration(proxyBeanMethods = false)
+    @EnableConfigurationProperties({CarrierProperties.class, GhnProperties.class, GhtkProperties.class})
+    @Import({StubCarrierGateway.class, LiveCarrierGateway.class, GhnCarrierGateway.class, GhtkCarrierGateway.class})
+    static class CarrierTestConfiguration {
     }
 }

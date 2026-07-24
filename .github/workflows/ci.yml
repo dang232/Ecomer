@@ -60,6 +60,7 @@ jobs:
               - '.github/workflows/ci.yml'
             payment-service:
               - 'services/payment-service/**'
+              - 'infra/kafka/contracts/**'
               - '.github/workflows/ci.yml'
             product-service:
               - 'services/product-service/**'
@@ -72,6 +73,7 @@ jobs:
               - '.github/workflows/ci.yml'
             seller-finance-service:
               - 'services/seller-finance-service/**'
+              - 'infra/kafka/contracts/**'
               - '.github/workflows/ci.yml'
             shipping-service:
               - 'services/shipping-service/**'
@@ -370,6 +372,14 @@ jobs:
       - name: Run order migration and persistence integration tests
         if: matrix.service == 'order-service'
         run: mvn --batch-mode --no-transfer-progress test -Djacoco.skip=true -Dtest=OrderServiceIntegrationTest
+
+      - name: Run seller-finance migration integration test
+        if: matrix.service == 'seller-finance-service'
+        run: mvn --batch-mode --no-transfer-progress verify -Djacoco.skip=true -Dtest=FinanceMigrationIntegrationTest
+
+      - name: Run payment migration integration test
+        if: matrix.service == 'payment-service'
+        run: mvn --batch-mode --no-transfer-progress verify -Djacoco.skip=true -Dtest=PaymentMigrationIntegrationTest
 
   node_tests:
     name: Node service (${{ matrix.service }})

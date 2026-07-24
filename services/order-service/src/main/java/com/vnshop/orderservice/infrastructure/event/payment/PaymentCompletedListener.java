@@ -6,6 +6,8 @@ import com.vnshop.orderservice.domain.Order;
 import com.vnshop.orderservice.domain.PaymentStatus;
 import com.vnshop.orderservice.domain.port.out.OrderEventPublisherPort;
 import com.vnshop.orderservice.domain.port.out.OrderRepositoryPort;
+import com.vnshop.orderservice.domain.port.out.SellerFinanceAdjustmentPublisherPort;
+import com.vnshop.orderservice.domain.port.out.SubOrderFinancialAllocationRepositoryPort;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Optional;
@@ -16,6 +18,8 @@ import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.annotation.RetryableTopic;
 import org.springframework.kafka.retrytopic.DltStrategy;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,14 +42,31 @@ public class PaymentCompletedListener {
     private final OrderRepositoryPort orderRepository;
     private final OrderEventPublisherPort orderEventPublisher;
     private final ObjectMapper objectMapper;
+    private final SubOrderFinancialAllocationRepositoryPort allocationRepository;
+    private final SellerFinanceAdjustmentPublisherPort sellerFinanceAdjustmentPublisher;
+    private final boolean sellerFinanceAdjustmentsEnabled;
 
     public PaymentCompletedListener(
             OrderRepositoryPort orderRepository,
             OrderEventPublisherPort orderEventPublisher,
             ObjectMapper objectMapper) {
+        this(orderRepository, orderEventPublisher, objectMapper, null, null, false);
+    }
+
+    @Autowired
+    public PaymentCompletedListener(
+            OrderRepositoryPort orderRepository,
+            OrderEventPublisherPort orderEventPublisher,
+            ObjectMapper objectMapper,
+            SubOrderFinancialAllocationRepositoryPort allocationRepository,
+            SellerFinanceAdjustmentPublisherPort sellerFinanceAdjustmentPublisher,
+            @Value("${seller-finance.adjustments.enabled:false}") boolean sellerFinanceAdjustmentsEnabled) {
         this.orderRepository = orderRepository;
         this.orderEventPublisher = orderEventPublisher;
         this.objectMapper = objectMapper;
+        this.allocationRepository = allocationRepository;
+        this.sellerFinanceAdjustmentPublisher = sellerFinanceAdjustmentPublisher;
+        this.sellerFinanceAdjustmentsEnabled = sellerFinanceAdjustmentsEnabled;
     }
 
     @RetryableTopic(
@@ -64,7 +85,7 @@ public class PaymentCompletedListener {
             LOGGER.warn("payment.completed missing orderId — skipping. payload={}", eventJson);
             return;
         }
-        if (status != null && !"COMPLETED".equals(status)) {
+        if (!"COMPLETED".equals(status)) {
             LOGGER.debug("payment.completed orderId={} status={} — only COMPLETED triggers the order flip", orderIdRaw, status);
             return;
         }
@@ -101,6 +122,15 @@ public class PaymentCompletedListener {
         }
         Order saved = orderRepository.save(order);
         orderEventPublisher.publishOrderPaid(saved);
+        if (sellerFinanceAdjustmentsEnabled) {
+            String callbackEventId = text(payload, "callbackEventId");
+            if (callbackEventId == null || callbackEventId.isBlank()) {
+                LOGGER.warn("payment.completed orderId={} missing callbackEventId — skipping finance credits", orderId);
+            } else {
+                allocationRepository.findByOrderId(orderId)
+                        .forEach(allocation -> sellerFinanceAdjustmentPublisher.publishCredit(allocation, callbackEventId));
+            }
+        }
         LOGGER.info("payment-completed orderId={} provider={} transactionRef={}",
                 orderId, text(payload, "provider"), text(payload, "transactionRef"));
     }

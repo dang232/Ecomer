@@ -20,7 +20,18 @@ public class SellerWalletJpaRepository implements SellerWalletRepositoryPort {
     }
 
     @Override
+    public Optional<SellerWallet> findBySellerIdForUpdate(String sellerId) {
+        return repository.findBySellerIdForUpdate(sellerId).map(SellerWalletJpaEntity::toDomain);
+    }
+
+    @Override
     public SellerWallet save(SellerWallet wallet) {
-        return repository.save(SellerWalletJpaEntity.fromDomain(wallet)).toDomain();
+        SellerWalletJpaEntity entity = repository.findById(wallet.sellerId()).orElse(null);
+        if (entity == null) {
+            entity = SellerWalletJpaEntity.fromDomain(wallet);
+        } else {
+            entity.applyDomain(wallet);
+        }
+        return repository.save(entity).toDomain();
     }
 }

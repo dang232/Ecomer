@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Payment refund requested v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["eventId", "eventType", "schemaVersion", "occurredAt", "producer", "aggregateId", "correlationId", "causationId", "payload"],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid" },
+    "eventType": { "const": "PAYMENT_REFUND_REQUESTED" },
+    "schemaVersion": { "const": 2 },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "producer": { "const": "order-service" },
+    "aggregateId": { "type": "string", "format": "uuid" },
+    "correlationId": { "type": "string", "format": "uuid" },
+    "causationId": { "type": "string", "format": "uuid" },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["refundId", "paymentId", "orderId", "amount", "currency", "reason"],
+      "properties": {
+        "refundId": { "type": "string", "format": "uuid" },
+        "paymentId": { "type": "string", "format": "uuid" },
+        "orderId": { "type": "string", "format": "uuid" },
+        "amount": { "type": "integer", "minimum": 1 },
+        "currency": { "const": "VND" },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

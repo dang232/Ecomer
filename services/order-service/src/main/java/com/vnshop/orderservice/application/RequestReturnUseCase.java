@@ -5,19 +5,29 @@ import com.vnshop.orderservice.domain.Return;
 import com.vnshop.orderservice.domain.SubOrder;
 import com.vnshop.orderservice.domain.port.out.OrderRepositoryPort;
 import com.vnshop.orderservice.domain.port.out.ReturnRepositoryPort;
+import com.vnshop.orderservice.domain.port.out.SettlementHoldPublisherPort;
 
 import java.util.Objects;
 import java.util.UUID;
+import org.springframework.transaction.annotation.Transactional;
 
 public class RequestReturnUseCase {
     private final OrderRepositoryPort orderRepository;
     private final ReturnRepositoryPort returnRepository;
+    private final SettlementHoldPublisherPort settlementHoldPublisher;
 
     public RequestReturnUseCase(OrderRepositoryPort orderRepository, ReturnRepositoryPort returnRepository) {
-        this.orderRepository = Objects.requireNonNull(orderRepository, "orderRepository is required");
-        this.returnRepository = Objects.requireNonNull(returnRepository, "returnRepository is required");
+        this(orderRepository, returnRepository, null);
     }
 
+    public RequestReturnUseCase(OrderRepositoryPort orderRepository, ReturnRepositoryPort returnRepository,
+                                SettlementHoldPublisherPort settlementHoldPublisher) {
+        this.orderRepository = Objects.requireNonNull(orderRepository, "orderRepository is required");
+        this.returnRepository = Objects.requireNonNull(returnRepository, "returnRepository is required");
+        this.settlementHoldPublisher = settlementHoldPublisher;
+    }
+
+    @Transactional
     public Return request(String buyerId, Long subOrderId, String reason) {
         requireNonBlank(buyerId, "buyerId");
         Objects.requireNonNull(subOrderId, "subOrderId is required");
@@ -47,7 +57,11 @@ public class RequestReturnUseCase {
             throw new IllegalStateException("a return already exists for sub-order " + subOrderId);
         });
 
-        return returnRepository.save(new Return(UUID.randomUUID(), order.id().toString(), subOrderId, buyerId, reason));
+        Return saved = returnRepository.save(new Return(UUID.randomUUID(), order.id().toString(), subOrderId, buyerId, reason));
+        if (settlementHoldPublisher != null) {
+            settlementHoldPublisher.publish(order.id(), subOrderId, "RETURN", true);
+        }
+        return saved;
     }
 
     private static void requireNonBlank(String value, String fieldName) {

@@ -1016,7 +1016,9 @@
         "balance": "Số dư ví",
         "pending": "Đơn cần xử lý",
         "views": "Lượt xem shop",
-        "rating": "Điểm đánh giá"
+        "products": "Sản phẩm",
+        "rating": "Điểm đánh giá",
+        "noRating": "Chưa có đánh giá"
       },
       "revenue30dTitle": "Doanh thu 30 ngày",
       "revenue30dHint": "Cập nhật theo dữ liệu đơn của bạn",

@@ -1,6 +1,7 @@
 package com.vnshop.sellerfinanceservice.infrastructure.config;
 
 import com.vnshop.sellerfinanceservice.application.CreditWalletUseCase;
+import com.vnshop.sellerfinanceservice.application.ApplyFinancialAdjustmentUseCase;
 import com.vnshop.sellerfinanceservice.application.AdminPayoutReadUseCase;
 import com.vnshop.sellerfinanceservice.application.GetSellerPayoutsUseCase;
 import com.vnshop.sellerfinanceservice.application.ListPayoutsUseCase;
@@ -8,10 +9,16 @@ import com.vnshop.sellerfinanceservice.application.ProcessPayoutUseCase;
 import com.vnshop.sellerfinanceservice.application.RefundWalletUseCase;
 import com.vnshop.sellerfinanceservice.application.RequestPayoutUseCase;
 import com.vnshop.sellerfinanceservice.application.ViewWalletUseCase;
+import com.vnshop.sellerfinanceservice.application.ReleaseEligibleSettlementsUseCase;
 import com.vnshop.sellerfinanceservice.domain.CommissionCalculator;
 import com.vnshop.sellerfinanceservice.domain.port.out.PayoutRepositoryPort;
+import com.vnshop.sellerfinanceservice.domain.port.out.FinanceEventInboxPort;
+import com.vnshop.sellerfinanceservice.domain.port.out.LedgerRepositoryPort;
 import com.vnshop.sellerfinanceservice.domain.port.out.SellerDirectoryPort;
 import com.vnshop.sellerfinanceservice.domain.port.out.SellerWalletRepositoryPort;
+import com.vnshop.sellerfinanceservice.domain.port.out.SettlementReleaseCandidateRepositoryPort;
+import java.time.Clock;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -25,6 +32,14 @@ public class UseCaseConfig {
     @Bean
     CreditWalletUseCase creditWalletUseCase(SellerWalletRepositoryPort walletRepositoryPort, CommissionCalculator commissionCalculator) {
         return new CreditWalletUseCase(walletRepositoryPort, commissionCalculator);
+    }
+
+    @Bean
+    ApplyFinancialAdjustmentUseCase applyFinancialAdjustmentUseCase(
+            LedgerRepositoryPort ledgerRepositoryPort,
+            FinanceEventInboxPort financeEventInboxPort,
+            SellerWalletRepositoryPort walletRepositoryPort) {
+        return new ApplyFinancialAdjustmentUseCase(ledgerRepositoryPort, financeEventInboxPort, walletRepositoryPort);
     }
 
     @Bean
@@ -62,5 +77,20 @@ public class UseCaseConfig {
     @Bean
     ProcessPayoutUseCase processPayoutUseCase(SellerWalletRepositoryPort walletRepositoryPort, PayoutRepositoryPort payoutRepositoryPort) {
         return new ProcessPayoutUseCase(walletRepositoryPort, payoutRepositoryPort);
+    }
+
+    @Bean
+    ReleaseEligibleSettlementsUseCase releaseEligibleSettlementsUseCase(
+            SettlementReleaseCandidateRepositoryPort candidateRepositoryPort,
+            ApplyFinancialAdjustmentUseCase applyFinancialAdjustmentUseCase,
+            Clock clock,
+            @Value("${seller-finance.settlement-release.batch-size:100}") int batchSize) {
+        return new ReleaseEligibleSettlementsUseCase(candidateRepositoryPort, applyFinancialAdjustmentUseCase,
+                clock, batchSize);
+    }
+
+    @Bean
+    Clock clock() {
+        return Clock.systemUTC();
     }
 }

@@ -458,7 +458,10 @@ export function useCart() {
         guestAdd(input.productId, input.quantity, input.variantId);
         return;
       }
-      if (!query.isSuccess) return;
+      // A newly authenticated buyer can add before the initial cart GET has
+      // settled. The mutation is server-authoritative and must not be gated
+      // on an unrelated read query, otherwise the click becomes a silent no-op.
+      if (!ready || !authenticated) return;
       return addItem.mutate(input, options);
     },
     addItemAsync: async (input: { productId: string; quantity: number; variantId?: string }) => {
@@ -466,7 +469,7 @@ export function useCart() {
         guestAdd(input.productId, input.quantity, input.variantId);
         return;
       }
-      if (!query.isSuccess) return;
+      if (!ready || !authenticated) return;
       await addItem.mutateAsync(input);
     },
     updateItem: (

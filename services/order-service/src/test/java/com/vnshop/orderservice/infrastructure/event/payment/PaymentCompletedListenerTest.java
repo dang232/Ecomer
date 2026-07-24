@@ -11,6 +11,9 @@ import com.vnshop.orderservice.domain.PaymentStatus;
 import com.vnshop.orderservice.domain.SubOrder;
 import com.vnshop.orderservice.domain.port.out.OrderEventPublisherPort;
 import com.vnshop.orderservice.domain.port.out.OrderRepositoryPort;
+import com.vnshop.orderservice.domain.port.out.SellerFinanceAdjustmentPublisherPort;
+import com.vnshop.orderservice.domain.port.out.SubOrderFinancialAllocationRepositoryPort;
+import com.vnshop.orderservice.infrastructure.event.finance.SellerFinanceAdjustmentPublisherAdapterTest;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -22,6 +25,11 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class PaymentCompletedListenerTest {
 
@@ -41,6 +49,38 @@ class PaymentCompletedListenerTest {
         assertThat(saved.paymentStatus()).isEqualTo(PaymentStatus.COMPLETED);
         assertThat(publisher.paid).hasSize(1);
         assertThat(publisher.paid.get(0).id()).isEqualTo(orderId);
+    }
+
+    @Test
+    void publishesOneCreditPerAllocationWhenFinanceAdjustmentsAreEnabled() {
+        UUID orderId = UUID.randomUUID();
+        InMemoryOrderRepo repo = new InMemoryOrderRepo();
+        repo.save(pendingOrder(orderId));
+        TestFakes.RecordingPublisher publisher = new TestFakes.RecordingPublisher();
+        SubOrderFinancialAllocationRepositoryPort allocations = mock(SubOrderFinancialAllocationRepositoryPort.class);
+        SellerFinanceAdjustmentPublisherPort finance = mock(SellerFinanceAdjustmentPublisherPort.class);
+        when(allocations.findByOrderId(orderId)).thenReturn(List.of(
+                SellerFinanceAdjustmentPublisherAdapterTest.allocation(), SellerFinanceAdjustmentPublisherAdapterTest.allocation()));
+        PaymentCompletedListener listener = new PaymentCompletedListener(repo, publisher, objectMapper, allocations, finance, true);
+
+        listener.onPaymentCompleted(eventJson(orderId, "COMPLETED", "PAYPAL"));
+
+        verify(finance, times(2)).publishCredit(any(), org.mockito.ArgumentMatchers.eq("callback-1"));
+    }
+
+    @Test
+    void skipsPaymentWithoutExplicitCompletedStatus() {
+        UUID orderId = UUID.randomUUID();
+        InMemoryOrderRepo repo = new InMemoryOrderRepo();
+        repo.save(pendingOrder(orderId));
+        TestFakes.RecordingPublisher publisher = new TestFakes.RecordingPublisher();
+        PaymentCompletedListener listener = new PaymentCompletedListener(repo, publisher, objectMapper);
+
+        listener.onPaymentCompleted(String.format(
+                "{\"orderId\":\"%s\",\"callbackEventId\":\"callback-missing-status\"}", orderId));
+
+        assertThat(repo.findById(orderId).orElseThrow().paymentStatus()).isEqualTo(PaymentStatus.PENDING);
+        assertThat(publisher.paid).isEmpty();
     }
 
     @Test
@@ -154,7 +194,7 @@ class PaymentCompletedListenerTest {
 
     private String eventJson(UUID orderId, String status, String provider) {
         return String.format(
-                "{\"orderId\":\"%s\",\"status\":\"%s\",\"provider\":\"%s\",\"transactionRef\":\"ref-1\"}",
+                "{\"orderId\":\"%s\",\"status\":\"%s\",\"provider\":\"%s\",\"transactionRef\":\"ref-1\",\"callbackEventId\":\"callback-1\"}",
                 orderId, status, provider);
     }
 

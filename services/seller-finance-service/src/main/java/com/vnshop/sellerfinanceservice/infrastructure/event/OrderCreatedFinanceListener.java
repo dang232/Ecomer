@@ -8,6 +8,7 @@ import com.vnshop.sellerfinanceservice.infrastructure.persistence.ProcessedOrder
 import com.vnshop.sellerfinanceservice.infrastructure.persistence.ProcessedOrderEventRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 
 @Service
+@ConditionalOnProperty(prefix = "seller-finance.legacy-order-created-consumer", name = "enabled", havingValue = "true")
 public class OrderCreatedFinanceListener {
     private static final Logger LOGGER = LoggerFactory.getLogger(OrderCreatedFinanceListener.class);
 

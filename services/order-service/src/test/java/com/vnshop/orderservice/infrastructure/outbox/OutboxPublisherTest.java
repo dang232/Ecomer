@@ -22,4 +22,18 @@ class OutboxPublisherTest {
         assertThat(OutboxPublisher.topicFor("ORDER_CREATED"))
                 .isEqualTo("order.created");
     }
+
+    @Test
+    void usesPayloadSellerIdAsTheAdjustmentKafkaKey() {
+        assertThat(OutboxPublisher.keyFor("SELLER_FINANCE_ADJUSTMENT", "order-id",
+                "{\"payload\":{\"sellerId\":\"seller-42\"}}"))
+                .isEqualTo("seller-42");
+    }
+
+    @Test
+    void usesSellerIdWhenGivenTheSerializedOutboxWrapper() {
+        assertThat(OutboxPublisher.keyFor("SELLER_FINANCE_ADJUSTMENT", "order-id",
+                "{\"payload\":\"{\\\"payload\\\":{\\\"sellerId\\\":\\\"seller-42\\\"}}\"}"))
+                .isEqualTo("seller-42");
+    }
 }

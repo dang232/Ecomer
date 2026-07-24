@@ -1,6 +1,8 @@
 package com.vnshop.orderservice.infrastructure.outbox;
 
 import io.opentelemetry.api.trace.Span;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.annotation.PostConstruct;
 import java.time.Instant;
 import java.util.List;
@@ -18,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class OutboxPublisher {
     private static final Logger LOGGER = LoggerFactory.getLogger(OutboxPublisher.class);
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final OutboxEventRepository repository;
     private final ObjectProvider<KafkaTemplate<String, Object>> kafkaTemplateProvider;
@@ -67,6 +70,25 @@ public class OutboxPublisher {
         return eventType.toLowerCase().replace('_', '.');
     }
 
+    static String keyFor(String eventType, String aggregateId, String payload) {
+        if (!"SELLER_FINANCE_ADJUSTMENT".equals(eventType)) {
+            return aggregateId;
+        }
+        try {
+            JsonNode envelope = OBJECT_MAPPER.readTree(payload);
+            if (envelope.path("payload").isTextual()) {
+                envelope = OBJECT_MAPPER.readTree(envelope.path("payload").asText());
+            }
+            String sellerId = envelope.path("payload").path("sellerId").asText();
+            if (sellerId == null || sellerId.isBlank()) {
+                throw new IllegalArgumentException("seller.finance.adjustment is missing payload.sellerId");
+            }
+            return sellerId;
+        } catch (java.io.IOException exception) {
+            throw new IllegalArgumentException("seller.finance.adjustment payload is not valid JSON", exception);
+        }
+    }
+
     int getMaxAttempts() {
         return maxAttempts;
     }
@@ -74,7 +96,8 @@ public class OutboxPublisher {
     private void publishEvent(KafkaTemplate<String, Object> kafkaTemplate, OutboxEventJpaEntity event) {
         try {
             String topic = topicFor(event.getEventType());
-            ProducerRecord<String, Object> record = new ProducerRecord<>(topic, event.getAggregateId(), event.toDomain());
+            ProducerRecord<String, Object> record = new ProducerRecord<>(topic,
+                    keyFor(event.getEventType(), event.getAggregateId(), event.getPayload()), event.toDomain());
             record.headers().add("traceparent", ("00-" + Span.current().getSpanContext().getTraceId() + "-" + Span.current().getSpanContext().getSpanId() + "-01").getBytes());
             kafkaTemplate.send(record).get(sendTimeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS);
             event.markPublished();

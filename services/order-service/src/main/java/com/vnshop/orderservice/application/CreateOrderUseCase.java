@@ -17,6 +17,7 @@ import com.vnshop.orderservice.domain.port.out.MetricsPort;
 import com.vnshop.orderservice.application.saga.SagaOrchestrator;
 import com.vnshop.orderservice.application.tax.TaxCalculationService;
 import com.vnshop.orderservice.application.tax.TaxResult;
+import com.vnshop.orderservice.application.finance.AllocateOrderFinancialsUseCase;
 import com.vnshop.orderservice.domain.Money;
 import com.vnshop.orderservice.application.coupon.CouponRedemptionService;
 
@@ -26,7 +27,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.math.BigDecimal;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +45,7 @@ public class CreateOrderUseCase {
     private final SagaOrchestrator sagaOrchestrator;
     private final TaxCalculationService taxCalculationService;
     private final CouponRedemptionService couponRedemptionService;
+    private final AllocateOrderFinancialsUseCase allocateOrderFinancialsUseCase;
 
     public CreateOrderUseCase(
             OrderRepositoryPort orderRepository,
@@ -54,7 +58,8 @@ public class CreateOrderUseCase {
             MetricsPort metricsPort,
             SagaOrchestrator sagaOrchestrator,
             TaxCalculationService taxCalculationService,
-            CouponRedemptionService couponRedemptionService
+            CouponRedemptionService couponRedemptionService,
+            AllocateOrderFinancialsUseCase allocateOrderFinancialsUseCase
     ) {
         this.orderRepository = Objects.requireNonNull(orderRepository, "orderRepository is required");
         this.inventoryReservationPort = Objects.requireNonNull(inventoryReservationPort, "inventoryReservationPort is required");
@@ -67,22 +72,8 @@ public class CreateOrderUseCase {
         this.sagaOrchestrator = Objects.requireNonNull(sagaOrchestrator, "sagaOrchestrator is required");
         this.taxCalculationService = Objects.requireNonNull(taxCalculationService, "taxCalculationService is required");
         this.couponRedemptionService = couponRedemptionService;
-    }
-
-    public CreateOrderUseCase(
-            OrderRepositoryPort orderRepository,
-            InventoryReservationPort inventoryReservationPort,
-            PaymentRequestPort paymentRequestPort,
-            ShippingRequestPort shippingRequestPort,
-            OrderEventPublisherPort orderEventPublisherPort,
-            CommissionTierLookupPort commissionTierLookupPort,
-            CartRepositoryPort cartRepositoryPort,
-            MetricsPort metricsPort,
-            SagaOrchestrator sagaOrchestrator,
-            TaxCalculationService taxCalculationService) {
-        this(orderRepository, inventoryReservationPort, paymentRequestPort, shippingRequestPort,
-                orderEventPublisherPort, commissionTierLookupPort, cartRepositoryPort, metricsPort,
-                sagaOrchestrator, taxCalculationService, null);
+        this.allocateOrderFinancialsUseCase = Objects.requireNonNull(
+                allocateOrderFinancialsUseCase, "allocateOrderFinancialsUseCase is required");
     }
 
     @Transactional
@@ -114,7 +105,9 @@ public class CreateOrderUseCase {
             String couponCode) {
         var timerSample = metricsPort.startTimer();
         List<OrderItem> itemSnapshot = List.copyOf(items);
-        List<SubOrder> subOrders = splitBySeller(itemSnapshot);
+        TaxResult taxResult = taxCalculationService.calculate(itemSnapshot);
+        List<OrderItem> taxedItemSnapshot = applyLineItemTaxes(itemSnapshot, taxResult);
+        List<SubOrder> subOrders = splitBySeller(taxedItemSnapshot);
         Order order = new Order(
                 UUID.randomUUID(),
                 buyerId,
@@ -131,7 +124,6 @@ public class CreateOrderUseCase {
                     couponCode, order.itemsTotal(), buyerId, order.id()));
         }
 
-        TaxResult taxResult = taxCalculationService.calculate(itemSnapshot);
         order.applyTax(new Money(taxResult.totalTax()));
 
         String sagaId = UUID.randomUUID().toString();
@@ -154,6 +146,7 @@ public class CreateOrderUseCase {
             sagaOrchestrator.stepCompleted(sagaId, "SHIPPING");
 
             Order savedOrder = orderRepository.save(order);
+            allocateOrderFinancialsUseCase.allocate(savedOrder);
             orderEventPublisherPort.publishOrderCreated(savedOrder);
             cartRepositoryPort.clearCart(buyerId);
             metricsPort.recordOrderCreated();
@@ -190,6 +183,18 @@ public class CreateOrderUseCase {
             subOrders.add(new SubOrder(entry.getKey(), entry.getValue(), tier));
         }
         return List.copyOf(subOrders);
+    }
+
+    private static List<OrderItem> applyLineItemTaxes(List<OrderItem> items, TaxResult taxResult) {
+        if (taxResult.lineItems().size() != items.size()) {
+            throw new IllegalStateException("tax calculation must return one result per order item");
+        }
+        return IntStream.range(0, items.size()).mapToObj(index -> {
+            OrderItem item = items.get(index);
+            TaxResult.LineItemTax tax = taxResult.lineItems().get(index);
+            return new OrderItem(item.productId(), item.variantSku(), item.sellerId(), item.name(), item.quantity(),
+                    item.unitPrice(), item.imageUrl(), tax.rate(), BigDecimal.valueOf(tax.taxAmount()));
+        }).toList();
     }
 
     private static void requireNonBlank(String value, String fieldName) {

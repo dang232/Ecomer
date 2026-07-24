@@ -5,24 +5,36 @@ import com.vnshop.shippingservice.domain.Money;
 import com.vnshop.shippingservice.domain.ShippingAddress;
 import com.vnshop.shippingservice.domain.ShippingLineItem;
 import com.vnshop.shippingservice.domain.model.LabelRequest;
+import com.vnshop.shippingservice.domain.model.CodCollectionEvidence;
 import com.vnshop.shippingservice.domain.model.Parcel;
 import com.vnshop.shippingservice.domain.model.ShippingLabel;
 import com.vnshop.shippingservice.domain.port.out.CarrierGatewayPort;
 import com.vnshop.shippingservice.domain.port.out.CarrierLabelPolicyPort;
+import com.vnshop.shippingservice.domain.port.out.CodCollectionEvidencePort;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 /** Creates a carrier label through the configured carrier gateway. */
 public class CreateLabelUseCase {
     private final CarrierGatewayPort carrierGateway;
     private final CarrierLabelPolicyPort carrierLabelPolicy;
+    private final CodCollectionEvidencePort codCollectionEvidence;
 
     public CreateLabelUseCase(
             CarrierGatewayPort carrierGateway,
             CarrierLabelPolicyPort carrierLabelPolicy) {
+        this(carrierGateway, carrierLabelPolicy, CodCollectionEvidencePort.noop());
+    }
+
+    public CreateLabelUseCase(
+            CarrierGatewayPort carrierGateway,
+            CarrierLabelPolicyPort carrierLabelPolicy,
+            CodCollectionEvidencePort codCollectionEvidence) {
         this.carrierGateway = Objects.requireNonNull(carrierGateway, "carrierGateway is required");
         this.carrierLabelPolicy = Objects.requireNonNull(carrierLabelPolicy, "carrierLabelPolicy is required");
+        this.codCollectionEvidence = Objects.requireNonNull(codCollectionEvidence, "codCollectionEvidence is required");
     }
 
     public CreateLabelResult create(CreateLabelCommand command) {
@@ -42,6 +54,12 @@ public class CreateLabelUseCase {
 
         if (label == null || label.trackingCode() == null || label.trackingCode().isBlank()) {
             throw new IllegalStateException("Carrier did not return a tracking code");
+        }
+
+        if (command.codAmount() != null && command.codAmount().amount().compareTo(java.math.BigDecimal.ZERO) > 0) {
+            codCollectionEvidence.saveExpected(CodCollectionEvidence.expected(
+                    UUID.randomUUID(), command.orderId(), label.carrier().name(), label.trackingCode(),
+                    command.codAmount().amount(), command.codAmount().currency()));
         }
 
         return new CreateLabelResult(

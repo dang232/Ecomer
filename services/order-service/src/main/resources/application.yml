@@ -75,6 +75,10 @@ vnshop:
       PREFERRED: "0.05"
       MALL: "0.03"
 
+seller-finance:
+  adjustments:
+    enabled: ${SELLER_FINANCE_ADJUSTMENTS_ENABLED:false}
+
 config-service:
   url: ${CONFIG_SERVICE_URL:http://configuration-service:8097}
   enabled: ${CONFIG_SERVICE_ENABLED:true}
