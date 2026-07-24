@@ -8,20 +8,22 @@ import jakarta.persistence.LockModeType;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class SettlementReleaseCandidateJpaRepository implements SettlementReleaseCandidateRepositoryPort {
-    private final EntityManager entityManager;
+    private final ObjectProvider<EntityManager> entityManagerProvider;
 
-    public SettlementReleaseCandidateJpaRepository(EntityManager entityManager) {
-        this.entityManager = entityManager;
+    public SettlementReleaseCandidateJpaRepository(ObjectProvider<EntityManager> entityManagerProvider) {
+        this.entityManagerProvider = entityManagerProvider;
     }
 
     @Override
     @Transactional
     public void recordAdjustment(FinancialAdjustment adjustment) {
+        EntityManager entityManager = entityManager();
         SettlementReleaseCandidateJpaEntity entity = entityManager.find(
                 SettlementReleaseCandidateJpaEntity.class, adjustment.allocationId(), LockModeType.PESSIMISTIC_WRITE);
         if (adjustment.adjustmentType() == FinancialAdjustment.AdjustmentType.CREDIT) {
@@ -38,7 +40,7 @@ public class SettlementReleaseCandidateJpaRepository implements SettlementReleas
     @Override
     @Transactional
     public void markDelivered(UUID orderId, long subOrderId, Instant deliveredAt) {
-        entityManager.createQuery("""
+        entityManager().createQuery("""
                 select candidate from SettlementReleaseCandidateJpaEntity candidate
                 where candidate.orderId = :orderId and candidate.subOrderId = :subOrderId
                 """, SettlementReleaseCandidateJpaEntity.class)
@@ -51,6 +53,7 @@ public class SettlementReleaseCandidateJpaRepository implements SettlementReleas
     @Override
     @Transactional
     public void updateHold(UUID orderId, Long subOrderId, String holdType, boolean open) {
+        EntityManager entityManager = entityManager();
         String query = subOrderId == null
                 ? "select candidate from SettlementReleaseCandidateJpaEntity candidate where candidate.orderId = :orderId"
                 : "select candidate from SettlementReleaseCandidateJpaEntity candidate where candidate.orderId = :orderId and candidate.subOrderId = :subOrderId";
@@ -64,7 +67,7 @@ public class SettlementReleaseCandidateJpaRepository implements SettlementReleas
     @Transactional
     public List<SettlementReleaseCandidate> lockEligible(Instant asOf, int batchSize) {
         if (batchSize < 1) throw new IllegalArgumentException("batchSize must be positive");
-        return entityManager.createQuery("""
+        return entityManager().createQuery("""
                 select candidate from SettlementReleaseCandidateJpaEntity candidate
                 where candidate.releaseStatus = :pending
                   and candidate.deliveredAt is not null
@@ -90,9 +93,17 @@ public class SettlementReleaseCandidateJpaRepository implements SettlementReleas
     @Override
     @Transactional
     public void markReleased(UUID allocationId, UUID releaseOperationId, Instant releasedAt) {
-        SettlementReleaseCandidateJpaEntity entity = entityManager.find(
+        SettlementReleaseCandidateJpaEntity entity = entityManager().find(
                 SettlementReleaseCandidateJpaEntity.class, allocationId, LockModeType.PESSIMISTIC_WRITE);
         if (entity == null) throw new IllegalStateException("settlement candidate was not found");
         entity.markReleased(releaseOperationId, releasedAt);
+    }
+
+    private EntityManager entityManager() {
+        EntityManager entityManager = entityManagerProvider.getIfAvailable();
+        if (entityManager == null) {
+            throw new IllegalStateException("settlement release persistence is unavailable without JPA");
+        }
+        return entityManager;
     }
 }
