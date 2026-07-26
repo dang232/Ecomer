@@ -1,10 +1,10 @@
 package com.vnshop.transcoder.service;
 
+import com.vnshop.transcoder.config.TranscoderProperties;
 import com.vnshop.transcoder.model.TranscodeJob;
 import com.vnshop.transcoder.model.TranscodeResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
@@ -31,15 +31,9 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class TranscodeService {
 
-    private static final String UPLOADS_BUCKET  = "vnshop-video-uploads-tmp";
-    private static final String STAGING_BUCKET  = "vnshop-videos-staging";
-    private static final int    PROCESS_TIMEOUT = 360; // seconds
-
     private final S3AsyncClient           s3AsyncClient;
     private final FfmpegCommandBuilder ffmpegCommandBuilder;
-
-    @Value("${transcoder.tmpfs-dir:/tmp/transcoder}")
-    private String tmpfsDir;
+    private final TranscoderProperties properties;
 
     /**
      * Full transcode pipeline for one job.
@@ -51,7 +45,7 @@ public class TranscodeService {
             backoff = @Backoff(delay = 1_000, multiplier = 5, maxDelay = 30_000)
     )
     public TranscodeResult transcode(TranscodeJob job) {
-        Path workDir = Path.of(tmpfsDir, job.videoId().toString());
+        Path workDir = Path.of(properties.tmpfsDir(), job.videoId().toString());
         try {
             Files.createDirectories(workDir);
 
@@ -128,7 +122,7 @@ public class TranscodeService {
 
     private void downloadRaw(String key, Path destination) throws InterruptedException, java.util.concurrent.ExecutionException {
         GetObjectRequest request = GetObjectRequest.builder()
-                .bucket(UPLOADS_BUCKET)
+                .bucket(properties.inputBucket())
                 .key(key)
                 .build();
 
@@ -187,7 +181,7 @@ public class TranscodeService {
                 .redirectErrorStream(true)
                 .start();
 
-        boolean finished = process.waitFor(PROCESS_TIMEOUT, TimeUnit.SECONDS);
+        boolean finished = process.waitFor(properties.processTimeoutSeconds(), TimeUnit.SECONDS);
         if (!finished) {
             process.destroyForcibly();
             throw new TranscodeException(phase + " timed out for videoId=" + videoId);
@@ -212,7 +206,7 @@ public class TranscodeService {
                     "-of", "default=noprint_wrappers=1:nokey=1",
                     file.toAbsolutePath().toString()
             ).start();
-            boolean done = p.waitFor(30, TimeUnit.SECONDS);
+            boolean done = p.waitFor(properties.probeTimeoutSeconds(), TimeUnit.SECONDS);
             if (!done || p.exitValue() != 0) {
                 return 0L;
             }
@@ -226,7 +220,7 @@ public class TranscodeService {
 
     private void uploadToStaging(Path file, String key) throws InterruptedException, java.util.concurrent.ExecutionException {
         PutObjectRequest request = PutObjectRequest.builder()
-                .bucket(STAGING_BUCKET)
+                .bucket(properties.stagingBucket())
                 .key(key)
                 .build();
 
@@ -238,7 +232,7 @@ public class TranscodeService {
     private void deleteRaw(String key) {
         try {
             DeleteObjectRequest request = DeleteObjectRequest.builder()
-                    .bucket(UPLOADS_BUCKET)
+                    .bucket(properties.inputBucket())
                     .key(key)
                     .build();
 

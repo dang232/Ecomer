@@ -28,6 +28,8 @@
 	</scm>
 	<properties>
 		<java.version>25</java.version>
+		<jackson.version>2.21.4</jackson.version>
+		<jackson.annotations.version>2.21</jackson.annotations.version>
 		<postgresql.version>42.7.12</postgresql.version>
 		<tomcat.version>11.0.22</tomcat.version>
 	</properties>
@@ -52,6 +54,11 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-flyway</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-annotations</artifactId>
+			<version>${jackson.annotations.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -234,6 +241,14 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
 					<argLine>@{argLine} -XX:+EnableDynamicAgentLoading</argLine>
+					<!-- DestinationCryptoConfig.scanEnvKeyVersions() reads keys from System.getProperties()
+					     (JVM -D args) and OS env. Spring yaml properties are NOT visible to System.getProperties(),
+					     so we bridge the test yaml key via a JVM system property so the fail-closed crypto
+					     bean can construct. The value is a public 32-byte test key; production reads from
+					     VNSHOP_PAYOUT_DESTINATION_KEY_V1 in the real env. -->
+					<systemPropertyVariables>
+						<vnshop.payout-destination.key.v1>JXR9Q23cKfIOTCXMglGH3a7XR05bT2OpnGiZrghnIK8=</vnshop.payout-destination.key.v1>
+					</systemPropertyVariables>
 				</configuration>
 			</plugin>
 		</plugins>

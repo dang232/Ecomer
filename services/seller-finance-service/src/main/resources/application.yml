@@ -15,7 +15,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/vnshop?currentSchema=seller_finance_svc
     username: vnshop
-    password: ${DB_PASSWORD:vnshop}
+    password: ${DB_PASSWORD}
     hikari:
       maximum-pool-size: 10
       minimum-idle: 3
@@ -32,13 +32,13 @@ spring:
     properties:
       security.protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_PLAINTEXT}
       sasl.mechanism: PLAIN
-      sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_SASL_USERNAME:svc-finance}" password="${KAFKA_SASL_PASSWORD:finance-secret-change-me}";
+      sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_SASL_USERNAME}" password="${KAFKA_SASL_PASSWORD}";
       ssl.endpoint.identification.algorithm: https
     admin:
       properties:
         security.protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_PLAINTEXT}
         sasl.mechanism: PLAIN
-        sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_SASL_USERNAME:svc-finance}" password="${KAFKA_SASL_PASSWORD:finance-secret-change-me}";
+        sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_SASL_USERNAME}" password="${KAFKA_SASL_PASSWORD}";
     listener:
       observation-enabled: true
     template:
@@ -95,6 +95,12 @@ management:
       endpoint: http://localhost:4318/v1/traces
 
 kafka:
+  admin:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    username: ${KAFKA_SASL_USERNAME}
+    password: ${KAFKA_SASL_PASSWORD}
+    security-protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_PLAINTEXT}
+    sasl-mechanism: ${KAFKA_SASL_MECHANISM:PLAIN}
   health:
     consumer:
       enabled: false
@@ -103,9 +109,10 @@ kafka:
 
 vnshop:
   user-service:
-    base-url: ${USER_SERVICE_URL:http://user-service:8081}
-    connect-timeout-ms: ${USER_SERVICE_CONNECT_TIMEOUT_MS:1000}
-    read-timeout-ms: ${USER_SERVICE_READ_TIMEOUT_MS:2000}
+    base-url: ${USER_SERVICE_URL}
+    connect-timeout-ms: ${USER_SERVICE_CONNECT_TIMEOUT_MS}
+    read-timeout-ms: ${USER_SERVICE_READ_TIMEOUT_MS}
+    internal-token: ${USER_SERVICE_INTERNAL_TOKEN}
   commission:
     tiers:
       STANDARD: "0.10"
@@ -114,6 +121,11 @@ vnshop:
       MALL: "0.03"
 
 seller-finance:
+  hold-allocation:
+    persistence-mode: ${SELLER_FINANCE_HOLD_ALLOCATION_PERSISTENCE_MODE:jdbc}
+  event-mode: ${SELLER_FINANCE_EVENT_MODE:OFF}
+  payout-execution-mode: ${PAYOUT_EXECUTION_MODE:DISABLED}
+  payout-idempotency-prefix: ${PAYOUT_IDEMPOTENCY_PREFIX:vnshop-payout-}
   adjustment-consumer:
     enabled: ${SELLER_FINANCE_ADJUSTMENT_CONSUMER_ENABLED:true}
   legacy-order-created-consumer:

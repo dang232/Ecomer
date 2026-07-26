@@ -11,13 +11,17 @@ import java.util.Map;
 @RestController
 public class FallbackController {
 
+    // ponytail: a non-2xx response must never carry ApiResponse.ok(...)
+    // (success: true, message: "Success"). The FE's response interceptor treats
+    // response.ok === false as an error and surfaces the envelope's `message`
+    // verbatim to the user — so a "Success" message on a 503 status shows as
+    // "Success" in the UI. Use the error envelope so the body and the status
+    // agree.
     @RequestMapping("/fallback/{service}")
     ResponseEntity<ApiResponse<Map<String, Object>>> fallback(@PathVariable String service) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-            .body(ApiResponse.ok(Map.of(
-                "error", "Service temporarily unavailable",
-                "service", service,
-                "status", HttpStatus.SERVICE_UNAVAILABLE.value()
-            )));
+            .body(ApiResponse.error(
+                "Service temporarily unavailable",
+                "SERVICE_UNAVAILABLE"));
     }
 }

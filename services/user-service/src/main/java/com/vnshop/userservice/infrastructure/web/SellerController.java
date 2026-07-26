@@ -1,7 +1,10 @@
 package com.vnshop.userservice.infrastructure.web;
 
+import com.vnshop.userservice.application.EnrollDestinationCommand;
+import com.vnshop.userservice.application.EnrollSellerPayoutDestinationUseCase;
 import com.vnshop.userservice.application.GetPublicSellerUseCase;
 import com.vnshop.userservice.application.ListPublicSellersUseCase;
+import com.vnshop.userservice.application.LookupSellerDestinationUseCase;
 import com.vnshop.userservice.application.PublicSellersPage;
 import com.vnshop.userservice.application.RegisterSellerCommand;
 import com.vnshop.userservice.application.RegisterSellerUseCase;
@@ -9,6 +12,7 @@ import com.vnshop.userservice.application.ViewSellerProfileUseCase;
 import com.vnshop.userservice.infrastructure.config.JwtPrincipalUtil;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,16 +29,22 @@ public class SellerController {
     private final ViewSellerProfileUseCase viewSellerProfileUseCase;
     private final GetPublicSellerUseCase getPublicSellerUseCase;
     private final ListPublicSellersUseCase listPublicSellersUseCase;
+    private final EnrollSellerPayoutDestinationUseCase enrollSellerPayoutDestinationUseCase;
+    private final LookupSellerDestinationUseCase lookupSellerDestinationUseCase;
 
     public SellerController(
             RegisterSellerUseCase registerSellerUseCase,
             ViewSellerProfileUseCase viewSellerProfileUseCase,
             GetPublicSellerUseCase getPublicSellerUseCase,
-            ListPublicSellersUseCase listPublicSellersUseCase) {
+            ListPublicSellersUseCase listPublicSellersUseCase,
+            EnrollSellerPayoutDestinationUseCase enrollSellerPayoutDestinationUseCase,
+            LookupSellerDestinationUseCase lookupSellerDestinationUseCase) {
         this.registerSellerUseCase = registerSellerUseCase;
         this.viewSellerProfileUseCase = viewSellerProfileUseCase;
         this.getPublicSellerUseCase = getPublicSellerUseCase;
         this.listPublicSellersUseCase = listPublicSellersUseCase;
+        this.enrollSellerPayoutDestinationUseCase = enrollSellerPayoutDestinationUseCase;
+        this.lookupSellerDestinationUseCase = lookupSellerDestinationUseCase;
     }
 
     @PostMapping("/register")
@@ -42,8 +52,7 @@ public class SellerController {
         var sellerProfile = registerSellerUseCase.register(new RegisterSellerCommand(
                 JwtPrincipalUtil.currentUserId(),
                 request.shopName(),
-                request.bankName(),
-                request.bankAccount()
+                request.bankName()
         ));
         return ApiResponse.ok(SellerProfileResponse.fromDomain(sellerProfile));
     }
@@ -58,6 +67,32 @@ public class SellerController {
     @GetMapping("/{id}")
     public ApiResponse<PublicSellerResponse> getById(@PathVariable String id) {
         return ApiResponse.ok(PublicSellerResponse.fromView(getPublicSellerUseCase.view(id)));
+    }
+
+    /**
+     * Seller self-enrolls payout destination. Bank account plaintext
+     * is consumed in-memory and never persisted; only ciphertext + fingerprint + last4 are stored.
+     */
+    @PostMapping("/me/payout-destination")
+    public ApiResponse<SellerProfileResponse> enrollMyDestination(@Valid @RequestBody EnrollPayoutDestinationRequest request) {
+        var sellerProfile = enrollSellerPayoutDestinationUseCase.enroll(new EnrollDestinationCommand(
+                JwtPrincipalUtil.currentUserId(),
+                request.bankName(),
+                request.bankAccount()
+        ));
+        return ApiResponse.ok(SellerProfileResponse.fromDomain(sellerProfile));
+    }
+
+    /**
+     * Internal-only service-to-service destination lookup.
+     * Returns encrypted material for finance snapshot building only.
+     * Only callers bearing the {@code internal} role/client-id may invoke this.
+     */
+    @GetMapping("/internal/{sellerId}/payout-destination")
+    @PreAuthorize("@internalServiceAuthorization.isAuthorized(authentication)")
+    public ApiResponse<SellerPayoutDestinationMaterialResponse> internalLookupDestination(@PathVariable String sellerId) {
+        return ApiResponse.ok(SellerPayoutDestinationMaterialResponse.fromDomain(
+                lookupSellerDestinationUseCase.lookup(sellerId)));
     }
 
     /**

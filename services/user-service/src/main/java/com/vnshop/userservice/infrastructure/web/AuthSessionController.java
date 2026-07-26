@@ -2,7 +2,7 @@ package com.vnshop.userservice.infrastructure.web;
 
 import com.vnshop.userservice.application.AuthSessionUseCase;
 import com.vnshop.userservice.application.RefreshTokenRejectedException;
-import com.vnshop.userservice.infrastructure.keycloak.KeycloakTokenClient.TokenSet;
+import com.vnshop.userservice.domain.port.out.KeycloakTokenPort.TokenSet;
 import com.vnshop.userservice.infrastructure.web.OAuthLoginState.StateRecord;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -58,8 +58,6 @@ public class AuthSessionController {
     private static final String CSRF_COOKIE_PATH = "/";
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
-    // OAuth configuration
-    private static final String DEFAULT_CALLBACK_URL = "http://localhost:8080/auth/oauth/callback";
     private static final Set<String> ALLOWED_PROVIDERS = Set.of("google", "facebook");
     private final AuthSessionUseCase useCase;
     private final OAuthLoginState oauthState;
@@ -74,14 +72,17 @@ public class AuthSessionController {
             OAuthLoginState oauthState,
             @Value("${vnshop.auth.cookie-secure:false}") boolean cookieSecure,
             @Value("${vnshop.auth.cookie-same-site:Strict}") String cookieSameSite,
-            @Value("${vnshop.auth.callback-base-url:}") String callbackBaseUrl,
+            @Value("${vnshop.auth.callback-base-url}") String callbackBaseUrl,
             @Value("${keycloak.public-base-url:http://localhost:8080}") String keycloakPublicBaseUrl,
             @Value("${vnshop.auth.frontend-base-url:http://localhost:3000}") String frontendBaseUrl) {
         this.useCase = useCase;
         this.oauthState = oauthState;
         this.cookieSecure = cookieSecure;
         this.cookieSameSite = cookieSameSite;
-        this.callbackBaseUrl = (callbackBaseUrl != null && !callbackBaseUrl.isBlank()) ? callbackBaseUrl : DEFAULT_CALLBACK_URL;
+        if (callbackBaseUrl == null || callbackBaseUrl.isBlank()) {
+            throw new IllegalStateException("vnshop.auth.callback-base-url must be configured");
+        }
+        this.callbackBaseUrl = callbackBaseUrl;
         this.keycloakAuthorizationUrl = stripTrailingSlash(keycloakPublicBaseUrl)
                 + "/realms/vnshop/protocol/openid-connect/auth";
         this.frontendBaseUrl = normalizeFrontendBaseUrl(frontendBaseUrl);

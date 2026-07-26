@@ -1,5 +1,6 @@
 package com.vnshop.transcoder.service;
 
+import com.vnshop.transcoder.config.TranscoderProperties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -18,8 +19,14 @@ class Sha256VerificationTest {
     /** Thin subclass to expose package-private helpers without mocking S3 */
     private final TranscodeService service = new TranscodeService(
             mock(software.amazon.awssdk.services.s3.S3AsyncClient.class),
-            new FfmpegCommandBuilder()
+            new FfmpegCommandBuilder(properties()),
+            properties()
     );
+
+    private static TranscoderProperties properties() {
+        return new TranscoderProperties("/tmp/transcoder", "input", "staging", 360,
+                600, 2_147_483_648L, 3, 30);
+    }
 
     @TempDir
     Path tmp;

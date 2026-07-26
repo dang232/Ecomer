@@ -3,6 +3,7 @@ package com.vnshop.invoiceservice.application.xml;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vnshop.invoiceservice.domain.entity.Invoice;
+import com.vnshop.invoiceservice.infrastructure.config.InvoiceProperties;
 import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Marshaller;
@@ -22,7 +23,7 @@ import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
 import javax.xml.validation.Validator;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 import org.xml.sax.SAXException;
@@ -35,6 +36,7 @@ import org.xml.sax.SAXException;
  */
 @Slf4j
 @Component
+@EnableConfigurationProperties(InvoiceProperties.class)
 public class InvoiceXmlGenerator {
 
     private static final DateTimeFormatter DATE_FMT =
@@ -42,39 +44,14 @@ public class InvoiceXmlGenerator {
 
     private static final String XSD_PATH = "xsd/tkhdon.xsd";
 
-    @Value("${invoice.currency:VND}")
-    private String currency;
-
-    @Value("${invoice.template-code:1}")
-    private String invoiceTemplateCode;
-
-    /** Payment method: TM/CK = cash or bank transfer */
-    @Value("${invoice.payment-method:TM/CK}")
-    private String paymentMethod;
-
-    @Value("${invoice.seller.name:VNShop Joint Stock Company}")
-    private String sellerName;
-
-    @Value("${invoice.seller.tax-code:0123456789}")
-    private String sellerTaxCode;
-
-    @Value("${invoice.seller.address:123 Le Loi Street, District 1, Ho Chi Minh City}")
-    private String sellerAddress;
-
-    @Value("${invoice.seller.phone:}")
-    private String sellerPhone;
-
-    @Value("${invoice.seller.email:invoice@vnshop.vn}")
-    private String sellerEmail;
-
-    @Value("${invoice.symbol:C26T}")
-    private String invoiceSymbol;
-
     private final ObjectMapper objectMapper;
+    private final InvoiceProperties properties;
     private final Schema xsdSchema;
 
-    public InvoiceXmlGenerator(ObjectMapper objectMapper) throws SAXException, IOException {
+    public InvoiceXmlGenerator(ObjectMapper objectMapper, InvoiceProperties properties)
+            throws SAXException, IOException {
         this.objectMapper = objectMapper;
+        this.properties = properties;
         SchemaFactory sf = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
         this.xsdSchema = sf.newSchema(new ClassPathResource(XSD_PATH).getURL());
     }
@@ -125,28 +102,28 @@ public class InvoiceXmlGenerator {
 
     private DLHDon.TTChung buildTTChung(Invoice invoice) {
         DLHDon.TTChung h = new DLHDon.TTChung();
-        h.setMauSo(invoiceTemplateCode);
-        h.setKyHieu(invoiceSymbol);
+        h.setMauSo(properties.templateCode());
+        h.setKyHieu(properties.symbol());
 
         String sequential = extractSequentialNumber(invoice.getGdtInvoiceNumber());
         h.setSoHD(sequential);
         h.setSoHDDayDu(invoice.getGdtInvoiceNumber());
         h.setNLap(DATE_FMT.format(invoice.getCreatedAt()));
-        h.setDvtte(currency);
+        h.setDvtte(properties.currency());
         h.setTGia("1");
-        h.setHtttoan(paymentMethod);
+        h.setHtttoan(properties.paymentMethod());
         return h;
     }
 
     private NDHDon.NBanHDon buildSeller() {
         NDHDon.NBanHDon s = new NDHDon.NBanHDon();
-        s.setTen(sellerName);
-        s.setMst(sellerTaxCode);
-        s.setDchi(sellerAddress);
-        if (sellerPhone != null && !sellerPhone.isBlank()) {
-            s.setSdthoai(sellerPhone);
+        s.setTen(properties.seller().name());
+        s.setMst(properties.seller().taxCode());
+        s.setDchi(properties.seller().address());
+        if (properties.seller().phone() != null && !properties.seller().phone().isBlank()) {
+            s.setSdthoai(properties.seller().phone());
         }
-        s.setDctdtu(sellerEmail);
+        s.setDctdtu(properties.seller().email());
         return s;
     }
 

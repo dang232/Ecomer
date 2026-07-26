@@ -1,0 +1,43 @@
+spring:
+  # AuthSessionUseCase + AdminUserUseCase tests don't touch an HTTP layer,
+  # but the @SpringBootTest context-loads every bean. Stub datasource + kafka
+  # so placeholders in ReadReplicaDataSourceConfig / KafkaHealthConfig resolve.
+  # KafkaAutoConfiguration is excluded by @SpringBootTest properties so the
+  # AdminClient is never actually instantiated — but the @Value placeholder
+  # still needs to resolve.
+  datasource:
+    url: jdbc:postgresql://localhost:5433/vnshop_user?currentSchema=user_svc
+    username: vnshop
+    password: vnshop
+  kafka:
+    bootstrap-servers: localhost:9092
+
+unleash:
+  api-url: http://localhost:4242/api
+  api-key: test-unleash-token
+  app-name: user-service-test
+
+keycloak:
+  admin:
+    client-secret: test-keycloak-admin-client-secret
+
+# Test-only stub key for payout destination cipher. Production must set
+# VNSHOP_PAYOUT_DESTINATION_KEY_V1 via a real env var; tests inject a 32-byte
+# AES key via the Spring property so CryptoConfig can construct the cipher.
+vnshop:
+  internal:
+    allowed-client-id: test-internal-client
+  auth:
+    callback-base-url: http://localhost:8080/auth/oauth/callback
+    frontend-base-url: http://localhost:3000
+  crypto:
+    payout:
+      key-property-prefix: vnshop.crypto.payout.key.v
+      key-env-prefix: VNSHOP_PAYOUT_DESTINATION_KEY_V
+      max-key-version: 32
+      default-key-version: 1
+      backfill:
+        enabled: false
+        verification-state: LEGACY_MIGRATED
+      key:
+        v1: "JXR9Q23cKfIOTCXMglGH3a7XR05bT2OpnGiZrghnIK8="

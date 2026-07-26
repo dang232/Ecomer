@@ -3,12 +3,14 @@ package com.vnshop.userservice.infrastructure.config;
 import com.vnshop.userservice.application.AdminUserUseCase;
 import com.vnshop.userservice.application.ApproveSellerUseCase;
 import com.vnshop.userservice.application.AuthSessionUseCase;
+import com.vnshop.userservice.application.EnrollSellerPayoutDestinationUseCase;
 import com.vnshop.userservice.application.GetPublicSellerUseCase;
 import com.vnshop.userservice.application.RejectSellerUseCase;
 import com.vnshop.userservice.application.ListBuyerPublicProfilesUseCase;
 import com.vnshop.userservice.application.ListPendingSellersUseCase;
 import com.vnshop.userservice.application.ListPublicSellersUseCase;
 import com.vnshop.userservice.application.ListPublicSellerProfilesUseCase;
+import com.vnshop.userservice.application.LookupSellerDestinationUseCase;
 import com.vnshop.userservice.application.ManageAddressUseCase;
 import com.vnshop.userservice.application.RegisterBuyerUseCase;
 import com.vnshop.userservice.application.RegisterSellerUseCase;
@@ -17,20 +19,27 @@ import com.vnshop.userservice.application.ViewBuyerProfileUseCase;
 import com.vnshop.userservice.application.ViewSellerProfileUseCase;
 import com.vnshop.userservice.application.WishlistUseCase;
 import com.vnshop.userservice.application.avatar.AvatarUploadService;
+import com.vnshop.userservice.domain.payoutdestination.CipherPort;
+import com.vnshop.userservice.domain.port.out.KeycloakAdminPort;
+import com.vnshop.userservice.domain.port.out.KeycloakTokenPort;
 import com.vnshop.userservice.domain.port.out.ObjectStoragePort;
 import com.vnshop.userservice.domain.port.out.SellerStatsPort;
 import com.vnshop.userservice.domain.port.out.UserRepositoryPort;
 import com.vnshop.userservice.domain.port.out.WishlistRepositoryPort;
-import com.vnshop.userservice.infrastructure.keycloak.KeycloakAdminClient;
-import com.vnshop.userservice.infrastructure.keycloak.KeycloakTokenClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
 public class UseCaseConfig {
+    @Bean("internalServiceAuthorization")
+    InternalServiceAuthorization internalServiceAuthorization(
+            @Value("${vnshop.internal.allowed-client-id}") String allowedClientId) {
+        return new InternalServiceAuthorization(allowedClientId);
+    }
     @Bean
-    AdminUserUseCase adminUserUseCase(UserRepositoryPort userRepositoryPort, KeycloakAdminClient keycloakAdminClient) {
-        return new AdminUserUseCase(userRepositoryPort, keycloakAdminClient);
+    AdminUserUseCase adminUserUseCase(UserRepositoryPort userRepositoryPort, KeycloakAdminPort keycloakAdminPort) {
+        return new AdminUserUseCase(userRepositoryPort, keycloakAdminPort);
     }
 
     @Bean
@@ -104,8 +113,19 @@ public class UseCaseConfig {
     }
 
     @Bean
-    AuthSessionUseCase authSessionUseCase(KeycloakTokenClient tokenClient) {
-        return new AuthSessionUseCase(tokenClient);
+    AuthSessionUseCase authSessionUseCase(KeycloakTokenPort tokenPort) {
+        return new AuthSessionUseCase(tokenPort);
+    }
+
+    @Bean
+    EnrollSellerPayoutDestinationUseCase enrollSellerPayoutDestinationUseCase(
+            UserRepositoryPort userRepositoryPort, CipherPort cipher) {
+        return new EnrollSellerPayoutDestinationUseCase(userRepositoryPort, cipher);
+    }
+
+    @Bean
+    LookupSellerDestinationUseCase lookupSellerDestinationUseCase(UserRepositoryPort userRepositoryPort) {
+        return new LookupSellerDestinationUseCase(userRepositoryPort);
     }
 
     @Bean

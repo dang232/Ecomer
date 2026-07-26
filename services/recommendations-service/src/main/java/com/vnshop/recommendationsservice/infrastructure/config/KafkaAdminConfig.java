@@ -23,8 +23,8 @@ public class KafkaAdminConfig {
     @Primary
     public KafkaAdmin kafkaAdmin(
             @Value("${spring.kafka.bootstrap-servers}") String bootstrapServers,
-            @Value("${KAFKA_SASL_USERNAME:svc-recommendations}") String username,
-            @Value("${KAFKA_SASL_PASSWORD:recommendations-secret-change-me}") String password) {
+            @Value("${KAFKA_SASL_USERNAME}") String username,
+            @Value("${KAFKA_SASL_PASSWORD}") String password) {
         Map<String, Object> configs = new HashMap<>();
         configs.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         configs.put("security.protocol", "SASL_PLAINTEXT");

@@ -10,7 +10,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5433/vnshop_user?currentSchema=user_svc
     username: vnshop
-    password: ${DB_PASSWORD:vnshop}
+    password: ${DB_PASSWORD}
     hikari:
       maximum-pool-size: 20
       minimum-idle: 5
@@ -22,7 +22,7 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
+      password: ${REDIS_PASSWORD}
   flyway:
     enabled: true
     schemas: user_svc
@@ -41,18 +41,29 @@ spring:
     properties:
       security.protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_PLAINTEXT}
       sasl.mechanism: PLAIN
-      sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_SASL_USERNAME:svc-order}" password="${KAFKA_SASL_PASSWORD:order-secret-change-me}";
+      sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_SASL_USERNAME}" password="${KAFKA_SASL_PASSWORD}";
       ssl.endpoint.identification.algorithm: https
     admin:
       properties:
         security.protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_PLAINTEXT}
         sasl.mechanism: PLAIN
-        sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_SASL_USERNAME:svc-order}" password="${KAFKA_SASL_PASSWORD:order-secret-change-me}";
+        sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_SASL_USERNAME}" password="${KAFKA_SASL_PASSWORD}";
 
 # Service-account credentials for the Keycloak Admin API. Used by AuthController
 # to create users on POST /auth/register. The realm import in
 # infra/keycloak/vnshop-realm.json defines the matching client.
 vnshop:
+  internal:
+    allowed-client-id: ${VNSHOP_INTERNAL_ALLOWED_CLIENT_ID}
+  crypto:
+    payout:
+      key-property-prefix: ${VNSHOP_PAYOUT_DESTINATION_KEY_PROPERTY_PREFIX:vnshop.crypto.payout.key.v}
+      key-env-prefix: ${VNSHOP_PAYOUT_DESTINATION_KEY_ENV_PREFIX:VNSHOP_PAYOUT_DESTINATION_KEY_V}
+      max-key-version: ${VNSHOP_PAYOUT_DESTINATION_MAX_KEY_VERSION:32}
+      default-key-version: ${VNSHOP_PAYOUT_DESTINATION_DEFAULT_KEY_VERSION}
+      backfill:
+        enabled: ${VNSHOP_PAYOUT_DESTINATION_BACKFILL_ENABLED:false}
+        verification-state: ${VNSHOP_PAYOUT_DESTINATION_BACKFILL_VERIFICATION_STATE:LEGACY_MIGRATED}
   auth:
     # cookie-secure must be true in production (HTTPS only).
     # cookie-same-site=Strict prevents the browser from sending vnshop_rt and
@@ -103,7 +114,12 @@ keycloak:
     base-url: ${KEYCLOAK_ADMIN_BASE_URL:http://keycloak:8080}
     realm: ${KEYCLOAK_ADMIN_REALM:vnshop}
     client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:vnshop-admin-api}
-    client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET:vnshop-admin-api-secret-dev}
+    client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET}
+
+unleash:
+  api-url: ${UNLEASH_API_URL:http://unleash:4242/api}
+  api-key: ${UNLEASH_CLIENT_API_TOKEN}
+  app-name: ${UNLEASH_APP_NAME:user-service}
 
 springdoc:
   api-docs:

@@ -40,9 +40,9 @@ class GetPublicSellerUseCaseTest {
     @Test
     void view_happyPath_returnsFullView() {
         SellerProfile seller = new SellerProfile(
-                SELLER_ID, "Cool Shop", "BankA", "ACC-001",
-                null, true, Tier.STANDARD, false,
-                "Best shop around", "http://logo.png", "http://banner.png", JOINED_AT
+                SELLER_ID, "Cool Shop", "BankA", null,
+                true, Tier.STANDARD, false,
+                "Best shop around", "http://logo.png", "http://banner.png", JOINED_AT, null
         );
         when(userRepositoryPort.findSellerById(SELLER_ID)).thenReturn(Optional.of(seller));
         when(sellerStatsPort.sellerStats(SELLER_ID)).thenReturn(new SellerStatsPort.SellerStats(4.5, 120L));
@@ -74,9 +74,9 @@ class GetPublicSellerUseCaseTest {
     @Test
     void view_degradedStats_stillReturnsSeller() {
         SellerProfile seller = new SellerProfile(
-                SELLER_ID, "Cool Shop", "BankA", "ACC-001",
-                null, true, Tier.VERIFIED, false,
-                null, null, null, JOINED_AT
+                SELLER_ID, "Cool Shop", "BankA", null,
+                true, Tier.VERIFIED, false,
+                null, null, null, JOINED_AT, null
         );
         when(userRepositoryPort.findSellerById(SELLER_ID)).thenReturn(Optional.of(seller));
         // port returns zero/empty (simulates product-service down)

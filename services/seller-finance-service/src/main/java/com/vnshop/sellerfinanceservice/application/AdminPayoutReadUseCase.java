@@ -19,16 +19,23 @@ public class AdminPayoutReadUseCase {
     }
 
     public List<EnrichedPayout> pending(String query) {
-        List<Payout> payouts = query == null || query.isBlank()
-                ? payoutRepositoryPort.findByStatus(PayoutStatus.PENDING)
-                : payoutRepositoryPort.findByStatus(PayoutStatus.PENDING, query);
+        List<Payout> payouts = new java.util.ArrayList<>();
+        for (PayoutStatus status : List.of(PayoutStatus.REQUESTED, PayoutStatus.APPROVED,
+                PayoutStatus.SUBMITTING, PayoutStatus.SUBMITTED, PayoutStatus.UNKNOWN, PayoutStatus.PENDING)) {
+            payouts.addAll(query == null || query.isBlank()
+                    ? payoutRepositoryPort.findByStatus(status)
+                    : payoutRepositoryPort.findByStatus(status, query));
+        }
         return enrich(payouts);
     }
 
     public List<EnrichedPayout> completed(String query) {
-        List<Payout> payouts = query == null || query.isBlank()
+        List<Payout> payouts = new java.util.ArrayList<>(query == null || query.isBlank()
                 ? payoutRepositoryPort.findCompleted()
-                : payoutRepositoryPort.findCompleted(query);
+                : payoutRepositoryPort.findCompleted(query));
+        payouts.addAll(query == null || query.isBlank()
+                ? payoutRepositoryPort.findByStatus(PayoutStatus.PAID)
+                : payoutRepositoryPort.findByStatus(PayoutStatus.PAID, query));
         return enrich(payouts);
     }
 

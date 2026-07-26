@@ -6,6 +6,7 @@ import com.vnshop.orderservice.application.coupon.CouponRedemptionService;
 import com.vnshop.orderservice.domain.Money;
 import com.vnshop.orderservice.domain.coupon.CouponException;
 import com.vnshop.orderservice.infrastructure.config.JwtPrincipalUtil;
+import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
 import java.util.List;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@Hidden
 public class CouponController {
     private final CouponManagementService management;
     private final CouponRedemptionService redemption;

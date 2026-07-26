@@ -2,6 +2,8 @@ package com.vnshop.userservice.infrastructure.keycloak;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vnshop.userservice.domain.port.out.KeycloakTokenPort;
+import com.vnshop.userservice.domain.port.out.KeycloakTokenPort.TokenSet;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -24,9 +26,13 @@ import org.springframework.web.client.RestClient;
  *
  * <p>Keeps the public {@code vnshop-api} client on the request — same client
  * the FE used to hit directly. The realm doesn't change; we just relay.
+ *
+ * <p>Implements {@link KeycloakTokenPort} so application-layer use cases
+ * (e.g. {@code AuthSessionUseCase}) can depend on the port, not the concrete
+ * HTTP adapter.
  */
 @Component
-public class KeycloakTokenClient {
+public class KeycloakTokenClient implements KeycloakTokenPort {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final RestClient http = RestClient.builder().build();
@@ -43,6 +49,7 @@ public class KeycloakTokenClient {
         this.clientId = clientId;
     }
 
+    @Override
     public TokenSet passwordGrant(String username, String password) {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("grant_type", "password");
@@ -52,6 +59,7 @@ public class KeycloakTokenClient {
         return tokenRequest(form, "invalid_credentials");
     }
 
+    @Override
     public TokenSet refresh(String refreshToken) {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("grant_type", "refresh_token");
@@ -60,6 +68,7 @@ public class KeycloakTokenClient {
         return tokenRequest(form, "refresh_failed");
     }
 
+    @Override
     public void revoke(String refreshToken) {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("client_id", clientId);
@@ -81,11 +90,12 @@ public class KeycloakTokenClient {
      * Exchanges an authorization code for tokens using the authorization_code grant.
      * Used for OAuth/OIDC identity provider callbacks via Keycloak broker.
      *
-     * @param code the authorization code from the callback
+     * @param code the authorization code from the OAuth callback
      * @param codeVerifier the PKCE code verifier (for S256 challenge)
      * @param redirectUri the redirect URI used in the original auth request
      * @return TokenSet with access and refresh tokens
      */
+    @Override
     public TokenSet authorizationCodeGrant(String code, String codeVerifier, String redirectUri) {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("grant_type", "authorization_code");
@@ -143,11 +153,4 @@ public class KeycloakTokenClient {
         }
         return "Authentication failed";
     }
-
-    public record TokenSet(
-            String accessToken,
-            String refreshToken,
-            int accessExpiresIn,
-            int refreshExpiresIn
-    ) {}
 }

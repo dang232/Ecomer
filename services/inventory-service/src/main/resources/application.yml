@@ -12,7 +12,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5437/vnshop_inventory?currentSchema=inventory_svc
     username: vnshop
-    password: ${DB_PASSWORD:vnshop}
+    password: ${DB_PASSWORD}
     hikari:
       maximum-pool-size: 15
       minimum-idle: 5
@@ -24,7 +24,7 @@ spring:
     redis:
       host: localhost
       port: 6379
-      password: ${REDIS_PASSWORD:vnshop123}
+      password: ${REDIS_PASSWORD}
   flyway:
     enabled: true
     schemas: inventory_svc
@@ -37,9 +37,9 @@ spring:
     properties:
       security.protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_SSL}
       sasl.mechanism: PLAIN
-      sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_SASL_USERNAME:svc-inventory}" password="${KAFKA_SASL_PASSWORD:inventory-secret-change-me}";
+      sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_SASL_USERNAME}" password="${KAFKA_SASL_PASSWORD}";
       ssl.truststore.location: ${KAFKA_SSL_TRUSTSTORE_LOCATION:/etc/kafka/secrets/kafka.truststore.jks}
-      ssl.truststore.password: ${KAFKA_SSL_TRUSTSTORE_PASSWORD:kafka-ssl-dev-password}
+      ssl.truststore.password: ${KAFKA_SSL_TRUSTSTORE_PASSWORD}
       ssl.endpoint.identification.algorithm: https
     listener:
       observation-enabled: true

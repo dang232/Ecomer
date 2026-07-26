@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import {
   FetchedOpenApiSpec,
   DiscoveredService,
@@ -34,10 +35,7 @@ type DeprecatedServices = ReadonlySet<string> | ReadonlyMap<string, string>;
 
 @Injectable()
 export class OpenApiAggregator {
-  constructor(
-    private readonly gatewayServerUrl = process.env
-      .OPENAPI_GATEWAY_SERVER_URL ?? "http://localhost:8080",
-  ) {}
+  constructor(private readonly config: ConfigService) {}
 
   merge(
     specs: FetchedOpenApiSpec[],
@@ -78,7 +76,14 @@ export class OpenApiAggregator {
         title: "VNShop Backend API",
         version: process.env.OPENAPI_DOCUMENT_VERSION ?? "1.0.0",
       },
-      servers: [{ url: this.gatewayServerUrl }],
+      servers: [
+        {
+          url: this.config.get<string>(
+            "app.openapiGatewayServerUrl",
+            "http://localhost:8080",
+          ),
+        },
+      ],
       tags,
       paths,
       components,
@@ -151,6 +156,7 @@ export class OpenApiAggregator {
     for (const [path, rawPathItem] of Object.entries(
       sourcePaths as JsonObject,
     )) {
+      if (this.isOperationalPath(path)) continue;
       if (
         !rawPathItem ||
         typeof rawPathItem !== "object" ||
@@ -330,6 +336,9 @@ export class OpenApiAggregator {
     return (
       path === "/error" ||
       path === "/health" ||
+      path === "/ready" ||
+      path === "/live" ||
+      path.startsWith("/health/") ||
       path.startsWith("/actuator/") ||
       path.startsWith("/api-docs") ||
       path.startsWith("/v3/api-docs") ||

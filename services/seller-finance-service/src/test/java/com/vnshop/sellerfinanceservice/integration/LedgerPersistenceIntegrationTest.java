@@ -13,6 +13,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import com.vnshop.sellerfinanceservice.domain.port.out.FinanceEventInboxPort;
@@ -47,6 +49,12 @@ class LedgerPersistenceIntegrationTest {
 
     @Autowired
     private PlatformTransactionManager transactionManager;
+
+    // Replace the auto-configured JwtDecoder (which would otherwise probe the
+    // real Keycloak issuer-uri during SecurityConfig wiring) with a Mockito
+    // stub so context-load passes without a live Keycloak instance.
+    @MockitoBean
+    private JwtDecoder jwtDecoder;
 
     @Test
     void persistsBalancedJournalInboxIdentityAndWalletProjectionTogether() {

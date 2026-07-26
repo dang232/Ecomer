@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -21,14 +20,12 @@ import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 public class SellerDirectoryHttpClientConfig {
     @Bean
     SellerDirectoryHttpClient sellerDirectoryHttpClient(
-            @Value("${vnshop.user-service.base-url:http://user-service:8081}") String baseUrl,
-            @Value("${vnshop.user-service.connect-timeout-ms:1000}") long connectTimeoutMs,
-            @Value("${vnshop.user-service.read-timeout-ms:2000}") long readTimeoutMs) {
+            UserServiceClientProperties properties) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(Duration.ofMillis(connectTimeoutMs));
-        requestFactory.setReadTimeout(Duration.ofMillis(readTimeoutMs));
+        requestFactory.setConnectTimeout(Duration.ofMillis(properties.connectTimeoutMs()));
+        requestFactory.setReadTimeout(Duration.ofMillis(properties.readTimeoutMs()));
         RestClient restClient = RestClient.builder()
-                .baseUrl(baseUrl)
+                .baseUrl(properties.baseUrl())
                 .requestFactory(requestFactory)
                 .build();
         return HttpServiceProxyFactory.builderFor(RestClientAdapter.create(restClient))

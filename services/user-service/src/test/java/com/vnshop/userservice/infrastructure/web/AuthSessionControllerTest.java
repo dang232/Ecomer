@@ -1,7 +1,7 @@
 package com.vnshop.userservice.infrastructure.web;
 
 import com.vnshop.userservice.application.AuthSessionUseCase;
-import com.vnshop.userservice.infrastructure.keycloak.KeycloakTokenClient.TokenSet;
+import com.vnshop.userservice.domain.port.out.KeycloakTokenPort.TokenSet;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

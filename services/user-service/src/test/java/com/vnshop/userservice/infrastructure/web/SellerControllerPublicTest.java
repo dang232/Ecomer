@@ -28,6 +28,8 @@ class SellerControllerPublicTest {
     @Mock private ViewSellerProfileUseCase viewSellerProfileUseCase;
     @Mock private GetPublicSellerUseCase getPublicSellerUseCase;
     @Mock private ListPublicSellersUseCase listPublicSellersUseCase;
+    @Mock private com.vnshop.userservice.application.EnrollSellerPayoutDestinationUseCase enrollSellerPayoutDestinationUseCase;
+    @Mock private com.vnshop.userservice.application.LookupSellerDestinationUseCase lookupSellerDestinationUseCase;
 
     private SellerController controller;
 
@@ -36,7 +38,8 @@ class SellerControllerPublicTest {
     @BeforeEach
     void setUp() {
         controller = new SellerController(registerSellerUseCase, viewSellerProfileUseCase,
-                getPublicSellerUseCase, listPublicSellersUseCase);
+                getPublicSellerUseCase, listPublicSellersUseCase,
+                enrollSellerPayoutDestinationUseCase, lookupSellerDestinationUseCase);
     }
 
     private PublicSellerView view(String id) {

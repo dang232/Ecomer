@@ -3,12 +3,15 @@ package com.vnshop.userservice.infrastructure.persistence;
 import com.vnshop.userservice.domain.Address;
 import com.vnshop.userservice.domain.SellerProfile;
 import com.vnshop.userservice.domain.Tier;
+import com.vnshop.userservice.domain.payoutdestination.SellerPayoutDestination;
+import com.vnshop.userservice.domain.payoutdestination.SellerPayoutDestination.VerificationState;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -29,9 +32,6 @@ public class SellerProfileJpaEntity extends BaseJpaEntity {
 
     @Column(nullable = false)
     private String bankName;
-
-    @Column(nullable = false)
-    private String bankAccount;
 
     private String pickupAddressStreet;
     private String pickupAddressWard;
@@ -60,14 +60,41 @@ public class SellerProfileJpaEntity extends BaseJpaEntity {
     @Column(columnDefinition = "TEXT")
     private String rejectionReason;
 
+    // --- Destination (encrypted) ---
+    @Column(name = "destination_id", length = 36)
+    private String destinationId;
+
+    @Column(name = "destination_fingerprint", length = 128)
+    private String destinationFingerprint;
+
+    @Column(name = "destination_ciphertext", columnDefinition = "TEXT")
+    private String destinationCiphertext;
+
+    @Column(name = "destination_key_version")
+    private Integer destinationKeyVersion;
+
+    @Column(name = "destination_algorithm", length = 32)
+    private String destinationAlgorithm;
+
+    @Column(name = "bank_account_last4", length = 4)
+    private String bankAccountLast4;
+
+    @Column(name = "verification_state", length = 16, nullable = false)
+    private String verificationState = "PENDING";
+
+    @Column(name = "destination_enrolled_at")
+    private Instant destinationEnrolledAt;
+
+    @Column(name = "destination_updated_at")
+    private Instant destinationUpdatedAt;
+
     protected SellerProfileJpaEntity() {
     }
 
-    public SellerProfileJpaEntity(String keycloakId, String shopName, String bankName, String bankAccount, boolean approved, String tier, boolean vacationMode) {
+    public SellerProfileJpaEntity(String keycloakId, String shopName, String bankName, boolean approved, String tier, boolean vacationMode) {
         this.keycloakId = keycloakId;
         this.shopName = shopName;
         this.bankName = bankName;
-        this.bankAccount = bankAccount;
         this.approved = approved;
         this.tier = tier;
         this.vacationMode = vacationMode;
@@ -78,7 +105,6 @@ public class SellerProfileJpaEntity extends BaseJpaEntity {
                 sellerProfile.id(),
                 sellerProfile.shopName(),
                 sellerProfile.bankName(),
-                sellerProfile.bankAccount(),
                 sellerProfile.approved(),
                 sellerProfile.tier().name(),
                 sellerProfile.vacationMode()
@@ -88,15 +114,15 @@ public class SellerProfileJpaEntity extends BaseJpaEntity {
         entity.logoUrl = sellerProfile.logoUrl();
         entity.bannerUrl = sellerProfile.bannerUrl();
         entity.rejectionReason = sellerProfile.rejectionReason();
+        entity.applyDestination(sellerProfile);
         return entity;
     }
 
     SellerProfile toDomain() {
-        return new SellerProfile(
+        SellerProfile profile = new SellerProfile(
                 keycloakId,
                 shopName,
                 bankName,
-                bankAccount,
                 pickupAddress(),
                 approved,
                 Tier.valueOf(tier),
@@ -104,8 +130,10 @@ public class SellerProfileJpaEntity extends BaseJpaEntity {
                 description,
                 logoUrl,
                 bannerUrl,
-                getCreatedAt()
-        ).withRejectionReason(rejectionReason);
+                getCreatedAt(),
+                destinationFromColumns()
+        );
+        return profile.withRejectionReason(rejectionReason);
     }
 
     private void applyPickupAddress(Address pickupAddress) {
@@ -124,5 +152,57 @@ public class SellerProfileJpaEntity extends BaseJpaEntity {
             return null;
         }
         return new Address(pickupAddressStreet, pickupAddressWard, pickupAddressDistrict, pickupAddressCity, pickupAddressDefault);
+    }
+
+    private void applyDestination(SellerProfile profile) {
+        profile.destination().ifPresentOrElse(d -> {
+            this.destinationId = d.destinationId();
+            this.destinationFingerprint = d.fingerprint();
+            this.destinationCiphertext = d.ciphertext();
+            this.destinationKeyVersion = d.keyVersion();
+            this.destinationAlgorithm = d.algorithm();
+            this.bankAccountLast4 = d.bankAccountLast4();
+            this.verificationState = d.verificationState().name();
+            this.destinationEnrolledAt = d.enrolledAt();
+            this.destinationUpdatedAt = d.updatedAt();
+        }, () -> {
+            this.destinationId = null;
+            this.destinationFingerprint = null;
+            this.destinationCiphertext = null;
+            this.destinationKeyVersion = null;
+            this.destinationAlgorithm = null;
+            this.bankAccountLast4 = null;
+            this.verificationState = "PENDING";
+            this.destinationEnrolledAt = null;
+            this.destinationUpdatedAt = null;
+        });
+    }
+
+    private SellerPayoutDestination destinationFromColumns() {
+        if (destinationId == null || destinationCiphertext == null) {
+            return null;
+        }
+        VerificationState state;
+        try {
+            state = VerificationState.valueOf(verificationState == null ? "PENDING" : verificationState);
+        } catch (IllegalArgumentException ex) {
+            state = VerificationState.PENDING;
+        }
+        int keyVersion = destinationKeyVersion == null ? 0 : destinationKeyVersion;
+        Instant enrolledAt = destinationEnrolledAt == null ? getCreatedAt() : destinationEnrolledAt;
+        Instant updatedAt = destinationUpdatedAt == null ? getUpdatedAt() : destinationUpdatedAt;
+        return new SellerPayoutDestination(
+                destinationId,
+                keycloakId,
+                bankName,
+                bankAccountLast4 == null ? "0000" : bankAccountLast4,
+                destinationFingerprint == null ? "0" : destinationFingerprint,
+                keyVersion,
+                destinationAlgorithm == null ? SellerPayoutDestination.PERSISTED_ALGORITHM : destinationAlgorithm,
+                destinationCiphertext,
+                state,
+                enrolledAt,
+                updatedAt
+        );
     }
 }

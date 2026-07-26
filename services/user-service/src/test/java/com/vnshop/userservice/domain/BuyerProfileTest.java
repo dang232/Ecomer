@@ -78,4 +78,37 @@ class BuyerProfileTest {
         assertThat(p.phone()).isEqualTo(newPhone);
         assertThat(p.avatarUrl()).isEqualTo("new-avatar");
     }
+
+    @Test
+    void constructor_withBannedTrue_initialFlagSet() {
+        BuyerProfile p = new BuyerProfile("kc-1", null, "Alice", PHONE, "avatar", true, null);
+        assertThat(p.banned()).isTrue();
+        assertThat(p.email()).isNull();
+    }
+
+    @Test
+    void ban_setsBannedTrue() {
+        BuyerProfile p = new BuyerProfile("kc-1", "Alice", PHONE, "avatar", null);
+        assertThat(p.banned()).isFalse();
+
+        p.ban();
+
+        assertThat(p.banned()).isTrue();
+    }
+
+    @Test
+    void unban_setsBannedFalse() {
+        BuyerProfile p = new BuyerProfile("kc-1", null, "Alice", PHONE, "avatar", true, null);
+        assertThat(p.banned()).isTrue();
+
+        p.unban();
+
+        assertThat(p.banned()).isFalse();
+    }
+
+    @Test
+    void email_returnsNormalizedValue() {
+        BuyerProfile p = new BuyerProfile("kc-1", "  alice@example.com  ", "Alice", PHONE, "avatar", null);
+        assertThat(p.email()).isEqualTo("alice@example.com");
+    }
 }

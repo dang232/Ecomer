@@ -7,6 +7,7 @@ import com.vnshop.sellerfinanceservice.infrastructure.persistence.ProcessedOrder
 import com.vnshop.sellerfinanceservice.infrastructure.persistence.ProcessedRefundRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @SpringBootTest(properties = {
@@ -28,6 +29,12 @@ class SellerFinanceServiceApplicationTests {
 
 	@MockitoBean
 	private ObjectMapper objectMapper;
+
+	// Replace the auto-configured JwtDecoder (which would otherwise probe the
+	// real Keycloak issuer-uri during SecurityConfig wiring) with a Mockito
+	// stub so context-load passes without a live Keycloak instance.
+	@MockitoBean
+	private JwtDecoder jwtDecoder;
 
 	@Test
 	void contextLoads() {

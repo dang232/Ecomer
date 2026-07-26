@@ -13,7 +13,13 @@ public record PayoutResponse(
         Instant createdAt,
         String completedBy,
         Instant completedAt,
-        String sellerName) {
+        String sellerName,
+        String currency,
+        String idempotencyKey,
+        String approvedBy,
+        String paidBy,
+        String externalReference,
+        String evidenceReference) {
     static PayoutResponse fromDomain(Payout payout) {
         return fromDomain(payout, null);
     }
@@ -27,6 +33,12 @@ public record PayoutResponse(
                 payout.createdAt(),
                 payout.completedBy(),
                 payout.completedAt(),
-                sellerName);
+                sellerName,
+                payout.currency(),
+                payout.idempotencyKey(),
+                payout.approvedBy(),
+                payout.paidBy(),
+                payout.externalReference(),
+                payout.evidenceReference());
     }
 }

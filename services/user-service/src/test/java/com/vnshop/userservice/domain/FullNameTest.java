@@ -63,4 +63,24 @@ class FullNameTest {
         assertThatThrownBy(() -> FullName.fromComposed("   "))
                 .isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void canonicalConstructor_withNonEmptyLastName_composesValueWithSpace() {
+        FullName n = new FullName("Alice", "Nguyen", null);
+        assertThat(n.value()).isEqualTo("Alice Nguyen");
+        assertThat(n.firstName()).isEqualTo("Alice");
+        assertThat(n.lastName()).isEqualTo("Nguyen");
+    }
+
+    @Test
+    void canonicalConstructor_withBlankLastName_setsValueToFirstName() {
+        FullName n = new FullName("Alice", "", null);
+        assertThat(n.value()).isEqualTo("Alice");
+    }
+
+    @Test
+    void canonicalConstructor_nullFirstName_throws() {
+        assertThatThrownBy(() -> new FullName(null, "Nguyen", null))
+                .isInstanceOf(NullPointerException.class);
+    }
 }

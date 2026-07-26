@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -56,7 +57,17 @@ public class SellerFinanceController {
 
     @PostMapping("/payouts")
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<PayoutResponse> requestPayout(@Valid @RequestBody PayoutRequest request) {
-        return ApiResponse.ok(PayoutResponse.fromDomain(requestPayoutUseCase.request(JwtPrincipalUtil.currentSellerId(), request.amount())));
+    public ApiResponse<PayoutResponse> requestPayout(
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @Valid @RequestBody PayoutRequest request) {
+        String sellerId = JwtPrincipalUtil.currentSellerId();
+        // Keep the legacy route callable during the client migration. New clients must
+        // send Idempotency-Key and use the canonical reservation path.
+        var payout = idempotencyKey == null || idempotencyKey.isBlank()
+                ? requestPayoutUseCase.request(sellerId, request.amount())
+                : requestPayoutUseCase.request(sellerId, request.amount(),
+                        request.currency() == null || request.currency().isBlank() ? "VND" : request.currency(),
+                        idempotencyKey);
+        return ApiResponse.ok(PayoutResponse.fromDomain(payout));
     }
 }

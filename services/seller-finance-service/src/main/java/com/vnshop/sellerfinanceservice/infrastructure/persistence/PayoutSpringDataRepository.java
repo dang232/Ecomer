@@ -11,6 +11,8 @@ import java.util.UUID;
 public interface PayoutSpringDataRepository extends JpaRepository<PayoutJpaEntity, UUID> {
     List<PayoutJpaEntity> findByStatus(PayoutStatus status);
 
+    java.util.Optional<PayoutJpaEntity> findBySellerIdAndIdempotencyKey(String sellerId, String idempotencyKey);
+
     @Query("select p from PayoutJpaEntity p where p.status = :status and "
             + "(:term = '' or lower(p.sellerId) like :likeTerm or lower(str(p.payoutId)) like :likeTerm) "
             + "order by p.createdAt desc")

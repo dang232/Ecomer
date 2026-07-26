@@ -28,6 +28,7 @@
 	</scm>
 	<properties>
 		<jackson.version>2.22.1</jackson.version>
+		<jackson.annotations.version>2.21</jackson.annotations.version>
 		<jackson3.version>3.1.4</jackson3.version>
 		<java.version>25</java.version>
 		<netty.version>4.2.16.Final</netty.version>
@@ -79,6 +80,11 @@
 			<artifactId>spring-boot-starter-flyway</artifactId>
 		</dependency>
 		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-annotations</artifactId>
+			<version>${jackson.annotations.version}</version>
+		</dependency>
+		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-validation</artifactId>
 		</dependency>
@@ -92,7 +98,7 @@
 		</dependency>
 		<dependency>
 			<groupId>io.github.resilience4j</groupId>
-			<artifactId>resilience4j-spring-boot3</artifactId>
+			<artifactId>resilience4j-spring-boot4</artifactId>
 			<version>2.4.0</version>
 		</dependency>
 		<dependency>
@@ -261,10 +267,15 @@
 								<exclude>com/vnshop/userservice/infrastructure/keycloak/**</exclude>
 								<exclude>com/vnshop/userservice/infrastructure/web/**</exclude>
 								<exclude>com/vnshop/userservice/infrastructure/config/**</exclude>
+								<!-- The one-shot payout backfill is verified against PostgreSQL in Docker. -->
+								<exclude>com/vnshop/userservice/infrastructure/migration/**</exclude>
 								<exclude>com/vnshop/userservice/infrastructure/integration/**</exclude>
 								<exclude>com/vnshop/userservice/infrastructure/storage/**</exclude>
 							<exclude>com/vnshop/userservice/infrastructure/event/**</exclude>
 							<exclude>com/vnshop/userservice/infrastructure/featureflag/**</exclude>
+							<!-- Domain ports are contracts (interfaces); they cannot be implementation-covered
+							     by unit tests. Adapters live under infrastructure/ and are also excluded. -->
+							<exclude>com/vnshop/userservice/domain/port/out/**</exclude>
 							</excludes>
 							<rules>
 								<rule>
