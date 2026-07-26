@@ -26,12 +26,12 @@ class FinanceMigrationIntegrationTest {
     private JwtDecoder jwtDecoder;
 
     @Test
-    void appliesFlywayMigrationsThroughVersionTen() {
+    void appliesFlywayMigrationsThroughVersionEleven() {
         String version = jdbcTemplate.queryForObject(
             "select version from seller_finance_svc.flyway_schema_history where success order by installed_rank desc limit 1",
             String.class
         );
 
-        assertThat(version).isEqualTo("10");
+        assertThat(version).isEqualTo("11");
     }
 }
