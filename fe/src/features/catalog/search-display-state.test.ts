@@ -73,6 +73,19 @@ describe("resolveSearchDisplayState", () => {
     ).toEqual({ source: "search", status: "empty", notice: null });
   });
 
+  it("uses the catalog while an empty search fallback is loading", () => {
+    expect(
+      resolveSearchDisplayState({
+        ...baseState,
+        searchTotalElements: 0,
+        searchProductCount: 0,
+        catalogFallbackActive: true,
+        catalogLoading: true,
+        visibleProductCount: 0,
+      }),
+    ).toEqual({ source: "catalog", status: "loading", notice: null });
+  });
+
   it("distinguishes a successful empty response from a failed request", () => {
     expect(
       resolveSearchDisplayState({

@@ -6,10 +6,23 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   v2SearchRefetch: vi.fn(),
   v2Error: null as unknown,
+  v2SearchIsFetching: false,
+  v2SearchIsFetchingNextPage: false,
+  v2SearchIsPlaceholderData: false,
   v2FetchNextPage: vi.fn(),
   v2HasNextPage: false,
   v2SearchData: undefined as
     { pages: { data: { items: Record<string, unknown>[]; facets?: unknown } }[] } | undefined,
+  v2CatalogData: undefined as
+    { pages: { data: { items: Record<string, unknown>[]; facets?: unknown } }[] } | undefined,
+  v2CatalogError: null as unknown,
+  v2CatalogIsLoading: false,
+  v2CatalogIsFetching: false,
+  v2CatalogIsFetchingNextPage: false,
+  v2CatalogIsPlaceholderData: false,
+  v2CatalogRefetch: vi.fn(),
+  v2ProductsEnabled: false,
+  v2SearchParams: undefined as Record<string, unknown> | undefined,
 }));
 
 vi.mock("motion/react", () => ({
@@ -68,27 +81,37 @@ vi.mock("../hooks/use-search-facets", () => ({
 }));
 
 vi.mock("../hooks/use-search-v2", () => ({
-  useSearchV2: () => ({
+  useSearchV2: (params: Record<string, unknown>) => {
+    mocks.v2SearchParams = params;
+    return {
     data: mocks.v2SearchData,
     error: mocks.v2Error,
     isLoading: false,
+    isFetching: mocks.v2SearchIsFetching,
+    isFetchingNextPage: mocks.v2SearchIsFetchingNextPage,
+    isPlaceholderData: mocks.v2SearchIsPlaceholderData,
     hasNextPage: mocks.v2HasNextPage,
-    isFetchingNextPage: false,
     fetchNextPage: mocks.v2FetchNextPage,
     refetch: mocks.v2SearchRefetch,
-  }),
+    };
+  },
 }));
 
 vi.mock("../hooks/use-products-v2", () => ({
-  useProductsV2: () => ({
-    data: undefined,
-    error: null,
-    isLoading: false,
-    hasNextPage: false,
-    isFetchingNextPage: false,
-    fetchNextPage: vi.fn(),
-    refetch: vi.fn(),
-  }),
+  useProductsV2: (_params: unknown, enabled: boolean) => {
+    mocks.v2ProductsEnabled = enabled;
+    return {
+      data: mocks.v2CatalogData,
+      error: mocks.v2CatalogError,
+      isLoading: mocks.v2CatalogIsLoading,
+      isFetching: mocks.v2CatalogIsFetching,
+      isFetchingNextPage: mocks.v2CatalogIsFetchingNextPage,
+      isPlaceholderData: mocks.v2CatalogIsPlaceholderData,
+      hasNextPage: false,
+      fetchNextPage: vi.fn(),
+      refetch: mocks.v2CatalogRefetch,
+    };
+  },
 }));
 
 vi.mock("../lib/api/catalog-flags", () => ({ catalogV2Enabled: true }));
@@ -106,9 +129,21 @@ function renderPage(entry = "/search") {
 beforeEach(() => {
   mocks.v2SearchRefetch.mockReset();
   mocks.v2Error = null;
+  mocks.v2SearchIsFetching = false;
+  mocks.v2SearchIsFetchingNextPage = false;
+  mocks.v2SearchIsPlaceholderData = false;
   mocks.v2FetchNextPage.mockReset();
   mocks.v2HasNextPage = false;
   mocks.v2SearchData = undefined;
+  mocks.v2CatalogData = undefined;
+  mocks.v2CatalogError = null;
+  mocks.v2CatalogIsLoading = false;
+  mocks.v2CatalogIsFetching = false;
+  mocks.v2CatalogIsFetchingNextPage = false;
+  mocks.v2CatalogIsPlaceholderData = false;
+  mocks.v2CatalogRefetch.mockReset();
+  mocks.v2ProductsEnabled = false;
+  mocks.v2SearchParams = undefined;
 });
 
 describe("SearchPage", () => {
@@ -157,6 +192,39 @@ describe("SearchPage", () => {
     expect(mocks.v2SearchRefetch).not.toHaveBeenCalled();
   });
 
+  it("renders every loaded catalog cursor page without slicing back to 20", () => {
+    mocks.v2CatalogData = {
+      pages: [
+        {
+          data: {
+            items: Array.from({ length: 20 }, (_, index) => ({
+              id: `catalog-${index}`,
+              name: `Catalog product ${index}`,
+              price: 100000,
+              variants: [],
+            })),
+          },
+        },
+        {
+          data: {
+            items: [
+              {
+                id: "catalog-20",
+                name: "Catalog product 20",
+                price: 100000,
+                variants: [],
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    renderPage("/search");
+
+    expect(screen.getAllByTestId("product-card")).toHaveLength(21);
+  });
+
   it("uses the projected rating and review count for the star filter", () => {
     mocks.v2SearchData = {
       pages: [
@@ -182,5 +250,139 @@ describe("SearchPage", () => {
 
     expect(screen.getByText("Tai nghe Sony WH-1000XM5")).toBeInTheDocument();
     expect(screen.getByText("4")).toBeInTheDocument();
+    expect(mocks.v2SearchParams).toMatchObject({ minRating: 4 });
+  });
+
+  it("sends repeated seller tags to cursor search instead of filtering the loaded page", () => {
+    renderPage("/search?tag=wireless&tag=bluetooth");
+
+    expect(mocks.v2SearchParams).toMatchObject({ tags: ["bluetooth", "wireless"] });
+  });
+
+  it("shows loading while a changed search key fetches behind retained data", () => {
+    mocks.v2SearchData = {
+      pages: [
+        {
+          data: {
+            items: [
+              {
+                id: "previous-product",
+                name: "Previous category product",
+                price: 100000,
+                variants: [],
+              },
+            ],
+          },
+        },
+      ],
+    };
+    mocks.v2SearchIsFetching = true;
+    mocks.v2SearchIsPlaceholderData = true;
+
+    renderPage("/search?q=fashion");
+
+    expect(screen.getByText(/Loading products/)).toBeInTheDocument();
+    expect(screen.queryByText("Previous category product")).not.toBeInTheDocument();
+  });
+
+  it("falls back to catalog products when a category search projection is empty", () => {
+    mocks.v2SearchData = { pages: [{ data: { items: [] } }] };
+    mocks.v2CatalogData = {
+      pages: [
+        {
+          data: {
+            items: [
+              {
+                id: "fashion-1",
+                name: "Fashion jacket",
+                categoryId: "fashion",
+                price: 450000,
+                variants: [],
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    renderPage("/search?q=fashion");
+
+    expect(mocks.v2ProductsEnabled).toBe(true);
+    expect(screen.getByText("Fashion jacket")).toBeInTheDocument();
+  });
+
+  it("hydrates missing search images from the catalog projection", () => {
+    mocks.v2SearchData = {
+      pages: [
+        {
+          data: {
+            items: [
+              {
+                id: "missing-image",
+                name: "Headphones",
+                categoryId: "electronics",
+                imageUrl: null,
+                price: 199000,
+                variants: [],
+              },
+            ],
+          },
+        },
+      ],
+    };
+    mocks.v2CatalogData = {
+      pages: [
+        {
+          data: {
+            items: [
+              {
+                id: "missing-image",
+                name: "Headphones",
+                categoryId: "electronics",
+                imageUrl: "https://catalog/headphones.jpg",
+                price: 199000,
+                variants: [],
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    renderPage("/search?q=headphones");
+
+    expect(mocks.v2ProductsEnabled).toBe(true);
+    expect(screen.getByRole("img", { name: "Headphones" })).toHaveAttribute(
+      "src",
+      "https://catalog/headphones.jpg",
+    );
+  });
+
+  it("does not show placeholder catalog data while the fallback key is fetching", () => {
+    mocks.v2SearchData = { pages: [{ data: { items: [] } }] };
+    mocks.v2CatalogData = {
+      pages: [
+        {
+          data: {
+            items: [
+              {
+                id: "previous-catalog-product",
+                name: "Previous catalog product",
+                categoryId: "electronics",
+                price: 199000,
+                variants: [],
+              },
+            ],
+          },
+        },
+      ],
+    };
+    mocks.v2CatalogIsFetching = true;
+    mocks.v2CatalogIsPlaceholderData = true;
+
+    renderPage("/search?cat=fashion");
+
+    expect(screen.getByText(/Loading products/)).toBeInTheDocument();
+    expect(screen.queryByText("Previous catalog product")).not.toBeInTheDocument();
   });
 });

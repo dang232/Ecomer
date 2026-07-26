@@ -11,7 +11,7 @@ describe("search route state", () => {
     expect(
       readSearchRouteState(
         new URLSearchParams(
-          "q=headphones&cat=electronics&brand=Acme&priceMin=2&priceMax=20&minRating=4&freeShip=true&sameDay=true&verifiedOnly=true&officialOnly=true&sort=price-low&page=3&flash=true",
+          "q=headphones&cat=electronics&brand=Acme&priceMin=2&priceMax=20&minRating=4&tag=Wireless&tag=bluetooth&tag=wireless&sameDay=true&verifiedOnly=true&officialOnly=true&sort=price-low&page=3&flash=true",
         ),
       ),
     ).toEqual({
@@ -21,7 +21,7 @@ describe("search route state", () => {
       priceMin: "2",
       priceMax: "20",
       minRating: 4,
-      freeShip: true,
+      tag: ["bluetooth", "Wireless", "wireless"].sort(),
       sameDay: true,
       verifiedOnly: true,
       officialOnly: true,
@@ -39,7 +39,7 @@ describe("search route state", () => {
     expect(state.minRating).toBe(5);
     expect(state.sort).toBe("popular");
     expect(state.page).toBe(1);
-    expect(state.freeShip).toBe(false);
+    expect(state.tag).toEqual([]);
   });
 
   it("resets pagination when an applied filter changes", () => {
@@ -69,5 +69,11 @@ describe("search route state", () => {
     );
 
     expect(next.toString()).toBe("q=phone&flash=true");
+  });
+
+  it("writes tags as repeated stable route parameters", () => {
+    const next = updateSearchRouteState(new URLSearchParams(), { tag: ["Wireless", "bluetooth"] });
+
+    expect(next.getAll("tag")).toEqual(["Wireless", "bluetooth"]);
   });
 });

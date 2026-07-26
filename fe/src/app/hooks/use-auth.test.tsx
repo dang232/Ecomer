@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   passwordLogin: vi.fn(),
   refreshTokens: vi.fn(),
   revokeTokens: vi.fn(),
+  accessTokenRefreshBufferMs: 60_000,
 }));
 
 vi.mock("../lib/auth/native-auth", () => ({
@@ -20,6 +21,9 @@ vi.mock("../lib/auth/native-auth", () => ({
   passwordLogin: (...args: unknown[]) => mocks.passwordLogin(...args),
   refreshTokens: (...args: unknown[]) => mocks.refreshTokens(...args),
   revokeTokens: (...args: unknown[]) => mocks.revokeTokens(...args),
+  ACCESS_TOKEN_REFRESH_BUFFER_MS: mocks.accessTokenRefreshBufferMs,
+  isAccessTokenRefreshDue: (tokenSet: { accessExpiresAt: number }) =>
+    tokenSet.accessExpiresAt - Date.now() <= mocks.accessTokenRefreshBufferMs,
   AuthError: class AuthError extends Error {
     constructor(
       readonly statusCode: number,
@@ -141,6 +145,8 @@ describe("AuthProvider native session", () => {
   });
 
   it("does not let an in-flight refresh restore a session after logout", async () => {
+    const expiringTokenSet = { ...tokenSet, accessExpiresAt: Date.now() + 30_000 };
+    mocks.refreshTokens.mockResolvedValueOnce(expiringTokenSet);
     const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
     await waitFor(() => expect(result.current.ready).toBe(true));
 
@@ -158,6 +164,18 @@ describe("AuthProvider native session", () => {
 
     await waitFor(() => expect(result.current.authenticated).toBe(false));
     expect(mocks.setLiveTokenSet).toHaveBeenLastCalledWith(null);
+  });
+
+  it("does not refresh on focus or visibility changes while the JWT is fresh", async () => {
+    const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
+    await waitFor(() => expect(result.current.ready).toBe(true));
+
+    act(() => {
+      window.dispatchEvent(new Event("focus"));
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    expect(mocks.refreshTokens).toHaveBeenCalledTimes(1);
   });
 
   it("reports allowed roles only", async () => {

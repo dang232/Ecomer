@@ -13,7 +13,7 @@ export const userProfileSchema = z
   .object({
     id: z.string().optional(),
     keycloakId: z.string().optional(),
-    email: z.string().optional(),
+    email: z.string().nullable().optional(),
     name: z.string().nullable().optional(),
     phone: z.string().nullable().optional(),
     avatar: z.string().nullable().optional(),

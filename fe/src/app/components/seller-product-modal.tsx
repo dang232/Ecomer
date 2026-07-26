@@ -111,6 +111,7 @@ function SellerProductModalBody({
   const [stock, _setStock] = useState(() => (product?.stock ? String(product.stock) : "1"));
   const [categoryId, setCategoryId] = useState(() => product?.categoryId ?? "");
   const [brand, setBrand] = useState(() => product?.brand ?? "");
+  const [tagsText, setTagsText] = useState(() => product?.tags?.join(", ") ?? "");
 
   // ── Variant matrix ─────────────────────────────────────────────────────────
   // Grid: rows = sizes, cols = colors. Each cell holds { sku, price, stock }.
@@ -326,6 +327,10 @@ function SellerProductModalBody({
         description: description.trim() || undefined,
         categoryId: categoryId.trim() || undefined,
         brand: brand.trim() || undefined,
+        tags: tagsText
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter(Boolean),
       };
 
       // Build flat variants array from the matrix grid.
@@ -782,6 +787,25 @@ function SellerProductModalBody({
 
           {/* ── Variant Matrix ─────────────────────────────────────────────── */}
           <div>
+            <label
+              htmlFor="seller-product-tags"
+              className="block text-sm font-semibold text-foreground mb-1.5"
+            >
+              {t("seller.productModal.tagsLabel", { defaultValue: "Tags" })}
+            </label>
+            <input
+              id="seller-product-tags"
+              value={tagsText}
+              onChange={(e) => setTagsText(e.target.value)}
+              placeholder={t("seller.productModal.tagsPlaceholder", {
+                defaultValue: "wireless, bluetooth, travel",
+              })}
+              className="w-full px-4 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-[var(--primary)]"
+              disabled={isBusy}
+            />
+          </div>
+
+          <div>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-semibold text-foreground">
                 {t("seller.productModal.variantsLabel") ?? "Phân loại (Biến thể)"}
@@ -1074,6 +1098,7 @@ function baseFieldsChanged(
     description: string | undefined;
     categoryId: string | undefined;
     brand: string | undefined;
+    tags: string[];
   },
 ): boolean {
   if (!product) return true;
@@ -1081,6 +1106,7 @@ function baseFieldsChanged(
     product.name !== body.name ||
     (product.description ?? "") !== (body.description ?? "") ||
     (product.categoryId ?? undefined) !== body.categoryId ||
-    (product.brand ?? undefined) !== body.brand
+    (product.brand ?? undefined) !== body.brand ||
+    (product.tags ?? []).join("|") !== body.tags.join("|")
   );
 }

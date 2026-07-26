@@ -220,6 +220,19 @@ describe("request", () => {
     expect(u.searchParams.has("category")).toBe(false);
   });
 
+  it("serializes repeated query values without collapsing them", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      mockResponse({
+        body: { success: true, message: "ok", data: [], errorCode: null, timestamp: "2026-05-15T00:00:00Z" },
+      }),
+    );
+
+    await api.get("/search/v2", z.array(z.unknown()), { tag: ["wireless", "bluetooth"] });
+
+    const [url] = fetchSpy.mock.calls[0];
+    expect(new URL(String(url)).searchParams.getAll("tag")).toEqual(["wireless", "bluetooth"]);
+  });
+
   it("returns a binary response without applying the JSON envelope contract", async () => {
     fetchSpy.mockResolvedValueOnce(
       new Response("section,value\nsummary,900000\n", {

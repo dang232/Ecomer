@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { sellerIdSchema } from "./branded-ids";
+import { parsePayoutStatus } from "../../lib/domain-enums";
 
 // BE seller-finance-service WalletResponse(sellerId, availableBalance,
 // pendingBalance, totalEarned, lastPayoutAt). FE legacy consumers want
@@ -40,22 +41,22 @@ export const payoutSchema = z
     id: z.string().optional(),
     requestedAt: z.string().optional(),
     completedAt: z.string().nullable().optional(),
-    bankAccount: z.string().optional(),
     // Live BE names
     payoutId: z.string().optional(),
     sellerId: sellerIdSchema.optional(),
     createdAt: z.string().optional(),
     amount: z.number(),
     status: z.string(),
+    currency: z.string().optional(),
   })
   .passthrough()
   .transform((raw) => ({
     id: raw.id ?? raw.payoutId ?? "",
     sellerId: raw.sellerId,
     amount: raw.amount,
-    status: raw.status,
+    status: parsePayoutStatus(raw.status),
     requestedAt: raw.requestedAt ?? raw.createdAt,
     completedAt: raw.completedAt,
-    bankAccount: raw.bankAccount,
+    currency: raw.currency ?? "VND",
   }));
 export type Payout = z.infer<typeof payoutSchema>;

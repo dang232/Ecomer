@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { productIdSchema, sellerIdSchema } from "./branded-ids";
+import { parsePayoutStatus } from "../../lib/domain-enums";
 
 // BE user-service BuyerProfileResponse(keycloakId, email, name, phone, avatarUrl, banned).
 // Used by admin user management panel.
@@ -96,9 +97,8 @@ export type AdminOrderSummary = z.infer<typeof adminOrderSummarySchema>;
  * gotcha #58.
  */
 
-// BE user-service SellerProfileResponse(id, shopName, bankName, bankAccount,
-// approved: boolean, tier, vacationMode). FE wanted `status: string` and
-// `appliedAt`; neither exists. Map approved → status string for the UI.
+// BE user-service SellerProfileResponse exposes masked destination metadata,
+// never a raw account value. Map approved → status string for the UI.
 export const sellerSummarySchema = z
   .object({
     id: z.string(),
@@ -109,7 +109,15 @@ export const sellerSummarySchema = z
     // Live BE fields
     approved: z.boolean().optional(),
     bankName: z.string().nullable().optional(),
-    bankAccount: z.string().nullable().optional(),
+    destination: z
+      .object({
+        destinationId: z.string().optional(),
+        bankName: z.string().nullable().optional(),
+        last4: z.string().nullable().optional(),
+        verificationState: z.string().optional(),
+      })
+      .nullable()
+      .optional(),
     tier: z.string().optional(),
     vacationMode: z.boolean().optional(),
   })
@@ -120,8 +128,9 @@ export const sellerSummarySchema = z
     status: raw.status ?? (raw.approved ? "APPROVED" : "PENDING"),
     appliedAt: raw.appliedAt,
     approved: raw.approved ?? raw.status === "APPROVED",
-    bankName: raw.bankName,
-    bankAccount: raw.bankAccount,
+    bankName: raw.destination?.bankName ?? raw.bankName,
+    last4: raw.destination?.last4,
+    destination: raw.destination,
     tier: raw.tier,
     vacationMode: raw.vacationMode,
   }));
@@ -192,7 +201,7 @@ export const disputeSchema = z
   .transform((raw) => ({
     id: raw.id ?? raw.disputeId ?? "",
     returnId: raw.returnId,
-    status: raw.status,
+    status: parsePayoutStatus(raw.status),
     description: raw.description ?? raw.buyerReason ?? undefined,
     sellerResponse: raw.sellerResponse ?? undefined,
     adminResolution: raw.adminResolution ?? undefined,
@@ -223,6 +232,7 @@ export const adminPayoutSchema = z
     sellerName: z.string().optional(),
     amount: z.number(),
     status: z.string(),
+    currency: z.string().optional(),
     // Audit trail (pt35) — populated only on COMPLETED rows. Both nullable
     // because PENDING/FAILED rows have nothing to record, and historical
     // COMPLETED rows that predate the V5 migration have no captured admin.
@@ -235,10 +245,11 @@ export const adminPayoutSchema = z
     sellerId: raw.sellerId,
     sellerName: raw.sellerName,
     amount: raw.amount,
-    status: raw.status,
+    status: parsePayoutStatus(raw.status),
     requestedAt: raw.requestedAt ?? raw.createdAt,
     completedBy: raw.completedBy ?? undefined,
     completedAt: raw.completedAt ?? undefined,
+    currency: raw.currency ?? "VND",
   }));
 export type AdminPayout = z.infer<typeof adminPayoutSchema>;
 

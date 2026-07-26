@@ -15,7 +15,7 @@ const values: SearchFilterValues = {
   priceMin: "2",
   priceMax: "-4",
   minRating: 0,
-  freeShipping: false,
+  selectedTags: [],
   sameDay: false,
   verifiedOnly: false,
   officialOnly: false,
@@ -34,6 +34,7 @@ function renderFilters(overrides: Partial<React.ComponentProps<typeof SearchFilt
         { key: "home", count: 5 },
       ],
       brands: [],
+      tags: [{ key: "wireless", label: "Wireless", count: 8 }],
     },
     values,
     hasActiveFilters: true,
@@ -45,7 +46,7 @@ function renderFilters(overrides: Partial<React.ComponentProps<typeof SearchFilt
     onPriceMaxChange: vi.fn(),
     onApplyPrice: vi.fn(),
     onRatingChange: vi.fn(),
-    onFreeShippingChange: vi.fn(),
+    onTagsChange: vi.fn(),
     onSameDayChange: vi.fn(),
     onVerifiedChange: vi.fn(),
     onOfficialChange: vi.fn(),
@@ -75,5 +76,13 @@ describe("SearchFilters", () => {
     const props = renderFilters();
     fireEvent.click(screen.getByRole("checkbox", { name: "Official stores" }));
     expect(props.onOfficialChange).toHaveBeenCalledWith(true);
+  });
+
+  it("renders API-driven tags and emits a multi-select change", () => {
+    const props = renderFilters();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: /Wireless/ }));
+
+    expect(props.onTagsChange).toHaveBeenCalledWith(["wireless"]);
   });
 });

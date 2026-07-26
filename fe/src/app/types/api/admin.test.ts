@@ -8,6 +8,7 @@ import {
   dashboardSummarySchema,
   dashboardTopProductSchema,
   dashboardTopSellerSchema,
+  sellerSummarySchema,
 } from "./admin";
 
 describe("admin dashboard response contracts", () => {
@@ -121,5 +122,25 @@ describe("admin dashboard response contracts", () => {
         topSellers: [],
       }),
     ).toMatchObject({ asOf: "2026-07-23T12:00:00.000Z", summary: { realizedRevenue: 1150000 } });
+  });
+});
+
+describe("admin seller destination contract", () => {
+  it("keeps only masked destination metadata", () => {
+    const seller = sellerSummarySchema.parse({
+      id: "seller-1",
+      shopName: "Alice Shop",
+      approved: false,
+      destination: {
+        destinationId: "destination-1",
+        bankName: "Vietcombank",
+        last4: "****1234",
+        verificationState: "VERIFIED",
+      },
+      bankAccount: "9704000000000000",
+    });
+
+    expect(seller.last4).toBe("****1234");
+    expect(seller).not.toHaveProperty("bankAccount");
   });
 });

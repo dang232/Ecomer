@@ -113,7 +113,7 @@ export function SellersApproval() {
       <div className="bg-card rounded-2xl shadow-sm overflow-hidden">
         <div className="divide-y divide-gray-50">
           {sellers.map((s) => {
-            const tail = s.bankAccount ? s.bankAccount.slice(-4) : null;
+            const tail = s.last4 ?? null;
             const bankLine =
               s.bankName && tail
                 ? t("admin.sellers.rowBank", { bank: s.bankName, tail })

@@ -1,24 +1,17 @@
-/**
- * P1-7 tests: SellerWallet history filter uses a known enum set.
- * Tests render the REAL SellerWallet component with controlled props;
- * the component's own WITHDRAWAL_STATUS_FILTER drives the filtering.
- */
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { HTMLAttributes, ReactNode } from "react";
 import { createElement } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Payout } from "../../lib/api/endpoints/seller-finance";
 
-// ── Mock tanstack/react-query ────────────────────────────────────────────────
+const mutationState = vi.hoisted(() => ({ mutate: vi.fn() }));
 
 vi.mock("@tanstack/react-query", () => ({
   useQuery: vi.fn(),
-  useMutation: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+  useMutation: vi.fn(() => ({ mutate: mutationState.mutate, isPending: false })),
   useQueryClient: vi.fn(() => ({ invalidateQueries: vi.fn() })),
 }));
-
-// ── Mock AnimatePresence so FormDialog renders synchronously in jsdom ────────
 
 vi.mock("motion/react", () => ({
   AnimatePresence: ({ children }: { children: ReactNode }) => children,
@@ -28,165 +21,102 @@ vi.mock("motion/react", () => ({
   },
 }));
 
-// ── Mock i18n — return the key itself ───────────────────────────────────────
-
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }),
 }));
-
-// ── Mock API endpoint (unused but imported by component) ─────────────────────
 
 vi.mock("../../lib/api/endpoints/seller-finance", () => ({
   requestPayout: vi.fn(),
 }));
 
-// ── Mock tabler icons ─────────────────────────────────────────────────────────
-
 vi.mock("@tabler/icons-react", () => ({
   IconWalletOff: () => createElement("span", null, "off"),
 }));
 
-// ── Mock sonner toast ─────────────────────────────────────────────────────────
-
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-
-// ── Component under test ─────────────────────────────────────────────────────
 
 import { SellerWallet } from "./SellerWallet";
 
-// ── Fixture helpers ───────────────────────────────────────────────────────────
-
-/** Payout fixture with required fields for SellerWallet rendering. */
 function makePayout(
   overrides: Partial<Payout> & { id: string; status: string; amount: number },
 ): Payout {
-  const defaults = {
+  return {
     id: "",
-    sellerId: undefined as Payout["sellerId"],
+    sellerId: undefined,
     amount: 0,
-    status: "PENDING",
+    status: "REQUESTED",
     requestedAt: "2024-06-01T10:00:00Z",
     completedAt: undefined,
-    bankAccount: undefined,
-  };
-  return { ...defaults, ...overrides } as Payout;
+    ...overrides,
+  } as Payout;
 }
 
-/** All 7 statuses from the original test fixture. */
-const SEVEN_FIXTURES: Payout[] = [
-  makePayout({ id: "p-1", status: "COMPLETED", amount: 100000 }),
-  makePayout({ id: "p-2", status: "COMPLETED_BY_ADMIN", amount: 200000 }),
-  makePayout({ id: "p-3", status: "PENDING", amount: 300000 }),
+const PAYOUTS: Payout[] = [
+  makePayout({ id: "p-1", status: "PAID", amount: 100000 }),
+  makePayout({ id: "p-2", status: "SUBMITTED", amount: 200000 }),
+  makePayout({ id: "p-3", status: "REQUESTED", amount: 300000 }),
   makePayout({ id: "p-4", status: "FAILED", amount: 400000 }),
   makePayout({ id: "p-5", status: "REJECTED", amount: 500000 }),
-  makePayout({ id: "p-6", status: "PENDING_REVIEW", amount: 600000 }),
-  makePayout({ id: "p-7", status: "PAID_OUT", amount: 700000 }),
+  makePayout({ id: "p-6", status: "UNKNOWN", amount: 600000 }),
+  makePayout({ id: "p-7", status: "REVERSED", amount: 700000 }),
 ];
 
-/**
- * Count payout rows by their distinctive border class.
- * - Payout rows: `border-t border-gray-50`  (every payout row)
- * - Section headers: `bg-muted/40`          (distinct bg colour)
- * - History header: `border-b border-border` (top border, no py-4)
- *
- * Payout rows are the only elements inside the card body that carry
- * `border-t`. Filter by `py-4` padding too to be defensive against
- * any future additions that only carry `border-t`.
- */
 function getRowCount(): number {
   const card = screen.getByText("seller.wallet.historyTitle").closest(".bg-card");
-  if (!card) return 0;
-  return card.querySelectorAll("[class*=border-t][class*=py-4]").length;
+  return card?.querySelectorAll("[class*=border-t][class*=py-4]").length ?? 0;
 }
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
+describe("SellerWallet canonical payout history", () => {
+  beforeEach(() => {
+    mutationState.mutate.mockReset();
+    vi.stubGlobal("crypto", { randomUUID: vi.fn(() => "payout-key-test") });
+  });
 
-describe("SellerWallet history filter — P1-7 enum set", () => {
-  it("SW1 — Filter 'all': all 7 payouts are visible", () => {
-    render(
-      <SellerWallet balance={1_000_000} payouts={SEVEN_FIXTURES} isLoading={false} error={null} />,
-    );
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
 
-    expect(screen.getByText("seller.wallet.historyTitle")).toBeInTheDocument();
+  it("shows all payout rows", () => {
+    render(<SellerWallet balance={1_000_000} payouts={PAYOUTS} isLoading={false} error={null} />);
     expect(getRowCount()).toBe(7);
   });
 
-  it("SW2 — Filter 'completed': only COMPLETED, COMPLETED_BY_ADMIN, PAID_OUT rows appear", () => {
-    render(
-      <SellerWallet balance={1_000_000} payouts={SEVEN_FIXTURES} isLoading={false} error={null} />,
-    );
+  it("filters paid rows without using legacy completed statuses", () => {
+    render(<SellerWallet balance={1_000_000} payouts={PAYOUTS} isLoading={false} error={null} />);
+    fireEvent.click(screen.getByRole("button", { name: "seller.wallet.historyFilter.paid" }));
+    expect(getRowCount()).toBe(1);
+  });
 
-    fireEvent.click(screen.getByRole("button", { name: "seller.wallet.historyFilter.completed" }));
+  it("filters active rows across requested, submitted, and unknown statuses", () => {
+    render(<SellerWallet balance={1_000_000} payouts={PAYOUTS} isLoading={false} error={null} />);
+    fireEvent.click(screen.getByRole("button", { name: "seller.wallet.historyFilter.active" }));
     expect(getRowCount()).toBe(3);
   });
 
-  it("SW2 — Filter 'completed' does NOT include PENDING or FAILED rows", () => {
-    render(
-      <SellerWallet balance={1_000_000} payouts={SEVEN_FIXTURES} isLoading={false} error={null} />,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "seller.wallet.historyFilter.completed" }));
-    expect(getRowCount()).toBe(3); // PENDING, FAILED, REJECTED, PENDING_REVIEW are absent
-  });
-
-  it("SW3 — Filter 'pending': only PENDING and PENDING_REVIEW rows appear", () => {
-    render(
-      <SellerWallet balance={1_000_000} payouts={SEVEN_FIXTURES} isLoading={false} error={null} />,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "seller.wallet.historyFilter.pending" }));
-    expect(getRowCount()).toBe(2);
-  });
-
-  it("SW3 — Filter 'pending' does NOT include COMPLETED or FAILED rows", () => {
-    render(
-      <SellerWallet balance={1_000_000} payouts={SEVEN_FIXTURES} isLoading={false} error={null} />,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "seller.wallet.historyFilter.pending" }));
-    expect(getRowCount()).toBe(2); // COMPLETED, FAILED, REJECTED absent
-  });
-
-  it("SW4 — Filter 'failed': only FAILED and REJECTED rows appear", () => {
-    render(
-      <SellerWallet balance={1_000_000} payouts={SEVEN_FIXTURES} isLoading={false} error={null} />,
-    );
-
+  it("filters failed rows across failed, rejected, and reversed statuses", () => {
+    render(<SellerWallet balance={1_000_000} payouts={PAYOUTS} isLoading={false} error={null} />);
     fireEvent.click(screen.getByRole("button", { name: "seller.wallet.historyFilter.failed" }));
-    expect(getRowCount()).toBe(2);
+    expect(getRowCount()).toBe(3);
   });
 
-  it("SW4 — Filter 'failed' does NOT include COMPLETED or PENDING rows", () => {
-    render(
-      <SellerWallet balance={1_000_000} payouts={SEVEN_FIXTURES} isLoading={false} error={null} />,
-    );
+  it("has no destination field and reuses its idempotency key for a retry", () => {
+    render(<SellerWallet balance={500000} payouts={[]} isLoading={false} error={null} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "seller.wallet.historyFilter.failed" }));
-    expect(getRowCount()).toBe(2); // COMPLETED, PENDING, PENDING_REVIEW absent
-  });
+    fireEvent.click(screen.getByRole("button", { name: "seller.wallet.withdraw" }));
+    expect(screen.queryByLabelText("seller.wallet.payoutDialog.bankLabel")).not.toBeInTheDocument();
 
-  it("SW5 — Empty filtered state: clicking 'completed' with zero COMPLETED payouts shows empty message", () => {
-    const noCompleted: Payout[] = [
-      makePayout({ id: "x1", status: "PENDING", amount: 100000 }),
-      makePayout({ id: "x2", status: "FAILED", amount: 200000 }),
-    ];
+    fireEvent.change(screen.getByLabelText("seller.wallet.payoutDialog.amountLabel"), {
+      target: { value: "100000" },
+    });
+    const submit = screen.getByRole("button", { name: "seller.wallet.payoutDialog.submit" });
+    fireEvent.click(submit);
+    fireEvent.click(submit);
 
-    render(<SellerWallet balance={500000} payouts={noCompleted} isLoading={false} error={null} />);
-
-    fireEvent.click(screen.getByRole("button", { name: "seller.wallet.historyFilter.completed" }));
-    expect(getRowCount()).toBe(0);
-    expect(screen.getByText("seller.wallet.historyEmpty")).toBeInTheDocument();
-  });
-
-  it("SW6 — Case-insensitivity: lowercase status values still match the completed filter", () => {
-    const lower: Payout[] = [
-      makePayout({ id: "l1", status: "completed", amount: 100000 }),
-      makePayout({ id: "l2", status: "paid_out", amount: 200000 }),
-    ];
-
-    render(<SellerWallet balance={500000} payouts={lower} isLoading={false} error={null} />);
-
-    fireEvent.click(screen.getByRole("button", { name: "seller.wallet.historyFilter.completed" }));
-    expect(getRowCount()).toBe(2);
+    expect(mutationState.mutate).toHaveBeenCalledTimes(2);
+    const first = mutationState.mutate.mock.calls[0]?.[0];
+    const second = mutationState.mutate.mock.calls[1]?.[0];
+    expect(first).toMatchObject({ amount: 100000, currency: "VND" });
+    expect(first).not.toHaveProperty("bankAccount");
+    expect(second).toEqual(first);
   });
 });

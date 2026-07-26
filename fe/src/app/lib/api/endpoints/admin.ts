@@ -105,9 +105,17 @@ export const adminPendingPayouts = (params: { q?: string } = {}) =>
   api.get("/admin/finance/payouts/pending", z.array(adminPayoutSchema), params);
 export const adminCompletedPayouts = (params: { q?: string } = {}) =>
   api.get("/admin/finance/payouts/completed", z.array(adminPayoutSchema), params);
-export const adminCompletePayout = (id: string) =>
-  api.post(`/admin/finance/payouts/${encodeURIComponent(id)}/complete`, adminPayoutSchema);
-export const adminFailPayout = (id: string, body: { reason: string }) =>
+export type PayoutActionBody = {
+  reason: string;
+  evidence?: {
+    externalReference?: string;
+    evidenceHash?: string;
+    maskedDestinationConfirmed?: boolean;
+  };
+};
+export const adminCompletePayout = (id: string, body?: PayoutActionBody) =>
+  api.post(`/admin/finance/payouts/${encodeURIComponent(id)}/complete`, adminPayoutSchema, body);
+export const adminFailPayout = (id: string, body: PayoutActionBody) =>
   api.post(`/admin/finance/payouts/${encodeURIComponent(id)}/fail`, adminPayoutSchema, body);
 
 // Dashboard

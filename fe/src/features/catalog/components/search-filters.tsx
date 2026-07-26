@@ -12,7 +12,7 @@ export interface SearchFilterValues {
   priceMin: string;
   priceMax: string;
   minRating: number;
-  freeShipping: boolean;
+  selectedTags: string[];
   sameDay: boolean;
   verifiedOnly: boolean;
   officialOnly: boolean;
@@ -32,7 +32,7 @@ interface SearchFiltersProps {
   onPriceMaxChange: (value: string) => void;
   onApplyPrice: () => void;
   onRatingChange: (rating: number) => void;
-  onFreeShippingChange: (value: boolean) => void;
+  onTagsChange: (value: string[]) => void;
   onSameDayChange: (value: boolean) => void;
   onVerifiedChange: (value: boolean) => void;
   onOfficialChange: (value: boolean) => void;
@@ -55,7 +55,7 @@ export function SearchFilters({
   onPriceMaxChange,
   onApplyPrice,
   onRatingChange,
-  onFreeShippingChange,
+  onTagsChange,
   onSameDayChange,
   onVerifiedChange,
   onOfficialChange,
@@ -198,15 +198,6 @@ export function SearchFilters({
         <label className={optionClass}>
           <input
             type="checkbox"
-            checked={values.freeShipping}
-            onChange={(event) => onFreeShippingChange(event.target.checked)}
-            className="h-4 w-4 accent-primary"
-          />
-          <span>{t("search.freeShippingTag", { defaultValue: "Free shipping" })}</span>
-        </label>
-        <label className={optionClass}>
-          <input
-            type="checkbox"
             checked={values.sameDay}
             onChange={(event) => onSameDayChange(event.target.checked)}
             className="h-4 w-4 accent-primary"
@@ -214,6 +205,37 @@ export function SearchFilters({
           <span>{t("search.sameDayDelivery", { defaultValue: "Same-day delivery" })}</span>
         </label>
       </fieldset>
+
+      {facets.tags.length > 0 ? (
+        <fieldset className="border-t border-border pt-4">
+          <legend className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
+            {t("search.tagsHeader", { defaultValue: "Tags" })}
+          </legend>
+          <div className="max-h-52 space-y-0.5 overflow-y-auto pr-1">
+            {facets.tags.map((entry) => {
+              const selected = values.selectedTags.includes(entry.key);
+              return (
+                <label key={entry.key} className={optionClass}>
+                  <input
+                    type="checkbox"
+                    checked={selected}
+                    onChange={() =>
+                      onTagsChange(
+                        selected
+                          ? values.selectedTags.filter((tag) => tag !== entry.key)
+                          : [...values.selectedTags, entry.key],
+                      )
+                    }
+                    className="h-4 w-4 accent-primary"
+                  />
+                  <span className="min-w-0 flex-1 break-words">{entry.label ?? entry.key}</span>
+                  <span className="text-xs tabular-nums text-muted-foreground">{entry.count}</span>
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
+      ) : null}
 
       <fieldset className="border-t border-border pt-4">
         <legend className="mb-2 text-xs font-semibold uppercase text-muted-foreground">

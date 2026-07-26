@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { FormDialog } from "../../components/form-dialog";
+import { StatusPill } from "../../components/status-pill";
 import { ApiError } from "../../lib/api";
 import {
   adminCompletePayout,
@@ -34,7 +35,7 @@ export function PayoutsQueue() {
   const tabRefs = { pending: pendingBtnRef, completed: completedBtnRef };
 
   const pendingQuery = useQuery({
-    queryKey: ["admin", "payouts", "pending", search],
+    queryKey: ["admin", "payouts", "requested", search],
     queryFn: () => adminPendingPayouts({ q: search || undefined }),
     retry: false,
   });
@@ -42,15 +43,28 @@ export function PayoutsQueue() {
   // tab is the hot path; loading the completed history on every dashboard
   // visit would burn a request the admin doesn't always need.
   const completedQuery = useQuery({
-    queryKey: ["admin", "payouts", "completed", search],
+    queryKey: ["admin", "payouts", "paid", search],
     queryFn: () => adminCompletedPayouts({ q: search || undefined }),
     enabled: tab === "completed",
     retry: false,
   });
 
   const complete = useMutation({
-    mutationFn: (id: string) => adminCompletePayout(id),
-    onMutate: (id) => setProcessingId(id),
+    mutationFn: ({
+      id,
+      body,
+    }: {
+      id: string;
+      body: {
+        reason: string;
+        evidence?: {
+          externalReference?: string;
+          evidenceHash?: string;
+          maskedDestinationConfirmed?: boolean;
+        };
+      };
+    }) => adminCompletePayout(id, body),
+    onMutate: ({ id }) => setProcessingId(id),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["admin", "payouts"] });
       toast.success(t("admin.payouts.completeOk"));
@@ -86,7 +100,7 @@ export function PayoutsQueue() {
   const activeList = useMemo(() => activeQuery.data ?? [], [activeQuery.data]);
   const completeTarget =
     completeFor && tab === "pending"
-      ? (pendingQuery.data?.find((p) => p.id === completeFor) ?? null)
+      ? (activeList.find((p) => p.id === completeFor) ?? null)
       : null;
 
   // Completed rows sort on completedAt (when the payout actually settled),
@@ -152,10 +166,60 @@ export function PayoutsQueue() {
         }
         submitLabel={t("admin.payouts.completeDialog.submit")}
         submitColor="var(--success)"
-        fields={[]}
+        fields={[
+          {
+            key: "reason",
+            label: t("admin.payouts.completeDialog.reasonLabel"),
+            placeholder: t("admin.payouts.completeDialog.reasonPlaceholder"),
+            type: "textarea",
+            required: false,
+            validate: (value) =>
+              value.trim()
+                ? undefined
+                : t("formDialog.fieldRequired", {
+                    label: t("admin.payouts.completeDialog.reasonLabel"),
+                  }),
+          },
+          {
+            key: "externalReference",
+            label: t("admin.payouts.completeDialog.externalReferenceLabel"),
+            placeholder: t("admin.payouts.completeDialog.externalReferencePlaceholder"),
+            required: false,
+            validate: (value) =>
+              value.trim()
+                ? undefined
+                : t("formDialog.fieldRequired", {
+                    label: t("admin.payouts.completeDialog.externalReferenceLabel"),
+                  }),
+          },
+          {
+            key: "evidenceHash",
+            label: t("admin.payouts.completeDialog.evidenceHashLabel"),
+            placeholder: t("admin.payouts.completeDialog.evidenceHashPlaceholder"),
+            required: false,
+            validate: (value) =>
+              value.trim()
+                ? undefined
+                : t("formDialog.fieldRequired", {
+                    label: t("admin.payouts.completeDialog.evidenceHashLabel"),
+                  }),
+          },
+        ]}
         onClose={() => setCompleteFor(null)}
-        onSubmit={() => {
-          if (completeTarget) complete.mutate(completeTarget.id);
+        onSubmit={(values) => {
+          if (completeTarget) {
+            complete.mutate({
+              id: completeTarget.id,
+              body: {
+                reason: values.reason,
+                evidence: {
+                  externalReference: values.externalReference,
+                  evidenceHash: values.evidenceHash,
+                  maskedDestinationConfirmed: true,
+                },
+              },
+            });
+          }
         }}
         isSubmitting={complete.isPending}
       />
@@ -202,7 +266,7 @@ export function PayoutsQueue() {
               : "px-3 py-1.5 rounded-xl text-xs font-semibold border border-border bg-card text-muted-foreground hover:bg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
           }
         >
-          {t("admin.payouts.tab.pending")}
+          {t("admin.payouts.tab.requested")}
         </button>
         <button
           ref={completedBtnRef}
@@ -222,7 +286,7 @@ export function PayoutsQueue() {
               : "px-3 py-1.5 rounded-xl text-xs font-semibold border border-border bg-card text-muted-foreground hover:bg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
           }
         >
-          {t("admin.payouts.tab.completed")}
+          {t("admin.payouts.tab.paid")}
         </button>
       </div>
 
@@ -332,6 +396,7 @@ function PendingPayoutRow({
         <p className="text-sm font-semibold text-foreground">
           {p.sellerName ?? t("admin.payouts.sellerLabel", { id: p.sellerId })}
         </p>
+        <StatusPill status={p.status} size="xs" />
         <p className="text-xs text-muted-foreground">
           {p.requestedAt ? formatDate(p.requestedAt) : ""}
         </p>
@@ -346,7 +411,7 @@ function PendingPayoutRow({
           className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
           style={{ background: "var(--success)" }}
         >
-          {t("admin.payouts.complete")}
+          {t("admin.payouts.recordPayment")}
         </button>
         <button
           onClick={onFail}

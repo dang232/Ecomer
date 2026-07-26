@@ -1,6 +1,8 @@
 export interface RouteParamCodec<T> {
   parse(rawValue: string | null): T;
+  parseAll?: (rawValues: string[]) => T;
   serialize(value: T): string | null;
+  serializeAll?(value: T): string[] | null;
 }
 
 type RouteSchema = Record<string, RouteParamCodec<unknown>>;
@@ -21,7 +23,8 @@ export function readRouteState<TSchema extends RouteSchema>(
   const state = {} as RouteState<TSchema>;
 
   for (const key of Object.keys(schema) as (keyof TSchema)[]) {
-    state[key] = schema[key].parse(params.get(String(key))) as RouteState<TSchema>[typeof key];
+    const codec = schema[key];
+    state[key] = (codec.parseAll ? codec.parseAll(params.getAll(String(key))) : codec.parse(params.get(String(key)))) as RouteState<TSchema>[typeof key];
   }
 
   return state;
@@ -39,6 +42,12 @@ export function writeRouteState<TSchema extends RouteSchema>(
     const value = updates[key];
     if (!codec || value === undefined) continue;
 
+    const serializedValues = codec.serializeAll?.(value);
+    if (serializedValues !== undefined) {
+      next.delete(String(key));
+      serializedValues?.forEach((item) => next.append(String(key), item));
+      continue;
+    }
     const serialized = codec.serialize(value);
     if (serialized === null) {
       next.delete(String(key));
@@ -71,6 +80,23 @@ export const routeParam = {
       serialize: (value) => {
         const normalized = normalize(value);
         return normalized === fallback ? null : normalized;
+      },
+    };
+  },
+
+  stringList({
+    maxItems = 20,
+    maxLength = 100,
+  }: { maxItems?: number; maxLength?: number } = {}): RouteParamCodec<string[]> {
+    const normalize = (value: string) => value.trim().replace(/\s+/g, " ").slice(0, maxLength);
+    const normalizeAll = (values: string[]) => Array.from(new Set(values.map(normalize).filter(Boolean))).sort().slice(0, maxItems);
+    return {
+      parse: (rawValue) => (rawValue === null ? [] : normalizeAll([rawValue])),
+      parseAll: (rawValues) => normalizeAll(rawValues),
+      serialize: (value) => (normalizeAll(value).length === 0 ? null : normalizeAll(value).join(",")),
+      serializeAll: (value) => {
+        const values = normalizeAll(value);
+        return values.length === 0 ? null : values;
       },
     };
   },

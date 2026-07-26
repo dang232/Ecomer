@@ -10,6 +10,7 @@ interface SearchSourceInput {
   searchTotalElements: number;
   searchProductCount: number;
   catalogProductCount: number;
+  catalogFallbackActive?: boolean;
 }
 
 export interface SearchDisplayInput extends SearchSourceInput {
@@ -28,7 +29,7 @@ export function resolveSearchDataSource(input: SearchSourceInput): {
   source: SearchDataSource;
   notice: SearchNotice;
 } {
-  if (!input.searchEnabled) {
+  if (!input.searchEnabled || input.catalogFallbackActive) {
     return { source: "catalog", notice: null };
   }
 

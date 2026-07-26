@@ -141,6 +141,7 @@
     "ratingHeader": "Đánh giá",
     "ratingAtLeast": "từ {{r}} ★",
     "freeShipping": "Miễn phí ship",
+    "tagsHeader": "Thẻ sản phẩm",
     "brandsTitle": "Thương hiệu",
     "categoriesTitle": "Danh mục",
     "filterToggle": "Lọc",
@@ -150,7 +151,7 @@
     "emptyTitle": "Không tìm thấy sản phẩm",
     "emptySub": "Thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm",
     "emptyClear": "Xóa bộ lọc",
-    "loadMore": "Xem thêm {{count}} sản phẩm",
+    "loadMore": "Xem thêm sản phẩm",
     "showingLoaded": "Đang hiển thị {{count}} sản phẩm đã tải",
     "loadingMore": "Đang tải thêm...",
     "noResultsFor": "Không tìm thấy kết quả cho '{{query}}'",
@@ -738,7 +739,7 @@
         "status": "Trạng thái",
         "appliedAt": "Thời gian nộp",
         "bankName": "Ngân hàng",
-        "bankAccount": "Số tài khoản",
+        "destinationLast4": "Tài khoản (4 số cuối)",
         "tier": "Hạng hoa hồng",
         "vacationMode": "Chế độ nghỉ",
         "vacationOn": "Bật",
@@ -902,12 +903,15 @@
       "sortByAmount": "Sắp xếp theo số tiền",
       "sortByDate": "Sắp xếp theo ngày",
       "sellerLabel": "Seller: {{id}}",
+      "recordPayment": "Ghi nhận thanh toán",
       "complete": "Hoàn thành",
       "fail": "Thất bại",
       "completeOk": "Đã đánh dấu hoàn thành",
       "failOk": "Đã đánh dấu thất bại",
       "updateErr": "Không thể cập nhật",
       "tab": {
+        "requested": "Đã yêu cầu",
+        "paid": "Đã thanh toán",
         "pending": "Đang chờ",
         "completed": "Đã hoàn tất"
       },
@@ -924,7 +928,13 @@
         "title": "Hoàn tất yêu cầu rút tiền này?",
         "subtitle": "{{amount}} sẽ được đánh dấu đã chi trả cho seller {{sellerId}}….",
         "irreversibleWarning": "Hành động này không thể hoàn tác.",
-        "submit": "Xác nhận hoàn tất"
+        "submit": "Ghi nhận thanh toán",
+        "reasonLabel": "Lý do",
+        "reasonPlaceholder": "Đã xác minh chuyển khoản thủ công",
+        "externalReferenceLabel": "Mã tham chiếu bên ngoài",
+        "externalReferencePlaceholder": "Mã giao dịch ngân hàng",
+        "evidenceHashLabel": "Mã băm bằng chứng",
+        "evidenceHashPlaceholder": "sha256:..."
       }
     },
     "videoModeration": {
@@ -1059,6 +1069,8 @@
       "searchPlaceholder": "Tìm theo mã đơn...",
       "tabs": {
         "all": "Tất cả",
+        "paid": "Đã thanh toán",
+        "active": "Đang xử lý",
         "pending": "Chờ duyệt",
         "accepted": "Đã nhận",
         "packed": "Đã đóng gói",
@@ -1125,8 +1137,6 @@
         "submit": "Gửi yêu cầu",
         "amountLabel": "Số tiền (VND)",
         "amountPlaceholder": "1000000",
-        "bankLabel": "Số tài khoản ngân hàng",
-        "bankPlaceholder": "VD: VCB - 0123456789",
         "invalidAmount": "Số tiền không hợp lệ",
         "exceedsBalance": "Số tiền vượt quá số dư khả dụng"
       },
@@ -1167,6 +1177,8 @@
       "stockLabel": "Tồn kho",
       "categoryLabel": "Danh mục",
       "brandLabel": "Th\u01b0\u01a1ng hi\u1ec7u",
+      "tagsLabel": "Thẻ sản phẩm",
+      "tagsPlaceholder": "không dây, bluetooth, du lịch",
       "cancel": "Huỷ",
       "save": "Lưu thay đổi",
       "publish": "Đăng sản phẩm",

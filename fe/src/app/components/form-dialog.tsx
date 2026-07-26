@@ -134,7 +134,7 @@ export function FormDialog({
       <div className="space-y-4">
         {fields.map((field, index) => {
           const id = `${formId}-${field.key}`;
-          const label = field.required === false ? `${field.label} (tuỳ chọn)` : field.label;
+          const label = field.label;
           const sharedProps = {
             id,
             label,

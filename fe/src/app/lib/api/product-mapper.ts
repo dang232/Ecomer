@@ -33,7 +33,10 @@ function flattenImages(p: ProductSummary | ProductDetail): string[] {
       if (url) out.push(url);
     }
   }
-  if (out.length === 0 && p.image) out.push(p.image);
+  if (out.length === 0) {
+    const topLevelImage = p.image || p.imageUrl;
+    if (topLevelImage) out.push(topLevelImage);
+  }
   return out;
 }
 

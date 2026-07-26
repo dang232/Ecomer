@@ -40,8 +40,8 @@ export function SellerApplicationDetail({ seller, onClose, onApprove, isApprovin
       value: seller.bankName ?? null,
     },
     {
-      labelKey: "admin.sellers.applicationDialog.bankAccount",
-      value: seller.bankAccount ?? null,
+      labelKey: "admin.sellers.applicationDialog.destinationLast4",
+      value: seller.last4 ?? null,
     },
     {
       labelKey: "admin.sellers.applicationDialog.tier",

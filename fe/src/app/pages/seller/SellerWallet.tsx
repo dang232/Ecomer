@@ -1,6 +1,6 @@
 import { IconWalletOff } from "@tabler/icons-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -15,11 +15,11 @@ import { groupByDate } from "../../lib/group-by-date";
  *  ("all" | "completed" | "pending" | "failed") to the corresponding
  *  status substrings so the filter works reliably regardless of how the
  *  BE capitalises or prefixes the enum values. */
-const WITHDRAWAL_STATUS_FILTER: Record<"all" | "completed" | "pending" | "failed", Set<string>> = {
+const WITHDRAWAL_STATUS_FILTER: Record<"all" | "paid" | "active" | "failed", Set<string>> = {
   all: new Set(),
-  completed: new Set(["COMPLETED", "PAID"]),
-  pending: new Set(["PENDING"]),
-  failed: new Set(["FAILED", "REJECTED"]),
+  paid: new Set(["PAID"]),
+  active: new Set(["REQUESTED", "APPROVED", "SUBMITTING", "SUBMITTED", "UNKNOWN"]),
+  failed: new Set(["FAILED", "REJECTED", "CANCELLED", "REVERSED"]),
 };
 
 export function SellerWallet({
@@ -36,14 +36,20 @@ export function SellerWallet({
   const qc = useQueryClient();
   const { t, i18n } = useTranslation();
   const [showPayoutDialog, setShowPayoutDialog] = useState(false);
-  const [filter, setFilter] = useState<"all" | "completed" | "pending" | "failed">("all");
+  const [filter, setFilter] = useState<"all" | "paid" | "active" | "failed">("all");
+  const idempotencyKeyRef = useRef<string | null>(null);
   const requestPayoutMutation = useMutation({
-    mutationFn: (body: { amount: number; bankAccount: string }) => requestPayout(body),
+    mutationFn: (body: { amount: number; currency: string }) => {
+      const idempotencyKey = idempotencyKeyRef.current ?? crypto.randomUUID();
+      idempotencyKeyRef.current = idempotencyKey;
+      return requestPayout(body, idempotencyKey);
+    },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["seller", "wallet"] });
       void qc.invalidateQueries({ queryKey: ["seller", "payouts"] });
       toast.success(t("seller.wallet.payoutOk"));
       setShowPayoutDialog(false);
+      idempotencyKeyRef.current = null;
     },
     onError: (err) =>
       toast.error(err instanceof ApiError ? err.message : t("seller.wallet.payoutErr")),
@@ -81,7 +87,7 @@ export function SellerWallet({
             label: t("seller.wallet.payoutDialog.amountLabel"),
             placeholder: t("seller.wallet.payoutDialog.amountPlaceholder"),
             type: "number",
-            required: true,
+            required: false,
             min: 1000,
             max: balance ?? undefined,
             inputMode: "numeric",
@@ -93,21 +99,11 @@ export function SellerWallet({
               return undefined;
             },
           },
-          {
-            key: "bankAccount",
-            label: t("seller.wallet.payoutDialog.bankLabel"),
-            placeholder: t("seller.wallet.payoutDialog.bankPlaceholder"),
-            required: true,
-            validate: (v) => {
-              if (!/^\d{6,19}$/.test(v.trim())) return "Bank account must be 6-19 digits";
-              return undefined;
-            },
-          },
         ]}
         onClose={() => setShowPayoutDialog(false)}
-        onSubmit={({ amount, bankAccount }) => {
+        onSubmit={({ amount }) => {
           const parsed = Number(amount.replace(/\D/g, ""));
-          requestPayoutMutation.mutate({ amount: parsed, bankAccount });
+          requestPayoutMutation.mutate({ amount: parsed, currency: "VND" });
         }}
         isSubmitting={requestPayoutMutation.isPending}
       />
@@ -148,7 +144,7 @@ export function SellerWallet({
         <div className="px-5 py-4 flex items-center justify-between gap-3 border-b border-border">
           <h3 className="font-bold text-foreground">{t("seller.wallet.historyTitle")}</h3>
           <div className="flex items-center gap-1.5">
-            {(["all", "completed", "pending", "failed"] as const).map((f) => (
+            {(["all", "paid", "active", "failed"] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}

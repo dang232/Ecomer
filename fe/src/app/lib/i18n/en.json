@@ -141,6 +141,7 @@
     "ratingHeader": "Rating",
     "ratingAtLeast": "{{r}}★ and up",
     "freeShipping": "Free shipping",
+    "tagsHeader": "Tags",
     "brandsTitle": "Brands",
     "categoriesTitle": "Categories",
     "filterToggle": "Filter",
@@ -150,7 +151,7 @@
     "emptyTitle": "No products found",
     "emptySub": "Try adjusting your filters or search query",
     "emptyClear": "Clear filters",
-    "loadMore": "Show {{count}} more products",
+    "loadMore": "Load more products",
     "showingLoaded": "Showing {{count}} loaded products",
     "loadingMore": "Loading more...",
     "noResultsFor": "No results for '{{query}}'",
@@ -738,7 +739,7 @@
         "status": "Status",
         "appliedAt": "Applied",
         "bankName": "Bank",
-        "bankAccount": "Bank account",
+        "destinationLast4": "Bank account (last 4)",
         "tier": "Commission tier",
         "vacationMode": "Vacation mode",
         "vacationOn": "On",
@@ -902,14 +903,14 @@
       "sortByAmount": "Sort by amount",
       "sortByDate": "Sort by date",
       "sellerLabel": "Seller: {{id}}",
-      "complete": "Complete",
+      "recordPayment": "Record payment",
       "fail": "Fail",
       "completeOk": "Marked as completed",
       "failOk": "Marked as failed",
       "updateErr": "Couldn't update",
       "tab": {
-        "pending": "Pending",
-        "completed": "Completed"
+        "requested": "Requested",
+        "paid": "Paid"
       },
       "completedBy": "Completed by {{id}}",
       "completedByUnknown": "Completed (admin not recorded)",
@@ -924,7 +925,13 @@
         "title": "Complete this payout?",
         "subtitle": "{{amount}} will be marked as paid to seller {{sellerId}}….",
         "irreversibleWarning": "This action cannot be undone.",
-        "submit": "Yes, mark complete"
+        "submit": "Record payment",
+        "reasonLabel": "Reason",
+        "reasonPlaceholder": "Manual transfer verified",
+        "externalReferenceLabel": "External reference",
+        "externalReferencePlaceholder": "Bank transfer reference",
+        "evidenceHashLabel": "Evidence hash",
+        "evidenceHashPlaceholder": "sha256:..."
       }
     },
     "videoModeration": {
@@ -1115,8 +1122,8 @@
       "historyEmpty": "No withdrawal requests yet",
       "historyFilter": {
         "all": "All",
-        "completed": "Completed",
-        "pending": "Pending",
+        "paid": "Paid",
+        "active": "Active",
         "failed": "Failed"
       },
       "payoutDialog": {
@@ -1125,8 +1132,6 @@
         "submit": "Submit request",
         "amountLabel": "Amount (VND)",
         "amountPlaceholder": "1000000",
-        "bankLabel": "Bank account number",
-        "bankPlaceholder": "e.g. VCB - 0123456789",
         "invalidAmount": "Invalid amount",
         "exceedsBalance": "Amount exceeds your available balance"
       },
@@ -1166,6 +1171,8 @@
       "stockLabel": "Stock",
       "categoryLabel": "Category",
       "brandLabel": "Brand",
+      "tagsLabel": "Tags",
+      "tagsPlaceholder": "wireless, bluetooth, travel",
       "cancel": "Cancel",
       "save": "Save changes",
       "publish": "Publish product",

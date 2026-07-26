@@ -18,6 +18,8 @@ export interface SearchParams {
   brand?: string;
   minPrice?: number;
   maxPrice?: number;
+  minRating?: number;
+  tags?: string[];
   sort?: string;
   page?: number;
   size?: number;
@@ -37,6 +39,8 @@ export const searchProducts = (params: SearchParams) =>
       brand: params.brand,
       minPrice: params.minPrice,
       maxPrice: params.maxPrice,
+      minRating: params.minRating,
+      tag: params.tags,
       sort: params.sort,
       page: params.page,
       size: params.size ?? 24,
@@ -64,6 +68,8 @@ export const searchProductsV2 = (params: CursorSearchParams, signal?: AbortSigna
       brand: params.brand,
       minPrice: params.minPrice,
       maxPrice: params.maxPrice,
+      minRating: params.minRating,
+      tag: params.tags,
       sort: params.sort,
       sameDay: params.sameDay,
       verifiedOnly: params.verifiedOnly,
@@ -88,6 +94,8 @@ export const searchFacets = (
     | "brand"
     | "minPrice"
     | "maxPrice"
+    | "minRating"
+    | "tags"
     | "sameDay"
     | "verifiedOnly"
     | "officialOnly"
@@ -102,6 +110,8 @@ export const searchFacets = (
       brand: params.brand,
       minPrice: params.minPrice,
       maxPrice: params.maxPrice,
+      minRating: params.minRating,
+      tag: params.tags,
       sameDay: params.sameDay,
       verifiedOnly: params.verifiedOnly,
       officialOnly: params.officialOnly,

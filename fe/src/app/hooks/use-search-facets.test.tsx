@@ -45,7 +45,7 @@ describe("useSearchFacets", () => {
     const { result } = renderHook(() => useSearchFacets({ enabled: false }), { wrapper: Wrapper });
 
     expect(searchFacetsMock).not.toHaveBeenCalled();
-    expect(result.current.facets).toEqual({ categories: [], brands: [] });
+    expect(result.current.facets).toEqual({ categories: [], brands: [], tags: [] });
   });
 
   it("forwards all filter params to the endpoint", async () => {
