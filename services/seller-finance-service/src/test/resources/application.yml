@@ -49,7 +49,7 @@ seller-finance:
   # reaches SellerFinanceEventModePolicy.parse() as literal "false" and fails
   # validation. Quote the value so it stays a string for Spring's @Value binding.
   event-mode: "OFF"
-  payout-execution-mode: DISABLED
+  payout-execution-mode: MANUAL_RECORDED
   payout-idempotency-prefix: vnshop-payout-
   adjustments:
     enabled: false

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.vnshop.inventoryservice.domain.FlashSaleReservation;
+import com.vnshop.inventoryservice.domain.DuplicateFlashSaleReservationException;
 import com.vnshop.inventoryservice.domain.port.out.FlashSaleReservationPort;
 import java.time.Instant;
 import java.util.Map;

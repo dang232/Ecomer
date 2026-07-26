@@ -9,7 +9,11 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+    "vnshop.kafka.admin.enabled=false",
+    "payment.kafka.listeners.enabled=false",
+    "spring.autoconfigure.exclude=org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration"
+})
 @Testcontainers
 @Import(TestcontainersConfig.class)
 class PaymentMigrationIntegrationTest {

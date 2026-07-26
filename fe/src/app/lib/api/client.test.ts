@@ -223,7 +223,13 @@ describe("request", () => {
   it("serializes repeated query values without collapsing them", async () => {
     fetchSpy.mockResolvedValueOnce(
       mockResponse({
-        body: { success: true, message: "ok", data: [], errorCode: null, timestamp: "2026-05-15T00:00:00Z" },
+        body: {
+          success: true,
+          message: "ok",
+          data: [],
+          errorCode: null,
+          timestamp: "2026-05-15T00:00:00Z",
+        },
       }),
     );
 

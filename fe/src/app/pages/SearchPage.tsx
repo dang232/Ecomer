@@ -230,10 +230,7 @@ export function SearchPage() {
   const searchResultLoading = searchV2.isFetching && !searchV2.isFetchingNextPage;
   const searchPlaceholderLoading = searchResultLoading && searchV2.isPlaceholderData;
   const catalogFallbackCandidate =
-    useV2SearchPath &&
-    !searchResultLoading &&
-    !searchV2.error &&
-    v2SearchProducts.length === 0;
+    useV2SearchPath && !searchResultLoading && !searchV2.error && v2SearchProducts.length === 0;
   const searchNeedsImageHydration =
     useV2SearchPath && v2SearchProducts.some((product) => !product.image);
   const productsV2 = useProductsV2(
@@ -264,8 +261,7 @@ export function SearchPage() {
       hasError: Boolean(searchV2.error),
       totalElements: v2SearchProducts.length,
       localCatalogCount: v2CatalogProducts.length,
-      localCatalogLoading:
-        productsV2.isFetching && !productsV2.isFetchingNextPage,
+      localCatalogLoading: productsV2.isFetching && !productsV2.isFetchingNextPage,
     });
   // A filtered view normally uses search-service V2. If it returns a healthy
   // empty page, warm product-service V2 and use it only for that visibility gap.
@@ -441,7 +437,10 @@ export function SearchPage() {
     });
   }
   for (const tag of selectedTags) {
-    activeFilters.push({ label: tag, onRemove: () => setSelectedTags(selectedTags.filter((value) => value !== tag)) });
+    activeFilters.push({
+      label: tag,
+      onRemove: () => setSelectedTags(selectedTags.filter((value) => value !== tag)),
+    });
   }
   if (sameDay) {
     activeFilters.push({

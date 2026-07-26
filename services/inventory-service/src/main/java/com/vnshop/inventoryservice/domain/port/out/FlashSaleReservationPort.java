@@ -1,6 +1,7 @@
 package com.vnshop.inventoryservice.domain.port.out;
 
 import com.vnshop.inventoryservice.domain.FlashSaleReservation;
+import com.vnshop.inventoryservice.domain.DuplicateFlashSaleReservationException;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,7 +18,7 @@ public interface FlashSaleReservationPort {
 			throw new IllegalArgumentException("idempotency key and request hash are required");
 		}
 		if (hasActiveReservation(productId, buyerId)) {
-			throw new com.vnshop.inventoryservice.application.DuplicateFlashSaleReservationException(productId, buyerId);
+			throw new DuplicateFlashSaleReservationException(productId, buyerId);
 		}
 		UUID reservationId = UUID.randomUUID();
 		java.time.Instant reservedAt = java.time.Instant.now();

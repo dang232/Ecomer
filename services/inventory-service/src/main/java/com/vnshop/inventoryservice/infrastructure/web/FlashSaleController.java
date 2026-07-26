@@ -1,9 +1,14 @@
-package com.vnshop.inventoryservice.infrastructure.flash;
+package com.vnshop.inventoryservice.infrastructure.web;
 
 import com.vnshop.inventoryservice.application.GetActiveFlashSaleCampaignsUseCase;
 import com.vnshop.inventoryservice.application.ReserveFlashSaleCommand;
 import com.vnshop.inventoryservice.application.ReserveFlashSaleResult;
 import com.vnshop.inventoryservice.application.ReserveFlashSaleUseCase;
+import com.vnshop.inventoryservice.infrastructure.flash.ActiveFlashSaleCampaignResponse;
+import com.vnshop.inventoryservice.infrastructure.flash.ApiResponse;
+import com.vnshop.inventoryservice.infrastructure.flash.ReserveFlashSaleRequest;
+import com.vnshop.inventoryservice.infrastructure.flash.ReserveFlashSaleResponse;
+import com.vnshop.inventoryservice.infrastructure.flash.StockResponse;
 import com.vnshop.inventoryservice.infrastructure.config.JwtPrincipalUtil;
 import jakarta.validation.Valid;
 import java.util.List;

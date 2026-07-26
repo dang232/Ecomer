@@ -26,15 +26,15 @@ export type PriceRangeError =
 export function canUseCatalogBrowse(criteria: BackendSearchCriteria): boolean {
   return Boolean(
     criteria.category?.trim() &&
-      !criteria.query?.trim() &&
-      !criteria.brand?.trim() &&
-      !criteria.minPrice?.trim() &&
-      !criteria.maxPrice?.trim() &&
-      (criteria.minRating ?? 0) <= 0 &&
-      !(criteria.tags?.length) &&
-      !criteria.sameDay &&
-      !criteria.verifiedOnly &&
-      !criteria.officialOnly,
+    !criteria.query?.trim() &&
+    !criteria.brand?.trim() &&
+    !criteria.minPrice?.trim() &&
+    !criteria.maxPrice?.trim() &&
+    (criteria.minRating ?? 0) <= 0 &&
+    !criteria.tags?.length &&
+    !criteria.sameDay &&
+    !criteria.verifiedOnly &&
+    !criteria.officialOnly,
   );
 }
 

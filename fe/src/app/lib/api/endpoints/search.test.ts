@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("../client", () => ({
   api: {
-    getWithMeta: vi.fn().mockResolvedValue({ data: { items: [], hasMore: false, nextCursor: null } }),
+    getWithMeta: vi
+      .fn()
+      .mockResolvedValue({ data: { items: [], hasMore: false, nextCursor: null } }),
     get: vi.fn(),
   },
 }));

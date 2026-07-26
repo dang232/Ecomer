@@ -1,7 +1,7 @@
 package com.vnshop.inventoryservice.infrastructure.flash;
 
 import com.vnshop.inventoryservice.domain.FlashSaleReservation;
-import com.vnshop.inventoryservice.application.DuplicateFlashSaleReservationException;
+import com.vnshop.inventoryservice.domain.DuplicateFlashSaleReservationException;
 import com.vnshop.inventoryservice.application.FlashSaleIdempotencyConflictException;
 import com.vnshop.inventoryservice.application.FlashSaleDependencyUnavailableException;
 import com.vnshop.inventoryservice.domain.port.out.FlashSaleReservationPort;

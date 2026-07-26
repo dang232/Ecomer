@@ -10,7 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class SecurityConfigCsrfTest {
 
     @Test
-    void gatewayDelegatesCookieCsrfProtectionToUserService() {
+    void gatewayProtectsCookieAuthenticatedStateChangingRequests() {
         ServerHttpSecurity http = ServerHttpSecurity.http();
         http.oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwt -> jwt.jwtDecoder(token -> Mono.empty())));
@@ -18,6 +18,6 @@ class SecurityConfigCsrfTest {
                 .securityWebFilterChain(http);
 
         assertThat(chain.getWebFilters().collectList().block())
-                .noneMatch(filter -> filter.getClass().getSimpleName().contains("Csrf"));
+                .anyMatch(filter -> filter.getClass().getSimpleName().contains("Csrf"));
     }
 }

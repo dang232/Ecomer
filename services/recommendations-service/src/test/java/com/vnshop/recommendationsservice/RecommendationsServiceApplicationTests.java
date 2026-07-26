@@ -19,6 +19,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
                 + "org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration,"
                 + "org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration,"
                 + "org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration",
+        "vnshop.kafka.admin.enabled=false",
         // Disables the Kafka listener so the smoke test doesn't need a broker.
         "vnshop.recommendations.events.enabled=false"
 })

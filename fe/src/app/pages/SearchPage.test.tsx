@@ -84,15 +84,15 @@ vi.mock("../hooks/use-search-v2", () => ({
   useSearchV2: (params: Record<string, unknown>) => {
     mocks.v2SearchParams = params;
     return {
-    data: mocks.v2SearchData,
-    error: mocks.v2Error,
-    isLoading: false,
-    isFetching: mocks.v2SearchIsFetching,
-    isFetchingNextPage: mocks.v2SearchIsFetchingNextPage,
-    isPlaceholderData: mocks.v2SearchIsPlaceholderData,
-    hasNextPage: mocks.v2HasNextPage,
-    fetchNextPage: mocks.v2FetchNextPage,
-    refetch: mocks.v2SearchRefetch,
+      data: mocks.v2SearchData,
+      error: mocks.v2Error,
+      isLoading: false,
+      isFetching: mocks.v2SearchIsFetching,
+      isFetchingNextPage: mocks.v2SearchIsFetchingNextPage,
+      isPlaceholderData: mocks.v2SearchIsPlaceholderData,
+      hasNextPage: mocks.v2HasNextPage,
+      fetchNextPage: mocks.v2FetchNextPage,
+      refetch: mocks.v2SearchRefetch,
     };
   },
 }));
