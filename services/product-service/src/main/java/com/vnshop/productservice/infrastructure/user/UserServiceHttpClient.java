@@ -1,7 +1,7 @@
 package com.vnshop.productservice.infrastructure.user;
 
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.service.annotation.GetExchange;
 import org.springframework.web.service.annotation.HttpExchange;
 
 import java.util.List;
@@ -14,6 +14,6 @@ import java.util.List;
  */
 @HttpExchange
 public interface UserServiceHttpClient {
-    @GetMapping("/users/public-profiles")
+    @GetExchange("/users/public-profiles")
     String list(@RequestParam("ids") List<String> ids);
 }

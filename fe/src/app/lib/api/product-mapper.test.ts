@@ -104,6 +104,16 @@ describe("fromServer image flattening", () => {
     };
     expect(fromServer(p).images).toEqual(["https://cdn/fallback.jpg"]);
   });
+
+  it("uses the flat imageUrl emitted by search summaries", () => {
+    const p = {
+      id: "p-search" as ProductId,
+      name: "Search Product",
+      imageUrl: "https://cdn/search.jpg",
+    } as ProductSummary;
+    expect(fromServer(p).images).toEqual(["https://cdn/search.jpg"]);
+    expect(fromServer(p).image).toBe("https://cdn/search.jpg");
+  });
 });
 
 // ---------------------------------------------------------------------------

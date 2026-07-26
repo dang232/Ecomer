@@ -96,6 +96,7 @@ export interface SellerProductWriteBody {
   description?: string;
   categoryId?: string;
   brand?: string;
+  tags?: string[];
   variants?: SellerVariant[];
   images?: SellerImage[];
 }

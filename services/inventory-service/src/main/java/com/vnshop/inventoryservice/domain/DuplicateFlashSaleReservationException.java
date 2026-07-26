@@ -1,4 +1,4 @@
-package com.vnshop.inventoryservice.application;
+package com.vnshop.inventoryservice.domain;
 
 /**
  * Thrown when a buyer attempts to reserve flash-sale stock for a product they

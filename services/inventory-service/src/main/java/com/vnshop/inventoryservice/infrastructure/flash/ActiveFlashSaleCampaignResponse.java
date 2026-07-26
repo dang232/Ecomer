@@ -23,7 +23,7 @@ public record ActiveFlashSaleCampaignResponse(
         String discount,
         String imageHash) {
 
-    static ActiveFlashSaleCampaignResponse from(ActiveFlashSaleCampaignView view) {
+    public static ActiveFlashSaleCampaignResponse from(ActiveFlashSaleCampaignView view) {
         return new ActiveFlashSaleCampaignResponse(
                 view.id(),
                 view.productId(),

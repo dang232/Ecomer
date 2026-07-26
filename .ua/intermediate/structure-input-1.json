@@ -1,0 +1,17 @@
+{
+    "projectRoot":  "C:\\Users\\dangq\\OneDrive\\Documents\\GitHub\\Full-Stack-E-commerce",
+    "batchFiles":  [
+                       {
+                           "path":  "fe/.dockerignore",
+                           "language":  "unknown",
+                           "sizeLines":  15,
+                           "fileCategory":  "infra"
+                       },
+                       {
+                           "path":  "fe/Dockerfile",
+                           "language":  "dockerfile",
+                           "sizeLines":  51,
+                           "fileCategory":  "infra"
+                       }
+                   ]
+}

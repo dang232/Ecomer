@@ -70,6 +70,9 @@ public class ProductProjectionRepairJob {
         payload.put("sameDayDelivery", model.sameDayDelivery());
         payload.put("verified", model.verified());
         payload.put("isOfficial", model.isOfficial());
+        payload.put("tags", model.tags().stream()
+                .map(tag -> Map.of("key", tag, "label", tag))
+                .toList());
         return payload;
     }
 }

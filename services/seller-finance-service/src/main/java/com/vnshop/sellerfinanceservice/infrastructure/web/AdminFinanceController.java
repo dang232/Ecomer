@@ -39,15 +39,60 @@ public class AdminFinanceController {
     }
 
     @PostMapping("/payouts/{payoutId}/complete")
-    public ApiResponse<PayoutResponse> complete(@PathVariable String payoutId) {
+    public ApiResponse<PayoutResponse> complete(@PathVariable String payoutId,
+            @org.springframework.web.bind.annotation.RequestBody(required = false) PayoutActionRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("manual payment evidence is required");
+        }
+        request.requireManualPaymentEvidence();
         String adminId = JwtPrincipalUtil.currentUserId();
+        var payout = processPayoutUseCase.complete(payoutId, adminId, request.reason(), request.evidenceReference());
         return ApiResponse.ok(toResponse(adminPayoutReadUseCase.enrich(
-                processPayoutUseCase.complete(payoutId, adminId))));
+                payout)));
+    }
+
+    @PostMapping("/payouts/{payoutId}/approve")
+    public ApiResponse<PayoutResponse> approve(@PathVariable String payoutId,
+            @RequestParam String reason) {
+        return ApiResponse.ok(toResponse(adminPayoutReadUseCase.enrich(
+                processPayoutUseCase.approve(payoutId, JwtPrincipalUtil.currentUserId(), reason))));
+    }
+
+    @PostMapping("/payouts/{payoutId}/submit")
+    public ApiResponse<PayoutResponse> submit(@PathVariable String payoutId,
+            @RequestParam String providerReference, @RequestParam String attemptId) {
+        return ApiResponse.ok(toResponse(adminPayoutReadUseCase.enrich(
+                processPayoutUseCase.markSubmitted(payoutId, JwtPrincipalUtil.currentUserId(), providerReference, attemptId))));
+    }
+
+    @PostMapping("/payouts/{payoutId}/unknown")
+    public ApiResponse<PayoutResponse> unknown(@PathVariable String payoutId, @RequestParam String reason) {
+        return ApiResponse.ok(toResponse(adminPayoutReadUseCase.enrich(
+                processPayoutUseCase.markUnknown(payoutId, JwtPrincipalUtil.currentUserId(), reason))));
+    }
+
+    @PostMapping("/payouts/{payoutId}/paid")
+    public ApiResponse<PayoutResponse> paid(@PathVariable String payoutId,
+            @RequestParam String providerReference, @RequestParam String evidence) {
+        return ApiResponse.ok(toResponse(adminPayoutReadUseCase.enrich(
+                processPayoutUseCase.markPaid(payoutId, JwtPrincipalUtil.currentUserId(), providerReference, evidence, true))));
+    }
+
+    @PostMapping("/payouts/{payoutId}/reject")
+    public ApiResponse<PayoutResponse> reject(@PathVariable String payoutId, @RequestParam String reason) {
+        return ApiResponse.ok(toResponse(adminPayoutReadUseCase.enrich(
+                processPayoutUseCase.reject(payoutId, JwtPrincipalUtil.currentUserId(), reason))));
     }
 
     @PostMapping("/payouts/{payoutId}/fail")
-    public ApiResponse<PayoutResponse> fail(@PathVariable String payoutId) {
-        return ApiResponse.ok(toResponse(adminPayoutReadUseCase.enrich(processPayoutUseCase.fail(payoutId))));
+    public ApiResponse<PayoutResponse> fail(@PathVariable String payoutId,
+            @org.springframework.web.bind.annotation.RequestBody(required = false) PayoutActionRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("failure evidence is required");
+        }
+        request.requireFailureEvidence();
+        var payout = processPayoutUseCase.fail(payoutId, JwtPrincipalUtil.currentUserId(), request.reason(), request.evidenceReference());
+        return ApiResponse.ok(toResponse(adminPayoutReadUseCase.enrich(payout)));
     }
 
     private PayoutResponse toResponse(AdminPayoutReadUseCase.EnrichedPayout payout) {

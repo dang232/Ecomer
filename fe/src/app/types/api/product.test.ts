@@ -14,4 +14,14 @@ describe("productSummarySchema", () => {
     expect(result.rating).toBeNull();
     expect(result.reviewCount).toBeNull();
   });
+
+  it("accepts nullable image URLs from search projections", () => {
+    const result = productSummarySchema.parse({
+      id: "2ff65816-fa6d-4bb2-beaf-47d5fffa0445",
+      name: "Search product",
+      imageUrl: null,
+    });
+
+    expect(result.imageUrl).toBeNull();
+  });
 });

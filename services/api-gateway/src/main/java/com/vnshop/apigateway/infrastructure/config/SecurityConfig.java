@@ -156,7 +156,7 @@ public class SecurityConfig {
         return repository;
     }
 
-    private reactor.core.publisher.Mono<ServerWebExchangeMatcher.MatchResult> requiresCsrfProtection(
+    private Mono<ServerWebExchangeMatcher.MatchResult> requiresCsrfProtection(
             org.springframework.web.server.ServerWebExchange exchange) {
         var request = exchange.getRequest();
         boolean cookieAuthenticated = request.getCookies().containsKey(REFRESH_TOKEN_COOKIE);

@@ -6,6 +6,7 @@ import { productSummarySchema } from "./product";
 const facetEntrySchema = z
   .object({
     key: z.string(),
+    label: z.string().optional(),
     count: z.number(),
   })
   .passthrough();
@@ -14,6 +15,7 @@ export const searchFacetsSchema = z
   .object({
     categories: z.array(facetEntrySchema),
     brands: z.array(facetEntrySchema),
+    tags: z.array(facetEntrySchema).default([]),
   })
   .passthrough();
 export type SearchFacets = z.infer<typeof searchFacetsSchema>;

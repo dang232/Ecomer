@@ -13,6 +13,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfFilter;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.core.annotation.Order;
@@ -29,6 +30,8 @@ import java.util.stream.Stream;
 public class SecurityConfig {
     private static final Set<String> CSRF_PROTECTED_PATHS = Set.of(
             "/auth/refresh", "/auth/logout");
+    private static final RequestMatcher AUTH_REQUEST_MATCHER =
+            request -> request.getRequestURI().startsWith("/auth/");
 
     @Bean
     @Order(1)
@@ -37,11 +40,15 @@ public class SecurityConfig {
         // authorization. Refresh and logout authenticate with the httpOnly
         // cookie, so they must be reachable before JWT authorization runs.
         return http
-                .securityMatcher("/auth/**")
+                .securityMatcher(AUTH_REQUEST_MATCHER)
                 // Keep Spring Security's CSRF protection enabled for the same
                 // cookie-authenticated endpoints guarded by the API error filter.
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(csrfTokenRepository())
+                        // The SPA echoes the raw readable cookie value. Spring
+                        // Security 7 defaults to XOR masking, which would
+                        // reject the valid double-submit header.
+                        .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
                         .requireCsrfProtectionMatcher(csrfRequestMatcher()))
                 .addFilterBefore(new CsrfProtectionFilter(), CsrfFilter.class)
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
@@ -54,17 +61,22 @@ public class SecurityConfig {
         return http
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(csrfTokenRepository())
+                        .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
                         .requireCsrfProtectionMatcher(csrfRequestMatcher()))
                 .addFilterBefore(new CsrfProtectionFilter(), CsrfFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api-docs", "/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
+                        // Let Spring MVC's exception resolvers render API errors
+                        // from the cookie-auth chain instead of replacing them
+                        // with a bearer challenge during ERROR dispatch.
+                        .requestMatchers("/error").permitAll()
                         // These endpoints are the public cookie-auth boundary. Keep the
                         // explicit method matchers alongside the namespace matcher so
                         // refresh/logout never fall through to JWT authorization.
                         .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/refresh", "/auth/logout")
                         .permitAll()
-                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers(AUTH_REQUEST_MATCHER).permitAll()
                         .requestMatchers(HttpMethod.GET, "/sellers", "/sellers/{id}", "/sellers/public-profiles").permitAll()
                         .requestMatchers(HttpMethod.GET, "/users/public-profiles").permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")

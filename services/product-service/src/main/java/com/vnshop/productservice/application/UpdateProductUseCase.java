@@ -4,6 +4,7 @@ import com.vnshop.productservice.domain.Product;
 import com.vnshop.productservice.domain.ProductEvent;
 import com.vnshop.productservice.domain.ProductImage;
 import com.vnshop.productservice.domain.ProductVariant;
+import com.vnshop.productservice.domain.ProductTag;
 import com.vnshop.productservice.domain.port.out.ProductEventOutboxPort;
 import com.vnshop.productservice.domain.port.out.ProductRepositoryPort;
 import com.vnshop.productservice.infrastructure.sanitization.HtmlSanitizer;
@@ -35,14 +36,15 @@ public class UpdateProductUseCase {
             String categoryId,
             String brand,
             List<ProductVariant> variants,
-            List<ProductImage> images
+            List<ProductImage> images,
+            List<ProductTag> tags
     ) {
         Product existing = productRepositoryPort.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("product not found"));
         if (!existing.sellerId().equals(sellerId)) {
             throw new IllegalArgumentException("product does not belong to seller");
         }
-        Product updated = new Product(productId, sellerId, name, htmlSanitizer.sanitize(description), categoryId, brand, variants, images,
+        Product updated = new Product(productId, sellerId, name, htmlSanitizer.sanitize(description), categoryId, brand, variants, images, tags,
                 existing.sameDayDelivery(), existing.verified(), existing.isOfficial());
         if (existing.status().name().equals("ACTIVE")) {
             updated.publish();

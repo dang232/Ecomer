@@ -1,5 +1,6 @@
 package com.vnshop.transcoder.service;
 
+import com.vnshop.transcoder.config.TranscoderProperties;
 import com.vnshop.transcoder.model.TranscodeJob;
 import com.vnshop.transcoder.model.TranscodeResult;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,10 +45,10 @@ class TranscodeServiceTest {
 
     @BeforeEach
     void setUp() {
-        FfmpegCommandBuilder cmdBuilder = new FfmpegCommandBuilder();
-        transcodeService = new TranscodeService(s3AsyncClient, cmdBuilder);
-        // Inject the @Value field so Path.of(tmpfsDir, ...) does not NPE
-        ReflectionTestUtils.setField(transcodeService, "tmpfsDir", tmpDir.toString());
+        TranscoderProperties properties = new TranscoderProperties(tmpDir.toString(), "input", "staging",
+                360, 600, 2_147_483_648L, 3, 30);
+        FfmpegCommandBuilder cmdBuilder = new FfmpegCommandBuilder(properties);
+        transcodeService = new TranscodeService(s3AsyncClient, cmdBuilder, properties);
     }
 
     // --- SHA-256 unit tests (via exposed package-private methods) ---

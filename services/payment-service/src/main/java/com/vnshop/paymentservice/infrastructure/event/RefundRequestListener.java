@@ -9,6 +9,7 @@ import com.vnshop.paymentservice.application.RefundPaymentUseCase;
 import com.vnshop.paymentservice.domain.PaymentMethod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.BackOff;
 import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -39,6 +40,7 @@ import java.util.UUID;
  * {@code SagaCompensationListener} can close the compensation step.
  */
 @Service
+@ConditionalOnProperty(name = "payment.kafka.listeners.enabled", havingValue = "true", matchIfMissing = true)
 public class RefundRequestListener {
 
     private static final Logger log = LoggerFactory.getLogger(RefundRequestListener.class);

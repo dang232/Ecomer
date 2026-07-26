@@ -20,7 +20,11 @@ public record SepayProperties(
         /** Shared secret sent by SePay in the {@code Authorization: Apikey <secret>} header on push callbacks. */
         String webhookSecret) {
     public SepayProperties {
-        if (baseUrl == null || baseUrl.isBlank()) baseUrl = "https://my.sepay.vn/userapi";
-        if (pollIntervalSeconds <= 0) pollIntervalSeconds = 30;
+        if (baseUrl == null || baseUrl.isBlank()) {
+            throw new IllegalStateException("payment.sepay.base-url must be configured");
+        }
+        if (pollIntervalSeconds <= 0) {
+            throw new IllegalStateException("payment.sepay.poll-interval-seconds must be positive");
+        }
     }
 }

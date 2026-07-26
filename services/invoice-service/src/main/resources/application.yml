@@ -10,7 +10,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5441/vnshop_invoice?currentSchema=invoice_svc
     username: vnshop
-    password: ${DB_PASSWORD:vnshop}
+    password: ${DB_PASSWORD}
     hikari:
       maximum-pool-size: 10
       minimum-idle: 2
@@ -39,7 +39,7 @@ spring:
     properties:
       security.protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_PLAINTEXT}
       sasl.mechanism: PLAIN
-      sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_SASL_USERNAME:svc-invoice}" password="${KAFKA_SASL_PASSWORD:invoice-secret-change-me}";
+      sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_SASL_USERNAME}" password="${KAFKA_SASL_PASSWORD}";
     consumer:
       group-id: invoice-service
       auto-offset-reset: earliest
@@ -95,3 +95,15 @@ resilience4j:
         waitDurationInOpenState: 30s
         failureRateThreshold: 50
         eventConsumerBufferSize: 10
+
+invoice:
+  currency: ${INVOICE_CURRENCY:VND}
+  template-code: ${INVOICE_TEMPLATE_CODE:1}
+  payment-method: ${INVOICE_PAYMENT_METHOD:TM/CK}
+  symbol: ${INVOICE_SYMBOL}
+  seller:
+    name: ${INVOICE_SELLER_NAME}
+    tax-code: ${INVOICE_SELLER_TAX_CODE}
+    address: ${INVOICE_SELLER_ADDRESS}
+    phone: ${INVOICE_SELLER_PHONE:}
+    email: ${INVOICE_SELLER_EMAIL}

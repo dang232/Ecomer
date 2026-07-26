@@ -33,8 +33,10 @@ import { useSearchV2 } from "../hooks/use-search-v2";
 import { catalogV2Enabled } from "../lib/api/catalog-flags";
 import { flattenCategoryTree } from "../lib/api/endpoints/categories";
 import { fromServer } from "../lib/api/product-mapper";
+import { canUseCatalogBrowse, mergeMissingProductImages } from "../lib/search-view";
 import {
   requiresBackendSearch,
+  shouldFallbackToCatalog,
   validatePriceRange,
   type PriceRangeError,
 } from "../lib/search-view";
@@ -72,7 +74,7 @@ export function SearchPage() {
     priceMax,
     sort: sortBy,
     minRating,
-    freeShip: freeShipOnly,
+    tag: selectedTags,
     sameDay,
     verifiedOnly,
     officialOnly,
@@ -107,7 +109,7 @@ export function SearchPage() {
   };
 
   const setMinRating = (value: number) => updateRoute({ minRating: value });
-  const setFreeShipOnly = (value: boolean) => updateRoute({ freeShip: value });
+  const setSelectedTags = (value: string[]) => updateRoute({ tag: value });
   const setSameDay = (value: boolean) => updateRoute({ sameDay: value });
   const setVerifiedOnly = (value: boolean) => updateRoute({ verifiedOnly: value });
   const setOfficialOnly = (value: boolean) => updateRoute({ officialOnly: value });
@@ -126,6 +128,13 @@ export function SearchPage() {
       sessionStorage.removeItem(key);
     }
   }, []);
+
+  useEffect(() => {
+    if (!searchParams.has("freeShip")) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("freeShip");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const setPriceFromUrl = (min: string, max: string) => {
     if (validatePriceRange(min, max)) return;
@@ -166,23 +175,40 @@ export function SearchPage() {
     brand: selectedBrand,
     minPrice: appliedPriceMin,
     maxPrice: appliedPriceMax,
+    minRating,
+    tags: selectedTags,
     sameDay,
     verifiedOnly,
     officialOnly,
     sortBy,
   });
-  // V2 is the sole buyer catalog path. Unsupported legacy-only filters are
-  // still applied to the returned V2 page below until their server fields are
-  // added to the read model.
+  const catalogBrowse = canUseCatalogBrowse({
+    query,
+    category: selectedCat,
+    brand: selectedBrand,
+    minPrice: appliedPriceMin,
+    maxPrice: appliedPriceMax,
+    minRating,
+    tags: selectedTags,
+    sameDay,
+    verifiedOnly,
+    officialOnly,
+    sortBy,
+  });
+  // Every supported catalog filter is sent to cursor search. The catalog path
+  // is also authoritative for category-only browsing because it contains the
+  // complete product set, while search-service remains the full-text path.
   const v2Eligible = catalogV2Enabled;
-  const useV2SearchPath = v2Eligible && searchEnabled;
-  const useV2CatalogPath = v2Eligible && !searchEnabled;
+  const useV2SearchPath = v2Eligible && searchEnabled && !catalogBrowse;
+  const useV2CatalogPath = v2Eligible && (!searchEnabled || catalogBrowse);
   const v2Params = {
     q: query || undefined,
     category: selectedCat || undefined,
     brand: selectedBrand || undefined,
     minPrice: appliedPriceMin ? Number(appliedPriceMin) * 1000 : undefined,
     maxPrice: appliedPriceMax ? Number(appliedPriceMax) * 1000 : undefined,
+    minRating: minRating > 0 ? minRating : undefined,
+    tags: selectedTags.length > 0 ? selectedTags : undefined,
     // V2 has no popularity metric yet; its default deterministic order is newest.
     sort: sortBy === "popular" ? undefined : sortBy,
     sameDay: sameDay || undefined,
@@ -191,12 +217,6 @@ export function SearchPage() {
     limit: pageSize,
   };
   const searchV2 = useSearchV2({ ...v2Params, includeFacets: true }, useV2SearchPath);
-  const productsV2 = useProductsV2(v2Params, useV2CatalogPath);
-  // Keep the query modes mutually exclusive: a filtered view uses
-  // search-service V2; an unfiltered browse uses product-service V2.
-  const v2SearchActive = useV2SearchPath;
-  const v2CatalogActive = useV2CatalogPath;
-  const facets = searchV2.data?.pages[0]?.data.facets ?? { categories: [], brands: [] };
   const v2SearchProducts = useMemo(() => {
     const seen = new Set<string>();
     return (searchV2.data?.pages.flatMap((page) => page.data.items) ?? [])
@@ -207,6 +227,16 @@ export function SearchPage() {
       })
       .map(fromServer);
   }, [searchV2.data]);
+  const searchResultLoading = searchV2.isFetching && !searchV2.isFetchingNextPage;
+  const searchPlaceholderLoading = searchResultLoading && searchV2.isPlaceholderData;
+  const catalogFallbackCandidate =
+    useV2SearchPath && !searchResultLoading && !searchV2.error && v2SearchProducts.length === 0;
+  const searchNeedsImageHydration =
+    useV2SearchPath && v2SearchProducts.some((product) => !product.image);
+  const productsV2 = useProductsV2(
+    v2Params,
+    useV2CatalogPath || catalogFallbackCandidate || searchNeedsImageHydration,
+  );
   const v2CatalogProducts = useMemo(() => {
     const seen = new Set<string>();
     return (productsV2.data?.pages.flatMap((page) => page.data.items) ?? [])
@@ -217,32 +247,59 @@ export function SearchPage() {
       })
       .map(fromServer);
   }, [productsV2.data]);
-  const backendProducts = v2SearchActive ? v2SearchProducts : [];
-  const backendLoading = v2SearchActive && searchV2.isLoading;
+  const hydratedSearchProducts = useMemo(
+    () => mergeMissingProductImages(v2SearchProducts, v2CatalogProducts),
+    [v2CatalogProducts, v2SearchProducts],
+  );
+  const catalogResultLoading = productsV2.isFetching && !productsV2.isFetchingNextPage;
+  const catalogPlaceholderLoading = catalogResultLoading && productsV2.isPlaceholderData;
+  const catalogFallbackActive =
+    catalogFallbackCandidate &&
+    !productsV2.error &&
+    shouldFallbackToCatalog({
+      isLoading: searchResultLoading,
+      hasError: Boolean(searchV2.error),
+      totalElements: v2SearchProducts.length,
+      localCatalogCount: v2CatalogProducts.length,
+      localCatalogLoading: productsV2.isFetching && !productsV2.isFetchingNextPage,
+    });
+  // A filtered view normally uses search-service V2. If it returns a healthy
+  // empty page, warm product-service V2 and use it only for that visibility gap.
+  const v2SearchActive = useV2SearchPath;
+  const v2CatalogActive = useV2CatalogPath || catalogFallbackActive;
+  const imageHydrationActive = v2SearchActive && searchNeedsImageHydration;
+  const facets = searchV2.data?.pages[0]?.data.facets ?? { categories: [], brands: [], tags: [] };
+  const backendProducts = v2SearchActive ? hydratedSearchProducts : [];
+  const backendLoading = v2SearchActive && searchResultLoading;
   const backendHasError = v2SearchActive && Boolean(searchV2.error);
   const backendTotalElements = v2SearchProducts.length;
   const catalogProducts = v2CatalogActive ? v2CatalogProducts : [];
-  const catalogLoading = v2CatalogActive && productsV2.isLoading;
+  const catalogLoading = v2CatalogActive && catalogResultLoading;
   const catalogHasError = v2CatalogActive && Boolean(productsV2.error);
   const { data: categories = [] } = useCategories();
   const flatCategories = useMemo(() => flattenCategoryTree(categories), [categories]);
 
   const sourceState = resolveSearchDataSource({
-    searchEnabled,
+    searchEnabled: useV2SearchPath,
     searchLoading: backendLoading,
     searchHasError: backendHasError,
     searchTotalElements: backendTotalElements,
     searchProductCount: backendProducts.length,
     catalogProductCount: catalogProducts.length,
+    catalogFallbackActive,
   });
   const usedBackend = sourceState.source === "search";
   const catalog = usedBackend ? backendProducts : catalogProducts;
   // V2 is the only displayed source. A failed or empty V2 result remains an
   // explicit error/empty state instead of silently switching to legacy data.
   const v2DisplayActive = (v2SearchActive && usedBackend) || (v2CatalogActive && !usedBackend);
+  const imageHydrationLoading =
+    imageHydrationActive &&
+    catalogResultLoading &&
+    hydratedSearchProducts.some((product) => !product.image);
 
   const filtered = useMemo(() => {
-    if (v2DisplayActive && !isFlash && minRating === 0 && !freeShipOnly) return catalog;
+    if (v2DisplayActive && !isFlash) return catalog;
     let list = [...catalog];
     if (isFlash) list = list.filter((p) => (p.discount ?? 0) >= 20 || p.badge === "flash");
     if (!usedBackend) {
@@ -260,8 +317,10 @@ export function SearchPage() {
     }
     if (appliedPriceMin) list = list.filter((p) => p.price >= Number(appliedPriceMin) * 1000);
     if (appliedPriceMax) list = list.filter((p) => p.price <= Number(appliedPriceMax) * 1000);
-    if (minRating > 0) list = list.filter((p) => p.rating >= minRating);
-    if (freeShipOnly) list = list.filter((p) => p.shippingFee === 0);
+    if (!usedBackend && minRating > 0) list = list.filter((p) => p.rating >= minRating);
+    if (!usedBackend && selectedTags.length > 0) {
+      list = list.filter((p) => selectedTags.some((tag) => p.tags.includes(tag)));
+    }
     if (sameDay) list = list.filter((p) => p.sameDayDelivery);
     if (verifiedOnly) list = list.filter((p) => p.verified);
     if (officialOnly) list = list.filter((p) => p.isOfficial);
@@ -289,7 +348,7 @@ export function SearchPage() {
     appliedPriceMin,
     appliedPriceMax,
     minRating,
-    freeShipOnly,
+    selectedTags,
     sameDay,
     verifiedOnly,
     officialOnly,
@@ -297,19 +356,23 @@ export function SearchPage() {
     isFlash,
   ]);
 
-  // V2 owns pagination through cursors; local slicing is retained only for
-  // unsupported legacy-only filters applied to the current V2 page.
+  // V2 owns pagination through cursors; local slicing is retained only for the
+  // campaign-only flash view and the unfiltered catalog fallback.
   const totalCount = v2DisplayActive
     ? filtered.length
     : usedBackend
       ? backendTotalElements
       : filtered.length;
   const totalPages = v2DisplayActive ? 1 : Math.max(1, Math.ceil(totalCount / pageSize));
-  const paginated = usedBackend
+  const paginated = v2DisplayActive
     ? filtered
     : filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const placeholderLoading =
+    (v2SearchActive && searchPlaceholderLoading) ||
+    (v2CatalogActive && catalogPlaceholderLoading) ||
+    imageHydrationLoading;
   const displayState = resolveSearchDisplayState({
-    searchEnabled,
+    searchEnabled: useV2SearchPath,
     searchLoading: backendLoading,
     searchHasError: backendHasError,
     searchTotalElements: backendTotalElements,
@@ -317,13 +380,16 @@ export function SearchPage() {
     catalogLoading,
     catalogHasError,
     catalogProductCount: catalogProducts.length,
-    visibleProductCount: paginated.length,
+    visibleProductCount: placeholderLoading ? 0 : paginated.length,
+    catalogFallbackActive,
   });
 
   const retryResults = () => {
     const requests: Promise<unknown>[] = [];
     if (useV2SearchPath) requests.push(searchV2.refetch());
-    if (useV2CatalogPath) requests.push(productsV2.refetch());
+    if (useV2CatalogPath || catalogFallbackCandidate || imageHydrationActive) {
+      requests.push(productsV2.refetch());
+    }
     void Promise.allSettled(requests);
   };
   const v2HasMore =
@@ -370,8 +436,11 @@ export function SearchPage() {
       onRemove: () => setMinRating(0),
     });
   }
-  if (freeShipOnly) {
-    activeFilters.push({ label: t("search.freeShipping"), onRemove: () => setFreeShipOnly(false) });
+  for (const tag of selectedTags) {
+    activeFilters.push({
+      label: tag,
+      onRemove: () => setSelectedTags(selectedTags.filter((value) => value !== tag)),
+    });
   }
   if (sameDay) {
     activeFilters.push({
@@ -408,7 +477,7 @@ export function SearchPage() {
       priceMin: localPriceMin,
       priceMax: localPriceMax,
       minRating,
-      freeShipping: freeShipOnly,
+      selectedTags,
       sameDay,
       verifiedOnly,
       officialOnly,
@@ -422,7 +491,7 @@ export function SearchPage() {
     onPriceMaxChange: setLocalPriceMax,
     onApplyPrice: () => setPriceFromUrl(localPriceMin, localPriceMax),
     onRatingChange: setMinRating,
-    onFreeShippingChange: setFreeShipOnly,
+    onTagsChange: setSelectedTags,
     onSameDayChange: setSameDay,
     onVerifiedChange: setVerifiedOnly,
     onOfficialChange: setOfficialOnly,

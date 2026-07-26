@@ -9,6 +9,8 @@ import com.vnshop.searchservice.application.SearchFacetsResponse;
 import com.vnshop.searchservice.application.SearchRepository;
 import com.vnshop.searchservice.application.CursorSort;
 import com.vnshop.searchservice.application.SearchCursor;
+import com.vnshop.searchservice.infrastructure.config.SearchFacetProperties;
+import co.elastic.clients.elasticsearch._types.FieldValue;
 import com.vnshop.searchservice.domain.ProductReadModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,17 +58,19 @@ public class ElasticsearchSearchAdapter implements SearchRepository {
             "totalSold", "totalSold"
     );
 
-    private static final int FACET_MAX_BUCKETS = 100;
     private static final String STATUS_ACTIVE = "ACTIVE";
 
     private final ElasticsearchOperations elasticsearchOperations;
     private final SearchRepository fallbackRepository;
+    private final SearchFacetProperties facetProperties;
 
     public ElasticsearchSearchAdapter(
             ElasticsearchOperations elasticsearchOperations,
-            @Qualifier("jpaSearchAdapter") SearchRepository fallbackRepository) {
+            @Qualifier("jpaSearchAdapter") SearchRepository fallbackRepository,
+            SearchFacetProperties facetProperties) {
         this.elasticsearchOperations = elasticsearchOperations;
         this.fallbackRepository = fallbackRepository;
+        this.facetProperties = facetProperties;
     }
 
     // -------------------------------------------------------------------------
@@ -140,10 +144,75 @@ public class ElasticsearchSearchAdapter implements SearchRepository {
     }
 
     @Override
+    public Page<ProductReadModel> searchPaged(
+            String query, String categoryId, String brand,
+            BigDecimal minPrice, BigDecimal maxPrice, Float minRating, List<String> tags,
+            Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly,
+            Pageable pageable) {
+        try {
+            NativeQuery nativeQuery = NativeQuery.builder()
+                    .withQuery(buildSearchQuery(query, categoryId, brand, minPrice, maxPrice, minRating, tags,
+                            sameDay, verifiedOnly, officialOnly))
+                    .withPageable(pageable)
+                    .withSort(toEsSort(pageable.getSort()))
+                    .build();
+            SearchHits<ProductDocument> hits = elasticsearchOperations.search(nativeQuery, ProductDocument.class);
+            List<ProductReadModel> results = hits.getSearchHits().stream()
+                    .map(SearchHit::getContent)
+                    .map(ElasticsearchSearchAdapter::toReadModel)
+                    .toList();
+            if (hits.getTotalHits() == 0) {
+                return fallbackRepository.searchPaged(query, categoryId, brand, minPrice, maxPrice, minRating, tags,
+                        sameDay, verifiedOnly, officialOnly, pageable);
+            }
+            return new PageImpl<>(results, pageable, hits.getTotalHits());
+        } catch (Exception ex) {
+            LOGGER.warn("Elasticsearch dynamic searchPaged failed, using JPA read-model fallback. Cause: {}", ex.getMessage());
+            return fallbackRepository.searchPaged(query, categoryId, brand, minPrice, maxPrice, minRating, tags,
+                    sameDay, verifiedOnly, officialOnly, pageable);
+        }
+    }
+
+    @Override
+    public List<ProductReadModel> searchAfter(
+            String query, String categoryId, String brand,
+            BigDecimal minPrice, BigDecimal maxPrice, Float minRating, List<String> tags,
+            Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly,
+            CursorSort sort, SearchCursor cursor, int limit) {
+        try {
+            NativeQueryBuilder builder = NativeQuery.builder()
+                    .withQuery(buildSearchQuery(query, categoryId, brand, minPrice, maxPrice, minRating, tags,
+                            sameDay, verifiedOnly, officialOnly))
+                    .withPageable(Pageable.ofSize(limit))
+                    .withSort(toCursorSort(sort))
+                    .withTrackTotalHits(false);
+            if (sort != CursorSort.NEWEST) {
+                builder.withFilter(Query.of(filter -> filter.exists(exists -> exists.field("price"))));
+            }
+            if (cursor != null) {
+                builder.withSearchAfter(searchAfterValues(cursor));
+            }
+            SearchHits<ProductDocument> hits = elasticsearchOperations.search(builder.build(), ProductDocument.class);
+            List<ProductReadModel> results = hits.getSearchHits().stream()
+                    .map(SearchHit::getContent)
+                    .map(ElasticsearchSearchAdapter::toReadModel)
+                    .toList();
+            return results.isEmpty()
+                    ? fallbackRepository.searchAfter(query, categoryId, brand, minPrice, maxPrice, minRating, tags,
+                    sameDay, verifiedOnly, officialOnly, sort, cursor, limit)
+                    : results;
+        } catch (Exception ex) {
+            LOGGER.warn("Elasticsearch dynamic cursor search failed, using JPA read-model fallback. Cause: {}", ex.getMessage());
+            return fallbackRepository.searchAfter(query, categoryId, brand, minPrice, maxPrice, minRating, tags,
+                    sameDay, verifiedOnly, officialOnly, sort, cursor, limit);
+        }
+    }
+
+    @Override
     public List<String> findDistinctCategories() {
         try {
             Aggregation termsAgg = Aggregation.of(a -> a
-                    .terms(t -> t.field("categoryId").size(FACET_MAX_BUCKETS)));
+                    .terms(t -> t.field("categoryId").size(facetProperties.maxBuckets())));
             NativeQuery nativeQuery = NativeQuery.builder()
                     .withQuery(Query.of(q -> q.matchAll(m -> m)))
                     .withAggregation("categories", termsAgg)
@@ -216,6 +285,45 @@ public class ElasticsearchSearchAdapter implements SearchRepository {
                 : facets;
     }
 
+    @Override
+    public List<SearchFacetsResponse.FacetEntry> categoryFacetsFor(
+            String query, String brand, BigDecimal minPrice, BigDecimal maxPrice, Float minRating, List<String> tags,
+            Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly) {
+        List<SearchFacetsResponse.FacetEntry> facets = runTermsFacet(
+                "categoryId", buildSearchQuery(query, null, brand, minPrice, maxPrice, minRating, tags,
+                        sameDay, verifiedOnly, officialOnly));
+        return facets.isEmpty()
+                ? fallbackRepository.categoryFacetsFor(query, brand, minPrice, maxPrice, minRating, tags,
+                sameDay, verifiedOnly, officialOnly)
+                : facets;
+    }
+
+    @Override
+    public List<SearchFacetsResponse.FacetEntry> brandFacetsFor(
+            String query, String categoryId, BigDecimal minPrice, BigDecimal maxPrice, Float minRating, List<String> tags,
+            Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly) {
+        List<SearchFacetsResponse.FacetEntry> facets = runTermsFacet(
+                "brand", buildSearchQuery(query, categoryId, null, minPrice, maxPrice, minRating, tags,
+                        sameDay, verifiedOnly, officialOnly));
+        return facets.isEmpty()
+                ? fallbackRepository.brandFacetsFor(query, categoryId, minPrice, maxPrice, minRating, tags,
+                sameDay, verifiedOnly, officialOnly)
+                : facets;
+    }
+
+    @Override
+    public List<SearchFacetsResponse.FacetEntry> tagFacetsFor(
+            String query, String categoryId, String brand, BigDecimal minPrice, BigDecimal maxPrice, Float minRating,
+            List<String> tags, Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly) {
+        List<SearchFacetsResponse.FacetEntry> facets = runTermsFacet(
+                "tags", buildSearchQuery(query, categoryId, brand, minPrice, maxPrice, minRating, tags,
+                        sameDay, verifiedOnly, officialOnly));
+        return facets.isEmpty()
+                ? fallbackRepository.tagFacetsFor(query, categoryId, brand, minPrice, maxPrice, minRating, tags,
+                sameDay, verifiedOnly, officialOnly)
+                : facets;
+    }
+
     // -------------------------------------------------------------------------
     // Internal helpers
     // -------------------------------------------------------------------------
@@ -227,6 +335,14 @@ public class ElasticsearchSearchAdapter implements SearchRepository {
     private static Query buildSearchQuery(
             String query, String categoryId, String brand,
             BigDecimal minPrice, BigDecimal maxPrice,
+            Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly) {
+        return buildSearchQuery(query, categoryId, brand, minPrice, maxPrice, null, List.of(),
+                sameDay, verifiedOnly, officialOnly);
+    }
+
+    private static Query buildSearchQuery(
+            String query, String categoryId, String brand,
+            BigDecimal minPrice, BigDecimal maxPrice, Float minRating, List<String> tags,
             Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly) {
 
         BoolQuery.Builder bool = new BoolQuery.Builder();
@@ -263,6 +379,20 @@ public class ElasticsearchSearchAdapter implements SearchRepository {
             }))));
         }
 
+        if (minRating != null) {
+            bool.filter(Query.of(f -> f.range(r -> r.number(n -> {
+                n.field("averageRating");
+                n.gte(minRating.doubleValue());
+                return n;
+            }))));
+        }
+
+        if (tags != null && !tags.isEmpty()) {
+            bool.filter(Query.of(f -> f.terms(t -> t
+                    .field("tags")
+                    .terms(values -> values.value(tags.stream().map(FieldValue::of).toList())))));
+        }
+
         // Same-day delivery filter
         if (Boolean.TRUE.equals(sameDay)) {
             bool.filter(Query.of(f -> f.term(t -> t.field("sameDayDelivery").value(true))));
@@ -286,7 +416,7 @@ public class ElasticsearchSearchAdapter implements SearchRepository {
     private List<SearchFacetsResponse.FacetEntry> runTermsFacet(String field, Query filterQuery) {
         try {
             Aggregation termsAgg = Aggregation.of(a -> a
-                    .terms(t -> t.field(field).size(FACET_MAX_BUCKETS)));
+                    .terms(t -> t.field(field).size(facetProperties.maxBuckets())));
             NativeQuery nativeQuery = NativeQuery.builder()
                     .withQuery(filterQuery)
                     .withAggregation(field, termsAgg)
@@ -387,7 +517,8 @@ public class ElasticsearchSearchAdapter implements SearchRepository {
                 doc.getCreatedAt(),
                 Boolean.TRUE.equals(doc.getSameDayDelivery()),
                 Boolean.TRUE.equals(doc.getVerified()),
-                Boolean.TRUE.equals(doc.getIsOfficial())
+                Boolean.TRUE.equals(doc.getIsOfficial()),
+                doc.getTags()
         );
     }
 }

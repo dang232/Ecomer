@@ -12,6 +12,13 @@ public interface PayoutRepositoryPort {
 
     Optional<Payout> findById(UUID payoutId);
 
+    default Optional<Payout> findBySellerIdAndIdempotencyKey(String sellerId, String idempotencyKey) {
+        if (sellerId == null || idempotencyKey == null) return Optional.empty();
+        return findBySellerId(sellerId).stream()
+                .filter(payout -> idempotencyKey.equals(payout.idempotencyKey()))
+                .findFirst();
+    }
+
     List<Payout> findByStatus(PayoutStatus status);
 
     default List<Payout> findByStatus(PayoutStatus status, String query) {

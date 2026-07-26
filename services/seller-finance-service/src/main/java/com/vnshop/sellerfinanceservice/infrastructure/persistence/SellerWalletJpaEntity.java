@@ -84,8 +84,13 @@ public class SellerWalletJpaEntity extends BaseJpaEntity {
         this.version = wallet.version();
     }
 
+    /**
+     * Round-trip preserves the new {@code currency} field through the domain constructor.
+     * The underlying column does not yet exist in {@code seller_wallets}; this is owned
+     * by Task 8/12 migration renumbering. We persist VND-by-default until then.
+     */
     SellerWallet toDomain() {
-        return new SellerWallet(sellerId, availableBalance, settlementPendingBalance, reserveBalance,
+        return new SellerWallet(sellerId, "VND", availableBalance, settlementPendingBalance, reserveBalance,
                 payoutPendingBalance, debtBalance, totalFees, totalRefunded, totalPaidOut,
                 totalEarned, lastPayoutAt, version);
     }

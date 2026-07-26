@@ -1,5 +1,6 @@
 package com.vnshop.transcoder.service;
 
+import com.vnshop.transcoder.config.TranscoderProperties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -11,7 +12,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class FfmpegCommandBuilderTest {
 
-    private final FfmpegCommandBuilder builder = new FfmpegCommandBuilder();
+    private final FfmpegCommandBuilder builder = new FfmpegCommandBuilder(properties());
+
+    private static TranscoderProperties properties() {
+        return new TranscoderProperties("/tmp/transcoder", "input", "staging", 300,
+                600, 2_147_483_648L, 3, 30);
+    }
 
     @Test
     void buildTranscodeCommand_containsRequiredFlags() {

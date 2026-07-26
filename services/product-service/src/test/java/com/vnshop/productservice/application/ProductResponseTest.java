@@ -5,12 +5,33 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.vnshop.productservice.domain.Money;
 import com.vnshop.productservice.domain.Product;
 import com.vnshop.productservice.domain.ProductVariant;
+import com.vnshop.productservice.domain.ProductTag;
+import com.vnshop.productservice.domain.review.ProductReviewSummary;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class ProductResponseTest {
+
+    @Test
+    void includesPublishedReviewSummary() {
+        Product product = new Product(
+                UUID.randomUUID(),
+                "seller-rating",
+                "Rated product",
+                null,
+                "electronics",
+                "Brand",
+                List.of(new ProductVariant("sku", "Default", new Money(new BigDecimal("100")), null, 1)),
+                List.of()
+        );
+
+        ProductResponse response = ProductResponse.fromDomain(product, new ProductReviewSummary(4.0, 1));
+
+        assertThat(response.rating()).isEqualTo(4.0);
+        assertThat(response.reviewCount()).isEqualTo(1);
+    }
 
     @Test
     void sumsStockAcrossVariants() {
@@ -77,5 +98,14 @@ class ProductResponseTest {
         assertThat(response.variants()).singleElement()
                 .extracting(ProductResponse.VariantResponse::stockQuantity)
                 .isEqualTo(0);
+    }
+
+    @Test
+    void exposesPublicTagLabels() {
+        Product product = new Product(
+                UUID.randomUUID(), "seller-4", "Wireless headphones", null, "audio", "Brand",
+                List.of(), List.of(), List.of(new ProductTag("wireless", "Wireless")), false, false, false);
+
+        assertThat(ProductResponse.fromDomain(product).tags()).containsExactly("Wireless");
     }
 }

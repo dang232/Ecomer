@@ -1,8 +1,8 @@
 package com.vnshop.userservice.application;
 
+import com.vnshop.userservice.domain.port.out.KeycloakTokenPort;
+import com.vnshop.userservice.domain.port.out.KeycloakTokenPort.TokenSet;
 import com.vnshop.userservice.infrastructure.keycloak.KeycloakAdminException;
-import com.vnshop.userservice.infrastructure.keycloak.KeycloakTokenClient;
-import com.vnshop.userservice.infrastructure.keycloak.KeycloakTokenClient.TokenSet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,7 +20,7 @@ import static org.mockito.Mockito.when;
 class AuthSessionUseCaseTest {
 
     @Mock
-    private KeycloakTokenClient tokenClient;
+    private KeycloakTokenPort tokenClient;
 
     private AuthSessionUseCase useCase;
 

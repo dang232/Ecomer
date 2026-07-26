@@ -74,7 +74,7 @@ type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 export interface RequestOptions<TSchema extends z.ZodType> {
   method?: Method;
   path: string;
-  query?: Record<string, string | number | boolean | undefined | null>;
+  query?: Record<string, string | number | boolean | string[] | undefined | null>;
   body?: unknown;
   schema: TSchema;
   signal?: AbortSignal;
@@ -134,7 +134,11 @@ function buildUrl(path: string, query?: RequestOptions<z.ZodType>["query"]): str
   if (query) {
     for (const [k, v] of Object.entries(query)) {
       if (v === undefined || v === null) continue;
-      url.searchParams.set(k, String(v));
+      if (Array.isArray(v)) {
+        v.forEach((item) => url.searchParams.append(k, item));
+      } else {
+        url.searchParams.set(k, String(v));
+      }
     }
   }
   return url.toString();
@@ -436,7 +440,7 @@ export const api = {
     }),
   getBlob: (
     path: string,
-    query?: Record<string, string | number | boolean | undefined | null>,
+    query?: Record<string, string | number | boolean | string[] | undefined | null>,
     opts?: Pick<RequestOptions<z.ZodType>, "auth" | "signal" | "credentials">,
   ): Promise<Blob> =>
     request({

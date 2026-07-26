@@ -10,7 +10,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5434/vnshop_product?currentSchema=product_svc
     username: vnshop
-    password: ${DB_PASSWORD:vnshop}
+    password: ${DB_PASSWORD}
     hikari:
       maximum-pool-size: 15
       minimum-idle: 5
@@ -25,15 +25,15 @@ spring:
     redis:
       host: localhost
       port: 6379
-      password: ${REDIS_PASSWORD:vnshop123}
+      password: ${REDIS_PASSWORD}
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     properties:
       security.protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_SSL}
       sasl.mechanism: PLAIN
-      sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_SASL_USERNAME:svc-product}" password="${KAFKA_SASL_PASSWORD:product-secret-change-me}";
+      sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_SASL_USERNAME}" password="${KAFKA_SASL_PASSWORD}";
       ssl.truststore.location: ${KAFKA_SSL_TRUSTSTORE_LOCATION:/etc/kafka/secrets/kafka.truststore.jks}
-      ssl.truststore.password: ${KAFKA_SSL_TRUSTSTORE_PASSWORD:kafka-ssl-dev-password}
+      ssl.truststore.password: ${KAFKA_SSL_TRUSTSTORE_PASSWORD}
       ssl.endpoint.identification.algorithm: https
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
@@ -71,6 +71,11 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
     enabled: ${SWAGGER_ENABLED:false}
+
+vnshop:
+  object-storage:
+    video:
+      public-bucket: ${S3_BUCKET_PUBLIC}
 
 management:
   endpoints:
@@ -112,6 +117,12 @@ review:
     group-id: ${REVIEW_PURCHASE_EVENTS_GROUP_ID:product-service-review-purchases}
 
 product:
+  cursor:
+    secret: ${VNSHOP_PRODUCT_CURSOR_SECRET}
+  tags:
+    max-per-product: ${PRODUCT_TAGS_MAX_PER_PRODUCT:20}
+    max-length: ${PRODUCT_TAGS_MAX_LENGTH:64}
+    max-total-length: ${PRODUCT_TAGS_MAX_TOTAL_LENGTH:512}
   review-rating-projection:
     backfill:
       enabled: ${PRODUCT_REVIEW_RATING_PROJECTION_BACKFILL_ENABLED:true}

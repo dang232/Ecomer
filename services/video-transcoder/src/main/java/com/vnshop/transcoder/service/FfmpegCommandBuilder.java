@@ -1,6 +1,8 @@
 package com.vnshop.transcoder.service;
 
+import com.vnshop.transcoder.config.TranscoderProperties;
 import org.springframework.stereotype.Component;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -10,7 +12,13 @@ import java.util.List;
  * Pure value object — no I/O, fully unit-testable.
  */
 @Component
+@EnableConfigurationProperties(TranscoderProperties.class)
 public class FfmpegCommandBuilder {
+    private final TranscoderProperties properties;
+
+    public FfmpegCommandBuilder(TranscoderProperties properties) {
+        this.properties = properties;
+    }
 
     /**
      * Builds the transcode command that:
@@ -26,9 +34,9 @@ public class FfmpegCommandBuilder {
      */
     public List<String> buildTranscodeCommand(Path inputFile, Path outputFile) {
         return List.of(
-                "timeout", "--signal=KILL", "300",
+                "timeout", "--signal=KILL", String.valueOf(properties.processTimeoutSeconds()),
                 "ffmpeg", "-y",
-                "-t", "600",
+                "-t", String.valueOf(properties.inputDurationLimitSeconds()),
                 "-protocol_whitelist", "file",
                 "-i", inputFile.toAbsolutePath().toString(),
                 "-vf", "scale='min(1280,iw)':'min(720,ih)':force_original_aspect_ratio=decrease",
@@ -41,8 +49,8 @@ public class FfmpegCommandBuilder {
                 "-map", "0:a:0",
                 "-map_metadata", "-1",
                 "-movflags", "+faststart",
-                "-fs", "2147483648",
-                "-threads", "3",
+                "-fs", String.valueOf(properties.outputSizeLimitBytes()),
+                "-threads", String.valueOf(properties.ffmpegThreads()),
                 "-f", "mp4",
                 outputFile.toAbsolutePath().toString()
         );

@@ -9,6 +9,7 @@ import com.vnshop.productservice.domain.review.port.out.ReviewRepositoryPort;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,6 +57,31 @@ public class ReviewJpaRepository implements ReviewRepositoryPort {
         long count = row.length < 2 || row[1] == null ? 0L : ((Number) row[1]).longValue();
         Double average = count == 0 || row[0] == null ? null : ((Number) row[0]).doubleValue();
         return new ProductReviewSummary(average, count);
+    }
+
+    @Override
+    public Map<String, ProductReviewSummary> getProductReviewSummaries(Collection<String> productIds) {
+        Map<String, ProductReviewSummary> result = new HashMap<>();
+        if (productIds == null || productIds.isEmpty()) {
+            return result;
+        }
+        productIds.stream()
+                .filter(id -> id != null && !id.isBlank())
+                .distinct()
+                .forEach(id -> result.put(id, ProductReviewSummary.empty()));
+        if (result.isEmpty()) {
+            return result;
+        }
+        for (Object[] row : reviewRepository.findProductReviewStatsBatch(result.keySet())) {
+            if (row == null || row.length < 3 || row[0] == null) {
+                continue;
+            }
+            String productId = String.valueOf(row[0]);
+            long count = row[2] == null ? 0L : ((Number) row[2]).longValue();
+            Double average = count == 0 || row[1] == null ? null : ((Number) row[1]).doubleValue();
+            result.put(productId, new ProductReviewSummary(average, count));
+        }
+        return result;
     }
 
     @Override

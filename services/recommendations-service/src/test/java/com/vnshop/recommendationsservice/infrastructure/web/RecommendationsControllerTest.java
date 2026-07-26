@@ -37,6 +37,7 @@ import org.springframework.test.web.servlet.MockMvc;
                 + "org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration,"
                 + "org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration,"
                 + "org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration",
+        "vnshop.kafka.admin.enabled=false",
         // Disables the @ConditionalOnProperty-gated OrderEventListener so it does
         // not need a Kafka cluster (or its dependencies) to wire in this test.
         "vnshop.recommendations.events.enabled=false"

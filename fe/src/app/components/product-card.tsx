@@ -1,4 +1,4 @@
-import { Heart, Star } from "lucide-react";
+import { Heart } from "lucide-react";
 import { motion } from "motion/react";
 import { memo, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
@@ -8,6 +8,7 @@ import { formatPrice } from "../lib/format";
 import type { Product } from "../types/ui";
 
 import { ImageWithFallback } from "./image-with-fallback";
+import { StarRating } from "./star-rating";
 import { useVNShop } from "./vnshop-context";
 
 interface ProductCardProps {
@@ -112,7 +113,7 @@ export const ProductCard = memo(function ProductCard({
           </div>
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
             <span className="flex items-center gap-1">
-              <Star className="h-3 w-3 fill-accent text-accent" aria-hidden="true" />
+              <StarRating value={product.rating} size={11} />
               <span className="font-medium text-foreground">{product.rating}</span>
             </span>
             <span aria-hidden="true">·</span>

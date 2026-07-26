@@ -3,7 +3,7 @@ package com.vnshop.sellerfinanceservice.infrastructure.config;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -16,23 +16,22 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Configuration
+@EnableConfigurationProperties(KafkaAdminProperties.class)
 public class KafkaAdminConfig {
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaAdminConfig.class);
 
     @Bean
     @Primary
     public KafkaAdmin kafkaAdmin(
-            @Value("${spring.kafka.bootstrap-servers}") String bootstrapServers,
-            @Value("${KAFKA_SASL_USERNAME:svc-finance}") String username,
-            @Value("${KAFKA_SASL_PASSWORD:finance-secret-change-me}") String password) {
+            KafkaAdminProperties properties) {
         Map<String, Object> configs = new HashMap<>();
-        configs.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        configs.put("security.protocol", "SASL_PLAINTEXT");
-        configs.put("sasl.mechanism", "PLAIN");
+        configs.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, properties.bootstrapServers());
+        configs.put("security.protocol", properties.securityProtocol());
+        configs.put("sasl.mechanism", properties.saslMechanism());
         configs.put("sasl.jaas.config",
                 "org.apache.kafka.common.security.plain.PlainLoginModule required "
-                + "username=\"" + username + "\" "
-                + "password=\"" + password + "\";");
+                + "username=\"" + properties.username() + "\" "
+                + "password=\"" + properties.password() + "\";");
         KafkaAdmin admin = new KafkaAdmin(configs);
         admin.setFatalIfBrokerNotAvailable(false);
         return admin;

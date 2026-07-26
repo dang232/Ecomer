@@ -29,7 +29,7 @@ class SepayPollerTest {
 
     @Test
     void rejectsBlankApiKeyAtConstruction() {
-        SepayProperties props = new SepayProperties(true, "", "ACCT-1", null, 30, null);
+        SepayProperties props = new SepayProperties(true, "", "ACCT-1", "https://sepay.example", 30, null);
 
         assertThatThrownBy(() -> new SepayPoller(props,
                 cursor -> empty(), new InMemoryCursorRepo(), new InMemoryPayments(),
@@ -111,7 +111,7 @@ class SepayPollerTest {
     }
 
     private static SepayProperties props() {
-        return new SepayProperties(true, "key-1", "ACCT-1", null, 30, null);
+        return new SepayProperties(true, "key-1", "ACCT-1", "https://sepay.example", 30, null);
     }
 
     private static SepayTransactionsResponse empty() {

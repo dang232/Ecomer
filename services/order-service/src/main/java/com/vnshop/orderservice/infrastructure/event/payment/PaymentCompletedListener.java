@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vnshop.orderservice.domain.Order;
 import com.vnshop.orderservice.domain.PaymentStatus;
+import com.vnshop.orderservice.domain.finance.eventmode.SellerFinanceEventModePolicy;
 import com.vnshop.orderservice.domain.port.out.OrderEventPublisherPort;
 import com.vnshop.orderservice.domain.port.out.OrderRepositoryPort;
 import com.vnshop.orderservice.domain.port.out.SellerFinanceAdjustmentPublisherPort;
@@ -19,7 +20,6 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.annotation.RetryableTopic;
 import org.springframework.kafka.retrytopic.DltStrategy;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,13 +44,31 @@ public class PaymentCompletedListener {
     private final ObjectMapper objectMapper;
     private final SubOrderFinancialAllocationRepositoryPort allocationRepository;
     private final SellerFinanceAdjustmentPublisherPort sellerFinanceAdjustmentPublisher;
-    private final boolean sellerFinanceAdjustmentsEnabled;
+    private final SellerFinanceEventModePolicy eventModePolicy;
 
     public PaymentCompletedListener(
             OrderRepositoryPort orderRepository,
             OrderEventPublisherPort orderEventPublisher,
             ObjectMapper objectMapper) {
-        this(orderRepository, orderEventPublisher, objectMapper, null, null, false);
+        this(orderRepository, orderEventPublisher, objectMapper, null, null, SellerFinanceEventModePolicy.disabled());
+    }
+
+    /**
+     * Backward-compat constructor preserved for legacy tests: maps a boolean
+     * to the central policy, so the only site that knows about the alias is
+     * the legacy constructor itself. Production wiring uses the policy-only
+     * constructor below.
+     */
+    public PaymentCompletedListener(
+            OrderRepositoryPort orderRepository,
+            OrderEventPublisherPort orderEventPublisher,
+            ObjectMapper objectMapper,
+            SubOrderFinancialAllocationRepositoryPort allocationRepository,
+            SellerFinanceAdjustmentPublisherPort sellerFinanceAdjustmentPublisher,
+            boolean sellerFinanceAdjustmentsEnabled) {
+        this(orderRepository, orderEventPublisher, objectMapper, allocationRepository,
+                sellerFinanceAdjustmentPublisher,
+                SellerFinanceEventModePolicy.fromLegacyAlias(sellerFinanceAdjustmentsEnabled));
     }
 
     @Autowired
@@ -60,13 +78,13 @@ public class PaymentCompletedListener {
             ObjectMapper objectMapper,
             SubOrderFinancialAllocationRepositoryPort allocationRepository,
             SellerFinanceAdjustmentPublisherPort sellerFinanceAdjustmentPublisher,
-            @Value("${seller-finance.adjustments.enabled:false}") boolean sellerFinanceAdjustmentsEnabled) {
+            SellerFinanceEventModePolicy eventModePolicy) {
         this.orderRepository = orderRepository;
         this.orderEventPublisher = orderEventPublisher;
         this.objectMapper = objectMapper;
         this.allocationRepository = allocationRepository;
         this.sellerFinanceAdjustmentPublisher = sellerFinanceAdjustmentPublisher;
-        this.sellerFinanceAdjustmentsEnabled = sellerFinanceAdjustmentsEnabled;
+        this.eventModePolicy = eventModePolicy;
     }
 
     @RetryableTopic(
@@ -122,7 +140,7 @@ public class PaymentCompletedListener {
         }
         Order saved = orderRepository.save(order);
         orderEventPublisher.publishOrderPaid(saved);
-        if (sellerFinanceAdjustmentsEnabled) {
+        if (eventModePolicy.shouldPublish()) {
             String callbackEventId = text(payload, "callbackEventId");
             if (callbackEventId == null || callbackEventId.isBlank()) {
                 LOGGER.warn("payment.completed orderId={} missing callbackEventId — skipping finance credits", orderId);
@@ -130,6 +148,8 @@ public class PaymentCompletedListener {
                 allocationRepository.findByOrderId(orderId)
                         .forEach(allocation -> sellerFinanceAdjustmentPublisher.publishCredit(allocation, callbackEventId));
             }
+        } else {
+            LOGGER.info("payment-completed-credit-suppressed {} adjustmentType=CREDIT", eventModePolicy.evidenceTag());
         }
         LOGGER.info("payment-completed orderId={} provider={} transactionRef={}",
                 orderId, text(payload, "provider"), text(payload, "transactionRef"));

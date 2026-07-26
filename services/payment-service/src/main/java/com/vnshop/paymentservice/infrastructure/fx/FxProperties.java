@@ -20,9 +20,17 @@ public record FxProperties(
         int cacheMaxEntries,
         BigDecimal fallbackUsdToVnd) {
     public FxProperties {
-        if (baseUrl == null || baseUrl.isBlank()) baseUrl = "https://api.frankfurter.app";
-        if (cacheTtl == null) cacheTtl = Duration.ofHours(24);
-        if (cacheMaxEntries <= 0) cacheMaxEntries = 100;
-        if (fallbackUsdToVnd == null) fallbackUsdToVnd = new BigDecimal("25500");
+        if (baseUrl == null || baseUrl.isBlank()) {
+            throw new IllegalStateException("payment.fx.base-url must be configured");
+        }
+        if (cacheTtl == null || cacheTtl.isNegative() || cacheTtl.isZero()) {
+            throw new IllegalStateException("payment.fx.cache-ttl must be positive");
+        }
+        if (cacheMaxEntries <= 0) {
+            throw new IllegalStateException("payment.fx.cache-max-entries must be positive");
+        }
+        if (fallbackUsdToVnd == null || fallbackUsdToVnd.signum() <= 0) {
+            throw new IllegalStateException("payment.fx.fallback-usd-to-vnd must be positive");
+        }
     }
 }

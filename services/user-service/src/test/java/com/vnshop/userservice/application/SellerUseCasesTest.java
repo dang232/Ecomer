@@ -24,7 +24,7 @@ class SellerUseCasesTest {
     private UserRepositoryPort userRepositoryPort;
 
     private static SellerProfile seller(String id) {
-        return new SellerProfile(id, "Shop", "Bank", "ACC", null, false, Tier.STANDARD, false);
+        return new SellerProfile(id, "Shop", "Bank", null, false, Tier.STANDARD, false);
     }
 
     // --- ApproveSellerUseCase ---
@@ -98,8 +98,8 @@ class SellerUseCasesTest {
 
     @Test
     void register_savesAndReturnsSeller() {
-        RegisterSellerCommand cmd = new RegisterSellerCommand("kc-1", "My Shop", "BankA", "ACC-001");
-        SellerProfile saved = new SellerProfile("kc-1", "My Shop", "BankA", "ACC-001", null, false, Tier.STANDARD, false);
+        RegisterSellerCommand cmd = new RegisterSellerCommand("kc-1", "My Shop", "BankA");
+        SellerProfile saved = new SellerProfile("kc-1", "My Shop", "BankA", null, false, Tier.STANDARD, false);
         when(userRepositoryPort.saveSeller(any())).thenReturn(saved);
 
         RegisterSellerUseCase useCase = new RegisterSellerUseCase(userRepositoryPort);

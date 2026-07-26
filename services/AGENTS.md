@@ -6,10 +6,11 @@
 | Service | Stack | Port | Purpose |
 |---------|-------|------|---------|
 | api-gateway | Spring Cloud | 8080 | OAuth2, routing, rate limiting |
-| user-service | Spring Boot | 8081 | User/seller profiles, wallet |
+| user-service | Spring Boot | 8081 | User/seller profiles, payout destination enrollment (masked) |
+| seller-finance-service | Spring Boot | 8090 | Active owner of marketplace settlement, ledger, wallet projection, payouts |
 | product-service | Spring Boot | 8082 | Catalog, variants, inventory |
 | cart-service | NestJS | 8084 | Multi-seller cart snapshots |
-| order-service | Spring Boot | 8091 | Orders, fulfillment, Kafka workers |
+| order-service | Spring Boot | 8091 | Orders, fulfillment, immutable per-sub-order financial allocations, Kafka workers |
 | payment-service | Spring Boot | 8092 | VNPay, MoMo, VietQR, COD |
 | shipping-service | Spring Boot | 8093 | GHN/GHTK carrier integration |
 | search-service | NestJS | 8086 | Elasticsearch, faceted search |

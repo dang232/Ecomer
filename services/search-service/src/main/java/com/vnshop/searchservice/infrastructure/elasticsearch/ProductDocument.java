@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Collection;
 
 @Document(indexName = "products")
 @Setting(settingPath = "/elasticsearch/product-settings.json")
@@ -80,6 +81,9 @@ public class ProductDocument {
     @Field(type = FieldType.Boolean)
     private Boolean isOfficial;
 
+    @Field(type = FieldType.Keyword)
+    private List<String> tags;
+
     // -------------------------------------------------------------------------
     // Getters and setters (explicit — avoids Lombok annotation-processor issues
     // on newer JDK versions)
@@ -145,6 +149,9 @@ public class ProductDocument {
     public Boolean getIsOfficial() { return isOfficial; }
     public void setIsOfficial(Boolean isOfficial) { this.isOfficial = isOfficial; }
 
+    public List<String> getTags() { return tags; }
+    public void setTags(List<String> tags) { this.tags = tags == null ? List.of() : List.copyOf(tags); }
+
     /**
      * Builds a {@link ProductDocument} from a Kafka event payload. Unknown or
      * missing fields are mapped to {@code null} / sensible defaults so the
@@ -172,6 +179,7 @@ public class ProductDocument {
         doc.setSameDayDelivery(booleanValue(payload.get("sameDayDelivery")));
         doc.setVerified(booleanValue(payload.get("verified")));
         doc.setIsOfficial(booleanValue(payload.get("isOfficial")));
+        doc.setTags(tagKeys(payload.get("tags")));
         doc.setCreatedAt(Instant.now());
         return doc;
     }
@@ -206,5 +214,18 @@ public class ProductDocument {
         if (value == null) return false;
         if (value instanceof Boolean b) return b;
         return Boolean.parseBoolean(value.toString());
+    }
+
+    private static List<String> tagKeys(Object value) {
+        if (!(value instanceof Collection<?> values)) {
+            return List.of();
+        }
+        return values.stream()
+                .map(item -> item instanceof Map<?, ?> map ? map.get("key") : item)
+                .filter(item -> item != null && !item.toString().isBlank())
+                .map(Object::toString)
+                .distinct()
+                .sorted()
+                .toList();
     }
 }

@@ -39,6 +39,17 @@ export interface TokenSet {
   accessExpiresAt: number;
 }
 
+/** Refresh shortly before access-token expiry, not on every browser focus. */
+export const ACCESS_TOKEN_REFRESH_BUFFER_MS = 60_000;
+
+export function isAccessTokenRefreshDue(
+  tokenSet: Pick<TokenSet, "accessExpiresAt">,
+  now = Date.now(),
+  bufferMs = ACCESS_TOKEN_REFRESH_BUFFER_MS,
+): boolean {
+  return tokenSet.accessExpiresAt - now <= bufferMs;
+}
+
 export interface JwtClaims {
   sub: string;
   email?: string;
@@ -173,8 +184,14 @@ export async function passwordLogin(username: string, password: string): Promise
 
 export async function refreshTokens(): Promise<TokenSet> {
   if (inFlightRefresh) return inFlightRefresh;
+  const csrfHeaders = csrfAuthHeader();
+  if (!csrfHeaders) {
+    return Promise.reject(
+      new AuthError(403, "csrf_missing", "Refresh session is unavailable without a CSRF cookie"),
+    );
+  }
   const pending = (async () => {
-    const res = await postAuth(apiUrl("/auth/refresh"), undefined, csrfAuthHeader());
+    const res = await postAuth(apiUrl("/auth/refresh"), undefined, csrfHeaders);
     return readEnvelope(res, "refresh_failed");
   })();
   inFlightRefresh = pending;
@@ -189,7 +206,9 @@ export async function refreshTokens(): Promise<TokenSet> {
 
 export async function revokeTokens(): Promise<void> {
   try {
-    await postAuth(apiUrl("/auth/logout"), undefined, csrfAuthHeader());
+    const csrfHeaders = csrfAuthHeader();
+    if (!csrfHeaders) return;
+    await postAuth(apiUrl("/auth/logout"), undefined, csrfHeaders);
   } catch {
     // Best-effort. Local state is cleared regardless.
   }

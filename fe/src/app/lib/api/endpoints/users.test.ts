@@ -71,6 +71,16 @@ describe("users endpoint Zod schemas", () => {
     expect(parsed.city).toBe("Hồ Chí Minh");
   });
 
+  it("userProfileSchema accepts a null email from the buyer profile endpoint", () => {
+    const parsed = userProfileSchema.parse({
+      keycloakId: "kc-123",
+      email: null,
+      addresses: [],
+    });
+
+    expect(parsed.email).toBe("");
+  });
+
   it("addressSchema requires street and city", () => {
     expect(() => addressSchema.parse({ city: "HCM" })).toThrow();
     expect(() => addressSchema.parse({ street: "12 Lê Lợi" })).toThrow();

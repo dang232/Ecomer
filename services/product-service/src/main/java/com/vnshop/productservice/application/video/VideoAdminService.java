@@ -22,19 +22,22 @@ import java.util.UUID;
  */
 public class VideoAdminService {
 
-    private static final String STAGING_BUCKET = "vnshop-videos-staging";
-    private static final String PUBLIC_BUCKET = "vnshop-videos";
-
     private final VideoRepositoryPort videoRepositoryPort;
     private final ObjectStoragePort objectStoragePort;
     private final VideoEventPublisherPort videoEventPublisherPort;
+    private final String publicBucket;
 
     public VideoAdminService(VideoRepositoryPort videoRepositoryPort,
             ObjectStoragePort objectStoragePort,
-            VideoEventPublisherPort videoEventPublisherPort) {
+            VideoEventPublisherPort videoEventPublisherPort,
+            String publicBucket) {
         this.videoRepositoryPort = Objects.requireNonNull(videoRepositoryPort, "videoRepositoryPort is required");
         this.objectStoragePort = Objects.requireNonNull(objectStoragePort, "objectStoragePort is required");
         this.videoEventPublisherPort = Objects.requireNonNull(videoEventPublisherPort, "videoEventPublisherPort is required");
+        if (publicBucket == null || publicBucket.isBlank()) {
+            throw new IllegalArgumentException("public video bucket is required");
+        }
+        this.publicBucket = publicBucket;
     }
 
     /** Returns paginated videos with status PENDING_REVIEW, sorted by createdAt ascending. */
@@ -127,7 +130,7 @@ public class VideoAdminService {
      */
     private Video doApprove(Video video, String adminId) {
         UUID videoId = video.videoId();
-        String publicKey = PUBLIC_BUCKET + "/" + videoId.toString();
+        String publicKey = publicBucket + "/" + videoId.toString();
 
         // Copy staging → public bucket then remove from staging
         objectStoragePort.copyObject(video.stagingKey(), publicKey);

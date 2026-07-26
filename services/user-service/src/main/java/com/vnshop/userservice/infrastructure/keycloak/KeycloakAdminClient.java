@@ -3,6 +3,7 @@ package com.vnshop.userservice.infrastructure.keycloak;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.vnshop.userservice.domain.port.out.KeycloakAdminPort;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -24,9 +25,13 @@ import java.util.concurrent.locks.ReentrantLock;
  * client_credentials and uses it to create users on self-registration. The token
  * is cached in-memory and refreshed before expiry; concurrent requests can race
  * but the worst outcome is two adjacent token fetches, not a stale token.
+ *
+ * <p>Implements {@link KeycloakAdminPort} so application-layer use cases
+ * (e.g. {@code AdminUserUseCase}) can depend on the port, not the concrete
+ * HTTP adapter.
  */
 @Component
-public class KeycloakAdminClient {
+public class KeycloakAdminClient implements KeycloakAdminPort {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final RestClient http = RestClient.builder().build();
@@ -43,7 +48,7 @@ public class KeycloakAdminClient {
             @Value("${keycloak.admin.base-url:http://keycloak:8080}") String baseUrl,
             @Value("${keycloak.admin.realm:vnshop}") String realm,
             @Value("${keycloak.admin.client-id:vnshop-admin-api}") String clientId,
-            @Value("${keycloak.admin.client-secret:vnshop-admin-api-secret}") String clientSecret) {
+            @Value("${keycloak.admin.client-secret}") String clientSecret) {
         this.baseUrl = baseUrl;
         this.realm = realm;
         this.clientId = clientId;
@@ -135,6 +140,7 @@ public class KeycloakAdminClient {
      * Disable a user in Keycloak (sets enabled=false). Used when an admin
      * bans a buyer — the user can no longer obtain tokens until re-enabled.
      */
+    @Override
     public void disableUser(String userId) {
         setUserEnabled(userId, false);
     }
@@ -143,6 +149,7 @@ public class KeycloakAdminClient {
      * Re-enable a user in Keycloak (sets enabled=true). Used when an admin
      * unbans a buyer.
      */
+    @Override
     public void enableUser(String userId) {
         setUserEnabled(userId, true);
     }

@@ -62,7 +62,7 @@ public class SepayPoller {
         this.promotionService = Objects.requireNonNull(promotionService, "promotionService is required");
     }
 
-    @Scheduled(fixedRateString = "${payment.sepay.poll-interval-seconds:30}000")
+    @Scheduled(fixedRateString = "${payment.sepay.poll-interval-seconds}000")
     public void poll() {
         String cursor = cursorRepository.readCursor().orElse(null);
         SepayTransactionsResponse response;

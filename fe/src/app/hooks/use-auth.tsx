@@ -14,7 +14,9 @@ import { registerUser, type RegisterInput } from "../lib/api/endpoints/auth";
 import { ApiError } from "../lib/api/envelope";
 import {
   AuthError,
+  ACCESS_TOKEN_REFRESH_BUFFER_MS,
   decodeJwt,
+  isAccessTokenRefreshDue,
   passwordLogin,
   refreshTokens,
   revokeTokens,
@@ -127,8 +129,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     clearRefreshTimer();
     if (!tokenSet) return;
-    const refreshSkewMs = 30_000;
-    const delay = Math.max(1_000, tokenSet.accessExpiresAt - Date.now() - refreshSkewMs);
+    const delay = Math.max(
+      1_000,
+      tokenSet.accessExpiresAt - Date.now() - ACCESS_TOKEN_REFRESH_BUFFER_MS,
+    );
     refreshTimeoutRef.current = window.setTimeout(() => {
       void refreshSession().catch(() => {
         if (!logoutInProgressRef.current) applyTokenSet(null);
@@ -145,7 +149,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const refreshVisibleSession = () => {
-      if (document.hidden || !tokenSet || logoutInProgressRef.current) return;
+      if (
+        document.hidden ||
+        !tokenSet ||
+        !isAccessTokenRefreshDue(tokenSet) ||
+        logoutInProgressRef.current
+      ) {
+        return;
+      }
       void refreshSession().catch(() => {
         if (!logoutInProgressRef.current) applyTokenSet(null);
       });

@@ -116,7 +116,7 @@ const STATIC_SERVICES: DiscoveredService[] = [
     name: "Shipping Service",
     url: "http://shipping-service:8093",
     healthPath: "/actuator/health",
-    routes: ["/shipping/**"],
+    routes: ["/shipping/**", "/webhooks/ghn", "/webhooks/ghtk"],
   },
   {
     id: "recommendations-service",

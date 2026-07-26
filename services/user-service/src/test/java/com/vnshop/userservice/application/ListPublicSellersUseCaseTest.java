@@ -40,9 +40,9 @@ class ListPublicSellersUseCaseTest {
 
     private SellerProfile seller(String id, String shopName) {
         return new SellerProfile(
-                id, shopName, "Bank", "ACC",
-                null, true, Tier.STANDARD, false,
-                null, null, null, Instant.now()
+                id, shopName, "Bank", null,
+                true, Tier.STANDARD, false,
+                null, null, null, Instant.now(), null
         );
     }
 

@@ -13,7 +13,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   CSRF_COOKIE_NAME,
   CSRF_HEADER_NAME,
+  ACCESS_TOKEN_REFRESH_BUFFER_MS,
   csrfAuthHeader,
+  isAccessTokenRefreshDue,
   passwordLogin,
   readCookieValue,
   refreshTokens,
@@ -109,6 +111,19 @@ describe("readCookieValue", () => {
   });
 });
 
+describe("access-token refresh timing", () => {
+  it("refreshes only inside the configured expiry buffer", () => {
+    const now = 1_000_000;
+
+    expect(
+      isAccessTokenRefreshDue({ accessExpiresAt: now + ACCESS_TOKEN_REFRESH_BUFFER_MS + 1 }, now),
+    ).toBe(false);
+    expect(
+      isAccessTokenRefreshDue({ accessExpiresAt: now + ACCESS_TOKEN_REFRESH_BUFFER_MS }, now),
+    ).toBe(true);
+  });
+});
+
 describe("csrfAuthHeader", () => {
   it("returns the CSRF header when the cookie is present", () => {
     setDocumentCookie(`${CSRF_COOKIE_NAME}=${CSRF_TOKEN_VALUE}`);
@@ -136,16 +151,16 @@ describe("refreshTokens", () => {
     expect(headers[CSRF_HEADER_NAME]).toBe(CSRF_TOKEN_VALUE);
   });
 
-  it("sends a request without the CSRF header when the cookie is missing (filter will 403)", async () => {
+  it("rejects locally without a request when the CSRF cookie is missing", async () => {
     setDocumentCookie("");
     mockFetchReturningAuthSession();
 
-    await refreshTokens();
+    await expect(refreshTokens()).rejects.toMatchObject({
+      statusCode: 403,
+      errorCode: "csrf_missing",
+    });
 
-    const { url, init } = getLastFetchCall();
-    expect(url).toContain("/auth/refresh");
-    const headers = getHeadersAsObject(init);
-    expect(headers[CSRF_HEADER_NAME]).toBeUndefined();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 

@@ -1,0 +1,63 @@
+spring:
+  # Flyway must run for integration tests — they read/write real tables
+  # (finance_event_inbox, settlement_release_candidates, etc.) created by V2..V9.
+  # TestcontainersConfig provides the JDBC URL; this yaml only needs to point
+  # Flyway at the same schema the application code uses.
+  flyway:
+    enabled: true
+    schemas: seller_finance_svc
+    default-schema: seller_finance_svc
+  # KafkaHealthConfig requires a bootstrap-servers placeholder; integration tests
+  # do not actually connect to Kafka but the AdminClient bean must construct.
+  # TestcontainersConfig provides a real Kafka broker via @ServiceConnection.
+  kafka:
+    bootstrap-servers: localhost:9092
+
+# KafkaConsumerHealthIndicator must be turned off for integration tests — it
+# needs a real Kafka cluster to compute group lag, and the test profile never
+# starts one. Mirroring the production yaml disables the bean cleanly.
+kafka:
+  admin:
+    bootstrap-servers: localhost:9092
+    username: test-finance
+    password: test-finance-password
+    security-protocol: PLAINTEXT
+    sasl-mechanism: PLAIN
+  health:
+    consumer:
+      enabled: false
+      lag-threshold: 1000
+      group-id: seller-finance-service-refund
+
+# Test-only stub key for payout destination cipher + snapshot sealer.
+# Production must set VNSHOP_PAYOUT_DESTINATION_KEY_V1 via real env var.
+# Random 32-byte key generated for use inside Spring Boot tests only.
+vnshop:
+  user-service:
+    base-url: http://user-service:8081
+    connect-timeout-ms: 1000
+    read-timeout-ms: 2000
+    internal-token: test-internal-token
+  payout-destination:
+    key:
+      v1: "JXR9Q23cKfIOTCXMglGH3a7XR05bT2OpnGiZrghnIK8="
+
+seller-finance:
+  hold-allocation:
+    persistence-mode: in-memory
+  # YAML 1.1 (SnakeYAML default) parses bare `OFF` as boolean false, which then
+  # reaches SellerFinanceEventModePolicy.parse() as literal "false" and fails
+  # validation. Quote the value so it stays a string for Spring's @Value binding.
+  event-mode: "OFF"
+  payout-execution-mode: MANUAL_RECORDED
+  payout-idempotency-prefix: vnshop-payout-
+  adjustments:
+    enabled: false
+  adjustment-consumer:
+    enabled: false
+  legacy-order-created-consumer:
+    enabled: false
+  settlement-release:
+    enabled: false
+    batch-size: 100
+    poll-interval-ms: 60000

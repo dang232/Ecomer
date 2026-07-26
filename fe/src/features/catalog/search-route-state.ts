@@ -14,7 +14,7 @@ export const searchRouteSchema = {
   priceMin: routeParam.string({ defaultValue: "", maxLength: 16 }),
   priceMax: routeParam.string({ defaultValue: "", maxLength: 16 }),
   minRating: routeParam.integer({ defaultValue: 0, min: 0, max: 5 }),
-  freeShip: routeParam.boolean(false),
+  tag: routeParam.stringList(),
   sameDay: routeParam.boolean(false),
   verifiedOnly: routeParam.boolean(false),
   officialOnly: routeParam.boolean(false),
@@ -26,7 +26,8 @@ export const searchRouteSchema = {
 export type SearchRouteState = RouteState<typeof searchRouteSchema>;
 
 export function readSearchRouteState(source: URLSearchParams | string): SearchRouteState {
-  return readRouteState(source, searchRouteSchema);
+  const state = readRouteState(source, searchRouteSchema);
+  return state;
 }
 
 export function updateSearchRouteState(

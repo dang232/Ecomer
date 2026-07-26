@@ -28,6 +28,11 @@ public class PayoutJpaRepository implements PayoutRepositoryPort {
     }
 
     @Override
+    public Optional<Payout> findBySellerIdAndIdempotencyKey(String sellerId, String idempotencyKey) {
+        return repository.findBySellerIdAndIdempotencyKey(sellerId, idempotencyKey).map(PayoutJpaEntity::toDomain);
+    }
+
+    @Override
     public List<Payout> findByStatus(PayoutStatus status) {
         return repository.findByStatus(status).stream().map(PayoutJpaEntity::toDomain).toList();
     }

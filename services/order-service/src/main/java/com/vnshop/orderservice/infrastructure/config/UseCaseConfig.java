@@ -59,7 +59,6 @@ import com.vnshop.orderservice.domain.coupon.CouponRepository;
 import com.vnshop.orderservice.domain.coupon.CouponUsageRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
 public class UseCaseConfig {
@@ -217,9 +216,10 @@ public class UseCaseConfig {
             OrderEventPublisherPort orderEventPublisherPort,
             SubOrderFinancialAllocationRepositoryPort allocationRepositoryPort,
             SellerFinanceAdjustmentPublisherPort sellerFinanceAdjustmentPublisherPort,
-            @Value("${seller-finance.adjustments.enabled:false}") boolean sellerFinanceAdjustmentsEnabled) {
+            SellerFinanceEventModeProperties sellerFinanceEventModeProperties) {
         return new ConfirmDeliveryUseCase(orderRepositoryPort, orderEventPublisherPort, allocationRepositoryPort,
-                sellerFinanceAdjustmentPublisherPort, sellerFinanceAdjustmentsEnabled);
+                sellerFinanceAdjustmentPublisherPort,
+                sellerFinanceEventModeProperties.adjustments().enabled());
     }
 
     @Bean

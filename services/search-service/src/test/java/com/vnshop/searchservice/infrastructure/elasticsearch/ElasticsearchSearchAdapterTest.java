@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.vnshop.searchservice.application.SearchRepository;
+import com.vnshop.searchservice.infrastructure.config.SearchFacetProperties;
 import com.vnshop.searchservice.domain.ProductReadModel;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -27,7 +28,8 @@ class ElasticsearchSearchAdapterTest {
     private final SearchRepository fallbackRepository = mock(SearchRepository.class);
     private final ElasticsearchSearchAdapter adapter = new ElasticsearchSearchAdapter(
             elasticsearchOperations,
-            fallbackRepository);
+            fallbackRepository,
+            new SearchFacetProperties(100));
 
     @Test
     void searchPaged_delegatesToReadModelWhenElasticsearchIsUnavailable() {

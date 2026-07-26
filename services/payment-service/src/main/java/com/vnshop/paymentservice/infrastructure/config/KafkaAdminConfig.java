@@ -2,6 +2,7 @@ package com.vnshop.paymentservice.infrastructure.config;
 
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.TopicBuilder;
@@ -16,6 +17,7 @@ import java.util.Map;
  * doesn't pick up spring.kafka.properties.* in Spring Boot 4.x.
  */
 @Configuration
+@ConditionalOnProperty(name = "vnshop.kafka.admin.enabled", havingValue = "true", matchIfMissing = true)
 public class KafkaAdminConfig {
 
     @Bean

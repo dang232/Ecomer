@@ -18,7 +18,6 @@ public class RegisterSellerUseCase {
                 command.keycloakId(),
                 command.shopName(),
                 command.bankName(),
-                command.bankAccount(),
                 null,
                 false,
                 Tier.STANDARD,

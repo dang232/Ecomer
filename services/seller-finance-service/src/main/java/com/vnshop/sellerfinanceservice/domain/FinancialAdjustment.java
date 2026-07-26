@@ -50,6 +50,9 @@ public record FinancialAdjustment(
         if (adjustmentType == AdjustmentType.CREDIT && releaseMetadata != null) {
             throw new IllegalArgumentException("releaseMetadata must be absent for CREDIT");
         }
+        if (adjustmentType == AdjustmentType.CHARGEBACK_HOLD && components.chargebackHoldSourceBucket() == null) {
+            throw new IllegalArgumentException("components.chargebackHoldSourceBucket is required for CHARGEBACK_HOLD");
+        }
     }
 
     public String sourceType() {
@@ -95,7 +98,8 @@ public record FinancialAdjustment(
             BigDecimal platformCommissionAmount,
             BigDecimal sellerPayableAmount,
             BigDecimal buyerPaidAmount,
-            String currency) {
+            String currency,
+            SellerWallet.WalletBucket chargebackHoldSourceBucket) {
         public Components {
             requireNonNegative(itemGmvAmount, "itemGmvAmount");
             requireNonNegative(sellerFundedDiscountAmount, "sellerFundedDiscountAmount");
@@ -117,6 +121,19 @@ public record FinancialAdjustment(
 
         public BigDecimal creditAmount() {
             return sellerPayableAmount.add(platformCommissionAmount);
+        }
+
+        /** Compact constructor used by callers that do not supply a chargeback hold source bucket. */
+        public Components(BigDecimal itemGmvAmount, BigDecimal sellerFundedDiscountAmount,
+                          BigDecimal platformFundedDiscountAmount, BigDecimal buyerShippingChargeAmount,
+                          BigDecimal sellerShippingPayableAmount, BigDecimal taxChargedAmount,
+                          BigDecimal sellerTaxPayableAmount, BigDecimal commissionBaseAmount,
+                          BigDecimal platformCommissionAmount, BigDecimal sellerPayableAmount,
+                          BigDecimal buyerPaidAmount, String currency) {
+            this(itemGmvAmount, sellerFundedDiscountAmount, platformFundedDiscountAmount,
+                    buyerShippingChargeAmount, sellerShippingPayableAmount, taxChargedAmount,
+                    sellerTaxPayableAmount, commissionBaseAmount, platformCommissionAmount,
+                    sellerPayableAmount, buyerPaidAmount, currency, null);
         }
     }
 

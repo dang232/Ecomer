@@ -53,13 +53,39 @@ export function parseReturnStatus(raw: string | null | undefined): ReturnStatusU
 
 // ─── Payout status ──────────────────────────────────────────────────────────
 
-export type PayoutStatusUi = "pending" | "completed" | "failed";
+export type PayoutStatusUi =
+  | "REQUESTED"
+  | "APPROVED"
+  | "SUBMITTING"
+  | "SUBMITTED"
+  | "PAID"
+  | "UNKNOWN"
+  | "FAILED"
+  | "REJECTED"
+  | "CANCELLED"
+  | "REVERSED";
 
 export function parsePayoutStatus(raw: string | null | undefined): PayoutStatusUi {
   const v = (raw ?? "").toUpperCase();
-  if (v.includes("COMPLETE") || v.includes("PAID")) return "completed";
-  if (v.includes("FAIL") || v.includes("REJECT")) return "failed";
-  return "pending";
+  if (v === "COMPLETED") return "PAID";
+  if (v === "PENDING") return "REQUESTED";
+  if (
+    [
+      "REQUESTED",
+      "APPROVED",
+      "SUBMITTING",
+      "SUBMITTED",
+      "PAID",
+      "UNKNOWN",
+      "FAILED",
+      "REJECTED",
+      "CANCELLED",
+      "REVERSED",
+    ].includes(v)
+  ) {
+    return v as PayoutStatusUi;
+  }
+  return "REQUESTED";
 }
 
 // ─── Payment method ─────────────────────────────────────────────────────────

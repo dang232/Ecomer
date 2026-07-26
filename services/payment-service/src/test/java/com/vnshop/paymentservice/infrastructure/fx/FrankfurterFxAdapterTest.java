@@ -51,7 +51,8 @@ class FrankfurterFxAdapterTest {
 
     @Test
     void identityRateForSameCurrency() {
-        FxProperties props = new FxProperties(null, null, 0, null);
+        FxProperties props = new FxProperties(
+                "https://fx.example", Duration.ofHours(24), 100, new BigDecimal("25500"));
         FrankfurterFxAdapter adapter = new FrankfurterFxAdapter(props, RestClient.builder());
 
         assertThat(adapter.rate("VND", "VND")).isEqualByComparingTo("1");

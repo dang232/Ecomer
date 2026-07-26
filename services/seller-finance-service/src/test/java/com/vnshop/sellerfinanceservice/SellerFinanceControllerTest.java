@@ -160,7 +160,11 @@ class SellerFinanceControllerTest {
         when(payoutRepositoryPort.save(any(Payout.class))).thenAnswer(inv -> inv.getArgument(0));
 
         HttpRequest request = authorizedRequest("/admin/finance/payouts/" + payoutId + "/complete")
-                .POST(HttpRequest.BodyPublishers.noBody())
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(
+                        "{\"reason\":\"manual transfer verified\",\"evidence\":{"
+                                + "\"externalReference\":\"bank-ref-1\",\"evidenceHash\":\"sha256:1\","
+                                + "\"maskedDestinationConfirmed\":true}}"))
                 .build();
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
@@ -171,6 +175,22 @@ class SellerFinanceControllerTest {
         assertThat(data.get("status").asText()).isEqualTo("COMPLETED");
         assertThat(data.get("completedBy").asText()).isEqualTo(SELLER_ID);
         assertThat(data.get("completedAt").asText()).isNotBlank();
+    }
+
+    @Test
+    void completePayoutRequiresManualEvidence() throws Exception {
+        UUID payoutId = UUID.randomUUID();
+        Payout pending = new Payout(payoutId, SELLER_ID, new BigDecimal("125.50"), PayoutStatus.PENDING,
+                Instant.parse("2026-05-14T00:00:00Z"));
+        when(payoutRepositoryPort.findById(payoutId)).thenReturn(Optional.of(pending));
+
+        HttpRequest request = authorizedRequest("/admin/finance/payouts/" + payoutId + "/complete")
+                .POST(HttpRequest.BodyPublishers.noBody())
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        assertThat(response.statusCode()).isEqualTo(400);
     }
 
     @Test

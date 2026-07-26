@@ -14,7 +14,7 @@ interface UseSearchFacetsParams {
   enabled?: boolean;
 }
 
-const EMPTY: SearchFacets = { categories: [], brands: [] };
+const EMPTY: SearchFacets = { categories: [], brands: [], tags: [] };
 
 /**
  * Returns category + brand facet counts for the same filter set used by

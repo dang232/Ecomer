@@ -3,8 +3,8 @@ import { z } from "zod";
 import { productIdSchema, sellerIdSchema } from "./branded-ids";
 
 // BE returns image objects ({url, alt, sortOrder}); some other endpoints (e.g.
-// search) emit a flat string array; legacy demo data sometimes ships single
-// `image`. Accept all three shapes and let `fromServer` flatten.
+// search) emit a flat string array or `imageUrl`; legacy demo data sometimes
+// ships single `image`. Accept all shapes and let `fromServer` flatten.
 const imageEntrySchema = z.union([
   z.string(),
   z
@@ -35,6 +35,7 @@ export const productSummarySchema = z
     price: z.number().optional(),
     originalPrice: z.number().optional(),
     image: z.string().optional(),
+    imageUrl: z.string().nullable().optional(),
     images: z.array(imageEntrySchema).optional(),
     variants: z.array(productVariantSchema).optional(),
     category: z.string().optional(),
@@ -49,6 +50,7 @@ export const productSummarySchema = z
     sameDayDelivery: z.boolean().optional(),
     verified: z.boolean().optional(),
     isOfficial: z.boolean().optional(),
+    tags: z.array(z.string()).optional(),
   })
   .passthrough();
 

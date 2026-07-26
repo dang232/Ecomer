@@ -1,0 +1,275 @@
+{
+  "version": "1.0.0",
+  "project": {
+    "name": "VNShop E-Commerce Platform",
+    "languages": ["Java", "TypeScript"],
+    "frameworks": ["Spring Boot", "React", "Elasticsearch", "Kafka"],
+    "description": "Marketplace catalog, discovery, and storefront flows with an event-projected search index.",
+    "analyzedAt": "2026-07-26T17:24:12.843Z",
+    "gitCommitHash": "f38db836ca53ebbddf9940876bafcb918240b2a1"
+  },
+  "nodes": [
+    {
+      "id": "domain:product-catalog",
+      "type": "domain",
+      "name": "Product Catalog",
+      "summary": "Owns products, variants, images, seller eligibility flags, and the event payload used to project discoverable products. The current model exposes fixed catalog fields but no persisted product tag or generic attribute collection.",
+      "tags": ["catalog", "source-of-truth"],
+      "complexity": "complex",
+      "domainMeta": {
+        "entities": ["Product", "ProductVariant", "ProductImage", "ProductEvent"],
+        "businessRules": ["Only active products should be discoverable", "Product events carry a canonical search projection payload"],
+        "crossDomainInteractions": ["Publishes product-events consumed by Product Discovery/Search"]
+      }
+    },
+    {
+      "id": "domain:product-discovery-search",
+      "type": "domain",
+      "name": "Product Discovery and Search",
+      "summary": "Maintains a JPA and Elasticsearch search projection, handles cursor-based search, and returns category and brand aggregations. Its current query and read model support only fixed filter fields.",
+      "tags": ["search", "facets", "event-projection"],
+      "complexity": "complex",
+      "domainMeta": {
+        "entities": ["ProductReadModel", "ProductDocument", "SearchV2Query", "SearchFacetsResponse"],
+        "businessRules": ["Search results must be ACTIVE", "Cursor validity is bound to canonical filters", "Category and brand facet axes relax their own selected axis"],
+        "crossDomainInteractions": ["Consumes Product Catalog events", "Serves Buyer Storefront search requests"]
+      }
+    },
+    {
+      "id": "domain:buyer-storefront",
+      "type": "domain",
+      "name": "Buyer Storefront",
+      "summary": "Owns the React search route, filter controls, product mapping, and result rendering. It currently has fixed filter controls and applies unsupported rating and shipping filters after fetching a page.",
+      "tags": ["frontend", "buyer", "search-ui"],
+      "complexity": "complex",
+      "domainMeta": {
+        "entities": ["SearchRouteState", "SearchFilters", "Product UI model"],
+        "businessRules": ["URL query state is the source of truth for applied filters", "Cursor search is used for supported backend filters"],
+        "crossDomainInteractions": ["Calls Product Discovery/Search for filtered queries", "Calls Product Catalog for unfiltered browse queries"]
+      }
+    },
+    {
+      "id": "flow:product-event-projection",
+      "type": "flow",
+      "name": "Project Product Changes into Search",
+      "summary": "Catalog changes are serialized into product-events, consumed by search-service, persisted in its read model, and projected into Elasticsearch with repair support for indexing failures.",
+      "tags": ["kafka", "projection", "eventual-consistency"],
+      "complexity": "complex",
+      "domainMeta": {
+        "entryPoint": "product-events Kafka topic",
+        "entryType": "event"
+      }
+    },
+    {
+      "id": "flow:cursor-product-search",
+      "type": "flow",
+      "name": "Cursor Product Search",
+      "summary": "A buyer search request is normalized, bound to a cursor contract, passed to Elasticsearch with a JPA fallback, and returned with page metadata and optional facets.",
+      "tags": ["http", "cursor", "elasticsearch"],
+      "complexity": "complex",
+      "domainMeta": {
+        "entryPoint": "GET /search/v2",
+        "entryType": "http"
+      }
+    },
+    {
+      "id": "flow:facet-aggregation",
+      "type": "flow",
+      "name": "Facet Aggregation",
+      "summary": "The search service computes category and brand term counts over the active search query, relaxing the selected facet axis so adjacent options remain visible.",
+      "tags": ["facets", "aggregations"],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entryPoint": "GET /search/v2?includeFacets=true and GET /search/facets",
+        "entryType": "http"
+      }
+    },
+    {
+      "id": "flow:buyer-search-and-filter",
+      "type": "flow",
+      "name": "Buyer Search and Filter",
+      "summary": "The search page reads URL state, selects the search or catalog data source, renders fixed controls, and post-filters unsupported dimensions in memory.",
+      "tags": ["react", "url-state", "filters"],
+      "complexity": "complex",
+      "domainMeta": {
+        "entryPoint": "/search route",
+        "entryType": "http"
+      }
+    },
+    {
+      "id": "step:product-event-projection:build-canonical-payload",
+      "type": "step",
+      "name": "Build Canonical Product Payload",
+      "summary": "The product service flattens product identity, name, category, brand, variant pricing, stock, images, and eligibility flags into an event payload.",
+      "tags": ["payload", "catalog"],
+      "complexity": "moderate",
+      "filePath": "services/product-service/src/main/java/com/vnshop/productservice/application/ProductEventPayload.java",
+      "lineRange": [14, 53]
+    },
+    {
+      "id": "step:product-event-projection:consume-product-event",
+      "type": "step",
+      "name": "Consume Product Event",
+      "summary": "The search consumer deduplicates incoming product events, deletes or updates the JPA read model, and schedules Elasticsearch projection work.",
+      "tags": ["kafka", "deduplication"],
+      "complexity": "complex",
+      "filePath": "services/search-service/src/main/java/com/vnshop/searchservice/infrastructure/kafka/ProductEventConsumer.java",
+      "lineRange": [42, 87]
+    },
+    {
+      "id": "step:product-event-projection:persist-search-read-model",
+      "type": "step",
+      "name": "Persist Search Read Model",
+      "summary": "The JPA projection stores only the fixed searchable fields received in the event payload, including category, brand, prices, rating, stock, and seller flags.",
+      "tags": ["jpa", "read-model"],
+      "complexity": "moderate",
+      "filePath": "services/search-service/src/main/java/com/vnshop/searchservice/infrastructure/persistence/ProductReadModelJpaEntity.java",
+      "lineRange": [18, 69]
+    },
+    {
+      "id": "step:product-event-projection:index-elasticsearch-document",
+      "type": "step",
+      "name": "Index Elasticsearch Document",
+      "summary": "The Elasticsearch document is built from the event map with typed fields for full text, keyword filtering, numerical pricing, ratings, stock, and seller eligibility flags.",
+      "tags": ["elasticsearch", "indexing"],
+      "complexity": "complex",
+      "filePath": "services/search-service/src/main/java/com/vnshop/searchservice/infrastructure/elasticsearch/ProductDocument.java",
+      "lineRange": [148, 176]
+    },
+    {
+      "id": "step:cursor-product-search:bind-http-query",
+      "type": "step",
+      "name": "Bind Search Request",
+      "summary": "The controller accepts the fixed V2 filter parameters, creates a SearchV2Query, and returns a correlated response with a stable ETag.",
+      "tags": ["controller", "http"],
+      "complexity": "moderate",
+      "filePath": "services/search-service/src/main/java/com/vnshop/searchservice/infrastructure/web/SearchController.java",
+      "lineRange": [82, 112]
+    },
+    {
+      "id": "step:cursor-product-search:validate-cursor-filters",
+      "type": "step",
+      "name": "Normalize Query and Bind Cursor",
+      "summary": "The query record normalizes fixed fields and produces the canonical filter string used to prevent a cursor from being replayed under different filters.",
+      "tags": ["validation", "cursor"],
+      "complexity": "moderate",
+      "filePath": "services/search-service/src/main/java/com/vnshop/searchservice/application/SearchV2Query.java",
+      "lineRange": [5, 68]
+    },
+    {
+      "id": "step:cursor-product-search:execute-cursor-query",
+      "type": "step",
+      "name": "Execute Cursor Query",
+      "summary": "The use case decodes the cursor, requests one additional row to determine hasMore, and maps the current page to response DTOs.",
+      "tags": ["use-case", "pagination"],
+      "complexity": "moderate",
+      "filePath": "services/search-service/src/main/java/com/vnshop/searchservice/application/SearchProductsUseCase.java",
+      "lineRange": [33, 47]
+    },
+    {
+      "id": "step:cursor-product-search:apply-indexed-filters",
+      "type": "step",
+      "name": "Apply Indexed Filters",
+      "summary": "The Elasticsearch adapter combines active-status enforcement, full-text matching, category, brand, price, delivery, and seller eligibility filters before cursor sorting.",
+      "tags": ["elasticsearch", "filtering"],
+      "complexity": "complex",
+      "filePath": "services/search-service/src/main/java/com/vnshop/searchservice/infrastructure/elasticsearch/ElasticsearchSearchAdapter.java",
+      "lineRange": [227, 282]
+    },
+    {
+      "id": "step:facet-aggregation:relax-category-axis",
+      "type": "step",
+      "name": "Aggregate Categories",
+      "summary": "The category aggregation removes the selected category while retaining the other fixed filters and reports term counts.",
+      "tags": ["facet", "category"],
+      "complexity": "moderate",
+      "filePath": "services/search-service/src/main/java/com/vnshop/searchservice/infrastructure/elasticsearch/ElasticsearchSearchAdapter.java",
+      "lineRange": [195, 205]
+    },
+    {
+      "id": "step:facet-aggregation:relax-brand-axis",
+      "type": "step",
+      "name": "Aggregate Brands",
+      "summary": "The brand aggregation removes the selected brand while retaining the other fixed filters and reports term counts.",
+      "tags": ["facet", "brand"],
+      "complexity": "moderate",
+      "filePath": "services/search-service/src/main/java/com/vnshop/searchservice/infrastructure/elasticsearch/ElasticsearchSearchAdapter.java",
+      "lineRange": [207, 217]
+    },
+    {
+      "id": "step:facet-aggregation:return-static-facet-contract",
+      "type": "step",
+      "name": "Return Static Facet Contract",
+      "summary": "The current response type exposes exactly two arrays, categories and brands, to clients.",
+      "tags": ["api-contract", "facets"],
+      "complexity": "simple",
+      "filePath": "services/search-service/src/main/java/com/vnshop/searchservice/application/SearchFacetsResponse.java",
+      "lineRange": [5, 9]
+    },
+    {
+      "id": "step:buyer-search-and-filter:read-url-filter-state",
+      "type": "step",
+      "name": "Read URL Filter State",
+      "summary": "The frontend parses fixed URL keys for category, brand, price, rating, shipping, delivery, seller, sorting, and paging state.",
+      "tags": ["frontend", "route-state"],
+      "complexity": "moderate",
+      "filePath": "fe/src/features/catalog/search-route-state.ts",
+      "lineRange": [8, 46]
+    },
+    {
+      "id": "step:buyer-search-and-filter:select-data-source",
+      "type": "step",
+      "name": "Select Search or Catalog Data Source",
+      "summary": "The search page sends only backend-supported dimensions to cursor search and uses the product catalog for an unfiltered browse route.",
+      "tags": ["frontend", "data-source"],
+      "complexity": "complex",
+      "filePath": "fe/src/app/pages/SearchPage.tsx",
+      "lineRange": [163, 227]
+    },
+    {
+      "id": "step:buyer-search-and-filter:post-filter-unsupported-dimensions",
+      "type": "step",
+      "name": "Post-filter Unsupported Dimensions",
+      "summary": "Rating and free-shipping filters are currently applied in memory after a page has been fetched rather than being part of the backend cursor contract.",
+      "tags": ["frontend", "known-gap"],
+      "complexity": "complex",
+      "filePath": "fe/src/app/pages/SearchPage.tsx",
+      "lineRange": [244, 298]
+    },
+    {
+      "id": "step:buyer-search-and-filter:render-fixed-filter-controls",
+      "type": "step",
+      "name": "Render Fixed Filter Controls",
+      "summary": "The filter component renders dedicated category, price, rating, shipping, seller, and brand controls instead of rendering a backend-provided facet definition list.",
+      "tags": ["frontend", "ui"],
+      "complexity": "complex",
+      "filePath": "fe/src/features/catalog/components/search-filters.tsx",
+      "lineRange": [9, 268]
+    }
+  ],
+  "edges": [
+    {"source": "domain:product-catalog", "target": "flow:product-event-projection", "type": "contains_flow", "direction": "forward", "weight": 1.0},
+    {"source": "domain:product-discovery-search", "target": "flow:cursor-product-search", "type": "contains_flow", "direction": "forward", "weight": 1.0},
+    {"source": "domain:product-discovery-search", "target": "flow:facet-aggregation", "type": "contains_flow", "direction": "forward", "weight": 1.0},
+    {"source": "domain:buyer-storefront", "target": "flow:buyer-search-and-filter", "type": "contains_flow", "direction": "forward", "weight": 1.0},
+    {"source": "flow:product-event-projection", "target": "step:product-event-projection:build-canonical-payload", "type": "flow_step", "direction": "forward", "weight": 0.2},
+    {"source": "flow:product-event-projection", "target": "step:product-event-projection:consume-product-event", "type": "flow_step", "direction": "forward", "weight": 0.4},
+    {"source": "flow:product-event-projection", "target": "step:product-event-projection:persist-search-read-model", "type": "flow_step", "direction": "forward", "weight": 0.6},
+    {"source": "flow:product-event-projection", "target": "step:product-event-projection:index-elasticsearch-document", "type": "flow_step", "direction": "forward", "weight": 0.8},
+    {"source": "flow:cursor-product-search", "target": "step:cursor-product-search:bind-http-query", "type": "flow_step", "direction": "forward", "weight": 0.2},
+    {"source": "flow:cursor-product-search", "target": "step:cursor-product-search:validate-cursor-filters", "type": "flow_step", "direction": "forward", "weight": 0.4},
+    {"source": "flow:cursor-product-search", "target": "step:cursor-product-search:execute-cursor-query", "type": "flow_step", "direction": "forward", "weight": 0.6},
+    {"source": "flow:cursor-product-search", "target": "step:cursor-product-search:apply-indexed-filters", "type": "flow_step", "direction": "forward", "weight": 0.8},
+    {"source": "flow:facet-aggregation", "target": "step:facet-aggregation:relax-category-axis", "type": "flow_step", "direction": "forward", "weight": 0.3},
+    {"source": "flow:facet-aggregation", "target": "step:facet-aggregation:relax-brand-axis", "type": "flow_step", "direction": "forward", "weight": 0.6},
+    {"source": "flow:facet-aggregation", "target": "step:facet-aggregation:return-static-facet-contract", "type": "flow_step", "direction": "forward", "weight": 0.9},
+    {"source": "flow:buyer-search-and-filter", "target": "step:buyer-search-and-filter:read-url-filter-state", "type": "flow_step", "direction": "forward", "weight": 0.2},
+    {"source": "flow:buyer-search-and-filter", "target": "step:buyer-search-and-filter:select-data-source", "type": "flow_step", "direction": "forward", "weight": 0.4},
+    {"source": "flow:buyer-search-and-filter", "target": "step:buyer-search-and-filter:post-filter-unsupported-dimensions", "type": "flow_step", "direction": "forward", "weight": 0.6},
+    {"source": "flow:buyer-search-and-filter", "target": "step:buyer-search-and-filter:render-fixed-filter-controls", "type": "flow_step", "direction": "forward", "weight": 0.8},
+    {"source": "domain:product-catalog", "target": "domain:product-discovery-search", "type": "cross_domain", "direction": "forward", "description": "Product events seed and update the search read models and Elasticsearch documents.", "weight": 0.8},
+    {"source": "domain:product-discovery-search", "target": "domain:buyer-storefront", "type": "cross_domain", "direction": "forward", "description": "The frontend consumes cursor search results and facet aggregations for filtered discovery.", "weight": 0.8}
+  ],
+  "layers": [],
+  "tour": []
+}

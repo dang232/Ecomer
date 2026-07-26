@@ -1,9 +1,13 @@
+import type { Product } from "../types/ui";
+
 export interface BackendSearchCriteria {
   query?: string;
   category?: string;
   brand?: string;
   minPrice?: string;
   maxPrice?: string;
+  minRating?: number;
+  tags?: string[];
   sameDay?: boolean;
   verifiedOnly?: boolean;
   officialOnly?: boolean;
@@ -14,6 +18,25 @@ const SUPPORTED_SORTS = new Set(["popular", "price-low", "price-high", "newest"]
 
 export type PriceRangeError =
   "min-negative" | "max-negative" | "min-greater-than-max" | "min-invalid" | "max-invalid";
+
+/**
+ * Category-only navigation is a catalog browse, not a full-text search. The
+ * product service is authoritative for its complete cursor result set.
+ */
+export function canUseCatalogBrowse(criteria: BackendSearchCriteria): boolean {
+  return Boolean(
+    criteria.category?.trim() &&
+    !criteria.query?.trim() &&
+    !criteria.brand?.trim() &&
+    !criteria.minPrice?.trim() &&
+    !criteria.maxPrice?.trim() &&
+    (criteria.minRating ?? 0) <= 0 &&
+    !criteria.tags?.length &&
+    !criteria.sameDay &&
+    !criteria.verifiedOnly &&
+    !criteria.officialOnly,
+  );
+}
 
 function parseOptionalPrice(value: string): number | null {
   const trimmed = value.trim();
@@ -47,6 +70,8 @@ export function requiresBackendSearch(criteria: BackendSearchCriteria): boolean 
     criteria.brand?.trim() ||
     criteria.minPrice?.trim() ||
     criteria.maxPrice?.trim() ||
+    (criteria.minRating ?? 0) > 0 ||
+    (criteria.tags?.length ?? 0) > 0 ||
     criteria.sameDay ||
     criteria.verifiedOnly ||
     criteria.officialOnly ||
@@ -59,6 +84,7 @@ export interface SearchFallbackState {
   hasError: boolean;
   totalElements: number;
   localCatalogCount: number;
+  localCatalogLoading?: boolean;
 }
 
 /**
@@ -69,6 +95,32 @@ export interface SearchFallbackState {
  */
 export function shouldFallbackToCatalog(state: SearchFallbackState): boolean {
   return (
-    !state.isLoading && !state.hasError && state.totalElements === 0 && state.localCatalogCount > 0
+    !state.isLoading &&
+    !state.hasError &&
+    state.totalElements === 0 &&
+    (state.localCatalogCount > 0 || state.localCatalogLoading === true)
   );
+}
+
+/**
+ * Search is the source of truth for result ordering, but the catalog can
+ * repair media omitted by an eventually-consistent search projection.
+ */
+export function mergeMissingProductImages(
+  products: Product[],
+  fallbackProducts: Product[],
+): Product[] {
+  const fallbackById = new Map(fallbackProducts.map((product) => [product.id, product]));
+
+  return products.map((product) => {
+    if (product.image) return product;
+    const fallback = fallbackById.get(product.id);
+    if (!fallback?.image) return product;
+
+    return {
+      ...product,
+      image: fallback.image,
+      images: product.images.length > 0 ? product.images : fallback.images,
+    };
+  });
 }

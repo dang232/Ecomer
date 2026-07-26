@@ -1,8 +1,8 @@
 package com.vnshop.userservice.application;
 
 import com.vnshop.userservice.domain.BuyerProfile;
+import com.vnshop.userservice.domain.port.out.KeycloakAdminPort;
 import com.vnshop.userservice.domain.port.out.UserRepositoryPort;
-import com.vnshop.userservice.infrastructure.keycloak.KeycloakAdminClient;
 
 import java.util.Objects;
 import org.springframework.data.domain.Page;
@@ -11,11 +11,11 @@ import org.springframework.data.domain.Pageable;
 public class AdminUserUseCase {
 
     private final UserRepositoryPort userRepository;
-    private final KeycloakAdminClient keycloakAdminClient;
+    private final KeycloakAdminPort keycloakAdmin;
 
-    public AdminUserUseCase(UserRepositoryPort userRepository, KeycloakAdminClient keycloakAdminClient) {
+    public AdminUserUseCase(UserRepositoryPort userRepository, KeycloakAdminPort keycloakAdmin) {
         this.userRepository = Objects.requireNonNull(userRepository, "userRepository is required");
-        this.keycloakAdminClient = Objects.requireNonNull(keycloakAdminClient, "keycloakAdminClient is required");
+        this.keycloakAdmin = Objects.requireNonNull(keycloakAdmin, "keycloakAdmin is required");
     }
 
     public Page<BuyerProfile> searchUsers(String query, Pageable pageable) {
@@ -26,7 +26,7 @@ public class AdminUserUseCase {
         BuyerProfile profile = userRepository.findBuyerByKeycloakId(keycloakId)
                 .orElseThrow(() -> new IllegalArgumentException("user not found: " + keycloakId));
         profile.ban();
-        keycloakAdminClient.disableUser(profile.keycloakId());
+        keycloakAdmin.disableUser(profile.keycloakId());
         return userRepository.saveBuyer(profile);
     }
 
@@ -34,7 +34,7 @@ public class AdminUserUseCase {
         BuyerProfile profile = userRepository.findBuyerByKeycloakId(keycloakId)
                 .orElseThrow(() -> new IllegalArgumentException("user not found: " + keycloakId));
         profile.unban();
-        keycloakAdminClient.enableUser(profile.keycloakId());
+        keycloakAdmin.enableUser(profile.keycloakId());
         return userRepository.saveBuyer(profile);
     }
 }

@@ -32,7 +32,11 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
         "org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration," +
         "org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration," +
         "org.springframework.boot.data.redis.autoconfigure.RedisAutoConfiguration",
-        "spring.data.jpa.repositories.enabled=false"
+        "spring.data.jpa.repositories.enabled=false",
+        "product.review-rating-projection.backfill.enabled=false",
+        "DB_PASSWORD=test-db-password",
+        "VNSHOP_PRODUCT_CURSOR_SECRET=test-product-cursor-secret",
+        "S3_BUCKET_PUBLIC=test-videos"
 })
 class ProductServiceApplicationTests {
 

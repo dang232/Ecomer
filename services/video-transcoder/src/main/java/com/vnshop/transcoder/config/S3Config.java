@@ -1,6 +1,6 @@
 package com.vnshop.transcoder.config;
 
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -12,33 +12,22 @@ import java.net.URI;
 import java.time.Duration;
 
 @Configuration
+@EnableConfigurationProperties(S3Properties.class)
 public class S3Config {
 
-    @Value("${vnshop.s3.endpoint:}")
-    private String endpoint;
-
-    @Value("${vnshop.s3.region:us-east-1}")
-    private String region;
-
-    @Value("${vnshop.s3.access-key:minioadmin}")
-    private String accessKey;
-
-    @Value("${vnshop.s3.secret-key:minioadmin}")
-    private String secretKey;
-
     @Bean
-    public S3AsyncClient s3AsyncClient() {
+    public S3AsyncClient s3AsyncClient(S3Properties properties) {
         var builder = S3AsyncClient.builder()
-                .region(Region.of(region))
+                .region(Region.of(properties.region()))
                 .credentialsProvider(
                         StaticCredentialsProvider.create(
-                                AwsBasicCredentials.create(accessKey, secretKey)))
+                                AwsBasicCredentials.create(properties.accessKey(), properties.secretKey())))
                 .overrideConfiguration(b -> b
                         .putHeader("Accept", "application/json"));
 
-        if (!endpoint.isBlank()) {
+        if (properties.endpoint() != null && !properties.endpoint().isBlank()) {
             // MinIO / localstack override
-            builder.endpointOverride(URI.create(endpoint))
+            builder.endpointOverride(URI.create(properties.endpoint()))
                    .forcePathStyle(true);
         }
 

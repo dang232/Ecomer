@@ -1,8 +1,26 @@
 import { OpenApiAggregator } from "./openapi-aggregator.js";
 import { FetchedOpenApiSpec, OpenApiServiceStatus } from "./discovery.types.js";
+import { ConfigService } from "@nestjs/config";
+import { Test } from "@nestjs/testing";
 
 describe("OpenApiAggregator", () => {
-  const aggregator = new OpenApiAggregator("http://localhost:8080");
+  const aggregator = new OpenApiAggregator({
+    get: () => "http://localhost:8080",
+  } as unknown as ConfigService);
+
+  it("is resolvable by Nest with the configured gateway URL", async () => {
+    const module = await Test.createTestingModule({
+      providers: [
+        OpenApiAggregator,
+        {
+          provide: ConfigService,
+          useValue: { get: () => "http://gateway:8080" },
+        },
+      ],
+    }).compile();
+
+    expect(module.get(OpenApiAggregator)).toBeInstanceOf(OpenApiAggregator);
+  });
 
   const status = (
     serviceId: string,
@@ -150,5 +168,27 @@ describe("OpenApiAggregator", () => {
         ]),
       ),
     ).toThrow(/not reachable through the gateway/i);
+  });
+
+  it("ignores readiness and liveness probe paths during route validation", () => {
+    const document = aggregator.merge(
+      [spec("cart-service", "readiness", false, "/ready")],
+      [status("cart-service")],
+      new Set(),
+      new Map([
+        [
+          "cart-service",
+          {
+            id: "cart-service",
+            name: "Cart Service",
+            url: "http://cart:8084",
+            healthPath: "/ready",
+            routes: ["/cart/**"],
+          },
+        ],
+      ]),
+    );
+
+    expect(document.paths).not.toHaveProperty("/ready");
   });
 });

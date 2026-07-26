@@ -1,7 +1,7 @@
 {
   "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"cd C:/Users/dangq/OneDrive/Documents/GitHub/Full-Stack-E-commerce/fe && npx vitest run src/app/hooks/use-cart.test.tsx 2>&1\",\"timeout\":60000,\"description\":\"Run use-cart tests\"}",
-  "error": "Exit code 1\n\n RUN  v4.1.10 C:/Users/dangq/OneDrive/Documents/GitHub/Full-Stack-E-commerce/fe\n\nAggregateError: \n    at internalConnectMultiple (node:net:1193:18)\n    at afterConnectMultiple (node:net:1783:7) {\n  code: 'ECONNREFUSED',\n  [errors]: [\n    Error: connect ECONNREFUSED ::1:8080\n        at createConnectionError (node:net:1746:14)\n        at afterConnectMultiple (node:net:1776:16) {\n      errno: -4078,\n      code: 'ECONNREFUSED',\n      syscall: 'connect',\n      address: '::1',\n      port:...",
-  "timestamp": "2026-07-21T10:52:27.989Z",
-  "retry_count": 2
+  "tool_input_preview": "{\"command\":\"cd \\\"C:\\\\Users\\\\dangq\\\\OneDrive\\\\Documents\\\\GitHub\\\\Full-Stack-E-commerce\\\" && git fetch --all && git reset --hard origin/main\",\"description\":\"Fetch all and reset\"}",
+  "error": "Exit code 128\nfatal: couldn't find remote ref refs/heads/dependabot/npm_and_yarn/fe/tabler/icons-react-3.45.0",
+  "timestamp": "2026-07-24T17:42:08.774Z",
+  "retry_count": 3
 }

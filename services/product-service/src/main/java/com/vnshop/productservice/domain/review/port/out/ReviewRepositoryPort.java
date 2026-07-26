@@ -14,16 +14,12 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-public interface ReviewRepositoryPort {
+public interface ReviewRepositoryPort extends ProductRatingReadPort {
     Review save(Review review);
 
     boolean existsByProductIdAndBuyerId(String productId, String buyerId);
 
     List<Review> findByProductId(String productId);
-
-    default ProductReviewSummary getProductReviewSummary(String productId) {
-        return ProductReviewSummary.empty();
-    }
 
     /** Returns products whose approved reviews need a rating projection. */
     default List<String> findProductIdsWithApprovedReviews() {

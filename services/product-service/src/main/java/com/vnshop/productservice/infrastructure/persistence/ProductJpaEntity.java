@@ -6,6 +6,7 @@ import com.vnshop.productservice.domain.Product;
 import com.vnshop.productservice.domain.ProductImage;
 import com.vnshop.productservice.domain.ProductStatus;
 import com.vnshop.productservice.domain.ProductVariant;
+import com.vnshop.productservice.domain.ProductTag;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -68,6 +69,10 @@ public class ProductJpaEntity extends BaseJpaEntity {
     @CollectionTable(schema = "product_svc", name = "product_images", joinColumns = @JoinColumn(name = "product_id"))
     private List<ProductImageEmbeddable> images = new ArrayList<>();
 
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(schema = "product_svc", name = "product_tags", joinColumns = @JoinColumn(name = "product_id"))
+    private List<ProductTagEmbeddable> tags = new ArrayList<>();
+
     protected ProductJpaEntity() {
     }
 
@@ -85,6 +90,7 @@ public class ProductJpaEntity extends BaseJpaEntity {
         entity.isOfficial = product.isOfficial();
         entity.variants = product.variants().stream().map(ProductVariantEmbeddable::fromDomain).toList();
         entity.images = product.images().stream().map(ProductImageEmbeddable::fromDomain).toList();
+        entity.tags = product.tags().stream().map(ProductTagEmbeddable::fromDomain).toList();
         return entity;
     }
 
@@ -98,6 +104,7 @@ public class ProductJpaEntity extends BaseJpaEntity {
                 brand,
                 variants.stream().map(ProductVariantEmbeddable::toDomain).toList(),
                 images.stream().map(ProductImageEmbeddable::toDomain).toList(),
+                tags.stream().map(ProductTagEmbeddable::toDomain).toList(),
                 sameDayDelivery,
                 verified,
                 isOfficial
@@ -112,6 +119,29 @@ public class ProductJpaEntity extends BaseJpaEntity {
             product.setOutOfStock();
         }
         return product;
+    }
+
+    @Embeddable
+    public static class ProductTagEmbeddable {
+        @Column(name = "canonical_key", nullable = false)
+        private String canonicalKey;
+
+        @Column(name = "display_label", nullable = false)
+        private String displayLabel;
+
+        protected ProductTagEmbeddable() {
+        }
+
+        static ProductTagEmbeddable fromDomain(ProductTag tag) {
+            ProductTagEmbeddable embeddable = new ProductTagEmbeddable();
+            embeddable.canonicalKey = tag.canonicalKey();
+            embeddable.displayLabel = tag.displayLabel();
+            return embeddable;
+        }
+
+        ProductTag toDomain() {
+            return new ProductTag(canonicalKey, displayLabel);
+        }
     }
 
     @Embeddable

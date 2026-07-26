@@ -2,8 +2,12 @@ package com.vnshop.searchservice.infrastructure.persistence;
 
 import com.vnshop.searchservice.domain.ProductReadModel;
 import jakarta.persistence.Column;
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -11,6 +15,8 @@ import lombok.Setter;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Map;
+import java.util.Collection;
+import java.util.List;
 
 @Entity
 @Table(schema = "search_svc", name = "product_read_models")
@@ -68,6 +74,11 @@ public class ProductReadModelJpaEntity {
     @Column(name = "is_official", nullable = false)
     private boolean isOfficial;
 
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(schema = "search_svc", name = "product_read_model_tags", joinColumns = @JoinColumn(name = "product_id"))
+    @Column(name = "tag_key", nullable = false)
+    private List<String> tags = List.of();
+
     protected ProductReadModelJpaEntity() {
     }
 
@@ -75,13 +86,13 @@ public class ProductReadModelJpaEntity {
             BigDecimal minPrice, BigDecimal maxPrice, int variantCount, String imageUrl, int stock, Instant createdAt,
             boolean sameDayDelivery, boolean verified, boolean isOfficial) {
         this(productId, name, description, categoryId, brand, status, minPrice, maxPrice, null, null,
-                variantCount, imageUrl, stock, createdAt, sameDayDelivery, verified, isOfficial);
+                variantCount, imageUrl, stock, createdAt, sameDayDelivery, verified, isOfficial, List.of());
     }
 
     public ProductReadModelJpaEntity(String productId, String name, String description, String categoryId, String brand, String status,
             BigDecimal minPrice, BigDecimal maxPrice, Float averageRating, Integer reviewCount,
             int variantCount, String imageUrl, int stock, Instant createdAt, boolean sameDayDelivery,
-            boolean verified, boolean isOfficial) {
+            boolean verified, boolean isOfficial, List<String> tags) {
         this.productId = productId;
         this.name = name;
         this.description = description;
@@ -99,6 +110,15 @@ public class ProductReadModelJpaEntity {
         this.sameDayDelivery = sameDayDelivery;
         this.verified = verified;
         this.isOfficial = isOfficial;
+        this.tags = tags == null ? List.of() : List.copyOf(tags);
+    }
+
+    public ProductReadModelJpaEntity(String productId, String name, String description, String categoryId, String brand, String status,
+            BigDecimal minPrice, BigDecimal maxPrice, Float averageRating, Integer reviewCount,
+            int variantCount, String imageUrl, int stock, Instant createdAt, boolean sameDayDelivery,
+            boolean verified, boolean isOfficial) {
+        this(productId, name, description, categoryId, brand, status, minPrice, maxPrice, averageRating, reviewCount,
+                variantCount, imageUrl, stock, createdAt, sameDayDelivery, verified, isOfficial, List.of());
     }
 
     public static ProductReadModelJpaEntity fromDomain(ProductReadModel model) {
@@ -119,7 +139,8 @@ public class ProductReadModelJpaEntity {
                 model.createdAt(),
                 model.sameDayDelivery(),
                 model.verified(),
-                model.isOfficial()
+                model.isOfficial(),
+                model.tags()
         );
     }
 
@@ -141,13 +162,14 @@ public class ProductReadModelJpaEntity {
                 Instant.now(),
                 booleanValue(payload.get("sameDayDelivery")),
                 booleanValue(payload.get("verified")),
-                booleanValue(payload.get("isOfficial"))
+                booleanValue(payload.get("isOfficial")),
+                tagKeys(payload.get("tags"))
         );
     }
 
     public ProductReadModel toDomain() {
         return new ProductReadModel(productId, name, description, categoryId, brand, status, minPrice, maxPrice,
-                averageRating, reviewCount, variantCount, imageUrl, stock, createdAt, sameDayDelivery, verified, isOfficial);
+                averageRating, reviewCount, variantCount, imageUrl, stock, createdAt, sameDayDelivery, verified, isOfficial, tags);
     }
 
     public Float getAverageRating() {
@@ -212,5 +234,18 @@ public class ProductReadModelJpaEntity {
             return bool;
         }
         return Boolean.parseBoolean(value.toString());
+    }
+
+    private static List<String> tagKeys(Object value) {
+        if (!(value instanceof Collection<?> values)) {
+            return List.of();
+        }
+        return values.stream()
+                .map(item -> item instanceof Map<?, ?> map ? map.get("key") : item)
+                .filter(item -> item != null && !item.toString().isBlank())
+                .map(Object::toString)
+                .distinct()
+                .sorted()
+                .toList();
     }
 }

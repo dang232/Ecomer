@@ -27,6 +27,7 @@ import { VideoPlayerSkeleton } from "../../features/videos/components/VideoPlaye
 import { usePageMeta } from "../../utils/meta-tags";
 import { ImageWithFallback } from "../components/image-with-fallback";
 import { RecentlyViewedGrid } from "../components/RecentlyViewedGrid";
+import { StarRating } from "../components/star-rating";
 import { useVNShop } from "../components/vnshop-context";
 import { useAuth } from "../hooks/use-auth";
 import { productDetailOptions } from "../hooks/use-products";
@@ -37,33 +38,8 @@ import { ApiError } from "../lib/api";
 import { askQuestion, questionsByProduct } from "../lib/api/endpoints/questions";
 import type { RecommendationItem } from "../lib/api/endpoints/recommendations";
 import { formatPrice } from "../lib/format";
+import { buildGalleryImages } from "../lib/product-gallery";
 import { comingSoon } from "../lib/ui/coming-soon";
-
-function StarRating({ value, max = 5, size = 16 }: { value: number; max?: number; size?: number }) {
-  return (
-    <div className="flex items-center gap-0.5">
-      {Array.from({ length: max }).map((_, i) => {
-        const filled = i < Math.floor(value);
-        const half = !filled && i < value;
-        return (
-          // eslint-disable-next-line react/no-array-index-key -- decorative star rating, no stable id
-          <svg key={i} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
-            <defs>
-              <linearGradient id={`half-${i}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="50%" stopColor="var(--rating)" />
-                <stop offset="50%" stopColor="var(--border)" />
-              </linearGradient>
-            </defs>
-            <path
-              d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-              fill={filled ? "var(--rating)" : half ? `url(#half-${i})` : "var(--border)"}
-            />
-          </svg>
-        );
-      })}
-    </div>
-  );
-}
 
 function SellerCard({ sellerId }: { sellerId?: string }) {
   const { t } = useTranslation();
@@ -233,9 +209,7 @@ export function ProductPage() {
   };
 
   const variantImage = selectedVariant?.imageUrl;
-  const galleryImages = variantImage
-    ? [variantImage, ...(product.images ?? [])]
-    : (product.images ?? []);
+  const galleryImages = buildGalleryImages(variantImage, product.images);
   const displayPrice = selectedVariant?.priceAmount ?? product.price;
   const displayStock = selectedVariant?.stockQuantity ?? product.stock;
   const savings = product.originalPrice ? product.originalPrice - displayPrice : 0;
