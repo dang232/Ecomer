@@ -4,7 +4,11 @@
   "private": true,
   "overrides": {
     "form-data": "4.0.6",
-    "ws": "8.21.1"
+    "ws": "8.21.1",
+    "brace-expansion": "5.0.8",
+    "@nestjs/swagger": {
+      "js-yaml": "5.2.2"
+    }
   },
   "scripts": {
     "build": "nest build",
