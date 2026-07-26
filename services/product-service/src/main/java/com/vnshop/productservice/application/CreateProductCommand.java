@@ -1,6 +1,7 @@
 package com.vnshop.productservice.application;
 
 import com.vnshop.productservice.domain.ProductImage;
+import com.vnshop.productservice.domain.ProductTag;
 import com.vnshop.productservice.domain.ProductVariant;
 import java.util.List;
 
@@ -12,6 +13,7 @@ public record CreateProductCommand(
         String brand,
         List<ProductVariant> variants,
         List<ProductImage> images,
+        List<ProductTag> tags,
         boolean sameDayDelivery,
         boolean verified,
         boolean isOfficial
@@ -23,6 +25,12 @@ public record CreateProductCommand(
 
     public CreateProductCommand(String sellerId, String name, String description, String categoryId,
                                String brand, List<ProductVariant> variants, List<ProductImage> images) {
-        this(sellerId, name, description, categoryId, brand, variants, images, false, false, false);
+        this(sellerId, name, description, categoryId, brand, variants, images, List.of(), false, false, false);
+    }
+
+    public CreateProductCommand(String sellerId, String name, String description, String categoryId,
+                               String brand, List<ProductVariant> variants, List<ProductImage> images,
+                               List<ProductTag> tags) {
+        this(sellerId, name, description, categoryId, brand, variants, images, tags, false, false, false);
     }
 }

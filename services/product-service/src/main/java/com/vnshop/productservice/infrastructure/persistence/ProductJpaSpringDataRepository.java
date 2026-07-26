@@ -23,7 +23,7 @@ public interface ProductJpaSpringDataRepository extends JpaRepository<ProductJpa
             group by product
             having (:minPrice is null or min(variant.price.amount) >= :minPrice)
                and (:maxPrice is null or min(variant.price.amount) <= :maxPrice)
-               and (:anchorCreatedAt is null or product.createdAt < :anchorCreatedAt
+               and (cast(:anchorCreatedAt as Instant) is null or product.createdAt < :anchorCreatedAt
                     or (product.createdAt = :anchorCreatedAt and product.id < :anchorProductId))
             order by product.createdAt desc, product.id desc
             """)
@@ -46,7 +46,7 @@ public interface ProductJpaSpringDataRepository extends JpaRepository<ProductJpa
             group by product
             having (:minPrice is null or min(variant.price.amount) >= :minPrice)
                and (:maxPrice is null or min(variant.price.amount) <= :maxPrice)
-               and (:anchorPrice is null or min(variant.price.amount) > :anchorPrice
+               and (cast(:anchorPrice as BigDecimal) is null or min(variant.price.amount) > :anchorPrice
                     or (min(variant.price.amount) = :anchorPrice and product.id > :anchorProductId))
             order by min(variant.price.amount) asc, product.id asc
             """)
@@ -69,7 +69,7 @@ public interface ProductJpaSpringDataRepository extends JpaRepository<ProductJpa
             group by product
             having (:minPrice is null or min(variant.price.amount) >= :minPrice)
                and (:maxPrice is null or min(variant.price.amount) <= :maxPrice)
-               and (:anchorPrice is null or min(variant.price.amount) < :anchorPrice
+               and (cast(:anchorPrice as BigDecimal) is null or min(variant.price.amount) < :anchorPrice
                     or (min(variant.price.amount) = :anchorPrice and product.id < :anchorProductId))
             order by min(variant.price.amount) desc, product.id desc
             """)

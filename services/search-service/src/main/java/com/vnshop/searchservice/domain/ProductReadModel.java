@@ -2,6 +2,7 @@ package com.vnshop.searchservice.domain;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 
 public class ProductReadModel {
     private String productId;
@@ -21,6 +22,7 @@ public class ProductReadModel {
     private boolean sameDayDelivery;
     private boolean verified;
     private boolean isOfficial;
+    private List<String> tags = List.of();
 
     public ProductReadModel() {
     }
@@ -29,13 +31,13 @@ public class ProductReadModel {
             BigDecimal minPrice, BigDecimal maxPrice, int variantCount, String imageUrl, int stock, Instant createdAt,
             boolean sameDayDelivery, boolean verified, boolean isOfficial) {
         this(productId, name, description, categoryId, brand, status, minPrice, maxPrice, null, null,
-                variantCount, imageUrl, stock, createdAt, sameDayDelivery, verified, isOfficial);
+                variantCount, imageUrl, stock, createdAt, sameDayDelivery, verified, isOfficial, List.of());
     }
 
     public ProductReadModel(String productId, String name, String description, String categoryId, String brand, String status,
             BigDecimal minPrice, BigDecimal maxPrice, Float averageRating, Integer reviewCount,
             int variantCount, String imageUrl, int stock, Instant createdAt, boolean sameDayDelivery,
-            boolean verified, boolean isOfficial) {
+            boolean verified, boolean isOfficial, List<String> tags) {
         this.productId = productId;
         this.name = name;
         this.description = description;
@@ -53,6 +55,15 @@ public class ProductReadModel {
         this.sameDayDelivery = sameDayDelivery;
         this.verified = verified;
         this.isOfficial = isOfficial;
+        this.tags = tags == null ? List.of() : List.copyOf(tags);
+    }
+
+    public ProductReadModel(String productId, String name, String description, String categoryId, String brand, String status,
+            BigDecimal minPrice, BigDecimal maxPrice, Float averageRating, Integer reviewCount,
+            int variantCount, String imageUrl, int stock, Instant createdAt, boolean sameDayDelivery,
+            boolean verified, boolean isOfficial) {
+        this(productId, name, description, categoryId, brand, status, minPrice, maxPrice, averageRating, reviewCount,
+                variantCount, imageUrl, stock, createdAt, sameDayDelivery, verified, isOfficial, List.of());
     }
 
     public String productId() {
@@ -121,5 +132,9 @@ public class ProductReadModel {
 
     public boolean isOfficial() {
         return isOfficial;
+    }
+
+    public List<String> tags() {
+        return tags;
     }
 }

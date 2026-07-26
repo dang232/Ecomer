@@ -1,6 +1,7 @@
 package com.vnshop.productservice.infrastructure.persistence.review;
 
 import com.vnshop.productservice.domain.review.ReviewStatus;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -23,6 +24,15 @@ public interface ReviewJpaSpringDataRepository extends JpaRepository<ReviewJpaEn
               AND r.status = 'APPROVED'
             """, nativeQuery = true)
     List<Object[]> findProductReviewStats(@Param("productId") String productId);
+
+    @Query(value = """
+            SELECT r.product_id, AVG(r.rating), COUNT(r.review_id)
+            FROM product_svc.reviews r
+            WHERE r.product_id IN (:productIds)
+              AND r.status = 'APPROVED'
+            GROUP BY r.product_id
+            """, nativeQuery = true)
+    List<Object[]> findProductReviewStatsBatch(@Param("productIds") Collection<String> productIds);
 
     @Query(value = """
             SELECT DISTINCT r.product_id

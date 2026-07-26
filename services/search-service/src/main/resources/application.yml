@@ -19,7 +19,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5438/vnshop_search?currentSchema=search_svc
     username: vnshop
-    password: ${DB_PASSWORD:vnshop}
+    password: ${DB_PASSWORD}
     hikari:
       maximum-pool-size: 10
       minimum-idle: 3
@@ -39,13 +39,13 @@ spring:
     properties:
       security.protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_PLAINTEXT}
       sasl.mechanism: PLAIN
-      sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_SASL_USERNAME:svc-search}" password="${KAFKA_SASL_PASSWORD:search-secret-change-me}";
+      sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_SASL_USERNAME}" password="${KAFKA_SASL_PASSWORD}";
       ssl.endpoint.identification.algorithm: https
     admin:
       properties:
         security.protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_PLAINTEXT}
         sasl.mechanism: PLAIN
-        sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_SASL_USERNAME:svc-search}" password="${KAFKA_SASL_PASSWORD:search-secret-change-me}";
+        sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_SASL_USERNAME}" password="${KAFKA_SASL_PASSWORD}";
     listener:
       observation-enabled: true
     template:
@@ -53,7 +53,7 @@ spring:
   elasticsearch:
     uris: http://${ELASTICSEARCH_HOST:elasticsearch}:${ELASTICSEARCH_PORT:9200}
     username: elastic
-    password: ${ELASTIC_PASSWORD:vnshop-es-dev-password}
+    password: ${ELASTIC_PASSWORD}
   security:
     oauth2:
       resourceserver:
@@ -111,6 +111,12 @@ kafka:
       enabled: false
       lag-threshold: 1000
       group-id: search-service
+
+search:
+  cursor:
+    secret: ${VNSHOP_SEARCH_CURSOR_SECRET}
+  facets:
+    max-buckets: ${SEARCH_FACETS_MAX_BUCKETS:100}
 
 logging:
   level:

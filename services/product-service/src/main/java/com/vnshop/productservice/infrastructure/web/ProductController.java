@@ -9,6 +9,7 @@ import com.vnshop.productservice.application.GetCategoriesUseCase;
 import com.vnshop.productservice.application.GetProductUseCase;
 import com.vnshop.productservice.application.ProductResponse;
 import com.vnshop.productservice.application.UpdateProductUseCase;
+import com.vnshop.productservice.domain.ProductTagNormalizer;
 import com.vnshop.productservice.application.UpdateProductEligibilityUseCase;
 import com.vnshop.productservice.application.PublishProductUseCase;
 import com.vnshop.productservice.application.CatalogCursorSort;
@@ -48,12 +49,14 @@ public class ProductController {
     private final GetProductUseCase getProductUseCase;
     private final CountSellerProductsUseCase countSellerProductsUseCase;
     private final GetCategoriesUseCase getCategoriesUseCase;
+    private final ProductTagNormalizer productTagNormalizer;
 
     public ProductController(CreateProductUseCase createProductUseCase, UpdateProductUseCase updateProductUseCase,
             UpdateProductEligibilityUseCase updateProductEligibilityUseCase,
             PublishProductUseCase publishProductUseCase,
             DeleteProductUseCase deleteProductUseCase, GetProductUseCase getProductUseCase,
-            CountSellerProductsUseCase countSellerProductsUseCase, GetCategoriesUseCase getCategoriesUseCase) {
+            CountSellerProductsUseCase countSellerProductsUseCase, GetCategoriesUseCase getCategoriesUseCase,
+            ProductTagNormalizer productTagNormalizer) {
         this.createProductUseCase = createProductUseCase;
         this.updateProductUseCase = updateProductUseCase;
         this.updateProductEligibilityUseCase = updateProductEligibilityUseCase;
@@ -62,6 +65,7 @@ public class ProductController {
         this.getProductUseCase = getProductUseCase;
         this.countSellerProductsUseCase = countSellerProductsUseCase;
         this.getCategoriesUseCase = getCategoriesUseCase;
+        this.productTagNormalizer = productTagNormalizer;
     }
 
     @PostMapping("/sellers/me/products")
@@ -75,7 +79,8 @@ public class ProductController {
                 request.categoryId(),
                 request.brand(),
                 request.toVariants(),
-                request.toImages()
+                request.toImages(),
+                request.toTags(productTagNormalizer)
         );
         return ApiResponse.ok(createProductUseCase.create(command));
     }
@@ -91,7 +96,8 @@ public class ProductController {
                 request.categoryId(),
                 request.brand(),
                 request.toVariants(),
-                request.toImages()
+                request.toImages(),
+                request.toTags(productTagNormalizer)
         ));
     }
 

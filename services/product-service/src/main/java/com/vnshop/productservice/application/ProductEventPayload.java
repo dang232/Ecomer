@@ -5,6 +5,7 @@ import com.vnshop.productservice.domain.review.ProductReviewSummary;
 
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public final class ProductEventPayload {
@@ -37,6 +38,9 @@ public final class ProductEventPayload {
         payload.put("sameDayDelivery", product.sameDayDelivery());
         payload.put("verified", product.verified());
         payload.put("isOfficial", product.isOfficial());
+        payload.put("tags", product.tags().stream()
+                .map(tag -> Map.of("key", tag.canonicalKey(), "label", tag.displayLabel()))
+                .toList());
 
         product.images().stream()
                 .min((left, right) -> Integer.compare(left.sortOrder(), right.sortOrder()))

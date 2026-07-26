@@ -6,6 +6,7 @@ import com.vnshop.productservice.domain.Money;
 import com.vnshop.productservice.domain.Product;
 import com.vnshop.productservice.domain.ProductImage;
 import com.vnshop.productservice.domain.ProductVariant;
+import com.vnshop.productservice.domain.ProductTag;
 import com.vnshop.productservice.domain.review.ProductReviewSummary;
 import java.math.BigDecimal;
 import java.util.List;
@@ -51,5 +52,15 @@ class ProductEventPayloadTest {
         Map<String, Object> payload = ProductEventPayload.from(product, new ProductReviewSummary(4.25, 4));
 
         assertThat(payload).containsEntry("averageRating", 4.25).containsEntry("reviewCount", 4L);
+    }
+
+    @Test
+    void publishesCanonicalAndDisplayTagEntries() {
+        Product product = new Product(
+                UUID.randomUUID(), "seller-1", "Studio headphones", "desc", "audio", "VNShop",
+                List.of(), List.of(), List.of(new ProductTag("wireless", "Wireless")), false, false, false);
+
+        assertThat(ProductEventPayload.from(product).get("tags"))
+                .isEqualTo(List.of(Map.of("key", "wireless", "label", "Wireless")));
     }
 }

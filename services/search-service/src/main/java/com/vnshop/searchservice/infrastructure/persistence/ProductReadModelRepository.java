@@ -197,6 +197,38 @@ public interface ProductReadModelRepository extends JpaRepository<ProductReadMod
             @Param("officialOnly") Boolean officialOnly
     );
 
+    @Query("""
+            select distinct product from ProductReadModelJpaEntity product
+            where product.status = 'ACTIVE'
+              and (:query is null or lower(product.name) like lower(concat('%', cast(:query as string), '%')) or lower(product.description) like lower(concat('%', cast(:query as string), '%')))
+              and (:categoryId is null or product.categoryId = cast(:categoryId as string))
+              and (:brand is null or product.brand = cast(:brand as string))
+              and (:minPrice is null or product.maxPrice >= :minPrice)
+              and (:maxPrice is null or product.minPrice <= :maxPrice)
+              and (:minRating is null or coalesce(product.averageRating, 0) >= :minRating)
+              and (:tagsEmpty = true or exists (
+                    select taggedProduct.productId from ProductReadModelJpaEntity taggedProduct
+                    join taggedProduct.tags tagKey
+                    where taggedProduct.productId = product.productId and tagKey in :tags
+              ))
+              and (:sameDay is null or product.sameDayDelivery = :sameDay)
+              and (:verifiedOnly is null or product.verified = :verifiedOnly)
+              and (:officialOnly is null or product.isOfficial = :officialOnly)
+            """)
+    List<ProductReadModelJpaEntity> findMatchingDynamic(
+            @Param("query") String query,
+            @Param("categoryId") String categoryId,
+            @Param("brand") String brand,
+            @Param("minPrice") BigDecimal minPrice,
+            @Param("maxPrice") BigDecimal maxPrice,
+            @Param("minRating") Float minRating,
+            @Param("tagsEmpty") boolean tagsEmpty,
+            @Param("tags") List<String> tags,
+            @Param("sameDay") Boolean sameDay,
+            @Param("verifiedOnly") Boolean verifiedOnly,
+            @Param("officialOnly") Boolean officialOnly
+    );
+
     default Page<ProductReadModel> searchPaged(String query, String categoryId, String brand, BigDecimal minPrice, BigDecimal maxPrice, Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly, Pageable pageable) {
         return searchEntitiesPaged(blankToNull(query), blankToNull(categoryId), blankToNull(brand), minPrice, maxPrice, sameDay, verifiedOnly, officialOnly, pageable)
                 .map(ProductReadModelJpaEntity::toDomain);

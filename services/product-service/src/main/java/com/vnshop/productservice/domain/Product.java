@@ -22,6 +22,7 @@ public class Product {
     private ProductStatus status;
     private final List<ProductVariant> variants;
     private final List<ProductImage> images;
+    private final List<ProductTag> tags;
     private boolean sameDayDelivery;
     private boolean verified;
     private boolean isOfficial;
@@ -36,7 +37,7 @@ public class Product {
             List<ProductVariant> variants,
             List<ProductImage> images
     ) {
-        this(productId, sellerId, name, description, categoryId, brand, variants, images, false, false, false);
+        this(productId, sellerId, name, description, categoryId, brand, variants, images, List.of(), false, false, false);
     }
 
     public Product(
@@ -53,7 +54,25 @@ public class Product {
             boolean isOfficial
     ) {
         this(productId, sellerId, name, description, categoryId, brand, ProductStatus.DRAFT,
-                variants, images, sameDayDelivery, verified, isOfficial);
+                variants, images, List.of(), sameDayDelivery, verified, isOfficial);
+    }
+
+    public Product(
+            UUID productId,
+            String sellerId,
+            String name,
+            String description,
+            String categoryId,
+            String brand,
+            List<ProductVariant> variants,
+            List<ProductImage> images,
+            List<ProductTag> tags,
+            boolean sameDayDelivery,
+            boolean verified,
+            boolean isOfficial
+    ) {
+        this(productId, sellerId, name, description, categoryId, brand, ProductStatus.DRAFT,
+                variants, images, tags, sameDayDelivery, verified, isOfficial);
     }
 
     @JsonCreator
@@ -67,6 +86,7 @@ public class Product {
             @JsonProperty("status") ProductStatus status,
             @JsonProperty("variants") List<ProductVariant> variants,
             @JsonProperty("images") List<ProductImage> images,
+            @JsonProperty("tags") List<ProductTag> tags,
             @JsonProperty("sameDayDelivery") boolean sameDayDelivery,
             @JsonProperty("verified") boolean verified,
             @JsonProperty("isOfficial") boolean isOfficial
@@ -80,6 +100,7 @@ public class Product {
         this.status = status == null ? ProductStatus.DRAFT : status;
         this.variants = new ArrayList<>();
         this.images = new ArrayList<>();
+        this.tags = tags == null ? new ArrayList<>() : new ArrayList<>(tags);
         this.sameDayDelivery = sameDayDelivery;
         this.verified = verified;
         this.isOfficial = isOfficial;
@@ -140,6 +161,11 @@ public class Product {
     @JsonProperty("images")
     public List<ProductImage> images() {
         return List.copyOf(images);
+    }
+
+    @JsonProperty("tags")
+    public List<ProductTag> tags() {
+        return List.copyOf(tags);
     }
 
     @JsonProperty("sameDayDelivery")

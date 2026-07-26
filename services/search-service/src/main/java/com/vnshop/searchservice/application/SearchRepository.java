@@ -28,6 +28,17 @@ public interface SearchRepository {
             int limit
     );
 
+    default List<ProductReadModel> searchAfter(
+            String query, String categoryId, String brand, BigDecimal minPrice, BigDecimal maxPrice,
+            Float minRating, List<String> tags, Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly,
+            CursorSort sort, SearchCursor cursor, int limit) {
+        if (minRating == null && (tags == null || tags.isEmpty())) {
+            return searchAfter(query, categoryId, brand, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly,
+                    sort, cursor, limit);
+        }
+        throw new UnsupportedOperationException("dynamic search filters are not supported by this adapter");
+    }
+
     /**
      * Full-text / filtered search returning a page of domain read models.
      * All parameters are nullable; null means "no filter on that dimension".
@@ -43,6 +54,16 @@ public interface SearchRepository {
             Boolean officialOnly,
             Pageable pageable
     );
+
+    default Page<ProductReadModel> searchPaged(
+            String query, String categoryId, String brand, BigDecimal minPrice, BigDecimal maxPrice,
+            Float minRating, List<String> tags, Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly,
+            Pageable pageable) {
+        if (minRating == null && (tags == null || tags.isEmpty())) {
+            return searchPaged(query, categoryId, brand, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly, pageable);
+        }
+        throw new UnsupportedOperationException("dynamic search filters are not supported by this adapter");
+    }
 
     /** Returns all distinct non-null category IDs present in the index. */
     List<String> findDistinctCategories();
@@ -68,4 +89,28 @@ public interface SearchRepository {
     List<SearchFacetsResponse.FacetEntry> brandFacetsFor(
             String query, String categoryId, BigDecimal minPrice, BigDecimal maxPrice,
             Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly);
+
+    default List<SearchFacetsResponse.FacetEntry> categoryFacetsFor(
+            String query, String brand, BigDecimal minPrice, BigDecimal maxPrice, Float minRating, List<String> tags,
+            Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly) {
+        if (minRating == null && (tags == null || tags.isEmpty())) {
+            return categoryFacetsFor(query, brand, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly);
+        }
+        throw new UnsupportedOperationException("dynamic facet filters are not supported by this adapter");
+    }
+
+    default List<SearchFacetsResponse.FacetEntry> brandFacetsFor(
+            String query, String categoryId, BigDecimal minPrice, BigDecimal maxPrice, Float minRating, List<String> tags,
+            Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly) {
+        if (minRating == null && (tags == null || tags.isEmpty())) {
+            return brandFacetsFor(query, categoryId, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly);
+        }
+        throw new UnsupportedOperationException("dynamic facet filters are not supported by this adapter");
+    }
+
+    default List<SearchFacetsResponse.FacetEntry> tagFacetsFor(
+            String query, String categoryId, String brand, BigDecimal minPrice, BigDecimal maxPrice, Float minRating,
+            List<String> tags, Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly) {
+        return List.of();
+    }
 }

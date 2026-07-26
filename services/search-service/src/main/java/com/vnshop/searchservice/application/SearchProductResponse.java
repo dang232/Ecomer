@@ -2,6 +2,7 @@ package com.vnshop.searchservice.application;
 
 import com.vnshop.searchservice.domain.ProductReadModel;
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * Search response DTO aligned with frontend's productSummarySchema.
@@ -24,7 +25,8 @@ public record SearchProductResponse(
         int stock,
         boolean sameDayDelivery,
         boolean verified,
-        boolean isOfficial
+        boolean isOfficial,
+        List<String> tags
 ) {
     public static SearchProductResponse fromDomain(ProductReadModel model) {
         return new SearchProductResponse(
@@ -43,7 +45,8 @@ public record SearchProductResponse(
                 model.stock(),
                 model.sameDayDelivery(),
                 model.verified(),
-                model.isOfficial()
+                model.isOfficial(),
+                model.tags()
         );
     }
 }

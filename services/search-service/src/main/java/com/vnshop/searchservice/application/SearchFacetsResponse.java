@@ -4,7 +4,16 @@ import java.util.List;
 
 public record SearchFacetsResponse(
         List<FacetEntry> categories,
-        List<FacetEntry> brands
+        List<FacetEntry> brands,
+        List<FacetEntry> tags
 ) {
-    public record FacetEntry(String key, long count) {}
+    public SearchFacetsResponse(List<FacetEntry> categories, List<FacetEntry> brands) {
+        this(categories, brands, List.of());
+    }
+
+    public record FacetEntry(String key, String label, long count) {
+        public FacetEntry(String key, long count) {
+            this(key, key, count);
+        }
+    }
 }

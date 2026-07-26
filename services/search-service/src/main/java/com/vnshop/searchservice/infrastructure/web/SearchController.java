@@ -86,6 +86,8 @@ public class SearchController {
             @RequestParam(required = false) String brand,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) Float minRating,
+            @RequestParam(name = "tag", required = false) List<String> tags,
             @RequestParam(required = false) String sort,
             @RequestParam(name = "sameDay", required = false) Boolean sameDay,
             @RequestParam(name = "verifiedOnly", required = false) Boolean verifiedOnly,
@@ -102,7 +104,7 @@ public class SearchController {
         response.setHeader("X-Correlation-Id", effectiveRequestId);
         response.setHeader("X-Request-Id", effectiveRequestId);
         SearchV2Response result = searchProductsUseCase.searchV2(new SearchV2Query(
-                query, category, brand, minPrice, maxPrice, CursorSort.parse(sort),
+                query, category, brand, minPrice, maxPrice, minRating, tags, CursorSort.parse(sort),
                 sameDay, verifiedOnly, officialOnly, cursor, limit, includeFacets));
         String etag = StableEtag.of(result);
         if (matches(ifNoneMatch, etag)) {
@@ -110,6 +112,15 @@ public class SearchController {
         }
         return ResponseEntity.ok().eTag(etag).body(ApiResponse.okWithMeta(result, new ApiMeta(
                 effectiveRequestId, "miss", false, result.nextCursor(), result.hasMore())));
+    }
+
+    public ResponseEntity<ApiResponse<SearchV2Response>> searchV2(
+            String query, String category, String brand, BigDecimal minPrice, BigDecimal maxPrice,
+            String sort, Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly, String cursor,
+            int limit, boolean includeFacets, String correlationId, String requestId, String ifNoneMatch,
+            HttpServletResponse response) {
+        return searchV2(query, category, brand, minPrice, maxPrice, null, List.of(), sort, sameDay,
+                verifiedOnly, officialOnly, cursor, limit, includeFacets, correlationId, requestId, ifNoneMatch, response);
     }
 
     @GetMapping("/categories")
@@ -140,11 +151,14 @@ public class SearchController {
             @RequestParam(required = false) String brand,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) Float minRating,
+            @RequestParam(name = "tag", required = false) List<String> tags,
             @RequestParam(name = "sameDay", required = false) Boolean sameDay,
             @RequestParam(name = "verifiedOnly", required = false) Boolean verifiedOnly,
             @RequestParam(name = "officialOnly", required = false) Boolean officialOnly
     ) {
-        return ApiResponse.ok(searchProductsUseCase.facets(query, category, brand, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly));
+        return ApiResponse.ok(searchProductsUseCase.facets(query, category, brand, minPrice, maxPrice, minRating,
+                tags, sameDay, verifiedOnly, officialOnly));
     }
 
     private static Sort resolveSort(String key) {

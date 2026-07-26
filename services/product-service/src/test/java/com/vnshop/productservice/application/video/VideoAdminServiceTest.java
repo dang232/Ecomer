@@ -29,12 +29,14 @@ import java.util.UUID;
 
 class VideoAdminServiceTest {
 
+    private static final String PUBLIC_BUCKET = "test-videos";
+
     private final VideoRepositoryPort videoRepositoryPort = mock(VideoRepositoryPort.class);
     private final ObjectStoragePort objectStoragePort = mock(ObjectStoragePort.class);
     private final VideoEventPublisherPort videoEventPublisherPort = mock(VideoEventPublisherPort.class);
 
     private final VideoAdminService service = new VideoAdminService(
-            videoRepositoryPort, objectStoragePort, videoEventPublisherPort);
+            videoRepositoryPort, objectStoragePort, videoEventPublisherPort, PUBLIC_BUCKET);
 
     private UUID videoId;
     private Video pendingVideo;
@@ -89,7 +91,7 @@ class VideoAdminServiceTest {
         assertThat(result.moderatedBy()).isEqualTo("admin-1");
         assertThat(result.publishedAt()).isNotNull();
 
-        verify(objectStoragePort).copyObject("vnshop-videos-staging/abc.mp4", "vnshop-videos/" + videoId);
+        verify(objectStoragePort).copyObject("vnshop-videos-staging/abc.mp4", PUBLIC_BUCKET + "/" + videoId);
         verify(objectStoragePort).deleteObject("vnshop-videos-staging/abc.mp4");
 
         ArgumentCaptor<VideoEvent> eventCaptor = ArgumentCaptor.forClass(VideoEvent.class);
@@ -206,19 +208,19 @@ class VideoAdminServiceTest {
 
     @Test
     void constructor_rejectsNullRepository() {
-        assertThatThrownBy(() -> new VideoAdminService(null, objectStoragePort, videoEventPublisherPort))
+        assertThatThrownBy(() -> new VideoAdminService(null, objectStoragePort, videoEventPublisherPort, PUBLIC_BUCKET))
                 .isInstanceOf(NullPointerException.class);
     }
 
     @Test
     void constructor_rejectsNullStorage() {
-        assertThatThrownBy(() -> new VideoAdminService(videoRepositoryPort, null, videoEventPublisherPort))
+        assertThatThrownBy(() -> new VideoAdminService(videoRepositoryPort, null, videoEventPublisherPort, PUBLIC_BUCKET))
                 .isInstanceOf(NullPointerException.class);
     }
 
     @Test
     void constructor_rejectsNullEventPublisher() {
-        assertThatThrownBy(() -> new VideoAdminService(videoRepositoryPort, objectStoragePort, null))
+        assertThatThrownBy(() -> new VideoAdminService(videoRepositoryPort, objectStoragePort, null, PUBLIC_BUCKET))
                 .isInstanceOf(NullPointerException.class);
     }
 }

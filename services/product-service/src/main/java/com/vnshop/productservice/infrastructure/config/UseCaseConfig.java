@@ -4,6 +4,7 @@ import com.vnshop.productservice.application.CountSellerProductsUseCase;
 import com.vnshop.productservice.application.CreateProductUseCase;
 import com.vnshop.productservice.application.DeleteProductUseCase;
 import com.vnshop.productservice.application.GetProductUseCase;
+import com.vnshop.productservice.application.CatalogCursorCodec;
 import com.vnshop.productservice.application.GetCategoriesUseCase;
 import com.vnshop.productservice.application.UpdateProductUseCase;
 import com.vnshop.productservice.application.UpdateProductEligibilityUseCase;
@@ -36,19 +37,29 @@ import com.vnshop.productservice.domain.review.port.out.BuyerProfileLookupPort;
 import com.vnshop.productservice.domain.review.port.out.PurchaseVerificationPort;
 import com.vnshop.productservice.domain.review.port.out.ReviewModerationPort;
 import com.vnshop.productservice.domain.review.port.out.ReviewRepositoryPort;
+import com.vnshop.productservice.domain.review.port.out.ProductRatingReadPort;
 import com.vnshop.productservice.domain.port.out.CategoryRepositoryPort;
 import com.vnshop.productservice.domain.storage.ObjectStorageClass;
+import com.vnshop.productservice.domain.ProductTagNormalizer;
 import com.vnshop.productservice.domain.video.port.out.VideoEventPublisherPort;
 import com.vnshop.productservice.domain.video.port.out.VideoRepositoryPort;
 import com.vnshop.productservice.infrastructure.persistence.video.VideoJpaRepository;
 import com.vnshop.productservice.infrastructure.sanitization.HtmlSanitizer;
+import com.vnshop.productservice.infrastructure.storage.VideoStorageProperties;
 import java.util.Set;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 @Configuration
+@EnableConfigurationProperties({ProductCursorProperties.class, ProductTagProperties.class, VideoStorageProperties.class})
 public class UseCaseConfig {
+    @Bean
+    ProductTagNormalizer productTagNormalizer(ProductTagProperties properties) {
+        return new ProductTagNormalizer(properties.toPolicy());
+    }
+
     @Bean
     CreateProductUseCase createProductUseCase(ProductRepositoryPort productRepositoryPort,
             ProductEventOutboxPort productEventOutboxPort, ContentSanitizerPort contentSanitizer) {
@@ -81,8 +92,12 @@ public class UseCaseConfig {
     }
 
     @Bean
-    GetProductUseCase getProductUseCase(ProductRepositoryPort productRepositoryPort) {
-        return new GetProductUseCase(productRepositoryPort);
+    GetProductUseCase getProductUseCase(
+            ProductRepositoryPort productRepositoryPort,
+            ProductRatingReadPort productRatingReadPort,
+            ProductCursorProperties properties) {
+        return new GetProductUseCase(productRepositoryPort, productRatingReadPort,
+                new CatalogCursorCodec(properties.secret()));
     }
 
     @Bean
@@ -213,8 +228,10 @@ public class UseCaseConfig {
     @Bean
     VideoAdminService videoAdminService(VideoRepositoryPort videoRepositoryPort,
             ObjectStoragePort objectStoragePort,
-            VideoEventPublisherPort videoEventPublisherPort) {
-        return new VideoAdminService(videoRepositoryPort, objectStoragePort, videoEventPublisherPort);
+            VideoEventPublisherPort videoEventPublisherPort,
+            VideoStorageProperties properties) {
+        return new VideoAdminService(videoRepositoryPort, objectStoragePort,
+                videoEventPublisherPort, properties.publicBucket());
     }
 
     @Bean

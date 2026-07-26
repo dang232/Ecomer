@@ -17,8 +17,7 @@ public class SearchProductsUseCase {
     private final SearchCursorCodec cursorCodec;
 
     public SearchProductsUseCase(SearchRepository searchRepository) {
-        this(searchRepository, new SearchCursorCodec(
-                System.getenv().getOrDefault("VNSHOP_SEARCH_CURSOR_SECRET", "local-search-cursor-secret-change-me")));
+        this(searchRepository, null);
     }
 
     public SearchProductsUseCase(SearchRepository searchRepository, SearchCursorCodec cursorCodec) {
@@ -32,15 +31,24 @@ public class SearchProductsUseCase {
     }
 
     public SearchV2Response searchV2(SearchV2Query query) {
+        if (cursorCodec == null) {
+            throw new IllegalStateException("search cursor codec is not configured");
+        }
         SearchCursor cursor = cursorCodec.decode(query.cursor(), query);
-        List<ProductReadModel> rows = searchRepository.searchAfter(
-                query.query(), query.category(), query.brand(), query.minPrice(), query.maxPrice(),
-                query.sameDay(), query.verifiedOnly(), query.officialOnly(), query.sort(), cursor, query.limit() + 1);
+        List<ProductReadModel> rows = hasDynamicFilters(query)
+                ? searchRepository.searchAfter(
+                        query.query(), query.category(), query.brand(), query.minPrice(), query.maxPrice(),
+                        query.minRating(), query.tags(), query.sameDay(), query.verifiedOnly(), query.officialOnly(),
+                        query.sort(), cursor, query.limit() + 1)
+                : searchRepository.searchAfter(
+                        query.query(), query.category(), query.brand(), query.minPrice(), query.maxPrice(),
+                        query.sameDay(), query.verifiedOnly(), query.officialOnly(), query.sort(), cursor, query.limit() + 1);
         boolean hasMore = rows.size() > query.limit();
         List<ProductReadModel> page = hasMore ? new ArrayList<>(rows.subList(0, query.limit())) : rows;
         String nextCursor = hasMore ? cursorCodec.encode(query, page.getLast()) : null;
         SearchFacetsResponse facets = query.includeFacets()
-                ? facets(query.query(), query.category(), query.brand(), query.minPrice(), query.maxPrice(), query.sameDay(), query.verifiedOnly(), query.officialOnly())
+                ? facets(query.query(), query.category(), query.brand(), query.minPrice(), query.maxPrice(),
+                query.minRating(), query.tags(), query.sameDay(), query.verifiedOnly(), query.officialOnly())
                 : null;
         return new SearchV2Response(page.stream().map(SearchProductResponse::fromDomain).toList(), nextCursor, hasMore, facets);
     }
@@ -61,10 +69,26 @@ public class SearchProductsUseCase {
      * without unselecting the current one (typical e-commerce facet UX).
      */
     public SearchFacetsResponse facets(String query, String category, String brand, BigDecimal minPrice, BigDecimal maxPrice, Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly) {
+        return facets(query, category, brand, minPrice, maxPrice, null, List.of(), sameDay, verifiedOnly, officialOnly);
+    }
+
+    public SearchFacetsResponse facets(String query, String category, String brand, BigDecimal minPrice, BigDecimal maxPrice,
+            Float minRating, List<String> tags, Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly) {
+        if (minRating == null && (tags == null || tags.isEmpty())) {
+            return new SearchFacetsResponse(
+                    searchRepository.categoryFacetsFor(query, brand, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly),
+                    searchRepository.brandFacetsFor(query, category, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly),
+                    searchRepository.tagFacetsFor(query, category, brand, minPrice, maxPrice, null, List.of(), sameDay, verifiedOnly, officialOnly));
+        }
         return new SearchFacetsResponse(
-                searchRepository.categoryFacetsFor(query, brand, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly),
-                searchRepository.brandFacetsFor(query, category, minPrice, maxPrice, sameDay, verifiedOnly, officialOnly)
+                searchRepository.categoryFacetsFor(query, brand, minPrice, maxPrice, minRating, tags, sameDay, verifiedOnly, officialOnly),
+                searchRepository.brandFacetsFor(query, category, minPrice, maxPrice, minRating, tags, sameDay, verifiedOnly, officialOnly),
+                searchRepository.tagFacetsFor(query, category, brand, minPrice, maxPrice, minRating, tags, sameDay, verifiedOnly, officialOnly)
         );
+    }
+
+    private static boolean hasDynamicFilters(SearchV2Query query) {
+        return query.minRating() != null || !query.tags().isEmpty();
     }
 
 }

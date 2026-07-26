@@ -34,6 +34,7 @@ public class CreateProductUseCase {
                 command.brand(),
                 command.variants(),
                 command.images(),
+                command.tags(),
                 command.sameDayDelivery(),
                 command.verified(),
                 command.isOfficial()

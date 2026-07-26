@@ -17,4 +17,23 @@ class ProductJpaSpringDataRepositoryContractTest {
         assertThat(method.getAnnotation(Query.class).value())
                 .contains("product.status = 'ACTIVE'");
     }
+
+    @Test
+    void cursorAnchorsHaveExplicitTypesWhenTheFirstPageHasNoCursor() throws NoSuchMethodException {
+        assertThat(queryFor("findCatalogAfterNewest"))
+                .contains("cast(:anchorCreatedAt as Instant)");
+        assertThat(queryFor("findCatalogAfterPriceLow"))
+                .contains("cast(:anchorPrice as BigDecimal)");
+        assertThat(queryFor("findCatalogAfterPriceHigh"))
+                .contains("cast(:anchorPrice as BigDecimal)");
+    }
+
+    private static String queryFor(String methodName) throws NoSuchMethodException {
+        return java.util.Arrays.stream(ProductJpaSpringDataRepository.class.getMethods())
+                .filter(method -> method.getName().equals(methodName))
+                .findFirst()
+                .orElseThrow()
+                .getAnnotation(Query.class)
+                .value();
+    }
 }
