@@ -42,6 +42,57 @@ These defaults come from `docs/ba/02-TRUST.md` and `docs/ba/05-FULFILL.md` and m
 | Reserve | Default rate is zero. The ledger supports reserves, but non-zero risk rules require a separately approved policy value. |
 | Payout execution | Production starts fail-closed. `MANUAL_RECORDED` requires maker-checker and external evidence; `PROVIDER` remains disabled until a provider adapter passes sandbox and recovery tests. |
 
+## Safe Payout Milestone Decisions (binding for Task 8 onward)
+
+These decisions come from `.omx/plans/safe-payout-milestone.md` and override any
+prior wording in this plan. They must be enforced from Task 8 forward.
+
+1. **Destination ownership.** `user-service` owns enrollment and returns only
+   destination ID, bank name/code, last four, and verification state from
+   seller self/admin/public responses. `seller-finance-service` fetches the
+   verified destination through an authenticated internal contract and stores
+   an **encrypted, immutable** `PayoutDestinationSnapshot` plus non-secret
+   fingerprint/last-four metadata on the payout.
+2. **Posting/projection invariant.** Journal postings must describe the exact
+   bucket deltas applied to the wallet. Refund / final chargeback recovery
+   order is `settlementPending -> available -> reserve -> debt`; `payoutPending`
+   is excluded so an already-reserved payout cannot be silently consumed.
+   Chargeback holds move funds from the exact funded buckets into `reserve`
+   and record the source allocation; release restores from the immutable hold
+   allocation; finalize consumes held reserve first and only then applies any
+   uncovered amount through the recovery order.
+3. **Flyway numbering (Task 8 / 12 renumbering).** user-service Task 8
+   migration is `V10__secure_payout_destination.sql`; seller-finance Task 8
+   is `V10__payout_execution_expand.sql`; seller-finance Task 12 is
+   `V11__settlement_reconciliation_expand.sql`. No second V9 or V10 may be
+   added in `seller-finance-service`.
+4. **Event mode boundary.** `SELLER_FINANCE_EVENT_MODE=OFF|SHADOW|PRIMARY`
+   is the single binding for credit, release, refund, and chargeback
+   adjustments across `order-service` publishers and `seller-finance-service`
+   consumers. `OFF`: legacy listeners remain authoritative, no new mutation.
+   `SHADOW`: versioned path produces comparison evidence only; payout
+   execution remains disabled. `PRIMARY`: versioned path is authoritative;
+   legacy order-created/direct-refund mutations are disabled. Conflicting
+   producer/consumer mode combinations fail startup. Fragmented producer/
+   consumer booleans remain only as deprecated aliases during the Task 14
+   compatibility window.
+5. **Canonical payout vocabulary.** Only `REQUESTED`, `APPROVED`, `SUBMITTING`,
+   `SUBMITTED`, `PAID`, `UNKNOWN`, `FAILED`, `REJECTED`, `CANCELLED`, and
+   `REVERSED` may be emitted or rendered. `PENDING` / `COMPLETED` are
+   translation-only within the compatibility window and never new-code.
+6. **Compatibility window.** Gateway route paths and list endpoints remain in
+   service for Task 14, but payloads/statuses map to the canonical model. The
+   unsafe no-evidence admin completion path is not preserved — it is replaced
+   by the maker-checker + manual evidence flow.
+
+## Later Release Gates (carried to Tasks 12–15)
+
+The milestone stop condition is code-complete / release-gated, not
+production-ready. Tasks 12–15 must independently close: reconciliation and
+alerts (V11), opening-balance backfill and compare/primary cutover,
+gateway authorization, browser journeys, provider sandbox and manual
+evidence, and a seven-day / one-cycle stability window.
+
 ## Canonical Terminology
 
 | Term | Definition | Owner |
@@ -553,7 +604,7 @@ git commit -m "feat(finance): account for release refunds and chargebacks"
 - Create: `services/user-service/src/main/resources/db/migration/V10__secure_payout_destination.sql`
 - Modify user-service seller profile persistence and responses
 - Create: `services/user-service/src/main/java/com/vnshop/userservice/infrastructure/web/SellerPayoutDestinationResponse.java`
-- Create: `services/seller-finance-service/src/main/resources/db/migration/V9__payout_execution_expand.sql`
+- Create: `services/seller-finance-service/src/main/resources/db/migration/V10__payout_execution_expand.sql`
 - Modify seller-finance `Payout`, `PayoutStatus`, repositories, use cases, controllers, and responses
 - Create: `services/seller-finance-service/src/main/java/com/vnshop/sellerfinanceservice/domain/PayoutDestinationSnapshot.java`
 - Create: `services/seller-finance-service/src/main/java/com/vnshop/sellerfinanceservice/domain/port/out/PayoutProviderPort.java`
@@ -796,7 +847,7 @@ git commit -m "feat(finance-ui): show authoritative marketplace money"
 ### Task 12: Add Reconciliation, Metrics, Alerts, And Fail-Closed Configuration
 
 **Files:**
-- Create: `services/seller-finance-service/src/main/resources/db/migration/V10__settlement_reconciliation_expand.sql`
+- Create: `services/seller-finance-service/src/main/resources/db/migration/V11__settlement_reconciliation_expand.sql`
 - Create reconciliation domain, persistence, use case, and scheduler files
 - Create: `services/seller-finance-service/src/main/java/com/vnshop/sellerfinanceservice/infrastructure/metrics/SettlementMetrics.java`
 - Modify: `services/seller-finance-service/src/main/resources/application.yml`
