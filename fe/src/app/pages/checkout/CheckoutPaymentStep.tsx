@@ -7,18 +7,32 @@ interface Props {
   paymentOptions: PaymentOption[];
   selectedPaymentId: PaymentOption["id"];
   setSelectedPaymentId: (id: PaymentOption["id"]) => void;
+  loadError?: Error | null;
+  onRetry?: () => void;
 }
 
 export function CheckoutPaymentStep({
   paymentOptions,
   selectedPaymentId,
   setSelectedPaymentId,
+  loadError,
+  onRetry,
 }: Props) {
   const { t } = useTranslation();
 
   return (
     <div>
       <h2 className="font-bold text-foreground text-lg mb-4">{t("checkout.payment.header")}</h2>
+      {loadError || paymentOptions.length === 0 ? (
+        <div role="alert" className="border border-destructive/40 bg-destructive/5 p-4 text-sm text-foreground">
+          <p>{t("checkout.payment.unavailable")}</p>
+          {onRetry ? (
+            <button type="button" onClick={onRetry} className="mt-2 text-sm font-semibold text-primary">
+              {t("checkout.payment.retry")}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       <div role="radiogroup" aria-label="Payment method" className="space-y-3">
         {paymentOptions.map((method) => {
           const isSelected = selectedPaymentId === method.id;

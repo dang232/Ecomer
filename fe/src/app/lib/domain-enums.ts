@@ -95,7 +95,6 @@ export const PAYMENT_METHODS = [
   "COD",
   "VNPAY",
   "MOMO",
-  "BANK",
   "VIETQR",
   "STRIPE",
   "PAYPAL",

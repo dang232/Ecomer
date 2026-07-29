@@ -16,6 +16,7 @@ interface Props {
   finalTotal: number;
   step: Step;
   isProcessing: boolean;
+  canSubmit: boolean;
   addresses: { length: number };
   appliedCoupon: string | null;
   couponInput: string;
@@ -44,6 +45,7 @@ export function CheckoutSummary({
   finalTotal,
   step,
   isProcessing,
+  canSubmit,
   addresses,
   appliedCoupon,
   couponInput,
@@ -270,7 +272,7 @@ export function CheckoutSummary({
         {/* CTA */}
         <button
           onClick={handleNext}
-          disabled={isProcessing || (step === "address" && addresses.length === 0)}
+          disabled={isProcessing || !canSubmit || (step === "address" && addresses.length === 0)}
           className="w-full py-3.5 rounded-[var(--radius-lg)] bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isProcessing ? (

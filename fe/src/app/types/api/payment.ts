@@ -1,15 +1,15 @@
 import { z } from "zod";
 
-export const initiatePaymentSchema = z
-  .object({
-    orderId: z.string(),
-    redirectUrl: z.string().url().nullable(),
-    transactionId: z.string().optional(),
-  })
-  .passthrough();
-
 /** Wire values emitted by payment-service PaymentStatus.name() */
-export const PAYMENT_STATUS_VALUES = ["PENDING", "COMPLETED", "FAILED"] as const;
+export const PAYMENT_STATUS_VALUES = [
+  "PENDING",
+  "AWAITING_COLLECTION",
+  "COMPLETED",
+  "FAILED",
+  "PARTIALLY_REFUNDED",
+  "REFUNDED",
+  "PAYMENT_TIMEOUT",
+] as const;
 /** Wire values emitted by payment-service PaymentMethod.name() */
 export const PAYMENT_METHOD_VALUES = [
   "COD",
@@ -20,13 +20,21 @@ export const PAYMENT_METHOD_VALUES = [
   "PAYPAL",
 ] as const;
 
-export const paymentStatusSchema = z
+export const paymentResponseSchema = z
   .object({
-    orderId: z.string(),
-    paymentId: z.string().optional(),
+    paymentId: z.string().min(1),
+    orderId: z.string().min(1),
+    amount: z.number(),
+    method: z.enum(PAYMENT_METHOD_VALUES),
     status: z.enum(PAYMENT_STATUS_VALUES),
-    paidAt: z.string().nullable().optional(),
-    method: z.enum(PAYMENT_METHOD_VALUES).optional(),
+    transactionRef: z.string().nullable(),
+    redirectUrl: z.string().url().nullable(),
+    createdAt: z.string().nullable().optional(),
+    externalAmount: z.number().nullable().optional(),
+    externalCurrency: z.string().nullable().optional(),
+    fxRate: z.number().nullable().optional(),
+    fxRateAt: z.string().nullable().optional(),
   })
   .passthrough();
-export type PaymentStatus = z.infer<typeof paymentStatusSchema>;
+export const paymentStatusSchema = paymentResponseSchema;
+export type PaymentStatus = z.infer<typeof paymentResponseSchema>;

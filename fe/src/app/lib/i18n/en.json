@@ -597,6 +597,8 @@
     "payment": {
       "header": "Payment method",
       "sslNotice": "All transactions are SSL-256-bit encrypted and fully secured",
+      "unavailable": "Payment options are unavailable. Try again before placing your order.",
+      "retry": "Retry payment options",
       "initFailedPrefix": "Couldn't initiate payment: {{message}}",
       "initFailedShort": "Couldn't initiate payment",
       "placeOrderFailed": "Couldn't place the order. Please try again.",
@@ -610,7 +612,23 @@
       "codName": "Cash on delivery",
       "codDesc": "Pay cash when the parcel arrives",
       "complete": "Complete payment for order {{id}}",
-      "retryHint": "Your order was placed. Return to the Orders page to retry payment."
+      "retryHint": "Your order was placed. Return to the Orders page to retry payment.",
+      "recovery": {
+        "checkingTitle": "Checking your order",
+        "checkingBody": "VNShop is confirming whether your original checkout request completed.",
+        "uncertainTitle": "Your order needs a quick check",
+        "uncertainBody": "Checkout will not submit another order automatically. Review your orders before starting a new checkout.",
+        "abandonHint": "After reviewing your orders, you can return to the cart when you are ready for a new checkout.",
+        "paymentFailedTitle": "Your order was placed",
+        "paymentFailedBody": "Payment for order {{id}} was not initialized. You can retry payment without placing another order.",
+        "retryPayment": "Retry payment",
+        "viewOrder": "View order",
+        "viewOrders": "View orders",
+        "continueTitle": "Continue payment",
+        "continueBody": "Your order is saved. Continue the existing payment session.",
+        "continuePayment": "Continue payment",
+        "redirectExpiredBody": "The previous payment redirect is no longer available. Continue from your order instead."
+      }
     },
     "review": {
       "header": "Review your order",
@@ -1521,6 +1539,10 @@
       "fallback": "Please check your orders page for the latest status.",
       "noOrderId": "No order ID found in the URL parameters.",
       "checkFailed": "Couldn't check payment status.",
+      "invalidProvider": "This payment return provider is not supported.",
+      "invalidRecovery": "We couldn't verify this payment return. Check your orders for the latest status.",
+      "mismatchedRecovery": "This payment return does not match the saved payment session.",
+      "pendingTooLong": "Payment is still pending. Check your orders for the latest status.",
       "goOrders": "Go to orders"
     }
   },

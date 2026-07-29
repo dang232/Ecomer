@@ -39,12 +39,38 @@ export type CheckoutCalculation = z.infer<typeof calculateCheckoutSchema>;
 
 export const paymentMethodSchema = z
   .object({
-    code: z.string(),
+    code: z.string().optional(),
+    id: z.string().optional(),
     name: z.string(),
     description: z.string().optional(),
     enabled: z.boolean().default(true),
   })
-  .passthrough();
+  .passthrough()
+  .transform((raw) => ({
+    code: raw.code ?? raw.id ?? "",
+    name: raw.name,
+    description: raw.description,
+    enabled: raw.enabled,
+  }));
+
+export const checkoutProviderSchema = z.enum([
+  "COD",
+  "VNPAY",
+  "MOMO",
+  "VIETQR",
+  "STRIPE",
+  "PAYPAL",
+]);
+export type CheckoutProvider = z.infer<typeof checkoutProviderSchema>;
+
+export const CHECKOUT_IMPLEMENTED_METHODS = [
+  "COD",
+  "VNPAY",
+  "MOMO",
+  "VIETQR",
+  "STRIPE",
+  "PAYPAL",
+] as const satisfies readonly CheckoutProvider[];
 
 // BE order-service ShippingOptionResponse(method, cost: BigDecimal,
 // estimate: string). FE legacy consumers want code/fee/estimatedDays:number.

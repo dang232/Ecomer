@@ -597,6 +597,8 @@
     "payment": {
       "header": "Phương thức thanh toán",
       "sslNotice": "Tất cả giao dịch được mã hóa SSL 256-bit và bảo mật tuyệt đối",
+      "unavailable": "Khong the tai phuong thuc thanh toan. Hay thu lai truoc khi dat hang.",
+      "retry": "Thu lai phuong thuc thanh toan",
       "initFailedPrefix": "Không khởi tạo được thanh toán: {{message}}",
       "initFailedShort": "Không khởi tạo được thanh toán",
       "placeOrderFailed": "Không thể đặt hàng. Vui lòng thử lại.",
@@ -610,7 +612,23 @@
       "codName": "Thanh toán khi nhận hàng",
       "codDesc": "Trả tiền mặt khi nhận hàng",
       "complete": "Hoàn tất thanh toán cho đơn {{id}}",
-      "retryHint": "Đơn hàng đã được đặt. Quay lại trang Đơn hàng để thử thanh toán lại."
+      "retryHint": "Đơn hàng đã được đặt. Quay lại trang Đơn hàng để thử thanh toán lại.",
+      "recovery": {
+        "checkingTitle": "Dang kiem tra don hang",
+        "checkingBody": "VNShop dang xac nhan yeu cau thanh toan truoc do.",
+        "uncertainTitle": "Don hang can duoc kiem tra",
+        "uncertainBody": "Checkout se khong tu dong tao don hang moi. Hay xem don hang truoc khi dat lai.",
+        "abandonHint": "Sau khi xem don hang, ban co the quay lai gio hang khi san sang dat moi.",
+        "paymentFailedTitle": "Don hang da duoc dat",
+        "paymentFailedBody": "Thanh toan cho don {{id}} chua duoc khoi tao. Ban co the thu lai ma khong tao don moi.",
+        "retryPayment": "Thu lai thanh toan",
+        "viewOrder": "Xem don hang",
+        "viewOrders": "Xem don hang",
+        "continueTitle": "Tiep tuc thanh toan",
+        "continueBody": "Don hang da duoc luu. Tiep tuc phien thanh toan hien tai.",
+        "continuePayment": "Tiep tuc thanh toan",
+        "redirectExpiredBody": "Chuyen huong thanh toan truoc do khong con. Hay tiep tuc tu don hang."
+      }
     },
     "review": {
       "header": "Xác nhận đơn hàng",
@@ -1527,6 +1545,10 @@
       "fallback": "Vui lòng kiểm tra trang đơn hàng để xem trạng thái mới nhất.",
       "noOrderId": "Không tìm thấy mã đơn hàng trong tham số URL.",
       "checkFailed": "Không thể kiểm tra trạng thái thanh toán.",
+      "invalidProvider": "Nhà cung cấp thanh toán này không được hỗ trợ.",
+      "invalidRecovery": "Không thể xác minh phiên thanh toán này. Hãy kiểm tra đơn hàng để xem trạng thái mới nhất.",
+      "mismatchedRecovery": "Kết quả thanh toán này không khớp với phiên thanh toán đã lưu.",
+      "pendingTooLong": "Thanh toán vẫn đang chờ. Hãy kiểm tra đơn hàng để xem trạng thái mới nhất.",
       "goOrders": "Đến đơn hàng"
     }
   },

@@ -9,16 +9,20 @@ import { paymentStatus, stripeCreate } from "../../lib/api/endpoints/payment";
 interface Props {
   orderId: string;
   idempotencyKey: string;
+  initialization?: {
+    clientSecret: string;
+    publishableKey: string;
+  };
   onCompleted: () => void;
 }
 
-export function StripePaymentSection({ orderId, idempotencyKey, onCompleted }: Props) {
+export function StripePaymentSection({ orderId, idempotencyKey, initialization, onCompleted }: Props) {
   // ponytail: read env at render time so stubEnv() in tests works and HMR picks up changes
   const stripeEnabled = import.meta.env.VITE_STRIPE_ENABLED === "true";
-  const publishableKey: string = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ?? "";
+  const publishableKey = initialization?.publishableKey ?? import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ?? "";
 
   const { t } = useTranslation();
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [clientSecret, setClientSecret] = useState<string | null>(initialization?.clientSecret ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,7 +33,7 @@ export function StripePaymentSection({ orderId, idempotencyKey, onCompleted }: P
   );
 
   useEffect(() => {
-    if (!stripeEnabled || !stripePromise) return;
+    if ((!stripeEnabled && !initialization) || !stripePromise) return;
     if (clientSecret || loading) return;
     setLoading(true);
     stripeCreate({ orderId }, idempotencyKey)
@@ -38,14 +42,14 @@ export function StripePaymentSection({ orderId, idempotencyKey, onCompleted }: P
       })
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [orderId, idempotencyKey, clientSecret, loading, stripeEnabled, stripePromise]);
+  }, [orderId, idempotencyKey, clientSecret, initialization, loading, stripeEnabled, stripePromise]);
 
   const options = useMemo(
     () => (clientSecret ? { clientSecret, appearance: { theme: "stripe" as const } } : undefined),
     [clientSecret],
   );
 
-  if (!stripeEnabled) {
+  if (!stripeEnabled && !initialization) {
     return (
       <div className="rounded-2xl border-2 border-dashed border-border p-4 text-sm text-muted-foreground">
         Stripe is disabled. Set <code>VITE_STRIPE_ENABLED=true</code> and{" "}

@@ -11,6 +11,7 @@ import {
 } from "../../../types/api";
 import type { PaymentMethod } from "../../domain-enums";
 import { api } from "../client";
+import { ApiError } from "../envelope";
 
 export type { PendingSubOrder, Return };
 
@@ -45,6 +46,24 @@ export const myOrders = (params: { page?: number; size?: number; status?: string
   });
 
 export const orderById = (id: string) => api.get(`/orders/${encodeURIComponent(id)}`, orderSchema);
+
+export type IdempotencyOrderLookup =
+  | { kind: "found"; order: Order }
+  | { kind: "not-found" };
+
+export async function findOrderByIdempotencyKey(key: string): Promise<IdempotencyOrderLookup> {
+  try {
+    return {
+      kind: "found",
+      order: await api.get(`/orders/by-idempotency-key/${encodeURIComponent(key)}`, orderSchema),
+    };
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return { kind: "not-found" };
+    }
+    throw error;
+  }
+}
 
 export const cancelOrder = (id: string) =>
   api.delete(`/orders/${encodeURIComponent(id)}/cancel`, orderSchema);
