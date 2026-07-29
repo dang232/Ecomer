@@ -1,7 +1,7 @@
 # VNShop Web Commerce Modernization Design
 
 **Date:** 2026-07-29
-**Status:** Design approved in conversation; pending written-spec confirmation
+**Status:** Approved
 **Scope:** React web storefront, seller console, and admin console in `fe/`
 
 ## 1. Relationship to Existing Specifications
@@ -73,6 +73,27 @@ payment behavior, role guards, and supported business workflows.
 - Maintaining separate old and new production themes after launch.
 - Reproducing another marketplace pixel for pixel.
 
+Contract-preservation clarification from implementation planning: public
+`GET /payment/methods` remains the configuration-aware provider authority.
+Preserving enabled providers includes narrowly scoped fixes so browser
+initialization reuses the payment already created with the order, provider
+creation/capture receives an idempotency key derived from the trusted internal
+payment ID rather than browser input, and VNPay/MoMo redirect to
+the existing browser return route. Terminal payment promotion is serialized on
+the persisted payment row so concurrent provider callbacks cannot duplicate
+internal ledger or outbox effects. Provider flags and credentials have explicit
+Compose and Kubernetes secret-backed deployment paths. Stripe and PayPal freeze
+the external amount, currency, and FX quote on the payment row before any
+provider create call, so a persistence failure and later retry cannot reuse one
+provider key with changed monetary parameters. VietQR is advertised only with
+a complete bank target, while VNPay/MoMo require a real public HTTPS callback
+origin rather than reserved example domains. Because order-service
+downstream calls are not atomic with order persistence, an ambiguous browser
+response is reconciled through a new authenticated, buyer-owned read-only
+idempotency-key lookup and is never resubmitted by the frontend. These fixes do
+not alter `POST /orders`, provider payment semantics, order idempotency,
+mutation payloads, or authorization.
+
 ## 6. Visual System
 
 ### 6.1 Brand Language
@@ -116,7 +137,10 @@ generated CSS.
 
 ### 6.3 Foundation Components
 
-`src/app/components/ui` will provide consistent:
+`fe/src/shared/ui` is the canonical owner of consistent primitives.
+`fe/src/app/components/ui` may temporarily re-export them during migration but
+must not own new implementations and is removed at cutover. The primitive set
+includes:
 
 - buttons and icon buttons;
 - text fields, text areas, selectors, checkboxes, toggles, and input groups;
@@ -132,7 +156,7 @@ Shared commerce patterns will cover:
 
 - product tile and product grid;
 - price, original price, discount, rating, sold count, and stock treatment;
-- seller identity and verified state;
+- seller identity, contract-backed rating, and available contact treatment;
 - voucher, shipping promise, return policy, and buyer-protection cues;
 - campaign banner, service shortcut, category rail, flash-sale shelf, Mall section,
   live-commerce section, and recommendation feed.
@@ -285,13 +309,14 @@ media actions require confirmation.
 
 ### 9.3 Orders and Reviews
 
-Order workflow tabs represent pending, accepted, shipped, completed, and exception
-states. Record inspection exposes fulfillment details and only valid next actions
+The seller order endpoint currently exposes only the pending fulfillment
+dataset, so the route provides search and record inspection without unsupported
+multi-status tabs. It exposes fulfillment details and only valid next actions
 without losing queue position.
 
-The review inbox provides server-backed search, rating filters, product context, and
-explicit loading, empty, and failure states. It does not invent response actions that
-the backend does not support.
+The review inbox provides server-backed search, pagination, product context,
+and explicit loading, empty, and failure states. It does not add a rating
+filter or response action that the backend does not support.
 
 ### 9.4 Wallet and Settings
 
@@ -518,6 +543,14 @@ The redesign is ready to release only when:
     unsafe suppression, duplicated wire contract, or unresolved type-check failure.
 14. Every implementation slice and the integrated release have recorded self-review,
     automated verification, independent review, and finding-resolution evidence.
+15. The staging lock names the reviewed implementation merge, and the complete
+    browser, accessibility, bundle, and Lighthouse gate passes against the exact
+    immutable frontend digest that protected promotion reuses.
+16. Every advertised payment provider has complete environment-specific
+    credentials and callback configuration; provider retries preserve one
+    frozen monetary request, and concurrent create/capture losers converge
+    through bounded reconciliation without duplicate external or internal
+    money movement.
 
 ## 17. Principal Risks and Mitigations
 
@@ -532,3 +565,4 @@ The redesign is ready to release only when:
 | Unsupported backend capabilities appear in the redesign. | Bind every action to an existing typed endpoint and omit unsupported controls. |
 | Refactoring introduces type escape hatches or duplicate contracts. | Decode `unknown` at boundaries, infer from canonical schemas, prohibit unsafe suppression in changed code, and review every assertion. |
 | A large coordinated diff receives shallow review. | Review each bounded slice independently, resolve findings continuously, and repeat review across the integrated release. |
+| Provider retry reuses an idempotency key with changed FX inputs or an unusable callback. | Persist one locked FX snapshot before creation, reconcile concurrent provider outcomes, fail capability discovery closed, and require real public HTTPS callback configuration before enabling redirect providers. |
