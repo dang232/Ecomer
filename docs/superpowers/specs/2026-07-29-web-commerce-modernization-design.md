@@ -44,6 +44,8 @@ payment behavior, role guards, and supported business workflows.
 - Use a system-first in-place refactor instead of a cosmetic reskin or parallel SPA.
 - Treat mobile web and desktop as equal acceptance targets, with mobile-first layout
   decisions for buyer journeys.
+- Treat compile-time type safety, runtime boundary validation, and completed code
+  review as release requirements rather than optional cleanup.
 
 ## 4. Goals
 
@@ -356,6 +358,34 @@ Optimistic updates are limited to reversible, low-risk actions. Orders, payouts,
 refunds, seller decisions, moderation, and fulfillment wait for confirmed responses.
 Background refresh retains visible data and user position.
 
+### 11.1 Type-Safety Contract
+
+Type safety is enforced from transport to rendered state:
+
+- TypeScript strict mode and the existing `no-explicit-any` and `no-unsafe-*` ESLint
+  rules remain enabled.
+- Network responses enter the application as `unknown` and become trusted only after
+  Zod decoding in endpoint or envelope modules.
+- Request inputs, decoded responses, query keys, query results, mutation variables,
+  mutation results, and error variants have explicit types.
+- Runtime schemas are the source for inferred wire types when a schema exists; the
+  implementation does not maintain a second handwritten interface that can drift.
+- Route parameters and URL search parameters are parsed and normalized before feature
+  logic consumes them.
+- Domain variants use discriminated unions and exhaustive handling instead of
+  stringly-typed branching.
+- `any`, double assertions, unchecked `as` casts, non-null assertions used to silence
+  uncertainty, and `@ts-ignore` are prohibited in changed production code.
+- A narrowly justified assertion may be used only when TypeScript cannot express an
+  invariant already enforced at runtime. It must be local, documented, and covered by
+  a test.
+- Shared identifiers, statuses, money values, and provider names reuse canonical
+  schemas or types rather than page-local string unions.
+- Presentation components receive typed view data and callbacks; they do not inspect
+  unvalidated API envelopes.
+- Type errors, unsafe lint findings, and stale generated token or schema outputs block
+  integration.
+
 ## 12. Error and Asynchronous States
 
 - Skeletons reserve final dimensions and prevent layout shifts.
@@ -385,6 +415,7 @@ Background refresh retains visible data and user position.
 
 ### 14.1 Component and Integration Tests
 
+- strict type-check and unsafe-code lint coverage for every changed module;
 - token generation and web/mobile isolation tests;
 - primitive behavior and accessibility tests;
 - commerce-pattern tests for long titles, missing images, discounts, stock, seller
@@ -419,6 +450,29 @@ The coordinated release requires:
 - complete buyer, seller, admin, and cross-persona journey suites;
 - desktop and mobile screenshot review;
 - no unresolved critical or high-severity regression.
+
+### 14.4 Review Protocol
+
+Every implementation slice must pass the following review sequence before it can be
+considered complete:
+
+1. **Author self-review:** inspect the full diff for unrelated changes, duplicated
+   types, unsafe assertions, missing states, accessibility regressions, responsive
+   behavior, localization, and unsupported backend assumptions.
+2. **Automated evidence:** run the smallest relevant type, lint, unit, integration,
+   accessibility, and build checks; record the commands and results.
+3. **Independent code review:** review behavior, type boundaries, API contracts,
+   component ownership, data flow, error handling, test adequacy, and visual
+   consistency. Findings are ordered by severity and tied to file and line references.
+4. **Finding resolution:** resolve every critical and high finding. Medium and low
+   findings are either resolved or explicitly documented with rationale and follow-up
+   ownership.
+5. **Integrated review:** after all slices are combined, review the complete buyer,
+   seller, and admin diff and run the full coordinated-release gates.
+
+Review approval cannot rely on screenshots alone. It requires passing type and
+behavioral evidence. A review that finds no defects must still state remaining test
+gaps and residual risks.
 
 ## 15. Coordinated Release Strategy
 
@@ -460,6 +514,10 @@ The redesign is ready to release only when:
     or below 2.5 seconds and CLS below 0.1 across three Lighthouse runs using Chromium,
     a 390x844 viewport, four-times CPU slowdown, 1.6 Mbps download throughput, 150 ms
     request latency, the production frontend build, and seeded backend data.
+13. Changed production code contains no unvalidated network payload, explicit `any`,
+    unsafe suppression, duplicated wire contract, or unresolved type-check failure.
+14. Every implementation slice and the integrated release have recorded self-review,
+    automated verification, independent review, and finding-resolution evidence.
 
 ## 17. Principal Risks and Mitigations
 
@@ -472,3 +530,5 @@ The redesign is ready to release only when:
 | Promotional density harms accessibility or performance. | Bound campaign dimensions, lazy-load below-fold media, reserve image space, reduce motion, and enforce performance and Axe gates. |
 | Operational consoles become visually decorative. | Use restrained shells, standardized tables and drawers, compact charts, and task-first hierarchy. |
 | Unsupported backend capabilities appear in the redesign. | Bind every action to an existing typed endpoint and omit unsupported controls. |
+| Refactoring introduces type escape hatches or duplicate contracts. | Decode `unknown` at boundaries, infer from canonical schemas, prohibit unsafe suppression in changed code, and review every assertion. |
+| A large coordinated diff receives shallow review. | Review each bounded slice independently, resolve findings continuously, and repeat review across the integrated release. |
