@@ -68,9 +68,15 @@ public class PayPalGateway {
      * extra round-trip.
      */
     public PayPalOrder createOrder(Payment payment) {
-        BigDecimal vndAmount = payment.amount();
-        BigDecimal rate = fxRatePort.rate("VND", "USD");
-        BigDecimal usdAmount = vndAmount.multiply(rate).setScale(2, RoundingMode.HALF_UP);
+        return createOrder(payment, "create:paypal:" + payment.paymentId());
+    }
+
+    /** Uses the internal payment ID to derive a stable PayPal request identity. */
+    public PayPalOrder createOrder(Payment payment, String providerCreateKey) {
+        requireNonBlank(providerCreateKey, "PayPal provider create key is required");
+        ExternalAmount external = externalAmount(payment);
+        BigDecimal usdAmount = external.amount();
+        BigDecimal rate = external.fxRate();
 
         Map<String, Object> body = Map.of(
                 "intent", "CAPTURE",
@@ -86,6 +92,7 @@ public class PayPalGateway {
             Map<?, ?> response = restClient.post()
                     .uri("/v2/checkout/orders")
                     .header(HttpHeaders.AUTHORIZATION, bearer())
+                    .header("PayPal-Request-Id", providerCreateKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(body)
                     .retrieve()
@@ -111,21 +118,57 @@ public class PayPalGateway {
      * the same capture record on the second attempt.
      */
     public PayPalCapture capture(String paypalOrderId) {
+        return capture(paypalOrderId, "capture:" + paypalOrderId);
+    }
+
+    /** Captures with a stable server-derived request ID and representation response preference. */
+    public PayPalCapture capture(String paypalOrderId, String captureRequestId) {
+        requireNonBlank(captureRequestId, "PayPal capture request key is required");
         try {
             Map<?, ?> response = restClient.post()
                     .uri("/v2/checkout/orders/{id}/capture", paypalOrderId)
                     .header(HttpHeaders.AUTHORIZATION, bearer())
+                    .header("PayPal-Request-Id", captureRequestId)
+                    .header("Prefer", "return=representation")
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(Map.of())
                     .retrieve()
                     .body(Map.class);
-            return PayPalCapture.fromResponse(paypalOrderId, response);
+            return PayPalCapture.fromResponse(paypalOrderId, response)
+                    .orElseGet(() -> PayPalCapture.fromResponse(paypalOrderId, showOrder(paypalOrderId))
+                            .orElseThrow(() -> new IllegalStateException(
+                                    "PayPal capture response did not contain one completed capture")));
         } catch (RestClientResponseException ex) {
             HttpStatus status = HttpStatus.resolve(ex.getStatusCode().value());
             log.warn("paypal-capture-failed paypalOrderId={} status={} body={}",
                     paypalOrderId, status, ex.getResponseBodyAsString());
             throw new IllegalStateException("PayPal capture failed: " + ex.getStatusCode(), ex);
         }
+    }
+
+    private Map<?, ?> showOrder(String paypalOrderId) {
+        Map<?, ?> response = restClient.get()
+                .uri("/v2/checkout/orders/{id}", paypalOrderId)
+                .header(HttpHeaders.AUTHORIZATION, bearer())
+                .retrieve()
+                .body(Map.class);
+        if (response == null) {
+            throw new IllegalStateException("PayPal order lookup returned empty body");
+        }
+        return response;
+    }
+
+    private ExternalAmount externalAmount(Payment payment) {
+        if (payment.externalAmount() != null
+                && payment.externalCurrency() != null
+                && payment.fxRate() != null) {
+            if (!"USD".equalsIgnoreCase(payment.externalCurrency())) {
+                throw new IllegalArgumentException("PayPal external currency must be USD");
+            }
+            return new ExternalAmount(payment.externalAmount(), payment.fxRate());
+        }
+        BigDecimal rate = fxRatePort.rate("VND", "USD");
+        return new ExternalAmount(payment.amount().multiply(rate).setScale(2, RoundingMode.HALF_UP), rate);
     }
 
     /**
@@ -205,30 +248,44 @@ public class PayPalGateway {
             String paypalOrderId,
             String captureId,
             String status) {
-        public static PayPalCapture fromResponse(String paypalOrderId, Map<?, ?> response) {
+        public static java.util.Optional<PayPalCapture> fromResponse(String paypalOrderId, Map<?, ?> response) {
             if (response == null) {
                 throw new IllegalStateException("PayPal capture returned empty body");
             }
-            String status = response.get("status") != null ? response.get("status").toString() : "UNKNOWN";
-            String captureId = extractCaptureId(response);
-            return new PayPalCapture(paypalOrderId, captureId, status);
+            java.util.List<Map<?, ?>> completedCaptures = extractCompletedCaptures(response);
+            if (completedCaptures.isEmpty()) {
+                return java.util.Optional.empty();
+            }
+            if (completedCaptures.size() != 1) {
+                throw new IllegalStateException("PayPal response contains ambiguous completed captures");
+            }
+            Map<?, ?> capture = completedCaptures.get(0);
+            Object captureId = capture.get("id");
+            if (captureId == null || captureId.toString().isBlank()) {
+                throw new IllegalStateException("PayPal completed capture has no capture ID");
+            }
+            return java.util.Optional.of(new PayPalCapture(paypalOrderId, captureId.toString(), "COMPLETED"));
         }
 
-        private static String extractCaptureId(Map<?, ?> response) {
+        private static java.util.List<Map<?, ?>> extractCompletedCaptures(Map<?, ?> response) {
+            java.util.List<Map<?, ?>> completed = new java.util.ArrayList<>();
             Object purchaseUnits = response.get("purchase_units");
-            if (purchaseUnits instanceof List<?> units && !units.isEmpty()
-                    && units.get(0) instanceof Map<?, ?> firstUnit) {
-                Object payments = firstUnit.get("payments");
-                if (payments instanceof Map<?, ?> paymentsMap) {
-                    Object captures = paymentsMap.get("captures");
-                    if (captures instanceof List<?> captureList && !captureList.isEmpty()
-                            && captureList.get(0) instanceof Map<?, ?> firstCapture) {
-                        Object id = firstCapture.get("id");
-                        if (id != null) return id.toString();
+            if (purchaseUnits instanceof List<?> units) {
+                for (Object unit : units) {
+                    if (unit instanceof Map<?, ?> unitMap && unitMap.get("payments") instanceof Map<?, ?> payments) {
+                        Object captures = payments.get("captures");
+                        if (captures instanceof List<?> captureList) {
+                            for (Object capture : captureList) {
+                                if (capture instanceof Map<?, ?> captureMap
+                                        && "COMPLETED".equals(String.valueOf(captureMap.get("status")))) {
+                                    completed.add(captureMap);
+                                }
+                            }
+                        }
                     }
                 }
             }
-            return String.valueOf(response.get("id") == null ? "UNKNOWN" : response.get("id"));
+            return completed;
         }
     }
 
@@ -236,5 +293,8 @@ public class PayPalGateway {
             String refundId,
             String captureId,
             String status) {
+    }
+
+    private record ExternalAmount(BigDecimal amount, BigDecimal fxRate) {
     }
 }

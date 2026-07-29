@@ -1599,6 +1599,42 @@ spec:
         - name: KAFKA_SASL_PASSWORD
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: payment-service-kafka-password}
+        - name: VIETQR_ACCOUNT_NO
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: payment-vietqr-account-no, optional: true}
+        - name: VIETQR_ACCOUNT_NAME
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: payment-vietqr-account-name, optional: true}
+        - name: VNPAY_TMN_CODE
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: payment-vnpay-tmn-code, optional: true}
+        - name: VNPAY_HASH_SECRET
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: payment-vnpay-hash-secret, optional: true}
+        - name: MOMO_PARTNER_CODE
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: payment-momo-partner-code, optional: true}
+        - name: MOMO_ACCESS_KEY
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: payment-momo-access-key, optional: true}
+        - name: MOMO_SECRET_KEY
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: payment-momo-secret-key, optional: true}
+        - name: STRIPE_SECRET_KEY
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: payment-stripe-secret-key, optional: true}
+        - name: STRIPE_PUBLISHABLE_KEY
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: payment-stripe-publishable-key, optional: true}
+        - name: STRIPE_WEBHOOK_SECRET
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: payment-stripe-webhook-secret, optional: true}
+        - name: PAYPAL_CLIENT_ID
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: payment-paypal-client-id, optional: true}
+        - name: PAYPAL_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: payment-paypal-client-secret, optional: true}
         envFrom:
         - configMapRef:
             name: vnshop-app-config

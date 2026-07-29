@@ -5,6 +5,7 @@ import com.vnshop.orderservice.application.CancelOrderUseCase;
 import com.vnshop.orderservice.application.CheckoutOrderUseCase;
 import com.vnshop.orderservice.application.CheckoutOrderUseCase.CheckoutOrderCommand;
 import com.vnshop.orderservice.application.ConfirmDeliveryUseCase;
+import com.vnshop.orderservice.application.FindOrderByIdempotencyKeyUseCase;
 import com.vnshop.orderservice.application.ViewOrderUseCase;
 import com.vnshop.orderservice.domain.port.out.OrderSummaryQueryPort;
 import com.vnshop.orderservice.infrastructure.config.JwtPrincipalUtil;
@@ -37,15 +38,18 @@ public class OrderController {
     private final OrderSummaryQueryPort orderSummaryQueryPort;
     private final ViewOrderUseCase viewOrderUseCase;
     private final ConfirmDeliveryUseCase confirmDeliveryUseCase;
+    private final FindOrderByIdempotencyKeyUseCase findOrderByIdempotencyKeyUseCase;
 
     public OrderController(CheckoutOrderUseCase checkoutOrderUseCase, CancelOrderUseCase cancelOrderUseCase,
             OrderSummaryQueryPort orderSummaryQueryPort, ViewOrderUseCase viewOrderUseCase,
-            ConfirmDeliveryUseCase confirmDeliveryUseCase) {
+            ConfirmDeliveryUseCase confirmDeliveryUseCase,
+            FindOrderByIdempotencyKeyUseCase findOrderByIdempotencyKeyUseCase) {
         this.checkoutOrderUseCase = checkoutOrderUseCase;
         this.cancelOrderUseCase = cancelOrderUseCase;
         this.orderSummaryQueryPort = orderSummaryQueryPort;
         this.viewOrderUseCase = viewOrderUseCase;
         this.confirmDeliveryUseCase = confirmDeliveryUseCase;
+        this.findOrderByIdempotencyKeyUseCase = findOrderByIdempotencyKeyUseCase;
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -74,6 +78,13 @@ public class OrderController {
             orderSummaryQueryPort.findByBuyerId(JwtPrincipalUtil.currentUserId(), status, pageable)
                 .map(OrderListItemResponse::fromProjection)
         );
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/by-idempotency-key/{key}")
+    public ApiResponse<OrderResponse> getByIdempotencyKey(@PathVariable String key) {
+        return ApiResponse.ok(OrderResponse.fromDomain(
+                findOrderByIdempotencyKeyUseCase.findForBuyer(key, JwtPrincipalUtil.currentUserId())));
     }
 
     @PreAuthorize("isAuthenticated()")

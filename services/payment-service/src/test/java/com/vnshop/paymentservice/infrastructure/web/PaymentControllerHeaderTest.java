@@ -65,7 +65,9 @@ class PaymentControllerHeaderTest {
                 Optional.empty(),
                 mock(com.vnshop.paymentservice.application.PaymentPromotionService.class),
                 mock(com.vnshop.paymentservice.domain.port.out.PaymentRepositoryPort.class),
-                mock(com.vnshop.paymentservice.infrastructure.gateway.PaymentCallbackLogStore.class)
+                mock(com.vnshop.paymentservice.infrastructure.gateway.PaymentCallbackLogStore.class),
+                mock(com.vnshop.paymentservice.application.ProviderInitializationService.class),
+                mock(com.vnshop.paymentservice.infrastructure.gateway.PaymentCallbackEventStore.class)
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
     }

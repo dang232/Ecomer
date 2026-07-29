@@ -1324,12 +1324,22 @@ services:
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
       OTEL_TRACES_SAMPLER: parentbased_traceidratio
       OTEL_TRACES_SAMPLER_ARG: "1.0"
-      # Per-method enable flags. Defaults: COD + VietQR on; VNPay/MoMo/Stripe/PayPal off.
+      # Per-method enable flags. COD is ready by default; every provider with
+      # destination or browser credentials stays disabled until configured.
       # Flip the matching env var to "true" once the provider's creds land in .env.
       COD_ENABLED: ${COD_ENABLED:-true}
-      VIETQR_ENABLED: ${VIETQR_ENABLED:-true}
+      VIETQR_ENABLED: ${VIETQR_ENABLED:-false}
       VNPAY_ENABLED: ${VNPAY_ENABLED:-false}
+      VNPAY_TMN_CODE: ${VNPAY_TMN_CODE:-}
+      VNPAY_HASH_SECRET: ${VNPAY_HASH_SECRET:-}
+      VNPAY_RETURN_URL: ${VNPAY_RETURN_URL:-}
+      VNPAY_IPN_URL: ${VNPAY_IPN_URL:-}
       MOMO_ENABLED: ${MOMO_ENABLED:-false}
+      MOMO_PARTNER_CODE: ${MOMO_PARTNER_CODE:-}
+      MOMO_ACCESS_KEY: ${MOMO_ACCESS_KEY:-}
+      MOMO_SECRET_KEY: ${MOMO_SECRET_KEY:-}
+      MOMO_REDIRECT_URL: ${MOMO_REDIRECT_URL:-}
+      MOMO_IPN_URL: ${MOMO_IPN_URL:-}
       STRIPE_ENABLED: ${STRIPE_ENABLED:-false}
       PAYPAL_ENABLED: ${PAYPAL_ENABLED:-false}
       # VietQR target bank — buyer scans, transfers from their bank app,
@@ -1348,6 +1358,8 @@ services:
       PAYPAL_CLIENT_SECRET: ${PAYPAL_CLIENT_SECRET:-}
       PAYPAL_MODE: ${PAYPAL_MODE:-sandbox}
       PAYPAL_WEBHOOK_ID: ${PAYPAL_WEBHOOK_ID:-}
+      VNSHOP_FRONTEND_URL: ${VNSHOP_FRONTEND_URL:-http://localhost:3000}
+      VNSHOP_PUBLIC_API_URL: ${VNSHOP_PUBLIC_API_URL:-}
       # SePay outbound polling for VietQR auto-confirm.
       SEPAY_API_KEY: ${SEPAY_API_KEY:-}
       SEPAY_ACCOUNT_ID: ${SEPAY_ACCOUNT_ID:-}

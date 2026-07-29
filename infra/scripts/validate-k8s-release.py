@@ -63,6 +63,55 @@ REQUIRED_ENVIRONMENT = {
     },
 }
 
+OPTIONAL_PROVIDER_SECRET_FLAGS = {
+    "payment-vietqr-account-no": "VIETQR_ENABLED",
+    "payment-vietqr-account-name": "VIETQR_ENABLED",
+    "payment-vnpay-tmn-code": "VNPAY_ENABLED",
+    "payment-vnpay-hash-secret": "VNPAY_ENABLED",
+    "payment-momo-partner-code": "MOMO_ENABLED",
+    "payment-momo-access-key": "MOMO_ENABLED",
+    "payment-momo-secret-key": "MOMO_ENABLED",
+    "payment-stripe-secret-key": "STRIPE_ENABLED",
+    "payment-stripe-publishable-key": "STRIPE_ENABLED",
+    "payment-stripe-webhook-secret": "STRIPE_ENABLED",
+    "payment-paypal-client-id": "PAYPAL_ENABLED",
+    "payment-paypal-client-secret": "PAYPAL_ENABLED",
+}
+
+
+def collect_required_secret_keys(documents: list[dict], app_config_data: dict) -> set[str]:
+    """Return runtime Secret keys required by the rendered provider configuration.
+
+    Optional payment-provider refs are deliberately present in every rendered
+    workload. They only become a release requirement when the corresponding
+    method is enabled in vnshop-app-config.
+    """
+    required: set[str] = set()
+
+    def collect(value):
+        if isinstance(value, dict):
+            reference = value.get("secretKeyRef")
+            if isinstance(reference, dict) and reference.get("name") == "vnshop-runtime-secrets":
+                key = reference.get("key", "")
+                if not reference.get("optional", False):
+                    required.add(key)
+                else:
+                    flag = OPTIONAL_PROVIDER_SECRET_FLAGS.get(key)
+                    if flag is None or str(app_config_data.get(flag, "false")).lower() == "true":
+                        required.add(key)
+            secret = value.get("secret")
+            if isinstance(secret, dict) and secret.get("secretName") == "vnshop-runtime-secrets":
+                required.update(item.get("key", "") for item in secret.get("items", []))
+            for nested in value.values():
+                collect(nested)
+        elif isinstance(value, list):
+            for nested in value:
+                collect(nested)
+
+    collect(documents)
+    required.discard("")
+    return required
+
 
 def fail(errors: list[str]) -> None:
     if not errors:
@@ -227,6 +276,7 @@ def main() -> None:
             "KEYCLOAK_ISSUER_URI": f"https://auth.{suffix}/realms/vnshop",
             "KEYCLOAK_PUBLIC_BASE_URL": f"https://auth.{suffix}",
             "VNSHOP_FRONTEND_URL": f"https://web.{suffix}",
+            "VNSHOP_PUBLIC_API_URL": f"https://api.{suffix}",
             "VNSHOP_AUTH_CALLBACK_BASE_URL": f"https://api.{suffix}/auth/oauth/callback",
             "VNSHOP_OBJECT_STORAGE_PUBLIC_ENDPOINT": f"https://storage.{suffix}",
             "VNSHOP_USER_STORAGE_PUBLIC_ENDPOINT": f"https://storage.{suffix}",
@@ -276,22 +326,7 @@ def main() -> None:
     elif not sealed[0].get("spec", {}).get("encryptedData") and not args.allow_unsealed:
         errors.append("SealedSecret encryptedData must be populated before release")
 
-    required_secret_keys: set[str] = set()
-    def collect_secret_keys(value):
-        if isinstance(value, dict):
-            reference = value.get("secretKeyRef")
-            if isinstance(reference, dict) and reference.get("name") == "vnshop-runtime-secrets":
-                required_secret_keys.add(reference.get("key", ""))
-            secret = value.get("secret")
-            if isinstance(secret, dict) and secret.get("secretName") == "vnshop-runtime-secrets":
-                required_secret_keys.update(item.get("key", "") for item in secret.get("items", []))
-            for nested in value.values():
-                collect_secret_keys(nested)
-        elif isinstance(value, list):
-            for nested in value:
-                collect_secret_keys(nested)
-    collect_secret_keys(documents)
-    required_secret_keys.discard("")
+    required_secret_keys = collect_required_secret_keys(documents, app_config_data)
     if sealed and sealed[0].get("spec", {}).get("encryptedData"):
         sealed_keys = set(sealed[0]["spec"]["encryptedData"])
         missing_keys = sorted(required_secret_keys - sealed_keys)

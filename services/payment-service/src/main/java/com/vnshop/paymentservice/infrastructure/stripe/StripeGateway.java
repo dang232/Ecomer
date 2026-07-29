@@ -44,10 +44,17 @@ public class StripeGateway {
     }
 
     public StripeIntent createPaymentIntent(Payment payment) throws StripeException {
+        return createPaymentIntent(payment, "create:stripe:" + payment.paymentId());
+    }
+
+    /** Uses a server-derived provider key so browser retry keys never define a monetary identity. */
+    public StripeIntent createPaymentIntent(Payment payment, String providerCreateKey) throws StripeException {
+        requireNonBlank(providerCreateKey, "Stripe provider create key is required");
+        ExternalAmount external = externalAmount(payment);
         BigDecimal vndAmount = payment.amount();
-        BigDecimal rate = fxRatePort.rate("VND", "USD");
+        BigDecimal rate = external.fxRate();
         // Stripe uses smallest unit (cents). Round up so we never under-charge.
-        BigDecimal usdAmount = vndAmount.multiply(rate);
+        BigDecimal usdAmount = external.amount();
         long usdCents = usdAmount.multiply(new BigDecimal("100")).setScale(0, RoundingMode.HALF_UP).longValueExact();
 
         PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
@@ -63,7 +70,7 @@ public class StripeGateway {
                                 .build())
                 .build();
 
-        PaymentIntent intent = intentClient.create(params, requestOptions());
+        PaymentIntent intent = intentClient.create(params, requestOptions(providerCreateKey));
         return new StripeIntent(
                 intent.getId(),
                 intent.getClientSecret(),
@@ -76,8 +83,24 @@ public class StripeGateway {
         return properties;
     }
 
-    private RequestOptions requestOptions() {
-        return RequestOptions.builder().setApiKey(properties.secretKey()).build();
+    private ExternalAmount externalAmount(Payment payment) {
+        if (payment.externalAmount() != null
+                && payment.externalCurrency() != null
+                && payment.fxRate() != null) {
+            if (!"USD".equalsIgnoreCase(payment.externalCurrency())) {
+                throw new IllegalArgumentException("Stripe external currency must be USD");
+            }
+            return new ExternalAmount(payment.externalAmount(), payment.fxRate());
+        }
+        BigDecimal rate = fxRatePort.rate("VND", "USD");
+        return new ExternalAmount(payment.amount().multiply(rate).setScale(2, RoundingMode.HALF_UP), rate);
+    }
+
+    private RequestOptions requestOptions(String idempotencyKey) {
+        return RequestOptions.builder()
+                .setApiKey(properties.secretKey())
+                .setIdempotencyKey(idempotencyKey)
+                .build();
     }
 
     private static void requireNonBlank(String value, String message) {
@@ -105,5 +128,8 @@ public class StripeGateway {
                     "externalCurrency", externalCurrency,
                     "fxRate", fxRate.toPlainString());
         }
+    }
+
+    private record ExternalAmount(BigDecimal amount, BigDecimal fxRate) {
     }
 }

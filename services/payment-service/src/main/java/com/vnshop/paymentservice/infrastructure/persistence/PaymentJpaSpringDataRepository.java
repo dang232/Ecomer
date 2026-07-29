@@ -17,6 +17,10 @@ interface PaymentJpaSpringDataRepository extends JpaRepository<PaymentJpaEntity,
     Optional<PaymentJpaEntity> findByOrderId(String orderId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p from PaymentJpaEntity p where p.paymentId = :paymentId")
+    Optional<PaymentJpaEntity> findByIdForUpdate(@Param("paymentId") UUID paymentId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from PaymentJpaEntity p where p.orderId = :orderId")
     Optional<PaymentJpaEntity> findByOrderIdForUpdate(@Param("orderId") String orderId);
 

@@ -29,8 +29,14 @@ public class PaymentMethodsController {
     @Value("${payment.cod.enabled:true}")
     private boolean codEnabled;
 
-    @Value("${payment.vietqr.enabled:true}")
+    @Value("${payment.vietqr.enabled:false}")
     private boolean vietqrEnabled;
+
+    @Value("${vietqr.account-no:}")
+    private String vietqrAccountNo;
+
+    @Value("${vietqr.account-name:}")
+    private String vietqrAccountName;
 
     @Value("${payment.vnpay.enabled:false}")
     private boolean vnpayEnabled;
@@ -70,7 +76,7 @@ public class PaymentMethodsController {
             methods.add(new PaymentMethodDto("cod", "Cash on Delivery", true));
         }
 
-        if (vietqrEnabled) {
+        if (vietqrEnabled && hasText(vietqrAccountNo) && hasText(vietqrAccountName)) {
             methods.add(new PaymentMethodDto("vietqr", "VietQR Bank Transfer", true));
         }
 
@@ -82,6 +88,7 @@ public class PaymentMethodsController {
 
         if (stripeProperties.enabled()
                 && hasText(stripeProperties.secretKey())
+                && hasText(stripeProperties.publishableKey())
                 && hasText(stripeProperties.webhookSecret())) {
             methods.add(new PaymentMethodDto("stripe", "Credit / Debit Card (Stripe)", true));
         }

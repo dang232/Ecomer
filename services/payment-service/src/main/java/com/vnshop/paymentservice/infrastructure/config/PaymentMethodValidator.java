@@ -20,7 +20,7 @@ import java.util.List;
  * misconfigured method so a bad deploy fails fast with a clear message
  * instead of silently 500-ing on the first checkout request.
  *
- * <p>COD and VietQR require no secret credentials. SePay, Stripe, PayPal,
+ * <p>COD requires no credentials. VietQR, SePay, Stripe, PayPal,
  * VNPay, and MoMo each require at least one non-blank credential when enabled.
  */
 @Component
@@ -31,14 +31,26 @@ public class PaymentMethodValidator {
     @Value("${payment.cod.enabled:true}")
     private boolean codEnabled;
 
-    @Value("${payment.vietqr.enabled:true}")
+    @Value("${payment.vietqr.enabled:false}")
     private boolean vietqrEnabled;
+
+    @Value("${vietqr.account-no:}")
+    private String vietqrAccountNo;
+
+    @Value("${vietqr.account-name:}")
+    private String vietqrAccountName;
 
     @Value("${payment.vnpay.enabled:false}")
     private boolean vnpayEnabled;
 
     @Value("${payment.momo.enabled:false}")
     private boolean momoEnabled;
+
+    @Value("${vnshop.public-api-url:}")
+    private String publicApiUrl;
+
+    @Value("${vnshop.frontend-url:}")
+    private String frontendUrl;
 
     private final StripeProperties stripeProperties;
     private final PayPalProperties payPalProperties;
@@ -68,7 +80,15 @@ public class PaymentMethodValidator {
         }
 
         if (vietqrEnabled) {
-            log.info("Payment method enabled: VietQR (no API credentials required)");
+            if (isBlank(vietqrAccountNo)) {
+                errors.add("VIETQR_ENABLED=true but VIETQR_ACCOUNT_NO is not set");
+            }
+            if (isBlank(vietqrAccountName)) {
+                errors.add("VIETQR_ENABLED=true but VIETQR_ACCOUNT_NAME is not set");
+            }
+            if (errors.isEmpty()) {
+                log.info("Payment method enabled: VietQR");
+            }
         }
 
         if (sepayProperties.enabled()) {
@@ -89,6 +109,9 @@ public class PaymentMethodValidator {
             }
             if (isBlank(stripeProperties.webhookSecret())) {
                 errors.add("STRIPE_ENABLED=true but STRIPE_WEBHOOK_SECRET is not set");
+            }
+            if (isBlank(stripeProperties.publishableKey())) {
+                errors.add("STRIPE_ENABLED=true but STRIPE_PUBLISHABLE_KEY is not set");
             }
             if (errors.isEmpty()) {
                 log.info("Payment method enabled: Stripe");
@@ -114,6 +137,12 @@ public class PaymentMethodValidator {
             if (isBlank(vnpayProperties.hashSecret())) {
                 errors.add("VNPAY_ENABLED=true but VNPAY_HASH_SECRET is not set");
             }
+            errors.addAll(PublicPaymentCallbackUrls.validate(
+                    "VNPay",
+                    publicApiUrl,
+                    frontendUrl,
+                    vnpayProperties.returnUrl(),
+                    vnpayProperties.ipnUrl()));
             if (errors.isEmpty()) {
                 log.info("Payment method enabled: VNPay");
             }
@@ -129,6 +158,12 @@ public class PaymentMethodValidator {
             if (isBlank(momoProperties.secretKey())) {
                 errors.add("MOMO_ENABLED=true but MOMO_SECRET_KEY is not set");
             }
+            errors.addAll(PublicPaymentCallbackUrls.validate(
+                    "MoMo",
+                    publicApiUrl,
+                    frontendUrl,
+                    momoProperties.redirectUrl(),
+                    momoProperties.ipnUrl()));
             if (errors.isEmpty()) {
                 log.info("Payment method enabled: MoMo");
             }

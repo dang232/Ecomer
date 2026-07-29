@@ -14,6 +14,14 @@ Required key groups:
   scoped MinIO access/secret keys for product, user, and both video workers.
 - Recovery: off-cluster S3 bucket, prefix, region, access key, and secret key.
 - Operations: `alert-webhook-url` for the durable paging/receipt endpoint.
+- Optional payment providers: `payment-vietqr-account-no`,
+  `payment-vietqr-account-name`, `payment-vnpay-tmn-code`,
+  `payment-vnpay-hash-secret`, `payment-momo-partner-code`,
+  `payment-momo-access-key`, `payment-momo-secret-key`,
+  `payment-stripe-secret-key`, `payment-stripe-publishable-key`,
+  `payment-stripe-webhook-secret`, `payment-paypal-client-id`, and
+  `payment-paypal-client-secret`. These become required only when their
+  corresponding `*_ENABLED` configuration flag is true.
 
 The validator derives the exact required key set from every `secretKeyRef` and
 secret volume item in the rendered manifests. Extra provider keys may be sealed

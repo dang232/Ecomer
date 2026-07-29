@@ -7,12 +7,14 @@ import com.vnshop.paymentservice.application.PaymentMethodInput;
 import com.vnshop.paymentservice.application.PaymentPromotionService;
 import com.vnshop.paymentservice.application.ProcessPaymentCommand;
 import com.vnshop.paymentservice.application.ProcessPaymentUseCase;
+import com.vnshop.paymentservice.application.ProviderInitializationService;
 import com.vnshop.paymentservice.domain.Payment;
 import com.vnshop.paymentservice.domain.port.out.PaymentRepositoryPort;
 import com.vnshop.paymentservice.infrastructure.config.JwtPrincipalUtil;
 import com.vnshop.paymentservice.infrastructure.gateway.MomoCallbackService;
 import com.vnshop.paymentservice.infrastructure.gateway.MomoIpnRequest;
 import com.vnshop.paymentservice.infrastructure.gateway.PaymentCallbackAttempt;
+import com.vnshop.paymentservice.infrastructure.gateway.PaymentCallbackEventStore;
 import com.vnshop.paymentservice.infrastructure.gateway.PaymentCallbackHasher;
 import com.vnshop.paymentservice.infrastructure.gateway.PaymentCallbackLogStore;
 import com.vnshop.paymentservice.infrastructure.gateway.VietQrService;
@@ -50,6 +52,8 @@ public class PaymentController {
     private final PaymentPromotionService promotionService;
     private final PaymentRepositoryPort paymentRepository;
     private final PaymentCallbackLogStore callbackLogStore;
+    private final ProviderInitializationService providerInitializationService;
+    private final PaymentCallbackEventStore callbackEventStore;
 
     public PaymentController(
             ProcessPaymentUseCase processPaymentUseCase,
@@ -61,7 +65,9 @@ public class PaymentController {
             Optional<PayPalGateway> payPalGateway,
             PaymentPromotionService promotionService,
             PaymentRepositoryPort paymentRepository,
-            PaymentCallbackLogStore callbackLogStore) {
+            PaymentCallbackLogStore callbackLogStore,
+            ProviderInitializationService providerInitializationService,
+            PaymentCallbackEventStore callbackEventStore) {
         this.processPaymentUseCase = processPaymentUseCase;
         this.getPaymentStatusUseCase = getPaymentStatusUseCase;
         this.vnpayCallbackService = vnpayCallbackService;
@@ -72,6 +78,8 @@ public class PaymentController {
         this.promotionService = promotionService;
         this.paymentRepository = paymentRepository;
         this.callbackLogStore = callbackLogStore;
+        this.providerInitializationService = providerInitializationService;
+        this.callbackEventStore = callbackEventStore;
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -165,17 +173,14 @@ public class PaymentController {
     ) {
         PayPalGateway gateway = payPalGateway.orElseThrow(() ->
                 new IllegalStateException("PayPal is not enabled — set payment.paypal.enabled=true"));
-        Payment payment = processPaymentUseCase.process(new ProcessPaymentCommand(
-                request.orderId(), JwtPrincipalUtil.currentUserId(),
-                PaymentMethodInput.PAYPAL, idempotencyKey));
-        PayPalGateway.PayPalOrder order = gateway.createOrder(payment);
+        Payment payment = processOrReuse(request.orderId(), PaymentMethodInput.PAYPAL, idempotencyKey);
+        Payment frozenPayment = providerInitializationService.freezeExternalAmount(payment.paymentId());
+        PayPalGateway.PayPalOrder order = gateway.createOrder(
+                frozenPayment, "create:paypal:" + frozenPayment.paymentId());
         // Persist PayPal order ID as transactionRef so the capture endpoint can
         // verify the client-supplied paypalOrderId matches what was created.
-        Payment withRef = payment.withResult(payment.status(), order.paypalOrderId());
-        // Persist FX details so they survive for dispute support / audit.
-        Payment enriched = withRef.withFxDetails(
-                order.externalAmount(), order.externalCurrency(), order.fxRate(), Instant.now());
-        paymentRepository.save(enriched);
+        Payment enriched = providerInitializationService.persistProviderReference(
+                frozenPayment.paymentId(), order.paypalOrderId());
         return ApiResponse.ok(PayPalCreateResponse.of(
                 enriched,
                 gateway.properties().clientId(),
@@ -238,19 +243,21 @@ public class PaymentController {
         // unchanged. PaymentPromotionService still short-circuits ALREADY_COMPLETED
         // on its own, so this is a defensive layer that prevents the second
         // PayPal API call and the cosmetic duplicate outbox row.
-        String dedupPayloadHash = PaymentCallbackHasher.sha256(paypalOrderId);
-        var duplicate = callbackLogStore.findProcessed("PAYPAL", paypalOrderId, dedupPayloadHash, "").orElse(null);
-        if (duplicate != null) {
-            callbackLogStore.save(payPalAttempt(paypalOrderId, dedupPayloadHash, duplicate.processingStatus(), true));
+        if (existing.status() == com.vnshop.paymentservice.domain.PaymentStatus.COMPLETED) {
             return ApiResponse.ok(PaymentResponse.fromDomain(existing));
         }
-        PayPalGateway.PayPalCapture capture = gateway.capture(paypalOrderId);
+        String dedupPayloadHash = PaymentCallbackHasher.sha256(paypalOrderId);
+        String captureRequestKey = "capture:" + id;
+        PayPalGateway.PayPalCapture capture = gateway.capture(paypalOrderId, captureRequestKey);
+        callbackEventStore.append("PAYPAL", id, "PAYPAL:" + id + ":" + captureRequestKey, "RECEIVED");
         PaymentCallbackAttempt savedAttempt = callbackLogStore.save(
-                payPalAttempt(paypalOrderId, dedupPayloadHash, "PROCESSED", false));
+                payPalAttempt(paypalOrderId, dedupPayloadHash, "RECEIVED", false));
         PaymentPromotionService.PromotionResult result = promotionService.promote(
                 PaymentPromotionService.PromotionCommand.fromCallback(
                         id, "PAYPAL", capture.captureId(),
                         savedAttempt.callbackId(), capture.captureId(), dedupPayloadHash));
+        callbackLogStore.save(payPalAttempt(paypalOrderId, dedupPayloadHash, "PROCESSED", false));
+        callbackEventStore.append("PAYPAL", id, "PAYPAL:" + id + ":" + captureRequestKey, "PROCESSED");
         return ApiResponse.ok(PaymentResponse.fromDomain(result.payment()));
     }
 
@@ -295,12 +302,14 @@ public class PaymentController {
     ) throws StripeException {
         StripeGateway gateway = stripeGateway.orElseThrow(() ->
                 new IllegalStateException("Stripe is not enabled — set payment.stripe.enabled=true"));
-        Payment payment = processPaymentUseCase.process(new ProcessPaymentCommand(
-                request.orderId(), JwtPrincipalUtil.currentUserId(),
-                PaymentMethodInput.STRIPE, idempotencyKey));
-        StripeGateway.StripeIntent intent = gateway.createPaymentIntent(payment);
+        Payment payment = processOrReuse(request.orderId(), PaymentMethodInput.STRIPE, idempotencyKey);
+        Payment frozenPayment = providerInitializationService.freezeExternalAmount(payment.paymentId());
+        StripeGateway.StripeIntent intent = gateway.createPaymentIntent(
+                frozenPayment, "create:stripe:" + frozenPayment.paymentId());
+        Payment enriched = providerInitializationService.persistProviderReference(
+                frozenPayment.paymentId(), intent.intentId());
         return ApiResponse.ok(StripeCreateResponse.of(
-                payment,
+                enriched,
                 gateway.properties().publishableKey(),
                 intent.clientSecret(),
                 intent.intentId(),

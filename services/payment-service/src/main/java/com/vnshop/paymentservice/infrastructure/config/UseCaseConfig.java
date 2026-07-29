@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vnshop.paymentservice.application.GetPaymentStatusUseCase;
 import com.vnshop.paymentservice.application.HandleVnpayIpnUseCase;
 import com.vnshop.paymentservice.application.ProcessPaymentUseCase;
+import com.vnshop.paymentservice.application.ProviderInitializationService;
 import com.vnshop.paymentservice.application.RefundPaymentUseCase;
 import com.vnshop.paymentservice.application.ledger.LedgerService;
 import com.vnshop.paymentservice.domain.port.out.LedgerRepositoryPort;
@@ -12,6 +13,7 @@ import com.vnshop.paymentservice.domain.port.out.PaymentGatewayPort;
 import com.vnshop.paymentservice.domain.port.out.PaymentIdempotencyKeyRepositoryPort;
 import com.vnshop.paymentservice.domain.port.out.PaymentRepositoryPort;
 import com.vnshop.paymentservice.domain.port.out.RefundGatewayPort;
+import com.vnshop.paymentservice.domain.port.out.FxRatePort;
 import com.vnshop.paymentservice.infrastructure.fx.FxProperties;
 import com.vnshop.paymentservice.infrastructure.gateway.MomoProperties;
 import com.vnshop.paymentservice.infrastructure.gateway.VnpayProperties;
@@ -70,6 +72,15 @@ public class UseCaseConfig {
     @Bean
     GetPaymentStatusUseCase getPaymentStatusUseCase(PaymentRepositoryPort paymentRepositoryPort) {
         return new GetPaymentStatusUseCase(paymentRepositoryPort);
+    }
+
+    @Bean
+    ProviderInitializationService providerInitializationService(
+            PaymentRepositoryPort paymentRepositoryPort,
+            FxRatePort fxRatePort,
+            PlatformTransactionManager transactionManager) {
+        return new ProviderInitializationService(
+                paymentRepositoryPort, fxRatePort, new TransactionTemplate(transactionManager));
     }
 
     @Bean

@@ -14,6 +14,15 @@ public interface PaymentRepositoryPort {
 
     Optional<Payment> findById(UUID paymentId);
 
+    /**
+     * Loads one payment under a write lock for state transitions and durable
+     * provider initialization. In-memory adapters may use the ordinary lookup;
+     * the JPA adapter serializes writers by internal payment id.
+     */
+    default Optional<Payment> findByIdForUpdate(UUID paymentId) {
+        return findById(paymentId);
+    }
+
     Optional<Payment> findByOrderId(String orderId);
 
     /**
