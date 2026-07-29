@@ -137,9 +137,10 @@ generated CSS.
 
 ### 6.3 Foundation Components
 
-`fe/src/shared/ui` is the canonical owner of consistent primitives.
-`fe/src/app/components/ui` may temporarily re-export them during migration but
-must not own new implementations and is removed at cutover. The primitive set
+`fe/src/shared/ui` owns canonical foundation components. Modules under
+`fe/src/app/components/ui` may temporarily re-export canonical components during
+migration, but contain no new primitive implementation and are removed before release.
+The primitive set
 includes:
 
 - buttons and icon buttons;

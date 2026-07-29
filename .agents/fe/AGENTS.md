@@ -2,7 +2,7 @@
 
 <!-- Parent: ../AGENTS.md -->
 
-**Stack:** React 18, Vite 6, TanStack Query 5, React Router 7, Tailwind 4, i18next, Zod, Playwright
+**Stack:** React 19.2.8, Vite 7.3.6, TanStack Query 5, React Router 7, Tailwind 4, i18next, Zod, Playwright
 
 ## GENERATED
 
@@ -10,7 +10,7 @@
 
 ## OVERVIEW
 
-VNShop React SPA frontend. Single Page Application (SPA) built with React 18 and Vite 6. Communicates with the backend through Spring Cloud Gateway at `:8080`. Authenticates through the gateway's native httpOnly-cookie boundary; Keycloak stays internal to the service network.
+VNShop React SPA frontend. Single Page Application (SPA) built with React 19.2.8 and Vite 7.3.6. Communicates with the backend through Spring Cloud Gateway at `:8080`. Authenticates through the gateway's native httpOnly-cookie boundary; Keycloak stays internal to the service network.
 
 ## PORTS
 
@@ -26,8 +26,8 @@ VNShop React SPA frontend. Single Page Application (SPA) built with React 18 and
 ```bash
 cd fe
 cp .env.example .env.local
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 ```
 
 ## DIRECTORY STRUCTURE
@@ -207,29 +207,29 @@ fe/
 
 | Script | Description |
 |--------|-------------|
-| `npm run dev` | Vite dev server with HMR (port 5173) |
-| `npm run build` | Type-check + production build to `dist/` |
-| `npm run typecheck` | TypeScript only, no emit |
-| `npm run preview` | Serve built `dist/` for smoke test |
-| `npm run test` | Vitest unit tests |
-| `npm run test:watch` | Vitest watch mode |
-| `npm run test:e2e` | Playwright E2E tests |
-| `npm run test:e2e:ui` | Playwright UI mode |
-| `npm run test:a11y` | Accessibility E2E tests |
-| `npm run lint` | ESLint |
-| `npm run lint:i18n` | Check i18n keys |
-| `npm run lint:tokens` | Check design tokens |
-| `npm run lint:all` | All linters |
-| `npm run format` | Prettier format |
-| `npm run format:check` | Prettier check |
-| `npm run verify` | Full: typecheck + lint + test + build |
+| `pnpm run dev` | Vite dev server with HMR (port 5173) |
+| `pnpm run build` | Type-check + production build to `dist/` |
+| `pnpm run typecheck` | TypeScript only, no emit |
+| `pnpm run preview` | Serve built `dist/` for smoke test |
+| `pnpm run test` | Vitest unit tests |
+| `pnpm run test:watch` | Vitest watch mode |
+| `pnpm run test:e2e` | Playwright E2E tests |
+| `pnpm run test:e2e:ui` | Playwright UI mode |
+| `pnpm run test:a11y` | Accessibility E2E tests |
+| `pnpm run lint` | ESLint |
+| `pnpm run lint:i18n` | Check i18n keys |
+| `pnpm run lint:tokens` | Check design tokens |
+| `pnpm run lint:all` | All linters |
+| `pnpm run format` | Prettier format |
+| `pnpm run format:check` | Prettier check |
+| `pnpm run verify` | Full: typecheck + lint + test + build |
 
 ## TECH STACK
 
 | Category | Technology | Version |
 |----------|------------|---------|
-| Framework | React | 18.3.1 |
-| Build tool | Vite | 6.3.5 |
+| Framework | React | 19.2.8 |
+| Build tool | Vite | 7.3.6 |
 | Language | TypeScript | 5.6.3 |
 | Data fetching | TanStack Query | 5.100.10 |
 | Routing | React Router | 7.15.0 |
@@ -249,7 +249,7 @@ fe/
 
 ```bash
 cd fe
-npm run dev
+pnpm run dev
 # Opens at http://localhost:5173
 ```
 
@@ -257,28 +257,28 @@ npm run dev
 
 ```bash
 # Unit tests
-npm test
+pnpm test
 
 # Unit tests in watch mode
-npm run test:watch
+pnpm run test:watch
 
 # E2E tests
-npm run test:e2e
+pnpm run test:e2e
 
 # E2E with UI
-npm run test:e2e:ui
+pnpm run test:e2e:ui
 
 # Accessibility tests
-npm run test:a11y
+pnpm run test:a11y
 
 # Full verification
-npm run verify
+pnpm run verify
 ```
 
 ### Building for Production
 
 ```bash
-npm run build
+pnpm run build
 # Output in dist/
 ```
 
@@ -351,7 +351,7 @@ All backend responses follow `ApiResponse<T>`:
 
 When working on this frontend:
 
-1. **Always run typecheck first:** `npm run typecheck`
+1. **Always run typecheck first:** `pnpm run typecheck`
 2. **Test before claiming completion:** Run relevant tests
 3. **Check existing patterns:** Look at similar components/hooks before creating new ones
 4. **Follow the structure:** Feature-based organization in `src/app/`

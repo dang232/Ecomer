@@ -9,7 +9,7 @@ import { defineConfig, devices } from "@playwright/test";
  *    (`bash infra/scripts/setup-keycloak-admin-client.sh`).
  *  - Frontend reachable at VITE_E2E_BASE_URL — defaults to the dockerised FE
  *    at http://localhost:3000 so the suite exercises the production bundle.
- *    Set VITE_E2E_BASE_URL=http://localhost:5173 to run against `npm run dev`
+ *    Set VITE_E2E_BASE_URL=http://localhost:5173 to run against `pnpm run dev`
  *    (and also unset E2E_SKIP_WEBSERVER so Playwright boots vite for you).
  */
 
@@ -61,7 +61,7 @@ export default defineConfig({
   webServer: skipWebServer
     ? undefined
     : {
-        command: "npm run dev",
+        command: "pnpm run dev",
         url: baseURL,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,
