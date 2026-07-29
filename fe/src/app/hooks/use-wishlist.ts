@@ -2,7 +2,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { z } from "zod";
 
+import { readJsonText } from "../../shared/api/read-json";
 import {
   addWishlistItem,
   clearWishlist as clearWishlistApi,
@@ -11,7 +13,7 @@ import {
   toggleWishlistItem,
   type WishlistResponse,
 } from "../lib/api/endpoints/wishlist";
-import type { ProductId } from "../types/api/branded-ids";
+import { productIdSchema, type ProductId } from "../types/api/branded-ids";
 
 import { useAuth } from "./use-auth";
 
@@ -19,6 +21,7 @@ const WISHLIST_KEY = ["wishlist"] as const;
 const LEGACY_STORAGE_KEY = "vnshop:wishlist";
 
 const EMPTY: WishlistResponse = { productIds: [], items: [] };
+const legacyWishlistSchema = z.array(z.string().min(1).brand<"ProductId">());
 
 /**
  * Server-backed wishlist via /users/me/wishlist. The hook lazily migrates the
@@ -49,14 +52,11 @@ export function useWishlist() {
     if (migrationAttempted.current) return;
     migrationAttempted.current = true;
 
-    let legacyIds: string[] = [];
+    let legacyIds: ProductId[] = [];
     try {
       const raw = localStorage.getItem(LEGACY_STORAGE_KEY);
       if (raw) {
-        const parsed = JSON.parse(raw) as unknown;
-        if (Array.isArray(parsed) && parsed.every((x) => typeof x === "string")) {
-          legacyIds = parsed;
-        }
+        legacyIds = readJsonText(raw, legacyWishlistSchema);
       }
     } catch {
       /* ignore */
@@ -66,8 +66,8 @@ export function useWishlist() {
     void (async () => {
       const current = qc.getQueryData<WishlistResponse>(WISHLIST_KEY) ?? EMPTY;
       const knownIds = new Set(current.productIds);
-      const missing = legacyIds.filter((id) => !knownIds.has(id as ProductId));
-      const failedIds: string[] = [];
+      const missing = legacyIds.filter((id) => !knownIds.has(id));
+      const failedIds: ProductId[] = [];
       for (const id of missing) {
         try {
           await addWishlistItem(id);
@@ -97,8 +97,8 @@ export function useWishlist() {
 
   const data = query.data ?? EMPTY;
 
-  const patchAfterToggle = (productId: string, inWishlist: boolean) => {
-    const pid = productId as ProductId;
+  const patchAfterToggle = (productId: ProductId, inWishlist: boolean) => {
+    const pid = productId;
     qc.setQueryData<WishlistResponse>(WISHLIST_KEY, (prev) => {
       const base = prev ?? EMPTY;
       const has = base.productIds.includes(pid);
@@ -128,13 +128,14 @@ export function useWishlist() {
     onMutate: async (productId) => {
       await qc.cancelQueries({ queryKey: WISHLIST_KEY });
       const previous = qc.getQueryData<WishlistResponse>(WISHLIST_KEY);
-      const has = previous?.productIds.includes(productId as ProductId) ?? false;
+      const parsedProductId = productIdSchema.parse(productId);
+      const has = previous?.productIds.includes(parsedProductId) ?? false;
       const nextInWishlist = !has;
-      patchAfterToggle(productId, nextInWishlist);
+      patchAfterToggle(parsedProductId, nextInWishlist);
       return { previous, nextInWishlist };
     },
     onSuccess: (result, productId) => {
-      patchAfterToggle(productId, result.inWishlist);
+      patchAfterToggle(productIdSchema.parse(productId), result.inWishlist);
     },
     onError: (_err, _id, context) => {
       if (context?.previous) qc.setQueryData(WISHLIST_KEY, context.previous);
@@ -146,7 +147,7 @@ export function useWishlist() {
     onMutate: async (productId) => {
       await qc.cancelQueries({ queryKey: WISHLIST_KEY });
       const previous = qc.getQueryData<WishlistResponse>(WISHLIST_KEY);
-      patchAfterToggle(productId, false);
+      patchAfterToggle(productIdSchema.parse(productId), false);
       return { previous };
     },
     onError: (_err, _id, context) => {
@@ -173,7 +174,8 @@ export function useWishlist() {
    *   reconciled with the server response once it lands.
    */
   const toggle = (productId: string): boolean => {
-    const has = data.productIds.includes(productId as ProductId);
+    const parsedProductId = productIdSchema.parse(productId);
+    const has = data.productIds.includes(parsedProductId);
     toggleMutation.mutate(productId);
     return !has;
   };
@@ -182,7 +184,7 @@ export function useWishlist() {
     ids: data.productIds,
     items: data.items,
     count: data.productIds.length,
-    has: (productId: string) => data.productIds.includes(productId as ProductId),
+    has: (productId: string) => data.productIds.includes(productIdSchema.parse(productId)),
     toggle,
     remove: (productId: string) => removeMutation.mutate(productId),
     clear: () => clearMutation.mutate(),

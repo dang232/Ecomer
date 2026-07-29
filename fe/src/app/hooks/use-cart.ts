@@ -1,6 +1,8 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState, useCallback } from "react";
+import { z } from "zod";
 
+import { readJsonText } from "../../shared/api/read-json";
 import {
   addCartItem,
   clearCart as clearCartApi,
@@ -12,7 +14,7 @@ import {
 import { productById } from "../lib/api/endpoints/products";
 import { fromServer, findVariant } from "../lib/api/product-mapper";
 import type { Cart } from "../types/api";
-import type { ProductId, SellerId } from "../types/api/branded-ids";
+import { productIdSchema, sellerIdSchema } from "../types/api/branded-ids";
 
 import { useAuth } from "./use-auth";
 
@@ -22,31 +24,20 @@ const GUEST_SESSION_STORAGE_KEY = "vnshop:guest-cart-session";
 
 const EMPTY_CART: Cart = { items: [], itemCount: 0, totalAmount: 0 };
 
-interface GuestCartItem {
-  productId: string;
-  quantity: number;
-  variantId?: string;
-}
+const guestCartItemSchema = z.object({
+  productId: productIdSchema,
+  quantity: z.number().int().positive(),
+  variantId: z.string().min(1).optional(),
+});
+const guestCartSchema = z.array(guestCartItemSchema);
+type GuestCartItem = z.infer<typeof guestCartItemSchema>;
 
 function readGuestCart(): GuestCartItem[] {
   if (typeof localStorage === "undefined") return [];
   try {
     const raw = localStorage.getItem(GUEST_STORAGE_KEY);
     if (!raw) return [];
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .filter(
-        (it): it is GuestCartItem =>
-          typeof it === "object" &&
-          it !== null &&
-          typeof (it as GuestCartItem).productId === "string" &&
-          typeof (it as GuestCartItem).quantity === "number" &&
-          (it as GuestCartItem).quantity > 0 &&
-          (typeof (it as GuestCartItem).variantId === "string" ||
-            (it as GuestCartItem).variantId === undefined),
-      )
-      .map((it) => ({ productId: it.productId, quantity: it.quantity, variantId: it.variantId }));
+    return readJsonText(raw, guestCartSchema);
   } catch {
     return [];
   }
@@ -66,17 +57,21 @@ function writeGuestCart(items: GuestCartItem[]): void {
 }
 
 function guestSessionId(): string {
-  const current = localStorage.getItem(GUEST_SESSION_STORAGE_KEY);
-  if (current) return current;
-  const sessionId = crypto.randomUUID();
-  localStorage.setItem(GUEST_SESSION_STORAGE_KEY, sessionId);
-  return sessionId;
+  try {
+    const current = localStorage.getItem(GUEST_SESSION_STORAGE_KEY);
+    if (current) return current;
+    const sessionId = crypto.randomUUID();
+    localStorage.setItem(GUEST_SESSION_STORAGE_KEY, sessionId);
+    return sessionId;
+  } catch {
+    return crypto.randomUUID();
+  }
 }
 
 function guestItemsToCart(items: GuestCartItem[]): Cart {
   return {
     items: items.map((it) => ({
-      productId: it.productId as ProductId,
+      productId: it.productId,
       name: undefined,
       image: undefined,
       price: 0,
@@ -104,7 +99,7 @@ function optimisticAdd(
   } else {
     // Skeleton item — name/price/image will reconcile from the server response.
     items.push({
-      productId: productId as ProductId,
+      productId: productIdSchema.parse(productId),
       name: undefined,
       image: undefined,
       price: 0,
@@ -244,14 +239,15 @@ export function useCart() {
   const isGuest = ready && !authenticated;
 
   const guestAdd = (productId: string, quantity: number, variantId?: string) => {
+    const parsedProductId = productIdSchema.parse(productId);
     setGuestItems((prev) => {
       const existing = prev.findIndex(
-        (i) => i.productId === productId && i.variantId === variantId,
+        (i) => i.productId === parsedProductId && i.variantId === variantId,
       );
       const next =
         existing >= 0
           ? prev.map((i, idx) => (idx === existing ? { ...i, quantity: i.quantity + quantity } : i))
-          : [...prev, { productId, quantity, variantId }];
+          : [...prev, { productId: parsedProductId, quantity, variantId }];
       writeGuestCart(next);
       return next;
     });
@@ -307,7 +303,7 @@ export function useCart() {
           const raw = productQueries[idx]?.data;
           if (!raw) {
             return {
-              productId: item.productId as ProductId,
+              productId: item.productId,
               name: undefined,
               image: undefined,
               price: 0,
@@ -318,16 +314,17 @@ export function useCart() {
           }
           const variant = findVariant(raw, item.variantId);
           const mapped = fromServer(raw);
+          const sellerId = sellerIdSchema.safeParse(mapped.sellerId);
           const price = variant?.priceAmount ?? mapped.price;
           const image = variant?.imageUrl ?? mapped.image;
           return {
-            productId: item.productId as ProductId,
+            productId: item.productId,
             name: mapped.name,
             image,
             price,
             originalPrice: mapped.originalPrice,
             quantity: item.quantity,
-            sellerId: mapped.sellerId as SellerId,
+            sellerId: sellerId.success ? sellerId.data : undefined,
             variantId: item.variantId,
           };
         }),

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { z } from "zod";
 
+import { readJson } from "../../../shared/api/read-json";
 import { apiUrl } from "../../lib/runtime-endpoints";
 
 interface ServiceDef {
@@ -46,6 +48,8 @@ interface ServiceHealth {
   detail?: string;
 }
 
+const healthSchema = z.object({ status: z.string() }).passthrough();
+
 async function checkHealth(url: string, signal: AbortSignal): Promise<HealthStatus> {
   try {
     const timeout = AbortSignal.timeout(5000);
@@ -55,7 +59,7 @@ async function checkHealth(url: string, signal: AbortSignal): Promise<HealthStat
       headers: { Accept: "application/json" },
     });
     if (!res.ok) return "down";
-    const body = (await res.json()) as { status?: string };
+    const body = await readJson(res, healthSchema);
     // ponytail: Spring Actuator uses "UP", NestJS /health uses "ok"
     return ["UP", "OK"].includes(body.status?.toUpperCase() ?? "") ? "up" : "down";
   } catch {

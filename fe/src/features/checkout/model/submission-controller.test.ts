@@ -54,7 +54,7 @@ function dependencies(
     }),
     newKey: () => keys.shift() ?? crypto.randomUUID(),
     now: () => 1,
-    sleep: async () => undefined,
+    sleep: () => Promise.resolve(),
     ...overrides,
   };
 }
@@ -76,6 +76,7 @@ describe("checkout submission controller", () => {
   });
 
   it("retries only payment initialization after an order already exists", async () => {
+    const placeOrder = vi.fn().mockResolvedValue({ id: "order-1", total: 125000 });
     const codConfirm = vi
       .fn()
       .mockRejectedValueOnce(new Error("temporary provider error"))
@@ -83,13 +84,13 @@ describe("checkout submission controller", () => {
         paymentId: "payment-1", orderId: "order-1", amount: 125000, method: "COD",
         status: "AWAITING_COLLECTION", transactionRef: null, redirectUrl: null,
       });
-    const deps = dependencies({ codConfirm });
+    const deps = dependencies({ placeOrder, codConfirm });
     const controller = createCheckoutSubmissionController(deps, "cart-a");
 
     await controller.submit(input);
     await controller.submit(input);
 
-    expect(deps.placeOrder).toHaveBeenCalledTimes(1);
+    expect(placeOrder).toHaveBeenCalledTimes(1);
     expect(codConfirm).toHaveBeenCalledTimes(2);
   });
 
@@ -102,7 +103,9 @@ describe("checkout submission controller", () => {
   });
 
   it("resumes a recovered order by initializing payment only", async () => {
-    const deps = dependencies();
+    const placeOrder = vi.fn();
+    const codConfirm = vi.fn();
+    const deps = dependencies({ placeOrder, codConfirm });
     deps.recovery.write({
       version: 1,
       phase: "created",
@@ -117,7 +120,10 @@ describe("checkout submission controller", () => {
 
     await controller.resume();
 
-    expect(deps.placeOrder).not.toHaveBeenCalled();
-    expect(deps.codConfirm).toHaveBeenCalledWith({ orderId: "order-1" }, "00000000-0000-4000-8000-000000000002");
+    expect(placeOrder).not.toHaveBeenCalled();
+    expect(codConfirm).toHaveBeenCalledWith(
+      { orderId: "order-1" },
+      "00000000-0000-4000-8000-000000000002",
+    );
   });
 });

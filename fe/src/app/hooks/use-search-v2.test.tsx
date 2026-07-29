@@ -1,15 +1,17 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type * as SearchEndpoints from "../lib/api/endpoints/search";
 import { makeWrapper } from "../test-utils/render-with-query-client";
 
 import { useSearchV2 } from "./use-search-v2";
 
-const searchProductsV2Mock = vi.fn();
+const searchProductsV2Mock = vi.hoisted(() => vi.fn());
 
-vi.mock("../lib/api/endpoints/search", () => ({
-  searchProductsV2: (...args: unknown[]) => searchProductsV2Mock(...args),
-}));
+vi.mock("../lib/api/endpoints/search", async (importOriginal) => {
+  const actual = await importOriginal<typeof SearchEndpoints>();
+  return { ...actual, searchProductsV2: searchProductsV2Mock as typeof actual.searchProductsV2 };
+});
 
 const firstPage = {
   data: {

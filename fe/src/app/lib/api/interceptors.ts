@@ -193,8 +193,8 @@ export function envelopeInterceptor<TSchema extends z.ZodType>(
     if (!envelope.data.success) {
       throw new ApiError(
         ctx.response.status,
-        envelope.data.errorCode,
-        envelope.data.message,
+        envelope.data.errorCode ?? null,
+        envelope.data.message ?? "Request failed",
         serverCorrelationId,
       );
     }

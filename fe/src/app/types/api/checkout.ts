@@ -39,19 +39,12 @@ export type CheckoutCalculation = z.infer<typeof calculateCheckoutSchema>;
 
 export const paymentMethodSchema = z
   .object({
-    code: z.string().optional(),
-    id: z.string().optional(),
+    id: z.string(),
     name: z.string(),
-    description: z.string().optional(),
     enabled: z.boolean().default(true),
   })
-  .passthrough()
-  .transform((raw) => ({
-    code: raw.code ?? raw.id ?? "",
-    name: raw.name,
-    description: raw.description,
-    enabled: raw.enabled,
-  }));
+  .passthrough();
+export type PaymentMethodOption = z.infer<typeof paymentMethodSchema>;
 
 export const checkoutProviderSchema = z.enum([
   "COD",

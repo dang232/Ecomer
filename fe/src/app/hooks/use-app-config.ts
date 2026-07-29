@@ -210,7 +210,8 @@ export async function fetchConfig(signal?: AbortSignal): Promise<AppConfig> {
   if (!response.ok) {
     throw new Error(`Config fetch failed: ${response.status}`);
   }
-  const config = appConfigSchema.parse(await response.json());
+  const raw: unknown = await response.json();
+  const config = appConfigSchema.parse(raw);
   configureApiOrigin(config.apiUri);
   return config;
 }

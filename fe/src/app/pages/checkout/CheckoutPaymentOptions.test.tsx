@@ -1,22 +1,24 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import type { PaymentMethodOption } from "../../types/api";
+
 import { CheckoutPaymentStep } from "./CheckoutPaymentStep";
-import { toPaymentOptions, type RawPaymentMethod } from "./types";
+import { toPaymentOptions } from "./types";
 
 const t = ((key: string) => key) as unknown as Parameters<typeof toPaymentOptions>[1];
 
 describe("toPaymentOptions", () => {
   it("keeps only enabled server-advertised flows implemented by checkout", () => {
-    const methods: RawPaymentMethod[] = [
-      { code: "cod", name: "Cash", enabled: true },
-      { code: "vnpay", name: "VNPay", enabled: true },
-      { code: "momo", name: "MoMo", enabled: false },
-      { code: "vietqr", name: "VietQR", enabled: true },
-      { code: "stripe", name: "Stripe", enabled: true },
-      { code: "paypal", name: "PayPal", enabled: true },
-      { code: "sepay", name: "SePay", enabled: true },
-      { code: "bank", name: "Bank", enabled: true },
+    const methods: PaymentMethodOption[] = [
+      { id: "cod", name: "Cash", enabled: true },
+      { id: "vnpay", name: "VNPay", enabled: true },
+      { id: "momo", name: "MoMo", enabled: false },
+      { id: "vietqr", name: "VietQR", enabled: true },
+      { id: "stripe", name: "Stripe", enabled: true },
+      { id: "paypal", name: "PayPal", enabled: true },
+      { id: "sepay", name: "SePay", enabled: true },
+      { id: "bank", name: "Bank", enabled: true },
     ];
 
     expect(toPaymentOptions(methods, t).map((option) => option.id)).toEqual([
@@ -48,7 +50,7 @@ describe("toPaymentOptions", () => {
 
   it("omits disabled capabilities", () => {
     expect(
-      toPaymentOptions([{ code: "COD", name: "Cash", enabled: false }], t),
+      toPaymentOptions([{ id: "COD", name: "Cash", enabled: false }], t),
     ).toEqual([]);
   });
 });

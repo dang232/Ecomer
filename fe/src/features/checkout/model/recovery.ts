@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { checkoutProviderSchema } from "../../../app/types/api";
 import type { PlaceOrderInput } from "../../../app/lib/api/endpoints/orders";
+import { checkoutProviderSchema } from "../../../app/types/api";
 
 const recoveryOrderSchema = z.object({
   items: z.array(z.object({ productId: z.string().min(1), variantSku: z.string().optional(), quantity: z.number().int().positive() })),

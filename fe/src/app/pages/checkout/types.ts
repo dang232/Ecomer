@@ -5,6 +5,7 @@ import {
   CHECKOUT_IMPLEMENTED_METHODS,
   checkoutProviderSchema,
   type CheckoutProvider,
+  type PaymentMethodOption,
 } from "../../types/api";
 
 export type Step = "address" | "shipping" | "payment" | "review" | "success";
@@ -56,18 +57,11 @@ export function makeFallbackShipping(t: TFunction): ShippingOption[] {
   ];
 }
 
-export interface RawPaymentMethod {
-  code: string;
-  name: string;
-  description?: string;
-  enabled?: boolean;
-}
-
 const warnedUnsupportedProviders = new Set<string>();
 
 /** Returns the enabled server capabilities that checkout implements. */
 export function toPaymentOptions(
-  data: RawPaymentMethod[] | undefined,
+  data: PaymentMethodOption[] | undefined,
   t: TFunction,
 ): PaymentOption[] {
   if (!data || data.length === 0) return [];
@@ -93,7 +87,7 @@ export function toPaymentOptions(
   return data
     .filter((payment) => payment.enabled !== false)
     .flatMap((payment) => {
-      const provider = payment.code.toUpperCase();
+      const provider = payment.id.toUpperCase();
       const parsed = checkoutProviderSchema.safeParse(provider);
       if (!parsed.success || !CHECKOUT_IMPLEMENTED_METHODS.includes(parsed.data)) {
         if (import.meta.env.DEV && !warnedUnsupportedProviders.has(provider)) {

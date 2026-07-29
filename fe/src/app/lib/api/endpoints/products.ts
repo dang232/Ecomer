@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import {
   pageSchema,
   productDetailSchema,
@@ -33,20 +35,21 @@ export const productList = (params: ProductListParams = {}) =>
     { auth: false },
   );
 
-export interface ProductListV2Params {
-  cursor?: string;
-  limit?: number;
-  category?: string;
-  brand?: string;
-  q?: string;
-  minPrice?: number;
-  maxPrice?: number;
-  sort?: string;
-  sameDay?: boolean;
-  verifiedOnly?: boolean;
-  officialOnly?: boolean;
-  includeFacets?: boolean;
-}
+export const productListV2ParamsSchema = z.object({
+  cursor: z.string().optional(),
+  limit: z.number().int().positive().optional(),
+  category: z.string().optional(),
+  brand: z.string().optional(),
+  q: z.string().optional(),
+  minPrice: z.number().nonnegative().optional(),
+  maxPrice: z.number().nonnegative().optional(),
+  sort: z.string().optional(),
+  sameDay: z.boolean().optional(),
+  verifiedOnly: z.boolean().optional(),
+  officialOnly: z.boolean().optional(),
+  includeFacets: z.boolean().optional(),
+});
+export type ProductListV2Params = z.infer<typeof productListV2ParamsSchema>;
 
 const productListV2Schema = cursorPageSchema(productSummarySchema);
 

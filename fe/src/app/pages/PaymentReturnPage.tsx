@@ -10,7 +10,6 @@ import { paymentStatus } from "../lib/api/endpoints/payment";
 import { formatPrice } from "../lib/format";
 
 const providerSchema = z.enum(["vnpay", "momo"]);
-type Provider = z.infer<typeof providerSchema>;
 type Phase = "pending" | "completed" | "failed" | "error";
 const MAX_PENDING_ATTEMPTS = 30;
 
@@ -55,7 +54,7 @@ export function PaymentReturnPage() {
     }
 
     let cancelled = false;
-    let timeout: ReturnType<typeof setTimeout> | undefined;
+    let timeout: number | undefined;
     let attempts = 0;
 
     const finish = (next: Extract<Phase, "completed" | "failed">) => {
@@ -103,7 +102,7 @@ export function PaymentReturnPage() {
     void poll();
     return () => {
       cancelled = true;
-      if (timeout) clearTimeout(timeout);
+      if (timeout) window.clearTimeout(timeout);
     };
   }, [orderId, recoveryStore, t, validationError]);
 

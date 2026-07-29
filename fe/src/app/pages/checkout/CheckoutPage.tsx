@@ -1,10 +1,11 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ArrowLeft, LogIn, Package } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
+import { z } from "zod";
 
 import {
   createCheckoutRecoveryStore,
@@ -13,6 +14,7 @@ import {
   type CheckoutSubmissionController,
   type CheckoutSubmissionResult,
 } from "../../../features/checkout";
+import { readJsonText } from "../../../shared/api/read-json";
 import { useAuth } from "../../hooks/use-auth";
 import { useCart } from "../../hooks/use-cart";
 import { ApiError } from "../../lib/api";
@@ -33,11 +35,11 @@ import {
   vnpayCreate,
 } from "../../lib/api/endpoints/payment";
 import { myProfile } from "../../lib/api/endpoints/users";
-import type { Address } from "../../types/api";
+import { checkoutProviderSchema, type Address } from "../../types/api";
 
 import { CheckoutAddressStep } from "./CheckoutAddressStep";
-import { CheckoutPaymentStep } from "./CheckoutPaymentStep";
 import { CheckoutPaymentRecovery } from "./CheckoutPaymentRecovery";
+import { CheckoutPaymentStep } from "./CheckoutPaymentStep";
 import { CheckoutReviewStep } from "./CheckoutReviewStep";
 import { CheckoutShippingStep } from "./CheckoutShippingStep";
 import { CheckoutStepper } from "./CheckoutStepper";
@@ -45,11 +47,35 @@ import { CheckoutSuccess } from "./CheckoutSuccess";
 import { CheckoutSummary } from "./CheckoutSummary";
 import { makeFallbackShipping, toPaymentOptions, type PaymentOption, type Step } from "./types";
 
+const checkoutProgressSchema = z.object({
+  step: z.enum(["address", "shipping", "payment", "review", "success"]).optional(),
+  selectedAddressIndex: z.number().int().nonnegative().optional(),
+  shippingChoice: z.string().optional(),
+  selectedPaymentId: checkoutProviderSchema.optional(),
+  note: z.string().optional(),
+});
+type CheckoutProgress = z.infer<typeof checkoutProgressSchema>;
+
+function readCheckoutProgress(): CheckoutProgress | null {
+  try {
+    const raw = sessionStorage.getItem("vnshop:checkout-state");
+    return raw ? readJsonText(raw, checkoutProgressSchema) : null;
+  } catch {
+    try {
+      sessionStorage.removeItem("vnshop:checkout-state");
+    } catch {
+      /* browser storage is unavailable */
+    }
+    return null;
+  }
+}
+
 export function CheckoutPage() {
   const navigate = useNavigate();
   const { ready, authenticated, login, profile } = useAuth();
   const { items: cartItems, totalAmount, isLoading: cartLoading, refetch: refetchCart } = useCart();
   const { t } = useTranslation();
+  const [initialProgress] = useState(readCheckoutProgress);
   const recoveryStoreRef = useRef<CheckoutRecoveryStore | null>(null);
   if (!recoveryStoreRef.current) {
     recoveryStoreRef.current = createCheckoutRecoveryStore(sessionStorage);
@@ -73,10 +99,15 @@ export function CheckoutPage() {
     });
   }
   const controller = controllerRef.current;
+  const subscribeToController = useCallback(
+    (onStoreChange: () => void) => controller.subscribe(onStoreChange),
+    [controller],
+  );
+  const getControllerState = useCallback(() => controller.getState(), [controller]);
   const submission = useSyncExternalStore(
-    controller.subscribe,
-    controller.getState,
-    controller.getState,
+    subscribeToController,
+    getControllerState,
+    getControllerState,
   );
 
   // Profile + addresses (best-effort — backend may not return addresses yet).
@@ -101,76 +132,25 @@ export function CheckoutPage() {
     [paymentQuery.data, t],
   );
 
-  const [step, setStep] = useState<Step>(() => {
-    try {
-      const raw = sessionStorage.getItem("vnshop:checkout-state");
-      if (raw) {
-        const s = (JSON.parse(raw) as Record<string, unknown>).step;
-        if (typeof s === "string") return s as Step;
-      }
-    } catch {
-      /* ignore */
-    }
-    return "address";
-  });
-  const [selectedAddressIndex, setSelectedAddressIndex] = useState<number>(() => {
-    try {
-      const raw = sessionStorage.getItem("vnshop:checkout-state");
-      if (raw) {
-        const v = (JSON.parse(raw) as Record<string, unknown>).selectedAddressIndex;
-        if (typeof v === "number") return v;
-      }
-    } catch {
-      /* ignore */
-    }
-    return 0;
-  });
+  const [step, setStep] = useState<Step>(() => initialProgress?.step ?? "address");
+  const [selectedAddressIndex, setSelectedAddressIndex] = useState<number>(
+    () => initialProgress?.selectedAddressIndex ?? 0,
+  );
   // The user's explicit shipping pick. Empty string means "use default" — we resolve
   // to the first available option at render time, so we never need an effect to
   // mirror server-provided defaults into local state.
-  const [shippingChoice, setShippingChoice] = useState<string>(() => {
-    try {
-      const raw = sessionStorage.getItem("vnshop:checkout-state");
-      if (raw) {
-        const v = (JSON.parse(raw) as Record<string, unknown>).shippingChoice;
-        if (typeof v === "string") return v;
-      }
-    } catch {
-      /* ignore */
-    }
-    return "";
-  });
+  const [shippingChoice, setShippingChoice] = useState<string>(() => initialProgress?.shippingChoice ?? "");
   const selectedShippingId = shippingChoice || "";
-  const [selectedPaymentId, setSelectedPaymentId] = useState<PaymentOption["id"]>(() => {
-    try {
-      const raw = sessionStorage.getItem("vnshop:checkout-state");
-      if (raw) {
-        const v = (JSON.parse(raw) as Record<string, unknown>).selectedPaymentId;
-        if (typeof v === "string") return v as PaymentOption["id"];
-      }
-    } catch {
-      /* ignore */
-    }
-    return "VNPAY";
-  });
+  const [selectedPaymentId, setSelectedPaymentId] = useState<PaymentOption["id"]>(
+    () => initialProgress?.selectedPaymentId ?? "VNPAY",
+  );
 
   useEffect(() => {
     if (paymentOptions.length > 0 && !paymentOptions.some((option) => option.id === selectedPaymentId)) {
       setSelectedPaymentId(paymentOptions[0].id);
     }
   }, [paymentOptions, selectedPaymentId]);
-  const [note, setNote] = useState<string>(() => {
-    try {
-      const raw = sessionStorage.getItem("vnshop:checkout-state");
-      if (raw) {
-        const v = (JSON.parse(raw) as Record<string, unknown>).note;
-        if (typeof v === "string") return v;
-      }
-    } catch {
-      /* ignore */
-    }
-    return "";
-  });
+  const [note, setNote] = useState<string>(() => initialProgress?.note ?? "");
   const [couponInput, setCouponInput] = useState<string>("");
 
   // Persist checkout progress so a page refresh doesn't lose the user's place.
@@ -503,8 +483,7 @@ export function CheckoutPage() {
       if (
         result.state.status !== "pending" ||
         result.state.providerState.kind !== "redirect" ||
-        !persisted ||
-        persisted.phase !== "redirect"
+        persisted?.phase !== "redirect"
       ) {
         toast.error(t("checkout.payment.initFailedShort"));
         return;
@@ -591,14 +570,15 @@ export function CheckoutPage() {
             toast.error(t("checkout.payment.initFailedShort"));
           }
         }}
-        onViewOrder={(orderId) => navigate(orderId ? `/orders/${orderId}` : "/orders")}
+        onViewOrder={(orderId) => {
+          void navigate(orderId ? `/orders/${orderId}` : "/orders");
+        }}
         onContinueRedirect={(url) => {
           const persisted = recoveryStore.read();
           if (
             submission.status !== "pending" ||
             submission.providerState.kind !== "redirect" ||
-            !persisted ||
-            persisted.phase !== "redirect"
+            persisted?.phase !== "redirect"
           ) {
             toast.error(t("checkout.payment.initFailedShort"));
             return;
@@ -611,7 +591,7 @@ export function CheckoutPage() {
         }}
         onPaymentCompleted={() => {
           recoveryStore.clear();
-          navigate(activeOrderId ? `/orders/${activeOrderId}` : "/orders");
+          void navigate(activeOrderId ? `/orders/${activeOrderId}` : "/orders");
         }}
       />
     );

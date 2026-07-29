@@ -6,7 +6,12 @@ import {
 } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 
-import { searchProductsV2, type CursorSearchParams } from "../lib/api/endpoints/search";
+import { readJsonText } from "../../shared/api/read-json";
+import {
+  cursorSearchParamsSchema,
+  searchProductsV2,
+  type CursorSearchParams,
+} from "../lib/api/endpoints/search";
 
 const SEARCH_V2_STALE_TIME = 60_000;
 
@@ -40,7 +45,7 @@ export const searchV2Options = (
 export function useSearchV2(params: CursorSearchParams, enabled = true) {
   const client = useQueryClient();
   const paramsKey = JSON.stringify(params);
-  const stableParams = useMemo(() => JSON.parse(paramsKey) as CursorSearchParams, [paramsKey]);
+  const stableParams = useMemo(() => readJsonText(paramsKey, cursorSearchParamsSchema), [paramsKey]);
   const query = useInfiniteQuery(searchV2Options(stableParams, client, enabled));
   const lastPage = query.data?.pages.at(-1);
   const nextCursor = lastPage?.data.hasMore ? (lastPage.data.nextCursor ?? undefined) : undefined;

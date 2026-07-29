@@ -1,17 +1,5 @@
 import { z } from "zod";
 
-export const apiResponseSchema = <T extends z.ZodType>(
-  data: T,
-): z.ZodType<ApiResponse<z.infer<T>>> =>
-  z.object({
-    success: z.boolean(),
-    message: z.string(),
-    data,
-    errorCode: z.string().nullable(),
-    timestamp: z.string(),
-    meta: apiMetaSchema.optional(),
-  }) as unknown as z.ZodType<ApiResponse<z.infer<T>>>;
-
 export const apiMetaSchema = z
   .object({
     requestId: z.string().optional(),
@@ -24,14 +12,21 @@ export const apiMetaSchema = z
 
 export type ApiMeta = z.infer<typeof apiMetaSchema>;
 
-export interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-  errorCode: string | null;
-  timestamp: string;
-  meta?: ApiMeta;
-}
+export const apiResponseSchema = <TData>(
+  data: z.ZodType<TData>,
+) =>
+  z.object({
+    success: z.boolean(),
+    message: z.string(),
+    data,
+    errorCode: z.string().nullable(),
+    timestamp: z.string(),
+    meta: apiMetaSchema.optional(),
+  });
+
+export type ApiResponse<TData> = z.infer<
+  ReturnType<typeof apiResponseSchema<TData>>
+>;
 
 export class ApiError extends Error {
   readonly status: number;

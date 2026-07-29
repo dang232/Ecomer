@@ -1,9 +1,11 @@
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 import * as tus from "tus-js-client";
+import { z } from "zod";
 
 import { videoUploadInit } from "../../../app/lib/api/endpoints/videos";
 import type { VideoContext } from "../../../app/types/api/video";
+import { readJsonText } from "../../../shared/api/read-json";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -49,18 +51,24 @@ export interface VideoUploadOptions {
 
 // ─── Resume URL cache ────────────────────────────────────────────────────────
 
-interface ResumeEntry {
-  videoId: string;
-  uploadUrl: string;
-  filename: string;
-  sizeBytes: number;
-}
+const resumeEntrySchema = z.object({
+  videoId: z.string().min(1),
+  uploadUrl: z.string().url(),
+  filename: z.string().min(1),
+  sizeBytes: z.number().positive(),
+});
+type ResumeEntry = z.infer<typeof resumeEntrySchema>;
 
 function getResumeEntry(idempotencyKey: string): ResumeEntry | null {
   try {
     const raw = localStorage.getItem(`${LS_RESUME_KEY}:${idempotencyKey}`);
-    return raw ? (JSON.parse(raw) as ResumeEntry) : null;
+    return raw ? readJsonText(raw, resumeEntrySchema) : null;
   } catch {
+    try {
+      localStorage.removeItem(`${LS_RESUME_KEY}:${idempotencyKey}`);
+    } catch {
+      /* browser storage is unavailable */
+    }
     return null;
   }
 }

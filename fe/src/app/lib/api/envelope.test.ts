@@ -14,6 +14,8 @@ describe("apiResponseSchema", () => {
       errorCode: null,
       timestamp: "2026-05-15T00:00:00Z",
     });
+    const id: string = parsed.data.id;
+    expect(id).toBe("p1");
     expect(parsed.data).toEqual({ id: "p1" });
     expect(parsed.errorCode).toBeNull();
   });

@@ -1,12 +1,13 @@
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// ── Module mocks ──────────────────────────────────────────────────────────────
-const videoUploadInitMock = vi.fn();
+import type * as VideoEndpoints from "../../../app/lib/api/endpoints/videos";
 
-vi.mock("../../../app/lib/api/endpoints/videos", () => ({
-  videoUploadInit: (...args: unknown[]) => videoUploadInitMock(...args),
-}));
+const { videoUploadInitMock } = vi.hoisted(() => ({ videoUploadInitMock: vi.fn() }));
+vi.mock("../../../app/lib/api/endpoints/videos", async (importOriginal) => {
+  const actual = await importOriginal<typeof VideoEndpoints>();
+  return { ...actual, videoUploadInit: videoUploadInitMock as typeof actual.videoUploadInit };
+});
 
 // tus-js-client mock
 const tusMockInstances: {
@@ -27,7 +28,7 @@ vi.mock("tus-js-client", () => {
 
     constructor(_file: File, opts: Record<string, unknown>) {
       this.options = opts;
-      tusMockInstances.push(this as unknown as (typeof tusMockInstances)[0]);
+      tusMockInstances.push(this);
     }
   }
   return { Upload };
@@ -36,6 +37,7 @@ vi.mock("tus-js-client", () => {
 import { __testables__, useVideoUpload } from "./useVideoUpload";
 
 const { preflightVideo, MAX_PRODUCT_VIDEO_BYTES, MAX_REVIEW_VIDEO_BYTES } = __testables__;
+const NativeURL = URL;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -63,10 +65,13 @@ beforeEach(() => {
   tusMockInstances.length = 0;
 
   // Stub URL.createObjectURL/revokeObjectURL (used by estimateDuration)
-  vi.stubGlobal("URL", {
-    createObjectURL: vi.fn(() => "blob:fake"),
-    revokeObjectURL: vi.fn(),
-  });
+  vi.stubGlobal(
+    "URL",
+    Object.assign(class extends NativeURL {}, {
+      createObjectURL: vi.fn(() => "blob:fake"),
+      revokeObjectURL: vi.fn(),
+    }),
+  );
 
   // Stub document.createElement only for "video" tag — route all other tags to
   // the real implementation so happy-dom's internal DOM wiring stays intact.
@@ -201,7 +206,7 @@ describe("useVideoUpload", () => {
     expect(result.current.state.videoId).toBe("vid-abc");
 
     // Simulate tus onSuccess
-    await act(async () => {
+    act(() => {
       (instance.options.onSuccess as () => void)();
     });
 
@@ -226,7 +231,7 @@ describe("useVideoUpload", () => {
     await waitFor(() => expect(tusMockInstances.length).toBeGreaterThan(0));
     const instance = tusMockInstances[0];
 
-    await act(async () => {
+    act(() => {
       (instance.options.onProgress as (uploaded: number, total: number) => void)(5_000, 10_000);
     });
 
@@ -248,7 +253,7 @@ describe("useVideoUpload", () => {
 
     await waitFor(() => expect(tusMockInstances.length).toBeGreaterThan(0));
 
-    await act(async () => {
+    act(() => {
       result.current.cancel();
     });
 
@@ -275,6 +280,15 @@ describe("useVideoUpload", () => {
     });
     await waitFor(() => expect(tusMockInstances.length).toBeGreaterThan(0));
     expect(videoUploadInitMock).toHaveBeenCalledTimes(1);
+    const key = `vnshop:video-upload-resume:${file.name}:${file.size}:${file.lastModified}`;
+    expect(localStorage.getItem(key)).toEqual(
+      JSON.stringify({
+        videoId: "vid-resume",
+        uploadUrl: "http://localhost:1080/files/",
+        filename: file.name,
+        sizeBytes: file.size,
+      }),
+    );
 
     // A second independent hook instance (simulating a remount) should reuse the entry
     const { result: result2 } = renderVideoUploadHook();
@@ -284,5 +298,24 @@ describe("useVideoUpload", () => {
 
     // Init should NOT be called again — cached entry is reused
     expect(videoUploadInitMock).toHaveBeenCalledTimes(1);
+  }, 10_000);
+
+  it("clears a malformed resume entry and starts a fresh upload", async () => {
+    videoUploadInitMock.mockResolvedValue({
+      tusEndpoint: "http://localhost:1080/files/",
+      videoId: "vid-fresh",
+      maxSizeBytes: MAX_PRODUCT_VIDEO_BYTES,
+    });
+    const file = makeFile({ name: "malformed.mp4", size: 2048 });
+    const key = `vnshop:video-upload-resume:${file.name}:${file.size}:${file.lastModified}`;
+    localStorage.setItem(key, JSON.stringify({ videoId: 42, uploadUrl: "not-a-url" }));
+
+    const { result } = renderVideoUploadHook();
+    await act(async () => {
+      await result.current.upload(file);
+    });
+
+    expect(videoUploadInitMock).toHaveBeenCalledTimes(1);
+    expect(localStorage.getItem(key)).toContain("vid-fresh");
   }, 10_000);
 });

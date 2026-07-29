@@ -51,11 +51,23 @@ export const searchProducts = (params: SearchParams) =>
     { auth: false },
   );
 
-export interface CursorSearchParams extends Omit<SearchParams, "page" | "size"> {
-  cursor?: string;
-  limit?: number;
-  includeFacets?: boolean;
-}
+export const cursorSearchParamsSchema = z.object({
+  q: z.string().optional(),
+  category: z.string().optional(),
+  brand: z.string().optional(),
+  minPrice: z.number().nonnegative().optional(),
+  maxPrice: z.number().nonnegative().optional(),
+  minRating: z.number().nonnegative().optional(),
+  tags: z.array(z.string()).optional(),
+  sort: z.string().optional(),
+  sameDay: z.boolean().optional(),
+  verifiedOnly: z.boolean().optional(),
+  officialOnly: z.boolean().optional(),
+  cursor: z.string().optional(),
+  limit: z.number().int().positive().optional(),
+  includeFacets: z.boolean().optional(),
+});
+export type CursorSearchParams = z.infer<typeof cursorSearchParamsSchema>;
 
 /** Default cursor search. The result keeps response metadata for cache/cursor-aware callers. */
 export const searchProductsV2 = (params: CursorSearchParams, signal?: AbortSignal) =>

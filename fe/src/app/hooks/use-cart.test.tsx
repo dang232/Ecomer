@@ -1,6 +1,8 @@
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
+import { readJsonText } from "../../shared/api/read-json";
 import { makeWrapper } from "../test-utils/render-with-query-client";
 
 import { useCart } from "./use-cart";
@@ -45,7 +47,7 @@ function cartEnvelope(data: unknown, status = 200): Response {
   );
 }
 
-const useAuthMock = vi.fn();
+const useAuthMock = vi.fn<() => { ready: boolean; authenticated: boolean }>();
 vi.mock("./use-auth", () => ({
   useAuth: () => useAuthMock(),
 }));
@@ -89,6 +91,20 @@ describe("useCart", () => {
       });
 
       expect(result.current.items).toHaveLength(2);
+    });
+
+    it("ignores malformed guest cart storage", async () => {
+      useAuthMock.mockReturnValue({ ready: true, authenticated: false });
+      localStorage.setItem(
+        "vnshop:guest-cart",
+        JSON.stringify([{ productId: "prod-1", quantity: 0 }]),
+      );
+
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
+
+      await waitFor(() => expect(result.current.isGuest).toBe(true));
+      expect(result.current.items).toEqual([]);
     });
 
     it("should add item to guest cart", async () => {
@@ -318,16 +334,23 @@ describe("useCart", () => {
       });
 
       const postCall = fetchSpy.mock.calls.find(
-        ([, request]) => (request as RequestInit | undefined)?.method === "POST",
+        ([, request]) => request?.method === "POST",
       );
-      expect(postCall).toBeDefined();
-      const [, request] = postCall as [RequestInfo | URL, RequestInit];
+      if (!postCall) throw new Error("Expected a cart merge request");
+      const [, request] = postCall;
       expect(request).toMatchObject({ method: "POST" });
-      expect(JSON.parse((request as RequestInit).body as string)).toMatchObject({
-        sessionId: expect.any(String),
-        idempotencyKey: expect.any(String),
-        items: [{ productId: "prod-1", quantity: 2 }],
-      });
+      if (typeof request?.body !== "string") throw new Error("Expected a JSON request body");
+      const mergePayload = readJsonText(
+        request.body,
+        z.object({
+          sessionId: z.string(),
+          idempotencyKey: z.string(),
+          items: z.array(z.object({ productId: z.string(), quantity: z.number() })),
+        }),
+      );
+      expect(mergePayload.sessionId).not.toBe("");
+      expect(mergePayload.idempotencyKey).not.toBe("");
+      expect(mergePayload.items).toEqual([{ productId: "prod-1", quantity: 2 }]);
       expect(result.current.items).toMatchObject([{ productId: "prod-1", quantity: 7 }]);
       expect(result.current.itemCount).toBe(7);
     });
@@ -441,10 +464,10 @@ describe("useCart", () => {
       });
 
       useAuthMock.mockReturnValue({ ready: true, authenticated: true });
-      fetchSpy.mockImplementation(((_input: RequestInfo | URL, init?: RequestInit) => {
+      fetchSpy.mockImplementation((_input, init) => {
         if (!init?.method || init.method === "GET") return initialCartPending;
         return Promise.resolve(cartEnvelope(updatedCart));
-      }) as typeof fetch);
+      });
       localStorage.removeItem("vnshop:guest-cart");
 
       const { Wrapper } = makeWrapper();
@@ -456,7 +479,7 @@ describe("useCart", () => {
 
       await waitFor(() => {
         const postCall = fetchSpy.mock.calls.find(
-          ([, request]) => (request as RequestInit | undefined)?.method === "POST",
+          ([, request]) => request?.method === "POST",
         );
         expect(postCall).toBeDefined();
       });
