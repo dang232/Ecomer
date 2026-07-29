@@ -1,4 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+
 import { expectNoGlobalError } from "./_helpers";
 
 /**
@@ -33,7 +34,7 @@ test.describe("public route breadth smoke", () => {
       await expect(page.getByText(mountSignal).first()).toBeVisible({
         timeout: 20_000,
       });
-      await expectNoGlobalError(page, path);
+      await expectNoGlobalError(page);
     });
   }
 });

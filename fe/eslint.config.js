@@ -17,7 +17,6 @@ export default tseslint.config(
       "*.tsbuildinfo",
       "playwright-report",
       "test-results",
-      "e2e",
       "src/imports",
       "scripts",
     ],
@@ -123,27 +122,37 @@ export default tseslint.config(
   },
 
   {
-    files: ["**/*.test.{ts,tsx}", "**/test-setup.ts", "**/*.config.{ts,js,mjs,cjs}"],
-    // Vitest files are intentionally excluded from the application tsconfig.
-    // Lint their syntax and React rules without asking the TypeScript project
-    // service to resolve them as production modules.
+    files: ["**/*.config.{ts,js,mjs,cjs}"],
     extends: [tseslint.configs.disableTypeChecked],
+  },
+
+  {
+    files: ["**/*.test.{ts,tsx}", "**/test-setup.ts"],
+    languageOptions: {
+      globals: { ...globals.browser, ...globals.node },
+      parserOptions: {
+        projectService: false,
+        project: "./tsconfig.test.json",
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
     rules: {
-      "@typescript-eslint/no-explicit-any": "off",
-      "@typescript-eslint/no-unsafe-argument": "off",
-      "@typescript-eslint/no-unsafe-assignment": "off",
-      "@typescript-eslint/no-unsafe-call": "off",
-      "@typescript-eslint/no-unsafe-member-access": "off",
-      "@typescript-eslint/no-unsafe-return": "off",
-      "@typescript-eslint/no-floating-promises": "off",
-      "@typescript-eslint/no-misused-promises": "off",
-      "@typescript-eslint/no-base-to-string": "off",
-      "@typescript-eslint/no-empty-function": "off",
-      "@typescript-eslint/require-await": "off",
-      "jsx-a11y/aria-role": "off",
-      "jsx-a11y/label-has-associated-control": "off",
-      "react/jsx-no-leaked-render": "off",
-      "react/no-array-index-key": "off",
+      "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/no-unsafe-assignment": "error",
+      "@typescript-eslint/no-unsafe-member-access": "error",
+      "@typescript-eslint/no-unsafe-return": "error",
+    },
+  },
+
+  {
+    files: ["e2e/**/*.ts"],
+    languageOptions: {
+      globals: { ...globals.browser, ...globals.node },
+      parserOptions: {
+        projectService: false,
+        project: "./tsconfig.e2e.json",
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
   },
 

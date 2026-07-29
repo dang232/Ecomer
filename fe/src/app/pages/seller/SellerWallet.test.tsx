@@ -5,7 +5,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Payout } from "../../lib/api/endpoints/seller-finance";
 
-const mutationState = vi.hoisted(() => ({ mutate: vi.fn() }));
+type PayoutMutationInput = { amount: number; currency: string };
+
+const mutationState = vi.hoisted(() => ({
+  mutate: vi.fn<(input: PayoutMutationInput) => void>(),
+}));
 
 vi.mock("@tanstack/react-query", () => ({
   useQuery: vi.fn(),
@@ -37,18 +41,22 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import { SellerWallet } from "./SellerWallet";
 
-function makePayout(
-  overrides: Partial<Payout> & { id: string; status: string; amount: number },
-): Payout {
+function makePayout({
+  id,
+  status,
+  amount,
+  ...overrides
+}: Partial<Payout> & Pick<Payout, "id" | "status" | "amount">): Payout {
   return {
-    id: "",
     sellerId: undefined,
-    amount: 0,
-    status: "REQUESTED",
     requestedAt: "2024-06-01T10:00:00Z",
     completedAt: undefined,
+    currency: "VND",
     ...overrides,
-  } as Payout;
+    id,
+    amount,
+    status,
+  };
 }
 
 const PAYOUTS: Payout[] = [

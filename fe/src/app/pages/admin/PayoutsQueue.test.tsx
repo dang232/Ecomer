@@ -3,7 +3,7 @@ import type { HTMLAttributes, ReactNode } from "react";
 import { createElement as h } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { AdminPayout } from "../../types/api";
+import { adminPayoutSchema, type AdminPayout } from "../../types/api";
 
 vi.mock("motion/react", () => ({
   AnimatePresence: ({ children }: { children: ReactNode }) => children,
@@ -56,17 +56,18 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 import { PayoutsQueue } from "./PayoutsQueue";
 
 function makeAdminPayout(overrides: Partial<AdminPayout> = {}): AdminPayout {
-  return {
+  return adminPayoutSchema.parse({
     id: "payout-1",
-    sellerId: "seller-001" as AdminPayout["sellerId"],
+    sellerId: "seller-001",
     sellerName: "Test Seller",
     amount: 100_000,
     status: "REQUESTED",
     requestedAt: "2024-06-01T10:00:00Z",
     completedBy: undefined,
     completedAt: undefined,
+    currency: "VND",
     ...overrides,
-  };
+  });
 }
 
 describe("PayoutsQueue canonical payout contract", () => {

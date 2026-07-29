@@ -112,7 +112,7 @@ test.describe("dark-mode toggle UI", () => {
     // light-mode dark grays (rgb(15, 23, 42) / rgb(31, 41, 55)).
     const fgColor = await page.evaluate(() => {
       const headings = document.querySelectorAll("h1, h2, h3");
-      for (const h of headings) {
+      for (const h of Array.from(headings)) {
         const c = getComputedStyle(h).color;
         if (c && c !== "rgba(0, 0, 0, 0)") return c;
       }

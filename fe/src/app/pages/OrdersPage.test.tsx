@@ -1,10 +1,12 @@
 /** Tests for P0-9: cancel order confirm dialog on OrdersPage */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { HTMLAttributes, ReactNode, type ReactNode as RLNode } from "react";
+import type { HTMLAttributes, ReactNode, ReactNode as RLNode } from "react";
 import { createElement } from "react";
 import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi, beforeEach } from "vitest";
+
+import { orderSchema, type Order, type Page } from "../types/api";
 
 // Mock motion/react so AnimatePresence renders synchronously in jsdom
 vi.mock("motion/react", () => ({
@@ -18,9 +20,9 @@ vi.mock("motion/react", () => ({
 const cancelOrderMock = vi.fn();
 
 // vi.hoisted ensures ordersData is shared between mock factory and tests
-const { ordersData } = vi.hoisted(() => ({
+const { ordersData } = vi.hoisted<{ ordersData: Page<Order> }>(() => ({
   ordersData: {
-    content: [] as any[],
+    content: [],
     totalElements: 0,
     page: 0,
     totalPages: 1,
@@ -73,13 +75,13 @@ vi.mock("@tanstack/react-query", () => {
   // ordersData is defined in vi.hoisted at the top of this module — it is accessible here
 
   return {
-    queryOptions: (opts: any) => opts,
+    queryOptions: <T,>(options: T) => options,
     useQuery: vi.fn(() => ({ data: undefined })),
     useMutation: vi.fn(() => ({ mutate: vi.fn(), mutateAsync: vi.fn() })),
     useQueryClient: vi.fn(() => ({ invalidateQueries: vi.fn() })),
     useSuspenseQuery: vi.fn(() => ({ data: ordersData })),
     QueryClient: vi.fn(),
-    QueryClientProvider: ({ children }: any) => children,
+    QueryClientProvider: ({ children }: { children: ReactNode }) => children,
   };
 });
 
@@ -97,8 +99,8 @@ function makeWrapper() {
   return Wrapper;
 }
 
-function makePendingOrder(id: string) {
-  return {
+function makePendingOrder(id: string): Order {
+  return orderSchema.parse({
     id,
     status: "PENDING",
     subOrders: [
@@ -111,7 +113,7 @@ function makePendingOrder(id: string) {
     ],
     total: 100000,
     createdAt: "2026-06-01T00:00:00Z",
-  };
+  });
 }
 
 describe("OrdersPage — P0-9 cancel confirm dialog", () => {
@@ -174,7 +176,8 @@ describe("OrdersPage — P0-9 cancel confirm dialog", () => {
       .getAllByRole("button")
       .find((b) => b.className.includes("bg-error"));
     expect(confirmBtn).toBeTruthy();
-    fireEvent.click(confirmBtn!);
+    if (!confirmBtn) throw new Error("Cancel confirmation button was not rendered");
+    fireEvent.click(confirmBtn);
 
     await waitFor(() => {
       expect(cancelOrderMock.mock.calls.some((args) => args[0] === "ord-cancel-2")).toBe(true);

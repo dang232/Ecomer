@@ -8,7 +8,7 @@
  * reads the cookie, attaches the header on the two protected endpoints, and
  * does <em>not</em> attach it on login (which is excluded by the filter).
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 
 import {
   CSRF_COOKIE_NAME,
@@ -38,11 +38,15 @@ function getLastFetchCall(): { url: string; init: RequestInit } {
   // directly so we never depend on the global having our stub attached.
   const calls = fetchMock.mock.calls;
   expect(calls.length).toBeGreaterThan(0);
-  const last = calls[calls.length - 1];
-  return { url: last[0] as string, init: last[1] as RequestInit };
+  const last = calls.at(-1);
+  if (!last) throw new Error("Expected a fetch call");
+  const [input, init] = last;
+  const url =
+    typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+  return { url, init: init ?? {} };
 }
 
-let fetchMock: ReturnType<typeof vi.fn>;
+let fetchMock: Mock<typeof globalThis.fetch>;
 
 function getHeadersAsObject(init: RequestInit): Record<string, string> {
   const headers = init.headers;
@@ -61,7 +65,7 @@ function getHeadersAsObject(init: RequestInit): Record<string, string> {
     }
     return out;
   }
-  return headers as Record<string, string>;
+  return headers;
 }
 
 function mockFetchReturningAuthSession(): void {
@@ -80,7 +84,7 @@ beforeEach(() => {
   // Spy on the real global fetch. vi.restoreAllMocks() in afterEach
   // restores the original implementation so this test does not pollute
   // other test files that rely on the real fetch.
-  fetchMock = vi.fn();
+  fetchMock = vi.fn<typeof globalThis.fetch>();
   vi.spyOn(globalThis, "fetch").mockImplementation(fetchMock);
   setDocumentCookie("");
 });

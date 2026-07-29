@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Review } from "../../app/types/api";
+import { reviewSchema, type Review } from "../../app/types/api";
 
 import {
   formatReviewDate,
@@ -9,7 +9,7 @@ import {
 } from "./review-view-model";
 
 function review(overrides: Partial<Review> = {}): Review {
-  return {
+  return reviewSchema.parse({
     id: "review-1",
     productId: "00000000-0000-0000-0000-000000000001",
     userName: "Buyer",
@@ -18,7 +18,7 @@ function review(overrides: Partial<Review> = {}): Review {
     comment: "Clear sound",
     helpful: 0,
     ...overrides,
-  };
+  });
 }
 
 describe("review publication view model", () => {

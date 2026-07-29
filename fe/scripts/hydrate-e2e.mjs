@@ -13,32 +13,69 @@
 //
 // On non-Windows this script is a no-op.
 
-import { existsSync, copyFileSync, unlinkSync, renameSync, readdirSync, lstatSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  lstatSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  statSync,
+  unlinkSync,
+} from "node:fs";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const E2E_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..", "e2e");
 
-if (process.platform !== "win32") process.exit(0);
-if (!existsSync(E2E_DIR)) process.exit(0);
-
 const REPARSE_POINT = 0x400; // IO_REPARSE_TAG_* set on file attributes via fs
 
-let hydrated = 0;
-for (const name of readdirSync(E2E_DIR)) {
-  if (!name.endsWith(".spec.ts")) continue;
-  const full = join(E2E_DIR, name);
+export function collectSpecFiles(directory) {
+  const specs = [];
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const full = join(directory, entry.name);
+    const stat = lstatSync(full);
+    const targetStat = stat.isSymbolicLink() ? statSync(full) : stat;
+    if (targetStat.isDirectory()) {
+      specs.push(...collectSpecFiles(full));
+      continue;
+    }
+    if (entry.name.endsWith(".spec.ts")) specs.push(full);
+  }
+  return specs.sort();
+}
+
+function hydrateSpecFile(full) {
+  try {
+    readFileSync(full);
+  } catch (error) {
+    throw new Error(`Could not read E2E spec: ${full}`, { cause: error });
+  }
+
   const stat = lstatSync(full);
   // Node's lstat sets isSymbolicLink() for reparse-points on Windows;
   // OneDrive cloud-only stubs come through here.
-  if (!stat.isSymbolicLink()) continue;
+  if (!stat.isSymbolicLink()) return false;
   const tmp = `${full}.hydrate.tmp`;
   copyFileSync(full, tmp);
   unlinkSync(full);
   renameSync(tmp, full);
-  hydrated += 1;
+  return true;
 }
 
-if (hydrated > 0) {
-  console.log(`hydrated ${hydrated} OneDrive reparse-point spec file(s) in fe/e2e/`);
+function main() {
+  if (process.platform !== "win32" || !existsSync(E2E_DIR)) return;
+
+  let hydrated = 0;
+  for (const spec of collectSpecFiles(E2E_DIR)) {
+    if (hydrateSpecFile(spec)) hydrated += 1;
+  }
+
+  if (hydrated > 0) {
+    console.log(`hydrated ${hydrated} OneDrive reparse-point spec file(s) in fe/e2e/`);
+  }
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main();
 }
