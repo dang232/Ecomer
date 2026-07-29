@@ -3,6 +3,7 @@ package com.vnshop.apigateway.infrastructure.config;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.security.web.server.csrf.ServerCsrfTokenRequestAttributeHandler;
 import reactor.core.publisher.Mono;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -19,5 +20,11 @@ class SecurityConfigCsrfTest {
 
         assertThat(chain.getWebFilters().collectList().block())
                 .anyMatch(filter -> filter.getClass().getSimpleName().contains("Csrf"));
+    }
+
+    @Test
+    void gatewayAcceptsTheSpaRawDoubleSubmitCsrfHeader() {
+        assertThat(new SecurityConfig().csrfTokenRequestAttributeHandler())
+                .isInstanceOf(ServerCsrfTokenRequestAttributeHandler.class);
     }
 }

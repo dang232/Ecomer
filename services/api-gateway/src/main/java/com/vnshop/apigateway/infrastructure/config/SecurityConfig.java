@@ -16,6 +16,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverterAdapter;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.security.web.server.csrf.CookieServerCsrfTokenRepository;
+import org.springframework.security.web.server.csrf.ServerCsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
@@ -84,6 +85,7 @@ public class SecurityConfig {
             .cors(org.springframework.security.config.Customizer.withDefaults())
             .csrf(csrf -> csrf
                 .csrfTokenRepository(csrfTokenRepository())
+                .csrfTokenRequestHandler(csrfTokenRequestAttributeHandler())
                 .requireCsrfProtectionMatcher(this::requiresCsrfProtection))
             .authorizeExchange(exchanges -> exchanges
                 // Browsers send a no-auth OPTIONS preflight before any
@@ -154,6 +156,10 @@ public class SecurityConfig {
         repository.setHeaderName(CSRF_HEADER);
         repository.setCookiePath("/");
         return repository;
+    }
+
+    ServerCsrfTokenRequestAttributeHandler csrfTokenRequestAttributeHandler() {
+        return new ServerCsrfTokenRequestAttributeHandler();
     }
 
     private Mono<ServerWebExchangeMatcher.MatchResult> requiresCsrfProtection(
