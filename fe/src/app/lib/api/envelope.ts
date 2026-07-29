@@ -12,9 +12,7 @@ export const apiMetaSchema = z
 
 export type ApiMeta = z.infer<typeof apiMetaSchema>;
 
-export const apiResponseSchema = <TData>(
-  data: z.ZodType<TData>,
-) =>
+export const apiResponseSchema = <TData>(data: z.ZodType<TData>) =>
   z.object({
     success: z.boolean(),
     message: z.string(),
@@ -24,9 +22,7 @@ export const apiResponseSchema = <TData>(
     meta: apiMetaSchema.optional(),
   });
 
-export type ApiResponse<TData> = z.infer<
-  ReturnType<typeof apiResponseSchema<TData>>
->;
+export type ApiResponse<TData> = z.infer<ReturnType<typeof apiResponseSchema<TData>>>;
 
 export class ApiError extends Error {
   readonly status: number;

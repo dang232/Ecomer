@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components -- showNotificationToast is paired with its render component for Sonner custom toasts */
 import { toast } from "sonner";
 
 import type { Notification } from "../types/api/notification";
@@ -32,19 +31,5 @@ export function NotificationToast({ notification, toastId, onNavigate }: Notific
         <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{notification.body}</p>
       </div>
     </button>
-  );
-}
-
-/**
- * Show a notification toast. Call this from the WebSocket hook when a new
- * notification arrives. Uses Sonner's custom toast with 5s auto-dismiss.
- */
-export function showNotificationToast(
-  notification: Notification,
-  navigate: (path: string) => void,
-): void {
-  toast.custom(
-    (id) => <NotificationToast notification={notification} toastId={id} onNavigate={navigate} />,
-    { duration: 5000, position: "top-right" },
   );
 }

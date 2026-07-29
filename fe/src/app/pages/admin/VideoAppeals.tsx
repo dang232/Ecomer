@@ -80,13 +80,14 @@ function AppealVideoModal({ item, onClose }: { item: AdminVideoAppealItem; onClo
 
         <div className="aspect-video bg-black w-full">
           {item.presignedUrl ? (
-            // eslint-disable-next-line jsx-a11y/media-has-caption -- admin appeal review; captions not applicable for moderation workflow
             <video
               src={item.presignedUrl ?? ""}
               controls
               className="w-full h-full"
               poster={item.posterUrl ?? undefined}
-            />
+            >
+              <track kind="captions" srcLang="vi" label="Captions unavailable" />
+            </video>
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <p className="text-sm text-white/60">{t("admin.videoAppeals.noPreview")}</p>

@@ -20,7 +20,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
-import { useAuth } from "../hooks/use-auth";
+import { useAuth } from "../hooks/auth-context";
 import { avatarUploadErrorMessage, useAvatarUpload } from "../hooks/use-avatar-upload";
 import { profileOptions } from "../hooks/use-profile";
 import { addressKey } from "../lib/address-key";

@@ -92,7 +92,10 @@ export function SellerPage() {
   const sellerId = profileQuery.data?.id;
   const publicStatsQuery = useQuery({
     queryKey: ["seller", "public-stats", sellerId],
-    queryFn: () => getSeller(sellerId!),
+    queryFn: () => {
+      if (!sellerId) throw new Error("A seller ID is required for public statistics");
+      return getSeller(sellerId);
+    },
     enabled: Boolean(sellerId),
     retry: false,
   });

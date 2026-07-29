@@ -117,8 +117,10 @@ export function PayoutsQueue() {
       return [...filtered].sort((a, b) => b.amount - a.amount);
     }
     return [...filtered].sort((a, b) => {
-      const ta = dateField(a) ? Date.parse(dateField(a)!) : 0;
-      const tb = dateField(b) ? Date.parse(dateField(b)!) : 0;
+      const aDate = dateField(a);
+      const bDate = dateField(b);
+      const ta = aDate ? Date.parse(aDate) : 0;
+      const tb = bDate ? Date.parse(bDate) : 0;
       return tb - ta;
     });
   }, [filtered, sortBy, dateField]);

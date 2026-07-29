@@ -71,7 +71,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../components/vnshop-context", () => ({
+vi.mock("../hooks/use-vnshop", () => ({
   useVNShop: () => ({
     toggleWishlist: vi.fn(),
     isWishlisted: () => false,

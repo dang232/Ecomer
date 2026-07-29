@@ -91,7 +91,10 @@ export function createCheckoutSubmissionController(
     for (const listener of listeners) listener(state);
   };
 
-  const providerAdapters: Record<CheckoutProvider, (order: CreatedOrder) => Promise<InitializedPayment>> = {
+  const providerAdapters: Record<
+    CheckoutProvider,
+    (order: CreatedOrder) => Promise<InitializedPayment>
+  > = {
     COD: async (order) => {
       const payment = await dependencies.codConfirm({ orderId: order.orderId }, order.paymentKey);
       if (payment.status !== "AWAITING_COLLECTION" && payment.status !== "COMPLETED") {
@@ -99,15 +102,19 @@ export function createCheckoutSubmissionController(
       }
       return initialized(order, payment.paymentId, { kind: "cod" });
     },
-    VNPAY: async (order) => redirect(order, await dependencies.vnpayCreate({ orderId: order.orderId }, order.paymentKey)),
-    MOMO: async (order) => redirect(order, await dependencies.momoCreate({ orderId: order.orderId }, order.paymentKey)),
+    VNPAY: async (order) =>
+      redirect(order, await dependencies.vnpayCreate({ orderId: order.orderId }, order.paymentKey)),
+    MOMO: async (order) =>
+      redirect(order, await dependencies.momoCreate({ orderId: order.orderId }, order.paymentKey)),
     VIETQR: async (order) => {
       const result = await dependencies.vietqrCreate({ orderId: order.orderId }, order.paymentKey);
       require(result.payment.paymentId, "VietQR payment ID");
       require(result.qrImageUrl, "VietQR QR URL");
       require(result.reference, "VietQR reference");
       return initialized(order, result.payment.paymentId, {
-        kind: "vietqr", qrImageUrl: result.qrImageUrl, reference: result.reference,
+        kind: "vietqr",
+        qrImageUrl: result.qrImageUrl,
+        reference: result.reference,
       });
     },
     STRIPE: async (order) => {
@@ -117,7 +124,10 @@ export function createCheckoutSubmissionController(
       require(result.clientSecret, "Stripe client secret");
       require(result.intentId, "Stripe intent ID");
       return initialized(order, result.payment.paymentId, {
-        kind: "stripe", publishableKey: result.publishableKey, clientSecret: result.clientSecret, intentId: result.intentId,
+        kind: "stripe",
+        publishableKey: result.publishableKey,
+        clientSecret: result.clientSecret,
+        intentId: result.intentId,
       });
     },
     PAYPAL: async (order) => {
@@ -126,7 +136,9 @@ export function createCheckoutSubmissionController(
       require(result.clientId, "PayPal client ID");
       require(result.paypalOrderId, "PayPal order ID");
       return initialized(order, result.payment.paymentId, {
-        kind: "paypal", clientId: result.clientId, paypalOrderId: result.paypalOrderId,
+        kind: "paypal",
+        clientId: result.clientId,
+        paypalOrderId: result.paypalOrderId,
       });
     },
   };
@@ -150,7 +162,12 @@ export function createCheckoutSubmissionController(
     }
   };
 
-  const reconcile = async (attempt: { order: PlaceOrderInput; provider: CheckoutProvider; orderKey: string; cartFingerprint: string }) => {
+  const reconcile = async (attempt: {
+    order: PlaceOrderInput;
+    provider: CheckoutProvider;
+    orderKey: string;
+    cartFingerprint: string;
+  }) => {
     transition({ type: "reconciling", startedAt: dependencies.now() });
     const maxAttempts = dependencies.reconciliationAttempts ?? 3;
     const delay = dependencies.reconciliationDelayMs ?? 150;
@@ -186,7 +203,11 @@ export function createCheckoutSubmissionController(
   const start = async (input: CheckoutSubmissionInput): Promise<CheckoutSubmissionResult> => {
     if (state.status === "pending") return stateResult(state);
     if (state.status === "completed") {
-      transition({ type: "new-draft", orderKey: dependencies.newKey(), cartFingerprint: state.cartFingerprint });
+      transition({
+        type: "new-draft",
+        orderKey: dependencies.newKey(),
+        cartFingerprint: state.cartFingerprint,
+      });
     }
     if (ownsOrder(state)) return initializePayment(createdOrder(state));
     if (state.status === "uncertain") return { state };
@@ -355,25 +376,38 @@ export function createCheckoutSubmissionController(
   }
 }
 
-function initialized(order: CreatedOrder, paymentId: string, providerState: ProviderState): InitializedPayment {
+function initialized(
+  order: CreatedOrder,
+  paymentId: string,
+  providerState: ProviderState,
+): InitializedPayment {
   return { ...order, paymentId, providerState };
 }
 
 function redirect(order: CreatedOrder, payment: RedirectPayment): InitializedPayment {
   require(payment.paymentId, "Redirect payment ID");
   require(payment.redirectUrl, "Redirect URL");
-  return initialized(order, payment.paymentId, { kind: "redirect", redirectUrl: payment.redirectUrl });
+  return initialized(order, payment.paymentId, {
+    kind: "redirect",
+    redirectUrl: payment.redirectUrl,
+  });
 }
 
-function resultFor(payment: InitializedPayment, state: CheckoutSubmissionState): CheckoutSubmissionResult {
+function resultFor(
+  payment: InitializedPayment,
+  state: CheckoutSubmissionState,
+): CheckoutSubmissionResult {
   return {
     state,
     orderId: payment.orderId,
-    redirectUrl: payment.providerState.kind === "redirect" ? payment.providerState.redirectUrl : undefined,
+    redirectUrl:
+      payment.providerState.kind === "redirect" ? payment.providerState.redirectUrl : undefined,
   };
 }
 
-function recoveryOrder(recovery: Extract<CheckoutRecoveryRecord, { paymentKey: string }>): CreatedOrder {
+function recoveryOrder(
+  recovery: Extract<CheckoutRecoveryRecord, { paymentKey: string }>,
+): CreatedOrder {
   return {
     orderKey: recovery.orderKey,
     cartFingerprint: recovery.cartFingerprint,

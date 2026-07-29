@@ -15,7 +15,7 @@ import {
   type CheckoutSubmissionResult,
 } from "../../../features/checkout";
 import { readJsonText } from "../../../shared/api/read-json";
-import { useAuth } from "../../hooks/use-auth";
+import { useAuth } from "../../hooks/auth-context";
 import { useCart } from "../../hooks/use-cart";
 import { ApiError } from "../../lib/api";
 import {
@@ -139,14 +139,19 @@ export function CheckoutPage() {
   // The user's explicit shipping pick. Empty string means "use default" — we resolve
   // to the first available option at render time, so we never need an effect to
   // mirror server-provided defaults into local state.
-  const [shippingChoice, setShippingChoice] = useState<string>(() => initialProgress?.shippingChoice ?? "");
+  const [shippingChoice, setShippingChoice] = useState<string>(
+    () => initialProgress?.shippingChoice ?? "",
+  );
   const selectedShippingId = shippingChoice || "";
   const [selectedPaymentId, setSelectedPaymentId] = useState<PaymentOption["id"]>(
     () => initialProgress?.selectedPaymentId ?? "VNPAY",
   );
 
   useEffect(() => {
-    if (paymentOptions.length > 0 && !paymentOptions.some((option) => option.id === selectedPaymentId)) {
+    if (
+      paymentOptions.length > 0 &&
+      !paymentOptions.some((option) => option.id === selectedPaymentId)
+    ) {
       setSelectedPaymentId(paymentOptions[0].id);
     }
   }, [paymentOptions, selectedPaymentId]);
@@ -186,7 +191,9 @@ export function CheckoutPage() {
         .join("|"),
     [cartItems],
   );
-  const isProcessing = ["placing", "reconciling", "payment-initializing"].includes(submission.status);
+  const isProcessing = ["placing", "reconciling", "payment-initializing"].includes(
+    submission.status,
+  );
   const recovery = recoveryStore.read();
   const recoveryResumeRef = useRef<string | null>(null);
 
@@ -468,7 +475,9 @@ export function CheckoutPage() {
         },
       });
     } catch (error) {
-      toast.error(error instanceof ApiError ? error.message : t("checkout.payment.placeOrderFailed"));
+      toast.error(
+        error instanceof ApiError ? error.message : t("checkout.payment.placeOrderFailed"),
+      );
       return;
     }
 
@@ -488,7 +497,10 @@ export function CheckoutPage() {
         toast.error(t("checkout.payment.initFailedShort"));
         return;
       }
-      if (persisted.orderId !== result.state.orderId || persisted.paymentId !== result.state.paymentId) {
+      if (
+        persisted.orderId !== result.state.orderId ||
+        persisted.paymentId !== result.state.paymentId
+      ) {
         toast.error(t("checkout.payment.initFailedShort"));
         return;
       }
@@ -542,7 +554,11 @@ export function CheckoutPage() {
 
   if (showsRecovery) {
     const activeOrderId =
-      "orderId" in submission ? submission.orderId : recovery && "orderId" in recovery ? recovery.orderId : undefined;
+      "orderId" in submission
+        ? submission.orderId
+        : recovery && "orderId" in recovery
+          ? recovery.orderId
+          : undefined;
     return (
       <CheckoutPaymentRecovery
         recovery={recovery}
@@ -583,7 +599,10 @@ export function CheckoutPage() {
             toast.error(t("checkout.payment.initFailedShort"));
             return;
           }
-          if (persisted.orderId !== submission.orderId || persisted.paymentId !== submission.paymentId) {
+          if (
+            persisted.orderId !== submission.orderId ||
+            persisted.paymentId !== submission.paymentId
+          ) {
             toast.error(t("checkout.payment.initFailedShort"));
             return;
           }

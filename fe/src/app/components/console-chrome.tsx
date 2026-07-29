@@ -15,7 +15,7 @@ import { useNavigate } from "react-router";
 
 import { ImageWithFallback } from "./image-with-fallback";
 import { LanguageSwitcher } from "./language-switcher";
-import { useVNShop } from "./vnshop-context";
+import { useVNShop } from "../hooks/use-vnshop";
 
 /**
  * Thin chrome for back-office routes (/admin/*, /seller/*).

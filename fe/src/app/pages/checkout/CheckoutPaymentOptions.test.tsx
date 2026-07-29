@@ -49,8 +49,6 @@ describe("toPaymentOptions", () => {
   });
 
   it("omits disabled capabilities", () => {
-    expect(
-      toPaymentOptions([{ id: "COD", name: "Cash", enabled: false }], t),
-    ).toEqual([]);
+    expect(toPaymentOptions([{ id: "COD", name: "Cash", enabled: false }], t)).toEqual([]);
   });
 });

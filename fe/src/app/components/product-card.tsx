@@ -9,7 +9,7 @@ import type { Product } from "../types/ui";
 
 import { ImageWithFallback } from "./image-with-fallback";
 import { StarRating } from "./star-rating";
-import { useVNShop } from "./vnshop-context";
+import { useVNShop } from "../hooks/use-vnshop";
 
 interface ProductCardProps {
   product: Product;

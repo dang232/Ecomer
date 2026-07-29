@@ -36,7 +36,9 @@ function writeRedirectRecovery(provider: "VNPAY" | "MOMO" = "VNPAY") {
 }
 
 function renderPage(initialEntries = [`/payment/return/vnpay?vnp_TxnRef=${paymentId}`]) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={initialEntries}>
@@ -72,7 +74,11 @@ describe("PaymentReturnPage", () => {
     writeRedirectRecovery();
     renderPage(["/payment/return/momo?orderId=wrong-reference"]);
 
-    await waitFor(() => expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("paymentReturn.error.title"));
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+        "paymentReturn.error.title",
+      ),
+    );
     expect(paymentStatusMock).not.toHaveBeenCalled();
   });
 
@@ -80,11 +86,15 @@ describe("PaymentReturnPage", () => {
     sessionStorage.setItem(CHECKOUT_RECOVERY_STORAGE_KEY, "not-json");
     renderPage();
 
-    await waitFor(() => expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("paymentReturn.error.title"));
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+        "paymentReturn.error.title",
+      ),
+    );
     expect(paymentStatusMock).not.toHaveBeenCalled();
   });
 
-  it.each(["COMPLETED", "FAILED", "PAYMENT_TIMEOUT"]) (
+  it.each(["COMPLETED", "FAILED", "PAYMENT_TIMEOUT"])(
     "stops polling and clears recovery for %s",
     async (status) => {
       writeRedirectRecovery();

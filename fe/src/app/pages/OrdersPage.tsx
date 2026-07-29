@@ -23,7 +23,7 @@ import { toast } from "sonner";
 import { ImageWithFallback } from "../components/image-with-fallback";
 import { ConfirmDialog } from "../components/ui/confirm-dialog";
 import { Modal } from "../components/ui/modal";
-import { useAuth } from "../hooks/use-auth";
+import { useAuth } from "../hooks/auth-context";
 import { useCart } from "../hooks/use-cart";
 import { useCancelOrder, myOrdersOptions, orderDetailOptions } from "../hooks/use-orders";
 import { ApiError } from "../lib/api";
@@ -80,6 +80,12 @@ const STATUS_CONFIG: Record<
 };
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const TRACKING_SKELETON_IDS = [
+  "tracking-skeleton-1",
+  "tracking-skeleton-2",
+  "tracking-skeleton-3",
+  "tracking-skeleton-4",
+];
 
 function fromServer(o: ServerOrder): UIOrder {
   const sub = o.subOrders?.[0];
@@ -158,9 +164,8 @@ function TrackingModal({
           aria-busy="true"
           aria-label={t("orders.tracking.loadingAria")}
         >
-          {Array.from({ length: 4 }).map((_, i) => (
-            // eslint-disable-next-line react/no-array-index-key -- decorative skeleton placeholders, no stable id
-            <div key={i} className="flex gap-4">
+          {TRACKING_SKELETON_IDS.map((id) => (
+            <div key={id} className="flex gap-4">
               <div className="w-6 h-6 rounded-full bg-muted" />
               <div className="flex-1 h-4 rounded bg-muted" />
             </div>
@@ -169,8 +174,10 @@ function TrackingModal({
       ) : showRealTimeline ? (
         <div className="space-y-4">
           {events.map((ev, i) => (
-            // eslint-disable-next-line react/no-array-index-key -- TrackingEvent has no stable id; ordering is server-defined
-            <div key={i} className="flex gap-4">
+            <div
+              key={[ev.at, ev.status, ev.location, ev.note].filter(Boolean).join("-")}
+              className="flex gap-4"
+            >
               <div className="flex flex-col items-center">
                 <div
                   className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"

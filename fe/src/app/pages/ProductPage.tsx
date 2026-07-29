@@ -28,8 +28,8 @@ import { usePageMeta } from "../../utils/meta-tags";
 import { ImageWithFallback } from "../components/image-with-fallback";
 import { RecentlyViewedGrid } from "../components/RecentlyViewedGrid";
 import { StarRating } from "../components/star-rating";
-import { useVNShop } from "../components/vnshop-context";
-import { useAuth } from "../hooks/use-auth";
+import { useVNShop } from "../hooks/use-vnshop";
+import { useAuth } from "../hooks/auth-context";
 import { productDetailOptions } from "../hooks/use-products";
 import { useRecentlyViewed } from "../hooks/use-recently-viewed";
 import { useFrequentlyBoughtTogether, useYouMayAlsoLike } from "../hooks/use-recommendations";
@@ -120,13 +120,15 @@ function SellerCard({ sellerId }: { sellerId?: string }) {
 
 export function ProductPage() {
   const { id } = useParams();
+  if (!id) return <Navigate to="/" replace />;
+  const productId = id;
   const navigate = useNavigate();
   const { addToCart, toggleWishlist, isWishlisted } = useVNShop();
   const { t } = useTranslation();
 
-  const { data: product } = useSuspenseQuery(productDetailOptions(id!));
-  const fbtQuery = useFrequentlyBoughtTogether(id);
-  const ymalQuery = useYouMayAlsoLike(id);
+  const { data: product } = useSuspenseQuery(productDetailOptions(productId));
+  const fbtQuery = useFrequentlyBoughtTogether(productId);
+  const ymalQuery = useYouMayAlsoLike(productId);
   const { authenticated, login } = useAuth();
   const qc = useQueryClient();
 
@@ -145,21 +147,20 @@ export function ProductPage() {
     }
   }, [product, addToRecentlyViewed]);
 
-  const reviewController = useProductReviewController(id!);
+  const reviewController = useProductReviewController(productId);
   const reviewCount = reviewController.summary?.count ?? product.reviewCount;
   const reviewRating = reviewController.summary?.average ?? product.rating;
 
   const liveQuestionsQuery = useQuery({
-    queryKey: ["questions", "product", id],
-    queryFn: () => questionsByProduct(id!),
-    enabled: !!id,
+    queryKey: ["questions", "product", productId],
+    queryFn: () => questionsByProduct(productId),
     retry: false,
   });
 
   const submitQuestion = useMutation({
-    mutationFn: (question: string) => askQuestion({ productId: id!, question }),
+    mutationFn: (question: string) => askQuestion({ productId, question }),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["questions", "product", id!] });
+      void qc.invalidateQueries({ queryKey: ["questions", "product", productId] });
       toast.success(t("product.qa.submitOk"));
       setQuestionDraft("");
     },
@@ -233,11 +234,6 @@ export function ProductPage() {
     })),
     ...galleryImages.map((url) => ({ type: "image" as const, url })),
   ];
-
-  // Guard: product ID is required — redirect to home if missing
-  if (!id) {
-    return <Navigate to="/" replace />;
-  }
 
   const currentItem = galleryItems[imageIdx] ?? galleryItems[0];
 

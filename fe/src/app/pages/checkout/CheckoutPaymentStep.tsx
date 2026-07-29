@@ -24,10 +24,17 @@ export function CheckoutPaymentStep({
     <div>
       <h2 className="font-bold text-foreground text-lg mb-4">{t("checkout.payment.header")}</h2>
       {loadError || paymentOptions.length === 0 ? (
-        <div role="alert" className="border border-destructive/40 bg-destructive/5 p-4 text-sm text-foreground">
+        <div
+          role="alert"
+          className="border border-destructive/40 bg-destructive/5 p-4 text-sm text-foreground"
+        >
           <p>{t("checkout.payment.unavailable")}</p>
           {onRetry ? (
-            <button type="button" onClick={onRetry} className="mt-2 text-sm font-semibold text-primary">
+            <button
+              type="button"
+              onClick={onRetry}
+              className="mt-2 text-sm font-semibold text-primary"
+            >
               {t("checkout.payment.retry")}
             </button>
           ) : null}

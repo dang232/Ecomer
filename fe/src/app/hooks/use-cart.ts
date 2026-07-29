@@ -16,7 +16,7 @@ import { fromServer, findVariant } from "../lib/api/product-mapper";
 import type { Cart } from "../types/api";
 import { productIdSchema, sellerIdSchema } from "../types/api/branded-ids";
 
-import { useAuth } from "./use-auth";
+import { useAuth } from "./auth-context";
 
 const CART_KEY = ["cart"] as const;
 const GUEST_STORAGE_KEY = "vnshop:guest-cart";

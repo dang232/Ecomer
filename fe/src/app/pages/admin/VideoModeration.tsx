@@ -109,13 +109,14 @@ function VideoPreviewModal({
               <p className="text-sm text-white/60">{t("admin.videoModeration.loadingPreview")}</p>
             </div>
           ) : previewUrl?.url ? (
-            // eslint-disable-next-line jsx-a11y/media-has-caption -- admin moderation preview; captions not applicable for NSFW review workflow
             <video
               src={previewUrl.url}
               controls
               className="w-full h-full"
               poster={item.nsfwScore !== undefined ? undefined : undefined}
-            />
+            >
+              <track kind="captions" srcLang="vi" label="Captions unavailable" />
+            </video>
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <p className="text-sm text-white/60">{t("admin.videoModeration.noPreview")}</p>

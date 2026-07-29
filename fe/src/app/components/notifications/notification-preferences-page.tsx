@@ -2,6 +2,15 @@ import { IconBell, IconBellCog, IconBellOff, IconMail } from "@tabler/icons-reac
 import { useEffect, useState } from "react";
 
 import { useNotificationPreferences } from "../../hooks/use-notification-preferences";
+
+const NOTIFICATION_PREFERENCE_SKELETON_IDS = [
+  "notification-preference-skeleton-1",
+  "notification-preference-skeleton-2",
+  "notification-preference-skeleton-3",
+  "notification-preference-skeleton-4",
+  "notification-preference-skeleton-5",
+  "notification-preference-skeleton-6",
+];
 import type { TypePreference, NotificationChannel } from "../../types/api/notification-preferences";
 
 const NOTIFICATION_TYPE_LABELS: Record<string, { label: string; description: string }> = {
@@ -88,9 +97,8 @@ export function NotificationPreferencesPage() {
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-muted rounded w-48" />
           <div className="h-4 bg-muted rounded w-64" />
-          {Array.from({ length: 6 }).map((_, i) => (
-            // eslint-disable-next-line react/no-array-index-key -- loading skeleton placeholders have no stable identity
-            <div key={i} className="h-16 bg-muted rounded" />
+          {NOTIFICATION_PREFERENCE_SKELETON_IDS.map((id) => (
+            <div key={id} className="h-16 bg-muted rounded" />
           ))}
         </div>
       </div>

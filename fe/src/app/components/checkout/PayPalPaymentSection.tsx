@@ -15,7 +15,12 @@ interface Props {
   onCompleted: () => void;
 }
 
-export function PayPalPaymentSection({ orderId, idempotencyKey, initialization, onCompleted }: Props) {
+export function PayPalPaymentSection({
+  orderId,
+  idempotencyKey,
+  initialization,
+  onCompleted,
+}: Props) {
   // ponytail: read env at render time so stubEnv() in tests works and HMR picks up changes
   const paypalEnabled = import.meta.env.VITE_PAYPAL_ENABLED === "true";
   const clientId = initialization?.clientId ?? import.meta.env.VITE_PAYPAL_CLIENT_ID ?? "";

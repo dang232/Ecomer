@@ -79,18 +79,17 @@ export function CouponsManagement() {
           <thead className="bg-muted">
             <tr>
               {[
-                t("admin.coupons.th.code"),
-                t("admin.coupons.th.type"),
-                t("admin.coupons.th.value"),
-                t("admin.coupons.th.status"),
-                "",
-              ].map((h, i) => (
+                { id: "code", label: t("admin.coupons.th.code") },
+                { id: "type", label: t("admin.coupons.th.type") },
+                { id: "value", label: t("admin.coupons.th.value") },
+                { id: "status", label: t("admin.coupons.th.status") },
+                { id: "actions", label: "" },
+              ].map((column) => (
                 <th
-                  // eslint-disable-next-line react/no-array-index-key -- table headers are positional, no stable id
-                  key={i}
+                  key={column.id}
                   className="px-4 py-3 text-xs font-semibold text-muted-foreground text-left"
                 >
-                  {h}
+                  {column.label}
                 </th>
               ))}
             </tr>

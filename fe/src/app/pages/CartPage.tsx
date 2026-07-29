@@ -22,7 +22,7 @@ import { GuestCartMergeDialog } from "../components/GuestCartMergeDialog";
 import { ImageWithFallback } from "../components/image-with-fallback";
 import { RecentlyViewedGrid } from "../components/RecentlyViewedGrid";
 import { useAppConfig } from "../hooks/use-app-config";
-import { useAuth } from "../hooks/use-auth";
+import { useAuth } from "../hooks/auth-context";
 import { useCart } from "../hooks/use-cart";
 import { useRecentlyViewed } from "../hooks/use-recently-viewed";
 import { ApiError } from "../lib/api";

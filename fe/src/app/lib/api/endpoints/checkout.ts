@@ -24,8 +24,7 @@ export interface CheckoutCalculateInput {
 export const calculateCheckout = (body: CheckoutCalculateInput) =>
   api.post("/checkout/calculate", calculateCheckoutSchema, body);
 
-export const paymentMethods = () =>
-  api.get("/payment/methods", z.array(paymentMethodSchema));
+export const paymentMethods = () => api.get("/payment/methods", z.array(paymentMethodSchema));
 
 export interface ShippingOptionsRequest {
   address: {

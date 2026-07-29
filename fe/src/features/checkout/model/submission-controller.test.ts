@@ -39,8 +39,13 @@ function dependencies(
     placeOrder: vi.fn().mockResolvedValue({ id: "order-1", total: 125000 }),
     findOrderByIdempotencyKey: vi.fn().mockResolvedValue({ kind: "not-found" }),
     codConfirm: vi.fn().mockResolvedValue({
-      paymentId: "payment-1", orderId: "order-1", amount: 125000, method: "COD",
-      status: "AWAITING_COLLECTION", transactionRef: null, redirectUrl: null,
+      paymentId: "payment-1",
+      orderId: "order-1",
+      amount: 125000,
+      method: "COD",
+      status: "AWAITING_COLLECTION",
+      transactionRef: null,
+      redirectUrl: null,
     }),
     vnpayCreate: vi.fn(),
     momoCreate: vi.fn(),
@@ -81,8 +86,13 @@ describe("checkout submission controller", () => {
       .fn()
       .mockRejectedValueOnce(new Error("temporary provider error"))
       .mockResolvedValueOnce({
-        paymentId: "payment-1", orderId: "order-1", amount: 125000, method: "COD",
-        status: "AWAITING_COLLECTION", transactionRef: null, redirectUrl: null,
+        paymentId: "payment-1",
+        orderId: "order-1",
+        amount: 125000,
+        method: "COD",
+        status: "AWAITING_COLLECTION",
+        transactionRef: null,
+        redirectUrl: null,
       });
     const deps = dependencies({ placeOrder, codConfirm });
     const controller = createCheckoutSubmissionController(deps, "cart-a");

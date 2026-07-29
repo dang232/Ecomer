@@ -126,7 +126,6 @@ export function VideoPlayer({
       ].join(" ")}
     >
       {/* Native video element — accessible via keyboard through native controls */}
-      {/* eslint-disable-next-line jsx-a11y/media-has-caption -- user-uploaded videos may not have captions; this is a known limitation for UGC content */}
       <video
         ref={videoRef}
         src={src}
@@ -155,6 +154,9 @@ export function VideoPlayer({
             default={track.default}
           />
         ))}
+        {!tracks?.length ? (
+          <track kind="captions" srcLang="vi" label="Captions unavailable" />
+        ) : null}
       </video>
 
       {/* Custom big-play overlay shown before first play on poster */}

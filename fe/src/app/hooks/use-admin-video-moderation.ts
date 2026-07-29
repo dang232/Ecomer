@@ -40,7 +40,10 @@ export function useVideoModerationQueue(params: AdminVideoModerationQueueParams 
 export function useVideoPreview(videoId: string | null) {
   return useQuery({
     queryKey: videoModerationKeys.preview(videoId ?? ""),
-    queryFn: () => adminVideoPreview(videoId!),
+    queryFn: () => {
+      if (!videoId) throw new Error("A video ID is required for preview");
+      return adminVideoPreview(videoId);
+    },
     enabled: !!videoId,
     retry: false,
     // Presigned URLs expire; don't cache for long.

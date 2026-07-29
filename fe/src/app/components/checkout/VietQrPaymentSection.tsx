@@ -13,7 +13,12 @@ interface Props {
   onCompleted: () => void;
 }
 
-export function VietQrPaymentSection({ orderId, idempotencyKey, initialization, onCompleted }: Props) {
+export function VietQrPaymentSection({
+  orderId,
+  idempotencyKey,
+  initialization,
+  onCompleted,
+}: Props) {
   const { t } = useTranslation();
   const [qr, setQr] = useState<{
     qrImageUrl: string;

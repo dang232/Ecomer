@@ -40,10 +40,7 @@ function makeItem(extra: Record<string, unknown> = {}): CartItem {
 describe("CheckoutReviewStep", () => {
   it("shows the cart-service variant identifier under the product name", () => {
     render(
-      <CheckoutReviewStep
-        {...baseProps}
-        cartItems={[makeItem({ variantId: "Size M / Blue" })]}
-      />,
+      <CheckoutReviewStep {...baseProps} cartItems={[makeItem({ variantId: "Size M / Blue" })]} />,
     );
 
     expect(screen.getByText("Blue T-Shirt")).toBeInTheDocument();
@@ -72,9 +69,7 @@ describe("CheckoutReviewStep", () => {
   });
 
   it("does not render a stock warning for fields outside the cart contract", () => {
-    render(
-      <CheckoutReviewStep {...baseProps} cartItems={[makeItem({ quantity: 3, stock: 2 })]} />,
-    );
+    render(<CheckoutReviewStep {...baseProps} cartItems={[makeItem({ quantity: 3, stock: 2 })]} />);
 
     expect(screen.queryByText(/Low stock/)).not.toBeInTheDocument();
   });

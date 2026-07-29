@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
-import { useAuth } from "../hooks/use-auth";
+import { useAuth } from "../hooks/auth-context";
 import { useNotifications } from "../hooks/use-notifications";
 import type { Notification } from "../types/api/notification";
 

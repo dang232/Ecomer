@@ -15,7 +15,7 @@ import {
 } from "../lib/api/endpoints/wishlist";
 import { productIdSchema, type ProductId } from "../types/api/branded-ids";
 
-import { useAuth } from "./use-auth";
+import { useAuth } from "./auth-context";
 
 const WISHLIST_KEY = ["wishlist"] as const;
 const LEGACY_STORAGE_KEY = "vnshop:wishlist";

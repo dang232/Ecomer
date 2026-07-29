@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 
-import { useAuth } from "../hooks/use-auth";
+import { useAuth } from "../hooks/auth-context";
 import { useMarkThreadRead, useMessages, useSendMessage } from "../hooks/use-messages";
 import { THREADS_KEY, useThreads } from "../hooks/use-threads";
 import { ApiError } from "../lib/api";

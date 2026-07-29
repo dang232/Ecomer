@@ -124,8 +124,6 @@ function CouponDialogBodyView({
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             placeholder={t("admin.coupons.dialog.codePlaceholder")}
             className="w-full px-3 py-2.5 border border-border rounded-xl text-sm font-mono uppercase tracking-wider outline-none focus:border-[var(--admin-primary)]"
-            // eslint-disable-next-line jsx-a11y/no-autofocus -- inside a modal opened by explicit user click; focusing the first input is expected UX
-            autoFocus
           />
         </div>
 

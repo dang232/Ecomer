@@ -9,7 +9,7 @@ import type {
   TypePreference,
 } from "../types/api/notification-preferences";
 
-import { useAuth } from "./use-auth";
+import { useAuth } from "./auth-context";
 
 const PREFERENCES_KEY = ["notifications", "preferences"] as const;
 

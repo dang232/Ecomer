@@ -2,7 +2,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const useAuthMock = vi.fn();
-vi.mock("./use-auth", () => ({
+vi.mock("./auth-context", () => ({
   useAuth: () => useAuthMock(),
 }));
 

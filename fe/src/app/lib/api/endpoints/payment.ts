@@ -8,15 +8,11 @@ export type { PaymentStatus };
 export const codConfirm = (body: { orderId: string }, idempotencyKey?: string) =>
   api.post("/payment/cod/confirm", paymentStatusSchema, body, { idempotencyKey });
 
-export const vnpayCreate = (
-  body: { orderId: string },
-  idempotencyKey?: string,
-) => api.post("/payment/vnpay/create", paymentResponseSchema, body, { idempotencyKey });
+export const vnpayCreate = (body: { orderId: string }, idempotencyKey?: string) =>
+  api.post("/payment/vnpay/create", paymentResponseSchema, body, { idempotencyKey });
 
-export const momoCreate = (
-  body: { orderId: string },
-  idempotencyKey?: string,
-) => api.post("/payment/momo/create", paymentResponseSchema, body, { idempotencyKey });
+export const momoCreate = (body: { orderId: string }, idempotencyKey?: string) =>
+  api.post("/payment/momo/create", paymentResponseSchema, body, { idempotencyKey });
 
 export const paymentStatus = (orderId: string) =>
   api.get(`/payment/status/${encodeURIComponent(orderId)}`, paymentStatusSchema);

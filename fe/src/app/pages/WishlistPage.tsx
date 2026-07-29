@@ -7,7 +7,7 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
 import { ImageWithFallback } from "../components/image-with-fallback";
-import { useAuth } from "../hooks/use-auth";
+import { useAuth } from "../hooks/auth-context";
 import { useCart } from "../hooks/use-cart";
 import { productDetailOptions } from "../hooks/use-products";
 import { useWishlist } from "../hooks/use-wishlist";

@@ -25,6 +25,10 @@ function isDev(): boolean {
   return Boolean((import.meta.env as Record<string, unknown>).DEV);
 }
 
+function emitDevTelemetry(message: string): void {
+  window.dispatchEvent(new CustomEvent("vnshop:telemetry", { detail: message }));
+}
+
 export function recordTelemetry(rec: TelemetryRecord): void {
   const safe: TelemetryRecord = {
     ...rec,
@@ -36,8 +40,7 @@ export function recordTelemetry(rec: TelemetryRecord): void {
   }
   if (isDev()) {
     // ponytail: replace with Sentry.addBreadcrumb when telemetry ships.
-    // eslint-disable-next-line no-console
-    console.debug(
+    emitDevTelemetry(
       `[vnshop] ${safe.method} ${safe.path} ${safe.status ?? "—"} ${safe.durationMs}ms attempt=${safe.attempts}`,
     );
   }

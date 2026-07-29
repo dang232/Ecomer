@@ -39,7 +39,8 @@ vi.mock("../lib/api/endpoints/auth", () => ({
   registerUser: (...args: unknown[]) => mocks.registerUser(...args),
 }));
 
-import { AuthProvider, useAuth, useHasRole } from "./use-auth";
+import { useAuth, useHasRole } from "./auth-context";
+import { AuthProvider } from "./use-auth";
 
 const tokenSet: TokenSet = {
   accessToken: "access-token",

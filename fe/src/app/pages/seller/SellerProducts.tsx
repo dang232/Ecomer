@@ -9,7 +9,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { SellerProductModal } from "../../components/seller-product-modal";
-import { useAuth } from "../../hooks/use-auth";
+import { useAuth } from "../../hooks/auth-context";
 import { useDebouncedValue } from "../../hooks/use-debounced-value";
 import { useProducts } from "../../hooks/use-products";
 import { formatPrice } from "../../lib/format";
@@ -80,18 +80,17 @@ export function SellerProducts() {
           <thead>
             <tr className="border-b border-border">
               {[
-                t("seller.products.th.product"),
-                t("seller.products.th.price"),
-                t("seller.products.th.stock"),
-                t("seller.products.th.sold"),
-                "",
-              ].map((h, i) => (
+                { id: "product", label: t("seller.products.th.product") },
+                { id: "price", label: t("seller.products.th.price") },
+                { id: "stock", label: t("seller.products.th.stock") },
+                { id: "sold", label: t("seller.products.th.sold") },
+                { id: "actions", label: "" },
+              ].map((column) => (
                 <th
-                  // eslint-disable-next-line react/no-array-index-key -- table headers are positional, no stable id
-                  key={i}
+                  key={column.id}
                   className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-left"
                 >
-                  {h}
+                  {column.label}
                 </th>
               ))}
             </tr>

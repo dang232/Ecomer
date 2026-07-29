@@ -2,7 +2,7 @@ import { queryOptions, useQuery } from "@tanstack/react-query";
 
 import { sellerRevenue, type SellerRevenuePoint } from "../lib/api/endpoints/seller-analytics";
 
-import { useAuth } from "./use-auth";
+import { useAuth } from "./auth-context";
 
 export const sellerRevenueOptions = (days: number) =>
   queryOptions<SellerRevenuePoint[]>({

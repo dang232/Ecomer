@@ -47,9 +47,7 @@ export const myOrders = (params: { page?: number; size?: number; status?: string
 
 export const orderById = (id: string) => api.get(`/orders/${encodeURIComponent(id)}`, orderSchema);
 
-export type IdempotencyOrderLookup =
-  | { kind: "found"; order: Order }
-  | { kind: "not-found" };
+export type IdempotencyOrderLookup = { kind: "found"; order: Order } | { kind: "not-found" };
 
 export async function findOrderByIdempotencyKey(key: string): Promise<IdempotencyOrderLookup> {
   try {

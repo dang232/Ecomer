@@ -11,7 +11,10 @@ export const myOrdersOptions = (params: { page?: number; size?: number; status?:
 export const orderDetailOptions = (id: string | undefined) =>
   queryOptions({
     queryKey: ["orders", "detail", id] as const,
-    queryFn: () => orderById(id!),
+    queryFn: () => {
+      if (!id) throw new Error("An order ID is required");
+      return orderById(id);
+    },
     enabled: !!id,
   });
 

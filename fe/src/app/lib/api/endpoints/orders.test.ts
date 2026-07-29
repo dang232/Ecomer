@@ -14,7 +14,10 @@ describe("findOrderByIdempotencyKey", () => {
     const order = { id: "order-1", total: 125000 };
     vi.mocked(api.get).mockResolvedValue(order);
 
-    await expect(findOrderByIdempotencyKey("checkout-key")).resolves.toEqual({ kind: "found", order });
+    await expect(findOrderByIdempotencyKey("checkout-key")).resolves.toEqual({
+      kind: "found",
+      order,
+    });
     expect(api.get).toHaveBeenCalledWith(
       "/orders/by-idempotency-key/checkout-key",
       expect.anything(),

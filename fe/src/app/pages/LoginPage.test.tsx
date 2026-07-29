@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const useAuthMock = vi.fn();
 
-vi.mock("../hooks/use-auth", () => ({ useAuth: () => useAuthMock() }));
+vi.mock("../hooks/auth-context", () => ({ useAuth: () => useAuthMock() }));
 vi.mock("../hooks/use-app-config", () => ({
   useAppConfig: () => ({ auth: { oauthProviders: ["google"] } }),
 }));

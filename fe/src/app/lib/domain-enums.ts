@@ -91,14 +91,7 @@ export function parsePayoutStatus(raw: string | null | undefined): PayoutStatusU
 // ─── Payment method ─────────────────────────────────────────────────────────
 
 /** Supported checkout payment methods. The backend echoes one of these strings. */
-export const PAYMENT_METHODS = [
-  "COD",
-  "VNPAY",
-  "MOMO",
-  "VIETQR",
-  "STRIPE",
-  "PAYPAL",
-] as const;
+export const PAYMENT_METHODS = ["COD", "VNPAY", "MOMO", "VIETQR", "STRIPE", "PAYPAL"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 export function isPaymentMethod(value: string | null | undefined): value is PaymentMethod {

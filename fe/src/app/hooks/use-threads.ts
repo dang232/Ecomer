@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { listThreads, type MessageThreadSummary } from "../lib/api/endpoints/messaging";
 
-import { useAuth } from "./use-auth";
+import { useAuth } from "./auth-context";
 import { usePageVisible } from "./use-page-visible";
 
 const POLL_INTERVAL_MS = 30_000;

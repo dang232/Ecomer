@@ -35,13 +35,14 @@ export function PaymentReturnPage() {
   const validationError = useMemo(() => {
     if (!provider) return t("paymentReturn.error.invalidProvider");
     if (!redirectRecovery) return t("paymentReturn.error.invalidRecovery");
-    if (redirectRecovery.provider !== provider.toUpperCase()) return t("paymentReturn.error.mismatchedRecovery");
+    if (redirectRecovery.provider !== provider.toUpperCase())
+      return t("paymentReturn.error.mismatchedRecovery");
     if (gatewayReference && gatewayReference !== redirectRecovery.paymentId) {
       return t("paymentReturn.error.mismatchedRecovery");
     }
     return null;
   }, [gatewayReference, provider, redirectRecovery, t]);
-  const orderId = validationError ? null : redirectRecovery?.orderId ?? null;
+  const orderId = validationError ? null : (redirectRecovery?.orderId ?? null);
 
   const [phase, setPhase] = useState<Phase>(validationError ? "error" : "pending");
   const [errorMessage, setErrorMessage] = useState(validationError ?? "");
@@ -95,7 +96,9 @@ export function PaymentReturnPage() {
           return;
         }
         setPhase("error");
-        setErrorMessage(error instanceof ApiError ? error.message : t("paymentReturn.error.checkFailed"));
+        setErrorMessage(
+          error instanceof ApiError ? error.message : t("paymentReturn.error.checkFailed"),
+        );
       }
     };
 
@@ -106,16 +109,22 @@ export function PaymentReturnPage() {
     };
   }, [orderId, recoveryStore, t, validationError]);
 
-  const amount = orderId ? redirectRecovery?.total ?? null : null;
+  const amount = orderId ? (redirectRecovery?.total ?? null) : null;
 
   return (
     <div className="max-w-lg mx-auto px-4 py-20 text-center">
       {phase === "pending" ? (
         <>
-          <div className="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center animate-pulse" style={{ background: "rgba(0,191,179,0.12)" }}>
+          <div
+            className="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center animate-pulse"
+            style={{ background: "rgba(0,191,179,0.12)" }}
+          >
             <IconClock size={36} style={{ color: "var(--primary)" }} />
           </div>
-          <h1 className="text-2xl font-bold text-foreground mb-3" style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}>
+          <h1
+            className="text-2xl font-bold text-foreground mb-3"
+            style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}
+          >
             {t("paymentReturn.pending.title")}
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -126,19 +135,42 @@ export function PaymentReturnPage() {
 
       {phase === "completed" ? (
         <>
-          <div className="w-24 h-24 rounded-full mx-auto mb-6 flex items-center justify-center" style={{ background: "rgb(var(--success-rgb) / 0.12)" }}>
+          <div
+            className="w-24 h-24 rounded-full mx-auto mb-6 flex items-center justify-center"
+            style={{ background: "rgb(var(--success-rgb) / 0.12)" }}
+          >
             <IconCircleCheck size={48} style={{ color: "var(--success)" }} />
           </div>
-          <h1 className="text-3xl font-black text-foreground mb-3" style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}>
+          <h1
+            className="text-3xl font-black text-foreground mb-3"
+            style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}
+          >
             {t("paymentReturn.completed.title")}
           </h1>
-          {amount !== null ? <p className="text-sm text-muted-foreground mb-2">{t("paymentReturn.completed.amountPaid")} <strong>{formatPrice(amount)}</strong></p> : null}
-          {orderId ? <p className="text-sm text-muted-foreground mb-8">{t("paymentReturn.completed.orderIdLabel")} <span className="font-mono font-semibold">{orderId}</span></p> : null}
+          {amount !== null ? (
+            <p className="text-sm text-muted-foreground mb-2">
+              {t("paymentReturn.completed.amountPaid")} <strong>{formatPrice(amount)}</strong>
+            </p>
+          ) : null}
+          {orderId ? (
+            <p className="text-sm text-muted-foreground mb-8">
+              {t("paymentReturn.completed.orderIdLabel")}{" "}
+              <span className="font-mono font-semibold">{orderId}</span>
+            </p>
+          ) : null}
           <div className="flex gap-3">
-            <button onClick={() => navigate("/orders")} className="flex-1 py-3 rounded-xl border-2 font-semibold text-sm" style={{ borderColor: "var(--primary)", color: "var(--primary)" }}>
+            <button
+              onClick={() => navigate("/orders")}
+              className="flex-1 py-3 rounded-xl border-2 font-semibold text-sm"
+              style={{ borderColor: "var(--primary)", color: "var(--primary)" }}
+            >
               {t("paymentReturn.completed.viewOrders")}
             </button>
-            <button onClick={() => navigate("/")} className="flex-1 py-3 rounded-xl text-white font-semibold text-sm" style={{ background: "var(--primary)" }}>
+            <button
+              onClick={() => navigate("/")}
+              className="flex-1 py-3 rounded-xl text-white font-semibold text-sm"
+              style={{ background: "var(--primary)" }}
+            >
               {t("paymentReturn.completed.continueShopping")}
             </button>
           </div>
@@ -147,16 +179,28 @@ export function PaymentReturnPage() {
 
       {phase === "failed" ? (
         <>
-          <div className="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center" style={{ background: "rgb(var(--error-rgb) / 0.12)" }}>
+          <div
+            className="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center"
+            style={{ background: "rgb(var(--error-rgb) / 0.12)" }}
+          >
             <IconAlertCircle size={40} style={{ color: "var(--error)" }} />
           </div>
-          <h1 className="text-2xl font-bold text-foreground mb-3">{t("paymentReturn.failed.title")}</h1>
+          <h1 className="text-2xl font-bold text-foreground mb-3">
+            {t("paymentReturn.failed.title")}
+          </h1>
           <p className="text-sm text-muted-foreground mb-6">{t("paymentReturn.failed.body")}</p>
           <div className="flex gap-3">
-            <button onClick={() => navigate("/orders")} className="flex-1 py-3 rounded-xl text-white font-semibold text-sm" style={{ background: "var(--primary)" }}>
+            <button
+              onClick={() => navigate("/orders")}
+              className="flex-1 py-3 rounded-xl text-white font-semibold text-sm"
+              style={{ background: "var(--primary)" }}
+            >
               {t("paymentReturn.failed.goOrders")}
             </button>
-            <button onClick={() => navigate("/")} className="flex-1 py-3 rounded-xl border border-border text-muted-foreground font-semibold text-sm">
+            <button
+              onClick={() => navigate("/")}
+              className="flex-1 py-3 rounded-xl border border-border text-muted-foreground font-semibold text-sm"
+            >
               {t("paymentReturn.failed.goHome")}
             </button>
           </div>
@@ -165,12 +209,23 @@ export function PaymentReturnPage() {
 
       {phase === "error" ? (
         <>
-          <div className="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center" style={{ background: "rgb(var(--warning-rgb) / 0.12)" }}>
+          <div
+            className="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center"
+            style={{ background: "rgb(var(--warning-rgb) / 0.12)" }}
+          >
             <IconAlertCircle size={40} style={{ color: "var(--warning)" }} />
           </div>
-          <h1 className="text-2xl font-bold text-foreground mb-3">{t("paymentReturn.error.title")}</h1>
-          <p className="text-sm text-muted-foreground mb-6">{errorMessage || t("paymentReturn.error.fallback")}</p>
-          <button onClick={() => navigate("/orders")} className="px-6 py-3 rounded-xl text-white font-semibold text-sm" style={{ background: "var(--primary)" }}>
+          <h1 className="text-2xl font-bold text-foreground mb-3">
+            {t("paymentReturn.error.title")}
+          </h1>
+          <p className="text-sm text-muted-foreground mb-6">
+            {errorMessage || t("paymentReturn.error.fallback")}
+          </p>
+          <button
+            onClick={() => navigate("/orders")}
+            className="px-6 py-3 rounded-xl text-white font-semibold text-sm"
+            style={{ background: "var(--primary)" }}
+          >
             {t("paymentReturn.error.goOrders")}
           </button>
         </>

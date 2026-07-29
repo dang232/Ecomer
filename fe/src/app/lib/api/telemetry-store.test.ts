@@ -46,13 +46,17 @@ describe("telemetry-store", () => {
     expect(getTelemetry()[0].path).toBe("/users");
   });
 
-  it("emits console.debug in DEV mode", () => {
+  it("emits a browser telemetry event in DEV mode", () => {
     if (!IS_DEV) return; // skip outside dev (e.g., CI)
 
-    const spy = vi.spyOn(console, "debug").mockImplementation(() => {});
+    const listener = vi.fn();
+    window.addEventListener("vnshop:telemetry", listener);
     recordTelemetry(rec({ method: "GET", path: "/x", status: 200, durationMs: 5 }));
-    expect(spy).toHaveBeenCalled();
-    const msg = String(spy.mock.calls[0][0]);
+    window.removeEventListener("vnshop:telemetry", listener);
+
+    expect(listener).toHaveBeenCalledOnce();
+    const event = listener.mock.calls[0][0] as CustomEvent<string>;
+    const msg = event.detail;
     expect(msg).toContain("[vnshop]");
     expect(msg).toContain("GET");
     expect(msg).toContain("/x");

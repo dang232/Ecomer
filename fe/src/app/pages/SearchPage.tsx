@@ -500,9 +500,9 @@ export function SearchPage() {
   // Pagination helper: build page numbers with ellipsis
   const getPageNumbers = () => {
     if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
-    const pages: (number | "...")[] = [];
+    const pages: (number | "ellipsis-start" | "ellipsis-end")[] = [];
     pages.push(1);
-    if (currentPage > 3) pages.push("...");
+    if (currentPage > 3) pages.push("ellipsis-start");
     for (
       let i = Math.max(2, currentPage - 1);
       i <= Math.min(totalPages - 1, currentPage + 1);
@@ -510,7 +510,7 @@ export function SearchPage() {
     ) {
       pages.push(i);
     }
-    if (currentPage < totalPages - 2) pages.push("...");
+    if (currentPage < totalPages - 2) pages.push("ellipsis-end");
     pages.push(totalPages);
     return pages;
   };
@@ -752,10 +752,10 @@ export function SearchPage() {
                 <ChevronLeft size={16} />
               </button>
 
-              {getPageNumbers().map((page, idx) =>
-                page === "..." ? (
+              {getPageNumbers().map((page) =>
+                typeof page === "string" ? (
                   <span
-                    key={`ellipsis-${idx}`} // eslint-disable-line react/no-array-index-key
+                    key={page}
                     className="w-9 h-9 flex items-center justify-center text-sm text-muted-foreground"
                   >
                     â€¦

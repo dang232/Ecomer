@@ -12,6 +12,8 @@ import {
   adminRejectReview,
 } from "../../lib/api/endpoints/admin";
 
+const REVIEW_STAR_POSITIONS = [1, 2, 3, 4, 5];
+
 export function ReviewsModeration() {
   const qc = useQueryClient();
   const { t } = useTranslation();
@@ -114,12 +116,12 @@ export function ReviewsModeration() {
                 </p>
               </div>
               <div className="flex items-center gap-0.5">
-                {Array.from({ length: 5 }).map((_, i) => (
+                {REVIEW_STAR_POSITIONS.map((position) => (
                   <IconStar
-                    key={i} // eslint-disable-line react/no-array-index-key -- decorative star rating, no stable id
+                    key={position}
                     size={14}
-                    fill={i < r.rating ? "var(--warning)" : "var(--border)"}
-                    className={i < r.rating ? "text-amber-400" : "text-gray-200"}
+                    fill={position <= r.rating ? "var(--warning)" : "var(--border)"}
+                    className={position <= r.rating ? "text-amber-400" : "text-gray-200"}
                   />
                 ))}
               </div>

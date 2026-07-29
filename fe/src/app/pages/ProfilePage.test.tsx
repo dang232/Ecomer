@@ -11,7 +11,7 @@ const setDefaultAddressMock = vi.fn();
 const removeAddressMock = vi.fn();
 const addAddressMock = vi.fn();
 
-vi.mock("../hooks/use-auth", () => ({
+vi.mock("../hooks/auth-context", () => ({
   useAuth: () => useAuthMock(),
 }));
 

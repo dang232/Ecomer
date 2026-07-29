@@ -11,7 +11,7 @@ const useAuthMock = vi.fn();
 const registerMock = vi.fn();
 const loginWithPasswordMock = vi.fn();
 
-vi.mock("../hooks/use-auth", () => ({
+vi.mock("../hooks/auth-context", () => ({
   useAuth: () => useAuthMock(),
 }));
 

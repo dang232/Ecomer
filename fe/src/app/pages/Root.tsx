@@ -5,7 +5,7 @@ import { Outlet, useNavigate, useLocation } from "react-router";
 import { ConsoleChrome } from "../components/console-chrome";
 import { Footer } from "../components/footer";
 import { AnnouncementBar, CategoriesBar, Navbar } from "../components/navbar";
-import { useVNShop } from "../components/vnshop-context";
+import { useVNShop } from "../hooks/use-vnshop";
 
 // ─── Dark Mode Floating Toggle ─────────────────────────────────────────────────
 function DarkModeToggle() {

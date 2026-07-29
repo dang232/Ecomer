@@ -7,7 +7,10 @@ import type { PublicSeller, ProductSummary, Page } from "../types/api";
 export const sellerDetailOptions = (id: string | undefined) =>
   queryOptions<PublicSeller>({
     queryKey: ["sellers", "detail", id] as const,
-    queryFn: () => getSeller(id!),
+    queryFn: () => {
+      if (!id) throw new Error("A seller ID is required");
+      return getSeller(id);
+    },
     enabled: !!id,
     retry: false,
   });

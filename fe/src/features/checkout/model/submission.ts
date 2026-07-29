@@ -71,7 +71,13 @@ export function checkoutSubmissionReducer(
         : state;
     case "payment-failed":
       return ownsOrder(state)
-        ? { status: "failed", stage: "payment", ...createdOrder(state), message: event.message, paymentId: event.paymentId }
+        ? {
+            status: "failed",
+            stage: "payment",
+            ...createdOrder(state),
+            message: event.message,
+            paymentId: event.paymentId,
+          }
         : state;
     case "reconciling":
       return state.status === "placing"
@@ -90,11 +96,18 @@ export function checkoutSubmissionReducer(
 
 export function ownsOrder(
   state: CheckoutSubmissionState,
-): state is Exclude<CheckoutSubmissionState, { status: "draft" | "placing" | "reconciling" | "uncertain" }> {
-  return ["order-created", "payment-initializing", "pending", "completed", "failed"].includes(state.status);
+): state is Exclude<
+  CheckoutSubmissionState,
+  { status: "draft" | "placing" | "reconciling" | "uncertain" }
+> {
+  return ["order-created", "payment-initializing", "pending", "completed", "failed"].includes(
+    state.status,
+  );
 }
 
-export function createdOrder(state: Extract<CheckoutSubmissionState, { orderId: string }>): CreatedOrder {
+export function createdOrder(
+  state: Extract<CheckoutSubmissionState, { orderId: string }>,
+): CreatedOrder {
   return {
     orderKey: state.orderKey,
     cartFingerprint: state.cartFingerprint,

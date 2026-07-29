@@ -4,8 +4,19 @@ import type { PlaceOrderInput } from "../../../app/lib/api/endpoints/orders";
 import { checkoutProviderSchema } from "../../../app/types/api";
 
 const recoveryOrderSchema = z.object({
-  items: z.array(z.object({ productId: z.string().min(1), variantSku: z.string().optional(), quantity: z.number().int().positive() })),
-  shippingAddress: z.object({ street: z.string().min(1), ward: z.string().optional(), district: z.string().min(1), city: z.string().min(1) }),
+  items: z.array(
+    z.object({
+      productId: z.string().min(1),
+      variantSku: z.string().optional(),
+      quantity: z.number().int().positive(),
+    }),
+  ),
+  shippingAddress: z.object({
+    street: z.string().min(1),
+    ward: z.string().optional(),
+    district: z.string().min(1),
+    city: z.string().min(1),
+  }),
   paymentMethod: checkoutProviderSchema.optional(),
   couponCode: z.string().optional(),
   shippingChoices: z.array(z.object({ sellerId: z.string(), code: z.string() })).optional(),
@@ -42,18 +53,30 @@ export const checkoutRecoverySchema = z.discriminatedUnion("phase", [
   }),
   baseSchema.extend({
     phase: z.literal("vietqr"),
-    paymentKey: z.string().uuid(), orderId: z.string().min(1), paymentId: z.string().uuid(), total: z.number().nonnegative(),
-    qrImageUrl: z.string().url(), reference: z.string().min(1),
+    paymentKey: z.string().uuid(),
+    orderId: z.string().min(1),
+    paymentId: z.string().uuid(),
+    total: z.number().nonnegative(),
+    qrImageUrl: z.string().url(),
+    reference: z.string().min(1),
   }),
   baseSchema.extend({
     phase: z.literal("stripe"),
-    paymentKey: z.string().uuid(), orderId: z.string().min(1), paymentId: z.string().uuid(), total: z.number().nonnegative(),
-    intentId: z.string().min(1), publishableKey: z.string().min(1),
+    paymentKey: z.string().uuid(),
+    orderId: z.string().min(1),
+    paymentId: z.string().uuid(),
+    total: z.number().nonnegative(),
+    intentId: z.string().min(1),
+    publishableKey: z.string().min(1),
   }),
   baseSchema.extend({
     phase: z.literal("paypal"),
-    paymentKey: z.string().uuid(), orderId: z.string().min(1), paymentId: z.string().uuid(), total: z.number().nonnegative(),
-    clientId: z.string().min(1), paypalOrderId: z.string().min(1),
+    paymentKey: z.string().uuid(),
+    orderId: z.string().min(1),
+    paymentId: z.string().uuid(),
+    total: z.number().nonnegative(),
+    clientId: z.string().min(1),
+    paypalOrderId: z.string().min(1),
   }),
 ]);
 
@@ -83,7 +106,10 @@ export function createCheckoutRecoveryStore(
       return null;
     },
     write(record) {
-      storage.setItem(CHECKOUT_RECOVERY_STORAGE_KEY, JSON.stringify(checkoutRecoverySchema.parse(record)));
+      storage.setItem(
+        CHECKOUT_RECOVERY_STORAGE_KEY,
+        JSON.stringify(checkoutRecoverySchema.parse(record)),
+      );
     },
     clear() {
       storage.removeItem(CHECKOUT_RECOVERY_STORAGE_KEY);

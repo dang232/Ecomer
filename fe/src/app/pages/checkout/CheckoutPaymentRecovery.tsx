@@ -27,12 +27,20 @@ export function CheckoutPaymentRecovery({
   const [ordersOpened, setOrdersOpened] = useState(false);
 
   if (submission.status === "reconciling" || recovery?.phase === "order") {
-    return <RecoveryPanel title={t("checkout.payment.recovery.checkingTitle")} body={t("checkout.payment.recovery.checkingBody")} />;
+    return (
+      <RecoveryPanel
+        title={t("checkout.payment.recovery.checkingTitle")}
+        body={t("checkout.payment.recovery.checkingBody")}
+      />
+    );
   }
 
   if (submission.status === "uncertain") {
     return (
-      <RecoveryPanel title={t("checkout.payment.recovery.uncertainTitle")} body={t("checkout.payment.recovery.uncertainBody")}>
+      <RecoveryPanel
+        title={t("checkout.payment.recovery.uncertainTitle")}
+        body={t("checkout.payment.recovery.uncertainBody")}
+      >
         <button
           type="button"
           className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold"
@@ -43,7 +51,11 @@ export function CheckoutPaymentRecovery({
         >
           {t("checkout.payment.recovery.viewOrders")}
         </button>
-        {ordersOpened ? <p className="text-sm text-muted-foreground">{t("checkout.payment.recovery.abandonHint")}</p> : null}
+        {ordersOpened ? (
+          <p className="text-sm text-muted-foreground">
+            {t("checkout.payment.recovery.abandonHint")}
+          </p>
+        ) : null}
       </RecoveryPanel>
     );
   }
@@ -55,10 +67,18 @@ export function CheckoutPaymentRecovery({
         title={t("checkout.payment.recovery.paymentFailedTitle")}
         body={t("checkout.payment.recovery.paymentFailedBody", { id: orderId ?? "" })}
       >
-        <button type="button" className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold" onClick={() => void onResume()}>
+        <button
+          type="button"
+          className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold"
+          onClick={() => void onResume()}
+        >
           {t("checkout.payment.recovery.retryPayment")}
         </button>
-        <button type="button" className="px-4 py-2 rounded-lg border border-border text-sm font-semibold" onClick={() => onViewOrder(orderId)}>
+        <button
+          type="button"
+          className="px-4 py-2 rounded-lg border border-border text-sm font-semibold"
+          onClick={() => onViewOrder(orderId)}
+        >
           {t("checkout.payment.recovery.viewOrder")}
         </button>
       </RecoveryPanel>
@@ -68,7 +88,10 @@ export function CheckoutPaymentRecovery({
   if (submission.status === "pending" && submission.providerState.kind === "redirect") {
     const redirectUrl = submission.providerState.redirectUrl;
     return (
-      <RecoveryPanel title={t("checkout.payment.recovery.continueTitle")} body={t("checkout.payment.recovery.continueBody")}>
+      <RecoveryPanel
+        title={t("checkout.payment.recovery.continueTitle")}
+        body={t("checkout.payment.recovery.continueBody")}
+      >
         <button
           type="button"
           className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold"
@@ -82,8 +105,15 @@ export function CheckoutPaymentRecovery({
 
   if (recovery?.phase === "redirect") {
     return (
-      <RecoveryPanel title={t("checkout.payment.recovery.continueTitle")} body={t("checkout.payment.recovery.redirectExpiredBody")}>
-        <button type="button" className="px-4 py-2 rounded-lg border border-border text-sm font-semibold" onClick={() => onViewOrder(recovery.orderId)}>
+      <RecoveryPanel
+        title={t("checkout.payment.recovery.continueTitle")}
+        body={t("checkout.payment.recovery.redirectExpiredBody")}
+      >
+        <button
+          type="button"
+          className="px-4 py-2 rounded-lg border border-border text-sm font-semibold"
+          onClick={() => onViewOrder(recovery.orderId)}
+        >
           {t("checkout.payment.recovery.viewOrder")}
         </button>
       </RecoveryPanel>
@@ -91,30 +121,79 @@ export function CheckoutPaymentRecovery({
   }
 
   if (submission.status === "pending" && submission.providerState.kind === "vietqr") {
-    return <VietQrPaymentSection orderId={submission.orderId} idempotencyKey={submission.paymentKey} initialization={submission.providerState} onCompleted={onPaymentCompleted} />;
+    return (
+      <VietQrPaymentSection
+        orderId={submission.orderId}
+        idempotencyKey={submission.paymentKey}
+        initialization={submission.providerState}
+        onCompleted={onPaymentCompleted}
+      />
+    );
   }
   if (recovery?.phase === "vietqr") {
-    return <VietQrPaymentSection orderId={recovery.orderId} idempotencyKey={recovery.paymentKey} initialization={recovery} onCompleted={onPaymentCompleted} />;
+    return (
+      <VietQrPaymentSection
+        orderId={recovery.orderId}
+        idempotencyKey={recovery.paymentKey}
+        initialization={recovery}
+        onCompleted={onPaymentCompleted}
+      />
+    );
   }
 
   if (submission.status === "pending" && submission.providerState.kind === "stripe") {
-    return <StripePaymentSection orderId={submission.orderId} idempotencyKey={submission.paymentKey} initialization={submission.providerState} onCompleted={onPaymentCompleted} />;
+    return (
+      <StripePaymentSection
+        orderId={submission.orderId}
+        idempotencyKey={submission.paymentKey}
+        initialization={submission.providerState}
+        onCompleted={onPaymentCompleted}
+      />
+    );
   }
   if (recovery?.phase === "stripe") {
-    return <StripePaymentSection orderId={recovery.orderId} idempotencyKey={recovery.paymentKey} onCompleted={onPaymentCompleted} />;
+    return (
+      <StripePaymentSection
+        orderId={recovery.orderId}
+        idempotencyKey={recovery.paymentKey}
+        onCompleted={onPaymentCompleted}
+      />
+    );
   }
 
   if (submission.status === "pending" && submission.providerState.kind === "paypal") {
-    return <PayPalPaymentSection orderId={submission.orderId} idempotencyKey={submission.paymentKey} initialization={{ paymentId: submission.paymentId, ...submission.providerState }} onCompleted={onPaymentCompleted} />;
+    return (
+      <PayPalPaymentSection
+        orderId={submission.orderId}
+        idempotencyKey={submission.paymentKey}
+        initialization={{ paymentId: submission.paymentId, ...submission.providerState }}
+        onCompleted={onPaymentCompleted}
+      />
+    );
   }
   if (recovery?.phase === "paypal") {
-    return <PayPalPaymentSection orderId={recovery.orderId} idempotencyKey={recovery.paymentKey} initialization={recovery} onCompleted={onPaymentCompleted} />;
+    return (
+      <PayPalPaymentSection
+        orderId={recovery.orderId}
+        idempotencyKey={recovery.paymentKey}
+        initialization={recovery}
+        onCompleted={onPaymentCompleted}
+      />
+    );
   }
 
   return null;
 }
 
-function RecoveryPanel({ title, body, children }: { title: string; body: string; children?: ReactNode }) {
+function RecoveryPanel({
+  title,
+  body,
+  children,
+}: {
+  title: string;
+  body: string;
+  children?: ReactNode;
+}) {
   return (
     <section className="max-w-2xl mx-auto px-4 py-16" aria-live="polite">
       <h1 className="text-xl font-bold text-foreground">{title}</h1>

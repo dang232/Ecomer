@@ -48,7 +48,7 @@ function cartEnvelope(data: unknown, status = 200): Response {
 }
 
 const useAuthMock = vi.fn<() => { ready: boolean; authenticated: boolean }>();
-vi.mock("./use-auth", () => ({
+vi.mock("./auth-context", () => ({
   useAuth: () => useAuthMock(),
 }));
 
@@ -333,9 +333,7 @@ describe("useCart", () => {
         await expect(result.current.executeMerge()).resolves.toBe(true);
       });
 
-      const postCall = fetchSpy.mock.calls.find(
-        ([, request]) => request?.method === "POST",
-      );
+      const postCall = fetchSpy.mock.calls.find(([, request]) => request?.method === "POST");
       if (!postCall) throw new Error("Expected a cart merge request");
       const [, request] = postCall;
       expect(request).toMatchObject({ method: "POST" });
@@ -478,9 +476,7 @@ describe("useCart", () => {
       });
 
       await waitFor(() => {
-        const postCall = fetchSpy.mock.calls.find(
-          ([, request]) => request?.method === "POST",
-        );
+        const postCall = fetchSpy.mock.calls.find(([, request]) => request?.method === "POST");
         expect(postCall).toBeDefined();
       });
 

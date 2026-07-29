@@ -31,7 +31,7 @@ const { ordersData } = vi.hoisted<{ ordersData: Page<Order> }>(() => ({
   },
 }));
 
-vi.mock("../hooks/use-auth", () => ({
+vi.mock("../hooks/auth-context", () => ({
   useAuth: () => ({ ready: true, authenticated: true, login: vi.fn() }),
 }));
 

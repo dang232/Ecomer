@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router";
 
 import { ImageWithFallback } from "../components/image-with-fallback";
-import { useAuth } from "../hooks/use-auth";
+import { useAuth } from "../hooks/auth-context";
 import { useOrder } from "../hooks/use-orders";
 import { ApiError } from "../lib/api";
 import { formatDate, formatPrice } from "../lib/format";

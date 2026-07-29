@@ -45,7 +45,10 @@ export const productV2Options = (
 export function useProductsV2(params: ProductListV2Params = {}, enabled = true) {
   const client = useQueryClient();
   const paramsKey = JSON.stringify(params);
-  const stableParams = useMemo(() => readJsonText(paramsKey, productListV2ParamsSchema), [paramsKey]);
+  const stableParams = useMemo(
+    () => readJsonText(paramsKey, productListV2ParamsSchema),
+    [paramsKey],
+  );
   const query = useInfiniteQuery(productV2Options(stableParams, client, enabled));
   const lastPage = query.data?.pages.at(-1);
   const nextCursor = lastPage?.data.hasMore ? (lastPage.data.nextCursor ?? undefined) : undefined;

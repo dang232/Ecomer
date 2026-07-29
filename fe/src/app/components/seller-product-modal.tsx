@@ -181,6 +181,7 @@ function SellerProductModalBody({
     () => product?.images ?? (product?.image ? [product.image] : []),
   );
   const [staged, setStaged] = useState<StagedFile[]>([]);
+  const stagedRef = useRef<StagedFile[]>([]);
   const [phase, setPhase] = useState<
     "idle" | "creating" | "uploading" | "finalising" | "publishing"
   >("idle");
@@ -208,13 +209,16 @@ function SellerProductModalBody({
 
   const videoUploading = videoUploadState.phase !== "idle" && videoUploadState.phase !== "error";
 
+  useEffect(() => {
+    stagedRef.current = staged;
+  }, [staged]);
+
   // Revoke object URLs on unmount to avoid leaks. Because the wrapper only
   // mounts the body while open, this fires on every close.
   useEffect(() => {
     return () => {
-      staged.forEach((s) => URL.revokeObjectURL(s.previewUrl));
+      stagedRef.current.forEach((s) => URL.revokeObjectURL(s.previewUrl));
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const totalImageCount = existingImages.length + staged.length;

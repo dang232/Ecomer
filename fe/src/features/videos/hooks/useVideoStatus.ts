@@ -61,7 +61,10 @@ export function useVideoStatus(
 
   const query = useQuery({
     queryKey: ["videos", "status", videoId],
-    queryFn: () => videoStatus(videoId!),
+    queryFn: () => {
+      if (!videoId) throw new Error("A video ID is required to load status");
+      return videoStatus(videoId);
+    },
     enabled,
     retry: 2,
     refetchInterval(q) {

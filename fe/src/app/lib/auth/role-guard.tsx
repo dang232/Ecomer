@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Navigate, useLocation } from "react-router";
 import { toast } from "sonner";
 
-import { useAuth, type Role } from "../../hooks/use-auth";
+import { useAuth, type Role } from "../../hooks/auth-context";
 
 /* ------------------------------------------------------------------ */
 /*  Helper: renders <Navigate> after firing a toast on mount           */
@@ -62,7 +62,7 @@ export function RequireAuth({ children, loginPath = "/login" }: RequireAuthProps
 
 interface RequireRoleProps {
   role: Role;
-  children: ReactNode;
+  children?: ReactNode;
   fallbackPath?: string;
 }
 

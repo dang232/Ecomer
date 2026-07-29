@@ -10,7 +10,7 @@ import {
   parseOptionalPhone,
 } from "../components/form/CountryPhoneInput";
 import { FormField } from "../components/form/FormField";
-import { useAuth } from "../hooks/use-auth";
+import { useAuth } from "../hooks/auth-context";
 import { sanitizeRedirect } from "../lib/auth/sanitize-redirect";
 import { isValidEmail } from "../lib/validation/email";
 import { MIN_PASSWORD_LENGTH } from "../lib/validation/password";

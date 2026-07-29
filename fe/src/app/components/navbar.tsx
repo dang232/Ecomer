@@ -28,7 +28,7 @@ import { LanguageSwitcher } from "./language-switcher";
 import { NotificationBell } from "./notification-bell";
 import { SearchAutocomplete } from "./search-autocomplete";
 import { LiveRegion } from "./ui/live-region";
-import { useVNShop } from "./vnshop-context";
+import { useVNShop } from "../hooks/use-vnshop";
 
 // ─── Announcement Bar ──────────────────────────────────────────────────────────
 export function AnnouncementBar() {

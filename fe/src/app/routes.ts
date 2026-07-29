@@ -78,7 +78,6 @@ const AccessDeniedPage = lazy(() =>
   import("./pages/AccessDeniedPage").then((m) => ({ default: m.AccessDeniedPage })),
 );
 
-/* eslint-disable react/no-children-prop -- createElement passes children via props by design */
 const lazyRoute = (el: ReactNode) =>
   createElement(Suspense, { fallback: createElement(PageSkeleton) }, el);
 const suspenseWithBoundary = (el: ReactNode) =>
@@ -93,18 +92,19 @@ const suspenseWithDetailBoundary = (el: ReactNode) =>
     null,
     createElement(Suspense, { fallback: createElement(ProductDetailSkeleton) }, el),
   );
-const guarded = (el: ReactNode) => createElement(RequireAuth, { children: lazyRoute(el) });
+const guarded = (el: ReactNode) => createElement(RequireAuth, null, lazyRoute(el));
 const guardedWithBoundary = (el: ReactNode) =>
-  createElement(RequireAuth, { children: suspenseWithBoundary(el) });
-const sellerOnly = (el: ReactNode) =>
-  createElement(RequireRole, { role: "SELLER", children: lazyRoute(el) });
+  createElement(RequireAuth, null, suspenseWithBoundary(el));
+const sellerOnly = (el: ReactNode) => createElement(RequireRole, { role: "SELLER" }, lazyRoute(el));
 const adminOnly = (el: ReactNode) =>
-  createElement(RequireRole, {
-    role: "ADMIN",
-    fallbackPath: "/access-denied",
-    children: lazyRoute(el),
-  });
-/* eslint-enable react/no-children-prop */
+  createElement(
+    RequireRole,
+    {
+      role: "ADMIN",
+      fallbackPath: "/access-denied",
+    },
+    lazyRoute(el),
+  );
 
 export const router = createBrowserRouter([
   {

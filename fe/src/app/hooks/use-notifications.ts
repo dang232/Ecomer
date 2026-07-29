@@ -8,7 +8,7 @@ import {
 } from "../lib/api/endpoints/notifications";
 import type { Notification } from "../types/api";
 
-import { useAuth } from "./use-auth";
+import { useAuth } from "./auth-context";
 
 const NOTIFICATIONS_KEY = ["notifications", "list"] as const;
 const UNREAD_KEY = ["notifications", "unread-count"] as const;

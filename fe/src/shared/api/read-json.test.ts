@@ -7,7 +7,9 @@ describe("readJson", () => {
   it("returns schema-decoded data", async () => {
     const response = new Response(JSON.stringify({ status: "UP" }));
 
-    await expect(readJson(response, z.object({ status: z.literal("UP") }))).resolves.toEqual({ status: "UP" });
+    await expect(readJson(response, z.object({ status: z.literal("UP") }))).resolves.toEqual({
+      status: "UP",
+    });
   });
 
   it("rejects malformed payloads", async () => {
