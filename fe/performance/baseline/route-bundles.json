@@ -1,0 +1,509 @@
+{
+  "generatedFrom": "dist",
+  "routes": {
+    "home": {
+      "entry": "src/app/pages/HomePage.tsx",
+      "assets": [
+        "HomePage-lRZAWERP.js",
+        "arrow-right-wgk_1iCS.js",
+        "chevron-right-DDBcHgQ7.js",
+        "format-Ch60Rzxm.js",
+        "icons-pgefAfjp.js",
+        "index-CD1OGqSx.js",
+        "lock-EQIL9OUw.js",
+        "react-query-DywHXaAj.js",
+        "react-vendor-DixGO3aS.js",
+        "shield-check-1nHfKkHW.js",
+        "star-BJz6Tfu2.js",
+        "star-rating-CUlQrMwW.js",
+        "truck-Dp6sG0xX.js",
+        "use-categories-CMt3wl98.js",
+        "use-recently-viewed-LRQhIk2O.js",
+        "zap-DWD6w4q4.js"
+      ],
+      "gzipBytes": 300187
+    },
+    "search": {
+      "entry": "src/app/pages/SearchPage.tsx",
+      "assets": [
+        "SearchPage-4KdVLAl4.js",
+        "chevron-right-DDBcHgQ7.js",
+        "dialog-BBhnOwle.js",
+        "format-Ch60Rzxm.js",
+        "icons-pgefAfjp.js",
+        "index-CD1OGqSx.js",
+        "react-query-DywHXaAj.js",
+        "react-vendor-DixGO3aS.js",
+        "star-BJz6Tfu2.js",
+        "star-rating-CUlQrMwW.js",
+        "surface-FgXL3TDx.js",
+        "use-categories-CMt3wl98.js"
+      ],
+      "gzipBytes": 303521
+    },
+    "product": {
+      "entry": "src/app/pages/ProductPage.tsx",
+      "assets": [
+        "ProductPage-C2tJdTkG.js",
+        "chevron-right-DDBcHgQ7.js",
+        "circle-alert-BI6QATqZ.js",
+        "field-CP-yWEIp.js",
+        "format-Ch60Rzxm.js",
+        "icons-pgefAfjp.js",
+        "index-CD1OGqSx.js",
+        "message-circle-C1mWuZMA.js",
+        "react-query-DywHXaAj.js",
+        "react-vendor-DixGO3aS.js",
+        "shield-D1S8WJ1w.js",
+        "shield-check-1nHfKkHW.js",
+        "shopping-cart-CNa3K9bq.js",
+        "star-BJz6Tfu2.js",
+        "star-rating-CUlQrMwW.js",
+        "surface-FgXL3TDx.js",
+        "truck-Dp6sG0xX.js",
+        "use-recently-viewed-LRQhIk2O.js",
+        "useProductVideos-dDvZHIZl.js",
+        "zap-DWD6w4q4.js"
+      ],
+      "gzipBytes": 324165
+    },
+    "cart": {
+      "entry": "src/app/pages/CartPage.tsx",
+      "assets": [
+        "CartPage-COfXpdr7.js",
+        "coupons-Dznd-N8m.js",
+        "credit-card-D6FdNjnY.js",
+        "dialog-BBhnOwle.js",
+        "domain-constants-k2lTefKR.js",
+        "format-Ch60Rzxm.js",
+        "icons-pgefAfjp.js",
+        "index-CD1OGqSx.js",
+        "lock-EQIL9OUw.js",
+        "plus-DON8dLzC.js",
+        "react-query-DywHXaAj.js",
+        "react-vendor-DixGO3aS.js",
+        "shield-check-1nHfKkHW.js",
+        "star-BJz6Tfu2.js",
+        "tag-DCVQgaRJ.js",
+        "trash-2-BozDkmii.js",
+        "use-recently-viewed-LRQhIk2O.js"
+      ],
+      "gzipBytes": 299079
+    },
+    "checkout": {
+      "entry": "src/app/pages/checkout/index.ts",
+      "assets": [
+        "arrow-left-fM-HXtup.js",
+        "chevron-right-DDBcHgQ7.js",
+        "circle-alert-BI6QATqZ.js",
+        "circle-check-big-BIXlmBuB.js",
+        "coupons-Dznd-N8m.js",
+        "credit-card-D6FdNjnY.js",
+        "dialog-BBhnOwle.js",
+        "domain-constants-k2lTefKR.js",
+        "format-Ch60Rzxm.js",
+        "icons-pgefAfjp.js",
+        "index-CD1OGqSx.js",
+        "index-D1Nyk9_s.js",
+        "index-Dk-_knwd.js",
+        "map-pin-DSjCfl20.js",
+        "modal-BEP3aZPZ.js",
+        "payment-BJizT9VX.js",
+        "plus-DON8dLzC.js",
+        "react-query-DywHXaAj.js",
+        "react-vendor-DixGO3aS.js",
+        "shield-check-1nHfKkHW.js",
+        "tag-DCVQgaRJ.js",
+        "truck-Dp6sG0xX.js",
+        "zap-DWD6w4q4.js"
+      ],
+      "gzipBytes": 318944
+    }
+  },
+  "assets": [
+    {
+      "name": "AccessDeniedPage-w4ZvcTBJ.js",
+      "bytes": 2009,
+      "gzipBytes": 940,
+      "sha256": "aa56db39783f11f6d78dfe9354cd83cdab5b860a6561c52433da3fd3d503aa31"
+    },
+    {
+      "name": "CartPage-COfXpdr7.js",
+      "bytes": 14858,
+      "gzipBytes": 4089,
+      "sha256": "86b294949b5b24326cadacf4aaa1f33ce7626b3a9698d8dfeadbf8887cdceead"
+    },
+    {
+      "name": "DesignSystemPage-NqkcqFB9.js",
+      "bytes": 35209,
+      "gzipBytes": 8624,
+      "sha256": "1c146f902997233e0c173c6dee4d46dae07617f100f37dd4a3df08fc3f09e512"
+    },
+    {
+      "name": "HomePage-lRZAWERP.js",
+      "bytes": 15347,
+      "gzipBytes": 4937,
+      "sha256": "79185fbf53094cfbe65e1ff610cac27a4062f682813cd1164c476a64996a598b"
+    },
+    {
+      "name": "LoginPage-BzRCUC8H.js",
+      "bytes": 5459,
+      "gzipBytes": 2083,
+      "sha256": "e9e3942970056010f155559b2541a7c16b33a7f73a20b221a4d3e98a820d4145"
+    },
+    {
+      "name": "MessagesPage-BaiTsNuA.js",
+      "bytes": 8010,
+      "gzipBytes": 2951,
+      "sha256": "740ba6080b4a33a452892de23c644714104f98d9cc7cbf81afe2c04cdfac4098"
+    },
+    {
+      "name": "NotFoundPage-BhbjBC5_.js",
+      "bytes": 1475,
+      "gzipBytes": 687,
+      "sha256": "196297f84c571def17dfb428525ca393fa35fdefeae169ae26015a793b2163c8"
+    },
+    {
+      "name": "NotificationsPage-CyilrM_C.js",
+      "bytes": 4408,
+      "gzipBytes": 1803,
+      "sha256": "5030e581c573fabf4bbf9d63d5fc40956be09c54f863c0180af0662fb06f382d"
+    },
+    {
+      "name": "OrderDetailPage-CcAiOi87.js",
+      "bytes": 8822,
+      "gzipBytes": 2253,
+      "sha256": "53c72d8009e5f8b6933f3c6cada621987f74a75c4ce1faface69e50dfddf78ed"
+    },
+    {
+      "name": "OrdersPage-nhdQ5J8W.js",
+      "bytes": 17832,
+      "gzipBytes": 5351,
+      "sha256": "34805d09295648c856e83ae49b27282fc76034711784288cb66c80dfbf9d21fd"
+    },
+    {
+      "name": "PasswordResetPage-Dw2MTQm_.js",
+      "bytes": 4017,
+      "gzipBytes": 1690,
+      "sha256": "73600cf08adc69663e6756e7ffde551c32d3ae7e50db183938f95c7def6ea3cd"
+    },
+    {
+      "name": "PaymentReturnPage-fN7y7cuD.js",
+      "bytes": 4947,
+      "gzipBytes": 1543,
+      "sha256": "08a0ed9da4d23384658776d024fc7bd6440fcb2fadf5fec5a4f2d51513e8d12f"
+    },
+    {
+      "name": "ProductPage-C2tJdTkG.js",
+      "bytes": 43040,
+      "gzipBytes": 11544,
+      "sha256": "c945f2673142dcb1af1f64f0fd321aae3cc56fb97b18066b47299b68e20ad4e2"
+    },
+    {
+      "name": "ProfilePage-CpCS29kG.js",
+      "bytes": 16002,
+      "gzipBytes": 4710,
+      "sha256": "4dccacf7ea3a82ad28ce8af0fe969169bf7deffa1d3b455227ca814e4248bf2e"
+    },
+    {
+      "name": "RegisterPage-Dxfs0NBl.js",
+      "bytes": 165933,
+      "gzipBytes": 40704,
+      "sha256": "f81fa9de1d35938a780ca934044cb5b5e5515fc0c566222c6b2a8bd0c740a6ff"
+    },
+    {
+      "name": "ReturnRequestPage-B8AYnIFt.js",
+      "bytes": 6322,
+      "gzipBytes": 2071,
+      "sha256": "1966925d59a2038cccf4901f0b6a67c367e89bac515c7672e0e3caf06d743533"
+    },
+    {
+      "name": "ReturnStatusPage-gob9doBA.js",
+      "bytes": 7589,
+      "gzipBytes": 2356,
+      "sha256": "d95f337da8055deb2547955b7fa57d3fec8b398b232ec89de7a5113882ac353b"
+    },
+    {
+      "name": "SearchPage-4KdVLAl4.js",
+      "bytes": 27099,
+      "gzipBytes": 8220,
+      "sha256": "7cfa22156b491f48763b619b24687203c78ac88a2a2891aab3445e0fa436c0ec"
+    },
+    {
+      "name": "SellerDetailPage-CiZ0U_C5.js",
+      "bytes": 4734,
+      "gzipBytes": 1780,
+      "sha256": "b73045c4c7e887b62d641ba92b3244335a733cf9736d111259fc56f1213ac6f0"
+    },
+    {
+      "name": "WishlistPage-t03AuTay.js",
+      "bytes": 5896,
+      "gzipBytes": 2162,
+      "sha256": "151c4d91269393669ed108b13104024fbc7450d75f35e9cd520bcf2061f0f812"
+    },
+    {
+      "name": "arrow-left-fM-HXtup.js",
+      "bytes": 166,
+      "gzipBytes": 164,
+      "sha256": "de1ea9108bb38c7aff692598f70950e4dc7977b4c7f106870881337e6c6984f1"
+    },
+    {
+      "name": "arrow-right-wgk_1iCS.js",
+      "bytes": 166,
+      "gzipBytes": 161,
+      "sha256": "80013c1ff3daecadab6900449876fce2fbb4917b8301e2e35c959acc927a3b12"
+    },
+    {
+      "name": "chevron-right-DDBcHgQ7.js",
+      "bytes": 131,
+      "gzipBytes": 142,
+      "sha256": "af1c4c3a825d45b4d40f31243335e5b992924242a197d277c2a1c10d389289fe"
+    },
+    {
+      "name": "circle-alert-BI6QATqZ.js",
+      "bytes": 251,
+      "gzipBytes": 187,
+      "sha256": "033be118758ea7e7fb1d56e82e97b11f810b53e28f416a3f393aa962267a23c3"
+    },
+    {
+      "name": "circle-check-big-BIXlmBuB.js",
+      "bytes": 190,
+      "gzipBytes": 180,
+      "sha256": "2550cc8838d558a03cb7224cb988a485352cc60b8a437e8fa44fb38dacaa30e2"
+    },
+    {
+      "name": "circle-x-BZfims2J.js",
+      "bytes": 203,
+      "gzipBytes": 177,
+      "sha256": "7e9736953b7609defeec2a670badd379a44fefa893d96ae849e9faf1b3d28c3d"
+    },
+    {
+      "name": "confirm-dialog-B12uAzFi.js",
+      "bytes": 1577,
+      "gzipBytes": 779,
+      "sha256": "a97afd6e4d4cb678222752579ba7e1c892504c3866439393ebd56276c065fb07"
+    },
+    {
+      "name": "coupons-Dznd-N8m.js",
+      "bytes": 354,
+      "gzipBytes": 266,
+      "sha256": "510d96aab476137868d104c37d3369581f2b7d376efffac1e1e709faa2843ccd"
+    },
+    {
+      "name": "credit-card-D6FdNjnY.js",
+      "bytes": 208,
+      "gzipBytes": 188,
+      "sha256": "304f20b656b803e5d57f748eda6a5f869ef2a55a7481bdb80eb0e131edb9d273"
+    },
+    {
+      "name": "dialog-BBhnOwle.js",
+      "bytes": 3133,
+      "gzipBytes": 1469,
+      "sha256": "ab1c9acddf1d8c2c16f06592ca8613acc818e9a4be9442553c2aeb5096a1f3e1"
+    },
+    {
+      "name": "domain-constants-k2lTefKR.js",
+      "bytes": 182,
+      "gzipBytes": 173,
+      "sha256": "3964cd20fd2526f2baa0067826e2f025a2c11683c6ee11046ea345561bf8e6b3"
+    },
+    {
+      "name": "field-CP-yWEIp.js",
+      "bytes": 2772,
+      "gzipBytes": 1019,
+      "sha256": "d3169472e0db85e1b86707e203aca176148a5716b970d6b6c0cfa1ff201b6f01"
+    },
+    {
+      "name": "format-Ch60Rzxm.js",
+      "bytes": 949,
+      "gzipBytes": 451,
+      "sha256": "adc46c3afc96be4d59a376159f976edf030d561eba2ff39e7c84397e0923e522"
+    },
+    {
+      "name": "group-by-date-Ds350p4K.js",
+      "bytes": 395579,
+      "gzipBytes": 109263,
+      "sha256": "add58591b83ff8f76eb6f84460c92f2a8eb455bb2ccd2b105a6b5f40853806c6"
+    },
+    {
+      "name": "icons-pgefAfjp.js",
+      "bytes": 18330,
+      "gzipBytes": 5090,
+      "sha256": "e63f264c0362ed46999817a728a38ed1f65dfef69b44040eadca51afe8b06b0a"
+    },
+    {
+      "name": "index-1LVRwWU2.js",
+      "bytes": 83226,
+      "gzipBytes": 16465,
+      "sha256": "92418bbc3df27466de9666907dddfa5dfd781811019aa524790db9f5ed2d20c6"
+    },
+    {
+      "name": "index-CD1OGqSx.js",
+      "bytes": 772253,
+      "gzipBytes": 237787,
+      "sha256": "a3caf9a3b2874d1398aa128ca9e45f2dfc0705981048b44cf97dd3608a195fa4"
+    },
+    {
+      "name": "index-D1Nyk9_s.js",
+      "bytes": 934,
+      "gzipBytes": 566,
+      "sha256": "30fd77057fbe03b4680065703c5e4b3d4e96e2709e2bf5d81b5f828a42e8d75c"
+    },
+    {
+      "name": "index-Dk-_knwd.js",
+      "bytes": 75538,
+      "gzipBytes": 23222,
+      "sha256": "90f601d063645a15a944e470436321951bd79960a515d30120aa6930669639b1"
+    },
+    {
+      "name": "index-TNyDABWS.js",
+      "bytes": 65470,
+      "gzipBytes": 16814,
+      "sha256": "13fc2cf41c4286f5ac1e65a836ce62dc0d360f9ec0402533e71bfac96357e6e9"
+    },
+    {
+      "name": "lock-EQIL9OUw.js",
+      "bytes": 202,
+      "gzipBytes": 192,
+      "sha256": "2b28f2f851529c30531986523439b4f1e823dcf11a5e6f377e7092d6706f795e"
+    },
+    {
+      "name": "map-pin-DSjCfl20.js",
+      "bytes": 255,
+      "gzipBytes": 222,
+      "sha256": "a40af2ed48438f4f9af334a34bf5055efa92954000184357be454d3b0f3ef2df"
+    },
+    {
+      "name": "message-circle-C1mWuZMA.js",
+      "bytes": 242,
+      "gzipBytes": 213,
+      "sha256": "18960cceee61b5d07d636661b6e95ef70785809861d80e1d68920bdd8b4e4add"
+    },
+    {
+      "name": "modal-BEP3aZPZ.js",
+      "bytes": 190,
+      "gzipBytes": 178,
+      "sha256": "cd922ccd84002ae61902e2444b12f2596044dc14932c648e40efd5c0d58d821a"
+    },
+    {
+      "name": "notification-preferences-page-CRoHMadZ.js",
+      "bytes": 6240,
+      "gzipBytes": 2447,
+      "sha256": "2a4527cd19b5f21a420b45606f93b4808e259a0176b8e8e9dc3c47b684ab4fc2"
+    },
+    {
+      "name": "payment-BJizT9VX.js",
+      "bytes": 1126,
+      "gzipBytes": 450,
+      "sha256": "acbccfdb8e6550b9f1a08e8864fcfbfab6fc58ef281d26d2b2e41b9da5ead2ab"
+    },
+    {
+      "name": "plus-DON8dLzC.js",
+      "bytes": 154,
+      "gzipBytes": 148,
+      "sha256": "3ab0ab84facad1598fbf8c733ce24d8894fae4baaf529d1e8cd7f306733be939"
+    },
+    {
+      "name": "react-query-DywHXaAj.js",
+      "bytes": 49352,
+      "gzipBytes": 15210,
+      "sha256": "743b1cd52a97168ef77e771529b56df2629045da85a62f29220f0d0cf9b17193"
+    },
+    {
+      "name": "react-vendor-DixGO3aS.js",
+      "bytes": 94263,
+      "gzipBytes": 31877,
+      "sha256": "2527bef4576393e260ae16099876b41a91b96a39ebc101b94e928e3e5be6c0bb"
+    },
+    {
+      "name": "returns-F1de9KsB.js",
+      "bytes": 697,
+      "gzipBytes": 404,
+      "sha256": "7f6f93ba39edf85dc73963849e8f768c335405592b039ffe5d9c42c6ab7c318e"
+    },
+    {
+      "name": "sanitize-redirect-DHYAg9nP.js",
+      "bytes": 320,
+      "gzipBytes": 187,
+      "sha256": "943af34dad3ce98bc3790358c73bb74d765d8400f1b1ef5a6ee5db4fc7b282e8"
+    },
+    {
+      "name": "shield-D1S8WJ1w.js",
+      "bytes": 268,
+      "gzipBytes": 225,
+      "sha256": "c6a12f3fe7cad2c766af49be6394518be702b09c4bf837fffc47108472781375"
+    },
+    {
+      "name": "shield-check-1nHfKkHW.js",
+      "bytes": 316,
+      "gzipBytes": 248,
+      "sha256": "d6283bd7ba31567384e7c20e7462470eb1adaf53e9b198d8afe0ff8169567937"
+    },
+    {
+      "name": "shopping-cart-CNa3K9bq.js",
+      "bytes": 597,
+      "gzipBytes": 347,
+      "sha256": "0951b4639ad44c74085f6e3eba694ccae49537ec5066b63b0fd15a6733681347"
+    },
+    {
+      "name": "star-BJz6Tfu2.js",
+      "bytes": 473,
+      "gzipBytes": 290,
+      "sha256": "4c0ac3bde70c63808c2742789f948bb25f595dd7cf4c514ccc6c915fce958905"
+    },
+    {
+      "name": "star-rating-CUlQrMwW.js",
+      "bytes": 891,
+      "gzipBytes": 577,
+      "sha256": "744d9c59125a0026b557594c7361b20a409819e2d486ced64d2c1f3677530031"
+    },
+    {
+      "name": "surface-FgXL3TDx.js",
+      "bytes": 1592,
+      "gzipBytes": 795,
+      "sha256": "307c6ad629ff73bc3393b4c77841e6193ce5d1cd2557a965098365967ac3f118"
+    },
+    {
+      "name": "tag-DCVQgaRJ.js",
+      "bytes": 322,
+      "gzipBytes": 248,
+      "sha256": "3e0f2064e3af5c498ff2179d18a70dd4aa77b5e5aff2da3f14d1148cb4de64b6"
+    },
+    {
+      "name": "trash-2-BozDkmii.js",
+      "bytes": 329,
+      "gzipBytes": 219,
+      "sha256": "8d6a8815d621e21cf1b7a68dc22039ff99008ac1f44fb52002cac72dbf07316f"
+    },
+    {
+      "name": "truck-Dp6sG0xX.js",
+      "bytes": 402,
+      "gzipBytes": 268,
+      "sha256": "1e051f0abdd8a98191ad752ed5ff5b3b9035e7a5680ce5e03408ff62763b40fa"
+    },
+    {
+      "name": "use-categories-CMt3wl98.js",
+      "bytes": 4151,
+      "gzipBytes": 1613,
+      "sha256": "f1f229eb33cc14477848896e23c5eb8cf33fecc1b34efacf5b6a35cce0ea5acb"
+    },
+    {
+      "name": "use-recently-viewed-LRQhIk2O.js",
+      "bytes": 2418,
+      "gzipBytes": 1134,
+      "sha256": "1deaeb52a26c16906e75fad63e47deb729ef39c8857a983155114758b639c560"
+    },
+    {
+      "name": "useProductVideos-dDvZHIZl.js",
+      "bytes": 61714,
+      "gzipBytes": 16551,
+      "sha256": "d95d2fa19caf9b259d7e4662a039df68ec7bfb08cd863f8eeb54d806c291c54e"
+    },
+    {
+      "name": "zap-DWD6w4q4.js",
+      "bytes": 263,
+      "gzipBytes": 210,
+      "sha256": "608338b655f8b579fc5085b53a76c6499ba56700ce7ce5c47d5f0c27ff0a2134"
+    }
+  ]
+}

@@ -32,7 +32,9 @@
     "pretest:e2e": "node scripts/hydrate-e2e.mjs",
     "test:e2e:ui": "playwright test --ui",
     "pretest:e2e:ui": "node scripts/hydrate-e2e.mjs",
-    "test:a11y": "playwright test e2e/a11y.spec.ts"
+    "test:a11y": "playwright test e2e/a11y.spec.ts",
+    "measure:bundles": "node scripts/measure-route-bundles.mjs",
+    "measure:lighthouse": "node scripts/measure-lighthouse.mjs"
   },
   "dependencies": {
     "@figma/astraui": "1.0.0",
@@ -74,6 +76,7 @@
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "5.2.0",
     "@vitest/coverage-v8": "4.1.10",
+    "chrome-launcher": "1.2.1",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^9.1.0",
     "eslint-import-resolver-typescript": "^3.7.0",
@@ -84,6 +87,7 @@
     "eslint-plugin-react-refresh": "^0.4.26",
     "globals": "^15.15.0",
     "happy-dom": "20.11.0",
+    "lighthouse": "13.4.1",
     "prettier": "^3.4.0",
     "tailwindcss": "4.1.12",
     "typescript": "^5.6.3",
