@@ -68,14 +68,16 @@ interface RequireRoleProps {
 
 export function RequireRole({ role, children, fallbackPath = "/" }: RequireRoleProps) {
   const { ready, authenticated, roles } = useAuth();
+  const location = useLocation();
   const { t } = useTranslation();
 
   if (!ready) return null;
 
   if (!authenticated) {
+    const next = encodeURIComponent(location.pathname + location.search);
     return (
       <RedirectWithToast
-        to="/login"
+        to={`/login?next=${next}`}
         replace
         message={t("auth.loginRequired", { defaultValue: "Please sign in to continue" })}
       />

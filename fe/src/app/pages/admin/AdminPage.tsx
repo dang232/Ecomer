@@ -12,8 +12,9 @@ import {
 } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "motion/react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { useLocation, useNavigate } from "react-router";
 
 import {
   adminListSellers,
@@ -60,8 +61,30 @@ const NAV_ITEMS: { id: AdminTab; labelKey: string; icon: typeof IconLayoutDashbo
   { id: "health", labelKey: "admin.nav.health", icon: IconActivity },
 ];
 
+const ADMIN_TAB_PATHS: Record<AdminTab, string> = {
+  dashboard: "/admin",
+  sellers: "/admin/sellers",
+  reviews: "/admin/reviews",
+  coupons: "/admin/coupons",
+  disputes: "/admin/disputes",
+  payouts: "/admin/payouts",
+  users: "/admin/users",
+  orders: "/admin/orders",
+  health: "/admin/health",
+  videoModeration: "/admin/video",
+};
+
+function adminTabFromPath(pathname: string): AdminTab {
+  return (
+    (Object.entries(ADMIN_TAB_PATHS).find(([, path]) => path === pathname)?.[0] as
+      AdminTab | undefined) ?? "dashboard"
+  );
+}
+
 export function AdminPage() {
-  const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const activeTab = adminTabFromPath(location.pathname);
   const { t } = useTranslation();
 
   // Pull pending counts for sidebar badges (best effort).
@@ -140,7 +163,7 @@ export function AdminPage() {
                 return (
                   <button
                     key={item.id}
-                    onClick={() => setActiveTab(item.id)}
+                    onClick={() => navigate(ADMIN_TAB_PATHS[item.id])}
                     aria-label={
                       badge > 0
                         ? t("admin.nav.ariaLabelWithBadge", {
@@ -183,7 +206,7 @@ export function AdminPage() {
             {NAV_ITEMS.map((item) => (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => navigate(ADMIN_TAB_PATHS[item.id])}
                 className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all"
                 style={
                   activeTab === item.id

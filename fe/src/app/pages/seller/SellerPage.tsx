@@ -10,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "motion/react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useLocation, useNavigate } from "react-router";
 
 import { sellerPendingOrders } from "../../lib/api/endpoints/orders";
 import { myPayouts, myWallet } from "../../lib/api/endpoints/seller-finance";
@@ -41,6 +42,22 @@ const NAV_ACCOUNT: { id: SellerTab; labelKey: string; icon: typeof IconLayoutDas
 ];
 
 const ALL_NAV_ITEMS = [...NAV_MAIN, ...NAV_FINANCE, ...NAV_ACCOUNT];
+
+const SELLER_TAB_PATHS: Record<SellerTab, string> = {
+  dashboard: "/seller",
+  products: "/seller/products",
+  orders: "/seller/orders",
+  reviews: "/seller/reviews",
+  wallet: "/seller/wallet",
+  settings: "/seller/settings",
+};
+
+function sellerTabFromPath(pathname: string): SellerTab {
+  return (
+    (Object.entries(SELLER_TAB_PATHS).find(([, path]) => path === pathname)?.[0] as
+      SellerTab | undefined) ?? "dashboard"
+  );
+}
 
 function NavItem({
   item,
@@ -79,8 +96,10 @@ function NavItem({
 }
 
 export function SellerPage() {
-  const [activeTab, setActiveTab] = useState<SellerTab>("dashboard");
   const [orderSearch, setOrderSearch] = useState("");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const activeTab = sellerTabFromPath(location.pathname);
   const { t } = useTranslation();
 
   const profileQuery = useQuery({
@@ -155,7 +174,7 @@ export function SellerPage() {
             key={item.id}
             item={item}
             active={activeTab === item.id}
-            onClick={() => setActiveTab(item.id)}
+            onClick={() => navigate(SELLER_TAB_PATHS[item.id])}
             badge={item.id === "orders" ? pendingCount : undefined}
           />
         ))}
@@ -169,7 +188,7 @@ export function SellerPage() {
             key={item.id}
             item={item}
             active={activeTab === item.id}
-            onClick={() => setActiveTab(item.id)}
+            onClick={() => navigate(SELLER_TAB_PATHS[item.id])}
           />
         ))}
 
@@ -182,7 +201,7 @@ export function SellerPage() {
             key={item.id}
             item={item}
             active={activeTab === item.id}
-            onClick={() => setActiveTab(item.id)}
+            onClick={() => navigate(SELLER_TAB_PATHS[item.id])}
           />
         ))}
       </aside>
@@ -198,7 +217,7 @@ export function SellerPage() {
             <button
               key={item.id}
               type="button"
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => navigate(SELLER_TAB_PATHS[item.id])}
               aria-label={t(item.labelKey)}
               aria-current={activeTab === item.id ? "page" : undefined}
               className={[
@@ -225,7 +244,7 @@ export function SellerPage() {
         </header>
 
         {/* Page content */}
-        <main className="p-8">
+        <div className="p-8">
           <motion.div
             key={activeTab}
             initial={{ opacity: 0, y: 10 }}
@@ -265,7 +284,7 @@ export function SellerPage() {
               <SellerSettings profileData={profileQuery.data} profileError={profileQuery.error} />
             ) : null}
           </motion.div>
-        </main>
+        </div>
       </div>
     </div>
   );
