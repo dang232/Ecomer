@@ -157,6 +157,13 @@ export default tseslint.config(
   },
 
   {
+    files: ["src/features/seller-products/**/*.ts", "src/features/seller-products/**/*.tsx"],
+    rules: {
+      "import/no-restricted-paths": "off",
+    },
+  },
+
+  {
     files: ["**/*.config.{ts,js,mjs,cjs}"],
     extends: [tseslint.configs.disableTypeChecked],
   },

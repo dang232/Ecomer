@@ -113,6 +113,10 @@ export const sellerProductUpdate = (id: string, body: SellerProductWriteBody) =>
 export const sellerProductPublish = (id: string) =>
   api.put(`/sellers/me/products/${encodeURIComponent(id)}/publish`, productDetailSchema);
 
+/** DELETE /sellers/me/products/{id} — waits for 204. */
+export const sellerProductDelete = (id: string) =>
+  api.delete(`/sellers/me/products/${encodeURIComponent(id)}`);
+
 export const sellerProductImageUploadUrl = (
   productId: string,
   body: { contentType: string; size?: number },
