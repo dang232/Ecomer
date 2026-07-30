@@ -2,6 +2,19 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+## Plan Progress
+
+| # | Task | Status | Commit |
+|---|---|---|---|
+| 1 | Modernize Seller Shell And Dashboard | **shipped** | `12fa1b1a feat(fe): modernize seller dashboard` |
+| 2 | Refactor Seller Products And Product Editor | **shipped** | `5f9660bb feat(fe): modernize seller product workflow` + `b10dcee8 fix(fe): clear seller queue a11y + editor async lint` |
+| 3 | Standardize Seller Orders And Review Inbox | **shipped** | `f8c13551 feat(fe): standardize seller work queues` |
+| 4 | Clarify Seller Wallet And Supported Settings | **shipped** | `c8c71fbb feat(fe): clarify seller finance and settings` + `1f0f7558 fix(fe): merge duplicate seller.settings i18n blocks + cover in-flight payout` (code-review follow-up) |
+
+**Note on `b7e411de`:** That commit shipped buyer-facing cart + checkout feature extraction (Plan 04), not seller work. The seller plan's Tasks 2/3/4 still need their own extraction commits.
+
+**Plan 05 final state (2026-07-31):** All 4 tasks shipped. Verification gates (vitest 42 tests / 7 files, tsc exit 0, eslint 0 errors) green after `b10dcee8`.
+
 **Goal:** Turn the seller area into a restrained, route-driven operational console for revenue, products, fulfillment, reviews, payouts, and supported account information.
 
 **Architecture:** Each seller route owns its query options and URL state through the seller feature public interface. Typed presenters convert decoded data into compact KPI, table, editor, and queue views; actions render only when a current endpoint supports them and financial mutations retain stable idempotency.

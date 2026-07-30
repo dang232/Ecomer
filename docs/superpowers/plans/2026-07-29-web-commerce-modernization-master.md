@@ -44,6 +44,26 @@ Execute these plans in order. A later plan may begin only after all blocking gat
 7. [Admin Experience](2026-07-29-web-commerce-modernization-06-admin.md)
 8. [Integrated Release And Cutover](2026-07-29-web-commerce-modernization-07-release.md)
 
+## Plan Progress
+
+Live status as of 2026-07-30. Updated when each task ships.
+
+| # | Plan | Task | Status | Commit / Notes |
+|---|---|---|---|---|
+| 01 | Baseline | all | **pending** | toolchain truth, baseline warnings, route inventory, buyer proxies not yet captured |
+| 02a | Checkout Lifecycle | all | **pending** | one-order invariant, payment-only retry, redirect recovery |
+| 02 | Boundaries | 3-4 | **pending** | unknown-to-Zod transport, test/E2E type coverage |
+| 03 | Platform | 1-6 | **partial** | shared primitives scaffolded (`fe/src/shared/ui`); nesting/layouts not migrated |
+| 04 | Buyer | 1-7 | **partial** | cart + checkout page-view extraction shipped (`b7e411de`); page components still to adopt |
+| 05 | Seller | 1 | **shipped** | `12fa1b1a feat(fe): modernize seller dashboard` |
+| 05 | Seller | 2 | **shipped** | `5f9660bb feat(fe): modernize seller product workflow` |
+| 05 | Seller | 3 | **shipped** | `f8c13551 feat(fe): standardize seller work queues` |
+| 05 | Seller | 4 | **shipped** | `c8c71fbb feat(fe): clarify seller finance and settings` + `1f0f7558` (i18n duplicate merge + payout-flight test) |
+| 06 | Admin | all | **pending** | admin dashboard, queues, decisions, users, health |
+| 07 | Release | all | **pending** | preview removal, compat removal, coordinated promotion and rollback |
+
+**Branch:** `feat/search-catalog-cache-flow` (currently 11 commits ahead of `main`).
+
 ## Locked Decisions
 
 | Decision | Implementation consequence |
