@@ -2,6 +2,14 @@ import { Filter, Package, Search, SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
 
 import {
+  CampaignMedia,
+  HorizontalRail,
+  ProductGrid,
+  ProductTile,
+  TrustCues,
+  type ProductTileView,
+} from "@/shared/commerce";
+import {
   AsyncState,
   Button,
   Checkbox,
@@ -59,6 +67,44 @@ const columns: DataTableColumn<DemoOrder>[] = [
     align: "end",
   },
 ];
+
+const commerceProducts: ProductTileView[] = [
+  {
+    id: "trail-runner",
+    name: "VNShop Trail Runner for city commutes and weekend routes",
+    imageUrl: "/images/marketplace-collection.png",
+    priceVnd: 1_250_000,
+    originalPriceVnd: 1_500_000,
+    rating: 4.8,
+    soldCount: 2_300,
+    sellerName: "VNShop Mall",
+    stockState: "in-stock",
+  },
+  {
+    id: "long-label",
+    name: "A 120 character Vietnamese product title that keeps the product tile height stable even with unavailable stock and no rating",
+    priceVnd: 12_500_000,
+    sellerName: "Verified home store with an intentionally long seller name",
+    stockState: "unavailable",
+  },
+  {
+    id: "coffee-kit",
+    name: "Vietnamese coffee starter kit",
+    imageUrl: "/images/marketplace-collection.png",
+    priceVnd: 480_000,
+    originalPriceVnd: 600_000,
+    rating: 4.5,
+    soldCount: 912,
+    sellerName: "Saigon Pantry",
+    stockState: "low-stock",
+  },
+];
+
+const trustCues = [
+  { id: "buyer-protection", label: "Buyer protection", detail: "Payment held safely" },
+  { id: "returns", label: "Easy returns", detail: "Simple return flow" },
+  { id: "shipping", label: "Tracked delivery", detail: "Updates from pickup" },
+] as const;
 
 function DemoSurface({ children }: { children: React.ReactNode }) {
   return <div className="grid gap-4 border-y border-border py-6 sm:grid-cols-2">{children}</div>;
@@ -209,6 +255,30 @@ export function DesignSystemPage() {
             </AsyncState>
           </div>
         </DemoSurface>
+      </section>
+
+      <section aria-labelledby="commerce-patterns-heading" className="space-y-6">
+        <h2 id="commerce-patterns-heading" className="text-lg font-bold text-foreground">
+          Marketplace patterns
+        </h2>
+        <CampaignMedia
+          eyebrow="Weekend edit"
+          title="Useful things for the way you shop"
+          description="A calm, practical collection for everyday delivery."
+          actionLabel="Explore the edit"
+          href="/search?q=weekend"
+          imageUrl="/images/marketplace-collection.png"
+          imageAlt="Everyday products arranged on a sunlit workspace"
+        />
+        <HorizontalRail title="Popular with buyers">
+          {commerceProducts.map((product) => (
+            <div key={product.id} className="snap-start">
+              <ProductTile product={product} href={`/product/${product.id}`} />
+            </div>
+          ))}
+        </HorizontalRail>
+        <ProductGrid products={commerceProducts} />
+        <TrustCues cues={trustCues} />
       </section>
 
       <section aria-labelledby="themes-heading" className="space-y-4">
