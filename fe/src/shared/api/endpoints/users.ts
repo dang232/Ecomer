@@ -1,11 +1,12 @@
+import { api } from "@/shared/api/client";
 import {
   avatarUploadResponseSchema,
+  sellerProfileSchema,
   sellerRegisterResponseSchema,
   userProfileSchema,
   type Address,
 } from "@/shared/contracts/api";
 import { findAddressIndexByKey } from "@/shared/lib";
-import { api } from "@/shared/api/client";
 
 export const myProfile = () => api.get("/users/me", userProfileSchema);
 
@@ -55,4 +56,4 @@ export const avatarActivate = (body: AvatarActivateBody) =>
 export const registerSeller = (body: { shopName: string; description?: string; phone: string }) =>
   api.post("/sellers/register", sellerRegisterResponseSchema, body);
 
-export const sellerProfile = () => api.get("/sellers/me", userProfileSchema);
+export const sellerProfile = () => api.get("/sellers/me", sellerProfileSchema);

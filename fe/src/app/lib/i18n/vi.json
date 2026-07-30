@@ -70,6 +70,7 @@
     "emptySub": "Hãy thêm sản phẩm vào giỏ hàng và quay lại nhé!",
     "continueShopping": "Tiếp tục mua sắm",
     "sellerFallback": "Người bán",
+    "sellerUnavailable": "Không xác định người bán",
     "freeShippingTag": "Miễn phí vận chuyển",
     "shipFee": "Ship {{fee}}",
     "couponHeader": "Mã giảm giá",
@@ -92,6 +93,13 @@
     "loginBtn": "Đăng nhập",
     "sslNotice": "Thông tin thanh toán được mã hóa SSL 256-bit",
     "priceUnavailable": "Không có giá",
+    "lineTotal": "Tạm tính: {{amount}}",
+    "quantity": "Số lượng của {{name}}",
+    "decreaseQuantity": "Giảm số lượng {{name}}",
+    "increaseQuantity": "Tăng số lượng {{name}}",
+    "removeItem": "Xoá",
+    "removeConfirmTitle": "Xoá sản phẩm này?",
+    "removeConfirmDescription": "{{name}} sẽ bị xoá khỏi giỏ hàng.",
     "errors": {
       "cantRemove": "Không thể xoá sản phẩm",
       "cantUpdate": "Không thể cập nhật",
@@ -718,7 +726,8 @@
       "paymentMethod": "Thanh toán",
       "productsCount": "Sản phẩm ({{count}})",
       "lowStock": "Còn ít hàng — chỉ còn {{count}} sản phẩm",
-      "sellerFallback": "Người bán không xác định"
+      "sellerFallback": "Người bán không xác định",
+      "quantity": "Số lượng"
     },
     "summary": {
       "title": "Đơn hàng của bạn",
@@ -1110,15 +1119,30 @@
       "reviews": "Đánh giá",
       "wallet": "Ví tiền",
       "settings": "Cài đặt",
+      "returns": "Trả hàng",
       "sidebarLabel": "Thanh điều hướng người bán",
-      "sectionMain": "Chính",
+      "mainLabel": "Không gian người bán",
+      "bottomLabel": "Điều hướng nhanh người bán",
+      "mobileLabel": "Kênh Người Bán",
+      "moreLabel": "Thêm",
+      "sectionMain": "Tổng quan",
       "sectionFinance": "Tài chính",
-      "sectionAccount": "Tài khoản",
-      "mobileLabel": "Kênh Người Bán"
+      "sectionAccount": "Tài khoản"
     },
     "dashboard": {
+      "eyebrow": "Hôm nay",
       "title": "Tổng quan",
-      "subtitle": "Dữ liệu thời gian thực",
+      "subtitle": "Tóm tắt hiệu quả shop của bạn.",
+      "daysLabel": "Khung thời gian doanh thu",
+      "daysOption": "{{count}}n",
+      "revenueTitle": "Doanh thu · {{days}} ngày",
+      "revenueHint": "VND",
+      "revenueError": "Không tải được doanh thu: {{message}}",
+      "revenueRetry": "Thử lại",
+      "revenueLoading": "Đang tải…",
+      "revenueEmpty": "Chưa có doanh thu trong khung này.",
+      "urgentTitle": "Cần xử lý",
+      "urgentEmpty": "Mọi thứ đã ổn.",
       "kpi": {
         "balance": "Số dư ví",
         "pending": "Đơn cần xử lý",
@@ -1136,6 +1160,11 @@
       "orders30dLoading": "Đang tải...",
       "orders30dEmpty": "Chưa có đơn nào trong 30 ngày qua.",
       "revenue30dRetry": "Thử lại"
+    },
+    "urgentTasks": {
+      "order": "Đơn chờ xác nhận",
+      "payout": "Yêu cầu rút tiền cần xử lý",
+      "inventory": "Cảnh báo tồn kho"
     },
     "products": {
       "title": "Quản lý sản phẩm",
@@ -1580,6 +1609,7 @@
     "loading": "Đang tải...",
     "comingSoon": "{{feature}} sắp ra mắt!",
     "cancel": "Huỷ",
+    "back": "Quay lại",
     "confirm": "Xác nhận",
     "unavailable": "—",
     "save": "Lưu",

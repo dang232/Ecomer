@@ -60,3 +60,4 @@ export const payoutSchema = z
     currency: raw.currency ?? "VND",
   }));
 export type Payout = z.infer<typeof payoutSchema>;
+export type Wallet = z.infer<typeof walletSchema>;

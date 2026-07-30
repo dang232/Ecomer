@@ -70,6 +70,7 @@
     "emptySub": "Add some products and come back any time!",
     "continueShopping": "Continue shopping",
     "sellerFallback": "Seller",
+    "sellerUnavailable": "Seller unavailable",
     "freeShippingTag": "Free shipping",
     "shipFee": "Ship {{fee}}",
     "couponHeader": "Coupon code",
@@ -92,6 +93,13 @@
     "loginBtn": "Log in",
     "sslNotice": "Payment information is SSL-256-bit encrypted",
     "priceUnavailable": "Price unavailable",
+    "lineTotal": "Line total: {{amount}}",
+    "quantity": "Quantity for {{name}}",
+    "decreaseQuantity": "Decrease quantity for {{name}}",
+    "increaseQuantity": "Increase quantity for {{name}}",
+    "removeItem": "Remove",
+    "removeConfirmTitle": "Remove this item?",
+    "removeConfirmDescription": "{{name}} will be removed from your cart.",
     "errors": {
       "cantRemove": "Couldn't remove item",
       "cantUpdate": "Couldn't update item",
@@ -718,7 +726,8 @@
       "paymentMethod": "Payment",
       "productsCount": "Items ({{count}})",
       "lowStock": "Low stock — only {{count}} left",
-      "sellerFallback": "Unknown seller"
+      "sellerFallback": "Unknown seller",
+      "quantity": "Quantity"
     },
     "summary": {
       "title": "Your order",
@@ -1107,15 +1116,30 @@
       "reviews": "Reviews",
       "wallet": "Wallet",
       "settings": "Settings",
+      "returns": "Returns",
       "sidebarLabel": "Seller navigation",
-      "sectionMain": "Main",
+      "mainLabel": "Seller workspace",
+      "bottomLabel": "Seller quick navigation",
+      "mobileLabel": "Seller Hub",
+      "moreLabel": "More",
+      "sectionMain": "Overview",
       "sectionFinance": "Finance",
-      "sectionAccount": "Account",
-      "mobileLabel": "Seller Hub"
+      "sectionAccount": "Account"
     },
     "dashboard": {
+      "eyebrow": "Today",
       "title": "Dashboard",
-      "subtitle": "Live data",
+      "subtitle": "Snapshot of your shop performance.",
+      "daysLabel": "Revenue window",
+      "daysOption": "{{count}}d",
+      "revenueTitle": "Revenue · {{days}} days",
+      "revenueHint": "VND",
+      "revenueError": "Couldn't load revenue: {{message}}",
+      "revenueRetry": "Retry",
+      "revenueLoading": "Loading…",
+      "revenueEmpty": "No revenue in this window.",
+      "urgentTitle": "Needs attention",
+      "urgentEmpty": "All caught up.",
       "kpi": {
         "balance": "Wallet balance",
         "pending": "Pending orders",
@@ -1133,6 +1157,11 @@
       "orders30dLoading": "Loading...",
       "orders30dEmpty": "No orders in the last 30 days yet.",
       "revenue30dRetry": "Retry"
+    },
+    "urgentTasks": {
+      "order": "Order awaiting confirmation",
+      "payout": "Payout needs attention",
+      "inventory": "Inventory alert"
     },
     "products": {
       "title": "Product management",
@@ -1574,6 +1603,7 @@
     "loading": "Loading...",
     "comingSoon": "{{feature}} is coming soon!",
     "cancel": "Cancel",
+    "back": "Back",
     "confirm": "Confirm",
     "unavailable": "—",
     "save": "Save",

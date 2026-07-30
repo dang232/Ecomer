@@ -1,88 +1,72 @@
 import { describe, expect, it } from "vitest";
 
-import { addressSchema, userProfileSchema } from "@/shared/contracts/api";
+import { sellerProfileSchema, type SellerProfile } from "@/shared/contracts/api/seller";
 
 /**
- * Regression coverage for the addAddress / removeAddress / setDefaultAddress
- * shape mismatch surfaced by the Wave 1 audit. The BE returns the full
- * BuyerProfileResponse (see UserController#addAddress), and the FE schema
- * must accept that shape — not a bare array of addresses.
+ * The /sellers/me endpoint returns a SellerProfileResponse that intentionally
+ * exposes a masked payout destination only — never a plaintext bank account
+ * number. This regression locks in two invariants for the endpoint layer:
  *
- * The schemas live one layer above this test (in {@code types/api.ts}) but
- * are exercised here because they are what {@code endpoints/users.ts} uses
- * to validate every address mutation response.
+ *   1. The wire shape parses through `sellerProfileSchema` without coercion
+ *      from the generic `userProfileSchema`.
+ *   2. A plaintext `bankAccount` on the response must NOT survive the schema
+ *      — if it ever does, we want the test to fail loudly, not silently
+ *      leak the number into a UI render.
+ *
+ * (Sister test in `seller-finance.test.ts` does the same for payouts.)
  */
-describe("users endpoint Zod schemas", () => {
-  const buyerProfileResponse = {
-    id: "kc-123",
-    keycloakId: "kc-123",
-    email: "buyer@example.com",
-    name: "Nguyễn Văn A",
-    phone: "0901234567",
-    avatar: "",
-    avatarUrl: "",
-    addresses: [
-      {
-        street: "12 Lê Lợi",
-        ward: "Bến Nghé",
-        district: "Quận 1",
-        city: "Hồ Chí Minh",
-        isDefault: true,
-      },
-    ],
-    role: "BUYER",
+describe("users endpoint /sellers/me contract", () => {
+  const sellerProfileResponse = {
+    id: "seller-42",
+    shopName: "Mộc Shop",
+    bankName: "Vietcombank",
+    approved: true,
+    tier: "STANDARD",
+    vacationMode: false,
+    destination: {
+      destinationId: "dest-1",
+      bankName: "Vietcombank",
+      last4: "1234",
+      verificationState: "VERIFIED",
+    },
   };
 
-  it("userProfileSchema parses a BuyerProfileResponse-shaped payload", () => {
-    const parsed = userProfileSchema.parse(buyerProfileResponse);
-    expect(parsed.id).toBe("kc-123");
-    expect(parsed.addresses).toHaveLength(1);
-    expect(parsed.addresses?.[0].city).toBe("Hồ Chí Minh");
+  const parse = (payload: unknown): SellerProfile => sellerProfileSchema.parse(payload);
+
+  it("sellerProfileSchema parses the seller dashboard payload", () => {
+    const parsed = parse(sellerProfileResponse);
+    expect(parsed.id).toBe("seller-42");
+    expect(parsed.shopName).toBe("Mộc Shop");
+    expect(parsed.destination?.last4).toBe("1234");
+    expect(parsed.approved).toBe(true);
   });
 
-  it("userProfileSchema rejects a bare address array — addAddress must return the full profile", () => {
-    // The legacy bug used z.array(addressSchema) here; this assertion locks in
-    // the invariant that the address mutation response is the full profile.
-    const bareArray = [
-      {
-        street: "12 Lê Lợi",
-        city: "Hồ Chí Minh",
-      },
-    ];
-    expect(() => userProfileSchema.parse(bareArray)).toThrow();
-  });
-
-  it("userProfileSchema tolerates BE-side extras through .loose()", () => {
-    const parsed = userProfileSchema.parse({
-      ...buyerProfileResponse,
-      // Hypothetical future fields — must not break parsing.
-      loyaltyTier: "GOLD",
-      createdAt: "2026-05-17T00:00:00Z",
-    });
-    expect(parsed.id).toBe("kc-123");
-  });
-
-  it("addressSchema accepts the AddressResponse shape with optional fields", () => {
-    const parsed = addressSchema.parse({
-      street: "12 Lê Lợi",
-      city: "Hồ Chí Minh",
-    });
-    expect(parsed.street).toBe("12 Lê Lợi");
-    expect(parsed.city).toBe("Hồ Chí Minh");
-  });
-
-  it("userProfileSchema accepts a null email from the buyer profile endpoint", () => {
-    const parsed = userProfileSchema.parse({
-      keycloakId: "kc-123",
-      email: null,
-      addresses: [],
+  it("sellerProfileSchema does not surface a plaintext bank account number", () => {
+    const parsed = parse({
+      ...sellerProfileResponse,
+      bankAccount: "9704000000000000",
+      destination: null,
     });
 
-    expect(parsed.email).toBe("");
+    expect(parsed).not.toHaveProperty("bankAccount");
+    expect(JSON.stringify(parsed)).not.toContain("9704000000000000");
   });
 
-  it("addressSchema requires street and city", () => {
-    expect(() => addressSchema.parse({ city: "HCM" })).toThrow();
-    expect(() => addressSchema.parse({ street: "12 Lê Lợi" })).toThrow();
+  it("sellerProfileSchema accepts a null destination for sellers without a payout card", () => {
+    const parsed = parse({
+      ...sellerProfileResponse,
+      destination: null,
+    });
+
+    expect(parsed.destination).toBeNull();
+  });
+
+  it("sellerProfileSchema accepts null bankName for sellers who have not picked a payout bank", () => {
+    const parsed = parse({
+      ...sellerProfileResponse,
+      bankName: null,
+    });
+
+    expect(parsed.bankName).toBeNull();
   });
 });

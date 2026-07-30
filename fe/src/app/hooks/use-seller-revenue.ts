@@ -1,8 +1,7 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
+import { useAuth } from "@/app/hooks/auth-context";
 import { sellerRevenue, type SellerRevenuePoint } from "@/shared/api/endpoints/seller-analytics";
-
-import { useAuth } from "./auth-context";
 
 export const sellerRevenueOptions = (days: number) =>
   queryOptions<SellerRevenuePoint[]>({
@@ -24,8 +23,6 @@ export function useSellerRevenue({ days = 30 }: UseSellerRevenueOptions = {}) {
   const { ready, authenticated, roles } = useAuth();
   const enabled = ready && authenticated && roles.includes("SELLER");
 
-  // `enabled` depends on runtime auth state so it is merged at call-site rather
-  // than baked into the factory, which keeps the factory reusable for loaders.
   const query = useQuery({ ...sellerRevenueOptions(days), enabled });
 
   return {

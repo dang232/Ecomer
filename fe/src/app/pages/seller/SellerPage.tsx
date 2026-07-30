@@ -1,17 +1,8 @@
-import {
-  IconLayoutDashboard,
-  IconPackage,
-  IconRotate,
-  IconSettings,
-  IconShoppingBag,
-  IconStar,
-  IconWallet,
-} from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "motion/react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useLocation, useNavigate } from "react-router";
+import { useLocation } from "react-router";
 
 import { sellerPendingOrders } from "@/shared/api/endpoints/orders";
 import { myPayouts, myWallet } from "@/shared/api/endpoints/seller-finance";
@@ -27,25 +18,13 @@ import { SellerSettings } from "./SellerSettings";
 import { SellerWallet } from "./SellerWallet";
 
 type SellerTab =
-  "dashboard" | "products" | "orders" | "returns" | "reviews" | "wallet" | "settings";
-
-const NAV_MAIN: { id: SellerTab; labelKey: string; icon: typeof IconLayoutDashboard }[] = [
-  { id: "dashboard", labelKey: "seller.nav.dashboard", icon: IconLayoutDashboard },
-  { id: "orders", labelKey: "seller.nav.orders", icon: IconShoppingBag },
-  { id: "returns", labelKey: "return.seller.title", icon: IconRotate },
-  { id: "products", labelKey: "seller.nav.products", icon: IconPackage },
-  { id: "reviews", labelKey: "seller.nav.reviews", icon: IconStar },
-];
-
-const NAV_FINANCE: { id: SellerTab; labelKey: string; icon: typeof IconLayoutDashboard }[] = [
-  { id: "wallet", labelKey: "seller.nav.wallet", icon: IconWallet },
-];
-
-const NAV_ACCOUNT: { id: SellerTab; labelKey: string; icon: typeof IconLayoutDashboard }[] = [
-  { id: "settings", labelKey: "seller.nav.settings", icon: IconSettings },
-];
-
-const ALL_NAV_ITEMS = [...NAV_MAIN, ...NAV_FINANCE, ...NAV_ACCOUNT];
+  | "dashboard"
+  | "products"
+  | "orders"
+  | "returns"
+  | "reviews"
+  | "wallet"
+  | "settings";
 
 const SELLER_TAB_PATHS: Record<SellerTab, string> = {
   dashboard: "/seller",
@@ -60,50 +39,14 @@ const SELLER_TAB_PATHS: Record<SellerTab, string> = {
 function sellerTabFromPath(pathname: string): SellerTab {
   return (
     (Object.entries(SELLER_TAB_PATHS).find(([, path]) => path === pathname)?.[0] as
-      SellerTab | undefined) ?? "dashboard"
-  );
-}
-
-function NavItem({
-  item,
-  active,
-  onClick,
-  badge,
-}: {
-  item: { id: SellerTab; labelKey: string; icon: typeof IconLayoutDashboard };
-  active: boolean;
-  onClick: () => void;
-  badge?: number;
-}) {
-  const { t } = useTranslation();
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={t(item.labelKey)}
-      aria-current={active ? "page" : undefined}
-      className={[
-        "w-full flex items-center gap-2.5 px-3 py-2.5 rounded-[var(--radius-md)] text-[13px] font-medium transition-colors cursor-pointer text-left",
-        active
-          ? "bg-primary-light text-primary font-semibold"
-          : "text-text-secondary hover:bg-background hover:text-foreground",
-      ].join(" ")}
-    >
-      <item.icon size={16} aria-hidden="true" />
-      <span className="flex-1">{t(item.labelKey)}</span>
-      {badge !== undefined && badge > 0 ? (
-        <span className="ml-auto text-[10px] font-semibold bg-accent text-white px-1.5 py-0.5 rounded-lg">
-          {badge}
-        </span>
-      ) : null}
-    </button>
+      | SellerTab
+      | undefined) ?? "dashboard"
   );
 }
 
 export function SellerPage() {
   const [orderSearch, setOrderSearch] = useState("");
   const location = useLocation();
-  const navigate = useNavigate();
   const activeTab = sellerTabFromPath(location.pathname);
   const { t } = useTranslation();
 
@@ -145,8 +88,6 @@ export function SellerPage() {
 
   const pendingOrders = useMemo(() => pendingQuery.data ?? [], [pendingQuery.data]);
   const balance = walletQuery.data?.balance ?? null;
-  const sellerName = profileQuery.data?.name ?? t("seller.shopFallback");
-  const pendingCount = pendingOrders.length;
 
   const tabTitle: Record<SellerTab, string> = {
     dashboard: t("seller.nav.dashboard"),
@@ -159,139 +100,51 @@ export function SellerPage() {
   };
 
   return (
-    <div className="flex min-h-screen">
-      {/* ── Sidebar ── */}
-      <aside
-        aria-label={t("seller.nav.sidebarLabel", { defaultValue: "Seller navigation" })}
-        className="hidden lg:flex w-[240px] bg-card border-r border-border p-5 flex-col gap-1 sticky top-0 h-screen overflow-y-auto shrink-0"
-      >
-        {/* Logo */}
-        <div className="text-lg font-extrabold text-primary px-3 py-2 mb-5">
-          {sellerName.charAt(0).toUpperCase()}
-          {sellerName.slice(1)}
-        </div>
-
-        {/* MAIN section */}
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-3 pt-4 pb-2">
-          {t("seller.nav.sectionMain", { defaultValue: "Main" })}
-        </p>
-        {NAV_MAIN.map((item) => (
-          <NavItem
-            key={item.id}
-            item={item}
-            active={activeTab === item.id}
-            onClick={() => navigate(SELLER_TAB_PATHS[item.id])}
-            badge={item.id === "orders" ? pendingCount : undefined}
-          />
-        ))}
-
-        {/* FINANCE section */}
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-3 pt-4 pb-2">
-          {t("seller.nav.sectionFinance", { defaultValue: "Finance" })}
-        </p>
-        {NAV_FINANCE.map((item) => (
-          <NavItem
-            key={item.id}
-            item={item}
-            active={activeTab === item.id}
-            onClick={() => navigate(SELLER_TAB_PATHS[item.id])}
-          />
-        ))}
-
-        {/* ACCOUNT section */}
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-3 pt-4 pb-2">
-          {t("seller.nav.sectionAccount", { defaultValue: "Account" })}
-        </p>
-        {NAV_ACCOUNT.map((item) => (
-          <NavItem
-            key={item.id}
-            item={item}
-            active={activeTab === item.id}
-            onClick={() => navigate(SELLER_TAB_PATHS[item.id])}
-          />
-        ))}
-      </aside>
-
-      {/* ── Main content ── */}
-      <div className="flex-1 bg-background min-w-0">
-        {/* Mobile nav strip */}
-        <nav
-          aria-label={t("seller.nav.mobileLabel", { defaultValue: "Seller navigation" })}
-          className="lg:hidden flex gap-2 px-4 pt-4 pb-2 overflow-x-auto"
+    <div className="min-w-0 flex-1 bg-background">
+      <header className="flex items-center justify-between px-4 pt-6 pb-0 lg:px-8">
+        <h1 className="text-xl font-bold text-foreground">{tabTitle[activeTab]}</h1>
+      </header>
+      <div className="p-4 lg:p-8">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
         >
-          {ALL_NAV_ITEMS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => navigate(SELLER_TAB_PATHS[item.id])}
-              aria-label={t(item.labelKey)}
-              aria-current={activeTab === item.id ? "page" : undefined}
-              className={[
-                "shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-md)] text-xs font-medium transition-colors",
-                activeTab === item.id
-                  ? "bg-primary-light text-primary font-semibold"
-                  : "bg-card border border-border text-text-secondary",
-              ].join(" ")}
-            >
-              <item.icon size={13} aria-hidden="true" />
-              {t(item.labelKey)}
-              {item.id === "orders" && pendingCount > 0 ? (
-                <span className="text-[10px] font-semibold bg-accent text-white px-1.5 py-0.5 rounded-lg">
-                  {pendingCount}
-                </span>
-              ) : null}
-            </button>
-          ))}
-        </nav>
-
-        {/* Page header */}
-        <header className="flex items-center justify-between px-8 pt-8 pb-0">
-          <h1 className="text-xl font-bold text-foreground">{tabTitle[activeTab]}</h1>
-        </header>
-
-        {/* Page content */}
-        <div className="p-8">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            {activeTab === "dashboard" ? (
-              <SellerDashboard
-                pendingOrders={pendingOrders}
-                walletBalance={balance}
-                productCount={publicStatsQuery.data?.totalProducts ?? null}
-                ratingAvg={publicStatsQuery.data?.ratingAvg ?? null}
-                statsLoading={profileQuery.isLoading || publicStatsQuery.isLoading}
-              />
-            ) : null}
-            {activeTab === "products" ? <SellerProducts /> : null}
-            {activeTab === "orders" ? (
-              <SellerOrders
-                orders={pendingOrders}
-                search={orderSearch}
-                onSearch={setOrderSearch}
-                isLoading={pendingQuery.isLoading}
-                error={pendingQuery.error}
-                onRetry={() => void pendingQuery.refetch()}
-              />
-            ) : null}
-            {activeTab === "returns" ? <SellerReturns /> : null}
-            {activeTab === "reviews" ? <SellerReviews /> : null}
-            {activeTab === "wallet" ? (
-              <SellerWallet
-                balance={balance}
-                payouts={payoutsQuery.data ?? []}
-                isLoading={walletQuery.isLoading}
-                error={walletQuery.error}
-              />
-            ) : null}
-            {activeTab === "settings" ? (
-              <SellerSettings profileData={profileQuery.data} profileError={profileQuery.error} />
-            ) : null}
-          </motion.div>
-        </div>
+          {activeTab === "dashboard" ? (
+            <SellerDashboard
+              pendingOrders={pendingOrders}
+              walletBalance={balance}
+              productCount={publicStatsQuery.data?.totalProducts ?? null}
+              ratingAvg={publicStatsQuery.data?.ratingAvg ?? null}
+              statsLoading={profileQuery.isLoading || publicStatsQuery.isLoading}
+            />
+          ) : null}
+          {activeTab === "products" ? <SellerProducts /> : null}
+          {activeTab === "orders" ? (
+            <SellerOrders
+              orders={pendingOrders}
+              search={orderSearch}
+              onSearch={setOrderSearch}
+              isLoading={pendingQuery.isLoading}
+              error={pendingQuery.error}
+              onRetry={() => void pendingQuery.refetch()}
+            />
+          ) : null}
+          {activeTab === "returns" ? <SellerReturns /> : null}
+          {activeTab === "reviews" ? <SellerReviews /> : null}
+          {activeTab === "wallet" ? (
+            <SellerWallet
+              balance={balance}
+              payouts={payoutsQuery.data ?? []}
+              isLoading={walletQuery.isLoading}
+              error={walletQuery.error}
+            />
+          ) : null}
+          {activeTab === "settings" ? (
+            <SellerSettings profileData={profileQuery.data} profileError={profileQuery.error} />
+          ) : null}
+        </motion.div>
       </div>
     </div>
   );
