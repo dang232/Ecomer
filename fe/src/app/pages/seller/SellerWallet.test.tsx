@@ -1,20 +1,30 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { HTMLAttributes, ReactNode } from "react";
 import { createElement } from "react";
+import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Payout } from "@/shared/api/endpoints/seller-finance";
 
 type PayoutMutationInput = { amount: number; currency: string };
 
+// Mutable object hoisted once per file — used by both the mock and spy
 const mutationState = vi.hoisted(() => ({
   mutate: vi.fn<(input: PayoutMutationInput) => void>(),
+  isPending: false,
+}));
+
+const queryClientState = vi.hoisted(() => ({
+  invalidateQueries: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-query", () => ({
   useQuery: vi.fn(),
-  useMutation: vi.fn(() => ({ mutate: mutationState.mutate, isPending: false })),
-  useQueryClient: vi.fn(() => ({ invalidateQueries: vi.fn() })),
+  useMutation: vi.fn(() => ({
+    mutate: mutationState.mutate,
+    isPending: mutationState.isPending,
+  })),
+  useQueryClient: vi.fn(() => queryClientState),
 }));
 
 vi.mock("motion/react", () => ({
@@ -38,6 +48,10 @@ vi.mock("@tabler/icons-react", () => ({
 }));
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+
+function renderWithRouter(ui: React.ReactElement) {
+  return render(<MemoryRouter>{ui}</MemoryRouter>);
+}
 
 import { SellerWallet } from "./SellerWallet";
 
@@ -85,30 +99,30 @@ describe("SellerWallet canonical payout history", () => {
   });
 
   it("shows all payout rows", () => {
-    render(<SellerWallet balance={1_000_000} payouts={PAYOUTS} isLoading={false} error={null} />);
+    renderWithRouter(<SellerWallet balance={1_000_000} payouts={PAYOUTS} isLoading={false} error={null} />);
     expect(getRowCount()).toBe(7);
   });
 
   it("filters paid rows without using legacy completed statuses", () => {
-    render(<SellerWallet balance={1_000_000} payouts={PAYOUTS} isLoading={false} error={null} />);
+    renderWithRouter(<SellerWallet balance={1_000_000} payouts={PAYOUTS} isLoading={false} error={null} />);
     fireEvent.click(screen.getByRole("button", { name: "seller.wallet.historyFilter.paid" }));
     expect(getRowCount()).toBe(1);
   });
 
   it("filters active rows across requested, submitted, and unknown statuses", () => {
-    render(<SellerWallet balance={1_000_000} payouts={PAYOUTS} isLoading={false} error={null} />);
+    renderWithRouter(<SellerWallet balance={1_000_000} payouts={PAYOUTS} isLoading={false} error={null} />);
     fireEvent.click(screen.getByRole("button", { name: "seller.wallet.historyFilter.active" }));
     expect(getRowCount()).toBe(3);
   });
 
   it("filters failed rows across failed, rejected, and reversed statuses", () => {
-    render(<SellerWallet balance={1_000_000} payouts={PAYOUTS} isLoading={false} error={null} />);
+    renderWithRouter(<SellerWallet balance={1_000_000} payouts={PAYOUTS} isLoading={false} error={null} />);
     fireEvent.click(screen.getByRole("button", { name: "seller.wallet.historyFilter.failed" }));
     expect(getRowCount()).toBe(3);
   });
 
   it("has no destination field and reuses its idempotency key for a retry", () => {
-    render(<SellerWallet balance={500000} payouts={[]} isLoading={false} error={null} />);
+    renderWithRouter(<SellerWallet balance={500000} payouts={[]} isLoading={false} error={null} />);
 
     fireEvent.click(screen.getByRole("button", { name: "seller.wallet.withdraw" }));
     expect(screen.queryByLabelText("seller.wallet.payoutDialog.bankLabel")).not.toBeInTheDocument();
@@ -126,5 +140,59 @@ describe("SellerWallet canonical payout history", () => {
     expect(first).toMatchObject({ amount: 100000, currency: "VND" });
     expect(first).not.toHaveProperty("bankAccount");
     expect(second).toEqual(first);
+  });
+});
+
+describe("SellerWallet idempotency key retry behavior", () => {
+  beforeEach(() => {
+    mutationState.mutate.mockReset();
+    queryClientState.invalidateQueries.mockReset();
+    vi.stubGlobal("crypto", { randomUUID: vi.fn(() => "payout-key-test") });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("generates a new UUID for the first payout call", () => {
+    renderWithRouter(<SellerWallet balance={500000} payouts={[]} isLoading={false} error={null} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "seller.wallet.withdraw" }));
+    fireEvent.change(screen.getByLabelText("seller.wallet.payoutDialog.amountLabel"), {
+      target: { value: "100000" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "seller.wallet.payoutDialog.submit" }));
+
+    expect(mutationState.mutate).toHaveBeenCalledTimes(1);
+    // The first call should have been made with a fresh UUID
+    expect(mutationState.mutate.mock.calls[0]?.[0]).toMatchObject({
+      amount: 100000,
+      currency: "VND",
+    });
+  });
+
+  it("reuses the same idempotency key on retry after a failed first call", () => {
+    const cryptoMock = vi.fn(() => "payout-key-test") as unknown as Crypto["randomUUID"];
+    vi.stubGlobal("crypto", { randomUUID: cryptoMock });
+
+    renderWithRouter(<SellerWallet balance={500000} payouts={[]} isLoading={false} error={null} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "seller.wallet.withdraw" }));
+    fireEvent.change(screen.getByLabelText("seller.wallet.payoutDialog.amountLabel"), {
+      target: { value: "100000" },
+    });
+
+    // First submit — crypto.randomUUID() called once to generate the key
+    fireEvent.click(screen.getByRole("button", { name: "seller.wallet.payoutDialog.submit" }));
+    expect(cryptoMock).toHaveBeenCalledTimes(1);
+
+    // Simulate a network failure by throwing from mutate
+    mutationState.mutate.mockImplementationOnce(() => {
+      throw new Error("network error");
+    });
+
+    // Second submit — crypto.randomUUID() NOT called again (key is reused)
+    fireEvent.click(screen.getByRole("button", { name: "seller.wallet.payoutDialog.submit" }));
+    expect(cryptoMock).toHaveBeenCalledTimes(1); // still 1, not 2
   });
 });

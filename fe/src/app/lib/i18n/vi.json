@@ -1253,8 +1253,8 @@
       "historyEmpty": "Chưa có yêu cầu rút tiền nào",
       "historyFilter": {
         "all": "Tất cả",
-        "completed": "Hoàn tất",
-        "pending": "Đang xử lý",
+        "paid": "Hoàn tất",
+        "active": "Đang xử lý",
         "failed": "Thất bại"
       },
       "payoutDialog": {
@@ -1267,7 +1267,18 @@
         "exceedsBalance": "Số tiền vượt quá số dư khả dụng"
       },
       "payoutOk": "Đã gửi yêu cầu rút tiền",
-      "payoutErr": "Không thể gửi yêu cầu"
+      "payoutErr": "Không thể gửi yêu cầu",
+      "pendingHint": "Đang xử lý: {{amount}}"
+    },
+    "settings": {
+      "tier": "Hạng",
+      "vacationMode": "Chế độ nghỉ",
+      "vacationOn": "Bật",
+      "vacationOff": "Tắt",
+      "destination": "Tài khoản nhận",
+      "verificationState": "Trạng thái",
+      "destinationBank": "Ngân hàng",
+      "manageAccount": "Quản lý tài khoản"
     },
     "reviewsTab": {
       "title": "Đánh giá của khách hàng",
@@ -1618,7 +1629,8 @@
     "prev": "Trước",
     "retry": "Thử lại",
     "refresh": "Tải lại",
-    "tryAgain": "Thử lại"
+    "tryAgain": "Thử lại",
+    "notProvided": "Không có"
   },
   "sellerDetail": {
     "notFound": "Không tìm thấy shop",

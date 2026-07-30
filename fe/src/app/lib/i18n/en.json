@@ -1262,7 +1262,18 @@
         "exceedsBalance": "Amount exceeds your available balance"
       },
       "payoutOk": "Withdrawal request submitted",
-      "payoutErr": "Couldn't submit request"
+      "payoutErr": "Couldn't submit request",
+      "pendingHint": "Pending settlement: {{amount}}"
+    },
+    "settings": {
+      "tier": "Tier",
+      "vacationMode": "Vacation mode",
+      "vacationOn": "On",
+      "vacationOff": "Off",
+      "destination": "Destination",
+      "verificationState": "Status",
+      "destinationBank": "Bank",
+      "manageAccount": "Manage account"
     },
     "reviewsTab": {
       "title": "Customer reviews",
@@ -1612,7 +1623,8 @@
     "prev": "Previous",
     "retry": "Retry",
     "refresh": "Refresh",
-    "tryAgain": "Try again"
+    "tryAgain": "Try again",
+    "notProvided": "Not provided"
   },
   "sellerDetail": {
     "notFound": "Shop not found",

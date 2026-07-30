@@ -11,7 +11,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { FormDialog } from "../../components/form-dialog";
-import { StatusPill } from "../../components/status-pill";
+import { StatusPill } from "@/shared/ui";
 import { ApiError } from "@/shared/api";
 import {
   sellerAcceptOrder,
