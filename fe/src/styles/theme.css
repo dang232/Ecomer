@@ -18,7 +18,8 @@
 
 @custom-variant dark (&:is(.dark *));
 
-:root {
+:root,
+.dark {
   --background: var(--color-canvas);
   --foreground: var(--color-text);
   --card: var(--color-surface);

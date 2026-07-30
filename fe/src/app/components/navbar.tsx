@@ -18,17 +18,18 @@ import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
 
+import { ImageWithFallback } from "@/shared/ui";
+
 import { useCart } from "../hooks/use-cart";
 import { useSearchSuggestions } from "../hooks/use-search-suggestions";
+import { useVNShop } from "../hooks/use-vnshop";
 import { useWishlist } from "../hooks/use-wishlist";
 import { comingSoon } from "../lib/ui/coming-soon";
 
-import { ImageWithFallback } from "@/shared/ui";
 import { LanguageSwitcher } from "./language-switcher";
 import { NotificationBell } from "./notification-bell";
 import { SearchAutocomplete } from "./search-autocomplete";
 import { LiveRegion } from "./ui/live-region";
-import { useVNShop } from "../hooks/use-vnshop";
 
 // ─── Announcement Bar ──────────────────────────────────────────────────────────
 export function AnnouncementBar() {
@@ -234,7 +235,9 @@ export function Navbar() {
 
         {/* Right actions */}
         <div className="flex items-center gap-1.5 ml-auto">
-          <LanguageSwitcher />
+          <div className="hidden md:block">
+            <LanguageSwitcher />
+          </div>
           <NotificationBell />
 
           <button

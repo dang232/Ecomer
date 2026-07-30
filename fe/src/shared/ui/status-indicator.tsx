@@ -2,9 +2,9 @@ import type { HTMLAttributes } from "react";
 
 import { cn } from "../lib/cn";
 
-type StatusTone = "neutral" | "info" | "success" | "warning" | "danger";
+export type StatusTone = "neutral" | "info" | "success" | "warning" | "danger";
 
-interface StatusIndicatorProps extends HTMLAttributes<HTMLSpanElement> {
+export interface StatusIndicatorProps extends HTMLAttributes<HTMLSpanElement> {
   tone?: StatusTone;
 }
 

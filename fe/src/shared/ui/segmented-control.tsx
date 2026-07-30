@@ -2,28 +2,29 @@ import type { KeyboardEvent, ReactNode } from "react";
 
 import { cn } from "../lib/cn";
 
-export interface TabItem<TValue extends string = string> {
+export interface SegmentedControlItem<TValue extends string = string> {
   value: TValue;
   label: ReactNode;
   disabled?: boolean;
 }
 
-export interface TabsProps<TValue extends string> {
+export interface SegmentedControlProps<TValue extends string> {
   ariaLabel: string;
   value: TValue;
-  items: readonly TabItem<TValue>[];
+  items: readonly SegmentedControlItem<TValue>[];
   onValueChange: (value: TValue) => void;
   className?: string;
 }
 
-export function Tabs<TValue extends string>({
+export function SegmentedControl<TValue extends string>({
   ariaLabel,
   value,
   items,
   onValueChange,
   className,
-}: TabsProps<TValue>) {
+}: SegmentedControlProps<TValue>) {
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
     const enabled = items
       .map((item, itemIndex) => ({ item, itemIndex }))
       .filter(({ item }) => !item.disabled);
@@ -32,24 +33,26 @@ export function Tabs<TValue extends string>({
 
     let target = current;
     if (event.key === "ArrowRight") target = (current + 1) % enabled.length;
-    else if (event.key === "ArrowLeft") target = (current - 1 + enabled.length) % enabled.length;
-    else if (event.key === "Home") target = 0;
-    else if (event.key === "End") target = enabled.length - 1;
-    else return;
+    if (event.key === "ArrowLeft") target = (current - 1 + enabled.length) % enabled.length;
+    if (event.key === "Home") target = 0;
+    if (event.key === "End") target = enabled.length - 1;
 
     event.preventDefault();
     const next = enabled[target];
-    const tabs =
-      event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
-    tabs?.[next.itemIndex]?.focus();
+    const buttons =
+      event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="radio"]');
+    buttons?.[next.itemIndex]?.focus();
     onValueChange(next.item.value);
   };
 
   return (
     <div
-      role="tablist"
+      role="radiogroup"
       aria-label={ariaLabel}
-      className={cn("flex min-w-0 gap-1 overflow-x-auto border-b border-border", className)}
+      className={cn(
+        "inline-flex min-h-[var(--target-web)] max-w-full rounded-[var(--radius-control)] bg-muted p-1",
+        className,
+      )}
     >
       {items.map((item, index) => {
         const selected = item.value === value;
@@ -57,17 +60,17 @@ export function Tabs<TValue extends string>({
           <button
             key={item.value}
             type="button"
-            role="tab"
-            aria-selected={selected}
+            role="radio"
+            aria-checked={selected}
             tabIndex={selected ? 0 : -1}
             disabled={item.disabled}
             onClick={() => onValueChange(item.value)}
             onKeyDown={(event) => handleKeyDown(event, index)}
             className={cn(
-              "min-h-[var(--target-web)] shrink-0 border-b-2 px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:opacity-50",
+              "min-h-9 min-w-0 rounded-[calc(var(--radius-control)-2px)] px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
               selected
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground",
+                ? "bg-card text-foreground shadow-[var(--shadow-low)]"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
             {item.label}

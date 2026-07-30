@@ -2,7 +2,7 @@ import type { HTMLAttributes } from "react";
 
 import { cn } from "../lib/cn";
 
-interface SurfaceProps extends HTMLAttributes<HTMLDivElement> {
+export interface SurfaceProps extends HTMLAttributes<HTMLDivElement> {
   tone?: "default" | "subtle" | "raised";
   padding?: "none" | "sm" | "md" | "lg";
 }

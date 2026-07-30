@@ -4,7 +4,10 @@ import { cn } from "../lib/cn";
 
 import { Button, type ButtonVariant } from "./button";
 
-interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "aria-label"> {
+export interface IconButtonProps extends Omit<
+  ButtonHTMLAttributes<HTMLButtonElement>,
+  "aria-label"
+> {
   label: string;
   tooltip?: string;
   variant?: ButtonVariant;
