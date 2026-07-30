@@ -1,8 +1,8 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-import { productList } from "../lib/api/endpoints/products";
-import { getSeller, listSellers } from "../lib/api/endpoints/sellers";
-import type { PublicSeller, ProductSummary, Page } from "../types/api";
+import { productList } from "@/shared/api/endpoints/products";
+import { getSeller, listSellers } from "@/shared/api/endpoints/sellers";
+import type { PublicSeller, ProductSummary, Page } from "@/shared/contracts/api";
 
 export const sellerDetailOptions = (id: string | undefined) =>
   queryOptions<PublicSeller>({

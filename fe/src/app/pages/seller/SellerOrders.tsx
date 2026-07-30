@@ -12,13 +12,13 @@ import { toast } from "sonner";
 
 import { FormDialog } from "../../components/form-dialog";
 import { StatusPill } from "../../components/status-pill";
-import { ApiError } from "../../lib/api";
+import { ApiError } from "@/shared/api";
 import {
   sellerAcceptOrder,
   sellerRejectOrder,
   sellerShipOrder,
   type PendingSubOrder,
-} from "../../lib/api/endpoints/orders";
+} from "@/shared/api/endpoints/orders";
 
 import { ShipDialog } from "./ShipDialog";
 

@@ -14,12 +14,12 @@ vi.mock("motion/react", () => ({
 
 const requestReturnMock = vi.fn();
 
-vi.mock("../lib/api/endpoints/returns", () => ({
+vi.mock("@/shared/api/endpoints/returns", () => ({
   requestReturn: (...args: unknown[]) => requestReturnMock(...args),
   RETURN_REASON_VALUES: ["damaged", "wrong_item", "changed_mind", "not_as_described", "other"],
 }));
 
-vi.mock("../lib/api", () => ({
+vi.mock("@/shared/api", () => ({
   ApiError: class ApiError extends Error {
     constructor(public message: string) {
       super(message);

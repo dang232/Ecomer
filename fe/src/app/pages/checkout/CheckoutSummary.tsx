@@ -2,9 +2,9 @@ import { Check, CheckCircle, ChevronRight, Tag } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useTranslation } from "react-i18next";
 
-import { ApiError } from "../../lib/api";
-import { formatPrice } from "../../lib/format";
-import type { BuyerCoupon } from "../../types/api";
+import { ApiError } from "@/shared/api";
+import { formatPrice } from "@/shared/lib";
+import type { BuyerCoupon } from "@/shared/contracts/api";
 
 import type { Step } from "./types";
 

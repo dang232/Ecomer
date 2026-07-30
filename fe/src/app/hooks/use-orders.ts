@@ -1,6 +1,6 @@
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { cancelOrder, myOrders, orderById } from "../lib/api/endpoints/orders";
+import { cancelOrder, myOrders, orderById } from "@/shared/api/endpoints/orders";
 
 export const myOrdersOptions = (params: { page?: number; size?: number; status?: string } = {}) =>
   queryOptions({

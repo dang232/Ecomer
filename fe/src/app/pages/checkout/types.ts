@@ -6,7 +6,7 @@ import {
   checkoutProviderSchema,
   type CheckoutProvider,
   type PaymentMethodOption,
-} from "../../types/api";
+} from "@/shared/contracts/api";
 
 export type Step = "address" | "shipping" | "payment" | "review" | "success";
 

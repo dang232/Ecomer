@@ -15,7 +15,7 @@ vi.mock("../hooks/auth-context", () => ({
   useAuth: () => useAuthMock(),
 }));
 
-vi.mock("../lib/api/endpoints/users", () => ({
+vi.mock("@/shared/api/endpoints/users", () => ({
   myProfile: (...args: unknown[]) => myProfileMock(...args),
   setDefaultAddress: (...args: unknown[]) => setDefaultAddressMock(...args),
   removeAddress: (...args: unknown[]) => removeAddressMock(...args),

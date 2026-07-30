@@ -142,8 +142,6 @@ vi.mock("../hooks/use-products-v2", () => ({
   },
 }));
 
-vi.mock("../lib/api/catalog-flags", () => ({ catalogV2Enabled: true }));
-
 import { SearchPage } from "./SearchPage";
 
 function renderPage(entry = "/search") {

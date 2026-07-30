@@ -187,7 +187,7 @@ vi.mock("react-i18next", () => ({
 }));
 
 // Mock API endpoints (unused but imported by component)
-vi.mock("../../lib/api/endpoints/admin", () => ({
+vi.mock("@/shared/api/endpoints/admin", () => ({
   adminListOrders: vi.fn(),
   adminCancelOrder: vi.fn(),
   adminChangeOrderStatus: vi.fn(),

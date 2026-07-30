@@ -6,7 +6,7 @@ import { createElement } from "react";
 import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-import { orderSchema, type Order, type Page } from "../types/api";
+import { orderSchema, type Order, type Page } from "@/shared/contracts/api";
 
 // Mock motion/react so AnimatePresence renders synchronously in jsdom
 vi.mock("motion/react", () => ({

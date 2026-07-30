@@ -10,29 +10,28 @@ import { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 
-import { SearchFilters } from "../../features/catalog/components/search-filters";
 import {
-  resolveSearchDataSource,
-  resolveSearchDisplayState,
-} from "../../features/catalog/search-display-state";
-import {
+  SearchFilters,
   clearSearchFilters,
   readSearchRouteState,
+  resolveSearchDataSource,
+  resolveSearchDisplayState,
   updateSearchRouteState,
   type SearchRouteState,
-} from "../../features/catalog/search-route-state";
+} from "@/features/catalog";
 import { AsyncState } from "../../shared/ui/async-state";
 import { Button } from "../../shared/ui/button";
 import { Dialog } from "../../shared/ui/dialog";
 import { Skeleton } from "../../shared/ui/skeleton";
 import { Surface } from "../../shared/ui/surface";
 import { ProductCard } from "../components/product-card";
-import { categoryDisplayLabel, useCategories } from "../hooks/use-categories";
+import { categoryDisplayLabel } from "@/features/catalog";
+import { useCategories } from "../hooks/use-categories";
 import { useProductsV2 } from "../hooks/use-products-v2";
 import { useSearchV2 } from "../hooks/use-search-v2";
-import { catalogV2Enabled } from "../lib/api/catalog-flags";
-import { flattenCategoryTree } from "../lib/api/endpoints/categories";
-import { fromServer } from "../lib/api/product-mapper";
+import { catalogV2Enabled } from "@/features/catalog";
+import { flattenCategoryTree } from "@/shared/api/endpoints/categories";
+import { fromServer } from "@/features/catalog";
 import { canUseCatalogBrowse, mergeMissingProductImages } from "../lib/search-view";
 import {
   requiresBackendSearch,

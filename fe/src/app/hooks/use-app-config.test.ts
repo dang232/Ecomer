@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { getApiOrigin } from "../lib/runtime-endpoints";
+import { getApiOrigin } from "@/shared/config";
 
 import { fetchConfig, MAINTENANCE_CONFIG } from "./use-app-config";
 

@@ -12,22 +12,24 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { VideoUploadDropzone } from "../../features/videos/components/VideoUploadDropzone";
-import { VideoUploadProgress } from "../../features/videos/components/VideoUploadProgress";
-import { useProductVideos } from "../../features/videos/hooks/useProductVideos";
-import { useVideoUpload } from "../../features/videos/hooks/useVideoUpload";
-import { ApiError } from "../lib/api";
+import {
+  VideoUploadDropzone,
+  VideoUploadProgress,
+  useProductVideos,
+  useVideoUpload,
+} from "@/features/videos";
+import { ApiError } from "@/shared/api";
 import {
   sellerProductCreate,
   sellerProductImageActivate,
   sellerProductImageUploadUrl,
   sellerProductPublish,
   sellerProductUpdate,
-} from "../lib/api/endpoints/products";
-import { videoDelete } from "../lib/api/endpoints/videos";
-import type { Product } from "../types/ui";
+} from "@/shared/api/endpoints/products";
+import { videoDelete } from "@/shared/api/endpoints/videos";
+import type { Product } from "@/features/catalog";
 
-import { ImageWithFallback } from "./image-with-fallback";
+import { ImageWithFallback } from "@/shared/ui";
 import { ConfirmDialog } from "./ui/confirm-dialog";
 import { Modal } from "./ui/modal";
 

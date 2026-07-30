@@ -1,6 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
-import { ApiError } from "../lib/api";
+import { ApiError } from "@/shared/api";
 import i18n from "../lib/i18n";
 
 interface Props {

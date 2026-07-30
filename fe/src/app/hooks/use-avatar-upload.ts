@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { ApiError } from "../lib/api";
-import { avatarActivate, avatarUpload } from "../lib/api/endpoints/users";
+import { ApiError } from "@/shared/api";
+import { avatarActivate, avatarUpload } from "@/shared/api/endpoints/users";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 const ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "webp"] as const;

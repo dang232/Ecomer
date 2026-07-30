@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { listThreads, type MessageThreadSummary } from "../lib/api/endpoints/messaging";
+import { listThreads, type MessageThreadSummary } from "@/shared/api/endpoints/messaging";
 
 import { useAuth } from "./auth-context";
 import { usePageVisible } from "./use-page-visible";

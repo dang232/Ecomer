@@ -15,7 +15,7 @@ vi.mock("../hooks/auth-context", () => ({
   useAuth: () => useAuthMock(),
 }));
 
-vi.mock("../lib/api/endpoints/users", () => ({
+vi.mock("@/shared/api/endpoints/users", () => ({
   myProfile: vi.fn(),
   setDefaultAddress: vi.fn(),
   removeAddress: vi.fn(),
@@ -231,7 +231,7 @@ describe("RegisterPage phone field (CountryPhoneInput)", () => {
   });
 
   it("surfaces a BE validation_error on phone as a field error, not a banner", async () => {
-    const { AuthError } = await import("../lib/auth/native-auth");
+    const { AuthError } = await import("@/shared/auth");
     registerMock.mockRejectedValueOnce(
       new AuthError(400, "validation_error", "phone: phone must be in E.164"),
     );

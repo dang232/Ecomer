@@ -7,7 +7,7 @@ const noop = () => undefined;
 
 const paypalCreateMock = vi.fn();
 const paypalCaptureMock = vi.fn();
-vi.mock("../../lib/api/endpoints/payment", () => ({
+vi.mock("@/shared/api/endpoints/payment", () => ({
   paypalCreate: (...args: unknown[]) => paypalCreateMock(...args),
   paypalCapture: (...args: unknown[]) => paypalCaptureMock(...args),
 }));

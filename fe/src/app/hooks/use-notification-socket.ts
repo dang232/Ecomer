@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import { io, type Socket } from "socket.io-client";
 
 import { showNotificationToast } from "../components/show-notification-toast";
-import { notificationSchema, type Notification } from "../types/api/notification";
+import { notificationSchema, type Notification } from "@/shared/contracts/api/notification";
 
 import { useAppConfig } from "./use-app-config";
 import { useAuth } from "./auth-context";

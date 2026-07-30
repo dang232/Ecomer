@@ -1,17 +1,17 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError } from "../lib/api";
+import { ApiError } from "@/shared/api";
 
 const productListMock = vi.fn();
 const productByIdMock = vi.fn();
 
-vi.mock("../lib/api/endpoints/products", () => ({
+vi.mock("@/shared/api/endpoints/products", () => ({
   productList: (...args: unknown[]) => productListMock(...args),
   productById: (...args: unknown[]) => productByIdMock(...args),
 }));
 
-import { makeWrapper } from "../test-utils/render-with-query-client";
+import { makeWrapper } from "@/shared/test/render-with-query-client";
 
 import { useProduct, useProducts } from "./use-products";
 

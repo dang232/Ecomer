@@ -19,8 +19,8 @@ import {
   useVideoPreview,
   type VideoModerationQueueParams,
 } from "../../hooks/use-admin-video-moderation";
-import { formatDate } from "../../lib/format";
-import type { AdminVideoModerationQueueItem } from "../../types/api";
+import { formatDate } from "@/shared/lib";
+import type { AdminVideoModerationQueueItem } from "@/shared/contracts/api";
 
 // ─── NSFW score badge ─────────────────────────────────────────────────────────
 

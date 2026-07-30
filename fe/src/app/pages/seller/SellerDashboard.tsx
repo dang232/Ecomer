@@ -21,10 +21,10 @@ import {
 } from "recharts";
 
 import { useSellerRevenue } from "../../hooks/use-seller-revenue";
-import { ApiError } from "../../lib/api";
-import type { PendingSubOrder } from "../../lib/api/endpoints/orders";
-import type { SellerRevenuePoint } from "../../lib/api/endpoints/seller-analytics";
-import { formatPrice } from "../../lib/format";
+import { ApiError } from "@/shared/api";
+import type { PendingSubOrder } from "@/shared/api/endpoints/orders";
+import type { SellerRevenuePoint } from "@/shared/api/endpoints/seller-analytics";
+import { formatPrice } from "@/shared/lib";
 
 interface RevenueChartPoint {
   day: string;

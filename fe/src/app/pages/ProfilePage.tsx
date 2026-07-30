@@ -23,16 +23,16 @@ import { toast } from "sonner";
 import { useAuth } from "../hooks/auth-context";
 import { avatarUploadErrorMessage, useAvatarUpload } from "../hooks/use-avatar-upload";
 import { profileOptions } from "../hooks/use-profile";
-import { addressKey } from "../lib/address-key";
-import { ApiError } from "../lib/api";
+import { addressKey } from "@/shared/lib";
+import { ApiError } from "@/shared/api";
 import {
   updateProfile,
   addAddress,
   setDefaultAddress,
   removeAddress,
-} from "../lib/api/endpoints/users";
+} from "@/shared/api/endpoints/users";
 import { comingSoon } from "../lib/ui/coming-soon";
-import type { Address, UserProfile } from "../types/api";
+import type { Address, UserProfile } from "@/shared/contracts/api";
 
 type ProfileTab = "info" | "addresses" | "notifications" | "reviews" | "payment" | "security";
 

@@ -10,11 +10,11 @@ import {
   mergeCart,
   removeCartItem,
   updateCartItem,
-} from "../lib/api/endpoints/cart";
-import { productById } from "../lib/api/endpoints/products";
-import { fromServer, findVariant } from "../lib/api/product-mapper";
-import type { Cart } from "../types/api";
-import { productIdSchema, sellerIdSchema } from "../types/api/branded-ids";
+} from "@/shared/api/endpoints/cart";
+import { productById } from "@/shared/api/endpoints/products";
+import { fromServer, findVariant } from "@/features/catalog";
+import type { Cart } from "@/shared/contracts/api";
+import { productIdSchema, sellerIdSchema } from "@/shared/contracts/api/branded-ids";
 
 import { useAuth } from "./auth-context";
 

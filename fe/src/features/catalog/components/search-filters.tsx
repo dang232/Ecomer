@@ -1,9 +1,9 @@
 import { SlidersHorizontal, Star } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { categoryDisplayLabel } from "../../../app/hooks/use-categories";
-import type { SearchFacets } from "../../../app/lib/api/endpoints/search";
-import type { Category } from "../../../app/types/api";
+import { categoryDisplayLabel } from "../model/category-label";
+import type { SearchFacets } from "@/shared/api/endpoints/search";
+import type { Category } from "@/shared/contracts/api";
 import { Button } from "../../../shared/ui/button";
 
 export interface SearchFilterValues {

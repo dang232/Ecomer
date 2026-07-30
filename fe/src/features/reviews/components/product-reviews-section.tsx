@@ -1,14 +1,14 @@
 import { MessageCircle, ShieldCheck, Star, ThumbsUp } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import type { Review } from "../../../app/types/api";
+import type { Review } from "@/shared/contracts/api";
 import { AsyncState } from "../../../shared/ui/async-state";
 import { Button } from "../../../shared/ui/button";
 import { TextAreaField } from "../../../shared/ui/field";
 import { Skeleton } from "../../../shared/ui/skeleton";
 import { StatusIndicator } from "../../../shared/ui/status-indicator";
 import { Surface } from "../../../shared/ui/surface";
-import { ReviewVideoDisplay } from "../../videos/components/ReviewVideoDisplay";
+import { ReviewVideoDisplay } from "@/features/videos";
 import { formatReviewDate } from "../review-view-model";
 import type { ProductReviewController } from "../use-product-review-controller";
 

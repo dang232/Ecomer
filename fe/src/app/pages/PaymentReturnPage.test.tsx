@@ -4,10 +4,10 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CHECKOUT_RECOVERY_STORAGE_KEY } from "../../features/checkout";
-import type * as PaymentEndpoints from "../lib/api/endpoints/payment";
+import type * as PaymentEndpoints from "@/shared/api/endpoints/payment";
 
 const { paymentStatusMock } = vi.hoisted(() => ({ paymentStatusMock: vi.fn() }));
-vi.mock("../lib/api/endpoints/payment", async (importOriginal) => {
+vi.mock("@/shared/api/endpoints/payment", async (importOriginal) => {
   const actual = await importOriginal<typeof PaymentEndpoints>();
   return { ...actual, paymentStatus: paymentStatusMock as typeof actual.paymentStatus };
 });

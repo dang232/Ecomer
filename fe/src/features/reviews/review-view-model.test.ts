@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { reviewSchema, type Review } from "../../app/types/api";
+import { reviewSchema, type Review } from "@/shared/contracts/api";
 
 import {
   formatReviewDate,

@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 
-import type { Notification } from "../types/api/notification";
+import type { Notification } from "@/shared/contracts/api/notification";
 
 import { NotificationToast } from "./notification-toast";
 

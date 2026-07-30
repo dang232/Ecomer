@@ -3,7 +3,7 @@ import type { HTMLAttributes, ReactNode } from "react";
 import { createElement as h } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { adminPayoutSchema, type AdminPayout } from "../../types/api";
+import { adminPayoutSchema, type AdminPayout } from "@/shared/contracts/api";
 
 vi.mock("motion/react", () => ({
   AnimatePresence: ({ children }: { children: ReactNode }) => children,
@@ -39,7 +39,7 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }),
 }));
 
-vi.mock("../../lib/api/endpoints/admin", () => ({
+vi.mock("@/shared/api/endpoints/admin", () => ({
   adminPendingPayouts: vi.fn(),
   adminCompletedPayouts: vi.fn(),
   adminCompletePayout: vi.fn(),

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { paymentStatus, vietqrCreate } from "../../lib/api/endpoints/payment";
+import { paymentStatus, vietqrCreate } from "@/shared/api/endpoints/payment";
 
 interface Props {
   orderId: string;

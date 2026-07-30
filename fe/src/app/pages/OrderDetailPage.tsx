@@ -2,11 +2,11 @@ import { ArrowLeft, CreditCard, MapPin, Package, RefreshCw, Truck } from "lucide
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router";
 
-import { ImageWithFallback } from "../components/image-with-fallback";
+import { ImageWithFallback } from "@/shared/ui";
 import { useAuth } from "../hooks/auth-context";
 import { useOrder } from "../hooks/use-orders";
-import { ApiError } from "../lib/api";
-import { formatDate, formatPrice } from "../lib/format";
+import { ApiError } from "@/shared/api";
+import { formatDate, formatPrice } from "@/shared/lib";
 
 const STATUS_STYLES = {
   pending: "bg-warning-light text-warning",

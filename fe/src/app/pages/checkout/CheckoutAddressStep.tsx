@@ -5,10 +5,10 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Modal } from "../../components/ui/modal";
-import { addressKey } from "../../lib/address-key";
-import { ApiError } from "../../lib/api";
-import { addAddress } from "../../lib/api/endpoints/users";
-import type { Address } from "../../types/api";
+import { addressKey } from "@/shared/lib";
+import { ApiError } from "@/shared/api";
+import { addAddress } from "@/shared/api/endpoints/users";
+import type { Address } from "@/shared/contracts/api";
 
 import { formatAddressLine } from "./format";
 

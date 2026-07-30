@@ -3,7 +3,11 @@ import { useEffect, useRef } from "react";
 import { z } from "zod";
 
 import { readJsonText } from "../../shared/api/read-json";
-import { messageSchema, type ChatMessage, type MessagesPage } from "../lib/api/endpoints/messaging";
+import {
+  messageSchema,
+  type ChatMessage,
+  type MessagesPage,
+} from "@/shared/api/endpoints/messaging";
 
 import { useAppConfig } from "./use-app-config";
 import { useAuth } from "./auth-context";

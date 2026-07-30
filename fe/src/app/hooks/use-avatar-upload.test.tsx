@@ -4,12 +4,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const avatarUploadMock = vi.fn();
 const avatarActivateMock = vi.fn();
 
-vi.mock("../lib/api/endpoints/users", () => ({
+vi.mock("@/shared/api/endpoints/users", () => ({
   avatarUpload: (...args: unknown[]) => avatarUploadMock(...args),
   avatarActivate: (...args: unknown[]) => avatarActivateMock(...args),
 }));
 
-import { makeWrapper } from "../test-utils/render-with-query-client";
+import { makeWrapper } from "@/shared/test/render-with-query-client";
 
 import { __testables__, useAvatarUpload } from "./use-avatar-upload";
 

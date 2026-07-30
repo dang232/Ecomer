@@ -1,5 +1,5 @@
-import type { PlaceOrderInput } from "../../../app/lib/api/endpoints/orders";
-import type { CheckoutProvider, PaymentStatus } from "../../../app/types/api";
+import type { PlaceOrderInput } from "@/shared/api/endpoints/orders";
+import type { CheckoutProvider, PaymentStatus } from "@/shared/contracts/api";
 
 import type { CheckoutRecoveryRecord, CheckoutRecoveryStore } from "./recovery";
 import {

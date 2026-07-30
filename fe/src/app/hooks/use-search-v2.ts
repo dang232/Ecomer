@@ -11,7 +11,7 @@ import {
   cursorSearchParamsSchema,
   searchProductsV2,
   type CursorSearchParams,
-} from "../lib/api/endpoints/search";
+} from "@/shared/api/endpoints/search";
 
 const SEARCH_V2_STALE_TIME = 60_000;
 

@@ -12,14 +12,14 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "../../components/ui/confirm-dialog";
-import { ApiError } from "../../lib/api";
+import { ApiError } from "@/shared/api";
 import {
   adminCancelOrder,
   adminChangeOrderStatus,
   adminListOrders,
   adminRefundOrder,
-} from "../../lib/api/endpoints/admin";
-import type { AdminOrderSummary } from "../../types/api";
+} from "@/shared/api/endpoints/admin";
+import type { AdminOrderSummary } from "@/shared/contracts/api";
 
 const STATUS_OPTIONS = [
   { value: "", labelKey: "seller.orders.tabs.all" },

@@ -6,16 +6,16 @@ import { toast } from "sonner";
 
 import { FormDialog } from "../../components/form-dialog";
 import { StatusPill } from "../../components/status-pill";
-import { ApiError } from "../../lib/api";
+import { ApiError } from "@/shared/api";
 import {
   adminCompletePayout,
   adminCompletedPayouts,
   adminFailPayout,
   adminPendingPayouts,
-} from "../../lib/api/endpoints/admin";
-import { formatDate, formatPrice } from "../../lib/format";
+} from "@/shared/api/endpoints/admin";
+import { formatDate, formatPrice } from "@/shared/lib";
 import { groupByDate } from "../../lib/group-by-date";
-import type { AdminPayout } from "../../types/api";
+import type { AdminPayout } from "@/shared/contracts/api";
 
 type Tab = "pending" | "completed";
 const TABS: Tab[] = ["pending", "completed"];

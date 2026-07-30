@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import { sellerPendingOrders } from "../../../app/lib/api/endpoints/orders";
+import { sellerPendingOrders } from "@/shared/api/endpoints/orders";
 
 export type SellerOrdersParams = NonNullable<Parameters<typeof sellerPendingOrders>[0]>;
 

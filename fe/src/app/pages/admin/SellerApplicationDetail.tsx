@@ -3,8 +3,8 @@ import { motion } from "motion/react";
 import { useTranslation } from "react-i18next";
 
 import { useEscapeKey } from "../../hooks/use-escape-key";
-import { formatDate, formatRelativeTime } from "../../lib/format";
-import type { SellerSummary } from "../../types/api";
+import { formatDate, formatRelativeTime } from "@/shared/lib";
+import type { SellerSummary } from "@/shared/contracts/api";
 
 interface Props {
   seller: SellerSummary | null;

@@ -13,7 +13,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
-import { ImageWithFallback } from "./image-with-fallback";
+import { ImageWithFallback } from "@/shared/ui";
 import { LanguageSwitcher } from "./language-switcher";
 import { useVNShop } from "../hooks/use-vnshop";
 

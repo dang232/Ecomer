@@ -3,9 +3,9 @@ import { memo } from "react";
 import { useNavigate } from "react-router";
 
 import type { RecentlyViewedItem } from "../hooks/use-recently-viewed";
-import { formatPrice } from "../lib/format";
+import { formatPrice } from "@/shared/lib";
 
-import { ImageWithFallback } from "./image-with-fallback";
+import { ImageWithFallback } from "@/shared/ui";
 
 // ─── Recently Viewed Card ────────────────────────────────────────────────────────
 const RecentlyViewedCard = memo(function RecentlyViewedCard({

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
-import { registerUser, type RegisterInput } from "../lib/api/endpoints/auth";
-import { ApiError } from "../lib/api/envelope";
+import { registerUser, type RegisterInput } from "@/shared/api/endpoints/auth";
+import { ApiError } from "@/shared/api/envelope";
 import {
   AuthError,
   ACCESS_TOKEN_REFRESH_BUFFER_MS,
@@ -13,8 +13,8 @@ import {
   setLiveTokenSet,
   type JwtClaims,
   type TokenSet,
-} from "../lib/auth/native-auth";
-import { apiUrl } from "../lib/runtime-endpoints";
+} from "@/shared/auth";
+import { apiUrl } from "@/shared/config";
 
 import { AuthContext, type AuthProfile, type AuthState, type Role } from "./auth-context";
 

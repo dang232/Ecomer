@@ -1,10 +1,10 @@
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type * as VideoEndpoints from "../../../app/lib/api/endpoints/videos";
+import type * as VideoEndpoints from "@/shared/api/endpoints/videos";
 
 const { videoUploadInitMock } = vi.hoisted(() => ({ videoUploadInitMock: vi.fn() }));
-vi.mock("../../../app/lib/api/endpoints/videos", async (importOriginal) => {
+vi.mock("@/shared/api/endpoints/videos", async (importOriginal) => {
   const actual = await importOriginal<typeof VideoEndpoints>();
   return { ...actual, videoUploadInit: videoUploadInitMock as typeof actual.videoUploadInit };
 });

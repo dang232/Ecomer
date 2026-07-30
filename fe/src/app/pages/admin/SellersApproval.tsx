@@ -5,13 +5,13 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { FormDialog } from "../../components/form-dialog";
-import { ApiError } from "../../lib/api";
+import { ApiError } from "@/shared/api";
 import {
   adminApproveSeller,
   adminListSellers,
   adminRejectSeller,
-} from "../../lib/api/endpoints/admin";
-import { formatRelativeTime } from "../../lib/format";
+} from "@/shared/api/endpoints/admin";
+import { formatRelativeTime } from "@/shared/lib";
 
 import { SellerApplicationDetail } from "./SellerApplicationDetail";
 

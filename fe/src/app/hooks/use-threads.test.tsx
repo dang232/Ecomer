@@ -7,7 +7,7 @@ vi.mock("./auth-context", () => ({
 }));
 
 const listThreadsMock = vi.fn();
-vi.mock("../lib/api/endpoints/messaging", async (importActual) => {
+vi.mock("@/shared/api/endpoints/messaging", async (importActual) => {
   const actual: object = await importActual();
   return {
     ...actual,
@@ -15,7 +15,7 @@ vi.mock("../lib/api/endpoints/messaging", async (importActual) => {
   };
 });
 
-import { makeWrapper } from "../test-utils/render-with-query-client";
+import { makeWrapper } from "@/shared/test/render-with-query-client";
 
 import { useThreads } from "./use-threads";
 

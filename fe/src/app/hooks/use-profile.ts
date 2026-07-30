@@ -1,7 +1,7 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-import { myProfile } from "../lib/api/endpoints/users";
-import type { UserProfile } from "../types/api";
+import { myProfile } from "@/shared/api/endpoints/users";
+import type { UserProfile } from "@/shared/contracts/api";
 
 export const profileOptions = () =>
   queryOptions<UserProfile>({

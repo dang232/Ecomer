@@ -11,7 +11,7 @@ const addWishlistItemMock = vi.fn();
 const toggleWishlistItemMock = vi.fn();
 const removeWishlistItemMock = vi.fn();
 const clearWishlistMock = vi.fn();
-vi.mock("../lib/api/endpoints/wishlist", () => ({
+vi.mock("@/shared/api/endpoints/wishlist", () => ({
   getWishlist: (...args: unknown[]) => getWishlistMock(...args),
   addWishlistItem: (...args: unknown[]) => addWishlistItemMock(...args),
   toggleWishlistItem: (...args: unknown[]) => toggleWishlistItemMock(...args),
@@ -19,7 +19,7 @@ vi.mock("../lib/api/endpoints/wishlist", () => ({
   clearWishlist: (...args: unknown[]) => clearWishlistMock(...args),
 }));
 
-import { makeWrapper } from "../test-utils/render-with-query-client";
+import { makeWrapper } from "@/shared/test/render-with-query-client";
 
 import { useWishlist } from "./use-wishlist";
 

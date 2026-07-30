@@ -6,7 +6,7 @@ import { useAuth } from "../hooks/auth-context";
 import { useCart } from "../hooks/use-cart";
 import { useProfile } from "../hooks/use-profile";
 import { useWishlist } from "../hooks/use-wishlist";
-import type { Product } from "../types/ui";
+import type { Product } from "@/features/catalog";
 
 import { VNShopContext } from "./vnshop-context-value";
 

@@ -1,8 +1,8 @@
 import { Clock, Loader2, Package, Truck, Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { FREE_SHIPPING_THRESHOLD } from "../../lib/domain-constants";
-import { formatPrice } from "../../lib/format";
+import { FREE_SHIPPING_THRESHOLD } from "@/shared/contracts";
+import { formatPrice } from "@/shared/lib";
 
 import type { ShippingOption } from "./types";
 

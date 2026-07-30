@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { reviewSchema, type Review } from "../../../app/types/api";
+import { reviewSchema, type Review } from "@/shared/contracts/api";
 import type { ProductReviewController } from "../use-product-review-controller";
 
 import { ProductReviewsSection } from "./product-reviews-section";

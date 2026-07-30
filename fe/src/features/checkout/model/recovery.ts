@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import type { PlaceOrderInput } from "../../../app/lib/api/endpoints/orders";
-import { checkoutProviderSchema } from "../../../app/types/api";
+import type { PlaceOrderInput } from "@/shared/api/endpoints/orders";
+import { checkoutProviderSchema } from "@/shared/contracts/api";
 
 const recoveryOrderSchema = z.object({
   items: z.array(

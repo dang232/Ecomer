@@ -1,6 +1,6 @@
 import { createContext } from "react";
 
-import type { Product } from "../types/ui";
+import type { Product } from "@/features/catalog";
 
 export interface VNShopContextType {
   cartCount: number;

@@ -3,11 +3,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { productReviewsQueryKey, useProductReviews } from "../../app/hooks/use-product-reviews";
-import { ApiError } from "../../app/lib/api";
-import { createReview, voteReviewHelpful } from "../../app/lib/api/endpoints/reviews";
-import { summarizeReviews, type ReviewSummary } from "../../app/lib/review-summary";
-import type { Review } from "../../app/types/api";
+import {
+  productReviewsQueryKey,
+  useProductReviews,
+} from "@/features/reviews/api/use-product-reviews";
+import { ApiError } from "@/shared/api";
+import { createReview, voteReviewHelpful } from "@/shared/api/endpoints/reviews";
+import { summarizeReviews, type ReviewSummary } from "@/features/reviews/model/review-summary";
+import type { Review } from "@/shared/contracts/api";
 import { resolveAsyncStatus, type AsyncStatus } from "../../shared/ui/async-state-model";
 
 import {

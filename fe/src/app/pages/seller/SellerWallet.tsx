@@ -6,9 +6,9 @@ import { toast } from "sonner";
 
 import { FormDialog } from "../../components/form-dialog";
 import { StatusPill } from "../../components/status-pill";
-import { ApiError } from "../../lib/api";
-import { requestPayout, type Payout } from "../../lib/api/endpoints/seller-finance";
-import { formatDate, formatPrice } from "../../lib/format";
+import { ApiError } from "@/shared/api";
+import { requestPayout, type Payout } from "@/shared/api/endpoints/seller-finance";
+import { formatDate, formatPrice } from "@/shared/lib";
 import { groupByDate } from "../../lib/group-by-date";
 
 /** Known withdrawal statuses the BE may return. Maps the `filter` chip

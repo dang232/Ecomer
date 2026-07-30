@@ -10,7 +10,7 @@ vi.mock("./use-app-config", () => ({
   useAppConfig: () => useAppConfigMock(),
 }));
 
-import { makeWrapper } from "../test-utils/render-with-query-client";
+import { makeWrapper } from "@/shared/test/render-with-query-client";
 
 import { useMessagingSocket } from "./use-messaging-socket";
 

@@ -7,13 +7,13 @@ const myOrdersMock = vi.fn();
 const orderByIdMock = vi.fn();
 const cancelOrderMock = vi.fn();
 
-vi.mock("../lib/api/endpoints/orders", () => ({
+vi.mock("@/shared/api/endpoints/orders", () => ({
   myOrders: (...args: unknown[]) => myOrdersMock(...args),
   orderById: (...args: unknown[]) => orderByIdMock(...args),
   cancelOrder: (...args: unknown[]) => cancelOrderMock(...args),
 }));
 
-import { makeWrapper } from "../test-utils/render-with-query-client";
+import { makeWrapper } from "@/shared/test/render-with-query-client";
 
 import { useCancelOrder, useMyOrders, useOrder } from "./use-orders";
 

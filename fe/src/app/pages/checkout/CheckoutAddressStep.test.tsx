@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { Address } from "../../types/api";
+import type { Address } from "@/shared/contracts/api";
 
 import { CheckoutAddressStep } from "./CheckoutAddressStep";
 

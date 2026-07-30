@@ -4,7 +4,7 @@ import {
   frequentlyBoughtTogether,
   youMayAlsoLike,
   type RecommendationItem,
-} from "../lib/api/endpoints/recommendations";
+} from "@/shared/api/endpoints/recommendations";
 
 const FBT_DEFAULT_LIMIT = 4;
 const YMAL_DEFAULT_LIMIT = 8;

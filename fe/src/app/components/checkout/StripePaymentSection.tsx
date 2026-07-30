@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { paymentStatus, stripeCreate } from "../../lib/api/endpoints/payment";
+import { paymentStatus, stripeCreate } from "@/shared/api/endpoints/payment";
 
 interface Props {
   orderId: string;

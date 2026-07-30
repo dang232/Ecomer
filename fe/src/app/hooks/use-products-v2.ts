@@ -11,7 +11,7 @@ import {
   productListV2,
   productListV2ParamsSchema,
   type ProductListV2Params,
-} from "../lib/api/endpoints/products";
+} from "@/shared/api/endpoints/products";
 
 const PRODUCT_V2_STALE_TIME = 60_000;
 

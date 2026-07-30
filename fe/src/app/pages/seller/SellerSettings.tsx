@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 
-import { ApiError } from "../../lib/api";
+import { ApiError } from "@/shared/api";
 
 export function SellerSettings({
   profileData,

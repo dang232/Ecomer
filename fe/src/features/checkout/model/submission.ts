@@ -1,4 +1,4 @@
-import type { CheckoutProvider } from "../../../app/types/api";
+import type { CheckoutProvider } from "@/shared/contracts/api";
 
 export type AttemptIdentity = {
   orderKey: string;

@@ -1,6 +1,6 @@
 import { createContext, useContext } from "react";
 
-import type { RegisterInput } from "../lib/api/endpoints/auth";
+import type { RegisterInput } from "@/shared/api/endpoints/auth";
 
 export type Role = "BUYER" | "SELLER" | "ADMIN";
 

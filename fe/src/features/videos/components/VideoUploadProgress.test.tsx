@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { VideoStatusResponse } from "../../../app/types/api/video";
+import type { VideoStatusResponse } from "@/shared/contracts/api/video";
 import type { UseVideoStatusResult } from "../hooks/useVideoStatus";
 import { useVideoStatus } from "../hooks/useVideoStatus";
 

@@ -5,8 +5,8 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
   unreadNotificationCount,
-} from "../lib/api/endpoints/notifications";
-import type { Notification } from "../types/api";
+} from "@/shared/api/endpoints/notifications";
+import type { Notification } from "@/shared/contracts/api";
 
 import { useAuth } from "./auth-context";
 

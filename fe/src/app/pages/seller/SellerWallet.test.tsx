@@ -3,7 +3,7 @@ import type { HTMLAttributes, ReactNode } from "react";
 import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { Payout } from "../../lib/api/endpoints/seller-finance";
+import type { Payout } from "@/shared/api/endpoints/seller-finance";
 
 type PayoutMutationInput = { amount: number; currency: string };
 
@@ -29,7 +29,7 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }),
 }));
 
-vi.mock("../../lib/api/endpoints/seller-finance", () => ({
+vi.mock("@/shared/api/endpoints/seller-finance", () => ({
   requestPayout: vi.fn(),
 }));
 

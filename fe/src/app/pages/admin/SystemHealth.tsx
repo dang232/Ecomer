@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { z } from "zod";
 
 import { readJson } from "../../../shared/api/read-json";
-import { apiUrl } from "../../lib/runtime-endpoints";
+import { apiUrl } from "@/shared/config";
 
 interface ServiceDef {
   id: string;

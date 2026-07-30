@@ -5,8 +5,8 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 
-import { ApiError } from "../lib/api";
-import { requestReturn, type ReturnReason } from "../lib/api/endpoints/returns";
+import { ApiError } from "@/shared/api";
+import { requestReturn, type ReturnReason } from "@/shared/api/endpoints/returns";
 
 const REASON_OPTIONS: ReturnReason[] = [
   "damaged",

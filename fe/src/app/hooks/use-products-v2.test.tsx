@@ -1,14 +1,14 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type * as ProductEndpoints from "../lib/api/endpoints/products";
-import { makeWrapper } from "../test-utils/render-with-query-client";
+import type * as ProductEndpoints from "@/shared/api/endpoints/products";
+import { makeWrapper } from "@/shared/test/render-with-query-client";
 
 import { useProductsV2 } from "./use-products-v2";
 
 const productListV2Mock = vi.hoisted(() => vi.fn());
 
-vi.mock("../lib/api/endpoints/products", async (importOriginal) => {
+vi.mock("@/shared/api/endpoints/products", async (importOriginal) => {
   const actual = await importOriginal<typeof ProductEndpoints>();
   return { ...actual, productListV2: productListV2Mock as typeof actual.productListV2 };
 });

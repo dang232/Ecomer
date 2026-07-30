@@ -5,16 +5,16 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 import { ErrorBoundary } from "../components/error-boundary";
-import { ApiError } from "../lib/api";
+import { ApiError } from "@/shared/api";
 
 const getSellerMock = vi.fn();
 const productListMock = vi.fn();
 
-vi.mock("../lib/api/endpoints/sellers", () => ({
+vi.mock("@/shared/api/endpoints/sellers", () => ({
   getSeller: (...args: unknown[]) => getSellerMock(...args),
 }));
 
-vi.mock("../lib/api/endpoints/products", () => ({
+vi.mock("@/shared/api/endpoints/products", () => ({
   productList: (...args: unknown[]) => productListMock(...args),
 }));
 

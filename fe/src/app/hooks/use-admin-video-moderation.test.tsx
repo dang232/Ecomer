@@ -21,7 +21,7 @@ const {
   adminRejectAppealMock: vi.fn(),
 }));
 
-vi.mock("../lib/api/endpoints/admin", () => ({
+vi.mock("@/shared/api/endpoints/admin", () => ({
   adminVideoModerationQueue: adminVideoModerationQueueMock,
   adminVideoPreview: adminVideoPreviewMock,
   adminApproveVideo: adminApproveVideoMock,
@@ -37,7 +37,7 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
-import { makeWrapper } from "../test-utils/render-with-query-client";
+import { makeWrapper } from "@/shared/test/render-with-query-client";
 
 import {
   useVideoModerationQueue,

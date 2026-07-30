@@ -19,17 +19,17 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
 import { GuestCartMergeDialog } from "../components/GuestCartMergeDialog";
-import { ImageWithFallback } from "../components/image-with-fallback";
+import { ImageWithFallback } from "@/shared/ui";
 import { RecentlyViewedGrid } from "../components/RecentlyViewedGrid";
 import { useAppConfig } from "../hooks/use-app-config";
 import { useAuth } from "../hooks/auth-context";
 import { useCart } from "../hooks/use-cart";
 import { useRecentlyViewed } from "../hooks/use-recently-viewed";
-import { ApiError } from "../lib/api";
-import { validateCouponCode } from "../lib/api/endpoints/coupons";
-import { FREE_SHIPPING_THRESHOLD, FLAT_SHIPPING_FEE } from "../lib/domain-constants";
-import { formatPrice } from "../lib/format";
-import type { CartItem } from "../types/api";
+import { ApiError } from "@/shared/api";
+import { validateCouponCode } from "@/shared/api/endpoints/coupons";
+import { FREE_SHIPPING_THRESHOLD, FLAT_SHIPPING_FEE } from "@/shared/contracts";
+import { formatPrice } from "@/shared/lib";
+import type { CartItem } from "@/shared/contracts/api";
 
 export function CartPage() {
   const navigate = useNavigate();

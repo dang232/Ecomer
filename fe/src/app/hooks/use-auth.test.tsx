@@ -2,8 +2,8 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError } from "../lib/api/envelope";
-import type { JwtClaims, TokenSet } from "../lib/auth/native-auth";
+import { ApiError } from "@/shared/api/envelope";
+import type { JwtClaims, TokenSet } from "@/shared/auth";
 
 const mocks = vi.hoisted(() => ({
   decodeJwt: vi.fn(),
@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
   accessTokenRefreshBufferMs: 60_000,
 }));
 
-vi.mock("../lib/auth/native-auth", () => ({
+vi.mock("@/shared/auth", () => ({
   decodeJwt: (token: string) => mocks.decodeJwt(token),
   setLiveTokenSet: (tokenSet: TokenSet | null) => mocks.setLiveTokenSet(tokenSet),
   passwordLogin: (...args: unknown[]) => mocks.passwordLogin(...args),
@@ -35,7 +35,7 @@ vi.mock("../lib/auth/native-auth", () => ({
   },
 }));
 
-vi.mock("../lib/api/endpoints/auth", () => ({
+vi.mock("@/shared/api/endpoints/auth", () => ({
   registerUser: (...args: unknown[]) => mocks.registerUser(...args),
 }));
 

@@ -1,4 +1,4 @@
-export { VideoPlayer } from "./components/VideoPlayer";
+export { VideoPlayer, VideoPlayerSkeleton } from "./components/VideoPlayer";
 export { VideoUploadDropzone } from "./components/VideoUploadDropzone";
 export { VideoUploadProgress } from "./components/VideoUploadProgress";
 export { ReviewVideoDisplay } from "./components/ReviewVideoDisplay";

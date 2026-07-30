@@ -2,7 +2,7 @@ import { IconInbox } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router";
 
-import { listThreads } from "../../lib/api/endpoints/notifications";
+import { listThreads } from "@/shared/api/endpoints/notifications";
 
 import { NotificationPagination } from "./notification-pagination";
 import { NotificationThread } from "./notification-thread";

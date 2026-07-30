@@ -23,7 +23,7 @@ import {
   adminPendingReviews,
   adminVideoAppealsQueue,
   adminVideoModerationQueue,
-} from "../../lib/api/endpoints/admin";
+} from "@/shared/api/endpoints/admin";
 
 import { AdminDashboard } from "./AdminDashboard";
 import { CouponsManagement } from "./CouponsManagement";

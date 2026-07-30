@@ -40,7 +40,7 @@ let mockUploadReturn: Record<string, unknown> = {
   retry: vi.fn(),
 };
 
-vi.mock("../lib/api/endpoints/videos", () => ({
+vi.mock("@/shared/api/endpoints/videos", () => ({
   videoDelete: (...args: unknown[]) => videoDeleteMock(...args),
   videosByEntity: (...args: unknown[]) => videosByEntityMock(...args),
 }));
@@ -67,11 +67,11 @@ vi.mock("../../features/videos/components/VideoUploadProgress", () => ({
   VideoUploadProgress: () => <div data-testid="video-progress" />,
 }));
 
-vi.mock("./image-with-fallback", () => ({
+vi.mock("@/shared/ui", () => ({
   ImageWithFallback: ({ src }: { src: string }) => <img src={src} alt="" />,
 }));
 
-vi.mock("../lib/api/endpoints/products", () => ({
+vi.mock("@/shared/api/endpoints/products", () => ({
   sellerProductCreate: vi.fn(),
   sellerProductImageActivate: vi.fn(),
   sellerProductImageUploadUrl: vi.fn(),

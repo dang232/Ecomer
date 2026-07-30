@@ -23,7 +23,7 @@ vi.mock("@stripe/stripe-js", () => ({
 
 // --- API stubs ---
 const stripeCreateMock = vi.fn();
-vi.mock("../../lib/api/endpoints/payment", () => ({
+vi.mock("@/shared/api/endpoints/payment", () => ({
   paymentStatus: vi.fn(),
   stripeCreate: (...args: unknown[]) => stripeCreateMock(...args),
 }));

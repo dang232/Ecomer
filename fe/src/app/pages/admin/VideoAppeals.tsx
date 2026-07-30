@@ -14,8 +14,8 @@ import {
   useRejectAppeal,
   useVideoAppeals,
 } from "../../hooks/use-admin-video-moderation";
-import { formatDate } from "../../lib/format";
-import type { AdminVideoAppealItem } from "../../types/api";
+import { formatDate } from "@/shared/lib";
+import type { AdminVideoAppealItem } from "@/shared/contracts/api";
 
 // ─── Duration formatter ───────────────────────────────────────────────────────
 

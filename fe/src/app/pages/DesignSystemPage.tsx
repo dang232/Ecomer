@@ -31,7 +31,7 @@ import {
 import { motion } from "motion/react";
 import { useState } from "react";
 
-import { formatPrice } from "../lib/format";
+import { formatPrice } from "@/shared/lib";
 
 // ─── Color Token ────────────────────────────────────────────────────────────
 interface ColorSwatch {

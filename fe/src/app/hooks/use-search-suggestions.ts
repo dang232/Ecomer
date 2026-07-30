@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { searchSuggestions } from "../lib/api/endpoints/search";
+import { searchSuggestions } from "@/shared/api/endpoints/search";
 
 import { useDebouncedValue } from "./use-debounced-value";
 

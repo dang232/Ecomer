@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const videoStatusMock = vi.fn();
 
-vi.mock("../../../app/lib/api/endpoints/videos", () => ({
+vi.mock("@/shared/api/endpoints/videos", () => ({
   videoStatus: (...args: unknown[]) => videoStatusMock(...args),
 }));
 

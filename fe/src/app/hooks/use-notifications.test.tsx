@@ -10,14 +10,14 @@ const listNotificationsMock = vi.fn();
 const markNotificationReadMock = vi.fn();
 const markAllNotificationsReadMock = vi.fn();
 const unreadNotificationCountMock = vi.fn();
-vi.mock("../lib/api/endpoints/notifications", () => ({
+vi.mock("@/shared/api/endpoints/notifications", () => ({
   listNotifications: (...args: unknown[]) => listNotificationsMock(...args),
   markNotificationRead: (...args: unknown[]) => markNotificationReadMock(...args),
   markAllNotificationsRead: (...args: unknown[]) => markAllNotificationsReadMock(...args),
   unreadNotificationCount: (...args: unknown[]) => unreadNotificationCountMock(...args),
 }));
 
-import { makeWrapper } from "../test-utils/render-with-query-client";
+import { makeWrapper } from "@/shared/test/render-with-query-client";
 
 import { useNotifications } from "./use-notifications";
 

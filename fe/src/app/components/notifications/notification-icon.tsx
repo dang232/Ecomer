@@ -16,7 +16,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 
-import type { NotificationType } from "../../types/api/notification";
+import type { NotificationType } from "@/shared/contracts/api/notification";
 
 const ICON_MAP: Record<NotificationType, typeof IconBell> = {
   ORDER_CREATED: IconShoppingCart,

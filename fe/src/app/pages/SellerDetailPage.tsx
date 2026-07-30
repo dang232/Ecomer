@@ -3,10 +3,10 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useParams, useNavigate } from "react-router";
 
-import { ImageWithFallback } from "../components/image-with-fallback";
+import { ImageWithFallback } from "@/shared/ui";
 import { sellerDetailOptions, sellerProductsOptions } from "../hooks/use-sellers";
-import { formatPrice } from "../lib/format";
-import type { ProductSummary } from "../types/api";
+import { formatPrice } from "@/shared/lib";
+import type { ProductSummary } from "@/shared/contracts/api";
 
 function SellerProductCard({ product }: { product: ProductSummary }) {
   const navigate = useNavigate();

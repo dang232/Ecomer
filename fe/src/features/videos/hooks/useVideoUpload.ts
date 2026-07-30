@@ -3,8 +3,8 @@ import { toast } from "sonner";
 import * as tus from "tus-js-client";
 import { z } from "zod";
 
-import { videoUploadInit } from "../../../app/lib/api/endpoints/videos";
-import type { VideoContext } from "../../../app/types/api/video";
+import { videoUploadInit } from "@/shared/api/endpoints/videos";
+import type { VideoContext } from "@/shared/contracts/api/video";
 import { readJsonText } from "../../../shared/api/read-json";
 
 // ─── Constants ───────────────────────────────────────────────────────────────

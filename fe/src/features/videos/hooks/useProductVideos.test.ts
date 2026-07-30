@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const videosByEntityMock = vi.fn();
 
-vi.mock("../../../app/lib/api/endpoints/videos", () => ({
+vi.mock("@/shared/api/endpoints/videos", () => ({
   videosByEntity: (...args: unknown[]) => videosByEntityMock(...args),
 }));
 

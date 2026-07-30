@@ -12,8 +12,8 @@ import { SellerProductModal } from "../../components/seller-product-modal";
 import { useAuth } from "../../hooks/auth-context";
 import { useDebouncedValue } from "../../hooks/use-debounced-value";
 import { useProducts } from "../../hooks/use-products";
-import { formatPrice } from "../../lib/format";
-import { type Product } from "../../types/ui";
+import { formatPrice } from "@/shared/lib";
+import type { Product } from "@/features/catalog";
 
 const PAGE_SIZE = 24;
 

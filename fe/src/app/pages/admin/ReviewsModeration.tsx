@@ -5,12 +5,12 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { FormDialog } from "../../components/form-dialog";
-import { ApiError } from "../../lib/api";
+import { ApiError } from "@/shared/api";
 import {
   adminApproveReview,
   adminPendingReviews,
   adminRejectReview,
-} from "../../lib/api/endpoints/admin";
+} from "@/shared/api/endpoints/admin";
 
 const REVIEW_STAR_POSITIONS = [1, 2, 3, 4, 5];
 

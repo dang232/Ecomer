@@ -12,7 +12,7 @@ vi.mock("motion/react", () => ({
   },
 }));
 
-vi.mock("../lib/api/endpoints/returns", () => ({
+vi.mock("@/shared/api/endpoints/returns", () => ({
   listReturns: vi.fn().mockResolvedValue([]),
   getReturn: vi.fn(),
   approveReturn: vi.fn(),
@@ -21,7 +21,7 @@ vi.mock("../lib/api/endpoints/returns", () => ({
   openDispute: vi.fn(),
 }));
 
-vi.mock("../lib/api", () => ({
+vi.mock("@/shared/api", () => ({
   ApiError: class ApiError extends Error {
     constructor(public message: string) {
       super(message);

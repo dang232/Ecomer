@@ -16,15 +16,15 @@ import { Link } from "react-router";
 import { toast } from "sonner";
 
 import { Modal } from "../components/ui/modal";
-import { ApiError } from "../lib/api";
+import { ApiError } from "@/shared/api";
 import {
   getReturn,
   listReturns,
   openDispute,
   type Return,
   type ReturnStatus,
-} from "../lib/api/endpoints/returns";
-import { formatPrice } from "../lib/format";
+} from "@/shared/api/endpoints/returns";
+import { formatPrice } from "@/shared/lib";
 
 const STATUS_CONFIG: Record<
   ReturnStatus,

@@ -1,6 +1,6 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-import { sellerRevenue, type SellerRevenuePoint } from "../lib/api/endpoints/seller-analytics";
+import { sellerRevenue, type SellerRevenuePoint } from "@/shared/api/endpoints/seller-analytics";
 
 import { useAuth } from "./auth-context";
 

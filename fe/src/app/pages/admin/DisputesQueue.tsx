@@ -5,8 +5,8 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { FormDialog } from "../../components/form-dialog";
-import { ApiError } from "../../lib/api";
-import { adminOpenDisputes, adminResolveDispute } from "../../lib/api/endpoints/admin";
+import { ApiError } from "@/shared/api";
+import { adminOpenDisputes, adminResolveDispute } from "@/shared/api/endpoints/admin";
 
 export function DisputesQueue() {
   const qc = useQueryClient();

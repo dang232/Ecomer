@@ -5,9 +5,9 @@ import { useNavigate, useParams, useSearchParams } from "react-router";
 import { z } from "zod";
 
 import { createCheckoutRecoveryStore, type CheckoutRecoveryStore } from "../../features/checkout";
-import { ApiError } from "../lib/api";
-import { paymentStatus } from "../lib/api/endpoints/payment";
-import { formatPrice } from "../lib/format";
+import { ApiError } from "@/shared/api";
+import { paymentStatus } from "@/shared/api/endpoints/payment";
+import { formatPrice } from "@/shared/lib";
 
 const providerSchema = z.enum(["vnpay", "momo"]);
 type Phase = "pending" | "completed" | "failed" | "error";

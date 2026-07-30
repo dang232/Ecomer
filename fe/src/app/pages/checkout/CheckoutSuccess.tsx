@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { Trans, useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
-import { formatPrice } from "../../lib/format";
+import { formatPrice } from "@/shared/lib";
 
 import type { PaymentOption } from "./types";
 

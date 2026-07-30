@@ -17,15 +17,15 @@ import {
 import { readJsonText } from "../../../shared/api/read-json";
 import { useAuth } from "../../hooks/auth-context";
 import { useCart } from "../../hooks/use-cart";
-import { ApiError } from "../../lib/api";
+import { ApiError } from "@/shared/api";
 import {
   calculateCheckout,
   fetchShippingRates,
   paymentMethods as fetchPaymentMethods,
   shippingOptions as fetchShippingOptions,
-} from "../../lib/api/endpoints/checkout";
-import { listActiveCoupons, validateCouponCode } from "../../lib/api/endpoints/coupons";
-import { findOrderByIdempotencyKey, placeOrder } from "../../lib/api/endpoints/orders";
+} from "@/shared/api/endpoints/checkout";
+import { listActiveCoupons, validateCouponCode } from "@/shared/api/endpoints/coupons";
+import { findOrderByIdempotencyKey, placeOrder } from "@/shared/api/endpoints/orders";
 import {
   codConfirm,
   momoCreate,
@@ -33,9 +33,9 @@ import {
   stripeCreate,
   vietqrCreate,
   vnpayCreate,
-} from "../../lib/api/endpoints/payment";
-import { myProfile } from "../../lib/api/endpoints/users";
-import { checkoutProviderSchema, type Address } from "../../types/api";
+} from "@/shared/api/endpoints/payment";
+import { myProfile } from "@/shared/api/endpoints/users";
+import { checkoutProviderSchema, type Address } from "@/shared/contracts/api";
 
 import { CheckoutAddressStep } from "./CheckoutAddressStep";
 import { CheckoutPaymentRecovery } from "./CheckoutPaymentRecovery";

@@ -118,6 +118,41 @@ export default tseslint.config(
 
       "no-console": ["warn", { allow: ["warn", "error"] }],
       eqeqeq: ["error", "smart"],
+
+      "import/no-restricted-paths": [
+        "error",
+        {
+          zones: [
+            { target: "./src/shared", from: "./src/app" },
+            { target: "./src/shared", from: "./src/features" },
+            { target: "./src/features", from: "./src/app" },
+          ],
+        },
+      ],
+    },
+  },
+
+  {
+    files: ["src/app/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@/features/*/*"],
+              message: "App composition must import a feature's public index.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  {
+    files: ["src/features/admin/index.ts", "src/features/seller/index.ts"],
+    rules: {
+      "import/no-restricted-paths": "off",
     },
   },
 

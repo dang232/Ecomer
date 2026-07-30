@@ -9,8 +9,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ApiError } from "../../lib/api";
-import { sellerReviews } from "../../lib/api/endpoints/reviews";
+import { ApiError } from "@/shared/api";
+import { sellerReviews } from "@/shared/api/endpoints/reviews";
 
 const RATING_STARS = ["one", "two", "three", "four", "five"];
 

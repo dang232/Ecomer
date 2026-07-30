@@ -1,8 +1,8 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { makeWrapper } from "../../app/test-utils/render-with-query-client";
-import { reviewSchema, type Review } from "../../app/types/api";
+import { makeWrapper } from "@/shared/test/render-with-query-client";
+import { reviewSchema, type Review } from "@/shared/contracts/api";
 
 import { useProductReviewController } from "./use-product-review-controller";
 
@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
   toastSuccess: vi.fn(),
 }));
 
-vi.mock("../../app/lib/api/endpoints/reviews", () => ({
+vi.mock("@/shared/api/endpoints/reviews", () => ({
   createReview: (...args: unknown[]) => mocks.createReview(...args),
   reviewsByProduct: (...args: unknown[]) => mocks.reviewsByProduct(...args),
   voteReviewHelpful: (...args: unknown[]) => mocks.voteReviewHelpful(...args),

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 
-import { configureApiOrigin } from "../lib/runtime-endpoints";
+import { configureApiOrigin } from "@/shared/config";
 
 const providerIdSchema = z.enum(["cod", "vietqr", "stripe", "paypal", "vnpay", "momo", "sepay"]);
 

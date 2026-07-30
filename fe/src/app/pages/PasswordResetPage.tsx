@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { requestPasswordReset } from "../lib/api/endpoints/auth";
+import { requestPasswordReset } from "@/shared/api/endpoints/auth";
 
 /**
  * Native password-reset request page. Replaces the old "forgot password"

@@ -11,7 +11,10 @@ const NOTIFICATION_PREFERENCE_SKELETON_IDS = [
   "notification-preference-skeleton-5",
   "notification-preference-skeleton-6",
 ];
-import type { TypePreference, NotificationChannel } from "../../types/api/notification-preferences";
+import type {
+  TypePreference,
+  NotificationChannel,
+} from "@/shared/contracts/api/notification-preferences";
 
 const NOTIFICATION_TYPE_LABELS: Record<string, { label: string; description: string }> = {
   ORDER_CREATED: { label: "Đơn hàng mới", description: "Khi đơn hàng được tạo thành công" },

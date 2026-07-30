@@ -12,10 +12,10 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router";
 
-import { sellerPendingOrders } from "../../lib/api/endpoints/orders";
-import { myPayouts, myWallet } from "../../lib/api/endpoints/seller-finance";
-import { getSeller } from "../../lib/api/endpoints/sellers";
-import { sellerProfile } from "../../lib/api/endpoints/users";
+import { sellerPendingOrders } from "@/shared/api/endpoints/orders";
+import { myPayouts, myWallet } from "@/shared/api/endpoints/seller-finance";
+import { getSeller } from "@/shared/api/endpoints/sellers";
+import { sellerProfile } from "@/shared/api/endpoints/users";
 
 import { SellerDashboard } from "./SellerDashboard";
 import { SellerOrders } from "./SellerOrders";

@@ -3,18 +3,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { readJsonText } from "../../shared/api/read-json";
-import { makeWrapper } from "../test-utils/render-with-query-client";
+import { makeWrapper } from "@/shared/test/render-with-query-client";
 
 import { useCart } from "./use-cart";
 
-vi.mock("../lib/auth/native-auth", () => ({
+vi.mock("@/shared/auth", () => ({
   getAccessToken: () => null,
   setLiveTokenSet: vi.fn(),
   refreshTokens: vi.fn(),
 }));
 
 // Mock product endpoint used by guest cart hydration
-vi.mock("../lib/api/endpoints/products", () => ({
+vi.mock("@/shared/api/endpoints/products", () => ({
   productById: vi.fn().mockResolvedValue(null),
 }));
 

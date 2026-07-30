@@ -12,8 +12,8 @@ import {
   removeWishlistItem,
   toggleWishlistItem,
   type WishlistResponse,
-} from "../lib/api/endpoints/wishlist";
-import { productIdSchema, type ProductId } from "../types/api/branded-ids";
+} from "@/shared/api/endpoints/wishlist";
+import { productIdSchema, type ProductId } from "@/shared/contracts/api/branded-ids";
 
 import { useAuth } from "./auth-context";
 

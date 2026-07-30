@@ -3,11 +3,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getNotificationPreferences,
   updateNotificationPreferences,
-} from "../lib/api/endpoints/notification-preferences";
+} from "@/shared/api/endpoints/notification-preferences";
 import type {
   NotificationPreferences,
   TypePreference,
-} from "../types/api/notification-preferences";
+} from "@/shared/contracts/api/notification-preferences";
 
 import { useAuth } from "./auth-context";
 

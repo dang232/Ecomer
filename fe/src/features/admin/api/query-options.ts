@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import { adminListOrders } from "../../../app/lib/api/endpoints/admin";
+import { adminListOrders } from "@/shared/api/endpoints/admin";
 
 export type AdminOrderListParams = NonNullable<Parameters<typeof adminListOrders>[0]>;
 

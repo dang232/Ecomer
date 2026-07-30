@@ -22,8 +22,8 @@ import {
 } from "recharts";
 
 import { KPICard } from "../../components/kpi-card";
-import { dashboardReport, dashboardExport } from "../../lib/api/endpoints/admin";
-import { formatPrice } from "../../lib/format";
+import { dashboardReport, dashboardExport } from "@/shared/api/endpoints/admin";
+import { formatPrice } from "@/shared/lib";
 
 export function AdminDashboard() {
   const { t } = useTranslation();

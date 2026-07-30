@@ -6,13 +6,13 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
-import { ImageWithFallback } from "../components/image-with-fallback";
+import { ImageWithFallback } from "@/shared/ui";
 import { useAuth } from "../hooks/auth-context";
 import { useCart } from "../hooks/use-cart";
 import { productDetailOptions } from "../hooks/use-products";
 import { useWishlist } from "../hooks/use-wishlist";
-import { ApiError } from "../lib/api";
-import { formatPrice } from "../lib/format";
+import { ApiError } from "@/shared/api";
+import { formatPrice } from "@/shared/lib";
 
 export function WishlistPage() {
   const navigate = useNavigate();

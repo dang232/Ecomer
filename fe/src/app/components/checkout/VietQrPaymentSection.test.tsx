@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // --- API stubs ---
 const paymentStatusMock = vi.fn();
 const vietqrCreateMock = vi.fn();
-vi.mock("../../lib/api/endpoints/payment", () => ({
+vi.mock("@/shared/api/endpoints/payment", () => ({
   paymentStatus: (...args: unknown[]) => paymentStatusMock(...args),
   vietqrCreate: (...args: unknown[]) => vietqrCreateMock(...args),
 }));

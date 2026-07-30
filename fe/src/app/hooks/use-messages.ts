@@ -6,7 +6,7 @@ import {
   sendMessage,
   type ChatMessage,
   type MessagesPage,
-} from "../lib/api/endpoints/messaging";
+} from "@/shared/api/endpoints/messaging";
 
 import { useAuth } from "./auth-context";
 import { THREADS_KEY } from "./use-threads";

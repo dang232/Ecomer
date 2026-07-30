@@ -2,7 +2,7 @@ import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { paypalCapture, paypalCreate } from "../../lib/api/endpoints/payment";
+import { paypalCapture, paypalCreate } from "@/shared/api/endpoints/payment";
 
 interface Props {
   orderId: string;

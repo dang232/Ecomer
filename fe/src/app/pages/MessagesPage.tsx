@@ -8,9 +8,9 @@ import { toast } from "sonner";
 import { useAuth } from "../hooks/auth-context";
 import { useMarkThreadRead, useMessages, useSendMessage } from "../hooks/use-messages";
 import { THREADS_KEY, useThreads } from "../hooks/use-threads";
-import { ApiError } from "../lib/api";
-import { openThread } from "../lib/api/endpoints/messaging";
-import type { ChatMessage, MessageThreadSummary } from "../lib/api/endpoints/messaging";
+import { ApiError } from "@/shared/api";
+import { openThread } from "@/shared/api/endpoints/messaging";
+import type { ChatMessage, MessageThreadSummary } from "@/shared/api/endpoints/messaging";
 
 function useRelativeTime() {
   const { t, i18n } = useTranslation();

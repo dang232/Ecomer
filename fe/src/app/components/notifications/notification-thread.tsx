@@ -2,8 +2,8 @@ import { IconChevronDown, IconChevronRight } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { getThreadNotifications } from "../../lib/api/endpoints/notifications";
-import type { NotificationThread as ThreadType } from "../../types/api/notification";
+import { getThreadNotifications } from "@/shared/api/endpoints/notifications";
+import type { NotificationThread as ThreadType } from "@/shared/contracts/api/notification";
 
 import { NotificationItem } from "./notification-item";
 

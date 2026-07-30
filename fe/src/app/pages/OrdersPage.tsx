@@ -20,19 +20,19 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 
-import { ImageWithFallback } from "../components/image-with-fallback";
+import { ImageWithFallback } from "@/shared/ui";
 import { ConfirmDialog } from "../components/ui/confirm-dialog";
 import { Modal } from "../components/ui/modal";
 import { useAuth } from "../hooks/auth-context";
 import { useCart } from "../hooks/use-cart";
 import { useCancelOrder, myOrdersOptions, orderDetailOptions } from "../hooks/use-orders";
-import { ApiError } from "../lib/api";
-import { requestReturn } from "../lib/api/endpoints/orders";
-import { getTracking } from "../lib/api/endpoints/shipping";
-import { TRACKING_STEPS_FALLBACK } from "../lib/domain-constants";
-import { parseOrderStatus } from "../lib/domain-enums";
-import { formatPrice } from "../lib/format";
-import type { Order as ServerOrder } from "../types/api";
+import { ApiError } from "@/shared/api";
+import { requestReturn } from "@/shared/api/endpoints/orders";
+import { getTracking } from "@/shared/api/endpoints/shipping";
+import { TRACKING_STEPS_FALLBACK } from "@/shared/contracts";
+import { parseOrderStatus } from "@/shared/contracts";
+import { formatPrice } from "@/shared/lib";
+import type { Order as ServerOrder } from "@/shared/contracts/api";
 import { type UIOrder } from "../types/ui";
 
 type OrderTab = "all" | "pending" | "confirmed" | "shipping" | "delivered" | "cancelled";

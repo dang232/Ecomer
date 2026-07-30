@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { cartItemSchema, type CartItem } from "../../types/api";
+import { cartItemSchema, type CartItem } from "@/shared/contracts/api";
 
 import { CheckoutReviewStep } from "./CheckoutReviewStep";
 

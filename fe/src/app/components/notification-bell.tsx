@@ -6,7 +6,7 @@ import { useNavigate } from "react-router";
 
 import { useAuth } from "../hooks/auth-context";
 import { useNotifications } from "../hooks/use-notifications";
-import type { Notification } from "../types/api/notification";
+import type { Notification } from "@/shared/contracts/api/notification";
 
 import { NotificationIcon } from "./notifications/notification-icon";
 

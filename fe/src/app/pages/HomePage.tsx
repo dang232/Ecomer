@@ -18,18 +18,19 @@ import { useMemo, memo } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { ImageWithFallback } from "../components/image-with-fallback";
+import { ImageWithFallback } from "@/shared/ui";
 import { ProductCard } from "../components/product-card";
 import { RecentlyViewedGrid } from "../components/RecentlyViewedGrid";
-import { categoryDisplayLabel, useCategories } from "../hooks/use-categories";
+import { categoryDisplayLabel } from "@/features/catalog";
+import { useCategories } from "../hooks/use-categories";
 import { useCountdown } from "../hooks/use-countdown";
 import { useFlashSaleWithProducts } from "../hooks/use-flash-sale";
 import { useProducts } from "../hooks/use-products";
 import { useRecentlyViewed } from "../hooks/use-recently-viewed";
 import { useSellerShowcase } from "../hooks/use-sellers";
-import { formatPrice } from "../lib/format";
+import { formatPrice } from "@/shared/lib";
 import { cdnUrl } from "../lib/image-url";
-import type { Product } from "../types/ui";
+import type { Product } from "@/features/catalog";
 
 // â”€â”€â”€ Section Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const SectionHeader = memo(function SectionHeader({

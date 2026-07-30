@@ -4,10 +4,10 @@ import { memo, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { formatPrice } from "../lib/format";
-import type { Product } from "../types/ui";
+import { formatPrice } from "@/shared/lib";
+import type { Product } from "@/features/catalog";
 
-import { ImageWithFallback } from "./image-with-fallback";
+import { ImageWithFallback } from "@/shared/ui";
 import { StarRating } from "./star-rating";
 import { useVNShop } from "../hooks/use-vnshop";
 

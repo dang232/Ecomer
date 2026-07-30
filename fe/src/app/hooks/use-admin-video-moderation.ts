@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { ApiError } from "../lib/api";
+import { ApiError } from "@/shared/api";
 import {
   adminApproveAppeal,
   adminApproveVideo,
@@ -12,7 +12,7 @@ import {
   adminVideoModerationQueue,
   adminVideoPreview,
   type AdminVideoModerationQueueParams,
-} from "../lib/api/endpoints/admin";
+} from "@/shared/api/endpoints/admin";
 
 // ─── Query keys ───────────────────────────────────────────────────────────────
 

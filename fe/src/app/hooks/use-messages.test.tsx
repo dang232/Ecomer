@@ -9,7 +9,7 @@ vi.mock("./auth-context", () => ({
 const listMessagesMock = vi.fn();
 const sendMessageMock = vi.fn();
 const markThreadReadMock = vi.fn();
-vi.mock("../lib/api/endpoints/messaging", async (importActual) => {
+vi.mock("@/shared/api/endpoints/messaging", async (importActual) => {
   const actual: object = await importActual();
   return {
     ...actual,
@@ -19,7 +19,7 @@ vi.mock("../lib/api/endpoints/messaging", async (importActual) => {
   };
 });
 
-import { makeWrapper } from "../test-utils/render-with-query-client";
+import { makeWrapper } from "@/shared/test/render-with-query-client";
 
 import { messagesKey, useMessages, useSendMessage } from "./use-messages";
 
