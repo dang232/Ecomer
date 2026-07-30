@@ -234,7 +234,12 @@ export function OrderQueue({
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">{row.itemSummary}</p>
                   </div>
-                  <div className="flex gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                  <div
+                    className="flex gap-2 shrink-0"
+                    role="group"
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  >
                     {row.actions.includes("accept") ? (
                       <>
                         <button

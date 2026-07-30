@@ -103,7 +103,7 @@ export function ProductMediaFields({ form, disabled }: ProductMediaFieldsProps) 
         <div className="grid grid-cols-4 gap-3">
           {(images ?? []).map((img, index) => (
             <div
-              key={index}
+              key={img.url || `image-${index}`}
               className="relative aspect-square rounded-[var(--radius-md)] overflow-hidden bg-muted border border-border"
             >
               <ImageWithFallback

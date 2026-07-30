@@ -121,7 +121,7 @@ export function ProductEditorDrawer({ open, product, onClose, onSave }: ProductE
         });
       }
     }
-  }, [open, isEdit]);
+  }, [open, isEdit, reset]);
 
   // ── Mutations ───────────────────────────────────────────────────────────────
 
@@ -208,7 +208,7 @@ export function ProductEditorDrawer({ open, product, onClose, onSave }: ProductE
 
   // ── Submit handler ──────────────────────────────────────────────────────────
 
-  const handleSave = async (values: SellerProductForm) => {
+  const handleSave = (values: SellerProductForm) => {
     if (createMutation.isPending || updateMutation.isPending) return;
     const body = toSellerProductWriteBody(values);
     if (isEdit) {

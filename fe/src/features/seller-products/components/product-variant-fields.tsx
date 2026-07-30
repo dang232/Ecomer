@@ -69,7 +69,7 @@ export function ProductVariantFields({ form, disabled }: ProductVariantFieldsPro
       <div className="space-y-2">
         {variants.map((variant, index) => (
           <div
-            key={index}
+            key={variant.sku || `variant-${index}`}
             className="grid grid-cols-[1fr_1fr_auto_auto_auto] gap-2 items-end rounded-[var(--radius-md)] border border-border p-3 bg-card"
           >
             {/* SKU */}
