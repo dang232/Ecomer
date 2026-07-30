@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   assertAccessiblePairs,
+  contrastRatio,
   loadTokens,
   renderCss,
   renderDart,
@@ -40,10 +41,30 @@ test("declared foreground and background pairs meet WCAG AA", async () => {
   assert.doesNotThrow(() => assertAccessiblePairs(tokens));
 });
 
+test("web brand tokens emit CSS without changing Dart", async () => {
+  const tokens = await loadTokens(tokenPath);
+  const sharedOnly = structuredClone(tokens);
+  delete sharedOnly.web;
+
+  assert.match(renderCss(tokens), /--web-brand: #d63c2f;/);
+  assert.match(renderCss(tokens), /--web-graphite: #24262b;/);
+  assert.match(renderCss(tokens), /--web-cobalt: #2457c5;/);
+  assert.equal(renderDart(tokens), renderDart(sharedOnly));
+  assert.ok(
+    contrastRatio(tokens.web.light.onBrand, tokens.web.light.brand) >= 4.5,
+  );
+  assert.ok(
+    contrastRatio(tokens.web.dark.onBrand, tokens.web.dark.brand) >= 4.5,
+  );
+});
+
 test("committed generated outputs are current", async () => {
   const tokens = await loadTokens(tokenPath);
   const [css, dart] = await Promise.all([
-    readFile(path.join(rootDir, "fe", "src", "styles", "generated-tokens.css"), "utf8"),
+    readFile(
+      path.join(rootDir, "fe", "src", "styles", "generated-tokens.css"),
+      "utf8",
+    ),
     readFile(
       path.join(
         rootDir,
@@ -67,14 +88,29 @@ test("web and Flutter themes consume the generated semantic tokens", async () =>
     readFile(path.join(rootDir, "fe", "src", "styles", "index.css"), "utf8"),
     readFile(path.join(rootDir, "fe", "src", "styles", "theme.css"), "utf8"),
     readFile(
-      path.join(rootDir, "vnshop_mobile", "lib", "core", "theme", "app_theme.dart"),
+      path.join(
+        rootDir,
+        "vnshop_mobile",
+        "lib",
+        "core",
+        "theme",
+        "app_theme.dart",
+      ),
       "utf8",
     ),
   ]);
 
   assert.match(indexCss, /@import "\.\/generated-tokens\.css";/);
-  assert.match(themeCss, /--primary: var\(--color-action-primary\);/);
-  assert.match(themeCss, /--accent-foreground: var\(--color-on-commerce-accent\);/);
+  assert.match(themeCss, /--primary: var\(--web-brand\);/);
+  assert.match(themeCss, /--primary-hover: var\(--web-brand-hover\);/);
+  assert.match(themeCss, /--primary-foreground: var\(--web-on-brand\);/);
+  assert.match(themeCss, /--accent: var\(--web-campaign-accent\);/);
+  assert.match(
+    themeCss,
+    /--accent-foreground: var\(--web-on-campaign-accent\);/,
+  );
+  assert.match(themeCss, /--commerce-info: var\(--web-cobalt\);/);
+  assert.match(themeCss, /--utility-strong: var\(--web-graphite\);/);
   assert.match(flutterTheme, /generated\/design_tokens\.dart/);
   assert.match(flutterTheme, /primary: DesignColorsLight\.actionPrimary/);
   assert.match(flutterTheme, /primary: DesignColorsDark\.actionPrimary/);
