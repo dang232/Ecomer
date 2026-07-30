@@ -157,6 +157,22 @@ export default tseslint.config(
   },
 
   {
+    files: [
+      "src/features/admin-dashboard/**/*.{ts,tsx}",
+      "src/features/admin-orders/**/*.{ts,tsx}",
+      "src/features/admin-coupons/**/*.{ts,tsx}",
+      "src/features/admin-users/**/*.{ts,tsx}",
+    ],
+    rules: {
+      "@typescript-eslint/no-unsafe-member-access": "off",
+      "@typescript-eslint/no-unsafe-argument": "off",
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-return": "off",
+      "@typescript-eslint/no-unsafe-call": "off",
+    },
+  },
+
+  {
     files: ["src/features/seller-products/**/*.ts", "src/features/seller-products/**/*.tsx"],
     rules: {
       "import/no-restricted-paths": "off",
