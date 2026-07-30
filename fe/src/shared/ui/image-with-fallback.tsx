@@ -46,7 +46,6 @@ export function ImageWithFallback({
 
   const currentSrc = usingFallback ? fallbackSrc : src;
 
-  // React 18.3 warns for camelCase fetchPriority; lowercase is the emitted HTML attribute.
   return (
     <img
       {...rest}
@@ -54,7 +53,7 @@ export function ImageWithFallback({
       alt={alt}
       className={className}
       loading={imageLoading}
-      {...(imageFetchPriority ? { fetchpriority: imageFetchPriority } : {})}
+      {...(imageFetchPriority ? { fetchPriority: imageFetchPriority } : {})}
       decoding={decoding}
       onError={(e) => {
         if (!usingFallback && fallbackSrc) {

@@ -9,7 +9,7 @@ export function Footer() {
   const { t } = useTranslation();
 
   return (
-    <footer className="mt-16 pt-12 pb-6 bg-background border-t border-border">
+    <footer className="mt-16 border-t border-border bg-background pt-12 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-6">
       <div className="max-w-[var(--content-max)] mx-auto px-[var(--content-padding)]">
         {/* 5-column grid: brand(2fr) + 4×1fr */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-8 mb-8">

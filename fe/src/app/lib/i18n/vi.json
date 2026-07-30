@@ -392,6 +392,59 @@
       "cta": "Xem danh mục"
     }
   },
+  "storefront": {
+    "accountMenu": "Menu tai khoan",
+    "campaign": {
+      "eyebrow": "Uu dai noi bat",
+      "action": "Xem san pham"
+    },
+    "shortcuts": {
+      "label": "Truy cap nhanh cua cua hang",
+      "vouchers": "Voucher",
+      "shipping": "Van chuyen",
+      "mall": "Shop chinh hang",
+      "video": "Video",
+      "delivery": "Giao nhanh"
+    },
+    "categories": {
+      "title": "Kham pha danh muc",
+      "navigation": "Danh muc san pham"
+    },
+    "flashSale": {
+      "endsSoon": "So luong co han, mua ngay"
+    },
+    "sellers": {
+      "title": "Nha ban hang noi bat"
+    },
+    "mobileNav": {
+      "label": "Dieu huong cua hang",
+      "home": "Trang chu",
+      "search": "Tim kiem",
+      "cart": "Gio hang",
+      "account": "Tai khoan"
+    },
+    "trust": {
+      "protection": "Bao ve nguoi mua",
+      "protectionDetail": "Thanh toan duoc xu ly an toan.",
+      "returns": "Doi tra de dang",
+      "returnsDetail": "Tao yeu cau doi tra tu don hang duoc ho tro.",
+      "shipping": "Giao hang co theo doi",
+      "shippingDetail": "Theo doi kien hang tu luc lay hang."
+    },
+    "empty": {
+      "title": "Cua hang dang cho san pham",
+      "description": "Kham pha danh muc trong khi san pham moi duoc cap nhat.",
+      "action": "Xem danh muc"
+    },
+    "error": {
+      "title": "Khong the tai cua hang",
+      "retry": "Thu lai"
+    },
+    "partial": {
+      "title": "Mot so khu vuc cua hang tam thoi khong kha dung",
+      "description": "Danh muc va san pham dang kha dung van duoc hien thi ben duoi."
+    }
+  },
   "consoleChrome": {
     "adminLabel": "Admin Console",
     "sellerLabel": "Kênh Người Bán",

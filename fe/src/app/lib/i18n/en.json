@@ -392,6 +392,59 @@
       "cta": "Browse catalog"
     }
   },
+  "storefront": {
+    "accountMenu": "Account menu",
+    "campaign": {
+      "eyebrow": "Featured deal",
+      "action": "View product"
+    },
+    "shortcuts": {
+      "label": "Storefront shortcuts",
+      "vouchers": "Vouchers",
+      "shipping": "Shipping",
+      "mall": "Official shops",
+      "video": "Video",
+      "delivery": "Fast delivery"
+    },
+    "categories": {
+      "title": "Browse categories",
+      "navigation": "Product categories"
+    },
+    "flashSale": {
+      "endsSoon": "Limited stock, while it lasts"
+    },
+    "sellers": {
+      "title": "Featured sellers"
+    },
+    "mobileNav": {
+      "label": "Storefront navigation",
+      "home": "Home",
+      "search": "Search",
+      "cart": "Cart",
+      "account": "Account"
+    },
+    "trust": {
+      "protection": "Buyer protection",
+      "protectionDetail": "Payments are handled safely.",
+      "returns": "Easy returns",
+      "returnsDetail": "Start a supported return from your order.",
+      "shipping": "Tracked delivery",
+      "shippingDetail": "Follow your package from pickup."
+    },
+    "empty": {
+      "title": "The storefront is waiting for products",
+      "description": "Browse the catalog while new marketplace listings arrive.",
+      "action": "Browse catalog"
+    },
+    "error": {
+      "title": "We could not load the storefront",
+      "retry": "Try again"
+    },
+    "partial": {
+      "title": "Some storefront sections are unavailable",
+      "description": "Available categories and products are still shown below."
+    }
+  },
   "consoleChrome": {
     "adminLabel": "Admin Console",
     "sellerLabel": "Seller Hub",
