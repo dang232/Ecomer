@@ -33,34 +33,36 @@ export function ProductTile({ product, href }: ProductTileProps) {
 
   return (
     <article
+      data-testid="product-card"
       className="grid h-full min-h-[22rem] grid-rows-[auto_minmax(3rem,auto)_auto_auto] overflow-hidden rounded-[var(--radius-card)] border border-border bg-card"
-      data-testid="product-tile"
     >
-      <Link
-        to={href}
-        aria-label={product.name}
-        className="group aspect-square overflow-hidden bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-      >
-        <ImageWithFallback
-          className="h-full w-full object-cover transition-transform duration-[var(--duration-base)] motion-reduce:transform-none group-hover:scale-105"
-          src={product.imageUrl ?? ""}
-          alt=""
-        />
-      </Link>
-      <h3 className="min-h-12 px-3 pt-3 text-sm font-medium leading-5 text-foreground">
-        <span className="line-clamp-2">{product.name}</span>
-      </h3>
-      <Price priceVnd={product.priceVnd} originalPriceVnd={product.originalPriceVnd} />
-      <div className="min-h-11 px-3 pb-3">
-        <Rating value={product.rating} soldCount={product.soldCount} />
-        {product.sellerName ? <SellerIdentity name={product.sellerName} /> : null}
-        {stockLabel ? (
-          <div className="mt-2">
-            <StatusIndicator tone={product.stockState === "unavailable" ? "danger" : "warning"}>
-              {stockLabel}
-            </StatusIndicator>
-          </div>
-        ) : null}
+      <div data-testid="product-tile" className="contents">
+        <Link
+          to={href}
+          aria-label={product.name}
+          className="group aspect-square overflow-hidden bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+        >
+          <ImageWithFallback
+            className="h-full w-full object-cover transition-transform duration-[var(--duration-base)] motion-reduce:transform-none group-hover:scale-105"
+            src={product.imageUrl ?? ""}
+            alt={product.name}
+          />
+        </Link>
+        <h3 className="min-h-12 px-3 pt-3 text-sm font-medium leading-5 text-foreground">
+          <span className="line-clamp-2">{product.name}</span>
+        </h3>
+        <Price priceVnd={product.priceVnd} originalPriceVnd={product.originalPriceVnd} />
+        <div className="min-h-11 px-3 pb-3">
+          <Rating value={product.rating} soldCount={product.soldCount} />
+          {product.sellerName ? <SellerIdentity name={product.sellerName} /> : null}
+          {stockLabel ? (
+            <div className="mt-2">
+              <StatusIndicator tone={product.stockState === "unavailable" ? "danger" : "warning"}>
+                {stockLabel}
+              </StatusIndicator>
+            </div>
+          ) : null}
+        </div>
       </div>
     </article>
   );

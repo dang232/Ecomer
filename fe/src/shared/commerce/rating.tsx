@@ -29,7 +29,7 @@ export function Rating({ value, soldCount }: RatingProps) {
             className="h-3.5 w-3.5 fill-[var(--color-rating)] text-[var(--color-rating)]"
             aria-hidden="true"
           />
-          {rating.toFixed(1)}
+          {Number.isInteger(rating) ? String(rating) : rating.toFixed(1)}
         </span>
       ) : null}
       {rating !== null && hasSoldCount ? <span aria-hidden="true">·</span> : null}

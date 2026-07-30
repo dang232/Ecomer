@@ -1,37 +1,30 @@
-import {
-  AlertTriangle,
-  ChevronLeft,
-  ChevronRight,
-  Search,
-  SlidersHorizontal,
-  X,
-} from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, SlidersHorizontal, X } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 
 import {
-  SearchFilters,
+  catalogV2Enabled,
+  categoryDisplayLabel,
   clearSearchFilters,
+  fromServer,
+  MobileFilterDrawer,
   readSearchRouteState,
   resolveSearchDataSource,
   resolveSearchDisplayState,
+  SearchFilters,
+  SearchResults,
+  SearchToolbar,
+  toSearchResultsView,
   updateSearchRouteState,
   type SearchRouteState,
 } from "@/features/catalog";
-import { AsyncState } from "../../shared/ui/async-state";
-import { Button } from "../../shared/ui/button";
-import { Dialog } from "../../shared/ui/dialog";
-import { Skeleton } from "../../shared/ui/skeleton";
-import { Surface } from "../../shared/ui/surface";
-import { ProductCard } from "../components/product-card";
-import { categoryDisplayLabel } from "@/features/catalog";
+import { flattenCategoryTree } from "@/shared/api/endpoints/categories";
+import { Button, Surface } from "@/shared/ui";
+
 import { useCategories } from "../hooks/use-categories";
 import { useProductsV2 } from "../hooks/use-products-v2";
 import { useSearchV2 } from "../hooks/use-search-v2";
-import { catalogV2Enabled } from "@/features/catalog";
-import { flattenCategoryTree } from "@/shared/api/endpoints/categories";
-import { fromServer } from "@/features/catalog";
 import { canUseCatalogBrowse, mergeMissingProductImages } from "../lib/search-view";
 import {
   requiresBackendSearch,
@@ -43,24 +36,6 @@ import {
 const getScrollKey = () => `scroll:${window.location.pathname}${window.location.search}`;
 
 const PAGE_SIZE = 20;
-const PRODUCT_SKELETON_IDS = Array.from({ length: 8 }, (_, index) => `product-skeleton-${index}`);
-
-function ProductGridSkeleton() {
-  return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-[repeat(auto-fill,minmax(200px,1fr))]">
-      {PRODUCT_SKELETON_IDS.map((id) => (
-        <Surface key={id} padding="none" className="overflow-hidden">
-          <Skeleton className="aspect-square w-full rounded-none" />
-          <div className="space-y-2 p-3">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-5 w-1/2" />
-          </div>
-        </Surface>
-      ))}
-    </div>
-  );
-}
 
 export function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -163,8 +138,6 @@ export function SearchPage() {
     };
     return messages[error];
   };
-
-  const setSortBy = (value: SearchRouteState["sort"]) => updateRoute({ sort: value });
 
   const setCategory = (next: string) => updateRoute({ cat: next });
 
@@ -382,6 +355,17 @@ export function SearchPage() {
     visibleProductCount: placeholderLoading ? 0 : paginated.length,
     catalogFallbackActive,
   });
+  const searchResultsView = useMemo(() => {
+    const base = toSearchResultsView({
+      query,
+      source: catalogFallbackActive ? "fallback" : "primary",
+      products: paginated,
+      total: totalCount,
+      error: displayState.status === "error" ? new Error("Search results are unavailable") : null,
+    });
+
+    return displayState.status === "loading" ? { ...base, status: "loading" as const } : base;
+  }, [catalogFallbackActive, displayState.status, paginated, query, totalCount]);
 
   const retryResults = () => {
     const requests: Promise<unknown>[] = [];
@@ -460,13 +444,6 @@ export function SearchPage() {
     });
   }
 
-  const sortOptions: readonly { v: SearchRouteState["sort"]; l: string }[] = [
-    { v: "popular", l: t("search.sort.shortPopular") },
-    { v: "price-low", l: t("search.sort.shortPriceLow") },
-    { v: "price-high", l: t("search.sort.shortPriceHigh") },
-    { v: "newest", l: t("search.sort.shortNewest") },
-  ];
-
   const filterProps = {
     categories: flatCategories,
     facets,
@@ -539,21 +516,31 @@ export function SearchPage() {
         </Button>
       </div>
 
-      <Dialog
+      <MobileFilterDrawer
         open={filtersOpen}
-        onClose={() => setFiltersOpen(false)}
-        title={t("search.filtersTitle", { defaultValue: "Filters" })}
-        closeLabel={t("search.closeFilters", { defaultValue: "Close filters" })}
-        size="md"
-        scrollable
-        footer={
-          <Button onClick={() => setFiltersOpen(false)} className="w-full sm:w-auto">
-            {t("search.showResults", { defaultValue: "Show results" })}
-          </Button>
-        }
-      >
-        <SearchFilters idPrefix="mobile" {...filterProps} />
-      </Dialog>
+        onOpenChange={setFiltersOpen}
+        categories={flatCategories}
+        facets={facets}
+        values={filterProps.values}
+        hasActiveFilters={activeFilters.length > 0}
+        priceError={priceRangeErrorMessage(priceRangeError) || null}
+        onApply={(values) => {
+          if (validatePriceRange(values.priceMin, values.priceMax)) return;
+          setLocalPriceMin(values.priceMin);
+          setLocalPriceMax(values.priceMax);
+          updateRoute({
+            cat: values.selectedCategory,
+            brand: values.selectedBrand,
+            priceMin: values.priceMin,
+            priceMax: values.priceMax,
+            minRating: values.minRating,
+            tag: values.selectedTags,
+            sameDay: values.sameDay,
+            verifiedOnly: values.verifiedOnly,
+            officialOnly: values.officialOnly,
+          });
+        }}
+      />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
         <aside className="hidden lg:block">
@@ -584,66 +571,7 @@ export function SearchPage() {
             </div>
           ) : null}
 
-          <Surface
-            padding="sm"
-            className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-          >
-            <p
-              aria-live="polite"
-              aria-atomic="true"
-              className="min-w-0 text-sm text-muted-foreground"
-            >
-              {displayState.status === "loading"
-                ? t("search.loading", { defaultValue: "Loading productsâ€¦" })
-                : displayState.status === "error"
-                  ? t("search.resultsUnavailable", { defaultValue: "Results unavailable" })
-                  : v2DisplayActive
-                    ? t("search.showingLoaded", {
-                        count: totalCount,
-                        defaultValue: "Showing {{count}} loaded products",
-                      })
-                    : query && totalCount > 0
-                      ? t("search.showingRange", {
-                          start: (currentPage - 1) * pageSize + 1,
-                          end: Math.min(currentPage * pageSize, totalCount),
-                          total: totalCount,
-                          query,
-                          defaultValue:
-                            "Showing {{start}}â€“{{end}} of {{total}} results for '{{query}}'",
-                        })
-                      : query
-                        ? t("search.noResultsFor", {
-                            query,
-                            defaultValue: "No results for '{{query}}'",
-                          })
-                        : t("search.productCount", {
-                            count: totalCount,
-                            defaultValue: "{{count}} products",
-                          })}
-            </p>
-
-            <div
-              role="group"
-              aria-label={t("search.sortLabel", { defaultValue: "Sort products" })}
-              className="flex max-w-full shrink-0 gap-1 overflow-x-auto rounded-[var(--radius-control)] border border-border bg-muted p-1"
-            >
-              {sortOptions.map((opt) => {
-                const active = sortBy === opt.v;
-                return (
-                  <Button
-                    key={opt.v}
-                    variant={active ? "primary" : "ghost"}
-                    size="sm"
-                    aria-pressed={active}
-                    onClick={() => setSortBy(opt.v)}
-                    className="shrink-0 border-transparent px-3 text-xs shadow-none"
-                  >
-                    {opt.l}
-                  </Button>
-                );
-              })}
-            </div>
-          </Surface>
+          <SearchToolbar state={routeState} view={searchResultsView} onChange={updateRoute} />
 
           {displayState.notice && displayState.status === "ready" ? (
             <Surface
@@ -668,68 +596,12 @@ export function SearchPage() {
             </Surface>
           ) : null}
 
-          <AsyncState
-            status={displayState.status}
-            retry={{
-              label: t("common.tryAgain", { defaultValue: "Try again" }),
-              onClick: retryResults,
-            }}
-            loading={<ProductGridSkeleton />}
-            error={
-              <Surface padding="lg" className="w-full py-16 text-center sm:py-20">
-                <Search
-                  className="mx-auto mb-4 h-10 w-10 text-muted-foreground"
-                  aria-hidden="true"
-                />
-                <h2 className="text-lg font-semibold text-foreground">
-                  {t("search.errorTitle", { defaultValue: "Products could not be loaded" })}
-                </h2>
-                <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-                  {t("search.errorDescription", {
-                    defaultValue: "Check your connection, then try loading the results again.",
-                  })}
-                </p>
-              </Surface>
-            }
-            empty={
-              <Surface padding="lg" className="py-16 text-center sm:py-20">
-                <Search
-                  className="mx-auto mb-4 h-10 w-10 text-muted-foreground"
-                  aria-hidden="true"
-                />
-                <h2 className="text-lg font-semibold text-foreground">
-                  {t("search.emptyTitle", { defaultValue: "No products found" })}
-                </h2>
-                <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-                  {t("search.emptySub", {
-                    defaultValue: "Try removing a filter or searching for a different product.",
-                  })}
-                </p>
-                <Button
-                  variant={activeFilters.length > 0 ? "primary" : "outline"}
-                  onClick={activeFilters.length > 0 ? clearFilters : retryResults}
-                  className="mt-6"
-                >
-                  {activeFilters.length > 0
-                    ? t("search.emptyClear", { defaultValue: "Clear filters" })
-                    : t("common.refresh", { defaultValue: "Refresh" })}
-                </Button>
-              </Surface>
-            }
-          >
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-[repeat(auto-fill,minmax(200px,1fr))]">
-              {paginated.map((product, index) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  index={index}
-                  onNavigate={() => {
-                    sessionStorage.setItem(getScrollKey(), String(window.scrollY));
-                  }}
-                />
-              ))}
-            </div>
-          </AsyncState>
+          <SearchResults
+            view={searchResultsView}
+            onRetry={retryResults}
+            onClearFilters={activeFilters.length > 0 ? clearFilters : undefined}
+            onProductNavigate={() => sessionStorage.setItem(getScrollKey(), String(window.scrollY))}
+          />
 
           {/* Pagination */}
           {v2DisplayActive && displayState.status === "ready" && v2HasMore ? (
