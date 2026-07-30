@@ -19,6 +19,7 @@ describe("application routes", () => {
       "index",
       "products",
       "orders",
+      "returns",
       "reviews",
       "wallet",
       "settings",

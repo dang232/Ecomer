@@ -1,6 +1,7 @@
 import {
   IconLayoutDashboard,
   IconPackage,
+  IconRotate,
   IconSettings,
   IconShoppingBag,
   IconStar,
@@ -20,15 +21,18 @@ import { sellerProfile } from "@/shared/api/endpoints/users";
 import { SellerDashboard } from "./SellerDashboard";
 import { SellerOrders } from "./SellerOrders";
 import { SellerProducts } from "./SellerProducts";
+import { SellerReturns } from "./SellerReturns";
 import { SellerReviews } from "./SellerReviews";
 import { SellerSettings } from "./SellerSettings";
 import { SellerWallet } from "./SellerWallet";
 
-type SellerTab = "dashboard" | "products" | "orders" | "reviews" | "wallet" | "settings";
+type SellerTab =
+  "dashboard" | "products" | "orders" | "returns" | "reviews" | "wallet" | "settings";
 
 const NAV_MAIN: { id: SellerTab; labelKey: string; icon: typeof IconLayoutDashboard }[] = [
   { id: "dashboard", labelKey: "seller.nav.dashboard", icon: IconLayoutDashboard },
   { id: "orders", labelKey: "seller.nav.orders", icon: IconShoppingBag },
+  { id: "returns", labelKey: "return.seller.title", icon: IconRotate },
   { id: "products", labelKey: "seller.nav.products", icon: IconPackage },
   { id: "reviews", labelKey: "seller.nav.reviews", icon: IconStar },
 ];
@@ -47,6 +51,7 @@ const SELLER_TAB_PATHS: Record<SellerTab, string> = {
   dashboard: "/seller",
   products: "/seller/products",
   orders: "/seller/orders",
+  returns: "/seller/returns",
   reviews: "/seller/reviews",
   wallet: "/seller/wallet",
   settings: "/seller/settings",
@@ -146,6 +151,7 @@ export function SellerPage() {
   const tabTitle: Record<SellerTab, string> = {
     dashboard: t("seller.nav.dashboard"),
     orders: t("seller.nav.orders"),
+    returns: t("return.seller.title"),
     products: t("seller.nav.products"),
     reviews: t("seller.nav.reviews"),
     wallet: t("seller.nav.wallet"),
@@ -271,6 +277,7 @@ export function SellerPage() {
                 onRetry={() => void pendingQuery.refetch()}
               />
             ) : null}
+            {activeTab === "returns" ? <SellerReturns /> : null}
             {activeTab === "reviews" ? <SellerReviews /> : null}
             {activeTab === "wallet" ? (
               <SellerWallet

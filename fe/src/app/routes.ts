@@ -201,6 +201,7 @@ export const router = createBrowserRouter([
       { index: true, element: lazyRoute(createElement(SellerPage)) },
       { path: "products", element: lazyRoute(createElement(SellerPage)) },
       { path: "orders", element: lazyRoute(createElement(SellerPage)) },
+      { path: "returns", element: lazyRoute(createElement(SellerPage)) },
       { path: "reviews", element: lazyRoute(createElement(SellerPage)) },
       { path: "wallet", element: lazyRoute(createElement(SellerPage)) },
       { path: "settings", element: lazyRoute(createElement(SellerPage)) },
