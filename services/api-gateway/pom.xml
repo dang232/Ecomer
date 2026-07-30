@@ -17,7 +17,7 @@
 		<java.version>25</java.version>
 		<opentelemetry.javaagent.version>2.29.0</opentelemetry.javaagent.version>
 		<tomcat.version>11.0.22</tomcat.version>
-		<spring-cloud.version>2025.1.1</spring-cloud.version>
+		<spring-cloud.version>2025.1.2</spring-cloud.version>
 		<netty.version>4.2.16.Final</netty.version>
 		<spring-kafka.version>4.0.6</spring-kafka.version>
 		<bouncycastle.version>1.84</bouncycastle.version>
