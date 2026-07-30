@@ -1271,10 +1271,12 @@
       "pendingHint": "Đang xử lý: {{amount}}"
     },
     "settings": {
+      "title": "Cài đặt Shop",
       "tier": "Hạng",
       "vacationMode": "Chế độ nghỉ",
       "vacationOn": "Bật",
       "vacationOff": "Tắt",
+      "bank": "Tên ngân hàng",
       "destination": "Tài khoản nhận",
       "verificationState": "Trạng thái",
       "destinationBank": "Ngân hàng",
@@ -1290,12 +1292,7 @@
       "productFallback": "Sản phẩm",
       "previous": "Trang trước",
       "page": "Trang {{page}} / {{pages}}",
-      "next": "Trang sau",
-      "comingSoon": "Inbox đánh giá sẽ được hỗ trợ khi backend cung cấp endpoint riêng."
-    },
-    "settings": {
-      "title": "Cài đặt Shop",
-      "comingSoon": "Cập nhật thông tin shop sẽ khả dụng khi backend mở endpoint riêng cho seller profile."
+      "next": "Trang sau"
     },
     "productModal": {
       "titleAdd": "Thêm sản phẩm mới",

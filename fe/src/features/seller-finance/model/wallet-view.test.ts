@@ -87,6 +87,17 @@ describe("toWalletView", () => {
     expect(view.canRequestPayout).toBe(false);
   });
 
+  it("canRequestPayout is false when an active payout is in-flight", () => {
+    const wallet: Wallet = { balance: 500_000, pending: 0 };
+    const payouts: Payout[] = [
+      makePayout({ id: "p-1", status: "REQUESTED", amount: 50_000 }),
+    ];
+
+    const view = toWalletView({ wallet, payouts });
+
+    expect(view.canRequestPayout).toBe(false);
+  });
+
   it("maps payout fields correctly", () => {
     const wallet: Wallet = { balance: 100_000, pending: 0 };
     const payouts: Payout[] = [

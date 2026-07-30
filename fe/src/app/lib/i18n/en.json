@@ -1266,10 +1266,12 @@
       "pendingHint": "Pending settlement: {{amount}}"
     },
     "settings": {
+      "title": "Shop settings",
       "tier": "Tier",
       "vacationMode": "Vacation mode",
       "vacationOn": "On",
       "vacationOff": "Off",
+      "bank": "Bank name",
       "destination": "Destination",
       "verificationState": "Status",
       "destinationBank": "Bank",
@@ -1286,10 +1288,6 @@
       "previous": "Previous",
       "next": "Next",
       "page": "Page {{page}} of {{pages}}"
-    },
-    "settings": {
-      "title": "Shop settings",
-      "comingSoon": "Shop profile updates will land once the backend ships a seller-profile endpoint."
     },
     "productModal": {
       "titleAdd": "Add new product",
