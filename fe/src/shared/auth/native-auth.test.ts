@@ -74,6 +74,7 @@ function mockFetchReturningAuthSession(): void {
       JSON.stringify({
         success: true,
         data: { accessToken: "fake-access-token", accessExpiresIn: 900 },
+        errorCode: null,
       }),
       { status: 200, headers: { "Content-Type": "application/json" } },
     ),
@@ -185,11 +186,13 @@ describe("revokeTokens", () => {
 });
 
 describe("passwordLogin", () => {
-  it("does NOT attach the X-CSRF-Token header on /auth/login (excluded by filter)", async () => {
+  it("returns the token set without attaching the CSRF header on /auth/login", async () => {
     setDocumentCookie(`${CSRF_COOKIE_NAME}=${CSRF_TOKEN_VALUE}`);
     mockFetchReturningAuthSession();
 
-    await passwordLogin("user", "pass");
+    await expect(passwordLogin("user", "pass")).resolves.toMatchObject({
+      accessToken: "fake-access-token",
+    });
 
     const { url, init } = getLastFetchCall();
     expect(url).toContain("/auth/login");
