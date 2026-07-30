@@ -1179,7 +1179,77 @@
       "editTooltip": "Edit product",
       "prev": "Previous page",
       "pageIndicator": "Page {{current}} of {{total}}",
-      "next": "Next page"
+      "next": "Next page",
+      "empty": "No products yet.",
+      "paginationLabel": "Product list pagination",
+      "caption": "Seller product catalog",
+      "editor": {
+        "titleNew": "New product",
+        "titleEdit": "Edit product",
+        "titleDraft": "Draft product",
+        "cancel": "Cancel",
+        "save": "Save changes",
+        "saveDraft": "Save as draft",
+        "updateDraft": "Update draft",
+        "saving": "Saving...",
+        "saveOk": "Product saved",
+        "updateOk": "Product updated",
+        "saveErr": "Couldn't save product",
+        "updateErr": "Couldn't update product",
+        "publishOk": "Product published",
+        "publishErr": "Couldn't publish product",
+        "deleteOk": "Draft deleted",
+        "deleteErr": "Couldn't delete draft",
+        "discardTitle": "Discard changes?",
+        "discardDescription": "You have unsaved changes. If you close now, your changes will be lost.",
+        "discard": "Discard",
+        "continueEditing": "Continue editing",
+        "sectionBasic": "Basic information",
+        "sectionMedia": "Media",
+        "sectionVariants": "Variants & pricing",
+        "sectionPublication": "Publication",
+        "basic": {
+          "legend": "Basic information",
+          "nameLabel": "Product name",
+          "namePlaceholder": "e.g. Wireless Headphones",
+          "descriptionLabel": "Description",
+          "descriptionPlaceholder": "Describe your product...",
+          "categoryLabel": "Category ID",
+          "brandLabel": "Brand",
+          "tagsLabel": "Tags",
+          "tagsPlaceholder": "wireless, bluetooth, travel",
+          "tagsHint": "Separate tags with commas. Max 20 tags."
+        },
+        "media": {
+          "legend": "Product media",
+          "label": "Images",
+          "remove": "Remove image",
+          "add": "Add image",
+          "maxReached": "Maximum {{max}} images reached.",
+          "invalidType": "{{name}} is not a supported image type.",
+          "fileTooLarge": "{{name}} exceeds {{maxMb}} MB limit.",
+          "hint": "JPEG, PNG, WebP up to {{maxMb}} MB each. Max {{maxCount}} images."
+        },
+        "variants": {
+          "legend": "Variants, pricing and inventory",
+          "label": "Variants",
+          "add": "Add variant",
+          "remove": "Remove variant",
+          "sku": "SKU",
+          "name": "Name",
+          "price": "Price",
+          "stock": "Stock"
+        },
+        "publication": {
+          "draftNotice": "Your product has been saved as a draft and is not yet visible in the catalog.",
+          "draftHint": "Draft ID: {{id}}…",
+          "publish": "Publish now",
+          "publishing": "Publishing…",
+          "continueEditing": "Continue editing",
+          "deleteDraft": "Delete draft",
+          "deleting": "Deleting…"
+        }
+      }
     },
     "orders": {
       "title": "Order management",
@@ -1214,28 +1284,35 @@
         "title": "Confirm Order",
         "body": "Accept this order and begin processing?",
         "confirm": "Confirm"
-      }
-    },
-    "shipDialog": {
-      "title": "Hand off to carrier",
-      "subOrderLabel": "Sub-order: {{id}}",
-      "cancel": "Cancel",
-      "submit": "Hand off",
-      "submitting": "Submitting...",
-      "carrierLabel": "Carrier",
-      "carrierOther": "Other",
-      "carrierOtherPlaceholder": "Carrier name",
-      "trackingNumberLabel": "Tracking number",
-      "trackingNumberPlaceholder": "e.g. GHN1234567890",
-      "missingCarrier": "Please enter a carrier name",
-      "missingTracking": "Please enter a tracking number"
-    },
-    "rejectDialog": {
-      "title": "Reject order",
-      "submitLabel": "Reject order",
-      "subtitle": "Order: {{id}}",
-      "reasonLabel": "Rejection reason",
-      "reasonPlaceholder": "Out of stock, can't deliver to that address..."
+      },
+      "rejectDialog": {
+        "title": "Reject order",
+        "submitLabel": "Reject order",
+        "confirmBody": "Are you sure you want to reject this order?",
+        "reasonLabel": "Rejection reason",
+        "reasonPlaceholder": "Out of stock, can't deliver to that address..."
+      },
+      "shipDialog": {
+        "title": "Hand off to carrier",
+        "subOrderLabel": "Sub-order: {{id}}",
+        "cancel": "Cancel",
+        "submit": "Hand off",
+        "submitting": "Submitting...",
+        "carrierLabel": "Carrier",
+        "carrierOther": "Other",
+        "carrierOtherPlaceholder": "Carrier name",
+        "trackingNumberLabel": "Tracking number",
+        "trackingNumberPlaceholder": "e.g. GHN1234567890",
+        "missingCarrier": "Please enter a carrier name",
+        "missingTracking": "Please enter a tracking number"
+      },
+      "detailDrawer": {
+        "title": "Order {{id}}",
+        "parentOrder": "Parent order: {{id}}",
+        "close": "Close",
+        "items": "{{count}} item(s)"
+      },
+      "openDetail": "View order {{id}}"
     },
     "wallet": {
       "title": "Wallet & Payouts",
@@ -1277,7 +1354,7 @@
       "destinationBank": "Bank",
       "manageAccount": "Manage account"
     },
-    "reviewsTab": {
+    "reviews": {
       "title": "Customer reviews",
       "subtitle": "Feedback for products in your shop",
       "searchPlaceholder": "Search product, review, or order",
@@ -1287,7 +1364,8 @@
       "productFallback": "Product",
       "previous": "Previous",
       "next": "Next",
-      "page": "Page {{page}} of {{pages}}"
+      "page": "Page {{page}} of {{pages}}",
+      "imageAlt": "Review image {{count}}"
     },
     "productModal": {
       "titleAdd": "Add new product",

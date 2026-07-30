@@ -1182,7 +1182,77 @@
       "editTooltip": "Sửa sản phẩm",
       "prev": "Trang trước",
       "pageIndicator": "Trang {{current}} / {{total}}",
-      "next": "Trang sau"
+      "next": "Trang sau",
+      "empty": "Chưa có sản phẩm nào.",
+      "paginationLabel": "Phân trang danh sách sản phẩm",
+      "caption": "Danh mục sản phẩm của người bán",
+      "editor": {
+        "TitleNew": "Sản phẩm mới",
+        "titleEdit": "Sửa sản phẩm",
+        "titleDraft": "Bản nháp",
+        "cancel": "Huỷ",
+        "save": "Lưu thay đổi",
+        "saveDraft": "Lưu bản nháp",
+        "updateDraft": "Cập nhật bản nháp",
+        "saving": "Đang lưu...",
+        "saveOk": "Đã lưu sản phẩm",
+        "updateOk": "Đã cập nhật sản phẩm",
+        "saveErr": "Không thể lưu sản phẩm",
+        "updateErr": "Không thể cập nhật sản phẩm",
+        "publishOk": "Đã xuất bản sản phẩm",
+        "publishErr": "Không thể xuất bản sản phẩm",
+        "deleteOk": "Đã xoá bản nháp",
+        "deleteErr": "Không thể xoá bản nháp",
+        "discardTitle": "Huỷ bỏ thay đổi?",
+        "discardDescription": "Bạn có thay đổi chưa lưu. Nếu đóng bây giờ, thay đổi sẽ bị mất.",
+        "discard": "Huỷ bỏ",
+        "continueEditing": "Tiếp tục chỉnh sửa",
+        "sectionBasic": "Thông tin cơ bản",
+        "sectionMedia": "Hình ảnh",
+        "sectionVariants": "Phân loại & giá",
+        "sectionPublication": "Xuất bản",
+        "basic": {
+          "legend": "Thông tin cơ bản",
+          "nameLabel": "Tên sản phẩm",
+          "namePlaceholder": "VD: Tai nghe không dây",
+          "descriptionLabel": "Mô tả",
+          "descriptionPlaceholder": "Mô tả sản phẩm của bạn...",
+          "categoryLabel": "ID danh mục",
+          "brandLabel": "Thương hiệu",
+          "tagsLabel": "Tags",
+          "tagsPlaceholder": "không dây, bluetooth, du lịch",
+          "tagsHint": "Ngăn cách các tag bằng dấu phẩy. Tối đa 20 tags."
+        },
+        "media": {
+          "legend": "Hình ảnh sản phẩm",
+          "label": "Hình ảnh",
+          "remove": "Xoá hình",
+          "add": "Thêm hình",
+          "maxReached": "Đã đạt tối đa {{max}} hình.",
+          "invalidType": "{{name}} không phải định dạng hình được hỗ trợ.",
+          "fileTooLarge": "{{name}} vượt quá giới hạn {{maxMb}} MB.",
+          "hint": "JPEG, PNG, WebP tối đa {{maxMb}} MB mỗi hình. Tối đa {{maxCount}} hình."
+        },
+        "variants": {
+          "legend": "Phân loại, giá và tồn kho",
+          "label": "Phân loại",
+          "add": "Thêm phân loại",
+          "remove": "Xoá phân loại",
+          "sku": "SKU",
+          "name": "Tên",
+          "price": "Giá",
+          "stock": "Tồn"
+        },
+        "publication": {
+          "draftNotice": "Sản phẩm của bạn đã được lưu dưới dạng bản nháp và chưa hiển thị trên danh mục.",
+          "draftHint": "ID bản nháp: {{id}}…",
+          "publish": "Xuất bản ngay",
+          "publishing": "Đang xuất bản…",
+          "continueEditing": "Tiếp tục chỉnh sửa",
+          "deleteDraft": "Xoá bản nháp",
+          "deleting": "Đang xoá…"
+        }
+      }
     },
     "orders": {
       "title": "Quản lý đơn hàng",
@@ -1219,9 +1289,36 @@
         "title": "Xác nhận đơn hàng",
         "body": "Chấp nhận đơn hàng này và bắt đầu xử lý?",
         "confirm": "Xác nhận"
-      }
+      },
+      "rejectDialog": {
+        "title": "Từ chối đơn",
+        "submitLabel": "Từ chối đơn",
+        "confirmBody": "Bạn có chắc muốn từ chối đơn hàng này?",
+        "reasonLabel": "Lý do từ chối",
+        "reasonPlaceholder": "Hết hàng, không thể giao đến địa chỉ..."
+      },
+      "shipDialog": {
+        "title": "Bàn giao đơn cho vận chuyển",
+        "subOrderLabel": "Sub-order: {{id}}",
+        "cancel": "Huỷ",
+        "submit": "Bàn giao",
+        "submitting": "Đang gửi...",
+        "carrierLabel": "Đơn vị vận chuyển",
+        "carrierOther": "Khác",
+        "carrierOtherPlaceholder": "Tên đơn vị vận chuyển",
+        "trackingNumberLabel": "Mã vận đơn",
+        "trackingNumberPlaceholder": "VD: GHN1234567890",
+        "missingCarrier": "Vui lòng nhập tên đơn vị vận chuyển",
+        "missingTracking": "Vui lòng nhập mã vận đơn"
+      },
+      "detailDrawer": {
+        "title": "Đơn {{id}}",
+        "parentOrder": "Mã đơn cha: {{id}}",
+        "close": "Đóng",
+        "items": "{{count}} món"
+      },
+      "openDetail": "Xem đơn {{id}}"
     },
-    "shipDialog": {
       "title": "Bàn giao đơn cho vận chuyển",
       "subOrderLabel": "Sub-order: {{id}}",
       "cancel": "Huỷ",
@@ -1234,13 +1331,6 @@
       "trackingNumberPlaceholder": "VD: GHN1234567890",
       "missingCarrier": "Vui lòng nhập tên đơn vị vận chuyển",
       "missingTracking": "Vui lòng nhập mã vận đơn"
-    },
-    "rejectDialog": {
-      "title": "Từ chối đơn",
-      "submitLabel": "Từ chối đơn",
-      "subtitle": "Đơn: {{id}}",
-      "reasonLabel": "Lý do từ chối",
-      "reasonPlaceholder": "Hết hàng, không thể giao đến địa chỉ..."
     },
     "wallet": {
       "title": "Ví & Thanh toán",
@@ -1282,7 +1372,7 @@
       "destinationBank": "Ngân hàng",
       "manageAccount": "Quản lý tài khoản"
     },
-    "reviewsTab": {
+    "reviews": {
       "title": "Đánh giá của khách hàng",
       "subtitle": "Phản hồi về sản phẩm trong Shop",
       "searchPlaceholder": "Tìm theo sản phẩm, đánh giá hoặc đơn hàng",
@@ -1292,7 +1382,8 @@
       "productFallback": "Sản phẩm",
       "previous": "Trang trước",
       "page": "Trang {{page}} / {{pages}}",
-      "next": "Trang sau"
+      "next": "Trang sau",
+      "imageAlt": "Ảnh đánh giá {{count}}"
     },
     "productModal": {
       "titleAdd": "Thêm sản phẩm mới",

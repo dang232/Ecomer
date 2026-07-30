@@ -125,12 +125,10 @@ export const sellerAcceptOrder = async (subOrderId: string): Promise<PendingSubO
   firstSubOrder(
     await api.put(`/seller/orders/${encodeURIComponent(subOrderId)}/accept`, orderSchema),
   );
-export const sellerRejectOrder = async (
-  subOrderId: string,
-  body: { reason: string },
-): Promise<PendingSubOrder> =>
+// PUT /seller/orders/{id}/reject accepts no request body per the backend controller.
+export const sellerRejectOrder = async (subOrderId: string): Promise<PendingSubOrder> =>
   firstSubOrder(
-    await api.put(`/seller/orders/${encodeURIComponent(subOrderId)}/reject`, orderSchema, body),
+    await api.put(`/seller/orders/${encodeURIComponent(subOrderId)}/reject`, orderSchema),
   );
 export const sellerShipOrder = async (
   subOrderId: string,
