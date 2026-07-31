@@ -46,7 +46,7 @@ Execute these plans in order. A later plan may begin only after all blocking gat
 
 ## Plan Progress
 
-Live status as of 2026-07-30. Updated when each task ships.
+Live status as of 2026-07-31. Updated when each task ships.
 
 | # | Plan | Task | Status | Commit / Notes |
 |---|---|---|---|---|
@@ -59,10 +59,13 @@ Live status as of 2026-07-30. Updated when each task ships.
 | 05 | Seller | 2 | **shipped** | `5f9660bb feat(fe): modernize seller product workflow` |
 | 05 | Seller | 3 | **shipped** | `f8c13551 feat(fe): standardize seller work queues` |
 | 05 | Seller | 4 | **shipped** | `c8c71fbb feat(fe): clarify seller finance and settings` + `1f0f7558` (i18n duplicate merge + payout-flight test) |
-| 06 | Admin | all | **pending** | admin dashboard, queues, decisions, users, health |
+| 06 | Admin | 1 | **shipped** | `b27d6095 feat(fe): add admin shell, queue infrastructure, dashboard (plan06 t1)` |
+| 06 | Admin | 2 | **shipped** | `5d8a6cd2 feat(fe): add commerce admin queues (orders/coupons/users) (plan06 t2)` |
+| 06 | Admin | 3 | **shipped** | `bf094ea8 feat(fe): modernize trust and safety queues` |
+| 06 | Admin | 4 | **shipped** | `03caa726 feat(fe): modernize admin finance & health` |
 | 07 | Release | all | **pending** | preview removal, compat removal, coordinated promotion and rollback |
 
-**Branch:** `feat/search-catalog-cache-flow` (currently 11 commits ahead of `main`).
+**Branch:** `feat/search-catalog-cache-flow` (currently 35 commits ahead of `main`).
 
 ## Locked Decisions
 
