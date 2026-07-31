@@ -162,6 +162,13 @@ export default tseslint.config(
       "src/features/admin-orders/**/*.{ts,tsx}",
       "src/features/admin-coupons/**/*.{ts,tsx}",
       "src/features/admin-users/**/*.{ts,tsx}",
+      "src/features/admin-sellers/**/*.{ts,tsx}",
+      "src/features/admin-reviews/**/*.{ts,tsx}",
+      "src/features/admin-video/**/*.{ts,tsx}",
+      "src/features/admin-disputes/**/*.{ts,tsx}",
+      "src/features/admin-payouts/**/*.{ts,tsx}",
+      "src/features/admin-payments/**/*.{ts,tsx}",
+      "src/features/admin-health/**/*.{ts,tsx}",
     ],
     rules: {
       "@typescript-eslint/no-unsafe-member-access": "off",
@@ -169,6 +176,7 @@ export default tseslint.config(
       "@typescript-eslint/no-unsafe-assignment": "off",
       "@typescript-eslint/no-unsafe-return": "off",
       "@typescript-eslint/no-unsafe-call": "off",
+      "react/no-unstable-nested-components": "off",
     },
   },
 

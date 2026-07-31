@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 import { productIdSchema, sellerIdSchema } from "@/shared/contracts/api/branded-ids";
-import { parsePayoutStatus } from "@/shared/contracts";
 
 // BE user-service BuyerProfileResponse(keycloakId, email, name, phone, avatarUrl, banned).
 // Used by admin user management panel.
@@ -176,6 +175,11 @@ export type Coupon = z.infer<typeof couponSchema>;
 // BE order-service DisputeResponse(disputeId, returnId, buyerReason,
 // sellerResponse, adminResolution, resolvedBy, status). FE wanted id,
 // description, createdAt — disputeId→id; description is the buyer's reason.
+
+/** Dispute lifecycle status. Distinct from payout status. */
+export const disputeStatusSchema = z.enum(["OPEN", "RESOLVED"]);
+export type DisputeStatus = z.infer<typeof disputeStatusSchema>;
+
 export const disputeSchema = z
   .object({
     // Legacy
@@ -201,7 +205,7 @@ export const disputeSchema = z
   .transform((raw) => ({
     id: raw.id ?? raw.disputeId ?? "",
     returnId: raw.returnId,
-    status: parsePayoutStatus(raw.status),
+    status: disputeStatusSchema.parse(raw.status),
     description: raw.description ?? raw.buyerReason ?? undefined,
     sellerResponse: raw.sellerResponse ?? undefined,
     adminResolution: raw.adminResolution ?? undefined,
@@ -220,6 +224,28 @@ export type Dispute = z.infer<typeof disputeSchema>;
 // createdAt, completedBy, createdAt). Same shape as the order-service finance
 // projection. Legacy callers expect id + requestedAt; keep accepting both.
 // sellerName is joined from the seller-service when the BE supports it (P1-8).
+
+/**
+ * All 12 wire statuses from seller-finance-service. Plan 06 Task 4 forbids
+ * collapsing PENDING→REQUESTED or COMPLETED→PAID — see
+ * `features/admin-payouts/model/payout-view.ts` for the action matrix.
+ */
+export const payoutStatusSchema = z.enum([
+  "REQUESTED",
+  "APPROVED",
+  "SUBMITTING",
+  "SUBMITTED",
+  "PAID",
+  "UNKNOWN",
+  "REJECTED",
+  "CANCELLED",
+  "REVERSED",
+  "PENDING",
+  "COMPLETED",
+  "FAILED",
+]);
+export type PayoutStatus = z.infer<typeof payoutStatusSchema>;
+
 export const adminPayoutSchema = z
   .object({
     // Legacy
@@ -238,6 +264,12 @@ export const adminPayoutSchema = z
     // COMPLETED rows that predate the V5 migration have no captured admin.
     completedBy: z.string().nullable().optional(),
     completedAt: z.string().nullable().optional(),
+    // Audit trail fields exposed by the BE PayoutResponse:
+    idempotencyKey: z.string().nullable().optional(),
+    approvedBy: z.string().nullable().optional(),
+    paidBy: z.string().nullable().optional(),
+    externalReference: z.string().nullable().optional(),
+    evidenceReference: z.string().nullable().optional(),
   })
   .passthrough()
   .transform((raw) => ({
@@ -245,10 +277,15 @@ export const adminPayoutSchema = z
     sellerId: raw.sellerId,
     sellerName: raw.sellerName,
     amount: raw.amount,
-    status: parsePayoutStatus(raw.status),
+    status: payoutStatusSchema.parse(raw.status),
     requestedAt: raw.requestedAt ?? raw.createdAt,
     completedBy: raw.completedBy ?? undefined,
     completedAt: raw.completedAt ?? undefined,
+    idempotencyKey: raw.idempotencyKey ?? undefined,
+    approvedBy: raw.approvedBy ?? undefined,
+    paidBy: raw.paidBy ?? undefined,
+    externalReference: raw.externalReference ?? undefined,
+    evidenceReference: raw.evidenceReference ?? undefined,
     currency: raw.currency ?? "VND",
   }));
 export type AdminPayout = z.infer<typeof adminPayoutSchema>;

@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { dashboardRevenueResponseSchema } from "@/shared/api/endpoints/admin";
-
 import {
   dashboardRevenuePointSchema,
   dashboardReportSchema,
   dashboardSummarySchema,
   dashboardTopProductSchema,
   dashboardTopSellerSchema,
+  disputeStatusSchema,
   sellerSummarySchema,
 } from "@/shared/contracts/api/admin";
 
@@ -142,5 +142,21 @@ describe("admin seller destination contract", () => {
 
     expect(seller.last4).toBe("****1234");
     expect(seller).not.toHaveProperty("bankAccount");
+  });
+});
+
+describe("admin dispute status", () => {
+  it("preserves OPEN verbatim", () => {
+    expect(disputeStatusSchema.parse("OPEN")).toBe("OPEN");
+  });
+
+  it("preserves RESOLVED verbatim", () => {
+    expect(disputeStatusSchema.parse("RESOLVED")).toBe("RESOLVED");
+  });
+
+  it("rejects unknown dispute status strings", () => {
+    expect(() => disputeStatusSchema.parse("CLOSED")).toThrow();
+    expect(() => disputeStatusSchema.parse("")).toThrow();
+    expect(() => disputeStatusSchema.parse("open")).toThrow();
   });
 });

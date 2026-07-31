@@ -770,6 +770,14 @@
   "admin": {
     "console": "Admin Console",
     "consoleSub": "VNShop Marketplace",
+    "queue": {
+      "searchPlaceholder": "Search queue",
+      "loading": "Loading queue…",
+      "loadErr": "Could not load the queue. Try again.",
+      "empty": "Nothing pending here.",
+      "reasonLabel": "Reason",
+      "reasonRequired": "Reason is required"
+    },
     "nav": {
       "dashboard": "Dashboard",
       "sellers": "Approve Sellers",
@@ -965,13 +973,15 @@
     },
     "health": {
       "title": "System Health",
+      "subtitle": "Live actuator check across services",
       "refresh": "Refresh",
       "checking": "Checking...",
       "allUp": "All systems operational",
       "someDown": "Some services are down",
       "up": "Up",
       "down": "Down",
-      "lastChecked": "Last checked: {{time}}"
+      "lastChecked": "Last checked: {{time}}",
+      "latencyMs": "{{ms}} ms"
     },
     "users": {
       "title": "User Management",
@@ -1001,6 +1011,7 @@
     },
     "payouts": {
       "title": "Payout requests",
+      "subtitle": "Approve, submit, and reconcile seller payouts",
       "loading": "Loading...",
       "empty": "No payout requests",
       "emptyCompleted": "No completed payouts yet",
@@ -1016,7 +1027,34 @@
       "updateErr": "Couldn't update",
       "tab": {
         "requested": "Requested",
-        "paid": "Paid"
+        "paid": "Paid",
+        "pending": "Pending",
+        "completed": "Completed"
+      },
+      "th": {
+        "id": "Payout #",
+        "seller": "Seller",
+        "amount": "Amount",
+        "status": "Status",
+        "requestedAt": "Requested"
+      },
+      "action": {
+        "approve": "Approve",
+        "reject": "Reject",
+        "submit": "Submit",
+        "unknown": "Unknown",
+        "paid": "Paid",
+        "legacyComplete": "Complete",
+        "legacyFail": "Fail"
+      },
+      "toast": {
+        "approve": { "ok": "Payout approved" },
+        "reject": { "ok": "Payout rejected" },
+        "submit": { "ok": "Payout submitted" },
+        "unknown": { "ok": "Payout marked unknown" },
+        "paid": { "ok": "Payout marked paid" },
+        "legacy-complete": { "ok": "Payout completed" },
+        "legacy-fail": { "ok": "Payout failed" }
       },
       "completedBy": "Completed by {{id}}",
       "completedByUnknown": "Completed (admin not recorded)",
@@ -1038,6 +1076,31 @@
         "externalReferencePlaceholder": "Bank transfer reference",
         "evidenceHashLabel": "Evidence hash",
         "evidenceHashPlaceholder": "sha256:..."
+      },
+      "decisionDialog": {
+        "reasonLabel": "Reason",
+        "reasonPlaceholder": "Why this action?",
+        "providerReferenceLabel": "Provider reference",
+        "providerReferencePlaceholder": "Bank transfer id",
+        "attemptIdLabel": "Attempt id",
+        "attemptIdPlaceholder": "Retry attempt id",
+        "evidenceLabel": "Evidence",
+        "evidencePlaceholder": "Receipt link or note",
+        "externalReferenceLabel": "External reference",
+        "externalReferencePlaceholder": "Bank transfer reference",
+        "evidenceHashLabel": "Evidence hash",
+        "evidenceHashPlaceholder": "sha256:..."
+      }
+    },
+    "payments": {
+      "vietqr": {
+        "panelTitle": "Confirm VietQR payment",
+        "panelSubtitle": "Payment: {{paymentId}}",
+        "bankReference": "Bank reference (optional)",
+        "bankReferencePlaceholder": "BANK-12345 — leave blank to auto-generate",
+        "bankReferenceHelp": "If the buyer provided a bank reference (often the payment id), paste it here. Otherwise the BE assigns a synthetic VIETQR-MANUAL-* reference.",
+        "confirm": "Confirm payment",
+        "confirmOk": "VietQR payment confirmed"
       }
     },
     "videoModeration": {

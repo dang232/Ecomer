@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { api } from "@/shared/api/client";
+import type { COUPON_TYPES } from "@/shared/contracts";
 import {
   adminOrderSummarySchema,
   adminPageSchema,
@@ -20,8 +22,6 @@ import {
   sellerSummarySchema,
   type DashboardSummary,
 } from "@/shared/contracts/api";
-import type { COUPON_TYPES } from "@/shared/contracts";
-import { api } from "@/shared/api/client";
 
 export type { DashboardSummary };
 
@@ -118,6 +118,85 @@ export const adminCompletePayout = (id: string, body?: PayoutActionBody) =>
 export const adminFailPayout = (id: string, body: PayoutActionBody) =>
   api.post(`/admin/finance/payouts/${encodeURIComponent(id)}/fail`, adminPayoutSchema, body);
 
+/**
+ * Plan 06 Task 4 — V5 payout action surface. Each endpoint mirrors the
+ * controller signature in seller-finance-service's AdminFinanceController:
+ * approve/reject/unknown/paid/submit use `@RequestParam`; complete/fail take
+ * the nested `PayoutActionRequest` body; the legacy `pending`/`completed`
+ * `*Payouts` endpoints above stay for the order-service finance projection
+ * that's still mounted at the same paths.
+ */
+
+export const adminAllPayouts = (params: {
+  status?: string;
+  page?: number;
+  size?: number;
+  q?: string;
+} = {}) =>
+  api.get("/admin/finance/payouts", adminPageSchema(adminPayoutSchema), {
+    status: params.status || undefined,
+    page: params.page ?? 0,
+    size: params.size ?? 50,
+    q: params.q || undefined,
+  });
+
+export const adminApprovePayout = (id: string, reason: string) =>
+  api.postWithQuery(
+    `/admin/finance/payouts/${encodeURIComponent(id)}/approve`,
+    adminPayoutSchema,
+    { reason },
+  );
+
+export const adminRejectPayout = (id: string, reason: string) =>
+  api.postWithQuery(
+    `/admin/finance/payouts/${encodeURIComponent(id)}/reject`,
+    adminPayoutSchema,
+    { reason },
+  );
+
+export const adminSubmitPayout = (id: string, providerReference: string, attemptId: string) =>
+  api.postWithQuery(
+    `/admin/finance/payouts/${encodeURIComponent(id)}/submit`,
+    adminPayoutSchema,
+    { providerReference, attemptId },
+  );
+
+export const adminUnknownPayout = (id: string, reason: string) =>
+  api.postWithQuery(
+    `/admin/finance/payouts/${encodeURIComponent(id)}/unknown`,
+    adminPayoutSchema,
+    { reason },
+  );
+
+export const adminPaidPayout = (
+  id: string,
+  providerReference: string,
+  evidence: string,
+) =>
+  api.postWithQuery(
+    `/admin/finance/payouts/${encodeURIComponent(id)}/paid`,
+    adminPayoutSchema,
+    { providerReference, evidence },
+  );
+
+export const adminCompleteLegacyPayout = (id: string, body: PayoutActionBody) =>
+  api.post(`/admin/finance/payouts/${encodeURIComponent(id)}/complete`, adminPayoutSchema, body);
+
+export const adminFailLegacyPayout = (id: string, body: PayoutActionBody) =>
+  api.post(`/admin/finance/payouts/${encodeURIComponent(id)}/fail`, adminPayoutSchema, body);
+
+/**
+ * Admin VietQR manual confirmation. The BE controller only accepts an
+ * optional `bankReference` body — no amount, no note. See
+ * payment-service/AdminVietQrController.
+ */
+export const adminConfirmVietQr = (paymentId: string, body: { bankReference?: string } = {}) =>
+  api.post(
+    `/admin/vietqr/confirm/${encodeURIComponent(paymentId)}`,
+    z.unknown(),
+    Object.keys(body).length > 0 ? body : undefined,
+  );
+
 // Dashboard
 //
 // Dashboard endpoints use the v2 typed metric contract and share the same
@@ -183,10 +262,10 @@ export const adminRejectVideo = (videoId: string, body: { reason: string }) =>
   );
 
 /** GET /admin/videos/appeal-queue — paginated APPEAL_PENDING videos. */
-export const adminVideoAppealsQueue = () =>
+export const adminVideoAppealsQueue = (params: { page?: number; size?: number } = {}) =>
   api.get("/admin/videos/appeal-queue", adminPageSchema(adminVideoAppealItemSchema), {
-    page: 0,
-    size: 50,
+    page: params.page ?? 0,
+    size: params.size ?? 20,
   });
 
 /** POST /admin/videos/{videoId}/appeal/approve — re-publish after appeal. */

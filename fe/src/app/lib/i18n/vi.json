@@ -770,6 +770,14 @@
   "admin": {
     "console": "Admin Console",
     "consoleSub": "VNShop Marketplace",
+    "queue": {
+      "searchPlaceholder": "Tìm trong hàng đợi",
+      "loading": "Đang tải hàng đợi…",
+      "loadErr": "Không tải được hàng đợi. Thử lại.",
+      "empty": "Không có mục nào đang chờ.",
+      "reasonLabel": "Lý do",
+      "reasonRequired": "Vui lòng nhập lý do"
+    },
     "nav": {
       "dashboard": "Tổng quan",
       "sellers": "Duyệt Seller",
@@ -965,13 +973,15 @@
     },
     "health": {
       "title": "Tình trạng hệ thống",
+      "subtitle": "Kiểm tra actuator trực tiếp các dịch vụ",
       "refresh": "Làm mới",
       "checking": "Đang kiểm tra...",
       "allUp": "Tất cả hệ thống hoạt động tốt",
       "someDown": "Một số dịch vụ đang gặp sự cố",
       "up": "Bình thường",
       "down": "Sự cố",
-      "lastChecked": "Kiểm tra lần cuối: {{time}}"
+      "lastChecked": "Kiểm tra lần cuối: {{time}}",
+      "latencyMs": "{{ms}} ms"
     },
     "users": {
       "title": "Quản lý người dùng",
@@ -1001,6 +1011,7 @@
     },
     "payouts": {
       "title": "Yêu cầu rút tiền",
+      "subtitle": "Duyệt, gửi và đối chiếu payout của seller",
       "loading": "Đang tải...",
       "empty": "Không có yêu cầu rút tiền nào",
       "emptyCompleted": "Chưa có yêu cầu nào hoàn tất",
@@ -1020,6 +1031,31 @@
         "paid": "Đã thanh toán",
         "pending": "Đang chờ",
         "completed": "Đã hoàn tất"
+      },
+      "th": {
+        "id": "Mã yêu cầu",
+        "seller": "Seller",
+        "amount": "Số tiền",
+        "status": "Trạng thái",
+        "requestedAt": "Ngày yêu cầu"
+      },
+      "action": {
+        "approve": "Duyệt",
+        "reject": "Từ chối",
+        "submit": "Gửi",
+        "unknown": "Chưa rõ",
+        "paid": "Đã thanh toán",
+        "legacyComplete": "Hoàn thành",
+        "legacyFail": "Thất bại"
+      },
+      "toast": {
+        "approve": { "ok": "Đã duyệt yêu cầu rút tiền" },
+        "reject": { "ok": "Đã từ chối yêu cầu rút tiền" },
+        "submit": { "ok": "Đã gửi yêu cầu rút tiền" },
+        "unknown": { "ok": "Đã đánh dấu chưa rõ" },
+        "paid": { "ok": "Đã đánh dấu đã thanh toán" },
+        "legacy-complete": { "ok": "Đã hoàn tất yêu cầu rút tiền" },
+        "legacy-fail": { "ok": "Đã đánh dấu thất bại" }
       },
       "completedBy": "Hoàn tất bởi {{id}}",
       "completedByUnknown": "Đã hoàn tất (không ghi nhận admin)",
@@ -1041,6 +1077,31 @@
         "externalReferencePlaceholder": "Mã giao dịch ngân hàng",
         "evidenceHashLabel": "Mã băm bằng chứng",
         "evidenceHashPlaceholder": "sha256:..."
+      },
+      "decisionDialog": {
+        "reasonLabel": "Lý do",
+        "reasonPlaceholder": "Lý do hành động này?",
+        "providerReferenceLabel": "Mã tham chiếu nhà cung cấp",
+        "providerReferencePlaceholder": "Mã giao dịch ngân hàng",
+        "attemptIdLabel": "Mã lần thử",
+        "attemptIdPlaceholder": "Mã lần thử lại",
+        "evidenceLabel": "Bằng chứng",
+        "evidencePlaceholder": "Link biên lai hoặc ghi chú",
+        "externalReferenceLabel": "Mã tham chiếu bên ngoài",
+        "externalReferencePlaceholder": "Mã giao dịch ngân hàng",
+        "evidenceHashLabel": "Mã băm bằng chứng",
+        "evidenceHashPlaceholder": "sha256:..."
+      }
+    },
+    "payments": {
+      "vietqr": {
+        "panelTitle": "Xác nhận thanh toán VietQR",
+        "panelSubtitle": "Thanh toán: {{paymentId}}",
+        "bankReference": "Mã tham chiếu ngân hàng (tuỳ chọn)",
+        "bankReferencePlaceholder": "BANK-12345 — bỏ trống để tự sinh",
+        "bankReferenceHelp": "Nếu người mua cung cấp mã tham chiếu (thường là payment id), dán vào đây. Nếu không, BE sẽ tự sinh mã VIETQR-MANUAL-*.",
+        "confirm": "Xác nhận thanh toán",
+        "confirmOk": "Đã xác nhận thanh toán VietQR"
       }
     },
     "videoModeration": {
@@ -1319,19 +1380,6 @@
       },
       "openDetail": "Xem đơn {{id}}"
     },
-      "title": "Bàn giao đơn cho vận chuyển",
-      "subOrderLabel": "Sub-order: {{id}}",
-      "cancel": "Huỷ",
-      "submit": "Bàn giao",
-      "submitting": "Đang gửi...",
-      "carrierLabel": "Đơn vị vận chuyển",
-      "carrierOther": "Khác",
-      "carrierOtherPlaceholder": "Tên đơn vị vận chuyển",
-      "trackingNumberLabel": "Mã vận đơn",
-      "trackingNumberPlaceholder": "VD: GHN1234567890",
-      "missingCarrier": "Vui lòng nhập tên đơn vị vận chuyển",
-      "missingTracking": "Vui lòng nhập mã vận đơn"
-    },
     "wallet": {
       "title": "Ví & Thanh toán",
       "balanceLabel": "Số dư khả dụng",
@@ -1401,7 +1449,7 @@
       "originalPriceLabel": "Giá gốc (tuỳ chọn)",
       "stockLabel": "Tồn kho",
       "categoryLabel": "Danh mục",
-      "brandLabel": "Th\u01b0\u01a1ng hi\u1ec7u",
+      "brandLabel": "Thương hiệu",
       "tagsLabel": "Thẻ sản phẩm",
       "tagsPlaceholder": "không dây, bluetooth, du lịch",
       "cancel": "Huỷ",
