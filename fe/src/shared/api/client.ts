@@ -456,6 +456,13 @@ export const api = {
     body?: unknown,
     opts?: Pick<RequestOptions<T>, "auth" | "signal" | "idempotencyKey" | "credentials">,
   ) => request({ method: "POST", path, schema, body, ...opts }),
+  postWithQuery: <T extends z.ZodType>(
+    path: string,
+    schema: T,
+    query: NonNullable<RequestOptions<T>["query"]>,
+    body?: unknown,
+    opts?: Pick<RequestOptions<T>, "auth" | "signal" | "idempotencyKey" | "credentials">,
+  ) => request({ method: "POST", path, schema, query, body, ...opts }),
   put: <T extends z.ZodType>(
     path: string,
     schema: T,
