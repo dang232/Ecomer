@@ -1,7 +1,7 @@
 # VNShop Commerce Modernization Integrated Review
 
 **Date:** 2026-08-01
-**Source head:** `542f3d58671ed90d8fff79ff21d7c86ea674a6da` plus reviewed working-tree changes
+**Source head:** `3373776d52843e541e2f058b321b17c3ef08e7ce`
 **Disposition:** local release candidate; not approved for protected promotion
 
 ## Completed Locally

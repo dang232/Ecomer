@@ -23,7 +23,7 @@
 
 Baseline source: `fe/performance/baseline/route-bundles.json`. Current source:
 fresh `fe/performance/current/route-bundles.json` generated after a production
-build of the working tree at `542f3d58` plus the local verification changes.
+build of candidate source commit `3373776d`.
 
 ## Lighthouse Mobile Metrics
 

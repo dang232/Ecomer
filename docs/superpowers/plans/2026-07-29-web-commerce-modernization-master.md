@@ -79,7 +79,8 @@ protected-environment promotion evidence.
 - The prior browser accessibility batch found 11 mobile violations. Source fixes now cover the reported checkout, returns, profile, seller orders/reviews/wallet, and admin dashboard/reviews issues, but the corrected browser matrix is not claimed until the stack is available for rerun.
 - Docker-backed production persona, visual, state, text-scale, Axe rerun, Lighthouse, exact-image, staging, production, and rollback gates remain open.
 
-**Branch:** `feat/search-catalog-cache-flow` (currently 35 commits ahead of `main`).
+**Branch:** `feat/search-catalog-cache-flow`
+**Candidate source commit:** `3373776d52843e541e2f058b321b17c3ef08e7ce`
 
 ## Locked Decisions
 
