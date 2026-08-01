@@ -77,37 +77,37 @@ function collectTests(suite, lineage = []) {
 }
 
 function statusLabelsForTest(test) {
-  const statuses = [];
+  const statuses = new Set();
 
   for (const result of test.results ?? []) {
-    statuses.push(result.status);
+    statuses.add(result.status);
   }
 
   if (typeof test.status === "string") {
-    if (
-      statuses.length === 0 ||
-      test.status === "unexpected" ||
-      test.status === "skipped" ||
-      test.status === "interrupted"
-    ) {
-      statuses.push(test.status);
-    }
+    statuses.add(test.status);
   }
 
   if (typeof test.outcome === "string") {
-    statuses.push(test.outcome);
+    statuses.add(test.outcome);
   }
 
-  return statuses;
+  return [...statuses];
 }
 
-function testIdentity({ test, specFile, specTitle }) {
+function testIdentity({ test, titlePath, specFile, specTitle }) {
   const specIdentity = specFile ?? specTitle ?? "<unknown spec>";
-  const testIdentity = test.title ?? specTitle ?? specFile ?? "<unnamed test>";
+  const leafTitle = test.title ?? specTitle ?? specFile ?? "<unnamed test>";
+  const fullTitlePath = [...titlePath];
+  if (fullTitlePath.at(-1) !== leafTitle) {
+    fullTitlePath.push(leafTitle);
+  }
+  const titlePathIdentity = fullTitlePath.join(" > ") || leafTitle;
+
   return {
     specIdentity,
-    testIdentity,
-    full: `${specIdentity} :: ${testIdentity}`,
+    testIdentity: leafTitle,
+    titlePath: fullTitlePath,
+    full: `${specIdentity} :: ${titlePathIdentity}`,
   };
 }
 
@@ -119,7 +119,7 @@ function duplicateTitlesByProject(tests) {
     const { test } = entry;
     const project = test.projectName ?? test.projectId ?? "default";
     const identity = testIdentity(entry);
-    const key = `${project}::${identity.specIdentity}::${identity.testIdentity}`;
+    const key = `${project}::${identity.full}`;
     if (seen.has(key)) {
       duplicates.push(`${project}: ${identity.full}`);
       continue;
@@ -158,26 +158,20 @@ export function parseRequiredPersonas(input) {
   return [...unique];
 }
 
+const modernizationPersonasBySpecPath = new Map([
+  ["e2e/modernization/buyer.spec.ts", ["buyer"]],
+  ["e2e/modernization/seller.spec.ts", ["seller"]],
+  ["e2e/modernization/admin.spec.ts", ["admin"]],
+  ["e2e/modernization/cross-persona.spec.ts", ["buyer", "seller", "admin"]],
+]);
+
 function personasForSpecFile(specFile) {
-  if (!specFile) {
+  if (typeof specFile !== "string") {
     return [];
   }
 
-  const normalized = specFile.replace(/\\/g, "/");
-  const basename = normalized.slice(normalized.lastIndexOf("/") + 1);
-
-  switch (basename) {
-    case "buyer.spec.ts":
-      return ["buyer"];
-    case "seller.spec.ts":
-      return ["seller"];
-    case "admin.spec.ts":
-      return ["admin"];
-    case "cross-persona.spec.ts":
-      return ["buyer", "seller", "admin"];
-    default:
-      return [];
-  }
+  const normalized = specFile.replace(/\\/g, "/").replace(/^\.\/+/, "");
+  return modernizationPersonasBySpecPath.get(normalized) ?? [];
 }
 
 function inferCoveredPersonas(tests) {

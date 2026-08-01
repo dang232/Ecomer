@@ -47,6 +47,17 @@ function makeMultiSpecReport(specs) {
   };
 }
 
+function makeNestedSuiteReport(suites) {
+  return {
+    suites: [
+      {
+        title: "e2e/modernization",
+        suites,
+      },
+    ],
+  };
+}
+
 test("passes a clean report", () => {
   const findings = validateReport(
     makeReport([
@@ -111,7 +122,7 @@ test("fails skipped, interrupted, and unexpected outcomes", () => {
 test("fails top-level unexpected status even when nested results say passed", () => {
   const findings = validateReport(
     makeMultiSpecReport([
-      makeSpec("buyer.spec.ts", [
+      makeSpec("e2e/modernization/buyer.spec.ts", [
         {
           projectName: "chromium",
           status: "unexpected",
@@ -122,6 +133,22 @@ test("fails top-level unexpected status even when nested results say passed", ()
   );
 
   assert(findings.some((finding) => finding.includes("UNEXPECTED")));
+});
+
+test("fails unknown top-level status even when nested results say passed", () => {
+  const findings = validateReport(
+    makeMultiSpecReport([
+      makeSpec("e2e/modernization/buyer.spec.ts", [
+        {
+          projectName: "chromium",
+          status: "mystery",
+          results: [{ status: "passed" }],
+        },
+      ]),
+    ]),
+  );
+
+  assert(findings.some((finding) => finding.includes("unknown status: mystery")));
 });
 
 test("fails failed reports and preserves error messages", () => {
@@ -172,22 +199,32 @@ test("parses required personas from explicit input", () => {
   assert.deepEqual(parseRequiredPersonas("buyer,seller"), ["buyer", "seller"]);
 });
 
-test("maps covered personas from exact spec files", () => {
+test("maps covered personas only from exact modernization spec paths", () => {
   assert.deepEqual(
     inferCoveredPersonasFromSpecFiles([
-      "e2e/modernization/buyer.spec.ts",
+      "./e2e/modernization/buyer.spec.ts",
+      "e2e\\modernization\\seller.spec.ts",
+      ".\\e2e\\modernization\\admin.spec.ts",
       "e2e/modernization/cross-persona.spec.ts",
       "e2e/modernization/unknown.spec.ts",
+      "e2e/other/buyer.spec.ts",
+      "e2e\\other\\seller.spec.ts",
+      "buyer.spec.ts",
     ]),
     ["buyer", "seller", "admin"],
+  );
+
+  assert.deepEqual(
+    inferCoveredPersonasFromSpecFiles(["e2e/other/buyer.spec.ts", "e2e\\other\\seller.spec.ts"]),
+    [],
   );
 });
 
 test("fails when a required persona is missing from the report via explicit config", () => {
   const findings = validateReport(
     makeMultiSpecReport([
-      makeSpec("buyer.spec.ts", [makeTest("buyer journey")]),
-      makeSpec("admin.spec.ts", [makeTest("admin journey")]),
+      makeSpec("e2e/modernization/buyer.spec.ts", [makeTest("buyer journey")]),
+      makeSpec("e2e/modernization/admin.spec.ts", [makeTest("admin journey")]),
     ]),
     { requiredPersonas: ["buyer", "seller", "admin"] },
   );
@@ -198,8 +235,8 @@ test("fails when a required persona is missing from the report via explicit conf
 test("fails when a required persona is missing from the report via env", () => {
   const findings = validateReport(
     makeMultiSpecReport([
-      makeSpec("buyer.spec.ts", [makeTest("buyer journey")]),
-      makeSpec("seller.spec.ts", [makeTest("seller journey")]),
+      makeSpec("e2e/modernization/buyer.spec.ts", [makeTest("buyer journey")]),
+      makeSpec("e2e/modernization/seller.spec.ts", [makeTest("seller journey")]),
     ]),
     { env: { E2E_REQUIRED_PERSONAS: "buyer,seller,admin" } },
   );
@@ -210,9 +247,9 @@ test("fails when a required persona is missing from the report via env", () => {
 test("passes when every required persona is present", () => {
   const findings = validateReport(
     makeMultiSpecReport([
-      makeSpec("buyer.spec.ts", [makeTest("buyer journey")]),
-      makeSpec("seller.spec.ts", [makeTest("seller journey")]),
-      makeSpec("admin.spec.ts", [makeTest("admin journey")]),
+      makeSpec("e2e/modernization/buyer.spec.ts", [makeTest("buyer journey")]),
+      makeSpec("e2e/modernization/seller.spec.ts", [makeTest("seller journey")]),
+      makeSpec("e2e/modernization/admin.spec.ts", [makeTest("admin journey")]),
     ]),
     { requiredPersonas: ["buyer", "seller", "admin"] },
   );
@@ -223,8 +260,8 @@ test("passes when every required persona is present", () => {
 test("buyer spec titles mentioning seller do not satisfy required seller coverage", () => {
   const findings = validateReport(
     makeMultiSpecReport([
-      makeSpec("buyer.spec.ts", [makeTest("buyer can message seller")]),
-      makeSpec("admin.spec.ts", [makeTest("admin journey")]),
+      makeSpec("e2e/modernization/buyer.spec.ts", [makeTest("buyer can message seller")]),
+      makeSpec("e2e/modernization/admin.spec.ts", [makeTest("admin journey")]),
     ]),
     { requiredPersonas: ["buyer", "seller", "admin"] },
   );
@@ -234,9 +271,59 @@ test("buyer spec titles mentioning seller do not satisfy required seller coverag
 
 test("cross-persona spec satisfies all required personas by file identity", () => {
   const findings = validateReport(
-    makeMultiSpecReport([makeSpec("cross-persona.spec.ts", [makeTest("handoff journey")])]),
+    makeMultiSpecReport([
+      makeSpec("e2e/modernization/cross-persona.spec.ts", [makeTest("handoff journey")]),
+    ]),
     { requiredPersonas: ["buyer", "seller", "admin"] },
   );
 
   assert.deepEqual(findings, []);
+});
+
+test("uses full suite lineage for duplicate identity and diagnostics", () => {
+  const sameLeafInDifferentSuites = validateReport(
+    makeNestedSuiteReport([
+      {
+        title: "checkout",
+        specs: [
+          makeSpec(
+            "e2e/modernization/buyer.spec.ts",
+            [makeTest("same leaf")],
+            "shared flow",
+          ),
+        ],
+      },
+      {
+        title: "orders",
+        specs: [
+          makeSpec(
+            "e2e/modernization/buyer.spec.ts",
+            [makeTest("same leaf")],
+            "shared flow",
+          ),
+        ],
+      },
+    ]),
+  );
+  assert.deepEqual(sameLeafInDifferentSuites, []);
+
+  const duplicateFindings = validateReport(
+    makeNestedSuiteReport([
+      {
+        title: "checkout",
+        specs: [
+          makeSpec(
+            "e2e/modernization/buyer.spec.ts",
+            [makeTest("same leaf"), makeTest("same leaf")],
+            "shared flow",
+          ),
+        ],
+      },
+    ]),
+  );
+  assert(
+    duplicateFindings.some((finding) =>
+      finding.includes("e2e/modernization > checkout > shared flow > same leaf"),
+    ),
+  );
 });
