@@ -1,8 +1,15 @@
 import { render, screen } from "@testing-library/react";
+import { createElement, type ComponentProps, type ReactElement, type ReactNode } from "react";
 import { MemoryRouter, Routes, Route, useLocation } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
-const useAuthMock = vi.fn();
+type AuthSnapshot = {
+  ready: boolean;
+  authenticated: boolean;
+  roles: ("BUYER" | "SELLER" | "ADMIN")[];
+};
+
+const useAuthMock = vi.fn<() => AuthSnapshot>();
 
 vi.mock("../../hooks/auth-context", () => ({
   useAuth: () => useAuthMock(),
@@ -10,7 +17,7 @@ vi.mock("../../hooks/auth-context", () => ({
 
 import { RequireAuth, RequireRole } from "./role-guard";
 
-function renderRoute(initialEntry: string, element: React.ReactElement) {
+function renderRoute(initialEntry: string, element: ReactElement) {
   function LocationDisplay() {
     const location = useLocation();
     return <div data-testid="location">{location.pathname + location.search}</div>;
@@ -30,6 +37,16 @@ function renderRoute(initialEntry: string, element: React.ReactElement) {
       </Routes>
     </MemoryRouter>,
   );
+}
+
+type RequireRoleProps = ComponentProps<typeof RequireRole>;
+
+function requireRole(
+  role: RequireRoleProps["role"],
+  children: ReactNode,
+  fallbackPath?: string,
+): ReactElement {
+  return createElement(RequireRole, { role, fallbackPath }, children);
 }
 
 describe("RequireAuth", () => {
@@ -74,9 +91,7 @@ describe("RequireRole", () => {
     useAuthMock.mockReturnValue({ ready: true, authenticated: false, roles: [] });
     renderRoute(
       "/seller",
-      <RequireRole role="SELLER">
-        <div data-testid="seller-content">Seller</div>
-      </RequireRole>,
+      requireRole("SELLER", <div data-testid="seller-content">Seller</div>),
     );
     expect(screen.getByTestId("login-page")).toBeInTheDocument();
     expect(screen.queryByTestId("seller-content")).toBeNull();
@@ -87,9 +102,7 @@ describe("RequireRole", () => {
 
     renderRoute(
       "/seller/orders?page=2",
-      <RequireRole role="SELLER">
-        <div>Seller orders</div>
-      </RequireRole>,
+      requireRole("SELLER", <div>Seller orders</div>),
     );
 
     expect(screen.getByTestId("location")).toHaveTextContent(
@@ -105,9 +118,7 @@ describe("RequireRole", () => {
     });
     renderRoute(
       "/seller",
-      <RequireRole role="SELLER">
-        <div data-testid="seller-content">Seller</div>
-      </RequireRole>,
+      requireRole("SELLER", <div data-testid="seller-content">Seller</div>),
     );
     expect(screen.getByTestId("home-page")).toBeInTheDocument();
     expect(screen.queryByTestId("seller-content")).toBeNull();
@@ -121,9 +132,7 @@ describe("RequireRole", () => {
     });
     renderRoute(
       "/seller",
-      <RequireRole role="SELLER">
-        <div data-testid="seller-content">Seller</div>
-      </RequireRole>,
+      requireRole("SELLER", <div data-testid="seller-content">Seller</div>),
     );
     expect(screen.getByTestId("seller-content")).toBeInTheDocument();
   });
@@ -136,9 +145,7 @@ describe("RequireRole", () => {
     });
     renderRoute(
       "/admin",
-      <RequireRole role="ADMIN">
-        <div data-testid="admin-content">Admin</div>
-      </RequireRole>,
+      requireRole("ADMIN", <div data-testid="admin-content">Admin</div>),
     );
     expect(screen.getByTestId("home-page")).toBeInTheDocument();
 
@@ -149,9 +156,7 @@ describe("RequireRole", () => {
     });
     renderRoute(
       "/admin",
-      <RequireRole role="ADMIN">
-        <div data-testid="admin-content">Admin</div>
-      </RequireRole>,
+      requireRole("ADMIN", <div data-testid="admin-content">Admin</div>),
     );
     expect(screen.getByTestId("admin-content")).toBeInTheDocument();
   });
@@ -165,9 +170,7 @@ describe("RequireRole", () => {
 
     renderRoute(
       "/admin",
-      <RequireRole role="ADMIN" fallbackPath="/access-denied">
-        <div data-testid="admin-content">Admin</div>
-      </RequireRole>,
+      requireRole("ADMIN", <div data-testid="admin-content">Admin</div>, "/access-denied"),
     );
 
     expect(screen.getByTestId("access-denied-page")).toBeInTheDocument();

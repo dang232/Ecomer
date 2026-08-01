@@ -2,25 +2,26 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { RegisterInput } from "@/shared/api/endpoints/auth";
 import { ApiError } from "@/shared/api/envelope";
 import type { JwtClaims, TokenSet } from "@/shared/auth";
 
 const mocks = vi.hoisted(() => ({
-  decodeJwt: vi.fn(),
-  setLiveTokenSet: vi.fn(),
-  registerUser: vi.fn(),
-  passwordLogin: vi.fn(),
-  refreshTokens: vi.fn(),
-  revokeTokens: vi.fn(),
+  decodeJwt: vi.fn<(token: string) => JwtClaims | null>(),
+  setLiveTokenSet: vi.fn<(tokenSet: TokenSet | null) => void>(),
+  registerUser: vi.fn<(input: RegisterInput) => Promise<void>>(),
+  passwordLogin: vi.fn<(username: string, password: string) => Promise<TokenSet>>(),
+  refreshTokens: vi.fn<() => Promise<TokenSet>>(),
+  revokeTokens: vi.fn<() => Promise<void>>(),
   accessTokenRefreshBufferMs: 60_000,
 }));
 
 vi.mock("@/shared/auth", () => ({
   decodeJwt: (token: string) => mocks.decodeJwt(token),
   setLiveTokenSet: (tokenSet: TokenSet | null) => mocks.setLiveTokenSet(tokenSet),
-  passwordLogin: (...args: unknown[]) => mocks.passwordLogin(...args),
-  refreshTokens: (...args: unknown[]) => mocks.refreshTokens(...args),
-  revokeTokens: (...args: unknown[]) => mocks.revokeTokens(...args),
+  passwordLogin: (username: string, password: string) => mocks.passwordLogin(username, password),
+  refreshTokens: () => mocks.refreshTokens(),
+  revokeTokens: () => mocks.revokeTokens(),
   ACCESS_TOKEN_REFRESH_BUFFER_MS: mocks.accessTokenRefreshBufferMs,
   isAccessTokenRefreshDue: (tokenSet: { accessExpiresAt: number }) =>
     tokenSet.accessExpiresAt - Date.now() <= mocks.accessTokenRefreshBufferMs,
@@ -36,7 +37,7 @@ vi.mock("@/shared/auth", () => ({
 }));
 
 vi.mock("@/shared/api/endpoints/auth", () => ({
-  registerUser: (...args: unknown[]) => mocks.registerUser(...args),
+  registerUser: (input: RegisterInput) => mocks.registerUser(input),
 }));
 
 import { useAuth, useHasRole } from "./auth-context";
@@ -157,7 +158,9 @@ describe("AuthProvider native session", () => {
     });
     mocks.refreshTokens.mockReturnValueOnce(pendingRefresh);
 
-    act(() => window.dispatchEvent(new Event("focus")));
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
     expect(mocks.refreshTokens).toHaveBeenCalledTimes(2);
 
     act(() => result.current.logout());
