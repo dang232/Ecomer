@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
-import { loginViaOidc, registerAndLoginViaOidc, uniqueTestId } from "./_auth";
+import { loginAsPersona, registerAndLoginViaOidc, uniqueTestId } from "./_auth";
+import { credentialForPersona } from "./modernization/_credentials";
 
 /**
  * Day-in-the-life simulation: drives every documented user flow end-to-end
@@ -72,16 +73,20 @@ async function registerBuyer(request: APIRequestContext): Promise<AuthResult> {
   return { accessToken: token, email };
 }
 
-async function loginByUsername(request: APIRequestContext, username: string): Promise<AuthResult> {
+async function loginForPersona(
+  request: APIRequestContext,
+  persona: "buyer" | "seller" | "admin",
+): Promise<AuthResult> {
+  const cred = credentialForPersona(persona);
   const r = await request.post(`${apiURL}/auth/login`, {
-    data: { username, password: "test" },
+    data: { username: cred.username, password: cred.password },
   });
-  expect(r.ok(), `login ${username} failed: ${r.status()} ${await r.text()}`).toBeTruthy();
+  expect(r.ok(), `loginForPersona(${persona}) failed: ${r.status()} ${await r.text()}`).toBeTruthy();
   const body = await r.json();
   const token = body?.data?.accessToken ?? body?.accessToken;
   expect(
     token,
-    `no accessToken for ${username}: ${JSON.stringify(body).slice(0, 200)}`,
+    `no accessToken for ${persona}: ${JSON.stringify(body).slice(0, 200)}`,
   ).toBeTruthy();
   return { accessToken: token };
 }
@@ -361,7 +366,7 @@ test.describe("day simulation — seller", () => {
   test("seller: dashboard read paths (revenue + wallet + analytics + orders)", async ({
     request,
   }) => {
-    const auth = await loginByUsername(request, "seller1");
+    const auth = await loginForPersona(request, "seller");
     const headers = authHeaders(auth);
 
     const me = await request.get(`${apiURL}/sellers/me`, { headers });
@@ -384,7 +389,7 @@ test.describe("day simulation — seller", () => {
   });
 
   test("seller UI: dashboard renders without crash", async ({ page }) => {
-    await loginViaOidc(page, "seller1", "test");
+    await loginAsPersona(page, "seller");
 
     await page.goto("/seller");
     await expect(page.locator("body")).not.toContainText(/something went wrong|đã xảy ra lỗi/i, {
@@ -397,7 +402,7 @@ test.describe("day simulation — admin", () => {
   test("admin: dashboard + sellers + reviews + coupons + payouts + disputes read paths", async ({
     request,
   }) => {
-    const auth = await loginByUsername(request, "admin1");
+    const auth = await loginForPersona(request, "admin");
     const headers = authHeaders(auth);
 
     const summary = await request.get(`${apiURL}/admin/dashboard/summary`, { headers });
@@ -429,7 +434,7 @@ test.describe("day simulation — admin", () => {
   });
 
   test("admin: coupon CRUD round-trip", async ({ request }) => {
-    const auth = await loginByUsername(request, "admin1");
+    const auth = await loginForPersona(request, "admin");
     const headers = authHeaders(auth);
 
     const code = `DAYSIM${Date.now().toString().slice(-6)}`;
@@ -518,7 +523,7 @@ test.describe("day simulation — payment-method shells", () => {
 
     const buyerA = await registerBuyer(request);
     const headersA = authHeaders(buyerA);
-    const seller1 = await loginByUsername(request, "seller1");
+    const seller1 = await loginForPersona(request, "seller");
     const headersSeller1 = authHeaders(seller1);
     const product = await firstProduct(request);
 

@@ -12,6 +12,7 @@ import {
 } from "./_journey-evidence";
 import { loginAsSeededUser, logoutViaUserMenu } from "../_workday-evidence";
 import { requireJourneyState, writeJourneyState } from "./_journey-state";
+import { credentialForPersona } from "../modernization/_credentials";
 
 /**
  * Chapter 3 — Seller fulfills the order.
@@ -147,7 +148,7 @@ test.describe.serial("Chapter 3 — Seller fulfills the order", () => {
           // actually shows its form (an authed visit to /login redirects
           // to /).
           await page.context().clearCookies();
-          await loginAsSeededUser(page, "seller1");
+          await loginAsSeededUser(page, "seller");
           await page.goto("/seller");
           await expect(
             page.getByText(/Dashboard|Tổng quan|Seller Hub|Kênh Người Bán/i).first(),
@@ -295,11 +296,16 @@ async function findSubOrderForOrder(
   // seller1 / test is the realm-imported seller that owns the seeded
   // products. The buyer in chapter 2 ordered one of those products, so
   // seller1's /seller/orders/pending will contain the sub-order.
-  const login = await request.post(`${apiURL}/auth/login`, {
-    data: { username: "seller1", password: "test" },
+  const { username, password } = credentialForPersona("seller");
+  const loginResponse = await request.post(`${apiURL}/auth/login`, {
+    data: { username, password },
   });
-  if (!login.ok()) return null;
-  const accessToken = (await login.json())?.data?.accessToken;
+  if (!loginResponse.ok()) return null;
+  const loginBody = (await loginResponse.json()) as {
+    data?: { accessToken?: string };
+    accessToken?: string;
+  };
+  const accessToken = loginBody.data?.accessToken ?? loginBody.accessToken ?? null;
   if (!accessToken) return null;
 
   const r = await request.get(`${apiURL}/seller/orders/pending`, {

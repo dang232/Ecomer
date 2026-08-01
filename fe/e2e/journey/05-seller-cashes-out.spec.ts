@@ -11,6 +11,10 @@ import {
   stopTrace,
 } from "./_journey-evidence";
 import { loginAsSeededUser, logoutViaUserMenu } from "../_workday-evidence";
+import {
+  credentialForPersona,
+  type Persona,
+} from "../modernization/_credentials";
 import { requireJourneyState, writeJourneyState } from "./_journey-state";
 
 /**
@@ -41,6 +45,27 @@ import { requireJourneyState, writeJourneyState } from "./_journey-state";
  */
 
 const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
+
+async function accessTokenForPersona(
+  request: import("@playwright/test").APIRequestContext,
+  persona: Persona,
+): Promise<string> {
+  const { username, password } = credentialForPersona(persona);
+  const loginResponse = await request.post(`${apiURL}/auth/login`, {
+    data: { username, password },
+  });
+  expect(
+    loginResponse.ok(),
+    `persona login (${persona}) failed: ${loginResponse.status()} ${await loginResponse.text()}`,
+  ).toBeTruthy();
+  const body = (await loginResponse.json()) as {
+    data?: { accessToken?: string };
+    accessToken?: string;
+  };
+  const accessToken = body.data?.accessToken ?? body.accessToken;
+  expect(accessToken, `no access token returned for ${persona}`).toBeTruthy();
+  return accessToken ?? "";
+}
 
 test.use({
   video: "on",
@@ -106,11 +131,10 @@ test.describe.serial("Chapter 5 — Seller cashes out", () => {
           await expect
             .poll(
               async () => {
-                const login = await page.request.post(`${apiURL}/auth/login`, {
-                  data: { username: "seller1", password: "test" },
-                });
-                if (!login.ok()) return 0;
-                const token = (await login.json())?.data?.accessToken;
+                const token = await accessTokenForPersona(
+                  page.request as import("@playwright/test").APIRequestContext,
+                  "seller",
+                );
                 if (!token) return 0;
                 const r = await page.request.get(`${apiURL}/sellers/me/finance/wallet`, {
                   headers: { Authorization: `Bearer ${token}` },
@@ -139,7 +163,7 @@ test.describe.serial("Chapter 5 — Seller cashes out", () => {
         "Seller logs into the SPA and the Wallet tab shows the same balance",
         async () => {
           await page.context().clearCookies();
-          await loginAsSeededUser(page, "seller1");
+          await loginAsSeededUser(page, "seller");
           await page.goto("/seller");
           await expect(
             page.getByText(/Dashboard|Tổng quan|Seller Hub|Kênh Người Bán/i).first(),
@@ -213,11 +237,10 @@ test.describe.serial("Chapter 5 — Seller cashes out", () => {
           // drives the admin UI to complete the payout. This step proves
           // the cross-persona handoff: what the seller submits is what
           // the admin will see.
-          const adminLogin = await page.request.post(`${apiURL}/auth/login`, {
-            data: { username: "admin1", password: "test" },
-          });
-          expect(adminLogin.ok(), `admin login: ${adminLogin.status()}`).toBeTruthy();
-          const adminToken = (await adminLogin.json())?.data?.accessToken;
+          const adminToken = await accessTokenForPersona(
+            page.request as import("@playwright/test").APIRequestContext,
+            "admin",
+          );
 
           await expect
             .poll(
