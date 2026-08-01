@@ -5,19 +5,19 @@ import { z } from "zod";
 
 const personaSchema = z.enum(["buyer", "seller", "admin"]);
 
+const errorSchema = z.union([
+  z.string(),
+  z
+    .object({
+      message: z.string().optional(),
+    })
+    .passthrough(),
+]);
+
 const testResultSchema = z
   .object({
     status: z.string(),
-    errors: z
-      .array(
-        z.union([
-          z.string(),
-          z.object({
-            message: z.string().optional(),
-          }).passthrough(),
-        ]),
-      )
-      .optional(),
+    errors: z.array(errorSchema).optional(),
   })
   .passthrough();
 
@@ -53,6 +53,7 @@ const suiteSchema = z.lazy(() =>
 const reportSchema = z
   .object({
     suites: z.array(suiteSchema),
+    errors: z.array(errorSchema).optional(),
   })
   .passthrough();
 
@@ -159,6 +160,10 @@ export function parseRequiredPersonas(input) {
 }
 
 const modernizationPersonasBySpecPath = new Map([
+  ["modernization/buyer.spec.ts", ["buyer"]],
+  ["modernization/seller.spec.ts", ["seller"]],
+  ["modernization/admin.spec.ts", ["admin"]],
+  ["modernization/cross-persona.spec.ts", ["buyer", "seller", "admin"]],
   ["e2e/modernization/buyer.spec.ts", ["buyer"]],
   ["e2e/modernization/seller.spec.ts", ["seller"]],
   ["e2e/modernization/admin.spec.ts", ["admin"]],
@@ -207,12 +212,20 @@ export function validateReport(report, options = {}) {
     ];
   }
 
-  const tests = parsed.data.suites.flatMap((suite) => collectTests(suite));
-  if (tests.length === 0) {
-    return ["Report contains zero tests - the selected suite did not run."];
+  const findings = [];
+  if (parsed.data.errors?.length > 0) {
+    const messages = errorMessages(parsed.data.errors);
+    findings.push(
+      `Playwright report contains report-level errors: ${messages.join("; ") || "unreported error"}`,
+    );
   }
 
-  const findings = [];
+  const tests = parsed.data.suites.flatMap((suite) => collectTests(suite));
+  if (tests.length === 0) {
+    findings.push("Report contains zero tests - the selected suite did not run.");
+    return findings;
+  }
+
   const requiredPersonas =
     options.requiredPersonas ??
     parseRequiredPersonas(options.env?.E2E_REQUIRED_PERSONAS ?? process.env.E2E_REQUIRED_PERSONAS);
@@ -232,6 +245,14 @@ export function validateReport(report, options = {}) {
     const { test } = entry;
     const identity = testIdentity(entry);
     const statuses = statusLabelsForTest(test);
+    if (
+      (test.status === "expected" || test.status === "passed") &&
+      (test.results ?? []).length === 0
+    ) {
+      findings.push(
+        `Incomplete report entry for "${identity.full}" - status ${test.status} has no test results.`,
+      );
+    }
     if (statuses.length === 0) {
       findings.push(
         `Malformed report entry for "${identity.full}" - no test results were recorded.`,
@@ -247,7 +268,9 @@ export function validateReport(report, options = {}) {
         case "failed":
         case "timedOut":
           findings.push(`Test "${identity.full}" FAILED with status ${status}.`);
-          for (const message of errorMessages(test.results?.flatMap((result) => result.errors ?? []))) {
+          for (const message of errorMessages(
+            test.results?.flatMap((result) => result.errors ?? []),
+          )) {
             findings.push(`  ${message}`);
           }
           break;
