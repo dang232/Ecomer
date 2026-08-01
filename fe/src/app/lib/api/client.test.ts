@@ -2,15 +2,17 @@ import { waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
+import type { TokenSet } from "../auth/native-auth";
+
 // Mock native-auth BEFORE importing the client.
 let liveToken: string | null = null;
-const refreshTokensMock = vi.fn();
+const refreshTokensMock = vi.fn<() => Promise<TokenSet>>();
 vi.mock("../auth/native-auth", () => ({
   getAccessToken: () => liveToken,
   setLiveTokenSet: vi.fn((next: { accessToken: string } | null) => {
     liveToken = next?.accessToken ?? null;
   }),
-  refreshTokens: (...args: unknown[]) => refreshTokensMock(...args),
+  refreshTokens: () => refreshTokensMock(),
 }));
 
 import { api, clearPublicResponseCache, request } from "./client";
@@ -30,6 +32,21 @@ function mockResponse(init: MockResponseInit): Response {
     status,
     headers: { "content-type": "application/json", ...init.headers },
   });
+}
+
+function fetchInputToUrl(input: Parameters<typeof globalThis.fetch>[0]): string {
+  if (typeof input === "string") return input;
+  if (input instanceof URL) return input.toString();
+  return input.url;
+}
+
+async function captureError<T>(promise: Promise<T>): Promise<unknown> {
+  try {
+    await promise;
+  } catch (error: unknown) {
+    return error;
+  }
+  throw new Error("Expected promise to reject");
 }
 
 const fetchSpy = vi.spyOn(global, "fetch");
@@ -71,7 +88,7 @@ describe("request", () => {
     expect(result).toEqual({ id: "p1", name: "Tai nghe" });
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     const [url, init] = fetchSpy.mock.calls[0];
-    expect(String(url)).toContain("/products/p1");
+    expect(fetchInputToUrl(url)).toContain("/products/p1");
     expect(init?.method).toBe("GET");
     const headers = init?.headers as Record<string, string>;
     expect(headers["X-Correlation-Id"]).toMatch(/^[0-9a-f-]{36}$/);
@@ -116,12 +133,14 @@ describe("request", () => {
       }),
     );
 
-    const err = await request({
-      method: "GET",
-      path: "/orders",
-      schema: z.array(z.unknown()),
-      auth: false,
-    }).catch((e) => e);
+    const err = await captureError(
+      request({
+        method: "GET",
+        path: "/orders",
+        schema: z.array(z.unknown()),
+        auth: false,
+      }),
+    );
 
     expect(err).toBeInstanceOf(ApiError);
     expect((err as ApiError).status).toBe(503);
@@ -136,12 +155,14 @@ describe("request", () => {
       }),
     );
 
-    const err = await request({
-      method: "GET",
-      path: "/anything",
-      schema: z.object({}),
-      auth: false,
-    }).catch((e) => e);
+    const err = await captureError(
+      request({
+        method: "GET",
+        path: "/anything",
+        schema: z.object({}),
+        auth: false,
+      }),
+    );
 
     expect(err).toBeInstanceOf(ApiError);
     expect((err as ApiError).errorCode).toBe("MALFORMED_RESPONSE");
@@ -152,12 +173,14 @@ describe("request", () => {
       new Response("<html>oops</html>", { status: 200, headers: { "content-type": "text/html" } }),
     );
 
-    const err = await request({
-      method: "GET",
-      path: "/anything",
-      schema: z.object({}),
-      auth: false,
-    }).catch((e) => e);
+    const err = await captureError(
+      request({
+        method: "GET",
+        path: "/anything",
+        schema: z.object({}),
+        auth: false,
+      }),
+    );
 
     expect(err).toBeInstanceOf(ApiError);
     expect((err as ApiError).errorCode).toBe("INVALID_JSON");
@@ -214,7 +237,7 @@ describe("request", () => {
     });
 
     const [url] = fetchSpy.mock.calls[0];
-    const u = new URL(String(url));
+    const u = new URL(fetchInputToUrl(url));
     expect(u.searchParams.get("q")).toBe("tai nghe");
     expect(u.searchParams.get("page")).toBe("2");
     expect(u.searchParams.has("brand")).toBe(false);
@@ -237,7 +260,10 @@ describe("request", () => {
     await api.get("/search/v2", z.array(z.unknown()), { tag: ["wireless", "bluetooth"] });
 
     const [url] = fetchSpy.mock.calls[0];
-    expect(new URL(String(url)).searchParams.getAll("tag")).toEqual(["wireless", "bluetooth"]);
+    expect(new URL(fetchInputToUrl(url)).searchParams.getAll("tag")).toEqual([
+      "wireless",
+      "bluetooth",
+    ]);
   });
 
   it("returns a binary response without applying the JSON envelope contract", async () => {
@@ -252,7 +278,7 @@ describe("request", () => {
 
     expect(await blob.text()).toBe("section,value\nsummary,900000\n");
     const [url] = fetchSpy.mock.calls[0];
-    expect(new URL(String(url)).searchParams.get("from")).toBe("2026-07-01");
+    expect(new URL(fetchInputToUrl(url)).searchParams.get("from")).toBe("2026-07-01");
   });
 
   it("returns response metadata without changing the legacy data result", async () => {
@@ -300,9 +326,9 @@ describe("request", () => {
       auth: false,
     });
     expect(initial.headers.get("etag")).toBe('"product-v1"');
-    const result = await api
-      .getWithMeta("/products/v2", productSchema, undefined, { auth: false })
-      .catch((error) => error);
+    const result = await api.getWithMeta("/products/v2", productSchema, undefined, {
+      auth: false,
+    });
 
     const secondHeaders = fetchSpy.mock.calls[1][1]?.headers as Record<string, string>;
     expect(secondHeaders["If-None-Match"]).toBe('"product-v1"');
@@ -319,10 +345,7 @@ describe("request", () => {
         accessToken: string;
         accessExpiresAt: number;
       }>;
-      resolve: ((value: {
-        accessToken: string;
-        accessExpiresAt: number;
-      }) => void) | null;
+      resolve: ((value: { accessToken: string; accessExpiresAt: number }) => void) | null;
     }
 
     const refreshGate: RefreshGate = {

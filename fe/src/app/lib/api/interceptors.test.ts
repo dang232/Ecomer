@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
+import type { TokenSet } from "../auth/native-auth";
+
 // Mock native-auth BEFORE importing anything that pulls it in.
 let liveToken: string | null = null;
 const refreshTokensMock = vi.fn<() => Promise<TokenSet>>();
-vi.mock("@/shared/auth", () => ({
+vi.mock("../auth/native-auth", () => ({
   getAccessToken: () => liveToken,
   setLiveTokenSet: vi.fn((next: { accessToken: string } | null) => {
     liveToken = next?.accessToken ?? null;
@@ -12,8 +14,8 @@ vi.mock("@/shared/auth", () => ({
   refreshTokens: () => refreshTokensMock(),
 }));
 
-import { api, request } from "@/shared/api/client";
-import { ApiError } from "@/shared/api/envelope";
+import { api, request } from "./client";
+import { ApiError } from "./envelope";
 import {
   authInterceptor,
   contentTypeInterceptor,
@@ -27,9 +29,8 @@ import {
   UnauthorizedError,
   type RequestContext,
   type ResponseContext,
-} from "@/shared/api/interceptors";
-import { clearTelemetry, getTelemetry } from "@/shared/api/telemetry-store";
-import type { TokenSet } from "@/shared/auth";
+} from "./interceptors";
+import { clearTelemetry, getTelemetry } from "./telemetry-store";
 
 const fetchSpy = vi.spyOn(global, "fetch");
 

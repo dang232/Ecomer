@@ -39,8 +39,6 @@ let sameTabRefreshPromise: Promise<boolean> | null = null;
 let sameTabRefreshResolve: ((success: boolean) => void) | null = null;
 /** True while this tab owns the in-flight refresh. */
 let thisTabRefreshing = false;
-/** Epoch-ms timestamp when this tab claimed the refresh lock. Used to detect stale locks. */
-let refreshLockTimestamp = 0;
 const REFRESH_LOCK_TIMEOUT_MS = 15_000;
 
 if (REFRESH_CHANNEL) {
@@ -304,8 +302,7 @@ async function executeRequest<TSchema extends z.ZodType>(
         // This tab owns the refresh. Guard with !thisTabRefreshing so a second
         // 401 arriving while we already hold the lock doesn't start a duplicate.
         thisTabRefreshing = true;
-        ensureSameTabRefreshPromise();
-        refreshLockTimestamp = Date.now();
+        void ensureSameTabRefreshPromise();
         REFRESH_CHANNEL?.postMessage({ type: "refresh-started" } satisfies RefreshMessage);
         let refreshSucceeded = false;
         try {
