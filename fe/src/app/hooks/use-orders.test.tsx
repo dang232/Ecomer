@@ -3,9 +3,11 @@ import { renderHook, waitFor, act } from "@testing-library/react";
 import { type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const myOrdersMock = vi.fn();
-const orderByIdMock = vi.fn();
-const cancelOrderMock = vi.fn();
+type UnknownCall = (...args: unknown[]) => unknown;
+
+const myOrdersMock = vi.fn<UnknownCall>();
+const orderByIdMock = vi.fn<UnknownCall>();
+const cancelOrderMock = vi.fn<UnknownCall>();
 
 vi.mock("@/shared/api/endpoints/orders", () => ({
   myOrders: (...args: unknown[]) => myOrdersMock(...args),

@@ -7,7 +7,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const useAuthMock = vi.fn();
+const useAuthMock = vi.fn<() => unknown>();
 const registerMock = vi.fn();
 const loginWithPasswordMock = vi.fn();
 
@@ -65,8 +65,8 @@ const PHONE_ERROR_ID = "phone-error";
 const PHONE_ERROR_RE = /(too short|too long|not valid)/i;
 
 const setInputValue = (input: HTMLInputElement, value: string) => {
-  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
-  setter?.call(input, value);
+  const setter = Reflect.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+  if (setter) Reflect.apply(setter, input, [value]);
   input.dispatchEvent(new Event("input", { bubbles: true }));
 };
 
@@ -103,7 +103,7 @@ const fillRequiredFields = (overrides: { phone?: string } = {}) => {
     target: { value: "alice@example.com" },
   });
   if (overrides.phone !== undefined) {
-    const phoneInput = screen.getByLabelText(/phone/i) as HTMLInputElement;
+    const phoneInput = screen.getByLabelText<HTMLInputElement>(/phone/i);
     setInputValue(phoneInput, overrides.phone);
   }
   fireEvent.change(screen.getByLabelText(/^password/i), {
@@ -152,7 +152,7 @@ describe("RegisterPage phone field (CountryPhoneInput)", () => {
 
   it("strips non-digit input from the visible input", () => {
     renderPage();
-    const input = screen.getByLabelText(/phone/i) as HTMLInputElement;
+    const input = screen.getByLabelText<HTMLInputElement>(/phone/i);
     setInputValue(input, "+1a2b3c4d5e hello +84");
     // Letters, '+', and the literal word are stripped. The visible value
     // contains only digits and AsYouType formatting spaces — no letters.
@@ -162,7 +162,7 @@ describe("RegisterPage phone field (CountryPhoneInput)", () => {
 
   it("shows a 'too short' error when fewer digits than the country requires", async () => {
     renderPage();
-    const input = screen.getByLabelText(/phone/i) as HTMLInputElement;
+    const input = screen.getByLabelText<HTMLInputElement>(/phone/i);
     setInputValue(input, "1234");
     await waitFor(() => {
       const alert = document.getElementById(PHONE_ERROR_ID);
@@ -174,7 +174,7 @@ describe("RegisterPage phone field (CountryPhoneInput)", () => {
 
   it("clears the error as soon as the user has the right number of digits", async () => {
     renderPage();
-    const input = screen.getByLabelText(/phone/i) as HTMLInputElement;
+    const input = screen.getByLabelText<HTMLInputElement>(/phone/i);
     setInputValue(input, "1234");
     await waitFor(() => {
       expect(document.getElementById(PHONE_ERROR_ID)).not.toBeNull();
@@ -197,7 +197,7 @@ describe("RegisterPage phone field (CountryPhoneInput)", () => {
 
   it("opens the country dropdown and re-formats the value with the new country", async () => {
     renderPage();
-    const input = screen.getByLabelText(/phone/i) as HTMLInputElement;
+    const input = screen.getByLabelText<HTMLInputElement>(/phone/i);
     setInputValue(input, "912345678"); // 9 valid VN digits
 
     // Switch to US via the dropdown.

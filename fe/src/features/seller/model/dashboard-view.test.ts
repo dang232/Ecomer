@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import type { PendingSubOrder } from "@/shared/api/endpoints/orders";
-import type { PublicSeller, Payout, Wallet } from "@/shared/contracts/api";
+import type { PublicSeller, Payout } from "@/shared/contracts/api";
+import { orderIdSchema } from "@/shared/contracts/api/branded-ids";
 
 import { toSellerDashboardView } from "./dashboard-view";
 
@@ -18,8 +19,10 @@ describe("toSellerDashboardView", () => {
         destination: null,
       },
       publicStats: null,
-      pendingOrders: [{ id: "sub-1", status: "PENDING_ACCEPTANCE", items: [] }] as PendingSubOrder[],
-      wallet: { balance: 500_000 } as Wallet,
+      pendingOrders: [
+        { id: "sub-1", orderId: orderIdSchema.parse("ord-1"), status: "PENDING_ACCEPTANCE", items: [], createdAt: undefined },
+      ] as PendingSubOrder[],
+      wallet: { balance: 500_000, pending: 0, sellerId: undefined, totalEarned: undefined, lastPayoutAt: null, currency: "VND", updatedAt: undefined },
       payouts: [
         {
           id: "pay-1",
@@ -49,7 +52,7 @@ describe("toSellerDashboardView", () => {
       },
       publicStats: { totalProducts: 12, ratingAvg: 4.6 } as unknown as PublicSeller,
       pendingOrders: [],
-      wallet: { balance: 0 } as Wallet,
+      wallet: { balance: 0, pending: 0, sellerId: undefined, totalEarned: undefined, lastPayoutAt: null, currency: "VND", updatedAt: undefined },
       payouts: [],
       revenue: [{ date: "2026-07-29", revenue: 20, orderCount: 1 }],
     });

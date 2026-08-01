@@ -1,15 +1,17 @@
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const useAuthMock = vi.fn();
+type UnknownCall = (...args: unknown[]) => unknown;
+
+const useAuthMock = vi.fn<() => unknown>();
 vi.mock("./auth-context", () => ({
   useAuth: () => useAuthMock(),
 }));
 
-const listNotificationsMock = vi.fn();
-const markNotificationReadMock = vi.fn();
-const markAllNotificationsReadMock = vi.fn();
-const unreadNotificationCountMock = vi.fn();
+const listNotificationsMock = vi.fn<UnknownCall>();
+const markNotificationReadMock = vi.fn<UnknownCall>();
+const markAllNotificationsReadMock = vi.fn<UnknownCall>();
+const unreadNotificationCountMock = vi.fn<UnknownCall>();
 vi.mock("@/shared/api/endpoints/notifications", () => ({
   listNotifications: (...args: unknown[]) => listNotificationsMock(...args),
   markNotificationRead: (...args: unknown[]) => markNotificationReadMock(...args),

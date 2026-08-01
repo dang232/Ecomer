@@ -34,6 +34,64 @@ export interface ProductListProps {
   onRouteChange: (next: SellerProductsRouteState) => void;
 }
 
+function renderProductCell(row: ProductListRow) {
+  return (
+    <div className="flex items-center gap-3">
+      {row.image ? (
+        <ImageWithFallback
+          src={row.image}
+          alt={row.name}
+          className="h-10 w-10 shrink-0 rounded-[var(--radius-md)] object-cover"
+        />
+      ) : (
+        <div
+          className="h-10 w-10 shrink-0 rounded-[var(--radius-md)] bg-muted"
+          aria-hidden="true"
+        />
+      )}
+      <span className="max-w-[280px] truncate text-sm font-medium text-foreground">{row.name}</span>
+    </div>
+  );
+}
+
+function renderPriceCell(row: ProductListRow) {
+  return <span className="text-sm font-bold text-primary">{row.priceRange}</span>;
+}
+
+function renderStockCell(row: ProductListRow) {
+  return <span className="text-sm text-foreground">{row.stockTotal.toLocaleString()}</span>;
+}
+
+function renderSoldCell(row: ProductListRow) {
+  return (
+    <span className="text-sm text-muted-foreground">
+      {row.sold != null ? row.sold.toLocaleString() : "-"}
+    </span>
+  );
+}
+
+function createProductActionsCell({
+  routeState,
+  onRouteChange,
+  editLabel,
+}: Pick<ProductListProps, "routeState" | "onRouteChange"> & { editLabel: string }) {
+  function ProductActionsCell(row: ProductListRow) {
+    return (
+      <button
+        type="button"
+        onClick={() => onRouteChange({ ...routeState, selected: row.id, mode: "edit" })}
+        className="rounded-[var(--radius-md)] p-1.5 text-primary transition-colors hover:bg-primary-light"
+        title={editLabel}
+        aria-label={editLabel}
+      >
+        <Edit3 size={14} aria-hidden="true" />
+      </button>
+    );
+  }
+
+  return ProductActionsCell;
+}
+
 export function ProductList({ rows, routeState, onRouteChange }: ProductListProps) {
   const { t } = useTranslation();
 
@@ -42,68 +100,38 @@ export function ProductList({ rows, routeState, onRouteChange }: ProductListProp
       {
         id: "product",
         header: t("seller.products.th.product"),
-        cell: (row) => (
-          <div className="flex items-center gap-3">
-            {row.image ? (
-              <ImageWithFallback
-                src={row.image}
-                alt={row.name}
-                className="h-10 w-10 shrink-0 rounded-[var(--radius-md)] object-cover"
-              />
-            ) : (
-              <div
-                className="h-10 w-10 shrink-0 rounded-[var(--radius-md)] bg-muted"
-                aria-hidden="true"
-              />
-            )}
-            <span className="max-w-[280px] truncate text-sm font-medium text-foreground">
-              {row.name}
-            </span>
-          </div>
-        ),
+        cell: renderProductCell,
         priority: "primary",
       },
       {
         id: "price",
         header: t("seller.products.th.price"),
-        cell: (row) => <span className="text-sm font-bold text-primary">{row.priceRange}</span>,
+        cell: renderPriceCell,
         priority: "secondary",
         align: "start",
       },
       {
         id: "stock",
         header: t("seller.products.th.stock"),
-        cell: (row) => (
-          <span className="text-sm text-foreground">{row.stockTotal.toLocaleString()}</span>
-        ),
+        cell: renderStockCell,
         priority: "secondary",
         align: "center",
       },
       {
         id: "sold",
         header: t("seller.products.th.sold"),
-        cell: (row) => (
-          <span className="text-sm text-muted-foreground">
-            {row.sold != null ? row.sold.toLocaleString() : "-"}
-          </span>
-        ),
+        cell: renderSoldCell,
         priority: "tertiary",
         align: "center",
       },
       {
         id: "actions",
         header: "",
-        cell: (row) => (
-          <button
-            type="button"
-            onClick={() => onRouteChange({ ...routeState, selected: row.id, mode: "edit" })}
-            className="rounded-[var(--radius-md)] p-1.5 text-primary transition-colors hover:bg-primary-light"
-            title={t("seller.products.editTooltip")}
-            aria-label={t("seller.products.editTooltip")}
-          >
-            <Edit3 size={14} aria-hidden="true" />
-          </button>
-        ),
+        cell: createProductActionsCell({
+          routeState,
+          onRouteChange,
+          editLabel: t("seller.products.editTooltip"),
+        }),
         align: "end",
       },
     ],

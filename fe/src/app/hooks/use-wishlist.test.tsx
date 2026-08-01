@@ -1,16 +1,18 @@
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const useAuthMock = vi.fn();
+type UnknownCall = (...args: unknown[]) => unknown;
+
+const useAuthMock = vi.fn<() => unknown>();
 vi.mock("./auth-context", () => ({
   useAuth: () => useAuthMock(),
 }));
 
-const getWishlistMock = vi.fn();
-const addWishlistItemMock = vi.fn();
-const toggleWishlistItemMock = vi.fn();
-const removeWishlistItemMock = vi.fn();
-const clearWishlistMock = vi.fn();
+const getWishlistMock = vi.fn<UnknownCall>();
+const addWishlistItemMock = vi.fn<UnknownCall>();
+const toggleWishlistItemMock = vi.fn<UnknownCall>();
+const removeWishlistItemMock = vi.fn<UnknownCall>();
+const clearWishlistMock = vi.fn<UnknownCall>();
 vi.mock("@/shared/api/endpoints/wishlist", () => ({
   getWishlist: (...args: unknown[]) => getWishlistMock(...args),
   addWishlistItem: (...args: unknown[]) => addWishlistItemMock(...args),

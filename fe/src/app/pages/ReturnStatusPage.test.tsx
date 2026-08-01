@@ -1,14 +1,16 @@
 /** Tests for ReturnStatusPage - simplified */
 import { render, screen } from "@testing-library/react";
-import type { ReactNode } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 import { createElement } from "react";
 import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
+type MotionDivProps = HTMLAttributes<HTMLDivElement> & { children?: ReactNode };
+
 vi.mock("motion/react", () => ({
   AnimatePresence: ({ children }: { children: ReactNode }) => children,
   motion: {
-    div: ({ children, ...props }: any) => createElement("div", props, children),
+    div: ({ children, ...props }: MotionDivProps) => createElement("div", props, children),
   },
 }));
 
@@ -37,7 +39,7 @@ vi.mock("react-i18next", () => ({
 }));
 
 vi.mock("@tanstack/react-query", () => ({
-  queryOptions: (opts: any) => opts,
+  queryOptions: passthrough,
   useQuery: vi.fn().mockReturnValue({
     data: [],
     isLoading: false,
@@ -49,6 +51,10 @@ vi.mock("@tanstack/react-query", () => ({
   }),
   useQueryClient: vi.fn().mockReturnValue({ invalidateQueries: vi.fn() }),
 }));
+
+function passthrough<T>(options: T): T {
+  return options;
+}
 
 vi.mock("sonner", () => ({
   toast: {

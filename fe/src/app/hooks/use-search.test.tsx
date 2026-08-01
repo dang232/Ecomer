@@ -6,7 +6,9 @@ import { makeWrapper } from "@/shared/test/render-with-query-client";
 
 import { useSearch } from "./use-search";
 
-const searchProductsMock = vi.fn();
+type UnknownCall = (...args: unknown[]) => unknown;
+
+const searchProductsMock = vi.fn<UnknownCall>();
 
 vi.mock("@/shared/api/endpoints/search", () => ({
   searchProducts: (...args: unknown[]) => searchProductsMock(...args),

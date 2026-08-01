@@ -1,8 +1,11 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const avatarUploadMock = vi.fn();
-const avatarActivateMock = vi.fn();
+type UnknownCall = (...args: unknown[]) => unknown;
+type AvatarErrorCall = (error: Error) => void;
+
+const avatarUploadMock = vi.fn<UnknownCall>();
+const avatarActivateMock = vi.fn<UnknownCall>();
 
 vi.mock("@/shared/api/endpoints/users", () => ({
   avatarUpload: (...args: unknown[]) => avatarUploadMock(...args),
@@ -48,7 +51,7 @@ describe("useAvatarUpload", () => {
   describe("preflight (client-side checks)", () => {
     it("rejects files over 2 MB before any API call", async () => {
       const { Wrapper } = makeWrapper();
-      const onError = vi.fn();
+      const onError = vi.fn<AvatarErrorCall>();
       const { result } = renderHook(() => useAvatarUpload({ onError }), { wrapper: Wrapper });
       const huge = makeFile({ size: 3 * 1024 * 1024 });
 
@@ -57,7 +60,7 @@ describe("useAvatarUpload", () => {
       });
       await waitFor(() => expect(onError).toHaveBeenCalled());
 
-      expect(onError.mock.calls[0][0].message).toBe("avatar:too-large");
+      expect(onError.mock.calls[0]?.[0]?.message).toBe("avatar:too-large");
       expect(avatarUploadMock).not.toHaveBeenCalled();
       expect(fetch).not.toHaveBeenCalled();
       expect(avatarActivateMock).not.toHaveBeenCalled();
@@ -65,7 +68,7 @@ describe("useAvatarUpload", () => {
 
     it("rejects unsupported content types before any API call", async () => {
       const { Wrapper } = makeWrapper();
-      const onError = vi.fn();
+      const onError = vi.fn<AvatarErrorCall>();
       const { result } = renderHook(() => useAvatarUpload({ onError }), { wrapper: Wrapper });
       const wrong = makeFile({ type: "image/gif", name: "anim.gif" });
 
@@ -74,7 +77,7 @@ describe("useAvatarUpload", () => {
       });
       await waitFor(() => expect(onError).toHaveBeenCalled());
 
-      expect(onError.mock.calls[0][0].message).toBe("avatar:wrong-type");
+      expect(onError.mock.calls[0]?.[0]?.message).toBe("avatar:wrong-type");
       expect(avatarUploadMock).not.toHaveBeenCalled();
     });
 
@@ -144,7 +147,7 @@ describe("useAvatarUpload", () => {
       });
       (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: false, status: 502 });
 
-      const onError = vi.fn();
+      const onError = vi.fn<AvatarErrorCall>();
       const { result } = renderHook(() => useAvatarUpload({ onError }), { wrapper: Wrapper });
 
       await act(async () => {
@@ -152,7 +155,7 @@ describe("useAvatarUpload", () => {
       });
       await waitFor(() => expect(onError).toHaveBeenCalled());
 
-      expect(onError.mock.calls[0][0].message).toBe("avatar:put-failed:502");
+      expect(onError.mock.calls[0]?.[0]?.message).toBe("avatar:put-failed:502");
       expect(avatarActivateMock).not.toHaveBeenCalled();
       expect(invalidateSpy).not.toHaveBeenCalled();
     });
@@ -168,7 +171,7 @@ describe("useAvatarUpload", () => {
       (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, status: 200 });
       avatarActivateMock.mockRejectedValue(new Error("activate-rejected"));
 
-      const onError = vi.fn();
+      const onError = vi.fn<AvatarErrorCall>();
       const { result } = renderHook(() => useAvatarUpload({ onError }), { wrapper: Wrapper });
 
       await act(async () => {
@@ -176,7 +179,7 @@ describe("useAvatarUpload", () => {
       });
       await waitFor(() => expect(onError).toHaveBeenCalled());
 
-      expect(onError.mock.calls[0][0].message).toBe("activate-rejected");
+      expect(onError.mock.calls[0]?.[0]?.message).toBe("activate-rejected");
       expect(invalidateSpy).not.toHaveBeenCalled();
     });
   });

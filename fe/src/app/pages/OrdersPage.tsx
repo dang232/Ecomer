@@ -2,20 +2,19 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { Package } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router";
 import { toast } from "sonner";
+
+import { OrderList, toOrderView, type OrderView } from "@/features/orders";
+import { ApiError } from "@/shared/api";
+import { ConfirmDialog, PageContainer, PageHeader } from "@/shared/ui";
 
 import { useAuth } from "../hooks/auth-context";
 import { useCart } from "../hooks/use-cart";
 import { myOrdersOptions, useCancelOrder } from "../hooks/use-orders";
-import { ApiError } from "@/shared/api";
-import { ConfirmDialog, PageContainer, PageHeader } from "@/shared/ui";
-import { OrderList, toOrderView, type OrderView } from "@/features/orders";
 
 type OrderTab = "all" | "pending" | "confirmed" | "shipping" | "delivered" | "cancelled";
 
 export function OrdersPage() {
-  const navigate = useNavigate();
   const { ready, authenticated, login } = useAuth();
   const { addItemAsync } = useCart();
   const cancelOrder = useCancelOrder();

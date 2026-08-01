@@ -5,11 +5,13 @@ import { type ReactNode, Suspense } from "react";
 import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
-const useAuthMock = vi.fn();
-const myProfileMock = vi.fn();
-const setDefaultAddressMock = vi.fn();
-const removeAddressMock = vi.fn();
-const addAddressMock = vi.fn();
+type UnknownCall = (...args: unknown[]) => unknown;
+
+const useAuthMock = vi.fn<() => unknown>();
+const myProfileMock = vi.fn<UnknownCall>();
+const setDefaultAddressMock = vi.fn<(addressKey: string) => unknown>();
+const removeAddressMock = vi.fn<UnknownCall>();
+const addAddressMock = vi.fn<UnknownCall>();
 
 vi.mock("../hooks/auth-context", () => ({
   useAuth: () => useAuthMock(),
@@ -17,7 +19,7 @@ vi.mock("../hooks/auth-context", () => ({
 
 vi.mock("@/shared/api/endpoints/users", () => ({
   myProfile: (...args: unknown[]) => myProfileMock(...args),
-  setDefaultAddress: (...args: unknown[]) => setDefaultAddressMock(...args),
+  setDefaultAddress: (addressKey: string) => setDefaultAddressMock(addressKey),
   removeAddress: (...args: unknown[]) => removeAddressMock(...args),
   addAddress: (...args: unknown[]) => addAddressMock(...args),
   updateProfile: vi.fn(),
@@ -166,7 +168,7 @@ describe("ProfilePage — address mutations (spec U-9)", () => {
 
     // Spec U-9: the mutation receives a stable string key, not a numeric index.
     await waitFor(() => expect(setDefaultAddressMock).toHaveBeenCalledTimes(1));
-    const callArg = setDefaultAddressMock.mock.calls[0][0];
+    const callArg = setDefaultAddressMock.mock.calls[0]?.[0];
     expect(typeof callArg).toBe("string");
     expect(String(callArg)).toContain(ADDRESS_2.street);
 

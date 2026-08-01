@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const useAuthMock = vi.fn();
+const useAuthMock = vi.fn<() => unknown>();
 
 vi.mock("../hooks/auth-context", () => ({ useAuth: () => useAuthMock() }));
 vi.mock("../hooks/use-app-config", () => ({

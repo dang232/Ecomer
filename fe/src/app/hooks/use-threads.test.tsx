@@ -1,12 +1,12 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const useAuthMock = vi.fn();
+const useAuthMock = vi.fn<() => unknown>();
 vi.mock("./auth-context", () => ({
   useAuth: () => useAuthMock(),
 }));
 
-const listThreadsMock = vi.fn();
+const listThreadsMock = vi.fn<(...args: unknown[]) => unknown>();
 vi.mock("@/shared/api/endpoints/messaging", async (importActual) => {
   const actual: object = await importActual();
   return {

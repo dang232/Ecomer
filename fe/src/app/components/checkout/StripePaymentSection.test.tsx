@@ -10,7 +10,9 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // --- Stripe SDK stubs ---
-const mockConfirmPayment = vi.fn();
+type UnknownCall = (...args: unknown[]) => unknown;
+
+const mockConfirmPayment = vi.fn<UnknownCall>();
 vi.mock("@stripe/react-stripe-js", () => ({
   Elements: ({ children }: { children: ReactNode }) => <>{children}</>,
   PaymentElement: () => <div data-testid="payment-element" />,
@@ -22,7 +24,7 @@ vi.mock("@stripe/stripe-js", () => ({
 }));
 
 // --- API stubs ---
-const stripeCreateMock = vi.fn();
+const stripeCreateMock = vi.fn<UnknownCall>();
 vi.mock("@/shared/api/endpoints/payment", () => ({
   paymentStatus: vi.fn(),
   stripeCreate: (...args: unknown[]) => stripeCreateMock(...args),
@@ -56,7 +58,7 @@ afterEach(() => {
 describe("StripePaymentSection i18n (P0-6)", () => {
   it("loading state renders t('stripe.initializing') — no Vietnamese literal", async () => {
     // Never resolve clientSecret so the component stays in loading state.
-    stripeCreateMock.mockImplementation(() => new Promise(() => {}));
+    stripeCreateMock.mockImplementation(() => new Promise<never>(() => undefined));
     const Wrapper = makeWrapper();
     const { container } = render(
       <Wrapper>

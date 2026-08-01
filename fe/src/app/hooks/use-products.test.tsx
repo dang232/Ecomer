@@ -3,8 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/shared/api";
 
-const productListMock = vi.fn();
-const productByIdMock = vi.fn();
+type UnknownCall = (...args: unknown[]) => unknown;
+
+const productListMock = vi.fn<UnknownCall>();
+const productByIdMock = vi.fn<UnknownCall>();
 
 vi.mock("@/shared/api/endpoints/products", () => ({
   productList: (...args: unknown[]) => productListMock(...args),

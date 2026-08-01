@@ -1,18 +1,22 @@
 /** Tests for ReturnRequestPage */
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 import { createElement } from "react";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+type MotionDivProps = HTMLAttributes<HTMLDivElement> & { children?: ReactNode };
+
 vi.mock("motion/react", () => ({
   AnimatePresence: ({ children }: { children: ReactNode }) => children,
   motion: {
-    div: ({ children, ...props }: any) => createElement("div", props, children),
+    div: ({ children, ...props }: MotionDivProps) => createElement("div", props, children),
   },
 }));
 
-const requestReturnMock = vi.fn();
+type UnknownCall = (...args: unknown[]) => unknown;
+
+const requestReturnMock = vi.fn<UnknownCall>();
 
 vi.mock("@/shared/api/endpoints/returns", () => ({
   requestReturn: (...args: unknown[]) => requestReturnMock(...args),
@@ -43,7 +47,7 @@ vi.mock("react-i18next", () => ({
 }));
 
 vi.mock("@tanstack/react-query", () => ({
-  queryOptions: (opts: any) => opts,
+  queryOptions: passthrough,
   useQuery: vi.fn(() => ({
     data: undefined,
     isLoading: false,
@@ -56,6 +60,10 @@ vi.mock("@tanstack/react-query", () => ({
   })),
   useQueryClient: vi.fn(() => ({ invalidateQueries: vi.fn() })),
 }));
+
+function passthrough<T>(options: T): T {
+  return options;
+}
 
 vi.mock("sonner", () => ({
   toast: {

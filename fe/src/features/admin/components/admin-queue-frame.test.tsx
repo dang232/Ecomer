@@ -1,4 +1,3 @@
-import type { ColumnDef } from "@tanstack/react-table";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
@@ -8,9 +7,7 @@ import { AdminQueueFrame } from "./admin-queue-frame";
 import type { AdminQueueFrameProps } from "./admin-queue-frame";
 
 function renderFrame(props?: Partial<AdminQueueFrameProps<{ id: string }>>) {
-  const columns: ColumnDef<{ id: string }>[] = [
-    { accessorKey: "id", header: "ID" },
-  ];
+  const { children = null, ...rest } = props ?? {};
   return render(
     <AdminQueueFrame
       title="Test Queue"
@@ -24,12 +21,15 @@ function renderFrame(props?: Partial<AdminQueueFrameProps<{ id: string }>>) {
       selectedId={null}
       onSelect={() => undefined}
       rows={[]}
-      columns={columns}
+      columns={[]}
       pagination={{ page: 0, totalPages: 1, totalElements: 0 }}
       onPageChange={() => undefined}
       drawerTitle="Detail"
-      {...props}
-    />,
+      drawerDescription="Test"
+      {...rest}
+    >
+      {children}
+    </AdminQueueFrame>,
   );
 }
 
@@ -39,5 +39,6 @@ describe("AdminQueueFrame", () => {
     expect(screen.queryByRole("combobox", { name: /sort/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("checkbox", { name: /select all/i })).not.toBeInTheDocument();
     expect(screen.getByRole("searchbox")).toBeVisible();
+    expect(screen.getByRole("button", { name: /search/i })).toBeVisible();
   });
 });

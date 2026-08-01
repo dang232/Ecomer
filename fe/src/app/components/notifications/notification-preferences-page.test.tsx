@@ -6,8 +6,10 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import enMessages from "@/app/lib/i18n/en.json";
 import viMessages from "@/app/lib/i18n/vi.json";
 
-const getNotificationPreferencesMock = vi.fn();
-const updateNotificationPreferencesMock = vi.fn();
+type UnknownCall = (...args: unknown[]) => unknown;
+
+const getNotificationPreferencesMock = vi.fn<UnknownCall>();
+const updateNotificationPreferencesMock = vi.fn<UnknownCall>();
 let currentLocale: "en" | "vi" = "en";
 
 vi.mock("@/shared/api/endpoints/notification-preferences", () => ({

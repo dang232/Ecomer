@@ -1,14 +1,21 @@
 import { createElement, lazy, Suspense, type ReactNode } from "react";
 import { createBrowserRouter } from "react-router";
 
+import { CouponList } from "@/features/admin-coupons";
+import { AdminDashboard } from "@/features/admin-dashboard";
+import { DisputeQueue } from "@/features/admin-disputes";
+import { SystemHealth } from "@/features/admin-health";
+import { AdminOrderQueue } from "@/features/admin-orders";
+import { PayoutQueue } from "@/features/admin-payouts";
+import { ReviewModerationQueue } from "@/features/admin-reviews";
+import { SellerApprovalQueue } from "@/features/admin-sellers";
+import { AdminUserQueue } from "@/features/admin-users";
+import { PageSkeleton, ProductDetailSkeleton } from "@/shared/ui";
 import { ErrorBoundary } from "./components/error-boundary";
-import { PageSkeleton, ProductDetailSkeleton } from "./components/ui/page-skeleton";
 import { myOrdersOptions, orderDetailOptions } from "./hooks/use-orders";
 import { productDetailOptions } from "./hooks/use-products";
 import { profileOptions } from "./hooks/use-profile";
 import { sellerDetailOptions, sellerProductsOptions } from "./hooks/use-sellers";
-import { RequireAuth, RequireRole } from "./lib/auth/role-guard";
-import { queryClient } from "./lib/query-client";
 import {
   AdminLayout,
   AuthLayout,
@@ -16,7 +23,21 @@ import {
   StandaloneLayout,
   StorefrontLayout,
 } from "./layouts";
+import { RequireAuth, RequireRole } from "./lib/auth/role-guard";
+import { queryClient } from "./lib/query-client";
 import { RouteErrorPage } from "./pages/RouteErrorPage";
+
+// Feature route imports (Plan 07 direct-route cutover)
+import { SellerDashboardRoute } from "@/features/seller-dashboard";
+import { SellerOrderQueueRoute } from "@/features/seller-orders";
+import { ReturnsRoute } from "@/features/seller-returns";
+import { SellerReviewInboxRoute } from "@/features/seller-reviews";
+
+// Route adapters (Plan 07)
+import { SellerProductsRoute } from "./routes/seller-products-route";
+import { SellerSettingsRoute } from "./routes/seller-settings-route";
+import { SellerWalletRoute } from "./routes/seller-wallet-route";
+import { VideoModerationRoute } from "./routes/video-moderation-route";
 
 const HomePage = lazy(() => import("./pages/HomePage").then((m) => ({ default: m.HomePage })));
 const LoginPage = lazy(() => import("./pages/LoginPage").then((m) => ({ default: m.LoginPage })));
@@ -46,8 +67,6 @@ const ProfilePage = lazy(() =>
 const WishlistPage = lazy(() =>
   import("./pages/WishlistPage").then((m) => ({ default: m.WishlistPage })),
 );
-const SellerPage = lazy(() => import("./pages/seller").then((m) => ({ default: m.SellerPage })));
-const AdminPage = lazy(() => import("./pages/admin").then((m) => ({ default: m.AdminPage })));
 const DesignSystemPage = lazy(() =>
   import("./pages/DesignSystemPage").then((m) => ({ default: m.DesignSystemPage })),
 );
@@ -198,29 +217,29 @@ export const router = createBrowserRouter([
     path: "/seller",
     element: sellerOnly(createElement(SellerLayout)),
     children: [
-      { index: true, element: lazyRoute(createElement(SellerPage)) },
-      { path: "products", element: lazyRoute(createElement(SellerPage)) },
-      { path: "orders", element: lazyRoute(createElement(SellerPage)) },
-      { path: "returns", element: lazyRoute(createElement(SellerPage)) },
-      { path: "reviews", element: lazyRoute(createElement(SellerPage)) },
-      { path: "wallet", element: lazyRoute(createElement(SellerPage)) },
-      { path: "settings", element: lazyRoute(createElement(SellerPage)) },
+      { index: true, element: lazyRoute(createElement(SellerDashboardRoute)) },
+      { path: "products", element: lazyRoute(createElement(SellerProductsRoute)) },
+      { path: "orders", element: lazyRoute(createElement(SellerOrderQueueRoute)) },
+      { path: "returns", element: lazyRoute(createElement(ReturnsRoute)) },
+      { path: "reviews", element: lazyRoute(createElement(SellerReviewInboxRoute)) },
+      { path: "wallet", element: lazyRoute(createElement(SellerWalletRoute)) },
+      { path: "settings", element: lazyRoute(createElement(SellerSettingsRoute)) },
     ],
   },
   {
     path: "/admin",
     element: adminOnly(createElement(AdminLayout)),
     children: [
-      { index: true, element: lazyRoute(createElement(AdminPage)) },
-      { path: "orders", element: lazyRoute(createElement(AdminPage)) },
-      { path: "coupons", element: lazyRoute(createElement(AdminPage)) },
-      { path: "sellers", element: lazyRoute(createElement(AdminPage)) },
-      { path: "reviews", element: lazyRoute(createElement(AdminPage)) },
-      { path: "video", element: lazyRoute(createElement(AdminPage)) },
-      { path: "disputes", element: lazyRoute(createElement(AdminPage)) },
-      { path: "payouts", element: lazyRoute(createElement(AdminPage)) },
-      { path: "users", element: lazyRoute(createElement(AdminPage)) },
-      { path: "health", element: lazyRoute(createElement(AdminPage)) },
+      { index: true, element: lazyRoute(createElement(AdminDashboard)) },
+      { path: "orders", element: lazyRoute(createElement(AdminOrderQueue)) },
+      { path: "coupons", element: lazyRoute(createElement(CouponList)) },
+      { path: "sellers", element: lazyRoute(createElement(SellerApprovalQueue)) },
+      { path: "reviews", element: lazyRoute(createElement(ReviewModerationQueue)) },
+      { path: "video", element: lazyRoute(createElement(VideoModerationRoute)) },
+      { path: "disputes", element: lazyRoute(createElement(DisputeQueue)) },
+      { path: "payouts", element: lazyRoute(createElement(PayoutQueue)) },
+      { path: "users", element: lazyRoute(createElement(AdminUserQueue)) },
+      { path: "health", element: lazyRoute(createElement(SystemHealth)) },
     ],
   },
   {

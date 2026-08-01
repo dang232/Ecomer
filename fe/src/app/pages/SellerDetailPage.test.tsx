@@ -4,11 +4,14 @@ import { type ReactNode, Suspense } from "react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
-import { ErrorBoundary } from "../components/error-boundary";
 import { ApiError } from "@/shared/api";
 
-const getSellerMock = vi.fn();
-const productListMock = vi.fn();
+import { ErrorBoundary } from "../components/error-boundary";
+
+type UnknownCall = (...args: unknown[]) => unknown;
+
+const getSellerMock = vi.fn<UnknownCall>();
+const productListMock = vi.fn<UnknownCall>();
 
 vi.mock("@/shared/api/endpoints/sellers", () => ({
   getSeller: (...args: unknown[]) => getSellerMock(...args),

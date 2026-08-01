@@ -1,8 +1,8 @@
 import { renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const useAuthMock = vi.fn();
-const useAppConfigMock = vi.fn();
+const useAuthMock = vi.fn<() => unknown>();
+const useAppConfigMock = vi.fn<() => unknown>();
 vi.mock("./auth-context", () => ({
   useAuth: () => useAuthMock(),
 }));
@@ -31,13 +31,17 @@ class FakeWebSocket {
     FakeWebSocket.instances.push(this);
   }
 
-  addEventListener(): void {}
+  addEventListener(): void {
+    return;
+  }
 
   close(): void {
     this.readyState = 3;
   }
 
-  send(): void {}
+  send(): void {
+    return;
+  }
 }
 
 const originalWebSocket = globalThis.WebSocket;

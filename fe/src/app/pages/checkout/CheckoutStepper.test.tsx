@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { CheckoutStepper } from "./CheckoutStepper";
@@ -86,8 +86,8 @@ describe("CheckoutStepper", () => {
     const onStepChange = vi.fn();
     render(<CheckoutStepper step="payment" onStepChange={onStepChange} />);
 
-    const done = document.querySelector('[data-step-id="address"]')! as HTMLAnchorElement;
-    done.click();
+    const done = document.querySelector<HTMLElement>('[data-step-id="address"]')!;
+    fireEvent.click(done);
     expect(onStepChange).toHaveBeenCalledWith("address");
   });
 

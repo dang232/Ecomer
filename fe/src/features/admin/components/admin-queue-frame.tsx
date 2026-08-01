@@ -1,8 +1,10 @@
-import type { ColumnDef } from "@tanstack/react-table";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import { DataTable } from "@/shared/ui/data-table";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/shared/ui/data-table";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { PageContainer } from "@/shared/ui/page-container";
 import { PageHeader } from "@/shared/ui/page-header";
@@ -40,7 +42,7 @@ export interface AdminQueueFrameProps<T> {
   onSelect: (id: string | null) => void;
   // table
   rows: readonly T[];
-  columns: ColumnDef<T>[];
+  columns: readonly DataTableColumn<T>[];
   isLoading?: boolean;
   isError?: boolean;
   // pagination — only rendered when capabilities.pagination === "server"
@@ -50,6 +52,12 @@ export interface AdminQueueFrameProps<T> {
   drawerTitle: string;
   drawerDescription?: string;
   children: ReactNode;
+}
+
+function rowId(row: unknown): string {
+  if (typeof row !== "object" || row === null || !("id" in row)) return "";
+  const id = row.id;
+  return typeof id === "string" || typeof id === "number" ? String(id) : "";
 }
 
 /**
@@ -83,7 +91,6 @@ export function AdminQueueFrame<T>({
 }: AdminQueueFrameProps<T>) {
   const { t } = useTranslation();
 
-  const handleRowOpen = (id: string) => onSelect(id);
   const handleDrawerClose = () => onSelect(null);
 
   return (
@@ -113,21 +120,22 @@ export function AdminQueueFrame<T>({
           {t("admin.queue.loadErr")}
         </div>
       ) : rows.length === 0 ? (
-        <EmptyState title={t("admin.queue.empty")} />
+        <EmptyState title={t("admin.queue.empty")} description="" icon={null} />
       ) : (
         <>
           <DataTable
             rows={rows}
             columns={columns}
-            selectedId={selectedId}
-            onRowOpen={handleRowOpen}
-            selection={capabilities.selection}
+            rowKey={rowId}
+            selectedId={selectedId ?? undefined}
+            onRowOpen={(row) => onSelect(rowId(row))}
+            caption={title}
+            empty={null}
           />
           {capabilities.pagination === "server" && pagination ? (
             <Pagination
               page={pagination.page}
-              totalPages={pagination.totalPages}
-              totalElements={pagination.totalElements}
+              pageCount={pagination.totalPages}
               onPageChange={onPageChange}
             />
           ) : null}
@@ -171,7 +179,11 @@ function SearchField({ value, onSubmit, placeholder }: SearchFieldProps) {
         placeholder={placeholder}
         className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
       />
-      <button type="submit" className="text-muted-foreground hover:text-foreground">
+      <button
+        type="submit"
+        aria-label={placeholder ?? "Search"}
+        className="text-muted-foreground hover:text-foreground"
+      >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <circle cx="11" cy="11" r="8" />
           <path d="m21 21-4.35-4.35" />

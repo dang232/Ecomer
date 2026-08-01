@@ -88,9 +88,27 @@ describe("fetchConfig", () => {
       expect.objectContaining({
         credentials: "same-origin",
         headers: { Accept: "application/json" },
-        signal: expect.any(AbortSignal),
       }),
     );
+    expect(fetchMock.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("accepts same-origin development proxy endpoints", async () => {
+    const developmentConfig = {
+      ...validConfig,
+      apiUri: "https://shop.vnshop.invalid/api/",
+      websocket: {
+        ...validConfig.websocket,
+        notificationsUri: "wss://shop.vnshop.invalid/api/ws/notifications",
+        messagingUri: "wss://shop.vnshop.invalid/api/ws/messaging",
+      },
+    };
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify(developmentConfig), { status: 200 }),
+    );
+
+    await expect(fetchConfig()).resolves.toEqual(developmentConfig);
+    expect(getApiOrigin()).toBe("https://shop.vnshop.invalid/api");
   });
 
   it("rejects unknown major schema versions", async () => {
@@ -108,6 +126,37 @@ describe("fetchConfig", () => {
     );
 
     await expect(fetchConfig()).resolves.toEqual(compatible);
+  });
+
+  it("accepts the configuration-service provider set including SePay", async () => {
+    const backendConfig = {
+      ...validConfig,
+      providers: [
+        { id: "cod", status: "enabled", mode: "stub", reasonCode: "PORTFOLIO_STUB" },
+        { id: "vietqr", status: "enabled", mode: "demo", reasonCode: "PORTFOLIO_DEMO" },
+        {
+          id: "stripe",
+          status: "disabled",
+          mode: "sandbox",
+          reasonCode: "DISABLED_BY_CONFIGURATION",
+        },
+        {
+          id: "paypal",
+          status: "disabled",
+          mode: "sandbox",
+          reasonCode: "DISABLED_BY_CONFIGURATION",
+        },
+        { id: "vnpay", status: "disabled", mode: "disabled", reasonCode: "DISABLED_BY_POLICY" },
+        { id: "momo", status: "disabled", mode: "disabled", reasonCode: "DISABLED_BY_POLICY" },
+        { id: "sepay", status: "disabled", mode: "disabled", reasonCode: "DISABLED_BY_POLICY" },
+      ],
+    };
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify(backendConfig), { status: 200 }),
+    );
+
+    await expect(fetchConfig()).resolves.toEqual(backendConfig);
+    expect(getApiOrigin()).toBe("https://api.vnshop.invalid");
   });
 
   it("rejects an otherwise valid expired runtime document", async () => {
