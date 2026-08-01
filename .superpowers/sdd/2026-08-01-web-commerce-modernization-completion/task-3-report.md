@@ -110,3 +110,42 @@ Task 3 acceptance is satisfied locally:
 Planned commit message:
 
 `test(fe): enforce modernization acceptance journeys`
+
+## Fix Round 1 - Review Findings Closed
+
+Date: 2026-08-01
+
+Reviewer findings addressed:
+
+1. `assert-playwright-results.mjs` now enforces required persona coverage from either:
+   - `E2E_REQUIRED_PERSONAS`, or
+   - explicit CLI/config input via `--required-personas=...` / `validateReport(..., { requiredPersonas })`
+2. `E2E_RELEASE_CONTRACT=true` now requires a non-empty explicit `E2E_REQUIRED_PERSONAS` declaration and no longer infers/defaults `buyer`.
+3. The credential audit now rejects seeded email aliases as credentials outside `modernization/_credentials.ts`, in addition to seeded username literals.
+
+Focused red -> green evidence:
+
+- Red:
+  - `node --test scripts/assert-playwright-results.test.mjs`
+    - failed on missing `parseRequiredPersonas` and missing required-persona enforcement
+  - `node --test scripts/check-e2e-credentials.test.mjs`
+    - failed on missing seeded-email alias detection
+    - failed because contract mode still allowed missing/blank `E2E_REQUIRED_PERSONAS`
+- Green:
+  - `node --test scripts/assert-playwright-results.test.mjs`
+    - pass
+  - `node --test scripts/check-e2e-credentials.test.mjs`
+    - pass
+
+Final focused verification from `fe`:
+
+1. `pnpm run lint:e2e-credentials`
+   - pass
+2. `pnpm run typecheck:e2e`
+   - pass
+3. `node --test scripts/check-release-workflows.test.mjs scripts/check-e2e-credentials.test.mjs scripts/assert-playwright-results.test.mjs`
+   - pass
+
+Fix-round commit message:
+
+`test(fe): enforce complete persona coverage`

@@ -201,3 +201,52 @@ Acceptance gates run from `fe`:
 - `fe/src/features/seller-products/components/product-list.test.tsx`
 - `fe/src/features/seller/index.ts`
 - `fe/src/shared/auth/native-auth.ts`
+
+---
+
+## Fix Round 1 - 2026-08-01
+
+Status: DONE
+
+### What changed
+
+- Added a regression test in `fe/src/app/lib/api/client.test.ts` for two same-tab authenticated requests that both receive `401` while a single refresh is in flight.
+- Updated `fe/src/app/lib/api/client.ts` so a second same-tab authenticated `401` waits on the in-flight refresh result, then retries once with the refreshed token instead of immediately dispatching `auth:unauthorized`.
+- Preserved the existing cross-tab BroadcastChannel coordination and the single post-refresh retry behavior.
+
+### TDD Evidence
+
+RED
+
+- Command:
+  `pnpm exec vitest run src/app/lib/api/client.test.ts src/app/lib/api/interceptors.test.ts`
+- Relevant failing output:
+  - `FAIL src/app/lib/api/client.test.ts > request > waits for an in-flight same-tab refresh before retrying a second authenticated 401`
+  - `AssertionError: promise rejected "ApiError: Authentication required" instead of resolving`
+  - Unhandled rejection surfaced from `src/app/lib/api/client.ts`
+- Why this was expected:
+  The current same-tab branch treated a second authenticated `401` during `thisTabRefreshing === true` as an immediate auth failure instead of waiting for the refresh started by the first request.
+
+GREEN
+
+- Command:
+  `pnpm exec vitest run src/app/lib/api/client.test.ts src/app/lib/api/interceptors.test.ts`
+- Result:
+  `2` test files passed, `42` tests passed, exit code `0`
+
+### Verification
+
+- `pnpm run lint:boundaries` -> exit code `0`
+- `pnpm run lint:type-safety` -> exit code `0`
+
+### Files changed in fix round 1
+
+- `.superpowers/sdd/2026-08-01-web-commerce-modernization-completion/task-2-boundary-report.md`
+- `fe/src/app/lib/api/client.ts`
+- `fe/src/app/lib/api/client.test.ts`
+
+### Residual findings
+
+- Focused client/interceptor tests: none
+- Scoped boundary gate findings: none
+- Scoped type-safety gate findings: none

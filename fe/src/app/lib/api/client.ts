@@ -34,6 +34,9 @@ type RefreshMessage = { type: "refresh-started" } | { type: "refresh-complete"; 
 /** Resolves to true when another tab's refresh succeeds, false on failure. */
 let crossTabRefreshPromise: Promise<boolean> | null = null;
 let crossTabRefreshResolve: ((success: boolean) => void) | null = null;
+/** Resolves to the outcome of this tab's in-flight refresh for concurrent 401s. */
+let sameTabRefreshPromise: Promise<boolean> | null = null;
+let sameTabRefreshResolve: ((success: boolean) => void) | null = null;
 /** True while this tab owns the in-flight refresh. */
 let thisTabRefreshing = false;
 /** Epoch-ms timestamp when this tab claimed the refresh lock. Used to detect stale locks. */
@@ -66,6 +69,42 @@ if (REFRESH_CHANNEL) {
       crossTabRefreshPromise = null;
     }
   };
+}
+
+function ensureSameTabRefreshPromise(): Promise<boolean> {
+  if (!sameTabRefreshPromise) {
+    sameTabRefreshPromise = new Promise<boolean>((resolve) => {
+      sameTabRefreshResolve = resolve;
+    });
+  }
+  return sameTabRefreshPromise;
+}
+
+function settleSameTabRefresh(success: boolean): void {
+  sameTabRefreshResolve?.(success);
+  sameTabRefreshResolve = null;
+  sameTabRefreshPromise = null;
+}
+
+async function retryAfterRefresh<TSchema extends z.ZodType>(
+  opts: RequestOptions<TSchema>,
+  requestCtx: RequestContext,
+  correlationId: string,
+  url: string,
+  init: RequestInit,
+): Promise<Response> {
+  const retryCtx = await runRequestChain({
+    url,
+    init: { ...init, headers: {} },
+    correlationId,
+    meta: {
+      ...requestCtx.meta,
+      auth: opts.auth ?? true,
+      idempotencyKey: opts.idempotencyKey,
+      hasBody: opts.body !== undefined && (opts.method ?? "GET") !== "GET",
+    },
+  });
+  return fetch(retryCtx.url, retryCtx.init);
 }
 
 type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -260,23 +299,12 @@ async function executeRequest<TSchema extends z.ZodType>(
           window.dispatchEvent(new Event("auth:unauthorized"));
           throw new ApiError(401, "UNAUTHORIZED", "Authentication required", correlationId);
         }
-        // Retry the original request with the new token. Preserve telemetry meta.
-        const retryCtx = await runRequestChain({
-          url,
-          init: { ...init, headers: {} },
-          correlationId,
-          meta: {
-            ...requestCtx.meta,
-            auth,
-            idempotencyKey: opts.idempotencyKey,
-            hasBody,
-          },
-        });
-        response = await fetch(retryCtx.url, retryCtx.init);
+        response = await retryAfterRefresh(opts, requestCtx, correlationId, url, init);
       } else if (!thisTabRefreshing) {
         // This tab owns the refresh. Guard with !thisTabRefreshing so a second
         // 401 arriving while we already hold the lock doesn't start a duplicate.
         thisTabRefreshing = true;
+        ensureSameTabRefreshPromise();
         refreshLockTimestamp = Date.now();
         REFRESH_CHANNEL?.postMessage({ type: "refresh-started" } satisfies RefreshMessage);
         let refreshSucceeded = false;
@@ -287,6 +315,7 @@ async function executeRequest<TSchema extends z.ZodType>(
           refreshSucceeded = false;
         } finally {
           thisTabRefreshing = false;
+          settleSameTabRefresh(refreshSucceeded);
           REFRESH_CHANNEL?.postMessage({
             type: "refresh-complete",
             success: refreshSucceeded,
@@ -309,12 +338,18 @@ async function executeRequest<TSchema extends z.ZodType>(
           throw new ApiError(401, "UNAUTHORIZED", "Authentication required", correlationId);
         }
       } else {
-        // thisTabRefreshing is already true — a concurrent request hit 401 while
-        // this tab's refresh is in-flight. The token will be updated once the
-        // in-flight refresh resolves; treat this as an auth failure since the
-        // original token was already invalid.
-        window.dispatchEvent(new Event("auth:unauthorized"));
-        throw new ApiError(401, "UNAUTHORIZED", "Authentication required", correlationId);
+        // This tab already owns a refresh. Wait for it, then retry once with
+        // the newly stored access token instead of forcing a logout race.
+        const succeeded = await ensureSameTabRefreshPromise();
+        if (!succeeded) {
+          window.dispatchEvent(new Event("auth:unauthorized"));
+          throw new ApiError(401, "UNAUTHORIZED", "Authentication required", correlationId);
+        }
+        response = await retryAfterRefresh(opts, requestCtx, correlationId, url, init);
+        if (response.status === 401) {
+          window.dispatchEvent(new Event("auth:unauthorized"));
+          throw new ApiError(401, "UNAUTHORIZED", "Authentication required", correlationId);
+        }
       }
     }
 
