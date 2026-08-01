@@ -250,3 +250,32 @@ GREEN
 - Focused client/interceptor tests: none
 - Scoped boundary gate findings: none
 - Scoped type-safety gate findings: none
+
+---
+
+## Fix Round 2 - 2026-08-01
+
+Status: DONE
+
+### What changed
+
+- Replaced the ad hoc concurrent-refresh resolver capture in `fe/src/app/lib/api/client.test.ts` with a typed holder object interface:
+  - `promise` holds the mocked refresh Promise
+  - `resolve` is assigned inside the Promise constructor
+  - the test captures `refreshGate.resolve`, null-checks it, and only then invokes it
+
+### Verification
+
+- Command:
+  `pnpm run typecheck:test`
+- Result:
+  exit code `0`
+
+### Files changed in fix round 2
+
+- `.superpowers/sdd/2026-08-01-web-commerce-modernization-completion/task-2-boundary-report.md`
+- `fe/src/app/lib/api/client.test.ts`
+
+### Residual findings
+
+- `typecheck:test`: none

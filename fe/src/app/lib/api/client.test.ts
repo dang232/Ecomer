@@ -314,15 +314,32 @@ describe("request", () => {
   it("waits for an in-flight same-tab refresh before retrying a second authenticated 401", async () => {
     liveToken = "old-jwt";
     const dispatchSpy = vi.spyOn(window, "dispatchEvent");
-    let resolveRefresh:
-      | ((value: { accessToken: string; accessExpiresAt: number }) => void)
-      | null = null;
-    refreshTokensMock.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          resolveRefresh = resolve;
-        }),
-    );
+    interface RefreshGate {
+      promise: Promise<{
+        accessToken: string;
+        accessExpiresAt: number;
+      }>;
+      resolve: ((value: {
+        accessToken: string;
+        accessExpiresAt: number;
+      }) => void) | null;
+    }
+
+    const refreshGate: RefreshGate = {
+      promise: Promise.resolve({
+        accessToken: "unreachable",
+        accessExpiresAt: 0,
+      }),
+      resolve: null,
+    };
+
+    refreshGate.promise = new Promise<{
+      accessToken: string;
+      accessExpiresAt: number;
+    }>((resolve) => {
+      refreshGate.resolve = resolve;
+    });
+    refreshTokensMock.mockImplementation(() => refreshGate.promise);
 
     fetchSpy.mockResolvedValueOnce(new Response("unauthorized", { status: 401 }));
     fetchSpy.mockResolvedValueOnce(new Response("unauthorized", { status: 401 }));
@@ -363,10 +380,15 @@ describe("request", () => {
     await waitFor(() => {
       expect(refreshTokensMock).toHaveBeenCalledTimes(1);
       expect(fetchSpy).toHaveBeenCalledTimes(2);
-      expect(resolveRefresh).not.toBeNull();
+      expect(refreshGate.resolve).not.toBeNull();
     });
 
-    resolveRefresh?.({
+    const releaseRefresh = refreshGate.resolve;
+    if (!releaseRefresh) {
+      throw new Error("Expected the refresh resolver to be captured");
+    }
+
+    releaseRefresh({
       accessToken: "new-jwt",
       accessExpiresAt: Date.now() + 60_000,
     });
