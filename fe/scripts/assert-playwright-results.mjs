@@ -245,12 +245,12 @@ export function validateReport(report, options = {}) {
     const { test } = entry;
     const identity = testIdentity(entry);
     const statuses = statusLabelsForTest(test);
-    if (
-      (test.status === "expected" || test.status === "passed") &&
-      (test.results ?? []).length === 0
-    ) {
+    const incompleteStatuses = [test.status, test.outcome].filter(
+      (status) => status === "expected" || status === "passed",
+    );
+    if (incompleteStatuses.length > 0 && (test.results ?? []).length === 0) {
       findings.push(
-        `Incomplete report entry for "${identity.full}" - status ${test.status} has no test results.`,
+        `Incomplete report entry for "${identity.full}" - status/outcome ${incompleteStatuses.join(" and ")} has no test results.`,
       );
     }
     if (statuses.length === 0) {

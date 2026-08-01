@@ -193,10 +193,12 @@ test("fails expected or passed tests with no recorded results as incomplete", ()
     makeReport([
       makeTest("expected without result", { status: "expected", results: [] }),
       makeTest("passed without result", { status: "passed", results: [] }),
+      makeTest("outcome expected without result", { outcome: "expected", results: [] }),
+      makeTest("outcome passed without result", { outcome: "passed", results: [] }),
     ]),
   );
 
-  assert.equal(findings.length, 2);
+  assert.equal(findings.length, 4);
   assert(findings.every((finding) => finding.includes("Incomplete report entry")));
 });
 
