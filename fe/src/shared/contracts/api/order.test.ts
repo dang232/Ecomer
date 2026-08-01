@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { orderSchema } from "@/shared/contracts/api/order";
+import { orderDetailSchema, orderListItemSchema, orderSchema } from "@/shared/contracts/api/order";
 
 describe("orderSchema status boundary", () => {
   it.each([
@@ -58,5 +58,30 @@ describe("orderSchema status boundary", () => {
     });
 
     expect(order.total).toBe(32_020_000);
+  });
+
+  it("keeps createdAt on list summaries but does not invent it for detail-only responses", () => {
+    const summary = orderListItemSchema.parse({
+      orderId: "00000000-0000-0000-0000-000000000003",
+      status: "DELIVERED",
+      createdAt: "2026-07-30T00:00:00Z",
+      totalAmount: 100_000,
+      itemCount: 1,
+      subOrders: [],
+    });
+
+    const detail = orderDetailSchema.parse({
+      id: "00000000-0000-0000-0000-000000000003",
+      subOrders: [],
+      itemsTotal: { amount: 100_000, currency: "VND" },
+      shippingTotal: { amount: 0, currency: "VND" },
+      discount: { amount: 0, currency: "VND" },
+      finalAmount: { amount: 100_000, currency: "VND" },
+      paymentStatus: "COMPLETED",
+      paymentMethod: "COD",
+    });
+
+    expect(summary.createdAt).toBe("2026-07-30T00:00:00Z");
+    expect(Object.hasOwn(detail, "createdAt")).toBe(false);
   });
 });

@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
+import { AccountNav } from "@/features/account";
 import { ImageWithFallback } from "@/shared/ui";
 import { useAuth } from "../hooks/auth-context";
 import { useCart } from "../hooks/use-cart";
@@ -67,6 +68,8 @@ export function WishlistPage() {
 
   return (
     <div className="max-w-[1100px] mx-auto py-8 px-8">
+      <AccountNav />
+
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-foreground">
           {t("wishlist.pageTitle")}

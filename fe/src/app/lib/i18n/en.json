@@ -801,6 +801,14 @@
       "kpiLoadFail": "Couldn't load KPIs: {{message}}",
       "kpiLoadFailFriendly": "Couldn't load the dashboard. Check your connection and try again.",
       "retry": "Retry",
+      "from": "From",
+      "to": "To",
+      "day": "Day",
+      "week": "Week",
+      "month": "Month",
+      "exceptionsTitle": "Exceptions",
+      "exceptionsEmpty": "No exceptions",
+      "viewQueue": "View queue",
       "kpi": {
         "paidGmv": "Paid GMV",
         "refundedAmount": "Refunded amount",
@@ -875,6 +883,7 @@
       "approveErr": "Couldn't approve",
       "rejectOk": "Review rejected",
       "rejectErr": "Couldn't reject",
+      "commentLabel": "Comment",
       "rejectDialog": {
         "title": "Reject review",
         "submit": "Reject",
@@ -920,8 +929,12 @@
         "maxDiscountPlaceholder": "100000",
         "missingCode": "Please enter a coupon code",
         "invalidValue": "Invalid value",
-        "percentTooLarge": "Percent discount can't exceed 100"
-      }
+        "percentTooLarge": "Percent discount can't exceed 100",
+        "maxUsesLabel": "Max uses",
+        "perUserLimitLabel": "Per-user limit",
+        "validUntilLabel": "Valid until"
+      },
+      "loadErr": "Couldn't load coupons"
     },
     "disputes": {
       "title": "Disputes",
@@ -969,7 +982,20 @@
       "refundConfirmTitle": "Issue refund?",
       "refundConfirmDescription": "This will return the full amount to the buyer. Please provide a reason.",
       "refundConfirmBtn": "Refund",
-      "accept": "Accept"
+      "accept": "Accept",
+      "cancelConfirmTitle": "Cancel order?",
+      "cancelConfirmDescription": "This action cannot be undone. The order will be marked as cancelled.",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "Enter a reason for this action...",
+      "changeStatusTitle": "Change order status",
+      "newStatus": "New status",
+      "total": "Total",
+      "status": "Status",
+      "date": "Date",
+      "th": {
+        "orderNumber": "Order #"
+      },
+      "changeStatus": "Change status"
     },
     "health": {
       "title": "System Health",
@@ -1007,7 +1033,21 @@
       "phonePlaceholder": "Search by phone...",
       "searchPlaceholder": "Search by name, email, phone, or ID...",
       "unknownName": "Unnamed buyer",
-      "page": "Page {{page}} of {{pages}}"
+      "page": "Page {{page}} of {{pages}}",
+      "drawer": {
+        "title": "User details",
+        "orderHistory": "Order history",
+        "loadingOrders": "Loading orders...",
+        "noOrders": "No orders yet"
+      },
+      "loadErr": "Couldn't load users",
+      "th": {
+        "name": "Name",
+        "email": "Email",
+        "status": "Status"
+      },
+      "active": "Active",
+      "view": "View"
     },
     "payouts": {
       "title": "Payout requests",
@@ -1090,6 +1130,40 @@
         "externalReferencePlaceholder": "Bank transfer reference",
         "evidenceHashLabel": "Evidence hash",
         "evidenceHashPlaceholder": "sha256:..."
+      },
+      "providerReferenceRequired": "Provider reference is required",
+      "attemptIdRequired": "Attempt id is required",
+      "evidenceRequired": "Evidence is required",
+      "legacyCompleteRequired": "Legacy complete is required",
+      "legacyFailAtLeastOne": "At least one of attempt id or evidence is required for legacy fail",
+      "dialogs": {
+        "subtitle": "Review and record the payout result.",
+        "approve": {
+          "title": "Approve payout?",
+          "submit": "Approve payout"
+        },
+        "reject": {
+          "title": "Reject payout?",
+          "submit": "Reject payout"
+        }
+      },
+      "fields": {
+        "providerReference": "Provider reference",
+        "providerReferencePlaceholder": "Bank transfer id",
+        "attemptId": "Attempt id",
+        "attemptIdPlaceholder": "Retry attempt id",
+        "evidence": "Evidence",
+        "evidencePlaceholder": "Receipt link or note",
+        "externalReference": "External reference",
+        "externalReferencePlaceholder": "Bank transfer reference",
+        "evidenceHash": "Evidence hash",
+        "evidenceHashPlaceholder": "sha256:...",
+        "maskedDestinationAuto": "Account: auto-filled from provider",
+        "reasonOptional": "Reason (optional)",
+        "reasonPlaceholder": "Optional notes for this action",
+        "reason": "Reason",
+        "submit": "Submit",
+        "reject": "Reject"
       }
     },
     "payments": {
@@ -1146,6 +1220,7 @@
       "empty": "No appeals pending",
       "loadErr": "Failed to load appeals",
       "approve": "Approve",
+      "reject": "Reject",
       "rejectFinal": "Reject",
       "approveOk": "Appeal approved",
       "approveErr": "Couldn't approve appeal",
@@ -1172,6 +1247,11 @@
     "loggedIn": "Signed in",
     "ordersToHandle": "{{count}} orders pending",
     "shopFallback": "My Shop",
+    "rejectDialog": {
+      "title": "Reject request",
+      "subtitle": "Are you sure you want to reject this request?",
+      "submitLabel": "Reject"
+    },
     "nav": {
       "dashboard": "Dashboard",
       "products": "Products",
@@ -1348,13 +1428,6 @@
         "body": "Accept this order and begin processing?",
         "confirm": "Confirm"
       },
-      "rejectDialog": {
-        "title": "Reject order",
-        "submitLabel": "Reject order",
-        "confirmBody": "Are you sure you want to reject this order?",
-        "reasonLabel": "Rejection reason",
-        "reasonPlaceholder": "Out of stock, can't deliver to that address..."
-      },
       "shipDialog": {
         "title": "Hand off to carrier",
         "subOrderLabel": "Sub-order: {{id}}",
@@ -1375,7 +1448,13 @@
         "close": "Close",
         "items": "{{count}} item(s)"
       },
-      "openDetail": "View order {{id}}"
+      "openDetail": "View order {{id}}",
+      "rejectDialog": {
+        "title": "Reject order",
+        "subtitle": "Are you sure you want to reject this order?",
+        "submitLabel": "Reject order",
+        "confirmBody": "Are you sure you want to reject this order?"
+      }
     },
     "wallet": {
       "title": "Wallet & Payouts",
@@ -1572,6 +1651,16 @@
       "openKeycloak": "Open Keycloak account console"
     }
   },
+  "account": {
+    "navigation": "Account navigation",
+    "sections": {
+      "profile": "Profile",
+      "wishlist": "Wishlist",
+      "notifications": "Notifications",
+      "messages": "Messages",
+      "returns": "Returns"
+    }
+  },
   "messaging": {
     "pageTitle": "Messages",
     "back": "Back",
@@ -1620,14 +1709,21 @@
   },
   "orders": {
     "pageTitle": "My Orders",
+    "listDescription": "Track current orders, review delivery progress, and revisit completed purchases.",
+    "tabLabel": "Order status filters",
     "loginPromptTitle": "Log in to view your orders",
     "initSession": "Initialising your session...",
     "loading": "Loading orders...",
     "loadError": "Couldn't load orders",
     "backToHome": "Back to home",
     "empty": "No orders to show",
+    "emptyHint": "Your new purchases will appear here once checkout is complete.",
     "orderId": "Order ID:",
     "orderNumber": "Order {{id}}",
+    "sellerLabel": "Seller: {{seller}}",
+    "placedAt": "Placed {{date}}",
+    "placedAtLong": "Placed {{date}}",
+    "itemQuantity": "Quantity: {{count}}",
     "itemCountSummary": "{{count}} items",
     "loadingItems": "Loading product details...",
     "totalLabel": "Total:",
@@ -1700,7 +1796,13 @@
       "title": "Cancel order #{{id}}?",
       "description": "This action cannot be undone."
     },
+    "timeline": {
+      "placed": "Order placed",
+      "pendingTimestamp": "Timestamp unavailable"
+    },
     "detail": {
+      "title": "Order details",
+      "description": "Review the seller groups, timeline, and totals for this order.",
       "back": "Back to orders",
       "orderNumber": "Order",
       "createdAt": "Placed on {{date}}",
@@ -1718,6 +1820,7 @@
       "paymentCompleted": "Paid",
       "paymentFailed": "Payment failed",
       "unknownPayment": "Not available",
+      "timeline": "Timeline",
       "totals": "Order summary",
       "subtotal": "Subtotal",
       "shipping": "Shipping",
@@ -1763,7 +1866,9 @@
     "retry": "Retry",
     "refresh": "Refresh",
     "tryAgain": "Try again",
-    "notProvided": "Not provided"
+    "notProvided": "Not provided",
+    "submitting": "Submitting...",
+    "close": "Close"
   },
   "sellerDetail": {
     "notFound": "Shop not found",
@@ -1774,7 +1879,124 @@
     "ratingsLabel": "{{count}} ratings",
     "productCount": "{{count}} products",
     "error": "Couldn't load shop details.",
-    "visitShop": "Visit shop"
+    "visitShop": "Visit shop",
+    "contactSeller": "Contact seller"
+  },
+  "notificationPreferences": {
+    "title": "Notification preferences",
+    "subtitle": "Choose which supported updates VNShop can send to you.",
+    "save": "notificationPreferences.save",
+    "saving": "notificationPreferences.saving",
+    "saved": "notificationPreferences.saved",
+    "saveError": "notificationPreferences.saveError",
+    "loadError": "notificationPreferences.loadError",
+    "muteToggle": "Mute all notifications",
+    "mutedTitle": "All notifications are muted",
+    "mutedDescription": "You will not receive in-app or email updates until you turn notifications back on.",
+    "activeTitle": "Notifications are on",
+    "activeDescription": "Adjust each supported notification type below.",
+    "channels": {
+      "IN_APP": "In app",
+      "EMAIL": "Email"
+    },
+    "types": {
+      "ORDER_CREATED": {
+        "label": "Order created",
+        "description": "A new order has been accepted into your account.",
+        "channels": {
+          "IN_APP": "notificationPreferences.types.ORDER_CREATED.channels.IN_APP",
+          "EMAIL": "notificationPreferences.types.ORDER_CREATED.channels.EMAIL"
+        }
+      },
+      "ORDER_CANCELLED": {
+        "label": "Order cancelled",
+        "description": "An order was cancelled before delivery.",
+        "channels": {
+          "IN_APP": "notificationPreferences.types.ORDER_CANCELLED.channels.IN_APP",
+          "EMAIL": "notificationPreferences.types.ORDER_CANCELLED.channels.EMAIL"
+        }
+      },
+      "ORDER_SHIPPED": {
+        "label": "Order shipped",
+        "description": "A seller handed your order to the carrier.",
+        "channels": {
+          "IN_APP": "notificationPreferences.types.ORDER_SHIPPED.channels.IN_APP",
+          "EMAIL": "notificationPreferences.types.ORDER_SHIPPED.channels.EMAIL"
+        }
+      },
+      "ORDER_DELIVERED": {
+        "label": "Order delivered",
+        "description": "Your order has been delivered successfully.",
+        "channels": {
+          "IN_APP": "notificationPreferences.types.ORDER_DELIVERED.channels.IN_APP",
+          "EMAIL": "notificationPreferences.types.ORDER_DELIVERED.channels.EMAIL"
+        }
+      },
+      "PAYMENT_COMPLETED": {
+        "label": "Payment completed",
+        "description": "A payment was captured successfully.",
+        "channels": {
+          "IN_APP": "notificationPreferences.types.PAYMENT_COMPLETED.channels.IN_APP",
+          "EMAIL": "notificationPreferences.types.PAYMENT_COMPLETED.channels.EMAIL"
+        }
+      },
+      "PAYMENT_REFUNDED": {
+        "label": "Payment refunded",
+        "description": "A refund has been issued.",
+        "channels": {
+          "IN_APP": "notificationPreferences.types.PAYMENT_REFUNDED.channels.IN_APP",
+          "EMAIL": "notificationPreferences.types.PAYMENT_REFUNDED.channels.EMAIL"
+        }
+      },
+      "SELLER_NEW_ORDER": {
+        "label": "Seller new order",
+        "description": "A seller account received a new order.",
+        "channels": {
+          "IN_APP": "notificationPreferences.types.SELLER_NEW_ORDER.channels.IN_APP",
+          "EMAIL": "notificationPreferences.types.SELLER_NEW_ORDER.channels.EMAIL"
+        }
+      },
+      "PRODUCT_APPROVED": {
+        "label": "Product approved",
+        "description": "A seller product was approved for publication.",
+        "channels": {
+          "IN_APP": "notificationPreferences.types.PRODUCT_APPROVED.channels.IN_APP",
+          "EMAIL": "notificationPreferences.types.PRODUCT_APPROVED.channels.EMAIL"
+        }
+      },
+      "PRODUCT_REJECTED": {
+        "label": "Product rejected",
+        "description": "A seller product needs fixes before it can go live.",
+        "channels": {
+          "IN_APP": "notificationPreferences.types.PRODUCT_REJECTED.channels.IN_APP",
+          "EMAIL": "notificationPreferences.types.PRODUCT_REJECTED.channels.EMAIL"
+        }
+      },
+      "REVIEW_REPLIED": {
+        "label": "Review replied",
+        "description": "A seller replied to one of your reviews.",
+        "channels": {
+          "IN_APP": "notificationPreferences.types.REVIEW_REPLIED.channels.IN_APP",
+          "EMAIL": "notificationPreferences.types.REVIEW_REPLIED.channels.EMAIL"
+        }
+      },
+      "RETURN_REQUESTED": {
+        "label": "Return requested",
+        "description": "A return request was created for one of your orders.",
+        "channels": {
+          "IN_APP": "notificationPreferences.types.RETURN_REQUESTED.channels.IN_APP",
+          "EMAIL": "notificationPreferences.types.RETURN_REQUESTED.channels.EMAIL"
+        }
+      },
+      "PAYOUT_COMPLETED": {
+        "label": "Payout completed",
+        "description": "A seller payout finished successfully.",
+        "channels": {
+          "IN_APP": "notificationPreferences.types.PAYOUT_COMPLETED.channels.IN_APP",
+          "EMAIL": "notificationPreferences.types.PAYOUT_COMPLETED.channels.EMAIL"
+        }
+      }
+    }
   },
   "paymentReturn": {
     "pending": {

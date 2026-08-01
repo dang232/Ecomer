@@ -801,6 +801,14 @@
       "kpiLoadFail": "Không tải được KPI: {{message}}",
       "kpiLoadFailFriendly": "Không tải được dashboard. Kiểm tra kết nối và thử lại.",
       "retry": "Thử lại",
+      "from": "Từ",
+      "to": "Đến",
+      "day": "Ngày",
+      "week": "Tuần",
+      "month": "Tháng",
+      "exceptionsTitle": "Ngoại lệ",
+      "exceptionsEmpty": "Không có ngoại lệ",
+      "viewQueue": "Xem hàng đợi",
       "kpi": {
         "paidGmv": "GMV da thanh toan",
         "refundedAmount": "So tien da hoan",
@@ -875,6 +883,7 @@
       "approveErr": "Không thể duyệt",
       "rejectOk": "Đã từ chối đánh giá",
       "rejectErr": "Không thể từ chối",
+      "commentLabel": "Bình luận",
       "rejectDialog": {
         "title": "Từ chối đánh giá",
         "submit": "Từ chối",
@@ -920,8 +929,12 @@
         "maxDiscountPlaceholder": "100000",
         "missingCode": "Vui lòng nhập mã coupon",
         "invalidValue": "Giá trị không hợp lệ",
-        "percentTooLarge": "Giảm phần trăm tối đa 100"
-      }
+        "percentTooLarge": "Giảm phần trăm tối đa 100",
+        "maxUsesLabel": "Số lần sử dụng tối đa",
+        "perUserLimitLabel": "Giới hạn mỗi người",
+        "validUntilLabel": "Hiệu lực đến"
+      },
+      "loadErr": "Không tải được coupon"
     },
     "disputes": {
       "title": "Khiếu nại",
@@ -969,7 +982,20 @@
       "refundConfirmTitle": "Hoàn tiền?",
       "refundConfirmDescription": "Thao tác này sẽ hoàn trả toàn bộ số tiền cho người mua. Vui lòng cung cấp lý do.",
       "refundConfirmBtn": "Hoàn tiền",
-      "accept": "Duyệt"
+      "accept": "Duyệt",
+      "cancelConfirmTitle": "Huỷ đơn hàng?",
+      "cancelConfirmDescription": "Hành động này không thể hoàn tác. Đơn hàng sẽ được đánh dấu là đã huỷ.",
+      "reasonLabel": "Lý do",
+      "reasonPlaceholder": "Nhập lý do cho hành động này...",
+      "changeStatusTitle": "Đổi trạng thái đơn hàng",
+      "newStatus": "Trạng thái mới",
+      "total": "Tổng cộng",
+      "status": "Trạng thái",
+      "date": "Ngày",
+      "th": {
+        "orderNumber": "Mã đơn"
+      },
+      "changeStatus": "Đổi trạng thái"
     },
     "health": {
       "title": "Tình trạng hệ thống",
@@ -1007,7 +1033,21 @@
       "phonePlaceholder": "Tìm theo số điện thoại...",
       "searchPlaceholder": "Tìm theo tên, email, số điện thoại hoặc ID...",
       "unknownName": "Người mua chưa có tên",
-      "page": "Trang {{page}} / {{pages}}"
+      "page": "Trang {{page}} / {{pages}}",
+      "drawer": {
+        "title": "Chi tiết người dùng",
+        "orderHistory": "Lịch sử đơn hàng",
+        "loadingOrders": "Đang tải đơn hàng...",
+        "noOrders": "Chưa có đơn hàng nào"
+      },
+      "loadErr": "Không tải được người dùng",
+      "th": {
+        "name": "Tên",
+        "email": "Email",
+        "status": "Trạng thái"
+      },
+      "active": "Hoạt động",
+      "view": "Xem"
     },
     "payouts": {
       "title": "Yêu cầu rút tiền",
@@ -1091,6 +1131,40 @@
         "externalReferencePlaceholder": "Mã giao dịch ngân hàng",
         "evidenceHashLabel": "Mã băm bằng chứng",
         "evidenceHashPlaceholder": "sha256:..."
+      },
+      "providerReferenceRequired": "Mã tham chiếu nhà cung cấp là bắt buộc",
+      "attemptIdRequired": "Mã lần thử là bắt buộc",
+      "evidenceRequired": "Bằng chứng là bắt buộc",
+      "legacyCompleteRequired": "Legacy complete là bắt buộc",
+      "legacyFailAtLeastOne": "Phải có mã lần thử hoặc bằng chứng để đánh dấu thất bại legacy",
+      "dialogs": {
+        "subtitle": "Xem xét và ghi nhận kết quả payout.",
+        "approve": {
+          "title": "Duyệt payout?",
+          "submit": "Duyệt payout"
+        },
+        "reject": {
+          "title": "Từ chối payout?",
+          "submit": "Từ chối payout"
+        }
+      },
+      "fields": {
+        "providerReference": "Mã tham chiếu nhà cung cấp",
+        "providerReferencePlaceholder": "Mã giao dịch ngân hàng",
+        "attemptId": "Mã lần thử",
+        "attemptIdPlaceholder": "Mã lần thử lại",
+        "evidence": "Bằng chứng",
+        "evidencePlaceholder": "Link biên lai hoặc ghi chú",
+        "externalReference": "Mã tham chiếu bên ngoài",
+        "externalReferencePlaceholder": "Mã giao dịch ngân hàng",
+        "evidenceHash": "Mã băm bằng chứng",
+        "evidenceHashPlaceholder": "sha256:...",
+        "maskedDestinationAuto": "Tài khoản: tự điền từ nhà cung cấp",
+        "reasonOptional": "Lý do (tuỳ chọn)",
+        "reasonPlaceholder": "Ghi chú tuỳ chọn cho hành động này",
+        "reason": "Lý do",
+        "submit": "Gửi",
+        "reject": "Từ chối"
       }
     },
     "payments": {
@@ -1147,6 +1221,7 @@
       "empty": "Không có kháng cáo nào đang chờ",
       "loadErr": "Không tải được kháng cáo",
       "approve": "Duyệt",
+      "reject": "Từ chối",
       "rejectFinal": "Từ chối",
       "approveOk": "Đã duyệt kháng cáo",
       "approveErr": "Không thể duyệt kháng cáo",
@@ -1173,6 +1248,11 @@
     "loggedIn": "Đã đăng nhập",
     "ordersToHandle": "{{count}} đơn cần xử lý",
     "shopFallback": "Shop của tôi",
+    "rejectDialog": {
+      "title": "Từ chối yêu cầu",
+      "subtitle": "Bạn có chắc muốn từ chối yêu cầu này?",
+      "submitLabel": "Từ chối"
+    },
     "nav": {
       "dashboard": "Tổng quan",
       "products": "Sản phẩm",
@@ -1248,7 +1328,7 @@
       "paginationLabel": "Phân trang danh sách sản phẩm",
       "caption": "Danh mục sản phẩm của người bán",
       "editor": {
-        "TitleNew": "Sản phẩm mới",
+        "titleNew": "Sản phẩm mới",
         "titleEdit": "Sửa sản phẩm",
         "titleDraft": "Bản nháp",
         "cancel": "Huỷ",
@@ -1351,13 +1431,6 @@
         "body": "Chấp nhận đơn hàng này và bắt đầu xử lý?",
         "confirm": "Xác nhận"
       },
-      "rejectDialog": {
-        "title": "Từ chối đơn",
-        "submitLabel": "Từ chối đơn",
-        "confirmBody": "Bạn có chắc muốn từ chối đơn hàng này?",
-        "reasonLabel": "Lý do từ chối",
-        "reasonPlaceholder": "Hết hàng, không thể giao đến địa chỉ..."
-      },
       "shipDialog": {
         "title": "Bàn giao đơn cho vận chuyển",
         "subOrderLabel": "Sub-order: {{id}}",
@@ -1378,7 +1451,13 @@
         "close": "Đóng",
         "items": "{{count}} món"
       },
-      "openDetail": "Xem đơn {{id}}"
+      "openDetail": "Xem đơn {{id}}",
+      "rejectDialog": {
+        "title": "Từ chối đơn hàng",
+        "subtitle": "Bạn có chắc muốn từ chối đơn hàng này?",
+        "submitLabel": "Từ chối đơn",
+        "confirmBody": "Bạn có chắc muốn từ chối đơn hàng này?"
+      }
     },
     "wallet": {
       "title": "Ví & Thanh toán",
@@ -1575,6 +1654,16 @@
       "openKeycloak": "Mở trang quản lý tài khoản Keycloak"
     }
   },
+  "account": {
+    "navigation": "Dieu huong tai khoan",
+    "sections": {
+      "profile": "Ho so",
+      "wishlist": "Yeu thich",
+      "notifications": "Thong bao",
+      "messages": "Tin nhan",
+      "returns": "Tra hang"
+    }
+  },
   "messaging": {
     "pageTitle": "Tin nhắn",
     "back": "Quay lại",
@@ -1622,6 +1711,13 @@
     "removeAria": "Xoá {{name}} khỏi yêu thích"
   },
   "orders": {
+    "emptyHint": "Don mua moi se xuat hien o day sau khi thanh toan hoan tat.",
+    "sellerLabel": "Nguoi ban: {{seller}}",
+    "placedAt": "Dat ngay {{date}}",
+    "placedAtLong": "Dat luc {{date}}",
+    "itemQuantity": "So luong: {{count}}",
+    "listDescription": "Theo doi don dang giao, xem tien do, va mua lai tu cac don da hoan tat.",
+    "tabLabel": "Bo loc trang thai don hang",
     "pageTitle": "Đơn mua của tôi",
     "loginPromptTitle": "Đăng nhập để xem đơn hàng",
     "initSession": "Đang khởi tạo phiên đăng nhập...",
@@ -1703,7 +1799,13 @@
       "title": "Huỷ đơn #{{id}}?",
       "description": "Hành động này không thể hoàn tác."
     },
+    "timeline": {
+      "placed": "Dat hang thanh cong",
+      "pendingTimestamp": "Chua co moc thoi gian"
+    },
     "detail": {
+      "title": "Chi tiet don hang",
+      "description": "Xem nhom nguoi ban, tien trinh don hang, va tong tien.",
       "back": "Quay lại đơn hàng",
       "orderNumber": "Đơn hàng",
       "createdAt": "Đặt ngày {{date}}",
@@ -1766,7 +1868,9 @@
     "retry": "Thử lại",
     "refresh": "Tải lại",
     "tryAgain": "Thử lại",
-    "notProvided": "Không có"
+    "notProvided": "Không có",
+    "submitting": "Đang gửi...",
+    "close": "Đóng"
   },
   "sellerDetail": {
     "notFound": "Không tìm thấy shop",

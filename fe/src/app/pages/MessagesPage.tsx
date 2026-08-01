@@ -1,10 +1,11 @@
-import { IconLoader2, IconSearch, IconSend } from "@tabler/icons-react";
+import { Loader2, Search, Send } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 
+import { AccountNav } from "@/features/account";
 import { useAuth } from "../hooks/auth-context";
 import { useMarkThreadRead, useMessages, useSendMessage } from "../hooks/use-messages";
 import { THREADS_KEY, useThreads } from "../hooks/use-threads";
@@ -61,7 +62,7 @@ function ThreadList({
       <div className="p-4 border-b border-border">
         <h2 className="text-[15px] font-bold text-foreground">{t("messaging.listHeader")}</h2>
         <label className="mt-3 flex items-center gap-2 px-3 py-2 rounded-[var(--radius-md)] bg-muted border border-border">
-          <IconSearch size={14} className="text-muted-foreground" />
+          <Search size={14} className="text-muted-foreground" />
           <input
             value={filter}
             onChange={(e) => onFilterChange(e.target.value)}
@@ -74,7 +75,7 @@ function ThreadList({
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="p-6 flex items-center justify-center text-muted-foreground text-sm gap-2">
-            <IconLoader2 size={14} className="animate-spin" /> {t("messaging.loading")}
+            <Loader2 size={14} className="animate-spin" /> {t("messaging.loading")}
           </div>
         ) : filtered.length === 0 ? (
           <p className="p-6 text-sm text-muted-foreground text-center">
@@ -272,9 +273,9 @@ function MessagePane({
           className="w-[38px] h-[38px] rounded-full bg-primary text-white flex items-center justify-center flex-shrink-0 disabled:opacity-60"
         >
           {sendMessage.isPending ? (
-            <IconLoader2 size={16} className="animate-spin" />
+            <Loader2 size={16} className="animate-spin" />
           ) : (
-            <IconSend size={16} />
+            <Send size={16} />
           )}
         </button>
       </form>
@@ -389,6 +390,7 @@ export function MessagesPage() {
 
   return (
     <div className="max-w-[1100px] mx-auto py-8 px-8">
+      <AccountNav />
       <h1 className="text-2xl font-bold text-foreground mb-6">{t("messaging.pageTitle")}</h1>
       <div className="grid grid-cols-[300px_1fr] border border-border rounded-[var(--radius-xl)] overflow-hidden h-[520px]">
         <ThreadList

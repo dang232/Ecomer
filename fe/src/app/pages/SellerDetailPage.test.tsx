@@ -78,6 +78,10 @@ describe("SellerDetailPage", () => {
 
     await waitFor(() => expect(screen.getByText("TechZone")).toBeInTheDocument());
     expect(screen.getByText("STANDARD")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Contact seller" })).toHaveAttribute(
+      "href",
+      "/messages?with=s1",
+    );
   });
 
   it("renders not-found state on 404", async () => {

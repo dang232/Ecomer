@@ -12,14 +12,13 @@ import {
   AlertCircle,
   Save,
   Store,
-  Bell,
-  MessageSquare,
 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
+import { AccountNav } from "@/features/account";
 import { useAuth } from "../hooks/auth-context";
 import { avatarUploadErrorMessage, useAvatarUpload } from "../hooks/use-avatar-upload";
 import { profileOptions } from "../hooks/use-profile";
@@ -31,10 +30,9 @@ import {
   setDefaultAddress,
   removeAddress,
 } from "@/shared/api/endpoints/users";
-import { comingSoon } from "../lib/ui/coming-soon";
 import type { Address, UserProfile } from "@/shared/contracts/api";
 
-type ProfileTab = "info" | "addresses" | "notifications" | "reviews" | "payment" | "security";
+type ProfileTab = "info" | "addresses" | "payment" | "security";
 
 const EMPTY_ADDRESS: Address = {
   street: "",
@@ -217,14 +215,13 @@ export function ProfilePage() {
   const NAV_ITEMS: { id: ProfileTab; labelKey: string; icon: typeof User }[] = [
     { id: "info", labelKey: "profile.tabs.info", icon: User },
     { id: "addresses", labelKey: "profile.tabs.addresses", icon: MapPin },
-    { id: "notifications", labelKey: "profile.tabs.notifications", icon: Bell },
-    { id: "reviews", labelKey: "profile.tabs.reviews", icon: MessageSquare },
     { id: "payment", labelKey: "profile.tabs.payment", icon: CreditCard },
     { id: "security", labelKey: "profile.tabs.security", icon: Shield },
   ];
 
   return (
     <div className="max-w-[1100px] mx-auto py-8 px-8">
+      <AccountNav />
       <div className="grid grid-cols-[280px_1fr] gap-6">
         {/* Left sidebar */}
         <div className="bg-card border border-border rounded-[var(--radius-xl)] p-6 h-fit">
@@ -275,28 +272,15 @@ export function ProfilePage() {
             className="flex flex-col gap-0.5 mt-5"
           >
             {NAV_ITEMS.map((item) => {
-              const isNav = item.id === "notifications" || item.id === "reviews";
               const isActive = activeTab === item.id;
               return (
                 <button
                   key={item.id}
                   id={`profile-tab-${item.id}`}
-                  {...(!isNav && {
-                    role: "tab" as const,
-                    "aria-selected": isActive,
-                    "aria-controls": `profile-tabpanel-${item.id}`,
-                  })}
-                  onClick={() => {
-                    if (item.id === "notifications") {
-                      void navigate("/notifications");
-                      return;
-                    }
-                    if (item.id === "reviews") {
-                      comingSoon(t("profile.tabs.reviews"), t);
-                      return;
-                    }
-                    setActiveTab(item.id);
-                  }}
+                  role="tab"
+                  aria-selected={isActive}
+                  aria-controls={`profile-tabpanel-${item.id}`}
+                  onClick={() => setActiveTab(item.id)}
                   className={`flex items-center gap-2.5 px-3 py-2.5 rounded-[var(--radius-md)] text-[13px] font-medium cursor-pointer transition-colors w-full text-left ${
                     isActive
                       ? "bg-primary-light text-primary"

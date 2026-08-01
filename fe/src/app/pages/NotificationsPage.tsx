@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 
+import { AccountNav } from "@/features/account";
 import { useNotifications } from "../hooks/use-notifications";
 import type { Notification, NotificationType } from "@/shared/contracts/api";
 
@@ -109,6 +110,8 @@ export function NotificationsPageRoute() {
 
   return (
     <div className="max-w-[1100px] mx-auto py-8 px-8">
+      <AccountNav />
+
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">

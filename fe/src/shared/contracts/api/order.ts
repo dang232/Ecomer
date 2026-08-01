@@ -63,6 +63,7 @@ export const subOrderSchema = z
     shippingFee: raw.shippingFee ?? raw.shippingCost ?? 0,
     shippingMethod: raw.shippingMethod,
   }));
+export type SubOrder = z.infer<typeof subOrderSchema>;
 
 // BE OrderResponse(id, orderNumber, buyerId, shippingAddress, subOrders[],
 // itemsTotal: Money, shippingTotal: Money, discount: Money, finalAmount: Money,
@@ -71,9 +72,7 @@ export const subOrderSchema = z
 // every parse fail. We now derive a display status from the sub-orders so the
 // existing UI checks (`order.status === "delivered" | "shipping" | ...`) still
 // work without rewriting every consumer.
-function deriveOrderStatus(
-  subStatuses: readonly (typeof FULFILLMENT_STATUS_VALUES)[number][],
-): OrderStatusUi {
+function deriveOrderStatus(subStatuses: readonly string[]): OrderStatusUi {
   if (subStatuses.length === 0) return "pending";
   const active = subStatuses.map(parseOrderStatus).filter((status) => status !== "cancelled");
   if (active.length === 0) return "cancelled";
@@ -84,7 +83,7 @@ function deriveOrderStatus(
   return "pending";
 }
 
-export const orderSchema = z
+const orderInputSchema = z
   .object({
     // GET /orders/{id} returns OrderResponse with `id`. GET /orders returns
     // a Page<OrderListItemResponse> with `orderId` instead. Accept both.
@@ -116,39 +115,51 @@ export const orderSchema = z
     updatedAt: z.string().optional(),
     estimatedDelivery: z.string().nullable().optional(),
   })
-  .passthrough()
-  .transform((raw) => {
-    const subOrders = raw.subOrders ?? [];
-    // The list read model exposes a canonical status. Detail responses expose
-    // sub-order fulfillment states, which collapse to the least advanced
-    // active state so mixed-seller orders remain actionable.
-    const rawStatus = raw.status;
-    const derivedStatus = rawStatus
-      ? parseOrderStatus(rawStatus)
-      : deriveOrderStatus(subOrders.map((subOrder) => subOrder.status));
-    return {
-      id: (raw.id ?? raw.orderId ?? "") as ReturnType<typeof orderIdSchema.parse>,
-      orderNumber: raw.orderNumber,
-      buyerId: raw.buyerId,
-      sellerId: raw.sellerId,
-      status: derivedStatus,
-      paymentStatus: raw.paymentStatus,
-      paymentMethod: raw.paymentMethod,
-      subtotal: raw.subtotal ?? raw.itemsTotal ?? 0,
-      shippingFee: raw.shippingFee ?? raw.shippingTotal ?? 0,
-      discount: raw.discount ?? 0,
-      total: raw.total ?? raw.finalAmount ?? raw.totalAmount ?? 0,
-      itemCount: raw.itemCount,
-      address: raw.address ?? raw.shippingAddress,
-      subOrders,
-      createdAt: raw.createdAt,
-      updatedAt: raw.updatedAt,
-      estimatedDelivery: raw.estimatedDelivery,
-      // Top-level convenience aliases for OrdersPage tracking widget.
-      trackingCode: subOrders.find((s) => s.trackingCode)?.trackingCode ?? null,
-      carrier: subOrders.find((s) => s.carrier)?.carrier ?? null,
-    };
-  });
+  .passthrough();
+
+function normalizeOrder(raw: z.infer<typeof orderInputSchema>) {
+  const subOrders = raw.subOrders ?? [];
+  const rawStatus = raw.status;
+  const derivedStatus = rawStatus
+    ? parseOrderStatus(rawStatus)
+    : deriveOrderStatus(subOrders.map((subOrder) => subOrder.status));
+
+  return {
+    id: (raw.id ?? raw.orderId ?? "") as ReturnType<typeof orderIdSchema.parse>,
+    orderNumber: raw.orderNumber,
+    buyerId: raw.buyerId,
+    sellerId: raw.sellerId,
+    status: derivedStatus,
+    paymentStatus: raw.paymentStatus,
+    paymentMethod: raw.paymentMethod,
+    subtotal: raw.subtotal ?? raw.itemsTotal ?? 0,
+    shippingFee: raw.shippingFee ?? raw.shippingTotal ?? 0,
+    discount: raw.discount ?? 0,
+    total: raw.total ?? raw.finalAmount ?? raw.totalAmount ?? 0,
+    itemCount: raw.itemCount,
+    address: raw.address ?? raw.shippingAddress,
+    subOrders,
+    estimatedDelivery: raw.estimatedDelivery,
+    trackingCode: subOrders.find((subOrder) => subOrder.trackingCode)?.trackingCode ?? null,
+    carrier: subOrders.find((subOrder) => subOrder.carrier)?.carrier ?? null,
+  };
+}
+
+export const orderListItemSchema = orderInputSchema.transform((raw) => ({
+  ...normalizeOrder(raw),
+  createdAt: raw.createdAt,
+  updatedAt: raw.updatedAt,
+}));
+export type OrderListItem = z.infer<typeof orderListItemSchema>;
+
+export const orderDetailSchema = orderInputSchema.transform((raw) => normalizeOrder(raw));
+export type OrderDetail = z.infer<typeof orderDetailSchema>;
+
+export const orderSchema = orderInputSchema.transform((raw) => ({
+  ...normalizeOrder(raw),
+  createdAt: raw.createdAt,
+  updatedAt: raw.updatedAt,
+}));
 export type Order = z.infer<typeof orderSchema>;
 
 /** Buyer-initiated returns + the seller-side moderation surface. */
