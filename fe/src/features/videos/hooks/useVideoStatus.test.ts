@@ -3,12 +3,17 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { videoStatus as videoStatusEndpoint } from "@/shared/api/endpoints/videos";
+import type { VideoStatus, VideoStatusResponse } from "@/shared/contracts/api/video";
+
 // ── Module mock ───────────────────────────────────────────────────────────────
 
-const videoStatusMock = vi.fn();
+const { videoStatusMock } = vi.hoisted(() => ({
+  videoStatusMock: vi.fn<typeof videoStatusEndpoint>(),
+}));
 
 vi.mock("@/shared/api/endpoints/videos", () => ({
-  videoStatus: (...args: unknown[]) => videoStatusMock(...args),
+  videoStatus: videoStatusMock,
 }));
 
 import { useVideoStatus } from "./useVideoStatus";
@@ -25,11 +30,13 @@ function makeWrapper() {
   return { Wrapper, client };
 }
 
-function makeStatusResponse(status: string, overrides: Record<string, unknown> = {}) {
+function makeStatusResponse(
+  status: VideoStatus,
+  overrides: Partial<VideoStatusResponse> = {},
+): VideoStatusResponse {
   return {
-    videoId: "vid-1",
+    id: "vid-1",
     status,
-    updatedAt: new Date().toISOString(),
     ...overrides,
   };
 }
@@ -48,8 +55,8 @@ afterEach(() => {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe("useVideoStatus", () => {
-  it("returns undefined status while loading", async () => {
-    videoStatusMock.mockReturnValue(new Promise(() => {})); // never resolves
+  it("returns undefined status while loading", () => {
+    videoStatusMock.mockReturnValue(new Promise<VideoStatusResponse>(() => undefined));
 
     const { Wrapper } = makeWrapper();
     const { result } = renderHook(() => useVideoStatus("vid-1"), {

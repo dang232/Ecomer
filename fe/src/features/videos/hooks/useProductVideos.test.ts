@@ -3,12 +3,17 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { videosByEntity as videosByEntityEndpoint } from "@/shared/api/endpoints/videos";
+import type { Video } from "@/shared/contracts/api/video";
+
 // ── Module mock ───────────────────────────────────────────────────────────────
 
-const videosByEntityMock = vi.fn();
+const { videosByEntityMock } = vi.hoisted(() => ({
+  videosByEntityMock: vi.fn<typeof videosByEntityEndpoint>(),
+}));
 
 vi.mock("@/shared/api/endpoints/videos", () => ({
-  videosByEntity: (...args: unknown[]) => videosByEntityMock(...args),
+  videosByEntity: videosByEntityMock,
 }));
 
 import { useProductVideos } from "./useProductVideos";
@@ -25,7 +30,7 @@ function makeWrapper() {
   return { Wrapper, client };
 }
 
-function makeVideo(overrides: Record<string, unknown> = {}) {
+function makeVideo(overrides: Partial<Video> = {}): Video {
   return {
     id: "vid-1",
     entityId: "prod-1",

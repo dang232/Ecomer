@@ -2,6 +2,7 @@ import { CheckCircle, XCircle, Loader2, Upload, Scissors, Shield } from "lucide-
 import { useTranslation } from "react-i18next";
 
 import type { VideoStatus } from "@/shared/contracts/api/video";
+
 import { useVideoStatus } from "../hooks/useVideoStatus";
 
 // ─── Pipeline step definitions ────────────────────────────────────────────────
