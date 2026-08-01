@@ -1,9 +1,9 @@
-import { test, expect, type Page, type TestInfo } from "@playwright/test";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { readJourneyState } from "./_journey-state";
+import { test, type Page, type TestInfo } from "@playwright/test";
+
 export { expectNoGlobalError } from "../_helpers";
 
 /**
@@ -44,7 +44,7 @@ export interface ChapterMeta {
   id: ChapterId;
   title: string;
   persona: "admin" | "buyer" | "seller";
-  acceptanceCriteria: ReadonlyArray<{ code: string; outcome: string }>;
+  acceptanceCriteria: readonly { code: string; outcome: string }[];
 }
 
 export interface BizStepRow {
@@ -354,7 +354,7 @@ export async function aggregateJourneyReport(): Promise<void> {
     generatedAt: string;
   }
 
-  const found: Array<{ chapterId: ChapterId; report: OnDiskReport }> = [];
+  const found: { chapterId: ChapterId; report: OnDiskReport }[] = [];
   for (const id of orderedIds) {
     const sidecar = path.join(chapterDir(id), "report.json");
     try {

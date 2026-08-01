@@ -1,4 +1,6 @@
 import { test, expect } from "@playwright/test";
+
+import { readJson, type SellerListResponse } from "./_api";
 import {
   copyArtifacts,
   expectNoGlobalError,
@@ -42,7 +44,7 @@ test.describe.serial("Workday — seller (login → console tour → logout)", (
     await resetPersona("seller");
   });
 
-  test.afterEach(async ({}, testInfo) => {
+  test.afterEach(({ page: _page }, testInfo) => {
     rememberOutputDir("seller", testInfo);
   });
 
@@ -60,8 +62,8 @@ test.describe.serial("Workday — seller (login → console tour → logout)", (
     try {
       let sellerId = "";
 
-      await step(page, "seller", "Login as seller1 via /login form", async () => {
-        await loginAsSeededUser(page, "seller1");
+      await step(page, "seller", "Login as seller via /login form", async () => {
+        await loginAsSeededUser(page, "seller");
       });
 
       await step(page, "seller", "/seller dashboard mounts with four KPI cards", async () => {
@@ -154,16 +156,16 @@ test.describe.serial("Workday — seller (login → console tour → logout)", (
         // page expects.
         const r = await page.request.get(`${apiURL}/sellers?size=20`);
         expect(r.ok(), `sellers list: ${r.status()}`).toBeTruthy();
-        const body = await r.json();
-        const list: Array<{ id?: string; userId?: string; shopName?: string }> =
-          body?.data?.content ?? body?.content ?? [];
+        const body = await readJson<SellerListResponse>(r);
+        const list = body.data?.content ?? body.content ?? [];
         // Pick the first seller — single-seller seed usually means seller1 IS
         // the only entry. If multiple, prefer one whose shopName mentions
         // "seller1" or just take the first.
         const match = list[0];
         sellerId = match?.id ?? "";
-        test.skip(!sellerId, "no public sellers seeded — skipping the public-storefront step");
-        if (!sellerId) return;
+        if (!sellerId) {
+          throw new Error("No public sellers seeded — cannot test public storefront step");
+        }
 
         await page.goto(`/sellers/${sellerId}`);
         await expect(

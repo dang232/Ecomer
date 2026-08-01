@@ -1,7 +1,14 @@
-import { test, expect, type Page, type ConsoleMessage } from "@playwright/test";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { loginViaOidc, registerAndLoginViaOidc } from "./_auth";
+
+import { test, type Page, type ConsoleMessage } from "@playwright/test";
+
+import {
+  readJsonOr,
+  type ProductListResponse,
+  type SellerSummary,
+} from "./_api";
+import { loginAsPersona, registerAndLoginViaOidc } from "./_auth";
 
 /**
  * UX screenshot sweep — visits every reachable page in the FE and writes a
@@ -44,6 +51,11 @@ interface Captured {
   pageErrors: string[];
 }
 
+interface SellerSweepResponse {
+  data?: { content?: SellerSummary[] } | SellerSummary[];
+  content?: SellerSummary[];
+}
+
 function attachCapture(page: Page): Captured {
   const captured: Captured = { consoleErrors: [], consoleWarnings: [], pageErrors: [] };
   const onConsole = (msg: ConsoleMessage) => {
@@ -62,7 +74,7 @@ async function snap(page: Page, captured: Captured, slug: string) {
   // (notifications) so we cap at 1.5s.
   try {
     await page.waitForLoadState("domcontentloaded", { timeout: 15_000 });
-    await page.waitForLoadState("networkidle", { timeout: 1_500 }).catch(() => {});
+    await page.waitForLoadState("networkidle", { timeout: 1_500 }).catch(() => undefined);
   } catch {
     // proceed — even a partial render is worth capturing
   }
@@ -71,8 +83,8 @@ async function snap(page: Page, captured: Captured, slug: string) {
   fs.writeFileSync(path.join(SHEET_DIR, `${slug}.console.json`), JSON.stringify(captured, null, 2));
 }
 
-async function login(page: Page, identifier: string, password: string) {
-  await loginViaOidc(page, identifier, password);
+async function login(page: Page, persona: "buyer" | "seller" | "admin") {
+  await loginAsPersona(page, persona);
 }
 
 async function registerFreshBuyer(page: Page): Promise<string> {
@@ -103,8 +115,8 @@ test.describe("UX sweep — public pages", () => {
   test("03 search query", async ({ page, request }) => {
     const c = attachCapture(page);
     const apiRes = await request.get(`${apiURL}/products?size=1`);
-    const body = await apiRes.json().catch(() => ({}));
-    const term = (body?.data?.content?.[0]?.name ?? "Sony").split(" ")[0];
+    const body = await readJsonOr<ProductListResponse>(apiRes, {});
+    const term = (body.data?.content?.[0]?.name ?? "Sony").split(" ")[0];
     await page.goto(`/search?q=${encodeURIComponent(term)}`);
     await snap(page, c, "03-search-query");
   });
@@ -112,9 +124,11 @@ test.describe("UX sweep — public pages", () => {
   test("04 product detail", async ({ page, request }) => {
     const c = attachCapture(page);
     const apiRes = await request.get(`${apiURL}/products?size=1`);
-    const body = await apiRes.json().catch(() => ({}));
-    const id = body?.data?.content?.[0]?.id;
-    test.skip(!id, "no products seeded — skipping product detail snap");
+    const body = await readJsonOr<ProductListResponse>(apiRes, {});
+    const id = body.data?.content?.[0]?.id;
+    if (!id) {
+      throw new Error("No products seeded — cannot capture product detail snap");
+    }
     await page.goto(`/product/${id}`);
     await snap(page, c, "04-product-detail");
   });
@@ -152,8 +166,12 @@ test.describe("UX sweep — public pages", () => {
   test("10 seller detail", async ({ page, request }) => {
     const c = attachCapture(page);
     const apiRes = await request.get(`${apiURL}/sellers?size=1`).catch(() => null);
-    const body = apiRes?.ok() ? await apiRes.json().catch(() => ({})) : {};
-    const id = body?.data?.content?.[0]?.id ?? body?.data?.[0]?.id;
+    const body: SellerSweepResponse = apiRes?.ok()
+      ? await readJsonOr<SellerSweepResponse>(apiRes, {})
+      : {};
+    const id = Array.isArray(body.data)
+      ? body.data[0]?.id
+      : (body.data?.content?.[0]?.id ?? body.content?.[0]?.id);
     if (!id) {
       await page.goto("/sellers/00000000-0000-0000-0000-000000000000");
       await snap(page, c, "10-seller-detail-missing");
@@ -211,8 +229,8 @@ test.describe("UX sweep — authenticated buyer", () => {
 
     // Add a product to cart so checkout has something to render.
     const apiRes = await request.get(`${apiURL}/products?size=1`);
-    const body = await apiRes.json().catch(() => ({}));
-    const productId = body?.data?.content?.[0]?.id;
+    const body = await readJsonOr<ProductListResponse>(apiRes, {});
+    const productId = body.data?.content?.[0]?.id;
     if (!productId) {
       await page.goto("/checkout");
       await snap(page, c, "31-checkout-no-products");
@@ -220,7 +238,7 @@ test.describe("UX sweep — authenticated buyer", () => {
     }
     await page.goto(`/product/${productId}`);
     const addBtn = page.getByRole("button", { name: /add to cart|thêm vào giỏ/i }).first();
-    await addBtn.click().catch(() => {});
+    await addBtn.click().catch(() => undefined);
 
     await page.goto("/checkout");
     await snap(page, c, "31-checkout-step-address");
@@ -234,7 +252,7 @@ test.describe("UX sweep — authenticated buyer", () => {
 test.describe("UX sweep — seller", () => {
   test("40 seller dashboard + sub-pages", async ({ page }) => {
     const c = attachCapture(page);
-    await login(page, "seller1", "test");
+    await login(page, "seller");
     await page.goto("/seller");
     await snap(page, c, "40-seller-dashboard");
 
@@ -252,15 +270,14 @@ test.describe("UX sweep — seller", () => {
 });
 
 test.describe("UX sweep — admin", () => {
-  test("50 admin dashboard + sub-pages (skipped without admin user)", async ({ page }) => {
+  test("50 admin dashboard + sub-pages (requires seeded admin user)", async ({ page }) => {
     const c = attachCapture(page);
-    // Try the seeded admin login. If it bounces back to /login, skip the
-    // suite — we don't want a red because the realm hasn't been seeded.
-    await loginViaOidc(page, "admin1", "test");
+    // Verify admin login. If the realm hasn't been seeded the test fails
+    // explicitly rather than silently skipping.
+    await loginAsPersona(page, "admin");
     await page.waitForTimeout(2_000);
     if (new URL(page.url()).pathname !== "/") {
-      test.skip(true, "no admin user seeded — skipping admin sweep");
-      return;
+      throw new Error("Admin login failed — no seeded admin user in this environment");
     }
     await page.goto("/admin");
     await snap(page, c, "50-admin-dashboard");

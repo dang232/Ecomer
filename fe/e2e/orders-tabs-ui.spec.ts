@@ -1,6 +1,14 @@
-import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
-import { expectNoGlobalError } from "./_helpers";
+import { test, expect, type APIRequestContext } from "@playwright/test";
+
 import { loginViaOidc, uniqueTestId } from "./_auth";
+import {
+  readJson,
+  type AuthResponse,
+  type OrderListResponse,
+  type OrderResponse,
+  type ProductListResponse,
+} from "./_api";
+import { expectNoGlobalError } from "./_helpers";
 
 /**
  * UI-driven QA spec for the /orders tab filter.
@@ -34,16 +42,18 @@ async function seedBuyer(request: APIRequestContext): Promise<SeededBuyer> {
     data: { username: email, password: PASSWORD },
   });
   expect(login.ok()).toBeTruthy();
-  const accessToken = (await login.json())?.data?.accessToken;
+  const accessToken = (await readJson<AuthResponse>(login)).data?.accessToken;
   expect(accessToken).toBeTruthy();
+  if (!accessToken) throw new Error("login did not return an access token");
   return { email, accessToken };
 }
 
 async function placePendingOrder(request: APIRequestContext, buyer: SeededBuyer): Promise<string> {
   const headers = { Authorization: `Bearer ${buyer.accessToken}` };
   const products = await request.get(`${apiURL}/products?size=1`);
-  const productId = (await products.json())?.data?.content?.[0]?.id;
+  const productId = (await readJson<ProductListResponse>(products)).data?.content?.[0]?.id;
   expect(productId).toBeTruthy();
+  if (!productId) throw new Error("expected a seeded product");
 
   await request.post(`${apiURL}/cart/items`, {
     headers,
@@ -71,13 +81,15 @@ async function placePendingOrder(request: APIRequestContext, buyer: SeededBuyer)
     },
   });
   expect(place.ok()).toBeTruthy();
-  const orderId = (await place.json())?.data?.id;
+  const orderId = (await readJson<OrderResponse>(place)).data?.id;
+  expect(orderId).toBeTruthy();
+  if (!orderId) throw new Error("order placement did not return an id");
 
   // Wait for the read-model projection to land so the list endpoint
   // returns the new order.
   for (let i = 0; i < 10; i++) {
     const list = await request.get(`${apiURL}/orders?size=10`, { headers });
-    const ids = ((await list.json())?.data?.content ?? []).map(
+    const ids = ((await readJson<OrderListResponse>(list)).data?.content ?? []).map(
       (o: { id?: string; orderId?: string }) => o.id ?? o.orderId,
     );
     if (ids.includes(orderId)) return orderId;

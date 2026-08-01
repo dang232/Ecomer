@@ -1,4 +1,12 @@
 import { test, expect, type Page } from "@playwright/test";
+
+import {
+  readJson,
+  type AuthResponse,
+  type OrderListResponse,
+  type OrderResponse,
+  type ProductListResponse,
+} from "./_api";
 import {
   copyArtifacts,
   expectNoGlobalError,
@@ -55,7 +63,7 @@ test.describe.serial("Workday — buyer (guest → register → shop → order)"
     await resetPersona("buyer");
   });
 
-  test.afterEach(async ({}, testInfo) => {
+  test.afterEach(({ page: _page }, testInfo) => {
     rememberOutputDir("buyer", testInfo);
   });
 
@@ -120,8 +128,9 @@ test.describe.serial("Workday — buyer (guest → register → shop → order)"
       await step(page, "buyer", "Pull a real seeded product for the journey", async () => {
         const r = await page.request.get(`${apiURL}/products?size=1`);
         expect(r.ok(), `products: ${r.status()}`).toBeTruthy();
-        const p = (await r.json())?.data?.content?.[0];
+        const p = (await readJson<ProductListResponse>(r)).data?.content?.[0];
         expect(p?.id, "expected at least one seeded product").toBeTruthy();
+        if (!p) throw new Error("expected at least one seeded product");
         productId = p.id;
         productName = p.name;
       });
@@ -285,7 +294,8 @@ test.describe.serial("Workday — buyer (guest → register → shop → order)"
               login.ok(),
               `auth/login for ${email}: ${login.status()} ${await login.text()}`,
             ).toBeTruthy();
-            accessToken = (await login.json())?.data?.accessToken;
+            const loginBody = await readJson<AuthResponse>(login);
+            accessToken = loginBody.data?.accessToken ?? loginBody.accessToken ?? "";
             expect(accessToken, "no access token after login").toBeTruthy();
           }
           const idem = `qa-workday-${Date.now()}`;
@@ -306,7 +316,7 @@ test.describe.serial("Workday — buyer (guest → register → shop → order)"
             },
           });
           expect(place.ok(), `place order: ${place.status()} ${await place.text()}`).toBeTruthy();
-          const placeBody = await place.json();
+          const placeBody = await readJson<OrderResponse>(place);
           const orderId = placeBody?.data?.id ?? placeBody?.data?.orderId;
 
           // CQRS read-model lag: the order_summary projection updates via Kafka
@@ -317,9 +327,9 @@ test.describe.serial("Workday — buyer (guest → register → shop → order)"
               headers: { Authorization: `Bearer ${accessToken}` },
             });
             if (list.ok()) {
-              const ids = ((await list.json())?.data?.content ?? []).map(
-                (o: { id?: string; orderId?: string }) => o.id ?? o.orderId,
-              );
+              const ids = (await readJson<OrderListResponse>(list)).data?.content?.map(
+                (o) => o.id ?? o.orderId,
+              ) ?? [];
               if (ids.includes(orderId)) break;
             }
             await page.waitForTimeout(500);

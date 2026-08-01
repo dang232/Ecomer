@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+
 import {
   copyArtifacts,
   expectNoGlobalError,
@@ -40,7 +41,7 @@ test.describe.serial("Workday — admin (login → console + coupon CRUD → log
     await resetPersona("admin");
   });
 
-  test.afterEach(async ({}, testInfo) => {
+  test.afterEach(({ page: _page }, testInfo) => {
     rememberOutputDir("admin", testInfo);
   });
 
@@ -58,8 +59,8 @@ test.describe.serial("Workday — admin (login → console + coupon CRUD → log
     try {
       const couponCode = `WORKDAY${Date.now() % 1_000_000}`;
 
-      await step(page, "admin", "Login as admin1 via /login form", async () => {
-        await loginAsSeededUser(page, "admin1");
+      await step(page, "admin", "Login as admin via /login form", async () => {
+        await loginAsSeededUser(page, "admin");
       });
 
       await step(page, "admin", "/admin dashboard mounts as default tab", async () => {

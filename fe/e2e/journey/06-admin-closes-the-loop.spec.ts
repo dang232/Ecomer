@@ -1,4 +1,16 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type APIRequestContext } from "@playwright/test";
+
+import {
+  readJson,
+  type AuthResponse,
+  type PayoutListResponse,
+  type WalletResponse,
+} from "../_api";
+import { loginAsSeededUser, logoutViaUserMenu } from "../_workday-evidence";
+import {
+  credentialForPersona,
+  type Persona,
+} from "../modernization/_credentials";
 
 import {
   bizStep,
@@ -10,11 +22,6 @@ import {
   startTrace,
   stopTrace,
 } from "./_journey-evidence";
-import { loginAsSeededUser, logoutViaUserMenu } from "../_workday-evidence";
-import {
-  credentialForPersona,
-  type Persona,
-} from "../modernization/_credentials";
 import { requireJourneyState } from "./_journey-state";
 
 /**
@@ -43,7 +50,7 @@ import { requireJourneyState } from "./_journey-state";
 const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
 
 async function accessTokenForPersona(
-  request: import("@playwright/test").APIRequestContext,
+  request: APIRequestContext,
   persona: Persona,
 ): Promise<string> {
   const { username, password } = credentialForPersona(persona);
@@ -54,10 +61,7 @@ async function accessTokenForPersona(
     loginResponse.ok(),
     `persona login (${persona}) failed: ${loginResponse.status()} ${await loginResponse.text()}`,
   ).toBeTruthy();
-  const body = (await loginResponse.json()) as {
-    data?: { accessToken?: string };
-    accessToken?: string;
-  };
+  const body = await readJson<AuthResponse>(loginResponse);
   const accessToken = body.data?.accessToken ?? body.accessToken;
   expect(accessToken, `no access token returned for ${persona}`).toBeTruthy();
   return accessToken ?? "";
@@ -99,7 +103,7 @@ test.describe.serial("Chapter 6 — Admin closes the loop", () => {
     });
   });
 
-  test.afterEach(async ({}, testInfo) => {
+  test.afterEach(({ page: _page }, testInfo) => {
     rememberOutputDir("06-admin-closes-loop", testInfo);
   });
 
@@ -143,7 +147,7 @@ test.describe.serial("Chapter 6 — Admin closes the loop", () => {
           // surfaces the chapter-5 reservation (Kafka catch-up lag varies),
           // then snapshot it so AC-6.3 below can prove the exact-delta drop.
           const token = await accessTokenForPersona(
-            page.request as import("@playwright/test").APIRequestContext,
+            page.request,
             "seller",
           );
 
@@ -154,7 +158,9 @@ test.describe.serial("Chapter 6 — Admin closes the loop", () => {
                   headers: { Authorization: `Bearer ${token}` },
                 });
                 if (!r.ok()) return -1;
-                const pending = Number((await r.json())?.data?.pendingBalance ?? -1);
+                const pending = Number(
+                  (await readJson<WalletResponse>(r)).data?.pendingBalance ?? -1,
+                );
                 if (pending >= payoutAmountVnd) {
                   pendingBeforeVnd = pending;
                 }
@@ -239,7 +245,7 @@ test.describe.serial("Chapter 6 — Admin closes the loop", () => {
           // signal; this is the source-of-truth signal that what the
           // platform's contract guarantees actually happened.
           const adminToken = await accessTokenForPersona(
-            page.request as import("@playwright/test").APIRequestContext,
+            page.request,
             "admin",
           );
 
@@ -250,8 +256,7 @@ test.describe.serial("Chapter 6 — Admin closes the loop", () => {
                   headers: { Authorization: `Bearer ${adminToken}` },
                 });
                 if (!r.ok()) return -1;
-                const list: Array<{ payoutId?: string; status?: string }> =
-                  (await r.json())?.data ?? [];
+                const list = (await readJson<PayoutListResponse>(r)).data ?? [];
                 return list.filter((p) => p.payoutId === payoutId && p.status === "PENDING").length;
               },
               {
@@ -276,7 +281,7 @@ test.describe.serial("Chapter 6 — Admin closes the loop", () => {
           const expectedAfter = pendingBeforeVnd - payoutAmountVnd;
 
           const token = await accessTokenForPersona(
-            page.request as import("@playwright/test").APIRequestContext,
+            page.request,
             "seller",
           );
 
@@ -287,7 +292,7 @@ test.describe.serial("Chapter 6 — Admin closes the loop", () => {
                   headers: { Authorization: `Bearer ${token}` },
                 });
                 if (!r.ok()) return -1;
-                return Number((await r.json())?.data?.pendingBalance ?? -1);
+                return Number((await readJson<WalletResponse>(r)).data?.pendingBalance ?? -1);
               },
               {
                 timeout: 30_000,
@@ -328,7 +333,7 @@ test.describe.serial("Chapter 6 — Admin closes the loop", () => {
           // truth check — the FE label could in theory render even if
           // the BE didn't persist the audit fields (a future regression).
           const adminToken = await accessTokenForPersona(
-            page.request as import("@playwright/test").APIRequestContext,
+            page.request,
             "admin",
           );
           const completedResp = await page.request.get(
@@ -336,12 +341,7 @@ test.describe.serial("Chapter 6 — Admin closes the loop", () => {
             { headers: { Authorization: `Bearer ${adminToken}` } },
           );
           expect(completedResp.ok(), `GET /completed: ${completedResp.status()}`).toBeTruthy();
-          const completedList: Array<{
-            payoutId?: string;
-            status?: string;
-            completedBy?: string | null;
-            completedAt?: string | null;
-          }> = (await completedResp.json())?.data ?? [];
+          const completedList = (await readJson<PayoutListResponse>(completedResp)).data ?? [];
           const auditRow = completedList.find((p) => p.payoutId === payoutId);
           expect(auditRow, `payout ${payoutId} not in /completed`).toBeTruthy();
           expect(auditRow?.status).toBe("COMPLETED");

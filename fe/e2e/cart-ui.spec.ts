@@ -1,5 +1,11 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+
 import { loginViaOidc, uniqueTestId } from "./_auth";
+import {
+  readJson,
+  type AuthResponse,
+  type ProductListResponse,
+} from "./_api";
 
 /**
  * UI-driven QA spec for the buyer cart flow.
@@ -37,8 +43,9 @@ async function seedBuyer(request: APIRequestContext): Promise<SeededBuyer> {
     data: { username: email, password: PASSWORD },
   });
   expect(login.ok(), `login: ${login.status()}`).toBeTruthy();
-  const accessToken = (await login.json())?.data?.accessToken;
+  const accessToken = (await readJson<AuthResponse>(login)).data?.accessToken;
   expect(accessToken).toBeTruthy();
+  if (!accessToken) throw new Error("login did not return an access token");
   return { email, accessToken };
 }
 
@@ -50,8 +57,9 @@ interface SeededProduct {
 async function firstProduct(request: APIRequestContext): Promise<SeededProduct> {
   const r = await request.get(`${apiURL}/products?size=1`);
   expect(r.ok()).toBeTruthy();
-  const p = (await r.json())?.data?.content?.[0];
+  const p = (await readJson<ProductListResponse>(r)).data?.content?.[0];
   expect(p?.id, "expected a seeded product").toBeTruthy();
+  if (!p) throw new Error("expected a seeded product");
   return { id: p.id, name: p.name };
 }
 

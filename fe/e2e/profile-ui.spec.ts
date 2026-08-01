@@ -1,5 +1,7 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+
 import { loginViaOidc, uniqueTestId } from "./_auth";
+import { readJson, type AuthResponse } from "./_api";
 
 /**
  * UI-driven QA spec for the buyer profile page.
@@ -37,8 +39,9 @@ async function seedBuyer(request: APIRequestContext): Promise<SeededBuyer> {
     data: { username: email, password: PASSWORD },
   });
   expect(login.ok(), `login: ${login.status()}`).toBeTruthy();
-  const accessToken = (await login.json())?.data?.accessToken;
+  const accessToken = (await readJson<AuthResponse>(login)).data?.accessToken;
   expect(accessToken).toBeTruthy();
+  if (!accessToken) throw new Error("login did not return an access token");
   return { email, accessToken };
 }
 

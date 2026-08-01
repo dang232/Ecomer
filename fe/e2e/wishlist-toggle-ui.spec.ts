@@ -1,6 +1,8 @@
-import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
-import { expectNoGlobalError } from "./_helpers";
+import { test, expect, type APIRequestContext } from "@playwright/test";
+
 import { loginViaOidc, uniqueTestId } from "./_auth";
+import { readJson, type AuthResponse, type ProductListResponse } from "./_api";
+import { expectNoGlobalError } from "./_helpers";
 
 /**
  * UI-driven QA spec for the wishlist heart toggle on ProductPage.
@@ -35,16 +37,18 @@ async function seedBuyer(request: APIRequestContext): Promise<SeededBuyer> {
     data: { username: email, password: PASSWORD },
   });
   expect(login.ok()).toBeTruthy();
-  const accessToken = (await login.json())?.data?.accessToken;
+  const accessToken = (await readJson<AuthResponse>(login)).data?.accessToken;
   expect(accessToken).toBeTruthy();
+  if (!accessToken) throw new Error("login did not return an access token");
   return { email, accessToken };
 }
 
 async function firstProductId(request: APIRequestContext): Promise<string> {
   const r = await request.get(`${apiURL}/products?size=1`);
   expect(r.ok()).toBeTruthy();
-  const id = (await r.json())?.data?.content?.[0]?.id;
+  const id = (await readJson<ProductListResponse>(r)).data?.content?.[0]?.id;
   expect(id, "expected a seeded product").toBeTruthy();
+  if (!id) throw new Error("expected a seeded product");
   return id;
 }
 

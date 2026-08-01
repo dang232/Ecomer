@@ -1,4 +1,16 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type APIRequestContext } from "@playwright/test";
+
+import {
+  readJson,
+  type AuthResponse,
+  type PayoutListResponse,
+  type WalletResponse,
+} from "../_api";
+import { loginAsSeededUser, logoutViaUserMenu } from "../_workday-evidence";
+import {
+  credentialForPersona,
+  type Persona,
+} from "../modernization/_credentials";
 
 import {
   bizStep,
@@ -10,11 +22,6 @@ import {
   startTrace,
   stopTrace,
 } from "./_journey-evidence";
-import { loginAsSeededUser, logoutViaUserMenu } from "../_workday-evidence";
-import {
-  credentialForPersona,
-  type Persona,
-} from "../modernization/_credentials";
 import { requireJourneyState, writeJourneyState } from "./_journey-state";
 
 /**
@@ -47,7 +54,7 @@ import { requireJourneyState, writeJourneyState } from "./_journey-state";
 const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
 
 async function accessTokenForPersona(
-  request: import("@playwright/test").APIRequestContext,
+  request: APIRequestContext,
   persona: Persona,
 ): Promise<string> {
   const { username, password } = credentialForPersona(persona);
@@ -58,10 +65,7 @@ async function accessTokenForPersona(
     loginResponse.ok(),
     `persona login (${persona}) failed: ${loginResponse.status()} ${await loginResponse.text()}`,
   ).toBeTruthy();
-  const body = (await loginResponse.json()) as {
-    data?: { accessToken?: string };
-    accessToken?: string;
-  };
+  const body = await readJson<AuthResponse>(loginResponse);
   const accessToken = body.data?.accessToken ?? body.accessToken;
   expect(accessToken, `no access token returned for ${persona}`).toBeTruthy();
   return accessToken ?? "";
@@ -92,7 +96,7 @@ test.describe.serial("Chapter 5 — Seller cashes out", () => {
     });
   });
 
-  test.afterEach(async ({}, testInfo) => {
+  test.afterEach(({ page: _page }, testInfo) => {
     rememberOutputDir("05-seller-cashes-out", testInfo);
   });
 
@@ -132,7 +136,7 @@ test.describe.serial("Chapter 5 — Seller cashes out", () => {
             .poll(
               async () => {
                 const token = await accessTokenForPersona(
-                  page.request as import("@playwright/test").APIRequestContext,
+                  page.request,
                   "seller",
                 );
                 if (!token) return 0;
@@ -140,7 +144,9 @@ test.describe.serial("Chapter 5 — Seller cashes out", () => {
                   headers: { Authorization: `Bearer ${token}` },
                 });
                 if (!r.ok()) return 0;
-                const balance = Number((await r.json())?.data?.availableBalance ?? 0);
+                const balance = Number(
+                  (await readJson<WalletResponse>(r)).data?.availableBalance ?? 0,
+                );
                 if (balance > 0) {
                   payoutAmountVnd = balance;
                 }
@@ -238,7 +244,7 @@ test.describe.serial("Chapter 5 — Seller cashes out", () => {
           // the cross-persona handoff: what the seller submits is what
           // the admin will see.
           const adminToken = await accessTokenForPersona(
-            page.request as import("@playwright/test").APIRequestContext,
+            page.request,
             "admin",
           );
 
@@ -249,12 +255,7 @@ test.describe.serial("Chapter 5 — Seller cashes out", () => {
                   headers: { Authorization: `Bearer ${adminToken}` },
                 });
                 if (!r.ok()) return null;
-                const list: Array<{
-                  payoutId?: string;
-                  sellerId?: string;
-                  amount?: number;
-                  status?: string;
-                }> = (await r.json())?.data ?? [];
+                const list = (await readJson<PayoutListResponse>(r)).data ?? [];
                 // seller1's keycloakId is what the wallet credit went
                 // against. Find the most recent PENDING payout for that
                 // seller — it's the one chapter 5 just submitted.

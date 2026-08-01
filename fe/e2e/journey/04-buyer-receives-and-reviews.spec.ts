@@ -1,5 +1,8 @@
 import { test, expect } from "@playwright/test";
 
+import { loginViaOidc } from "../_auth";
+import { logoutViaUserMenu } from "../_workday-evidence";
+
 import {
   bizStep,
   copyArtifacts,
@@ -10,8 +13,6 @@ import {
   startTrace,
   stopTrace,
 } from "./_journey-evidence";
-import { loginViaOidc } from "../_auth";
-import { logoutViaUserMenu } from "../_workday-evidence";
 import { requireJourneyState } from "./_journey-state";
 
 /**
@@ -77,7 +78,7 @@ test.describe.serial("Chapter 4 — Buyer reviews the ordered product", () => {
     });
   });
 
-  test.afterEach(async ({}, testInfo) => {
+  test.afterEach(({ page: _page }, testInfo) => {
     rememberOutputDir("04-buyer-reviews", testInfo);
   });
 
@@ -229,7 +230,7 @@ test.describe.serial("Chapter 4 — Buyer reviews the ordered product", () => {
           // Match a unique substring of the review body (the timestamp).
           // The review may be in a list item or a card; the unique
           // substring is enough.
-          const stamp = reviewBody.match(/run (\d+)/)?.[1] ?? "";
+          const stamp = (/run (\d+)/.exec(reviewBody))?.[1] ?? "";
           await expect
             .poll(async () => page.getByText(stamp).count(), {
               timeout: 30_000,

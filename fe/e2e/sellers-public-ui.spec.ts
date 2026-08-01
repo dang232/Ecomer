@@ -1,4 +1,6 @@
-import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { test, expect, type APIRequestContext } from "@playwright/test";
+
+import { readJson, type SellerListResponse } from "./_api";
 import { expectNoGlobalError } from "./_helpers";
 
 /**
@@ -21,7 +23,7 @@ const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
 async function firstSellerId(request: APIRequestContext): Promise<string | null> {
   const r = await request.get(`${apiURL}/sellers?size=1`);
   if (!r.ok()) return null;
-  const body = await r.json();
+  const body = await readJson<SellerListResponse>(r);
   // BE returns either { content: [...] } or { data: { content: [...] } }
   // depending on envelope. Try both.
   return body?.data?.content?.[0]?.id ?? body?.content?.[0]?.id ?? null;
@@ -50,8 +52,9 @@ test.describe("public sellers UI", () => {
 
   test("/sellers/{id} renders the seller detail page (schema check)", async ({ page }) => {
     const sellerId = await firstSellerId(page.request);
-    test.skip(!sellerId, "no public sellers seeded — nothing to test");
-    if (!sellerId) return;
+    if (!sellerId) {
+      throw new Error("No public sellers seeded — cannot test seller detail page rendering");
+    }
 
     await page.goto(`/sellers/${sellerId}`);
 

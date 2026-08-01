@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 
 /**
  * UI-driven QA spec for the i18n language switcher.
@@ -13,10 +13,6 @@ import { test, expect, type Page } from "@playwright/test";
  *
  * No backend or auth needed. Runs on the public home page.
  */
-
-async function getCurrentLang(page: Page): Promise<string> {
-  return page.evaluate(() => document.documentElement.lang || "");
-}
 
 test.describe("i18n language switcher UI", () => {
   test("Toggle flips home page between Vietnamese and English without raw keys leaking", async ({

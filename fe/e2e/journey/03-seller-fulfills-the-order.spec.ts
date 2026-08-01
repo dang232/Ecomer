@@ -1,5 +1,9 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
 
+import { loginAsSeededUser, logoutViaUserMenu } from "../_workday-evidence";
+import { readJson } from "../_api";
+import { credentialForPersona } from "../modernization/_credentials";
+
 import {
   bizStep,
   copyArtifacts,
@@ -10,9 +14,8 @@ import {
   startTrace,
   stopTrace,
 } from "./_journey-evidence";
-import { loginAsSeededUser, logoutViaUserMenu } from "../_workday-evidence";
 import { requireJourneyState, writeJourneyState } from "./_journey-state";
-import { credentialForPersona } from "../modernization/_credentials";
+
 
 /**
  * Chapter 3 — Seller fulfills the order.
@@ -83,7 +86,7 @@ test.describe.serial("Chapter 3 — Seller fulfills the order", () => {
     });
   });
 
-  test.afterEach(async ({}, testInfo) => {
+  test.afterEach(({ page: _page }, testInfo) => {
     rememberOutputDir("03-seller-fulfills", testInfo);
   });
 
@@ -301,10 +304,10 @@ async function findSubOrderForOrder(
     data: { username, password },
   });
   if (!loginResponse.ok()) return null;
-  const loginBody = (await loginResponse.json()) as {
+  const loginBody = await readJson<{
     data?: { accessToken?: string };
     accessToken?: string;
-  };
+  }>(loginResponse);
   const accessToken = loginBody.data?.accessToken ?? loginBody.accessToken ?? null;
   if (!accessToken) return null;
 
@@ -312,8 +315,9 @@ async function findSubOrderForOrder(
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (!r.ok()) return null;
-  const list: Array<{ id?: string; subOrders?: Array<{ subOrderId?: number }> }> =
-    (await r.json())?.data ?? [];
+  const list =
+    (await readJson<{ data?: { id?: string; subOrders?: { subOrderId?: number }[] }[] }>(r)).data ??
+    [];
   const parent = list.find((o) => o.id === parentOrderId);
   if (!parent) return null;
   // A multi-seller order would have multiple sub-orders; chapter 2 ordered

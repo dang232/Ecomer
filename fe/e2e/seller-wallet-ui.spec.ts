@@ -1,6 +1,9 @@
 import { test, expect } from "@playwright/test";
+
+import { loginAsPersona } from "./_auth";
+import { readJson, type AuthResponse, type WalletResponse } from "./_api";
 import { expectNoGlobalError } from "./_helpers";
-import { loginViaOidc } from "./_auth";
+import { credentialForPersona } from "./modernization/_credentials";
 
 /**
  * UI-driven QA spec for the seller wallet page.
@@ -20,7 +23,7 @@ const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
 
 test.describe("seller wallet UI", () => {
   test("Wallet tab renders the balance card and history section", async ({ page }) => {
-    await loginViaOidc(page, "seller1");
+    await loginAsPersona(page, "seller");
     await page.goto("/seller");
 
     await expect(
@@ -52,18 +55,20 @@ test.describe("seller wallet UI", () => {
   });
 
   test("Withdraw button follows the live seller balance", async ({ page }) => {
-    await loginViaOidc(page, "seller1");
+    await loginAsPersona(page, "seller");
+    const { username, password } = credentialForPersona("seller");
     const loginResponse = await page.request.post(`${apiURL}/auth/login`, {
-      data: { username: "seller1", password: "test" },
+      data: { username, password },
     });
     expect(loginResponse.ok(), `seller login: ${loginResponse.status()}`).toBeTruthy();
-    const accessToken = (await loginResponse.json())?.data?.accessToken as string;
+    const accessToken = (await readJson<AuthResponse>(loginResponse)).data?.accessToken;
     expect(accessToken).toBeTruthy();
+    if (!accessToken) throw new Error("seller login did not return an access token");
     const walletResponse = await page.request.get(`${apiURL}/sellers/me/finance/wallet`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     expect(walletResponse.ok(), `wallet: ${walletResponse.status()}`).toBeTruthy();
-    const walletBody = await walletResponse.json();
+    const walletBody = await readJson<WalletResponse>(walletResponse);
     const wallet = walletBody?.data ?? walletBody;
     const balance = wallet?.balance ?? wallet?.availableBalance ?? 0;
     expect(typeof balance).toBe("number");
