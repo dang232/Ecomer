@@ -23,7 +23,7 @@ const testResultSchema = z
 
 const testSchema = z
   .object({
-    title: z.string().min(1),
+    title: z.string().min(1).optional(),
     projectName: z.string().optional(),
     projectId: z.string().optional(),
     status: z.string().optional(),
@@ -62,7 +62,12 @@ function collectTests(suite, lineage = []) {
   for (const spec of suite.specs ?? []) {
     const specLineage = spec.title ? [...nextLineage, spec.title] : nextLineage;
     for (const test of spec.tests ?? []) {
-      tests.push({ test, titlePath: specLineage, specFile: spec.file });
+      tests.push({
+        test,
+        titlePath: specLineage,
+        specFile: spec.file,
+        specTitle: spec.title,
+      });
     }
   }
   for (const child of suite.suites ?? []) {
@@ -78,29 +83,45 @@ function statusLabelsForTest(test) {
     statuses.push(result.status);
   }
 
-  if (statuses.length === 0 && typeof test.status === "string") {
-    statuses.push(test.status);
+  if (typeof test.status === "string") {
+    if (
+      statuses.length === 0 ||
+      test.status === "unexpected" ||
+      test.status === "skipped" ||
+      test.status === "interrupted"
+    ) {
+      statuses.push(test.status);
+    }
   }
 
-  if (
-    typeof test.outcome === "string" &&
-    (test.outcome === "unexpected" || test.outcome === "skipped")
-  ) {
+  if (typeof test.outcome === "string") {
     statuses.push(test.outcome);
   }
 
   return statuses;
 }
 
+function testIdentity({ test, specFile, specTitle }) {
+  const specIdentity = specFile ?? specTitle ?? "<unknown spec>";
+  const testIdentity = test.title ?? specTitle ?? specFile ?? "<unnamed test>";
+  return {
+    specIdentity,
+    testIdentity,
+    full: `${specIdentity} :: ${testIdentity}`,
+  };
+}
+
 function duplicateTitlesByProject(tests) {
   const seen = new Set();
   const duplicates = [];
 
-  for (const { test } of tests) {
+  for (const entry of tests) {
+    const { test } = entry;
     const project = test.projectName ?? test.projectId ?? "default";
-    const key = `${project}::${test.title}`;
+    const identity = testIdentity(entry);
+    const key = `${project}::${identity.specIdentity}::${identity.testIdentity}`;
     if (seen.has(key)) {
-      duplicates.push(`${project}: ${test.title}`);
+      duplicates.push(`${project}: ${identity.full}`);
       continue;
     }
     seen.add(key);
@@ -213,10 +234,14 @@ export function validateReport(report, options = {}) {
     findings.push(`Duplicate test titles found: ${duplicates.join(", ")}`);
   }
 
-  for (const { test } of tests) {
+  for (const entry of tests) {
+    const { test } = entry;
+    const identity = testIdentity(entry);
     const statuses = statusLabelsForTest(test);
     if (statuses.length === 0) {
-      findings.push(`Malformed report entry for "${test.title}" - no test results were recorded.`);
+      findings.push(
+        `Malformed report entry for "${identity.full}" - no test results were recorded.`,
+      );
       continue;
     }
 
@@ -227,22 +252,22 @@ export function validateReport(report, options = {}) {
           break;
         case "failed":
         case "timedOut":
-          findings.push(`Test "${test.title}" FAILED with status ${status}.`);
+          findings.push(`Test "${identity.full}" FAILED with status ${status}.`);
           for (const message of errorMessages(test.results?.flatMap((result) => result.errors ?? []))) {
             findings.push(`  ${message}`);
           }
           break;
         case "skipped":
-          findings.push(`Test "${test.title}" was SKIPPED.`);
+          findings.push(`Test "${identity.full}" was SKIPPED.`);
           break;
         case "interrupted":
-          findings.push(`Test "${test.title}" was INTERRUPTED.`);
+          findings.push(`Test "${identity.full}" was INTERRUPTED.`);
           break;
         case "unexpected":
-          findings.push(`Test "${test.title}" had an UNEXPECTED outcome.`);
+          findings.push(`Test "${identity.full}" had an UNEXPECTED outcome.`);
           break;
         default:
-          findings.push(`Test "${test.title}" has unknown status: ${status}`);
+          findings.push(`Test "${identity.full}" has unknown status: ${status}`);
           break;
       }
     }

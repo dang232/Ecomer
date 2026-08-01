@@ -59,6 +59,31 @@ test("passes a clean report", () => {
   assert.deepEqual(findings, []);
 });
 
+test("passes a real Playwright-style report shape without test.title", () => {
+  const findings = validateReport(
+    makeMultiSpecReport([
+      makeSpec(
+        "e2e/modernization/buyer.spec.ts",
+        [{ projectName: "chromium", status: "passed", results: [{ status: "passed" }] }],
+        "buyer journey spec",
+      ),
+      makeSpec(
+        "e2e/modernization/seller.spec.ts",
+        [{ projectName: "chromium", status: "passed", results: [{ status: "passed" }] }],
+        "seller journey spec",
+      ),
+      makeSpec(
+        "e2e/modernization/admin.spec.ts",
+        [{ projectName: "chromium", status: "passed", results: [{ status: "passed" }] }],
+        "admin journey spec",
+      ),
+    ]),
+    { requiredPersonas: ["buyer", "seller", "admin"] },
+  );
+
+  assert.deepEqual(findings, []);
+});
+
 test("fails a malformed report", () => {
   const findings = validateReport({ suites: [{ specs: "broken" }] });
   assert.match(findings[0], /Malformed report/);
@@ -80,6 +105,22 @@ test("fails skipped, interrupted, and unexpected outcomes", () => {
 
   assert(findings.some((finding) => finding.includes("SKIPPED")));
   assert(findings.some((finding) => finding.includes("INTERRUPTED")));
+  assert(findings.some((finding) => finding.includes("UNEXPECTED")));
+});
+
+test("fails top-level unexpected status even when nested results say passed", () => {
+  const findings = validateReport(
+    makeMultiSpecReport([
+      makeSpec("buyer.spec.ts", [
+        {
+          projectName: "chromium",
+          status: "unexpected",
+          results: [{ status: "passed" }],
+        },
+      ]),
+    ]),
+  );
+
   assert(findings.some((finding) => finding.includes("UNEXPECTED")));
 });
 
