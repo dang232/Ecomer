@@ -142,3 +142,53 @@ Result:
 
 - No blocking concerns for Task 1.
 - I did not run the full repository verification matrix beyond the focused buyer tests and `pnpm run typecheck`, per the scope instruction to avoid expanding into unrelated debugging.
+
+## Fix Round 1 Evidence
+
+### Findings Addressed
+
+1. `notification-preferences-page.tsx` was still backed by incomplete locale resources:
+   - `en.json` contained literal `notificationPreferences.*` placeholder values instead of user-facing copy.
+   - `vi.json` did not have a top-level `notificationPreferences` namespace.
+2. The mute-all switch exposed inverted `aria-checked` semantics.
+
+### Fixes Applied
+
+- Added complete English `notificationPreferences` copy in [en.json](C:/Users/dangq/OneDrive/Documents/GitHub/Full-Stack-E-commerce/fe/src/app/lib/i18n/en.json).
+- Added complete Vietnamese `notificationPreferences` copy in [vi.json](C:/Users/dangq/OneDrive/Documents/GitHub/Full-Stack-E-commerce/fe/src/app/lib/i18n/vi.json).
+- Corrected the mute-all switch so `draft.muted === true` maps to `aria-checked="true"` in [notification-preferences-page.tsx](C:/Users/dangq/OneDrive/Documents/GitHub/Full-Stack-E-commerce/fe/src/app/components/notifications/notification-preferences-page.tsx).
+- Updated [notification-preferences-page.test.tsx](C:/Users/dangq/OneDrive/Documents/GitHub/Full-Stack-E-commerce/fe/src/app/components/notifications/notification-preferences-page.test.tsx) to:
+  - resolve real strings from the English and Vietnamese locale resources
+  - verify non-key headings/button labels
+  - assert truthful `aria-checked` behavior for the mute-all switch
+
+### Fix Round GREEN
+
+Focused buyer suite:
+
+```powershell
+pnpm exec vitest run src/features/orders src/features/account src/features/returns src/app/pages/OrdersPage.test.tsx src/app/pages/ReturnRequestPage.test.tsx src/app/pages/ReturnStatusPage.test.tsx src/app/pages/ProfilePage.test.tsx src/app/pages/SellerDetailPage.test.tsx src/app/components/notifications/notification-preferences-page.test.tsx src/app/hooks/use-notifications.test.tsx src/app/hooks/use-messages.test.tsx src/shared/contracts/api/order.test.ts
+```
+
+Result:
+
+- `11` test files passed
+- `51` tests passed
+
+Typecheck rerun:
+
+```powershell
+pnpm run typecheck
+```
+
+Result:
+
+- failed outside the buyer fix slice during `typecheck:test`
+- exact failure:
+
+```text
+src/app/lib/api/client.test.ts(369,5): error TS2349: This expression is not callable.
+Type 'never' has no call signatures.
+```
+
+- This failure is unrelated to the notification preferences fix round and was not debugged further per scope.

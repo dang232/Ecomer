@@ -1885,11 +1885,11 @@
   "notificationPreferences": {
     "title": "Notification preferences",
     "subtitle": "Choose which supported updates VNShop can send to you.",
-    "save": "notificationPreferences.save",
-    "saving": "notificationPreferences.saving",
-    "saved": "notificationPreferences.saved",
-    "saveError": "notificationPreferences.saveError",
-    "loadError": "notificationPreferences.loadError",
+    "save": "Save changes",
+    "saving": "Saving...",
+    "saved": "Preferences saved.",
+    "saveError": "Could not save your notification preferences.",
+    "loadError": "Could not load your notification preferences.",
     "muteToggle": "Mute all notifications",
     "mutedTitle": "All notifications are muted",
     "mutedDescription": "You will not receive in-app or email updates until you turn notifications back on.",
@@ -1904,96 +1904,96 @@
         "label": "Order created",
         "description": "A new order has been accepted into your account.",
         "channels": {
-          "IN_APP": "notificationPreferences.types.ORDER_CREATED.channels.IN_APP",
-          "EMAIL": "notificationPreferences.types.ORDER_CREATED.channels.EMAIL"
+          "IN_APP": "Order created in app",
+          "EMAIL": "Order created by email"
         }
       },
       "ORDER_CANCELLED": {
         "label": "Order cancelled",
         "description": "An order was cancelled before delivery.",
         "channels": {
-          "IN_APP": "notificationPreferences.types.ORDER_CANCELLED.channels.IN_APP",
-          "EMAIL": "notificationPreferences.types.ORDER_CANCELLED.channels.EMAIL"
+          "IN_APP": "Order cancelled in app",
+          "EMAIL": "Order cancelled by email"
         }
       },
       "ORDER_SHIPPED": {
         "label": "Order shipped",
         "description": "A seller handed your order to the carrier.",
         "channels": {
-          "IN_APP": "notificationPreferences.types.ORDER_SHIPPED.channels.IN_APP",
-          "EMAIL": "notificationPreferences.types.ORDER_SHIPPED.channels.EMAIL"
+          "IN_APP": "Order shipped in app",
+          "EMAIL": "Order shipped by email"
         }
       },
       "ORDER_DELIVERED": {
         "label": "Order delivered",
         "description": "Your order has been delivered successfully.",
         "channels": {
-          "IN_APP": "notificationPreferences.types.ORDER_DELIVERED.channels.IN_APP",
-          "EMAIL": "notificationPreferences.types.ORDER_DELIVERED.channels.EMAIL"
+          "IN_APP": "Order delivered in app",
+          "EMAIL": "Order delivered by email"
         }
       },
       "PAYMENT_COMPLETED": {
         "label": "Payment completed",
         "description": "A payment was captured successfully.",
         "channels": {
-          "IN_APP": "notificationPreferences.types.PAYMENT_COMPLETED.channels.IN_APP",
-          "EMAIL": "notificationPreferences.types.PAYMENT_COMPLETED.channels.EMAIL"
+          "IN_APP": "Payment completed in app",
+          "EMAIL": "Payment completed by email"
         }
       },
       "PAYMENT_REFUNDED": {
         "label": "Payment refunded",
         "description": "A refund has been issued.",
         "channels": {
-          "IN_APP": "notificationPreferences.types.PAYMENT_REFUNDED.channels.IN_APP",
-          "EMAIL": "notificationPreferences.types.PAYMENT_REFUNDED.channels.EMAIL"
+          "IN_APP": "Payment refunded in app",
+          "EMAIL": "Payment refunded by email"
         }
       },
       "SELLER_NEW_ORDER": {
-        "label": "Seller new order",
-        "description": "A seller account received a new order.",
+        "label": "Seller order alert",
+        "description": "A seller account received a new order that needs attention.",
         "channels": {
-          "IN_APP": "notificationPreferences.types.SELLER_NEW_ORDER.channels.IN_APP",
-          "EMAIL": "notificationPreferences.types.SELLER_NEW_ORDER.channels.EMAIL"
+          "IN_APP": "Seller order alert in app",
+          "EMAIL": "Seller order alert by email"
         }
       },
       "PRODUCT_APPROVED": {
         "label": "Product approved",
         "description": "A seller product was approved for publication.",
         "channels": {
-          "IN_APP": "notificationPreferences.types.PRODUCT_APPROVED.channels.IN_APP",
-          "EMAIL": "notificationPreferences.types.PRODUCT_APPROVED.channels.EMAIL"
+          "IN_APP": "Product approved in app",
+          "EMAIL": "Product approved by email"
         }
       },
       "PRODUCT_REJECTED": {
         "label": "Product rejected",
         "description": "A seller product needs fixes before it can go live.",
         "channels": {
-          "IN_APP": "notificationPreferences.types.PRODUCT_REJECTED.channels.IN_APP",
-          "EMAIL": "notificationPreferences.types.PRODUCT_REJECTED.channels.EMAIL"
+          "IN_APP": "Product rejected in app",
+          "EMAIL": "Product rejected by email"
         }
       },
       "REVIEW_REPLIED": {
         "label": "Review replied",
         "description": "A seller replied to one of your reviews.",
         "channels": {
-          "IN_APP": "notificationPreferences.types.REVIEW_REPLIED.channels.IN_APP",
-          "EMAIL": "notificationPreferences.types.REVIEW_REPLIED.channels.EMAIL"
+          "IN_APP": "Review reply in app",
+          "EMAIL": "Review reply by email"
         }
       },
       "RETURN_REQUESTED": {
         "label": "Return requested",
         "description": "A return request was created for one of your orders.",
         "channels": {
-          "IN_APP": "notificationPreferences.types.RETURN_REQUESTED.channels.IN_APP",
-          "EMAIL": "notificationPreferences.types.RETURN_REQUESTED.channels.EMAIL"
+          "IN_APP": "Return request in app",
+          "EMAIL": "Return request by email"
         }
       },
       "PAYOUT_COMPLETED": {
         "label": "Payout completed",
         "description": "A seller payout finished successfully.",
         "channels": {
-          "IN_APP": "notificationPreferences.types.PAYOUT_COMPLETED.channels.IN_APP",
-          "EMAIL": "notificationPreferences.types.PAYOUT_COMPLETED.channels.EMAIL"
+          "IN_APP": "Payout completed in app",
+          "EMAIL": "Payout completed by email"
         }
       }
     }

@@ -227,7 +227,7 @@ export function NotificationPreferencesPage() {
           <button
             type="button"
             role="switch"
-            aria-checked={draft.muted ? "false" : "true"}
+            aria-checked={draft.muted ? "true" : "false"}
             aria-label={t("notificationPreferences.muteToggle", {
               defaultValue: "Mute all notifications",
             })}

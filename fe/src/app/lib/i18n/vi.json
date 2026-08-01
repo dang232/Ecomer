@@ -1883,6 +1883,122 @@
     "error": "Không thể tải thông tin shop.",
     "visitShop": "Ghé thăm shop"
   },
+  "notificationPreferences": {
+    "title": "Tuy chon thong bao",
+    "subtitle": "Chon nhung cap nhat duoc ho tro ma VNShop co the gui cho ban.",
+    "save": "Luu thay doi",
+    "saving": "Dang luu...",
+    "saved": "Da luu tuy chon thong bao.",
+    "saveError": "Khong the luu tuy chon thong bao.",
+    "loadError": "Khong the tai tuy chon thong bao.",
+    "muteToggle": "Tat tat ca thong bao",
+    "mutedTitle": "Tat ca thong bao dang tat",
+    "mutedDescription": "Ban se khong nhan cap nhat trong ung dung hoac qua email cho den khi bat lai.",
+    "activeTitle": "Thong bao dang bat",
+    "activeDescription": "Dieu chinh tung loai thong bao duoc ho tro ben duoi.",
+    "channels": {
+      "IN_APP": "Trong ung dung",
+      "EMAIL": "Email"
+    },
+    "types": {
+      "ORDER_CREATED": {
+        "label": "Don hang moi",
+        "description": "Thong bao khi don hang moi duoc ghi nhan vao tai khoan cua ban.",
+        "channels": {
+          "IN_APP": "Don hang moi trong ung dung",
+          "EMAIL": "Don hang moi qua email"
+        }
+      },
+      "ORDER_CANCELLED": {
+        "label": "Don hang bi huy",
+        "description": "Thong bao khi don hang bi huy truoc khi giao.",
+        "channels": {
+          "IN_APP": "Don hang bi huy trong ung dung",
+          "EMAIL": "Don hang bi huy qua email"
+        }
+      },
+      "ORDER_SHIPPED": {
+        "label": "Don hang da gui",
+        "description": "Thong bao khi nguoi ban ban giao don cho don vi van chuyen.",
+        "channels": {
+          "IN_APP": "Don hang da gui trong ung dung",
+          "EMAIL": "Don hang da gui qua email"
+        }
+      },
+      "ORDER_DELIVERED": {
+        "label": "Don hang da giao",
+        "description": "Thong bao khi don hang duoc giao thanh cong.",
+        "channels": {
+          "IN_APP": "Don hang da giao trong ung dung",
+          "EMAIL": "Don hang da giao qua email"
+        }
+      },
+      "PAYMENT_COMPLETED": {
+        "label": "Thanh toan thanh cong",
+        "description": "Thong bao khi thanh toan da duoc xac nhan.",
+        "channels": {
+          "IN_APP": "Thanh toan thanh cong trong ung dung",
+          "EMAIL": "Thanh toan thanh cong qua email"
+        }
+      },
+      "PAYMENT_REFUNDED": {
+        "label": "Hoan tien",
+        "description": "Thong bao khi khoan hoan tien da duoc tao.",
+        "channels": {
+          "IN_APP": "Hoan tien trong ung dung",
+          "EMAIL": "Hoan tien qua email"
+        }
+      },
+      "SELLER_NEW_ORDER": {
+        "label": "Canh bao don moi cho nguoi ban",
+        "description": "Thong bao khi tai khoan nguoi ban nhan don hang moi can xu ly.",
+        "channels": {
+          "IN_APP": "Canh bao don moi trong ung dung",
+          "EMAIL": "Canh bao don moi qua email"
+        }
+      },
+      "PRODUCT_APPROVED": {
+        "label": "San pham duoc duyet",
+        "description": "Thong bao khi san pham cua nguoi ban duoc duyet de dang ban.",
+        "channels": {
+          "IN_APP": "San pham duoc duyet trong ung dung",
+          "EMAIL": "San pham duoc duyet qua email"
+        }
+      },
+      "PRODUCT_REJECTED": {
+        "label": "San pham bi tu choi",
+        "description": "Thong bao khi san pham can chinh sua truoc khi dang ban.",
+        "channels": {
+          "IN_APP": "San pham bi tu choi trong ung dung",
+          "EMAIL": "San pham bi tu choi qua email"
+        }
+      },
+      "REVIEW_REPLIED": {
+        "label": "Phan hoi danh gia",
+        "description": "Thong bao khi nguoi ban phan hoi mot danh gia cua ban.",
+        "channels": {
+          "IN_APP": "Phan hoi danh gia trong ung dung",
+          "EMAIL": "Phan hoi danh gia qua email"
+        }
+      },
+      "RETURN_REQUESTED": {
+        "label": "Yeu cau tra hang",
+        "description": "Thong bao khi yeu cau tra hang duoc tao cho mot don mua.",
+        "channels": {
+          "IN_APP": "Yeu cau tra hang trong ung dung",
+          "EMAIL": "Yeu cau tra hang qua email"
+        }
+      },
+      "PAYOUT_COMPLETED": {
+        "label": "Rut tien hoan tat",
+        "description": "Thong bao khi lenh rut tien cua nguoi ban hoan tat thanh cong.",
+        "channels": {
+          "IN_APP": "Rut tien hoan tat trong ung dung",
+          "EMAIL": "Rut tien hoan tat qua email"
+        }
+      }
+    }
+  },
   "paymentReturn": {
     "pending": {
       "title": "Đang xác nhận thanh toán...",
