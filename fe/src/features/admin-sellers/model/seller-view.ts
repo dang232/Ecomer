@@ -20,8 +20,8 @@ export function toSellerView(raw: SellerSummary): SellerView {
     status: raw.status ?? (raw.approved ? "APPROVED" : "PENDING"),
     approved: raw.approved ?? raw.status === "APPROVED",
     appliedAt: raw.appliedAt,
-    bankName: raw.bankName,
-    last4: raw.last4,
+    bankName: raw.bankName ?? undefined,
+    last4: raw.last4 ?? undefined,
     tier: raw.tier,
     vacationMode: raw.vacationMode,
   };

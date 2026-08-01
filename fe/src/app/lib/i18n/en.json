@@ -779,6 +779,13 @@
       "reasonRequired": "Reason is required"
     },
     "nav": {
+      "sectionOverview": "Overview",
+      "sectionCommerce": "Commerce",
+      "sectionTrust": "Trust and Safety",
+      "sectionFinance": "Finance",
+      "sectionUsersSystem": "Users and System",
+      "sidebarLabel": "Admin navigation",
+      "mobileLabel": "Admin navigation",
       "dashboard": "Dashboard",
       "sellers": "Approve Sellers",
       "reviews": "Moderation",
@@ -807,6 +814,7 @@
       "week": "Week",
       "month": "Month",
       "exceptionsTitle": "Exceptions",
+      "granularity": "Granularity",
       "exceptionsEmpty": "No exceptions",
       "viewQueue": "View queue",
       "kpi": {
@@ -2258,6 +2266,7 @@
   "return": {
     "request": {
       "title": "Request Return",
+      "subtitle": "Review the package, choose the affected item when available, and explain the issue clearly.",
       "backToOrders": "Back to orders",
       "orderIdLabel": "Order ID",
       "orderIdPlaceholder": "Enter order ID",
@@ -2280,6 +2289,8 @@
       "success": "Return request submitted",
       "error": "Failed to submit return request",
       "selectOrder": "Please enter order ID",
+      "selectItem": "Please select an item",
+      "itemLabel": "Affected item",
       "selectReason": "Please select a return reason",
       "reasonTooShort": "Description must be at least 10 characters"
     },

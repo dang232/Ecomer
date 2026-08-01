@@ -22,9 +22,7 @@ export function CouponEditor({ open, onClose, initialValues }: CouponEditorProps
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [code, setCode] = useState(initialValues?.code ?? "");
-  const [type, setType] = useState<"PERCENT" | "FIXED" | "FREE_SHIPPING">(
-    initialValues?.type ?? "PERCENT",
-  );
+  const [type, setType] = useState<"PERCENT" | "FIXED">(initialValues?.type ?? "PERCENT");
   const [value, setValue] = useState(String(initialValues?.value ?? ""));
   const [minOrderValue, setMinOrderValue] = useState(
     initialValues?.minOrderValue != null ? String(initialValues.minOrderValue) : "",
@@ -39,7 +37,8 @@ export function CouponEditor({ open, onClose, initialValues }: CouponEditorProps
     initialValues?.perUserLimit != null ? String(initialValues.perUserLimit) : "",
   );
   const [validUntil, setValidUntil] = useState(
-    initialValues?.validUntil ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
+    initialValues?.validUntil ??
+      new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
   );
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -111,10 +110,11 @@ export function CouponEditor({ open, onClose, initialValues }: CouponEditorProps
       <div className="space-y-4">
         {/* Code */}
         <div>
-          <label className="block text-sm font-semibold mb-1.5">
+          <label htmlFor="admin-coupon-code" className="block text-sm font-semibold mb-1.5">
             {t("admin.coupons.dialog.codeLabel")}
           </label>
           <input
+            id="admin-coupon-code"
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             placeholder={t("admin.coupons.dialog.codePlaceholder")}
@@ -139,15 +139,21 @@ export function CouponEditor({ open, onClose, initialValues }: CouponEditorProps
                 className="py-2 rounded-xl text-sm font-medium border transition-colors"
                 style={
                   type === opt
-                    ? { background: "var(--admin-primary)", color: "white", borderColor: "var(--admin-primary)" }
-                    : { background: "white", color: "var(--admin-muted)", borderColor: "var(--admin-border)" }
+                    ? {
+                        background: "var(--admin-primary)",
+                        color: "white",
+                        borderColor: "var(--admin-primary)",
+                      }
+                    : {
+                        background: "white",
+                        color: "var(--admin-muted)",
+                        borderColor: "var(--admin-border)",
+                      }
                 }
               >
                 {opt === "PERCENT"
                   ? t("admin.coupons.dialog.typePercent")
-                  : opt === "FIXED"
-                  ? t("admin.coupons.dialog.typeFixed")
-                  : t("admin.coupons.dialog.typeFreeShipping")}
+                  : t("admin.coupons.dialog.typeFixed")}
               </button>
             ))}
           </div>
@@ -155,18 +161,17 @@ export function CouponEditor({ open, onClose, initialValues }: CouponEditorProps
 
         {/* Value */}
         <div>
-          <label className="block text-sm font-semibold mb-1.5">
+          <label htmlFor="admin-coupon-value" className="block text-sm font-semibold mb-1.5">
             {type === "PERCENT"
               ? t("admin.coupons.dialog.valueLabelPercent")
-              : type === "FIXED"
-              ? t("admin.coupons.dialog.valueLabelFixed")
-              : t("admin.coupons.dialog.valueLabelFreeShipping")}
+              : t("admin.coupons.dialog.valueLabelFixed")}
           </label>
           <input
+            id="admin-coupon-value"
             type="number"
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            min={type === "FREE_SHIPPING" ? 0 : 1}
+            min={type === "PERCENT" ? 1 : 0}
             max={type === "PERCENT" ? 100 : undefined}
             className="w-full px-3 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-primary"
           />

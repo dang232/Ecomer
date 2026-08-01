@@ -31,19 +31,22 @@ export function OperationalExceptions({ items }: OperationalExceptionsProps) {
               tone="warning"
               title={
                 <span className="flex items-center justify-between">
-                  <span>{t(`admin.nav.${item.kind === "seller" ? "sellers" : item.kind === "review" ? "reviews" : item.kind}`)}</span>
+                  <span>
+                    {t(
+                      `admin.nav.${item.kind === "seller" ? "sellers" : item.kind === "review" ? "reviews" : item.kind}`,
+                    )}
+                  </span>
                   <span className="font-black tabular-nums">{item.count}</span>
                 </span>
               }
-              action={
-                <Link
-                  to={item.href}
-                  className="text-xs font-semibold underline underline-offset-2 hover:no-underline"
-                >
-                  {t("admin.dashboard.viewQueue", "View queue")}
-                </Link>
-              }
-            />
+            >
+              <Link
+                to={item.href}
+                className="text-xs font-semibold underline underline-offset-2 hover:no-underline"
+              >
+                {t("admin.dashboard.viewQueue", "View queue")}
+              </Link>
+            </InlineAlert>
           ))}
         </div>
       )}

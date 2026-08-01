@@ -36,9 +36,7 @@ function derivePriceRange(
       priceMax: price ?? 0,
     };
   }
-  const amounts = variants
-    .map((v) => v?.priceAmount)
-    .filter((a): a is number => a != null);
+  const amounts = variants.map((v) => v?.priceAmount).filter((a): a is number => a != null);
   if (amounts.length === 0) {
     return {
       priceRange: price != null ? formatPrice(price) : "–",
@@ -60,10 +58,7 @@ function derivePriceRange(
  * DRAFT rows are recovered from sessionStorage only.
  */
 export function toProductListRow(product: Product): ProductListRow {
-  const { priceRange, priceMin, priceMax } = derivePriceRange(
-    product.price,
-    product.variants,
-  );
+  const { priceRange, priceMin, priceMax } = derivePriceRange(product.price, product.variants);
   return {
     id: product.id,
     name: product.name,

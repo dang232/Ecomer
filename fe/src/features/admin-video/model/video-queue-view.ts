@@ -1,7 +1,4 @@
-import type {
-  AdminVideoAppealItem,
-  AdminVideoModerationQueueItem,
-} from "@/shared/contracts/api";
+import type { AdminVideoAppealItem, AdminVideoModerationQueueItem } from "@/shared/contracts/api";
 
 /** UI-facing view of a video in the moderation queue. */
 export interface VideoModerationView {
@@ -18,9 +15,7 @@ export interface VideoModerationView {
   createdAt: string | null;
 }
 
-export function toVideoModerationView(
-  raw: AdminVideoModerationQueueItem,
-): VideoModerationView {
+export function toVideoModerationView(raw: AdminVideoModerationQueueItem): VideoModerationView {
   return {
     videoId: raw.videoId,
     ownerId: raw.ownerId ?? null,

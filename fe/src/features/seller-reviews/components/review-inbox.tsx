@@ -1,4 +1,4 @@
-import { IconChevronLeft, IconChevronRight, IconMessage, IconSearch, IconStar } from "@tabler/icons-react";
+import { ChevronLeft, ChevronRight, MessageSquare, Search, Star } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -35,12 +35,12 @@ export function ReviewInbox({ view, routeState, onRouteChange }: ReviewInboxProp
           <h2 className="text-xl font-bold text-foreground">{t("seller.reviews.title")}</h2>
           <p className="text-sm text-muted-foreground">{t("seller.reviews.subtitle")}</p>
         </div>
-        <IconMessage size={24} className="text-muted-foreground" aria-hidden="true" />
+        <MessageSquare size={24} className="text-muted-foreground" aria-hidden="true" />
       </div>
 
       {/* Search form */}
       <form className="flex items-center gap-2" onSubmit={handleSearchSubmit}>
-        <IconSearch size={16} className="text-muted-foreground" aria-hidden="true" />
+        <Search size={16} className="text-muted-foreground" aria-hidden="true" />
         <input
           role="searchbox"
           value={search}
@@ -71,9 +71,13 @@ export function ReviewInbox({ view, routeState, onRouteChange }: ReviewInboxProp
                   {review.productName ?? t("seller.reviews.productFallback")}
                 </p>
               </div>
-              <div className="flex items-center gap-0.5" aria-label={`${review.rating}/5`}>
+              <div
+                className="flex items-center gap-0.5"
+                role="img"
+                aria-label={`${review.rating}/5`}
+              >
                 {RATING_STARS.map((star, index) => (
-                  <IconStar
+                  <Star
                     key={star}
                     size={14}
                     fill={index < review.rating ? "var(--warning)" : "var(--border)"}
@@ -119,10 +123,12 @@ export function ReviewInbox({ view, routeState, onRouteChange }: ReviewInboxProp
             disabled={routeState.page === 0}
             className="inline-flex items-center gap-1 rounded border border-border px-2 py-1 disabled:opacity-40"
           >
-            <IconChevronLeft size={14} aria-hidden="true" />
+            <ChevronLeft size={14} aria-hidden="true" />
             {t("seller.reviews.previous")}
           </button>
-          <span>{t("seller.reviews.page", { page: routeState.page + 1, pages: view.pageCount })}</span>
+          <span>
+            {t("seller.reviews.page", { page: routeState.page + 1, pages: view.pageCount })}
+          </span>
           <button
             type="button"
             onClick={() => onRouteChange({ page: routeState.page + 1 })}
@@ -130,7 +136,7 @@ export function ReviewInbox({ view, routeState, onRouteChange }: ReviewInboxProp
             className="inline-flex items-center gap-1 rounded border border-border px-2 py-1 disabled:opacity-40"
           >
             {t("seller.reviews.next")}
-            <IconChevronRight size={14} aria-hidden="true" />
+            <ChevronRight size={14} aria-hidden="true" />
           </button>
         </nav>
       ) : null}

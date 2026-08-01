@@ -1,8 +1,8 @@
 import { CreditCard, MapPin, Package, Truck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { formatPrice } from "@/shared/lib";
 import type { Address, CartItem } from "@/shared/contracts/api";
+import { formatPrice } from "@/shared/lib";
 
 import { formatAddressLine } from "./format";
 import type { PaymentOption, ShippingOption } from "./types";

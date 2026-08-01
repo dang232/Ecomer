@@ -18,9 +18,8 @@ interface PayoutDialogProps {
  *   - Amount must be greater than 0
  *   - Amount must not exceed the available balance
  *
- * NOTE: the idempotency key is NOT cleared on network/server error — it is
- * cleared only on success or explicit dialog close/reset (caller's concern).
- * See wallet-page.tsx for the key management strategy.
+ * NOTE: idempotency-key lifetime is owned by the request handler so retries
+ * can reuse the same key after a network/server error.
  */
 export function PayoutDialog({
   open,

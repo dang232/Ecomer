@@ -1,13 +1,14 @@
-import { IconAlertCircle, IconCircleCheck, IconClock } from "@tabler/icons-react";
+import { AlertCircle, CheckCircle2, Clock } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { z } from "zod";
 
-import { createCheckoutRecoveryStore, type CheckoutRecoveryStore } from "../../features/checkout";
 import { ApiError } from "@/shared/api";
 import { paymentStatus } from "@/shared/api/endpoints/payment";
 import { formatPrice } from "@/shared/lib";
+
+import { createCheckoutRecoveryStore, type CheckoutRecoveryStore } from "../../features/checkout";
 
 const providerSchema = z.enum(["vnpay", "momo"]);
 type Phase = "pending" | "completed" | "failed" | "error";
@@ -119,7 +120,7 @@ export function PaymentReturnPage() {
             className="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center animate-pulse"
             style={{ background: "rgba(0,191,179,0.12)" }}
           >
-            <IconClock size={36} style={{ color: "var(--primary)" }} />
+            <Clock size={36} style={{ color: "var(--primary)" }} />
           </div>
           <h1
             className="text-2xl font-bold text-foreground mb-3"
@@ -139,7 +140,7 @@ export function PaymentReturnPage() {
             className="w-24 h-24 rounded-full mx-auto mb-6 flex items-center justify-center"
             style={{ background: "rgb(var(--success-rgb) / 0.12)" }}
           >
-            <IconCircleCheck size={48} style={{ color: "var(--success)" }} />
+            <CheckCircle2 size={48} style={{ color: "var(--success)" }} />
           </div>
           <h1
             className="text-3xl font-black text-foreground mb-3"
@@ -183,7 +184,7 @@ export function PaymentReturnPage() {
             className="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center"
             style={{ background: "rgb(var(--error-rgb) / 0.12)" }}
           >
-            <IconAlertCircle size={40} style={{ color: "var(--error)" }} />
+            <AlertCircle size={40} style={{ color: "var(--error)" }} />
           </div>
           <h1 className="text-2xl font-bold text-foreground mb-3">
             {t("paymentReturn.failed.title")}
@@ -213,7 +214,7 @@ export function PaymentReturnPage() {
             className="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center"
             style={{ background: "rgb(var(--warning-rgb) / 0.12)" }}
           >
-            <IconAlertCircle size={40} style={{ color: "var(--warning)" }} />
+            <AlertCircle size={40} style={{ color: "var(--warning)" }} />
           </div>
           <h1 className="text-2xl font-bold text-foreground mb-3">
             {t("paymentReturn.error.title")}

@@ -88,6 +88,24 @@ class VnpayCallbackServiceTest {
     }
 
     @Test
+    void paymentNotFound_acknowledgesWithoutStateChange() {
+        CapturingPaymentRepository repository = new CapturingPaymentRepository(null);
+        CapturingLedgerRepository ledgerRepository = new CapturingLedgerRepository();
+        CapturingCallbackLogStore callbackLogStore = new CapturingCallbackLogStore();
+        CapturingPaymentCallbackOutbox outbox = new CapturingPaymentCallbackOutbox();
+        VnpayCallbackService service = service(repository, ledgerRepository, callbackLogStore, outbox);
+        Map<String, String> params = completedIpn(paymentId().toString(), "14123456");
+
+        VnpayCallbackService.VnpayIpnResult result = service.handleIpn(params);
+
+        assertThat(result.responseCode()).isEqualTo("01");
+        assertThat(callbackLogStore.savedAttempts).hasSize(1);
+        assertThat(callbackLogStore.savedAttempts.get(0).processingStatus()).isEqualTo("PAYMENT_NOT_FOUND");
+        assertThat(ledgerRepository.savedEntries).isEmpty();
+        assertThat(outbox.savedRecords).isEmpty();
+    }
+
+    @Test
     void returnVerificationDoesNotMutatePayment() {
         CapturingPaymentRepository repository = new CapturingPaymentRepository(payment(PaymentStatus.PENDING, null));
         CapturingLedgerRepository ledgerRepository = new CapturingLedgerRepository();

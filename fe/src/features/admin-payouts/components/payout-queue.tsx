@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { DataTableColumn } from "@/shared/ui/data-table";
 import type { TFunction } from "i18next";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -18,6 +17,7 @@ import {
 } from "@/shared/api/endpoints/admin";
 import type { PayoutStatus } from "@/shared/contracts/api";
 import { formatPrice } from "@/shared/lib";
+import type { DataTableColumn } from "@/shared/ui/data-table";
 
 import { adminPayoutsQueryOptions } from "../api/query-options";
 import {
@@ -70,7 +70,7 @@ export function PayoutQueue({
     }),
   );
   const rows: PayoutView[] = (data?.content ?? []).map(toPayoutView);
-  const selectedRow = selected ? rows.find((r) => r.id === selected) ?? null : null;
+  const selectedRow = selected ? (rows.find((r) => r.id === selected) ?? null) : null;
 
   const invalidate = () => {
     void qc.invalidateQueries({ queryKey: ["admin", "payouts"] });
@@ -97,11 +97,7 @@ export function PayoutQueue({
         case "unknown":
           return adminUnknownPayout(payout.id, values.reason);
         case "paid":
-          return adminPaidPayout(
-            payout.id,
-            values.providerReference ?? "",
-            values.evidence ?? "",
-          );
+          return adminPaidPayout(payout.id, values.providerReference ?? "", values.evidence ?? "");
         case "legacy-complete":
           return adminCompleteLegacyPayout(payout.id, {
             reason: values.reason,
@@ -257,7 +253,7 @@ function buildPayoutQueueColumns({
     {
       id: "requestedAt",
       header: t("admin.payouts.th.requestedAt") ?? "Requested",
-      cell: (row) => row.requestedAt ? new Date(row.requestedAt).toLocaleDateString() : "—",
+      cell: (row) => (row.requestedAt ? new Date(row.requestedAt).toLocaleDateString() : "—"),
     },
     {
       id: "actions",
@@ -301,19 +297,39 @@ function PayoutActionCell({
     tone: "default" | "danger" | "primary";
   }[] = [];
   if (actions.canApprove) {
-    buttons.push({ variant: "approve", label: t("admin.payouts.action.approve") ?? "Approve", tone: "primary" });
+    buttons.push({
+      variant: "approve",
+      label: t("admin.payouts.action.approve") ?? "Approve",
+      tone: "primary",
+    });
   }
   if (actions.canReject) {
-    buttons.push({ variant: "reject", label: t("admin.payouts.action.reject") ?? "Reject", tone: "danger" });
+    buttons.push({
+      variant: "reject",
+      label: t("admin.payouts.action.reject") ?? "Reject",
+      tone: "danger",
+    });
   }
   if (actions.canSubmit) {
-    buttons.push({ variant: "submit", label: t("admin.payouts.action.submit") ?? "Submit", tone: "primary" });
+    buttons.push({
+      variant: "submit",
+      label: t("admin.payouts.action.submit") ?? "Submit",
+      tone: "primary",
+    });
   }
   if (actions.canUnknown) {
-    buttons.push({ variant: "unknown", label: t("admin.payouts.action.unknown") ?? "Unknown", tone: "default" });
+    buttons.push({
+      variant: "unknown",
+      label: t("admin.payouts.action.unknown") ?? "Unknown",
+      tone: "default",
+    });
   }
   if (actions.canPaid) {
-    buttons.push({ variant: "paid", label: t("admin.payouts.action.paid") ?? "Paid", tone: "primary" });
+    buttons.push({
+      variant: "paid",
+      label: t("admin.payouts.action.paid") ?? "Paid",
+      tone: "primary",
+    });
   }
   if (actions.canLegacyComplete) {
     buttons.push({
@@ -372,7 +388,5 @@ function StatusChip({ status }: { status: PayoutStatus }) {
     COMPLETED: "bg-emerald-100 text-emerald-700",
     FAILED: "bg-red-100 text-red-700",
   };
-  return (
-    <span className={`rounded px-2 py-0.5 text-xs font-bold ${map[status]}`}>{status}</span>
-  );
+  return <span className={`rounded px-2 py-0.5 text-xs font-bold ${map[status]}`}>{status}</span>;
 }

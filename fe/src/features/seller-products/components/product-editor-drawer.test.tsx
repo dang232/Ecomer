@@ -17,9 +17,7 @@ import { ProductEditorDrawer } from "./product-editor-drawer";
 // ── Mock child sections so we test drawer-level logic only ─────────────────────
 
 vi.mock("./product-basic-fields", () => ({
-  ProductBasicFields: () => (
-    <div data-testid="basic-fields">BasicFields</div>
-  ),
+  ProductBasicFields: () => <div data-testid="basic-fields">BasicFields</div>,
 }));
 
 vi.mock("./product-media-fields", () => ({
@@ -50,11 +48,7 @@ vi.mock("../model/draft-recovery", () => ({
 
 function withQueryClient(element: React.ReactElement) {
   const queryClient = new QueryClient();
-  return (
-    <QueryClientProvider client={queryClient}>
-      {element}
-    </QueryClientProvider>
-  );
+  return <QueryClientProvider client={queryClient}>{element}</QueryClientProvider>;
 }
 
 const renderDrawer = (
@@ -65,12 +59,7 @@ const renderDrawer = (
 ) =>
   render(
     withQueryClient(
-      <ProductEditorDrawer
-        open={open}
-        product={product}
-        onClose={onClose}
-        onSave={onSave}
-      />,
+      <ProductEditorDrawer open={open} product={product} onClose={onClose} onSave={onSave} />,
     ),
   );
 
@@ -82,7 +71,15 @@ describe("ProductEditorDrawer", () => {
   it("renders all four sections when a draft is recovered", async () => {
     vi.mocked(draftRecovery.getDraftRecovery).mockReturnValueOnce({
       productId: "draft-1",
-      formValues: { name: "Draft", description: "", categoryId: "", brand: "", tags: [], images: [], variants: [] },
+      formValues: {
+        name: "Draft",
+        description: "",
+        categoryId: "",
+        brand: "",
+        tags: [],
+        images: [],
+        variants: [],
+      },
     });
     renderDrawer(true, null, vi.fn(), vi.fn());
     await waitFor(() => {
@@ -117,9 +114,7 @@ describe("ProductEditorDrawer", () => {
   it("calls onClose when Cancel is clicked (form is not dirty)", () => {
     const onClose = vi.fn();
     renderDrawer(true, null, onClose, vi.fn());
-    fireEvent.click(
-      screen.getByRole("button", { name: /seller\.products\.editor\.cancel/i }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: /seller\.products\.editor\.cancel/i }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 

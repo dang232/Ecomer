@@ -34,7 +34,7 @@ describe("ProductTile", () => {
     );
     expect(screen.getByText("VNShop Mall")).toBeVisible();
     expect(screen.getByText(/17%/)).toBeVisible();
-    expect(screen.getByTestId("product-tile").className).toContain("grid-rows-");
+    expect(screen.getByTestId("product-card").className).toContain("grid-rows-");
   });
 
   it("marks unavailable products and omits unsupported actions", () => {

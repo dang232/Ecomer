@@ -1,16 +1,8 @@
 import { createElement, lazy, Suspense, type ReactNode } from "react";
 import { createBrowserRouter } from "react-router";
 
-import { CouponList } from "@/features/admin-coupons";
-import { AdminDashboard } from "@/features/admin-dashboard";
-import { DisputeQueue } from "@/features/admin-disputes";
-import { SystemHealth } from "@/features/admin-health";
-import { AdminOrderQueue } from "@/features/admin-orders";
-import { PayoutQueue } from "@/features/admin-payouts";
-import { ReviewModerationQueue } from "@/features/admin-reviews";
-import { SellerApprovalQueue } from "@/features/admin-sellers";
-import { AdminUserQueue } from "@/features/admin-users";
 import { PageSkeleton, ProductDetailSkeleton } from "@/shared/ui";
+
 import { ErrorBoundary } from "./components/error-boundary";
 import { myOrdersOptions, orderDetailOptions } from "./hooks/use-orders";
 import { productDetailOptions } from "./hooks/use-products";
@@ -26,18 +18,6 @@ import {
 import { RequireAuth, RequireRole } from "./lib/auth/role-guard";
 import { queryClient } from "./lib/query-client";
 import { RouteErrorPage } from "./pages/RouteErrorPage";
-
-// Feature route imports (Plan 07 direct-route cutover)
-import { SellerDashboardRoute } from "@/features/seller-dashboard";
-import { SellerOrderQueueRoute } from "@/features/seller-orders";
-import { ReturnsRoute } from "@/features/seller-returns";
-import { SellerReviewInboxRoute } from "@/features/seller-reviews";
-
-// Route adapters (Plan 07)
-import { SellerProductsRoute } from "./routes/seller-products-route";
-import { SellerSettingsRoute } from "./routes/seller-settings-route";
-import { SellerWalletRoute } from "./routes/seller-wallet-route";
-import { VideoModerationRoute } from "./routes/video-moderation-route";
 
 const HomePage = lazy(() => import("./pages/HomePage").then((m) => ({ default: m.HomePage })));
 const LoginPage = lazy(() => import("./pages/LoginPage").then((m) => ({ default: m.LoginPage })));
@@ -101,6 +81,59 @@ const NotFoundPage = lazy(() =>
 );
 const AccessDeniedPage = lazy(() =>
   import("./pages/AccessDeniedPage").then((m) => ({ default: m.AccessDeniedPage })),
+);
+
+const SellerDashboardRoute = lazy(() =>
+  import("@/features/seller-dashboard").then((m) => ({ default: m.SellerDashboardRoute })),
+);
+const SellerProductsRoute = lazy(() =>
+  import("./routes/seller-products-route").then((m) => ({ default: m.SellerProductsRoute })),
+);
+const SellerOrderQueueRoute = lazy(() =>
+  import("@/features/seller-orders").then((m) => ({ default: m.SellerOrderQueueRoute })),
+);
+const ReturnsRoute = lazy(() =>
+  import("@/features/seller-returns").then((m) => ({ default: m.ReturnsRoute })),
+);
+const SellerReviewInboxRoute = lazy(() =>
+  import("@/features/seller-reviews").then((m) => ({ default: m.SellerReviewInboxRoute })),
+);
+const SellerWalletRoute = lazy(() =>
+  import("./routes/seller-wallet-route").then((m) => ({ default: m.SellerWalletRoute })),
+);
+const SellerSettingsRoute = lazy(() =>
+  import("./routes/seller-settings-route").then((m) => ({ default: m.SellerSettingsRoute })),
+);
+
+const AdminDashboard = lazy(() =>
+  import("@/features/admin-dashboard").then((m) => ({ default: m.AdminDashboard })),
+);
+const AdminOrderQueue = lazy(() =>
+  import("@/features/admin-orders").then((m) => ({ default: m.AdminOrderQueue })),
+);
+const CouponList = lazy(() =>
+  import("@/features/admin-coupons").then((m) => ({ default: m.CouponList })),
+);
+const SellerApprovalQueue = lazy(() =>
+  import("@/features/admin-sellers").then((m) => ({ default: m.SellerApprovalQueue })),
+);
+const ReviewModerationQueue = lazy(() =>
+  import("@/features/admin-reviews").then((m) => ({ default: m.ReviewModerationQueue })),
+);
+const VideoModerationRoute = lazy(() =>
+  import("./routes/video-moderation-route").then((m) => ({ default: m.VideoModerationRoute })),
+);
+const DisputeQueue = lazy(() =>
+  import("@/features/admin-disputes").then((m) => ({ default: m.DisputeQueue })),
+);
+const PayoutQueue = lazy(() =>
+  import("@/features/admin-payouts").then((m) => ({ default: m.PayoutQueue })),
+);
+const AdminUserQueue = lazy(() =>
+  import("@/features/admin-users").then((m) => ({ default: m.AdminUserQueue })),
+);
+const SystemHealth = lazy(() =>
+  import("@/features/admin-health").then((m) => ({ default: m.SystemHealth })),
 );
 
 const lazyRoute = (el: ReactNode) =>

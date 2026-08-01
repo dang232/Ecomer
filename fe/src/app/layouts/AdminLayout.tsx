@@ -1,16 +1,20 @@
 import { Outlet } from "react-router";
 
-import { ConsoleChrome } from "../components/console-chrome";
+import { AdminNav } from "@/features/admin";
 
+import { ConsoleChrome } from "./ConsoleChrome";
 import { ConsoleLayoutFooter } from "./ConsoleLayoutFooter";
 
 export function AdminLayout() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <ConsoleChrome persona="admin" />
-      <main id="main-content" className="flex-1 animate-fade-in">
-        <Outlet />
-      </main>
+      <div className="flex flex-1">
+        <AdminNav />
+        <main id="main-content" className="min-w-0 flex-1 animate-fade-in">
+          <Outlet />
+        </main>
+      </div>
       <ConsoleLayoutFooter />
     </div>
   );

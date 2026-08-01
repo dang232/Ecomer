@@ -3,12 +3,11 @@
  * Image removal before save changes form state only (no destructive API call).
  */
 
-import { IconPhoto, IconTrash } from "@tabler/icons-react";
+import { Image, Trash2 } from "lucide-react";
 import { useRef } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-
 
 import { ImageWithFallback } from "@/shared/ui";
 
@@ -25,7 +24,11 @@ interface ProductMediaFieldsProps {
 
 export function ProductMediaFields({ form, disabled }: ProductMediaFieldsProps) {
   const { t } = useTranslation();
-  const { watch, setValue, formState: { errors } } = form;
+  const {
+    watch,
+    setValue,
+    formState: { errors },
+  } = form;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const images = watch("images");
@@ -38,22 +41,24 @@ export function ProductMediaFields({ form, disabled }: ProductMediaFieldsProps) 
       toast.info(t("seller.products.editor.media.maxReached", { max: MAX_IMAGES }));
       return;
     }
-    const toAdd = Array.from(files).slice(0, slotsLeft).filter((file) => {
-      if (!ACCEPTED_TYPES.test(file.type)) {
-        toast.error(t("seller.products.editor.media.invalidType", { name: file.name }));
-        return false;
-      }
-      if (file.size > MAX_IMAGE_BYTES) {
-        toast.error(
-          t("seller.products.editor.media.fileTooLarge", {
-            name: file.name,
-            maxMb: MAX_IMAGE_BYTES / (1024 * 1024),
-          }),
-        );
-        return false;
-      }
-      return true;
-    });
+    const toAdd = Array.from(files)
+      .slice(0, slotsLeft)
+      .filter((file) => {
+        if (!ACCEPTED_TYPES.test(file.type)) {
+          toast.error(t("seller.products.editor.media.invalidType", { name: file.name }));
+          return false;
+        }
+        if (file.size > MAX_IMAGE_BYTES) {
+          toast.error(
+            t("seller.products.editor.media.fileTooLarge", {
+              name: file.name,
+              maxMb: MAX_IMAGE_BYTES / (1024 * 1024),
+            }),
+          );
+          return false;
+        }
+        return true;
+      });
 
     if (toAdd.length === 0) return;
 
@@ -66,10 +71,14 @@ export function ProductMediaFields({ form, disabled }: ProductMediaFieldsProps) 
     // Store blobs as a separate field and keep URLs in form values
     // Note: Blobs are temporary; the real upload flow happens in the drawer mutation.
     // For now we render local blob previews.
-    setValue("images", [
-      ...(images ?? []),
-      ...newEntries.map((e) => ({ url: e.url, alt: e.alt, sortOrder: e.sortOrder })),
-    ], { shouldValidate: false });
+    setValue(
+      "images",
+      [
+        ...(images ?? []),
+        ...newEntries.map((e) => ({ url: e.url, alt: e.alt, sortOrder: e.sortOrder })),
+      ],
+      { shouldValidate: false },
+    );
   };
 
   const removeImage = (index: number) => {
@@ -118,7 +127,7 @@ export function ProductMediaFields({ form, disabled }: ProductMediaFieldsProps) 
                 aria-label={t("seller.products.editor.media.remove")}
                 className="absolute top-1 right-1 w-6 h-6 rounded-full bg-white/90 flex items-center justify-center hover:bg-card disabled:opacity-50 transition-colors"
               >
-                <IconTrash size={12} className="text-error" />
+                <Trash2 size={12} className="text-error" />
               </button>
             </div>
           ))}
@@ -130,7 +139,7 @@ export function ProductMediaFields({ form, disabled }: ProductMediaFieldsProps) 
               disabled={disabled}
               className="aspect-square rounded-[var(--radius-md)] border-2 border-dashed border-border flex flex-col items-center justify-center gap-1.5 text-muted-foreground hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
             >
-              <IconPhoto size={20} aria-hidden="true" />
+              <Image size={20} aria-hidden="true" />
               <span className="text-[11px] font-medium">
                 {t("seller.products.editor.media.add")}
               </span>
@@ -157,9 +166,11 @@ export function ProductMediaFields({ form, disabled }: ProductMediaFieldsProps) 
           })}
         </p>
 
-        {errors.images ? <p className="mt-1 text-xs text-error" role="alert">
+        {errors.images ? (
+          <p className="mt-1 text-xs text-error" role="alert">
             {String(errors.images.message ?? "")}
-          </p> : null}
+          </p>
+        ) : null}
       </div>
     </fieldset>
   );

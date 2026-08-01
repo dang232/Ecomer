@@ -29,7 +29,7 @@ export function RevenueChart({ points }: RevenueChartProps) {
       ) : (
         <div data-testid="admin-revenue-chart">
           <ResponsiveContainer width="100%" height={260}>
-            <AreaChart data={points}>
+            <AreaChart data={[...points]}>
               <defs>
                 <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3} />

@@ -1,12 +1,9 @@
-import type {
-  FULFILLMENT_STATUS_VALUES,
-  type PendingSubOrder,
-} from "@/shared/api/endpoints/orders";
+import type * as api from "@/shared/contracts/api";
 
 /** Actions available for a given sub-order status. */
 export type SellerOrderAction = "accept" | "reject" | "ship";
 
-export type FulfillmentStatus = (typeof FULFILLMENT_STATUS_VALUES)[number];
+export type FulfillmentStatus = (typeof api.FULFILLMENT_STATUS_VALUES)[number];
 
 /** Maps each known fulfillment status to the set of actions a seller can take. */
 const STATUS_ACTIONS: Record<FulfillmentStatus, readonly SellerOrderAction[]> = {
@@ -31,9 +28,17 @@ export interface SellerOrderRow {
 
 /** Derives a typed order row from a pending sub-order. Unknown wire values fail
  * the PendingSubOrder schema rather than defaulting to pending. */
-export function toSellerOrderRow(subOrder: PendingSubOrder): SellerOrderRow {
+export function toSellerOrderRow(subOrder: api.PendingSubOrder): SellerOrderRow {
   type Item = { name?: string; quantity?: number };
-  const items = (subOrder.items ?? []) as Item[];
+  const isItem = (value: unknown): value is Item => {
+    if (typeof value !== "object" || value === null) return false;
+    const record = value as Record<string, unknown>;
+    return (
+      (record.name === undefined || typeof record.name === "string") &&
+      (record.quantity === undefined || typeof record.quantity === "number")
+    );
+  };
+  const items = (subOrder.items ?? []).filter(isItem);
   const itemCount = items.length;
 
   let itemSummary = "";
@@ -48,9 +53,7 @@ export function toSellerOrderRow(subOrder: PendingSubOrder): SellerOrderRow {
     itemSummary = `${items[0].name ?? ""} x${qty1}, ${items[1].name ?? ""} x${qty2}`;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- schema guarantees FulfillmentStatus
-  const status: FulfillmentStatus = subOrder.status as FulfillmentStatus;
-  /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
+  const status = subOrder.status;
   const row: SellerOrderRow = {
     id: subOrder.id,
     orderId: subOrder.orderId,

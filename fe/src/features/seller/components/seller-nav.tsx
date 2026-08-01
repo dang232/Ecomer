@@ -1,43 +1,37 @@
 import {
-  IconLayoutDashboard,
-  IconPackage,
-  IconRotate,
-  IconSettings,
-  IconShoppingBag,
-  IconStar,
-  IconWallet,
-} from "@tabler/icons-react";
-import type { Icon } from "@tabler/icons-react";
+  LayoutDashboard,
+  Package,
+  RotateCcw,
+  Settings,
+  ShoppingBag,
+  Star,
+  Wallet,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { NavLink, useLocation } from "react-router";
 
 type SellerTab =
-  | "dashboard"
-  | "products"
-  | "orders"
-  | "returns"
-  | "reviews"
-  | "wallet"
-  | "settings";
+  "dashboard" | "products" | "orders" | "returns" | "reviews" | "wallet" | "settings";
 
 interface NavItem {
   id: SellerTab;
   labelKey: string;
-  icon: Icon;
+  icon: LucideIcon;
   href: string;
 }
 
 const PRIMARY: NavItem[] = [
-  { id: "dashboard", labelKey: "seller.nav.dashboard", icon: IconLayoutDashboard, href: "/seller" },
-  { id: "orders", labelKey: "seller.nav.orders", icon: IconShoppingBag, href: "/seller/orders" },
-  { id: "products", labelKey: "seller.nav.products", icon: IconPackage, href: "/seller/products" },
-  { id: "wallet", labelKey: "seller.nav.wallet", icon: IconWallet, href: "/seller/wallet" },
+  { id: "dashboard", labelKey: "seller.nav.dashboard", icon: LayoutDashboard, href: "/seller" },
+  { id: "orders", labelKey: "seller.nav.orders", icon: ShoppingBag, href: "/seller/orders" },
+  { id: "products", labelKey: "seller.nav.products", icon: Package, href: "/seller/products" },
+  { id: "wallet", labelKey: "seller.nav.wallet", icon: Wallet, href: "/seller/wallet" },
 ];
 
 const OVERFLOW: NavItem[] = [
-  { id: "returns", labelKey: "return.seller.title", icon: IconRotate, href: "/seller/returns" },
-  { id: "reviews", labelKey: "seller.nav.reviews", icon: IconStar, href: "/seller/reviews" },
-  { id: "settings", labelKey: "seller.nav.settings", icon: IconSettings, href: "/seller/settings" },
+  { id: "returns", labelKey: "return.seller.title", icon: RotateCcw, href: "/seller/returns" },
+  { id: "reviews", labelKey: "seller.nav.reviews", icon: Star, href: "/seller/reviews" },
+  { id: "settings", labelKey: "seller.nav.settings", icon: Settings, href: "/seller/settings" },
 ];
 
 const SIDE_LINK_CLASS = ({ isActive }: { isActive: boolean }) =>
@@ -51,9 +45,7 @@ const SIDE_LINK_CLASS = ({ isActive }: { isActive: boolean }) =>
 const BOTTOM_LINK_CLASS = ({ isActive }: { isActive: boolean }) =>
   [
     "flex min-h-[var(--target-web)] min-w-[var(--target-web)] flex-col items-center justify-center gap-0.5 rounded-[var(--radius-md)] px-2 text-[11px] font-medium transition-colors",
-    isActive
-      ? "bg-primary-light text-primary"
-      : "text-text-secondary hover:bg-background",
+    isActive ? "bg-primary-light text-primary" : "text-text-secondary hover:bg-background",
   ].join(" ");
 
 const TOP_LINK_CLASS = ({ isActive }: { isActive: boolean }) =>
@@ -183,7 +175,7 @@ export function SellerNav({ pendingCount }: { pendingCount: number }) {
             className="flex min-h-[var(--target-web)] min-w-[var(--target-web)] cursor-pointer list-none flex-col items-center justify-center gap-0.5 rounded-[var(--radius-md)] px-2 text-[11px] font-medium text-text-secondary transition-colors hover:bg-background [&::-webkit-details-marker]:hidden"
             aria-label={t("seller.nav.moreLabel", { defaultValue: "More" })}
           >
-            <IconSettings size={20} aria-hidden="true" />
+            <Settings size={20} aria-hidden="true" />
             <span>{t("seller.nav.moreLabel", { defaultValue: "More" })}</span>
           </summary>
           <div className="absolute bottom-full right-0 mb-2 w-56 rounded-[var(--radius-lg)] border border-border bg-card p-2 shadow-[var(--shadow-lg)]">

@@ -1,5 +1,5 @@
-import { IconAlertCircle, IconCircleCheck, IconPackage, IconSearch, IconTruck } from "@tabler/icons-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { AlertCircle, CheckCircle2, Package, Search, Truck } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -95,6 +95,10 @@ export function OrderQueue({
 
   return (
     <div className="space-y-5">
+      <header className="space-y-1">
+        <h1 className="text-2xl font-bold text-foreground">{t("seller.orders.title")}</h1>
+      </header>
+
       <ShipOrderDialog
         subOrderId={shipFor ?? ""}
         open={!!shipFor}
@@ -116,7 +120,8 @@ export function OrderQueue({
       />
 
       {/* Accept confirm — uses the existing seller.orders.confirmDialog key */}
-      {confirmOrderId ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      {confirmOrderId ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-card border border-border rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
             <h3 className="text-base font-semibold text-foreground mb-2">
               {t("seller.orders.confirmDialog.title")}
@@ -148,11 +153,12 @@ export function OrderQueue({
               </button>
             </div>
           </div>
-        </div> : null}
+        </div>
+      ) : null}
 
       {/* Toolbar: search only */}
       <div className="sm:ml-auto flex items-center gap-2 bg-card border border-border rounded-[var(--radius-md)] px-3 py-1.5 w-full sm:w-72">
-        <IconSearch size={14} className="text-muted-foreground" aria-hidden="true" />
+        <Search size={14} className="text-muted-foreground" aria-hidden="true" />
         <input
           type="search"
           value={routeState.q}
@@ -169,7 +175,7 @@ export function OrderQueue({
       ) : null}
       {error instanceof ApiError ? (
         <div className="bg-card border border-error/30 rounded-[var(--radius-lg)] p-6 text-center flex flex-col items-center gap-3">
-          <IconAlertCircle size={36} className="text-error" aria-hidden="true" />
+          <AlertCircle size={36} className="text-error" aria-hidden="true" />
           <p className="text-sm text-error font-medium">
             {t("seller.orders.loadError", { message: error.message })}
           </p>
@@ -186,11 +192,7 @@ export function OrderQueue({
       ) : null}
       {!isLoading && orders.length === 0 && !error ? (
         <div className="bg-card border border-border rounded-[var(--radius-lg)] p-8 text-center">
-          <IconPackage
-            size={40}
-            className="mx-auto mb-3 text-muted-foreground"
-            aria-hidden="true"
-          />
+          <Package size={40} className="mx-auto mb-3 text-muted-foreground" aria-hidden="true" />
           <p className="text-sm text-muted-foreground">{t("seller.orders.empty")}</p>
         </div>
       ) : null}
@@ -210,20 +212,13 @@ export function OrderQueue({
             {orders.map((row) => {
               const isRowPending = pendingMutationIds.has(row.id);
               return (
-                <div
-                  key={row.id}
-                  className="px-5 py-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-background transition-colors"
-                  onClick={() => onRouteChange({ selected: row.id })}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      onRouteChange({ selected: row.id });
-                    }
-                  }}
-                  aria-label={t("seller.orders.openDetail", { id: row.id })}
-                >
-                  <div>
+                <div key={row.id} className="px-5 py-4 flex items-center justify-between gap-4">
+                  <button
+                    type="button"
+                    onClick={() => onRouteChange({ selected: row.id })}
+                    aria-label={t("seller.orders.openDetail", { id: row.id })}
+                    className="min-w-0 flex-1 rounded-[var(--radius-md)] text-left hover:bg-background focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                  >
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-xs font-mono font-bold text-muted-foreground">
                         {row.id}
@@ -233,13 +228,8 @@ export function OrderQueue({
                       {t("seller.orders.parentOrder", { id: row.orderId })}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">{row.itemSummary}</p>
-                  </div>
-                  <div
-                    className="flex gap-2 shrink-0"
-                    role="group"
-                    onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => e.stopPropagation()}
-                  >
+                  </button>
+                  <div className="flex gap-2 shrink-0" role="group">
                     {row.actions.includes("accept") ? (
                       <>
                         <button
@@ -248,7 +238,7 @@ export function OrderQueue({
                           disabled={isRowPending}
                           className="flex items-center gap-1 px-3 py-1.5 rounded-[var(--radius-md)] text-xs font-semibold bg-primary text-primary-foreground disabled:opacity-50 hover:bg-primary-hover transition-colors"
                         >
-                          <IconCircleCheck size={13} aria-hidden="true" />
+                          <CheckCircle2 size={13} aria-hidden="true" />
                           {t("seller.orders.accept")}
                         </button>
                         <button
@@ -268,7 +258,7 @@ export function OrderQueue({
                         disabled={isRowPending}
                         className="flex items-center gap-1 px-3 py-1.5 rounded-[var(--radius-md)] text-xs font-semibold bg-primary text-primary-foreground disabled:opacity-50 hover:bg-primary-hover transition-colors"
                       >
-                        <IconTruck size={13} aria-hidden="true" />
+                        <Truck size={13} aria-hidden="true" />
                         {t("seller.orders.ship")}
                       </button>
                     ) : null}
@@ -280,10 +270,7 @@ export function OrderQueue({
         </div>
       ) : null}
 
-      <OrderDetailDrawer
-        row={selectedRow}
-        onClose={() => onRouteChange({ selected: null })}
-      />
+      <OrderDetailDrawer row={selectedRow} onClose={() => onRouteChange({ selected: null })} />
     </div>
   );
 }

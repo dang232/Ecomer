@@ -1,6 +1,7 @@
 package com.vnshop.orderservice.integration;
 
 import com.vnshop.orderservice.domain.Address;
+import com.vnshop.orderservice.domain.FulfillmentStatus;
 import com.vnshop.orderservice.domain.Money;
 import com.vnshop.orderservice.domain.Order;
 import com.vnshop.orderservice.domain.OrderItem;
@@ -86,6 +87,33 @@ class OrderServiceIntegrationTest {
         assertThat(orderRepository.findBySubOrderId(subOrderId))
                 .isPresent()
                 .get()
+                .extracting(order -> order.subOrders().getFirst().items())
+                .asList()
+                .hasSize(1);
+    }
+
+    @Test
+    void loadsSellerQueueItemsWithoutFetchingTwoBagCollectionsTogether() {
+        orderRepository.save(new Order(
+                UUID.randomUUID(),
+                "buyer-seller-queue-test",
+                new Address("1 Test Street", null, "District 1", "Ho Chi Minh City"),
+                List.of(new SubOrder("seller-queue-test", List.of(new OrderItem(
+                        "product-seller-queue-test",
+                        "SKU-SELLER-QUEUE-TEST",
+                        "seller-queue-test",
+                        "Seller Queue Product",
+                        1,
+                        new Money(new BigDecimal("100000")),
+                        null
+                )))),
+                "seller-queue-test-" + UUID.randomUUID()
+        ));
+
+        assertThat(orderRepository.findBySellerIdAndFulfillmentStatusIn(
+                "seller-queue-test", List.of(FulfillmentStatus.PENDING_ACCEPTANCE), "queue product"))
+                .hasSize(1)
+                .first()
                 .extracting(order -> order.subOrders().getFirst().items())
                 .asList()
                 .hasSize(1);

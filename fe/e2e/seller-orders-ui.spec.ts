@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
+
+import { loginAsPersona } from "./_auth";
 import { expectNoGlobalError } from "./_helpers";
-import { loginViaOidc } from "./_auth";
 
 /**
  * UI-driven QA spec for the seller orders queue.
@@ -17,7 +18,7 @@ import { loginViaOidc } from "./_auth";
 
 test.describe("seller orders queue UI", () => {
   test("/seller dashboard renders for seller1 without the global error", async ({ page }) => {
-    await loginViaOidc(page, "seller1");
+    await loginAsPersona(page, "seller");
     await page.goto("/seller");
 
     // Either the dashboard tab content OR the seller-channel layout shell.
@@ -32,7 +33,7 @@ test.describe("seller orders queue UI", () => {
   test("Orders tab renders queue header (proves /seller/orders/pending parses)", async ({
     page,
   }) => {
-    await loginViaOidc(page, "seller1");
+    await loginAsPersona(page, "seller");
     await page.goto("/seller");
 
     // Wait for the seller shell to mount before clicking the Orders tab.

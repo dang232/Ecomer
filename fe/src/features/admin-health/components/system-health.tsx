@@ -73,15 +73,11 @@ export function SystemHealth() {
       />
 
       <div
-        className="rounded-2xl p-4 shadow-sm"
-        style={{ background: summary.allUp ? "#f0fdf4" : summary.down > 0 ? "#fff7ed" : "#f8fafc" }}
+        className={`rounded-2xl p-4 shadow-sm ${summary.allUp ? "bg-success-light" : "bg-error-light"}`}
       >
-        <p
-          className="text-sm font-semibold"
-          style={{ color: summary.allUp ? "#16a34a" : "#ea580c" }}
-        >
+        <p className={`text-sm font-semibold ${summary.allUp ? "text-success" : "text-error"}`}>
           {summary.allUp
-            ? t("admin.health.allUp") ?? "All systems operational"
+            ? (t("admin.health.allUp") ?? "All systems operational")
             : t("admin.health.someDown", { down: summary.down, total: summary.total })}
         </p>
         {lastChecked ? (
@@ -105,7 +101,10 @@ export function SystemHealth() {
                   <p className="mt-0.5 truncate text-xs text-muted-foreground">{svc.healthPath}</p>
                   {result?.latencyMs != null ? (
                     <p className="mt-0.5 text-[11px] text-muted-foreground">
-                      {t("admin.health.latencyMs", { ms: result.latencyMs, defaultValue: `${result.latencyMs} ms` })}
+                      {t("admin.health.latencyMs", {
+                        ms: result.latencyMs,
+                        defaultValue: `${result.latencyMs} ms`,
+                      })}
                     </p>
                   ) : null}
                 </div>
@@ -125,16 +124,11 @@ function StatusPill({ status, t }: { status: HealthStatus; t: (k: string) => str
   if (status === "up") {
     return (
       <span
-        className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
-        style={{ background: "#dcfce7", color: "#16a34a" }}
+        className="flex items-center gap-1.5 rounded-full bg-success-light px-2.5 py-1 text-xs font-semibold text-success"
         role="status"
         aria-label={t("admin.health.up")}
       >
-        <span
-          className="h-2 w-2 rounded-full"
-          style={{ background: "#16a34a" }}
-          aria-hidden="true"
-        />
+        <span className="h-2 w-2 rounded-full bg-success" aria-hidden="true" />
         {t("admin.health.up")}
       </span>
     );
@@ -142,16 +136,11 @@ function StatusPill({ status, t }: { status: HealthStatus; t: (k: string) => str
   if (status === "down") {
     return (
       <span
-        className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
-        style={{ background: "#fee2e2", color: "#dc2626" }}
+        className="flex items-center gap-1.5 rounded-full bg-error-light px-2.5 py-1 text-xs font-semibold text-error"
         role="status"
         aria-label={t("admin.health.down")}
       >
-        <span
-          className="h-2 w-2 rounded-full"
-          style={{ background: "#dc2626" }}
-          aria-hidden="true"
-        />
+        <span className="h-2 w-2 rounded-full bg-error" aria-hidden="true" />
         {t("admin.health.down")}
       </span>
     );

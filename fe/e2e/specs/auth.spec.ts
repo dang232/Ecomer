@@ -1,6 +1,7 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
-import { expectNoGlobalError } from "../_helpers";
+
 import { loginViaOidc, registerAndLoginViaOidc, uniqueTestId } from "../_auth";
+import { expectNoGlobalError } from "../_helpers";
 
 const PASSWORD = "Test1234!";
 const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";

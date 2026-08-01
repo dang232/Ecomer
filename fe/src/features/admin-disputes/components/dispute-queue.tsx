@@ -3,14 +3,11 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { ADMIN_QUEUE_CAPABILITIES, AdminQueueFrame } from "@/features/admin";
 import { ApiError } from "@/shared/api";
-import {
-  adminOpenDisputes,
-  adminResolveDispute,
-} from "@/shared/api/endpoints/admin";
+import { adminOpenDisputes, adminResolveDispute } from "@/shared/api/endpoints/admin";
 import type { DataTableColumn } from "@/shared/ui/data-table";
 
-import { ADMIN_QUEUE_CAPABILITIES, AdminQueueFrame } from "@/features/admin";
 import { toDisputeView } from "../model/dispute-view";
 import type { DisputeView } from "../model/dispute-view";
 
@@ -23,17 +20,16 @@ interface DisputeQueueProps {
   onSelect: (id: string | null) => void;
 }
 
-export function DisputeQueue({
-  q,
-  selected,
-  onSearch,
-  onSelect,
-}: DisputeQueueProps) {
+export function DisputeQueue({ q, selected, onSearch, onSelect }: DisputeQueueProps) {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [resolveFor, setResolveFor] = useState<string | null>(null);
 
-  const { data: disputesRaw, isLoading, isError } = useQuery({
+  const {
+    data: disputesRaw,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ["admin", "disputes", q],
     queryFn: () => adminOpenDisputes({ q: q || undefined }),
     retry: false,
@@ -53,9 +49,7 @@ export function DisputeQueue({
       toast.error(err instanceof ApiError ? err.message : t("admin.disputes.resolveErr")),
   });
 
-  const selectedDispute = selected
-    ? disputes.find((d) => d.id === selected) ?? null
-    : null;
+  const selectedDispute = selected ? (disputes.find((d) => d.id === selected) ?? null) : null;
 
   const columns: DataTableColumn<DisputeView>[] = [
     {
@@ -142,9 +136,7 @@ export function DisputeQueue({
         <DisputeResolutionDialog
           disputeId={resolveFor}
           isPending={resolve.isPending}
-          onConfirm={({ adminResolution }) =>
-            resolve.mutate({ id: resolveFor, adminResolution })
-          }
+          onConfirm={({ adminResolution }) => resolve.mutate({ id: resolveFor, adminResolution })}
           onCancel={() => setResolveFor(null)}
         />
       ) : null}

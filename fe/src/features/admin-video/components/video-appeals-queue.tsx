@@ -1,29 +1,20 @@
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 
-import {
-  adminApproveAppeal,
-  adminRejectAppeal,
-} from "@/shared/api/endpoints/admin";
-import { DataTable } from "@/shared/ui/data-table";
+import { adminApproveAppeal, adminRejectAppeal } from "@/shared/api/endpoints/admin";
+import { DataTable, type DataTableColumn } from "@/shared/ui/data-table";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { PageContainer } from "@/shared/ui/page-container";
 import { PageHeader } from "@/shared/ui/page-header";
 import { Pagination } from "@/shared/ui/pagination";
 
 import { adminVideoAppealsQueryOptions } from "../api/query-options";
-import {
-  toVideoAppealView,
-  type VideoAppealView,
-} from "../model/video-queue-view";
+import { toVideoAppealView, type VideoAppealView } from "../model/video-queue-view";
 
 import { VideoDecisionDialog } from "./video-decision-dialog";
 import { VideoPreviewDrawer } from "./video-preview-drawer";
-
-const helper = createColumnHelper<VideoAppealView>();
 
 /**
  * Video appeal queue. URL owns `page` (1-based). Approving an appeal
@@ -38,9 +29,7 @@ export function VideoAppealsQueue() {
   const page = Number.parseInt(searchParams.get("page") ?? "1", 10) || 1;
   const selected = searchParams.get("selected");
 
-  const { data, isLoading, isError } = useQuery(
-    adminVideoAppealsQueryOptions({ page }),
-  );
+  const { data, isLoading, isError } = useQuery(adminVideoAppealsQueryOptions({ page }));
 
   const [rejectTarget, setRejectTarget] = useState<{
     videoId: string;
@@ -101,17 +90,19 @@ export function VideoAppealsQueue() {
     };
   })();
 
-  const columns: ColumnDef<VideoAppealView>[] = [
-    helper.accessor("videoId", { header: "Video ID" }),
-    helper.accessor("uploaderName", {
+  const columns: DataTableColumn<VideoAppealView>[] = [
+    { id: "videoId", header: "Video ID", cell: (row) => row.videoId },
+    {
+      id: "uploaderName",
       header: "Uploader",
-      cell: (info) => info.getValue() ?? "—",
-    }),
-    helper.accessor("status", { header: "Status" }),
-    helper.accessor("appealReason", {
+      cell: (row) => row.uploaderName ?? "—",
+    },
+    { id: "status", header: "Status", cell: (row) => row.status },
+    {
+      id: "appealReason",
       header: "Appeal Reason",
-      cell: (info) => info.getValue() ?? "—",
-    }),
+      cell: (row) => row.appealReason ?? "—",
+    },
   ];
 
   const handlePageChange = (next: number) => {
@@ -139,9 +130,7 @@ export function VideoAppealsQueue() {
 
   return (
     <PageContainer density="compact">
-      <PageHeader
-        title={t("admin.videoAppeals.title") ?? "Video Appeals"}
-      />
+      <PageHeader title={t("admin.videoAppeals.title") ?? "Video Appeals"} />
 
       {isLoading ? (
         <div className="rounded-xl border border-border bg-card px-5 py-8 text-center text-sm text-muted-foreground">
@@ -152,20 +141,21 @@ export function VideoAppealsQueue() {
           {t("admin.queue.loadErr")}
         </div>
       ) : items.length === 0 ? (
-        <EmptyState title={t("admin.queue.empty")} />
+        <EmptyState title={t("admin.queue.empty")} description="" icon={null} />
       ) : (
         <>
           <DataTable
             rows={items}
             columns={columns}
-            selectedId={selected}
-            onRowOpen={handleSelect}
-            selection="single"
+            rowKey={(row) => row.videoId}
+            selectedId={selected ?? undefined}
+            onRowOpen={(row) => handleSelect(row.videoId)}
+            caption={t("admin.videoAppeals.title") ?? "Video Appeals"}
+            empty={null}
           />
           <Pagination
             page={page}
-            totalPages={data?.totalPages ?? 0}
-            totalElements={data?.totalElements ?? 0}
+            pageCount={data?.totalPages ?? 0}
             onPageChange={handlePageChange}
           />
         </>
@@ -175,9 +165,7 @@ export function VideoAppealsQueue() {
         video={selectedVideo}
         onClose={() => handleSelect(null)}
         onApprove={(videoId) => approveMutation.mutate(videoId)}
-        onReject={(videoId) =>
-          setRejectTarget({ videoId, variant: "reject-appeal" })
-        }
+        onReject={(videoId) => setRejectTarget({ videoId, variant: "reject-appeal" })}
         isMutating={approveMutation.isPending || rejectMutation.isPending}
         approveLabel={t("admin.videoAppeals.approve") ?? "Approve Appeal"}
         rejectLabel={t("admin.videoAppeals.reject") ?? "Reject"}

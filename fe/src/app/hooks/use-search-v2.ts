@@ -6,12 +6,13 @@ import {
 } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 
-import { readJsonText } from "../../shared/api/read-json";
 import {
   cursorSearchParamsSchema,
   searchProductsV2,
   type CursorSearchParams,
 } from "@/shared/api/endpoints/search";
+
+import { readJsonText } from "../../shared/api/read-json";
 
 const SEARCH_V2_STALE_TIME = 60_000;
 

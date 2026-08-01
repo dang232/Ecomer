@@ -1,4 +1,4 @@
-import { IconBell, IconSettings } from "@tabler/icons-react";
+import { Bell, Settings } from "lucide-react";
 import { Link } from "react-router";
 
 import { useNotifications } from "../../hooks/use-notifications";
@@ -14,7 +14,7 @@ export function NotificationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
-          <IconBell size={24} className="text-foreground" />
+          <Bell size={24} className="text-foreground" />
           <h1 className="text-xl font-semibold text-foreground">Thông báo</h1>
         </div>
         <div className="flex items-center gap-3">
@@ -32,7 +32,7 @@ export function NotificationsPage() {
             className="p-1.5 rounded-md hover:bg-muted transition-colors"
             aria-label="Cài đặt thông báo"
           >
-            <IconSettings size={20} className="text-muted-foreground" />
+            <Settings size={20} className="text-muted-foreground" />
           </Link>
         </div>
       </div>

@@ -1,1 +1,0 @@
-export { ReviewModerationQueue as ReviewsModeration } from "@/features/admin-reviews";

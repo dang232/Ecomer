@@ -7,10 +7,11 @@ import {
   productReviewsQueryKey,
   useProductReviews,
 } from "@/features/reviews/api/use-product-reviews";
+import { summarizeReviews, type ReviewSummary } from "@/features/reviews/model/review-summary";
 import { ApiError } from "@/shared/api";
 import { createReview, voteReviewHelpful } from "@/shared/api/endpoints/reviews";
-import { summarizeReviews, type ReviewSummary } from "@/features/reviews/model/review-summary";
 import type { Review } from "@/shared/contracts/api";
+
 import { resolveAsyncStatus, type AsyncStatus } from "../../shared/ui/async-state-model";
 
 import {

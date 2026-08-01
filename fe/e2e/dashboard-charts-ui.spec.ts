@@ -1,11 +1,11 @@
 import { expect, test } from "@playwright/test";
 
-import { loginViaOidc } from "./_auth";
+import { loginAsPersona } from "./_auth";
 import { expectNoGlobalError } from "./_helpers";
 
 test.describe("dashboard charts", () => {
   test("admin revenue area and top-products column charts render live data", async ({ page }) => {
-    await loginViaOidc(page, "admin1");
+    await loginAsPersona(page, "admin");
     await page.goto("/admin");
 
     await expect(page.getByTestId("admin-revenue-chart")).toBeVisible({ timeout: 30_000 });
@@ -33,7 +33,7 @@ test.describe("dashboard charts", () => {
   });
 
   test("seller revenue area and orders column charts render live data", async ({ page }) => {
-    await loginViaOidc(page, "seller1");
+    await loginAsPersona(page, "seller");
     await page.goto("/seller");
 
     await expect(page.getByTestId("seller-revenue-chart")).toBeVisible({ timeout: 30_000 });

@@ -1,6 +1,7 @@
 package com.vnshop.paymentservice.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -58,6 +59,61 @@ class ProviderInitializationServiceTest {
         assertThat(retry.transactionRef()).isEqualTo("pi_first");
     }
 
+    @Test
+    void doesNotBotherFxServiceForNonFxMethods() {
+        UUID paymentId = UUID.randomUUID();
+        InMemoryPayments payments = new InMemoryPayments(payment(paymentId));
+        CapturingFxRate fxRates = new CapturingFxRate();
+        ProviderInitializationService service = new ProviderInitializationService(
+                payments, fxRates, immediateTransactions());
+
+        Payment result = service.freezeExternalAmount(paymentId);
+
+        assertThat(fxRates.calls).isEqualTo(0);
+        assertThat(result).isEqualTo(payment(paymentId));
+    }
+
+    @Test
+    void rejectsNegativeAmount() {
+        InMemoryPayments payments = new InMemoryPayments(payment(UUID.randomUUID()));
+        ProviderInitializationService service = new ProviderInitializationService(
+                payments, (f, t) -> new BigDecimal("0.00004"), immediateTransactions());
+
+        assertThatThrownBy(() -> service.persistProviderReference(payments.values.keySet().iterator().next(), null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void rejectsBlankProviderReference() {
+        UUID paymentId = UUID.randomUUID();
+        InMemoryPayments payments = new InMemoryPayments(payment(paymentId));
+        ProviderInitializationService service = new ProviderInitializationService(
+                payments, (f, t) -> new BigDecimal("0.00004"), immediateTransactions());
+
+        assertThatThrownBy(() -> service.persistProviderReference(paymentId, "   "))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void rejectsPaymentNotFound() {
+        InMemoryPayments payments = new InMemoryPayments();
+        ProviderInitializationService service = new ProviderInitializationService(
+                payments, (f, t) -> new BigDecimal("0.00004"), immediateTransactions());
+
+        assertThatThrownBy(() -> service.freezeExternalAmount(UUID.randomUUID()))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    private static final class CapturingFxRate implements FxRatePort {
+        int calls;
+
+        @Override
+        public BigDecimal rate(String from, String to) {
+            calls++;
+            return new BigDecimal("0.00004");
+        }
+    }
+
     @SuppressWarnings("unchecked")
     private static TransactionOperations immediateTransactions() {
         TransactionOperations transactions = mock(TransactionOperations.class);
@@ -77,6 +133,8 @@ class ProviderInitializationServiceTest {
     private static final class InMemoryPayments implements PaymentRepositoryPort {
         private final Map<UUID, Payment> values = new HashMap<>();
         private int lockedReads;
+
+        private InMemoryPayments() {}
 
         private InMemoryPayments(Payment payment) {
             values.put(payment.paymentId(), payment);

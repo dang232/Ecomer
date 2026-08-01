@@ -1,13 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  dashboardReportSchema,
-  dashboardTopSellerSchema,
-} from "@/shared/contracts/api/admin";
+import { dashboardReportSchema, dashboardTopSellerSchema } from "@/shared/contracts/api/admin";
 
-import {
-  toAdminDashboardView,
-} from "./dashboard-view";
+import { toAdminDashboardView } from "./dashboard-view";
 
 describe("toAdminDashboardView", () => {
   it("keeps unavailable metrics null and exposes operational exceptions", () => {

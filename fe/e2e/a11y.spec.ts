@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { test, expect, type Page } from "@playwright/test";
 
-import { loginViaOidc } from "./_auth";
+import { loginAsPersona } from "./_auth";
 import { expectNoGlobalError } from "./_helpers";
 
 /**
@@ -137,7 +137,7 @@ test.describe("a11y — seller dashboard", () => {
   test("Seller dashboard passes axe-core wcag2a + wcag2aa (no serious/critical)", async ({
     page,
   }) => {
-    await loginViaOidc(page, "seller1");
+    await loginAsPersona(page, "seller");
     await page.goto("/seller");
     await installCsrfPatch(page);
 
@@ -154,7 +154,7 @@ test.describe("a11y — seller dashboard", () => {
 
 test.describe("a11y — admin panel", () => {
   test("Admin panel passes axe-core wcag2a + wcag2aa (no serious/critical)", async ({ page }) => {
-    await loginViaOidc(page, "admin1");
+    await loginAsPersona(page, "admin");
     await page.goto("/admin");
     await installCsrfPatch(page);
 

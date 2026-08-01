@@ -100,6 +100,7 @@ jobs:
           tags: ${{ matrix.artifact.image }}:sha-${{ needs.prepare.outputs.source_commit }}
           sbom: true
           provenance: mode=max
+          labels: org.opencontainers.image.revision=${{ needs.prepare.outputs.source_commit }}
           cache-from: type=gha,scope=${{ matrix.artifact.id }}
           cache-to: type=gha,mode=max,scope=${{ matrix.artifact.id }}
 
@@ -132,6 +133,7 @@ jobs:
           set -euo pipefail
           mkdir -p attestation-evidence
           gh attestation verify "oci://$IMAGE@$DIGEST" \
+            --bundle-from-oci \
             --repo "$GITHUB_REPOSITORY" \
             --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/cd.yml" \
             --source-digest "$SOURCE_COMMIT" \

@@ -1,4 +1,4 @@
-import { createQueryOptions } from "@tanstack/react-query";
+import { queryOptions } from "@tanstack/react-query";
 
 import {
   sellerPendingOrders,
@@ -13,7 +13,7 @@ export const sellerOrderKeys = {
 };
 
 export const sellerPendingOrdersOptions = (params: { q?: string }) =>
-  /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return */ createQueryOptions({
+  queryOptions({
     queryKey: sellerOrderKeys.queue(params),
     queryFn: () => sellerPendingOrders(params),
   });

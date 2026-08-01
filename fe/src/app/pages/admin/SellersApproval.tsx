@@ -1,1 +1,0 @@
-export { SellerApprovalQueue as SellersApproval } from "@/features/admin-sellers";

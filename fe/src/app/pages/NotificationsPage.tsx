@@ -12,8 +12,9 @@ import {
 import { Link, useNavigate } from "react-router";
 
 import { AccountNav } from "@/features/account";
-import { useNotifications } from "../hooks/use-notifications";
 import type { Notification, NotificationType } from "@/shared/contracts/api";
+
+import { useNotifications } from "../hooks/use-notifications";
 
 function relativeTime(iso: string): string {
   const then = Date.parse(iso);

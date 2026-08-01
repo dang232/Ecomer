@@ -39,7 +39,7 @@ import { ProductVariantFields } from "./product-variant-fields";
 
 // ── Props ───────────────────────────────────────────────────────────────────────
 
-interface ProductEditorDrawerProps {
+export interface ProductEditorDrawerProps {
   open: boolean;
   /** When provided, the drawer opens in edit mode. */
   product: { id: string } | null;
@@ -50,7 +50,6 @@ interface ProductEditorDrawerProps {
 
 // ── Image upload helper ────────────────────────────────────────────────────────
 
- 
 async function _uploadImage(productId: string, file: File): Promise<string> {
   const { sellerProductImageUploadUrl, sellerProductImageActivate } =
     await import("@/shared/api/endpoints/products");
@@ -144,9 +143,7 @@ export function ProductEditorDrawer({ open, product, onClose, onSave }: ProductE
       await qc.invalidateQueries({ queryKey: ["catalog", "products"] });
     },
     onError: (err) => {
-      toast.error(
-        err instanceof ApiError ? err.message : t("seller.products.editor.saveErr"),
-      );
+      toast.error(err instanceof ApiError ? err.message : t("seller.products.editor.saveErr"));
     },
   });
 
@@ -162,9 +159,7 @@ export function ProductEditorDrawer({ open, product, onClose, onSave }: ProductE
       onClose();
     },
     onError: (err) => {
-      toast.error(
-        err instanceof ApiError ? err.message : t("seller.products.editor.updateErr"),
-      );
+      toast.error(err instanceof ApiError ? err.message : t("seller.products.editor.updateErr"));
     },
   });
 
@@ -181,9 +176,7 @@ export function ProductEditorDrawer({ open, product, onClose, onSave }: ProductE
       onClose();
     },
     onError: (err) => {
-      toast.error(
-        err instanceof ApiError ? err.message : t("seller.products.editor.publishErr"),
-      );
+      toast.error(err instanceof ApiError ? err.message : t("seller.products.editor.publishErr"));
     },
   });
 
@@ -200,9 +193,7 @@ export function ProductEditorDrawer({ open, product, onClose, onSave }: ProductE
       onClose();
     },
     onError: (err) => {
-      toast.error(
-        err instanceof ApiError ? err.message : t("seller.products.editor.deleteErr"),
-      );
+      toast.error(err instanceof ApiError ? err.message : t("seller.products.editor.deleteErr"));
     },
   });
 
@@ -270,7 +261,8 @@ export function ProductEditorDrawer({ open, product, onClose, onSave }: ProductE
       <Button variant="outline" onClick={handleClose} disabled={isBusy}>
         {t("seller.products.editor.cancel")}
       </Button>
-      {!isEdit && !recoveredDraft ? <Button
+      {!isEdit && !recoveredDraft ? (
+        <Button
           variant="primary"
           onClick={form.handleSubmit(handleSave)}
           disabled={isBusy}
@@ -278,8 +270,10 @@ export function ProductEditorDrawer({ open, product, onClose, onSave }: ProductE
           pendingLabel={t("seller.products.editor.saving")}
         >
           {t("seller.products.editor.saveDraft")}
-        </Button> : null}
-      {recoveredDraft ? <Button
+        </Button>
+      ) : null}
+      {recoveredDraft ? (
+        <Button
           variant="accent"
           onClick={form.handleSubmit(handleSave)}
           disabled={isBusy}
@@ -287,8 +281,10 @@ export function ProductEditorDrawer({ open, product, onClose, onSave }: ProductE
           pendingLabel={t("seller.products.editor.saving")}
         >
           {t("seller.products.editor.updateDraft")}
-        </Button> : null}
-      {isEdit ? <Button
+        </Button>
+      ) : null}
+      {isEdit ? (
+        <Button
           variant="primary"
           onClick={form.handleSubmit(handleSave)}
           disabled={isBusy}
@@ -296,7 +292,8 @@ export function ProductEditorDrawer({ open, product, onClose, onSave }: ProductE
           pendingLabel={t("seller.products.editor.saving")}
         >
           {t("seller.products.editor.save")}
-        </Button> : null}
+        </Button>
+      ) : null}
     </>
   );
 
@@ -311,7 +308,9 @@ export function ProductEditorDrawer({ open, product, onClose, onSave }: ProductE
               ? t("seller.products.editor.titleDraft")
               : t("seller.products.editor.titleNew")
         }
-        onOpenChange={(next) => { if (!next) handleClose(); }}
+        onOpenChange={(next) => {
+          if (!next) handleClose();
+        }}
       >
         <div className="space-y-6">
           {/* Basic */}
@@ -352,7 +351,8 @@ export function ProductEditorDrawer({ open, product, onClose, onSave }: ProductE
           </section>
 
           {/* Publication — only shown for recovered drafts */}
-          {recoveredDraft ? <section aria-labelledby="publication-heading">
+          {recoveredDraft ? (
+            <section aria-labelledby="publication-heading">
               <h3
                 id="publication-heading"
                 className="text-sm font-semibold text-foreground mb-3 uppercase tracking-wide"
@@ -368,17 +368,20 @@ export function ProductEditorDrawer({ open, product, onClose, onSave }: ProductE
                 deletePending={deleteMutation.isPending}
                 disabled={isBusy}
               />
-            </section> : null}
+            </section>
+          ) : null}
         </div>
       </Drawer>
 
       {/* Sticky footer rendered outside drawer scroll area */}
-      {open ? <div
+      {open ? (
+        <div
           className="fixed bottom-0 right-0 z-[60] w-full max-w-[min(100vw,36rem)] border-t border-border bg-card px-5 py-4 sm:px-6 flex flex-wrap items-center justify-end gap-3"
           style={{ maxWidth: "min(100vw, 36rem)" }}
         >
           {footer}
-        </div> : null}
+        </div>
+      ) : null}
 
       {/* Discard confirmation */}
       <AlertDialog

@@ -1,11 +1,7 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
 
+import { readJson, type AuthResponse, type ProductListResponse } from "./_api";
 import { loginViaOidc, uniqueTestId } from "./_auth";
-import {
-  readJson,
-  type AuthResponse,
-  type ProductListResponse,
-} from "./_api";
 
 /**
  * UI-driven QA spec for the buyer cart flow.

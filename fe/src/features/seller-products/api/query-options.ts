@@ -89,8 +89,6 @@ export async function sellerProductUpdateAction(
 }
 
 /** Publish a draft product. */
-export async function sellerProductPublishAction(
-  id: string,
-): Promise<Product> {
+export async function sellerProductPublishAction(id: string): Promise<Product> {
   return fromServer(await sellerProductPublish(id));
 }

@@ -1,6 +1,5 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
 
-import { loginAsPersona, registerAndLoginViaOidc, uniqueTestId } from "./_auth";
 import {
   readJson,
   type AuthResponse,
@@ -13,6 +12,7 @@ import {
   type OrderResponse,
   type ProductListResponse,
 } from "./_api";
+import { loginAsPersona, registerAndLoginViaOidc, uniqueTestId } from "./_auth";
 import { credentialForPersona } from "./modernization/_credentials";
 
 /**
@@ -95,7 +95,10 @@ async function loginForPersona(
   const r = await request.post(`${apiURL}/auth/login`, {
     data: { username: cred.username, password: cred.password },
   });
-  expect(r.ok(), `loginForPersona(${persona}) failed: ${r.status()} ${await r.text()}`).toBeTruthy();
+  expect(
+    r.ok(),
+    `loginForPersona(${persona}) failed: ${r.status()} ${await r.text()}`,
+  ).toBeTruthy();
   const body = await readJson<AuthResponse>(r);
   const token = body?.data?.accessToken ?? body?.accessToken;
   expect(
@@ -487,7 +490,9 @@ test.describe("day simulation — payment-method shells", () => {
 
     const r = await request.get(`${apiURL}/checkout/payment-methods`, { headers });
     expect(r.ok(), `payment-methods: ${r.status()} ${await r.text()}`).toBeTruthy();
-    const body = await readJson<{ data?: { method?: string; code?: string; enabled?: boolean }[] }>(r);
+    const body = await readJson<{ data?: { method?: string; code?: string; enabled?: boolean }[] }>(
+      r,
+    );
     const methods: { method?: string; code?: string; enabled?: boolean }[] = body?.data ?? [];
     expect(Array.isArray(methods)).toBeTruthy();
     expect(methods.length).toBeGreaterThan(0);

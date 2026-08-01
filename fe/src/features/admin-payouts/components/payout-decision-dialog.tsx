@@ -4,13 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Modal } from "@/shared/ui/modal";
 
 export type PayoutDecisionVariant =
-  | "approve"
-  | "reject"
-  | "submit"
-  | "unknown"
-  | "paid"
-  | "legacy-complete"
-  | "legacy-fail";
+  "approve" | "reject" | "submit" | "unknown" | "paid" | "legacy-complete" | "legacy-fail";
 
 export interface PayoutDecisionDialogProps {
   variant: PayoutDecisionVariant;
@@ -112,7 +106,9 @@ export function PayoutDecisionDialog({
     setEvidenceHash("");
   };
 
-  const title = t(`admin.payouts.dialogs.${variant}.title`, { defaultValue: variantTitle(variant) });
+  const title = t(`admin.payouts.dialogs.${variant}.title`, {
+    defaultValue: variantTitle(variant),
+  });
   const subtitle = t("admin.payouts.dialogs.subtitle", {
     id: payoutId,
     amount: amountLabel,
@@ -150,12 +146,7 @@ export function PayoutDecisionDialog({
       }
     >
       <div className="space-y-3">
-        <ReasonField
-          variant={variant}
-          value={reason}
-          onChange={setReason}
-          t={t}
-        />
+        <ReasonField variant={variant} value={reason} onChange={setReason} t={t} />
         {variant === "submit" || variant === "paid" ? (
           <TextField
             id="provider-reference"

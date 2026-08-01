@@ -395,9 +395,10 @@ test.describe.serial("Chapter 2 — Buyer discovers and orders", () => {
                   headers: { Authorization: `Bearer ${accessToken}` },
                 });
                 if (!list.ok()) return false;
-                const ids = (await readJson<OrderListResponse>(list)).data?.content?.map(
-                  (o) => o.id ?? o.orderId,
-                ) ?? [];
+                const ids =
+                  (await readJson<OrderListResponse>(list)).data?.content?.map(
+                    (o) => o.id ?? o.orderId,
+                  ) ?? [];
                 return ids.includes(placedOrderId);
               },
               {

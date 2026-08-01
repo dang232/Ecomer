@@ -1,5 +1,5 @@
-import { IconChevronDown, IconChevronRight } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
 
 import { getThreadNotifications } from "@/shared/api/endpoints/notifications";
@@ -28,7 +28,7 @@ export function NotificationThread({ thread, onMarkRead }: NotificationThreadPro
         className="flex w-full items-center justify-between px-4 py-3 hover:bg-muted transition-colors"
       >
         <div className="flex items-center gap-2">
-          {expanded ? <IconChevronDown size={16} /> : <IconChevronRight size={16} />}
+          {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
           <span className="text-sm font-medium text-foreground">{thread.threadTitle}</span>
           {thread.unreadCount > 0 ? (
             <span className="rounded-full bg-error text-white px-1.5 py-0.5 text-[10px] font-bold text-white">

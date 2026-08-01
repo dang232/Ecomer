@@ -9,8 +9,13 @@ import { z } from "zod";
 const feDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const appURL = process.env.VITE_E2E_BASE_URL ?? "http://localhost:3000";
 const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
-const buyerUsername = process.env.E2E_BUYER_USERNAME ?? "buyer1";
-const buyerPassword = process.env.E2E_BUYER_PASSWORD ?? "test";
+const buyerUsername = process.env.E2E_BUYER_USERNAME;
+const buyerPassword = process.env.E2E_BUYER_PASSWORD;
+if (!buyerUsername || !buyerPassword) {
+  throw new Error(
+    "Performance measurement requires E2E_BUYER_USERNAME and E2E_BUYER_PASSWORD",
+  );
+}
 const outputIndex = process.argv.indexOf("--output");
 const output = path.resolve(
   feDir,

@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
-import { loginViaOidc } from "./_auth";
+
+import { loginAsPersona } from "./_auth";
 
 /**
  * Network diagnostic: walk the main pages logged-in as buyer1 and report
@@ -17,17 +18,17 @@ test.describe("network diagnostic", () => {
       }
     });
     page.on("pageerror", (err) => {
-      console.log(`PAGE ERROR: ${err.message}`);
+      console.error(`PAGE ERROR: ${err.message}`);
     });
     page.on("console", (msg) => {
       if (msg.type() === "error") {
-        console.log(`CONSOLE ERROR: ${msg.text()}`);
+        console.error(`CONSOLE ERROR: ${msg.text()}`);
       }
     });
 
     // Use the same browser OIDC path as a real user so route diagnostics cover
     // the deployed session and callback contract.
-    await loginViaOidc(page, "buyer1", "test");
+    await loginAsPersona(page, "buyer");
 
     // Walk the main routes. The SPA does its own bootstrap on first paint,
     // so we just need to land + wait for network idle on each.
@@ -47,12 +48,12 @@ test.describe("network diagnostic", () => {
 
     // Report.
     if (errors.length > 0) {
-      console.log("\n=== non-2xx responses captured ===");
+      console.warn("\n=== non-2xx responses captured ===");
       for (const e of errors) {
-        console.log(`  ${e.status} ${e.method} ${e.url}`);
+        console.warn(`  ${e.status} ${e.method} ${e.url}`);
       }
     } else {
-      console.log("\n=== no non-2xx responses ===");
+      console.warn("\n=== no non-2xx responses ===");
     }
 
     // Fail the test only on 5xx — 4xx is often expected (404 on /sellers/seller1

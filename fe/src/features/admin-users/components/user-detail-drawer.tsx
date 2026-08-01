@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
 import { adminUserOrders } from "@/shared/api/endpoints/admin";
-import type { Order } from "@/shared/contracts/api";
+import type { AdminOrderSummary } from "@/shared/contracts/api";
 import { formatPrice } from "@/shared/lib";
 
 interface UserDetailDrawerProps {
@@ -30,9 +30,9 @@ export function UserDetailDrawer({ userId }: UserDetailDrawerProps) {
         <p className="text-sm text-muted-foreground">{t("admin.users.drawer.noOrders")}</p>
       ) : (
         <div className="space-y-3">
-          {orders.map((order: Order) => (
+          {orders.map((order: AdminOrderSummary) => (
             <div
-              key={order.id}
+              key={order.orderId}
               className="rounded-lg border border-border p-3 text-sm space-y-1.5"
             >
               <div className="flex items-center justify-between">
@@ -46,9 +46,7 @@ export function UserDetailDrawer({ userId }: UserDetailDrawerProps) {
                   {order.status?.toLowerCase() ?? "—"}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {order.createdAt
-                    ? new Date(order.createdAt).toLocaleDateString()
-                    : "—"}
+                  {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : "—"}
                 </span>
               </div>
             </div>

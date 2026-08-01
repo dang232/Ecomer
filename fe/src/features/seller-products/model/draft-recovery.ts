@@ -49,7 +49,10 @@ export function saveDraftRecovery(
  * Read and validate the stored draft record.
  * Returns null if nothing is stored, JSON is malformed, or the shape is unrecognised.
  */
-export function getDraftRecovery(): { productId: string; formValues: z.infer<typeof sellerProductFormSchema> } | null {
+export function getDraftRecovery(): {
+  productId: string;
+  formValues: z.infer<typeof sellerProductFormSchema>;
+} | null {
   try {
     const raw = sessionStorage.getItem(draftRecoveryKey);
     if (!raw) return null;

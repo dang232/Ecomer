@@ -1,10 +1,10 @@
-import { MessageSquare, RotateCcw, ShoppingCart, XCircle } from "lucide-react";
 import type { TFunction } from "i18next";
+import { MessageSquare, RotateCcw, ShoppingCart, XCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { Button } from "@/shared/ui";
 import { formatPrice } from "@/shared/lib";
+import { Button } from "@/shared/ui";
 
 import type { OrderAction, OrderView } from "../model/order-view";
 
@@ -92,20 +92,20 @@ export function OrderDetail({ order, onCancel, onBuyAgain }: OrderDetailProps) {
                 </p>
               ) : null}
             </div>
-              <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2">
               {order.actions.map((action) =>
                 actionButton(action, order, { onCancel, onBuyAgain }, t),
               )}
-                {order.sellerGroups[0]?.sellerId ? (
-                  <Link
-                    to={`/messages?with=${encodeURIComponent(order.sellerGroups[0].sellerId)}`}
-                    className="inline-flex min-h-[var(--target-web)] items-center justify-center gap-2 rounded-[var(--radius-control)] px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
-                  >
-                    <MessageSquare size={16} />
-                    {t("orders.actions.chat")}
-                  </Link>
-                ) : null}
-              </div>
+              {order.sellerGroups[0]?.sellerId ? (
+                <Link
+                  to={`/messages?with=${encodeURIComponent(order.sellerGroups[0].sellerId)}`}
+                  className="inline-flex min-h-[var(--target-web)] items-center justify-center gap-2 rounded-[var(--radius-control)] px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+                >
+                  <MessageSquare size={16} />
+                  {t("orders.actions.chat")}
+                </Link>
+              ) : null}
+            </div>
           </div>
         </article>
 

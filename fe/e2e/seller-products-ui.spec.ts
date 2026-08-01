@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
+
+import { loginAsPersona } from "./_auth";
 import { expectNoGlobalError } from "./_helpers";
-import { loginViaOidc } from "./_auth";
 
 /**
  * UI-driven QA spec for the seller products tab.
@@ -17,7 +18,7 @@ import { loginViaOidc } from "./_auth";
 
 test.describe("seller products UI", () => {
   test("Products tab renders the table chrome (header columns + Add CTA)", async ({ page }) => {
-    await loginViaOidc(page, "seller1");
+    await loginAsPersona(page, "seller");
     await page.goto("/seller");
 
     await expect(

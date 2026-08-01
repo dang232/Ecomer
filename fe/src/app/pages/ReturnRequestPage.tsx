@@ -1,15 +1,16 @@
-import { ArrowLeft } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 
-import { useOrder } from "../hooks/use-orders";
+import { AccountNav } from "@/features/account";
+import { ReturnWorkflow } from "@/features/returns";
 import { ApiError } from "@/shared/api";
 import { requestReturn } from "@/shared/api/endpoints/returns";
 import { PageContainer, PageHeader } from "@/shared/ui";
-import { AccountNav } from "@/features/account";
-import { ReturnWorkflow } from "@/features/returns";
+
+import { useOrder } from "../hooks/use-orders";
 
 interface ReturnRequestPageProps {
   initialSubOrderId?: string;
@@ -21,8 +22,7 @@ export function ReturnRequestPage({ initialSubOrderId }: ReturnRequestPageProps)
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const orderId = searchParams.get("orderId") ?? undefined;
-  const preselectedSubOrderId =
-    initialSubOrderId ?? searchParams.get("subOrderId") ?? undefined;
+  const preselectedSubOrderId = initialSubOrderId ?? searchParams.get("subOrderId") ?? undefined;
   const orderQuery = useOrder(orderId);
 
   const submitReturn = useMutation({
@@ -56,7 +56,8 @@ export function ReturnRequestPage({ initialSubOrderId }: ReturnRequestPageProps)
         <PageHeader
           title={t("return.request.title")}
           description={t("return.request.subtitle", {
-            defaultValue: "Review the package, choose the affected item when available, and explain the issue clearly.",
+            defaultValue:
+              "Review the package, choose the affected item when available, and explain the issue clearly.",
           })}
         />
       </div>

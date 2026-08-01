@@ -56,9 +56,9 @@ export function CheckoutStepper({ step, onStepChange }: CheckoutStepperProps) {
                 </a>
               ) : (
                 <span
+                  role="img"
                   aria-label={label}
                   aria-current={isActive ? "step" : undefined}
-                  aria-disabled={!isActive}
                   data-step-id={s.id}
                   data-step-state={isActive ? "active" : "future"}
                   className={[

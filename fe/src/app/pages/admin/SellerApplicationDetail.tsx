@@ -1,1 +1,0 @@
-export { SellerApplicationDrawer as SellerApplicationDetail } from "@/features/admin-sellers";

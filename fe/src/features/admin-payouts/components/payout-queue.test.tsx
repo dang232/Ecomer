@@ -36,8 +36,7 @@ vi.mock("react-i18next", () => ({
         "admin.payouts.providerReferenceRequired": "Provider reference is required",
         "admin.payouts.attemptIdRequired": "Attempt id is required",
         "admin.payouts.evidenceRequired": "Evidence is required",
-        "admin.payouts.legacyCompleteRequired":
-          "External reference and evidence hash are required",
+        "admin.payouts.legacyCompleteRequired": "External reference and evidence hash are required",
         "admin.payouts.legacyFailAtLeastOne":
           "At least one of external reference or evidence hash is required",
       };
@@ -94,9 +93,7 @@ describe("PayoutDecisionDialog", () => {
     );
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "  bad destination  " } });
     fireEvent.click(screen.getByRole("button", { name: "Reject" }));
-    expect(onConfirm).toHaveBeenCalledWith(
-      expect.objectContaining({ reason: "bad destination" }),
-    );
+    expect(onConfirm).toHaveBeenCalledWith(expect.objectContaining({ reason: "bad destination" }));
   });
 
   it("submit requires providerReference and attemptId", () => {

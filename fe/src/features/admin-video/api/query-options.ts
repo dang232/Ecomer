@@ -1,17 +1,11 @@
-import { createQueryOptions } from "@tanstack/react-query";
+import { queryOptions } from "@tanstack/react-query";
 
-import {
-  adminVideoAppealsQueue,
-  adminVideoModerationQueue,
-} from "@/shared/api/endpoints/admin";
+import { adminVideoAppealsQueue, adminVideoModerationQueue } from "@/shared/api/endpoints/admin";
 
 import { moderationUiPageToBackend } from "../model/video-queue-view";
 
-export const adminVideoModerationQueryOptions = (params: {
-  page: number;
-  size?: number;
-}) =>
-  createQueryOptions({
+export const adminVideoModerationQueryOptions = (params: { page: number; size?: number }) =>
+  queryOptions({
     queryKey: ["admin", "video", "moderation", params.page],
     queryFn: () =>
       adminVideoModerationQueue({
@@ -21,11 +15,8 @@ export const adminVideoModerationQueryOptions = (params: {
     retry: false,
   });
 
-export const adminVideoAppealsQueryOptions = (params: {
-  page: number;
-  size?: number;
-}) =>
-  createQueryOptions({
+export const adminVideoAppealsQueryOptions = (params: { page: number; size?: number }) =>
+  queryOptions({
     queryKey: ["admin", "video", "appeals", params.page],
     queryFn: () => {
       // The endpoint accepts { page, size }; UI page → backend page is mapped

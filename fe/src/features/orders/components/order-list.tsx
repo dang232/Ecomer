@@ -1,10 +1,10 @@
-import { MessageSquare, RotateCcw, ShoppingCart, XCircle } from "lucide-react";
 import type { TFunction } from "i18next";
+import { MessageSquare, RotateCcw, ShoppingCart, XCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { Button, EmptyState } from "@/shared/ui";
 import { formatPrice } from "@/shared/lib";
+import { Button, EmptyState } from "@/shared/ui";
 
 import type { OrderAction, OrderView } from "../model/order-view";
 
@@ -85,7 +85,10 @@ export function OrderList({ orders, onCancel, onBuyAgain }: OrderListProps) {
   return (
     <div className="space-y-4">
       {orders.map((order) => (
-        <article key={order.id} className="rounded-[var(--radius-lg)] border border-border bg-card p-5">
+        <article
+          key={order.id}
+          className="rounded-[var(--radius-lg)] border border-border bg-card p-5"
+        >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
@@ -121,7 +124,9 @@ export function OrderList({ orders, onCancel, onBuyAgain }: OrderListProps) {
                       {t("orders.itemQuantity", { count: item.quantity })}
                     </p>
                   </div>
-                  <p className="shrink-0 font-medium text-foreground">{formatPrice(item.totalVnd)}</p>
+                  <p className="shrink-0 font-medium text-foreground">
+                    {formatPrice(item.totalVnd)}
+                  </p>
                 </div>
               )),
             )}

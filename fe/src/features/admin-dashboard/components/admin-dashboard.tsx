@@ -1,5 +1,5 @@
-import { IconAlertCircle, IconDownload } from "@tabler/icons-react";
 import { useQueries } from "@tanstack/react-query";
+import { AlertCircle, Download } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
@@ -36,8 +36,8 @@ function parseDateParam(raw: string | null, fallback: string): string {
 function DashboardDateControls() {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const from = searchParams.get("from") ?? DEFAULT_PARAMS.from!;
-  const to = searchParams.get("to") ?? DEFAULT_PARAMS.to!;
+  const from = searchParams.get("from") ?? DEFAULT_PARAMS.from;
+  const to = searchParams.get("to") ?? DEFAULT_PARAMS.to;
   const granularity = (searchParams.get("granularity") as "day" | "week" | "month") ?? "day";
 
   const setParam = (key: string, value: string) => {
@@ -74,6 +74,7 @@ function DashboardDateControls() {
         />
       </label>
       <select
+        aria-label={t("admin.dashboard.granularity", "Granularity")}
         value={granularity}
         onChange={(e) => setParam("granularity", e.target.value)}
         className="border rounded px-2 py-1 text-sm"
@@ -93,8 +94,8 @@ function ExportButton({ asOf }: { asOf?: string }) {
   const [exportError, setExportError] = useState(false);
 
   const params: AdminDashboardQueryParams = {
-    from: parseDateParam(searchParams.get("from"), DEFAULT_PARAMS.from!),
-    to: parseDateParam(searchParams.get("to"), DEFAULT_PARAMS.to!),
+    from: parseDateParam(searchParams.get("from"), DEFAULT_PARAMS.from),
+    to: parseDateParam(searchParams.get("to"), DEFAULT_PARAMS.to),
     granularity: (searchParams.get("granularity") as "day" | "week" | "month") ?? "day",
   };
 
@@ -120,14 +121,17 @@ function ExportButton({ asOf }: { asOf?: string }) {
 
   return (
     <div className="flex items-center gap-2">
-      {exportError ? <span className="text-xs text-amber-600">{t("admin.dashboard.exportFailed")}</span> : null}
-      <Tooltip content={t("admin.dashboard.exportReport")}>
+      {exportError ? (
+        <span className="text-xs text-amber-600">{t("admin.dashboard.exportFailed")}</span>
+      ) : null}
+      <Tooltip label={t("admin.dashboard.exportReport")}>
         <button
           onClick={() => void handleExport()}
           disabled={isExporting}
           className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border bg-card text-sm text-muted-foreground hover:bg-muted transition-colors"
         >
-          <IconDownload size={15} />
+          <Download size={16} />
+          <Download size={15} />
           {isExporting ? t("admin.dashboard.exporting") : t("admin.dashboard.exportReport")}
         </button>
       </Tooltip>
@@ -140,25 +144,34 @@ export function AdminDashboard() {
   const [searchParams] = useSearchParams();
 
   const params: AdminDashboardQueryParams = {
-    from: parseDateParam(searchParams.get("from"), DEFAULT_PARAMS.from!),
-    to: parseDateParam(searchParams.get("to"), DEFAULT_PARAMS.to!),
+    from: parseDateParam(searchParams.get("from"), DEFAULT_PARAMS.from),
+    to: parseDateParam(searchParams.get("to"), DEFAULT_PARAMS.to),
     granularity: (searchParams.get("granularity") as "day" | "week" | "month") ?? "day",
   };
 
-  const [reportResult, revenueResult, topProductsResult, topSellersResult, sellersCountResult, reviewsCountResult, videoCountResult, disputesCountResult, payoutsCountResult] =
-    useQueries({
-      queries: [
-        adminDashboardReportOptions(params),
-        adminDashboardRevenueOptions(params),
-        adminDashboardTopProductsOptions(params),
-        adminDashboardTopSellersOptions(params),
-        adminDashboardSellersCountOptions(),
-        adminDashboardReviewsCountOptions(),
-        adminDashboardVideoCountOptions(),
-        adminDashboardDisputesCountOptions(),
-        adminDashboardPayoutsCountOptions(),
-      ],
-    });
+  const [
+    reportResult,
+    revenueResult,
+    topProductsResult,
+    topSellersResult,
+    sellersCountResult,
+    reviewsCountResult,
+    videoCountResult,
+    disputesCountResult,
+    payoutsCountResult,
+  ] = useQueries({
+    queries: [
+      adminDashboardReportOptions(params),
+      adminDashboardRevenueOptions(params),
+      adminDashboardTopProductsOptions(params),
+      adminDashboardTopSellersOptions(params),
+      adminDashboardSellersCountOptions(),
+      adminDashboardReviewsCountOptions(),
+      adminDashboardVideoCountOptions(),
+      adminDashboardDisputesCountOptions(),
+      adminDashboardPayoutsCountOptions(),
+    ],
+  });
 
   const summary = reportResult.data?.summary ?? null;
   const asOf = reportResult.data?.asOf;
@@ -188,8 +201,9 @@ export function AdminDashboard() {
         actions={<DashboardDateControls />}
         className="mb-0"
       />
-      {anyError ? <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-4 text-sm text-amber-800 dark:text-amber-200 flex items-center gap-3">
-          <IconAlertCircle size={18} className="shrink-0 text-amber-500" />
+      {anyError ? (
+        <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-4 text-sm text-amber-800 dark:text-amber-200 flex items-center gap-3">
+          <AlertCircle size={18} className="shrink-0 text-amber-500" />
           <p className="flex-1">{t("admin.dashboard.kpiLoadFailFriendly")}</p>
           <button
             type="button"
@@ -198,7 +212,8 @@ export function AdminDashboard() {
           >
             {t("common.retry", "Retry")}
           </button>
-        </div> : null}
+        </div>
+      ) : null}
       <MarketplaceKpis values={view.kpis} />
       <RevenueChart points={view.revenue} />
       <div className="grid gap-6 xl:grid-cols-2">

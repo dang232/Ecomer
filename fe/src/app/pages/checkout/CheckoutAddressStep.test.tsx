@@ -67,7 +67,7 @@ describe("CheckoutAddressStep", () => {
     expect(radios).toHaveLength(2);
     for (const radio of radios) {
       expect(radio.tagName).toBe("INPUT");
-       expect(radio.type).toBe("radio");
+      expect(radio.type).toBe("radio");
     }
   });
 

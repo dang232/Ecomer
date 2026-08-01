@@ -1,16 +1,8 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
 
-import {
-  readJson,
-  type AuthResponse,
-  type PayoutListResponse,
-  type WalletResponse,
-} from "../_api";
+import { readJson, type AuthResponse, type PayoutListResponse, type WalletResponse } from "../_api";
 import { loginAsSeededUser, logoutViaUserMenu } from "../_workday-evidence";
-import {
-  credentialForPersona,
-  type Persona,
-} from "../modernization/_credentials";
+import { credentialForPersona, type Persona } from "../modernization/_credentials";
 
 import {
   bizStep,
@@ -146,10 +138,7 @@ test.describe.serial("Chapter 6 — Admin closes the loop", () => {
           // bucket the admin's Complete drains. Poll until the projection
           // surfaces the chapter-5 reservation (Kafka catch-up lag varies),
           // then snapshot it so AC-6.3 below can prove the exact-delta drop.
-          const token = await accessTokenForPersona(
-            page.request,
-            "seller",
-          );
+          const token = await accessTokenForPersona(page.request, "seller");
 
           await expect
             .poll(
@@ -244,10 +233,7 @@ test.describe.serial("Chapter 6 — Admin closes the loop", () => {
           // contains the payout. The dialog unmount above is the FE
           // signal; this is the source-of-truth signal that what the
           // platform's contract guarantees actually happened.
-          const adminToken = await accessTokenForPersona(
-            page.request,
-            "admin",
-          );
+          const adminToken = await accessTokenForPersona(page.request, "admin");
 
           await expect
             .poll(
@@ -280,10 +266,7 @@ test.describe.serial("Chapter 6 — Admin closes the loop", () => {
           // poll until the delta lands.
           const expectedAfter = pendingBeforeVnd - payoutAmountVnd;
 
-          const token = await accessTokenForPersona(
-            page.request,
-            "seller",
-          );
+          const token = await accessTokenForPersona(page.request, "seller");
 
           await expect
             .poll(
@@ -332,10 +315,7 @@ test.describe.serial("Chapter 6 — Admin closes the loop", () => {
           // completedBy + completedAt populated. This is the source-of-
           // truth check — the FE label could in theory render even if
           // the BE didn't persist the audit fields (a future regression).
-          const adminToken = await accessTokenForPersona(
-            page.request,
-            "admin",
-          );
+          const adminToken = await accessTokenForPersona(page.request, "admin");
           const completedResp = await page.request.get(
             `${apiURL}/admin/finance/payouts/completed`,
             { headers: { Authorization: `Bearer ${adminToken}` } },

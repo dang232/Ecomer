@@ -2,8 +2,9 @@ import { renderHook, waitFor, act } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { readJsonText } from "../../shared/api/read-json";
 import { makeWrapper } from "@/shared/test/render-with-query-client";
+
+import { readJsonText } from "../../shared/api/read-json";
 
 import { useCart } from "./use-cart";
 

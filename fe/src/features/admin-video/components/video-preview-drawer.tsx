@@ -1,5 +1,5 @@
-import { Video } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { Video } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { adminVideoPreview } from "@/shared/api/endpoints/admin";
@@ -78,9 +78,7 @@ export function VideoPreviewDrawer({
         <div className="aspect-video w-full overflow-hidden rounded-xl bg-black">
           {isLoading ? (
             <div className="flex h-full w-full items-center justify-center">
-              <p className="text-sm text-white/60">
-                {t("admin.videoModeration.loadingPreview")}
-              </p>
+              <p className="text-sm text-white/60">{t("admin.videoModeration.loadingPreview")}</p>
             </div>
           ) : src ? (
             <video src={src} poster={poster} controls className="h-full w-full">

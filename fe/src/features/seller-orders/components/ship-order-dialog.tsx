@@ -66,7 +66,9 @@ export function ShipOrderDialog({
             className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold disabled:opacity-50"
             style={{ background: "oklch(52% 0.2 270)" }}
           >
-            {isSubmitting ? t("seller.orders.shipDialog.submitting") : t("seller.orders.shipDialog.submit")}
+            {isSubmitting
+              ? t("seller.orders.shipDialog.submitting")
+              : t("seller.orders.shipDialog.submit")}
           </button>
         </>
       }

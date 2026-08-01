@@ -24,7 +24,10 @@ describe("sellerProductFormSchema", () => {
   });
 
   it("rejects a description longer than 5000 characters", () => {
-    const result = sellerProductFormSchema.safeParse({ ...validForm, description: "x".repeat(5001) });
+    const result = sellerProductFormSchema.safeParse({
+      ...validForm,
+      description: "x".repeat(5001),
+    });
     expect(result.success).toBe(false);
   });
 
@@ -65,7 +68,15 @@ describe("sellerProductFormSchema", () => {
   it("accepts a variant with optional imageUrl", () => {
     const result = sellerProductFormSchema.safeParse({
       ...validForm,
-      variants: [{ sku: "SKU-002", name: "Red", priceAmount: 990000, stockQuantity: 5, imageUrl: "https://example.com/red.jpg" }],
+      variants: [
+        {
+          sku: "SKU-002",
+          name: "Red",
+          priceAmount: 990000,
+          stockQuantity: 5,
+          imageUrl: "https://example.com/red.jpg",
+        },
+      ],
     });
     expect(result.success).toBe(true);
   });

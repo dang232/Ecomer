@@ -23,7 +23,10 @@ export function ProductBasicFields({ register, errors, disabled }: ProductBasicF
 
       {/* Name */}
       <div>
-        <label htmlFor="product-name" className="block text-sm font-semibold text-foreground mb-1.5">
+        <label
+          htmlFor="product-name"
+          className="block text-sm font-semibold text-foreground mb-1.5"
+        >
           {t("seller.products.editor.basic.nameLabel")} *
         </label>
         <input
@@ -36,14 +39,19 @@ export function ProductBasicFields({ register, errors, disabled }: ProductBasicF
           aria-invalid={!!errors.name}
           aria-describedby={errors.name ? "product-name-error" : undefined}
         />
-        {errors.name ? <p id="product-name-error" className="mt-1 text-xs text-error" role="alert">
+        {errors.name ? (
+          <p id="product-name-error" className="mt-1 text-xs text-error" role="alert">
             {errors.name.message}
-          </p> : null}
+          </p>
+        ) : null}
       </div>
 
       {/* Description */}
       <div>
-        <label htmlFor="product-description" className="block text-sm font-semibold text-foreground mb-1.5">
+        <label
+          htmlFor="product-description"
+          className="block text-sm font-semibold text-foreground mb-1.5"
+        >
           {t("seller.products.editor.basic.descriptionLabel")}
         </label>
         <textarea
@@ -55,15 +63,20 @@ export function ProductBasicFields({ register, errors, disabled }: ProductBasicF
           aria-invalid={!!errors.description}
           aria-describedby={errors.description ? "product-description-error" : undefined}
         />
-        {errors.description ? <p id="product-description-error" className="mt-1 text-xs text-error" role="alert">
+        {errors.description ? (
+          <p id="product-description-error" className="mt-1 text-xs text-error" role="alert">
             {errors.description.message}
-          </p> : null}
+          </p>
+        ) : null}
       </div>
 
       {/* Category + Brand */}
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label htmlFor="product-category" className="block text-sm font-semibold text-foreground mb-1.5">
+          <label
+            htmlFor="product-category"
+            className="block text-sm font-semibold text-foreground mb-1.5"
+          >
             {t("seller.products.editor.basic.categoryLabel")} *
           </label>
           <input
@@ -76,13 +89,18 @@ export function ProductBasicFields({ register, errors, disabled }: ProductBasicF
             aria-invalid={!!errors.categoryId}
             aria-describedby={errors.categoryId ? "product-category-error" : undefined}
           />
-          {errors.categoryId ? <p id="product-category-error" className="mt-1 text-xs text-error" role="alert">
+          {errors.categoryId ? (
+            <p id="product-category-error" className="mt-1 text-xs text-error" role="alert">
               {errors.categoryId.message}
-            </p> : null}
+            </p>
+          ) : null}
         </div>
 
         <div>
-          <label htmlFor="product-brand" className="block text-sm font-semibold text-foreground mb-1.5">
+          <label
+            htmlFor="product-brand"
+            className="block text-sm font-semibold text-foreground mb-1.5"
+          >
             {t("seller.products.editor.basic.brandLabel")}
           </label>
           <input
@@ -94,15 +112,20 @@ export function ProductBasicFields({ register, errors, disabled }: ProductBasicF
             placeholder="Samsung"
             aria-invalid={!!errors.brand}
           />
-          {errors.brand ? <p className="mt-1 text-xs text-error" role="alert">
+          {errors.brand ? (
+            <p className="mt-1 text-xs text-error" role="alert">
               {errors.brand.message}
-            </p> : null}
+            </p>
+          ) : null}
         </div>
       </div>
 
       {/* Tags */}
       <div>
-        <label htmlFor="product-tags" className="block text-sm font-semibold text-foreground mb-1.5">
+        <label
+          htmlFor="product-tags"
+          className="block text-sm font-semibold text-foreground mb-1.5"
+        >
           {t("seller.products.editor.basic.tagsLabel")}
         </label>
         <input
@@ -118,9 +141,11 @@ export function ProductBasicFields({ register, errors, disabled }: ProductBasicF
         <p className="mt-1 text-[11px] text-muted-foreground">
           {t("seller.products.editor.basic.tagsHint")}
         </p>
-        {errors.tags ? <p id="product-tags-error" className="mt-1 text-xs text-error" role="alert">
+        {errors.tags ? (
+          <p id="product-tags-error" className="mt-1 text-xs text-error" role="alert">
             {errors.tags.message}
-          </p> : null}
+          </p>
+        ) : null}
       </div>
     </fieldset>
   );

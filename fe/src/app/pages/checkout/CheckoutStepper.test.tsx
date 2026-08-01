@@ -38,7 +38,9 @@ describe("CheckoutStepper", () => {
     // Future steps (payment, review) are non-focusable spans
     const future = document.querySelector('[data-step-id="payment"]')!;
     expect(future.tagName).toBe("SPAN");
+    expect(future.getAttribute("role")).toBe("img");
     expect(future.getAttribute("aria-current")).toBeNull();
+    expect(future.getAttribute("aria-label")).toBe("Payment");
     expect(future.hasAttribute("href")).toBe(false);
 
     // Completed steps (address) are focusable anchors

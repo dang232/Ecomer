@@ -24,7 +24,9 @@ describe("couponFormSchema refinements", () => {
     });
     expect(result.success).toBe(false);
     const messages = result.error?.issues.map((i) => i.message) ?? [];
-    expect(messages.some((m) => m.toLowerCase().includes("100") || m.includes("exceed"))).toBe(true);
+    expect(messages.some((m) => m.toLowerCase().includes("100") || m.includes("exceed"))).toBe(
+      true,
+    );
   });
 
   it("rejects PERCENT <= 0", () => {
@@ -58,17 +60,6 @@ describe("couponFormSchema refinements", () => {
       validUntil: "2026-12-31T23:59:59.000Z",
     });
     expect(result.success).toBe(false);
-  });
-
-  it("accepts FREE_SHIPPING with value 0", () => {
-    const result = couponFormSchema.safeParse({
-      code: "FREESHIP",
-      type: "FREE_SHIPPING",
-      value: 0,
-      maxUses: 100,
-      validUntil: "2026-12-31T23:59:59.000Z",
-    });
-    expect(result.success).toBe(true);
   });
 
   it("normalizes code to uppercase", () => {

@@ -97,10 +97,10 @@ export const approveReturn = (returnId: string) =>
   api.post(`/returns/${encodeURIComponent(returnId)}/approve`, returnResponseSchema);
 
 /**
- * Seller: Reject a return request
+ * Seller: Reject a return request. The backend accepts no request body.
  */
-export const rejectReturn = (returnId: string, body: { reason: string }) =>
-  api.post(`/returns/${encodeURIComponent(returnId)}/reject`, returnResponseSchema, body);
+export const rejectReturn = (returnId: string) =>
+  api.post(`/returns/${encodeURIComponent(returnId)}/reject`, returnResponseSchema);
 
 /**
  * Seller: Mark return as completed

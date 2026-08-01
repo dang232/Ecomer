@@ -2,15 +2,16 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { z } from "zod";
 
-import { readJsonText } from "../../shared/api/read-json";
 import {
   messageSchema,
   type ChatMessage,
   type MessagesPage,
 } from "@/shared/api/endpoints/messaging";
 
-import { useAppConfig } from "./use-app-config";
+import { readJsonText } from "../../shared/api/read-json";
+
 import { useAuth } from "./auth-context";
+import { useAppConfig } from "./use-app-config";
 import { messagesKey } from "./use-messages";
 import { THREADS_KEY } from "./use-threads";
 

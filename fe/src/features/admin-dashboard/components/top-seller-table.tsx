@@ -11,10 +11,13 @@ interface TopSellerTableProps {
 export function TopSellerTable({ rows }: TopSellerTableProps) {
   const { t } = useTranslation();
   return (
-    <div className="bg-card rounded-2xl p-5 shadow-sm">
+    <div className="bg-card rounded-2xl p-5 shadow-sm" data-testid="admin-top-sellers">
       <h3 className="font-bold text-foreground mb-4">{t("admin.dashboard.topSellers")}</h3>
       {rows.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-8">
+        <p
+          className="text-sm text-muted-foreground text-center py-8"
+          data-testid="admin-top-sellers-empty"
+        >
           {t("admin.dashboard.noData")}
         </p>
       ) : (

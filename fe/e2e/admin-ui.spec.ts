@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
+
+import { loginAsPersona } from "./_auth";
 import { expectNoGlobalError } from "./_helpers";
-import { loginViaOidc } from "./_auth";
 
 /**
  * UI-driven QA spec for the admin console.
@@ -27,7 +28,7 @@ async function expectTabRenders(page: Page, tabName: RegExp, contentSignal: RegE
 
 test.describe("admin console UI", () => {
   test("/admin renders for admin1 with the dashboard tab as default", async ({ page }) => {
-    await loginViaOidc(page, "admin1");
+    await loginAsPersona(page, "admin");
     await page.goto("/admin");
 
     await expect(page.getByText(/Admin Dashboard|Tổng quan|Admin Console/i).first()).toBeVisible({
@@ -38,7 +39,7 @@ test.describe("admin console UI", () => {
   });
 
   test("Sellers tab loads (locks in sellerSummarySchema fix)", async ({ page }) => {
-    await loginViaOidc(page, "admin1");
+    await loginAsPersona(page, "admin");
     await page.goto("/admin");
     // Wait for shell.
     await expect(page.getByText(/Admin Dashboard|Tổng quan|Admin Console/i).first()).toBeVisible({
@@ -58,7 +59,7 @@ test.describe("admin console UI", () => {
   test("Coupons tab loads (locks in couponSchema Long-id coercion + envelope wrap)", async ({
     page,
   }) => {
-    await loginViaOidc(page, "admin1");
+    await loginAsPersona(page, "admin");
     await page.goto("/admin");
     await expect(page.getByText(/Admin Dashboard|Tổng quan|Admin Console/i).first()).toBeVisible({
       timeout: 20_000,
@@ -72,7 +73,7 @@ test.describe("admin console UI", () => {
   });
 
   test("Disputes tab loads (locks in disputeSchema disputeId→id alias)", async ({ page }) => {
-    await loginViaOidc(page, "admin1");
+    await loginAsPersona(page, "admin");
     await page.goto("/admin");
     await expect(page.getByText(/Admin Dashboard|Tổng quan|Admin Console/i).first()).toBeVisible({
       timeout: 20_000,
@@ -86,7 +87,7 @@ test.describe("admin console UI", () => {
   });
 
   test("Payouts tab loads (locks in adminPayoutSchema payoutId→id alias)", async ({ page }) => {
-    await loginViaOidc(page, "admin1");
+    await loginAsPersona(page, "admin");
     await page.goto("/admin");
     await expect(page.getByText(/Admin Dashboard|Tổng quan|Admin Console/i).first()).toBeVisible({
       timeout: 20_000,

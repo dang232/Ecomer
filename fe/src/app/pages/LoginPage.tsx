@@ -3,8 +3,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useNavigate, useSearchParams } from "react-router";
 
-import { useAppConfig } from "../hooks/use-app-config";
 import { useAuth } from "../hooks/auth-context";
+import { useAppConfig } from "../hooks/use-app-config";
 import { resolvePostLoginRedirect, sanitizeRedirect } from "../lib/auth/sanitize-redirect";
 
 const OAUTH_ERROR_KEYS: Record<string, string> = {

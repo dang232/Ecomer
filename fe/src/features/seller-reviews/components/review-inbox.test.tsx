@@ -33,7 +33,11 @@ describe("ReviewInbox", () => {
       pageCount: 2,
     };
     render(
-      <ReviewInbox view={view} routeState={{ q: "", page: 0, selected: null }} onRouteChange={vi.fn()} />,
+      <ReviewInbox
+        view={view}
+        routeState={{ q: "", page: 0, selected: null }}
+        onRouteChange={vi.fn()}
+      />,
     );
     expect(screen.getByRole("searchbox")).toBeVisible();
     expect(screen.getByRole("navigation", { name: /pagination/i })).toBeVisible();
@@ -50,11 +54,16 @@ describe("ReviewInbox", () => {
       pageCount: 1,
     };
     render(
-      <ReviewInbox view={view} routeState={{ q: "", page: 0, selected: null }} onRouteChange={vi.fn()} />,
+      <ReviewInbox
+        view={view}
+        routeState={{ q: "", page: 0, selected: null }}
+        onRouteChange={vi.fn()}
+      />,
     );
     expect(screen.getByText("Bob")).toBeVisible();
     expect(screen.getByText("Gadget")).toBeVisible();
     expect(screen.getByText("Love it!")).toBeVisible();
+    expect(screen.getByRole("img", { name: "5/5" })).toBeVisible();
   });
 
   it("does not render a reply button", () => {
@@ -64,7 +73,11 @@ describe("ReviewInbox", () => {
       pageCount: 1,
     };
     render(
-      <ReviewInbox view={view} routeState={{ q: "", page: 0, selected: null }} onRouteChange={vi.fn()} />,
+      <ReviewInbox
+        view={view}
+        routeState={{ q: "", page: 0, selected: null }}
+        onRouteChange={vi.fn()}
+      />,
     );
     expect(screen.queryByRole("button", { name: /reply/i })).not.toBeInTheDocument();
   });

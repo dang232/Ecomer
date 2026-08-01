@@ -18,9 +18,15 @@ export interface MutationCapability {
 }
 
 export type MutationInput =
-  | "reason" | "status" | "adminResolution" | "providerReference"
-  | "attemptId" | "evidence" | "externalReference"
-  | "evidenceHash" | "maskedDestinationConfirmed";
+  | "reason"
+  | "status"
+  | "adminResolution"
+  | "providerReference"
+  | "attemptId"
+  | "evidence"
+  | "externalReference"
+  | "evidenceHash"
+  | "maskedDestinationConfirmed";
 
 export interface MutationValidationRule {
   kind: "at-least-one";
@@ -28,9 +34,22 @@ export interface MutationValidationRule {
 }
 
 export type AdminQueueAction =
-  | "cancel" | "refund" | "change-status" | "deactivate" | "ban" | "unban"
-  | "approve" | "reject" | "approve-appeal" | "reject-appeal" | "resolve"
-  | "submit" | "unknown" | "paid" | "legacy-complete" | "legacy-fail";
+  | "cancel"
+  | "refund"
+  | "change-status"
+  | "deactivate"
+  | "ban"
+  | "unban"
+  | "approve"
+  | "reject"
+  | "approve-appeal"
+  | "reject-appeal"
+  | "resolve"
+  | "submit"
+  | "unknown"
+  | "paid"
+  | "legacy-complete"
+  | "legacy-fail";
 
 export const ADMIN_QUEUE_CAPABILITIES = {
   orders: {

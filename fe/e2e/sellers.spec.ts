@@ -54,7 +54,9 @@ test.describe("public sellers", () => {
     // Pre-fetch the list so the test branches deterministically on
     // "we have approved sellers" vs "fallback to coming-soon".
     const listRes = await request.get(`${apiURL}/sellers?page=0&size=8`);
-    const list = listRes.ok() ? ((await readJson<SellerListResponse>(listRes)).data?.content ?? []) : [];
+    const list = listRes.ok()
+      ? ((await readJson<SellerListResponse>(listRes)).data?.content ?? [])
+      : [];
 
     if (list.length > 0) {
       // Real cards path — the first seller's shop name should be visible
@@ -79,7 +81,9 @@ test.describe("public sellers", () => {
     if (first?.id) {
       await page.goto(`/sellers/${first.id}`);
       // Shop name is the most reliable signal that the header rendered.
-      await expect(page.getByText(first.shopName ?? first.id, { exact: false }).first()).toBeVisible({
+      await expect(
+        page.getByText(first.shopName ?? first.id, { exact: false }).first(),
+      ).toBeVisible({
         timeout: 20_000,
       });
       // Ensure the visit-shop CTA / banner area landed (page didn't crash).

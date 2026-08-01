@@ -12,7 +12,7 @@ export const maskedPayoutDestinationSchema = z
     destinationId: z.string(),
     bankName: z.string(),
     last4: z.string(),
-    verificationState: z.enum(["UNVERIFIED", "PENDING", "VERIFIED", "REJECTED"]),
+    verificationState: z.enum(["UNVERIFIED", "PENDING", "VERIFIED", "REJECTED", "LEGACY_MIGRATED"]),
   })
   .nullable();
 
@@ -36,7 +36,7 @@ export const sellerProfileSchema = z
   // .passthrough() and reach the dashboard. See users.test.ts regression.
   .passthrough()
   .transform((raw) => {
-    const { bankAccount: _stripped, ...safe } = raw as Record<string, unknown>;
+    const { bankAccount: _stripped, ...safe } = raw;
     return safe;
   });
 export type SellerProfile = z.infer<typeof sellerProfileSchema>;

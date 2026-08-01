@@ -61,9 +61,7 @@ describe("video-moderation-queue", () => {
         />,
       );
       fireEvent.click(screen.getByRole("button", { name: "Reject" }));
-      await waitFor(() =>
-        expect(screen.getByText("Reason is required")).toBeInTheDocument(),
-      );
+      await waitFor(() => expect(screen.getByText("Reason is required")).toBeInTheDocument());
       expect(onConfirm).not.toHaveBeenCalled();
     });
 
@@ -80,9 +78,7 @@ describe("video-moderation-queue", () => {
       const textarea = screen.getByRole("textbox");
       fireEvent.change(textarea, { target: { value: "   " } });
       fireEvent.click(screen.getByRole("button", { name: "Reject" }));
-      await waitFor(() =>
-        expect(screen.getByText("Reason is required")).toBeInTheDocument(),
-      );
+      await waitFor(() => expect(screen.getByText("Reason is required")).toBeInTheDocument());
       expect(onConfirm).not.toHaveBeenCalled();
     });
 

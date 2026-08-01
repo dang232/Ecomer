@@ -1,7 +1,7 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
 
-import { loginAsSeededUser, logoutViaUserMenu } from "../_workday-evidence";
 import { readJson, type AuthResponse } from "../_api";
+import { loginAsSeededUser, logoutViaUserMenu } from "../_workday-evidence";
 
 import {
   bizStep,
@@ -114,7 +114,7 @@ test.describe.serial("Chapter 1 — Admin onboards the marketplace", () => {
 
           // The pending application's display name carries our run's
           // timestamp so we can disambiguate from other Journey leftovers.
-          const stamp = (/_(\d+)@/.exec(pendingSellerEmail))?.[1] ?? "";
+          const stamp = /_(\d+)@/.exec(pendingSellerEmail)?.[1] ?? "";
           await expect
             .poll(async () => page.getByText(new RegExp(`Journey Pending Shop ${stamp}`)).count(), {
               timeout: 30_000,
@@ -136,7 +136,7 @@ test.describe.serial("Chapter 1 — Admin onboards the marketplace", () => {
           // pick the Approve button inside it. The .divide-y > div selector
           // narrows to the row container so the parent matcher doesn't also
           // match nested ancestors.
-          const stamp = (/_(\d+)@/.exec(pendingSellerEmail))?.[1] ?? "";
+          const stamp = /_(\d+)@/.exec(pendingSellerEmail)?.[1] ?? "";
           const shopName = `Journey Pending Shop ${stamp}`;
           const row = page.locator(".divide-y > div", { hasText: shopName }).first();
           await expect(row).toBeVisible({ timeout: 10_000 });

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { ADMIN_QUEUE_CAPABILITIES, AdminQueueFrame } from "@/features/admin";
 import { ApiError } from "@/shared/api";
 import {
   adminCancelOrder,
@@ -12,7 +13,6 @@ import {
 } from "@/shared/api/endpoints/admin";
 import type { DataTableColumn } from "@/shared/ui/data-table";
 
-import { ADMIN_QUEUE_CAPABILITIES, AdminQueueFrame } from "@/features/admin";
 import { adminOrdersQueryOptions } from "../api/query-options";
 import type { OrderView } from "../model/order-view";
 import { toOrderView } from "../model/order-view";
@@ -59,9 +59,11 @@ export function AdminOrderQueue({
     orderNumber?: string | null;
   } | null>(null);
 
-  const { data: pageData, isLoading, isError } = useQuery(
-    adminOrdersQueryOptions({ q, status, page, size: 50 }),
-  );
+  const {
+    data: pageData,
+    isLoading,
+    isError,
+  } = useQuery(adminOrdersQueryOptions({ q, status, page, size: 50 }));
 
   const orders = (pageData?.content ?? []).map(toOrderView);
 
@@ -104,7 +106,7 @@ export function AdminOrderQueue({
     setDialog,
   });
 
-  const selectedOrder = selected ? orders.find((o) => o.id === selected) ?? null : null;
+  const selectedOrder = selected ? (orders.find((o) => o.id === selected) ?? null) : null;
 
   return (
     <>
@@ -145,7 +147,9 @@ export function AdminOrderQueue({
               </div>
               <div>
                 <p className="text-muted-foreground">{t("admin.orders.seller")}</p>
-                <p className="font-semibold">{selectedOrder.sellerName ?? selectedOrder.sellerId ?? "—"}</p>
+                <p className="font-semibold">
+                  {selectedOrder.sellerName ?? selectedOrder.sellerId ?? "—"}
+                </p>
               </div>
               <div>
                 <p className="text-muted-foreground">{t("admin.orders.total")}</p>
@@ -184,11 +188,15 @@ export function AdminOrderQueue({
             if (dialog.variant === "cancel") {
               cancel.mutate(dialog.orderId);
             } else if (dialog.variant === "refund") {
-              const reasonField = document.getElementById("refund-reason") as HTMLTextAreaElement | null;
+              const reasonField = document.getElementById(
+                "refund-reason",
+              ) as HTMLTextAreaElement | null;
               const reason = reasonField?.value.trim() || defaultRefundReason;
               refund.mutate({ id: dialog.orderId, reason });
             } else if (dialog.variant === "change-status") {
-              const statusField = document.getElementById("order-status") as HTMLSelectElement | null;
+              const statusField = document.getElementById(
+                "order-status",
+              ) as HTMLSelectElement | null;
               const newStatus = statusField?.value;
               if (newStatus) {
                 changeStatus.mutate({ id: dialog.orderId, status: newStatus });
@@ -238,7 +246,7 @@ function buildOrderQueueColumns({
     {
       id: "totalAmount",
       header: t("admin.orders.total") ?? "Total",
-      cell: (row) => row.totalAmount ? `${row.totalAmount.toLocaleString("vi-VN")} ₫` : "—",
+      cell: (row) => (row.totalAmount ? `${row.totalAmount.toLocaleString("vi-VN")} ₫` : "—"),
     },
     {
       id: "status",
@@ -248,29 +256,20 @@ function buildOrderQueueColumns({
     {
       id: "createdAt",
       header: t("admin.orders.date") ?? "Date",
-      cell: (row) => row.createdAt ? new Date(row.createdAt).toLocaleDateString("vi-VN") : "—",
+      cell: (row) => (row.createdAt ? new Date(row.createdAt).toLocaleDateString("vi-VN") : "—"),
     },
     {
       id: "actions",
       header: "",
       cell: (row) => (
-        <OrderActionsCell
-          order={row}
-          isMutating={isMutating}
-          t={t}
-          setDialog={setDialog}
-        />
+        <OrderActionsCell order={row} isMutating={isMutating} t={t} setDialog={setDialog} />
       ),
     },
   ];
 }
 
 function OrderNumberCell({ order }: { order: OrderView }) {
-  return (
-    <span className="font-mono text-sm font-semibold">
-      {order.orderNumber ?? order.id}
-    </span>
-  );
+  return <span className="font-mono text-sm font-semibold">{order.orderNumber ?? order.id}</span>;
 }
 
 function OrderActionsCell({
@@ -342,7 +341,5 @@ function StatusChip({ status }: { status: string }) {
     DELIVERED: "bg-green-100 text-green-700",
   };
   const cls = colorMap[status] ?? "bg-gray-100 text-gray-600";
-  return (
-    <span className={`rounded px-2 py-0.5 text-xs font-bold ${cls}`}>{status}</span>
-  );
+  return <span className={`rounded px-2 py-0.5 text-xs font-bold ${cls}`}>{status}</span>;
 }

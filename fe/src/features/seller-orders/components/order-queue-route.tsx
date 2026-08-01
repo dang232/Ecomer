@@ -21,10 +21,7 @@ export function SellerOrderQueueRoute() {
     retry: false,
   });
 
-  const rows = useMemo(
-    () => (ordersQuery.data ?? []).map(toSellerOrderRow),
-    [ordersQuery.data],
-  );
+  const rows = useMemo(() => (ordersQuery.data ?? []).map(toSellerOrderRow), [ordersQuery.data]);
 
   const handleRouteChange = (next: { q?: string; selected?: string | null }) => {
     const params = new URLSearchParams(searchParams);

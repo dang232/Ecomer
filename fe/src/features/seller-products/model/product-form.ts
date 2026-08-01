@@ -50,9 +50,7 @@ export type SellerProductForm = z.infer<typeof sellerProductFormSchema>;
  * priceCurrency: 'VND' is injected here — the endpoint does not require it on the wire
  * but the BE expects it on the record.
  */
-export function toSellerProductWriteBody(
-  values: SellerProductForm,
-): SellerProductWriteBody {
+export function toSellerProductWriteBody(values: SellerProductForm): SellerProductWriteBody {
   return {
     name: values.name,
     description: values.description || undefined,

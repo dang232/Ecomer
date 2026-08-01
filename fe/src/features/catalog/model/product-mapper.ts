@@ -7,6 +7,7 @@
  */
 
 import type { ProductDetail, ProductSummary } from "@/shared/contracts/api";
+
 import type { Product } from "./product";
 
 /** Derive a discount percentage from original and current price. */

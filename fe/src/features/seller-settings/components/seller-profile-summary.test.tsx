@@ -33,7 +33,9 @@ function makeProfile(overrides?: Partial<SellerProfile>): SellerProfile {
 
 describe("SellerProfileSummary", () => {
   it("renders shop name and tier", () => {
-    renderWithRouter(<SellerProfileSummary profile={makeProfile({ shopName: "Test Shop", tier: "PREMIUM" })} />);
+    renderWithRouter(
+      <SellerProfileSummary profile={makeProfile({ shopName: "Test Shop", tier: "PREMIUM" })} />,
+    );
     expect(screen.getByText("Test Shop")).toBeInTheDocument();
     expect(screen.getByText("PREMIUM")).toBeInTheDocument();
   });
@@ -80,7 +82,7 @@ describe("SellerProfileSummary", () => {
             verificationState: "VERIFIED",
           },
         })}
-      />
+      />,
     );
     expect(screen.getByText("1234")).toBeInTheDocument();
     expect(screen.getByText("VERIFIED")).toBeInTheDocument();

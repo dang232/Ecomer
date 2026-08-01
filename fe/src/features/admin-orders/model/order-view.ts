@@ -32,7 +32,12 @@ export function toOrderView(raw: AdminOrderSummary): OrderView {
 }
 
 /** Admin-settable order statuses from the backend. */
-export const ADMIN_SETTABLE_ORDER_STATUSES = ["ACCEPTED", "PACKED", "SHIPPED", "CANCELLED"] as const;
+export const ADMIN_SETTABLE_ORDER_STATUSES = [
+  "ACCEPTED",
+  "PACKED",
+  "SHIPPED",
+  "CANCELLED",
+] as const;
 export type AdminSettableOrderStatus = (typeof ADMIN_SETTABLE_ORDER_STATUSES)[number];
 
 export function isAdminSettableStatus(s: string): s is AdminSettableOrderStatus {

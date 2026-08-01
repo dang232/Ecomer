@@ -35,7 +35,7 @@ const LOCAL_CREDENTIALS: Record<Persona, PersonaCredential> = {
 };
 
 function isContractMode(): boolean {
-  return process.env["E2E_RELEASE_CONTRACT"] === "true";
+  return process.env.E2E_RELEASE_CONTRACT === "true";
 }
 
 function envKey(persona: Persona, suffix: "USERNAME" | "PASSWORD"): string {
@@ -68,9 +68,7 @@ function contractCredentialForPersona(persona: Persona): PersonaCredential {
 }
 
 export function credentialForPersona(persona: Persona): PersonaCredential {
-  return isContractMode()
-    ? contractCredentialForPersona(persona)
-    : LOCAL_CREDENTIALS[persona];
+  return isContractMode() ? contractCredentialForPersona(persona) : LOCAL_CREDENTIALS[persona];
 }
 
 /**
@@ -79,7 +77,7 @@ export function credentialForPersona(persona: Persona): PersonaCredential {
  * returns all three personas for local runs.
  */
 export function requiredPersonas(): Persona[] {
-  const env = process.env["E2E_REQUIRED_PERSONAS"]?.trim();
+  const env = process.env.E2E_REQUIRED_PERSONAS?.trim();
   if (!env) {
     if (isContractMode()) {
       throw new Error(
@@ -116,14 +114,10 @@ export function validateCredentials(): void {
   for (const persona of requiredPersonas()) {
     const { username, password } = credentialForPersona(persona);
     if (!username.trim()) {
-      throw new Error(
-        `${envKey(persona, "USERNAME")} must be a non-empty string`,
-      );
+      throw new Error(`${envKey(persona, "USERNAME")} must be a non-empty string`);
     }
     if (!password.trim()) {
-      throw new Error(
-        `${envKey(persona, "PASSWORD")} must be a non-empty string`,
-      );
+      throw new Error(`${envKey(persona, "PASSWORD")} must be a non-empty string`);
     }
   }
 }

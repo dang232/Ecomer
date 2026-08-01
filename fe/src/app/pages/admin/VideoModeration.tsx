@@ -1,1 +1,0 @@
-export { VideoModerationQueue as VideoModeration } from "@/features/admin-video";

@@ -85,10 +85,7 @@ export function CartPage() {
 
   const handleKeepSeparate = () => keepSeparate();
 
-  const onQuantityChange = (
-    line: { productId: string; variantId?: string },
-    quantity: number,
-  ) => {
+  const onQuantityChange = (line: { productId: string; variantId?: string }, quantity: number) => {
     if (quantity <= 0) {
       removeItem(
         { productId: line.productId, variantId: line.variantId },

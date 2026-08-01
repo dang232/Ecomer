@@ -1,8 +1,8 @@
-import { IconArrowUpRight } from "@tabler/icons-react";
-import type { IconLayoutDashboard } from "@tabler/icons-react";
+import { ArrowUpRight } from "lucide-react";
+import type { LayoutDashboard } from "lucide-react";
 
 export interface KPICardProps {
-  icon: typeof IconLayoutDashboard;
+  icon: typeof LayoutDashboard;
   label: string;
   value: string;
   change?: string;
@@ -22,7 +22,7 @@ export function KPICard({ icon: Icon, label, value, change, color, sub }: KPICar
         </div>
         {change ? (
           <div className="flex items-center gap-1 text-xs font-semibold text-green-500">
-            <IconArrowUpRight size={14} />
+            <ArrowUpRight size={14} />
             {change}
           </div>
         ) : null}

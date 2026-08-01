@@ -1,17 +1,14 @@
-import { Star } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { DataTableColumn } from "@/shared/ui/data-table";
+import { Star } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { ApiError } from "@/shared/api";
-import {
-  adminApproveReview,
-  adminRejectReview,
-} from "@/shared/api/endpoints/admin";
-
 import { ADMIN_QUEUE_CAPABILITIES, AdminQueueFrame } from "@/features/admin";
+import { ApiError } from "@/shared/api";
+import { adminApproveReview, adminRejectReview } from "@/shared/api/endpoints/admin";
+import type { DataTableColumn } from "@/shared/ui/data-table";
+
 import { adminReviewsQueryOptions } from "../api/query-options";
 import type { ReviewView } from "../model/review-view";
 import { toReviewView } from "../model/review-view";
@@ -37,9 +34,7 @@ export function ReviewModerationQueue({
   const qc = useQueryClient();
   const [rejectFor, setRejectFor] = useState<string | null>(null);
 
-  const { data: reviewsRaw, isLoading, isError } = useQuery(
-    adminReviewsQueryOptions({ q }),
-  );
+  const { data: reviewsRaw, isLoading, isError } = useQuery(adminReviewsQueryOptions({ q }));
   const reviews: ReviewView[] = (reviewsRaw ?? []).map(toReviewView);
 
   const approve = useMutation({
@@ -67,7 +62,7 @@ export function ReviewModerationQueue({
   });
 
   const isMutating = approve.isPending || reject.isPending;
-  const selectedReview = selected ? reviews.find((r) => r.id === selected) ?? null : null;
+  const selectedReview = selected ? (reviews.find((r) => r.id === selected) ?? null) : null;
 
   const columns: DataTableColumn<ReviewView>[] = [
     {
@@ -75,8 +70,7 @@ export function ReviewModerationQueue({
       header: t("admin.reviewsModeration.productPrefix", { id: "" }) ?? "Product",
       cell: (row) => (
         <span className="text-sm font-semibold text-foreground">
-          {row.productName ??
-            t("admin.reviewsModeration.productPrefix", { id: row.productId })}
+          {row.productName ?? t("admin.reviewsModeration.productPrefix", { id: row.productId })}
         </span>
       ),
     },
@@ -99,9 +93,7 @@ export function ReviewModerationQueue({
       header: t("admin.reviewsModeration.commentLabel") ?? "Comment",
       cell: (row) =>
         row.comment ? (
-          <span className="line-clamp-1 text-xs text-muted-foreground">
-            {row.comment}
-          </span>
+          <span className="line-clamp-1 text-xs text-muted-foreground">{row.comment}</span>
         ) : (
           "—"
         ),
@@ -186,7 +178,7 @@ export function ReviewModerationQueue({
 
 function Stars({ rating }: { rating: number }) {
   return (
-    <div className="flex items-center gap-0.5" aria-label={`Rating ${rating} of 5`}>
+    <div className="flex items-center gap-0.5" role="img" aria-label={`Rating ${rating} of 5`}>
       {STAR_POSITIONS.map((position) => (
         <Star
           key={position}

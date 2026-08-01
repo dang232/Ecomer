@@ -2,11 +2,12 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import type { Product } from "@/features/catalog";
+
 import { useAuth } from "../hooks/auth-context";
 import { useCart } from "../hooks/use-cart";
 import { useProfile } from "../hooks/use-profile";
 import { useWishlist } from "../hooks/use-wishlist";
-import type { Product } from "@/features/catalog";
 
 import { VNShopContext } from "./vnshop-context-value";
 

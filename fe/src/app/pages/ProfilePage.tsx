@@ -19,10 +19,6 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
 import { AccountNav } from "@/features/account";
-import { useAuth } from "../hooks/auth-context";
-import { avatarUploadErrorMessage, useAvatarUpload } from "../hooks/use-avatar-upload";
-import { profileOptions } from "../hooks/use-profile";
-import { addressKey } from "@/shared/lib";
 import { ApiError } from "@/shared/api";
 import {
   updateProfile,
@@ -31,6 +27,11 @@ import {
   removeAddress,
 } from "@/shared/api/endpoints/users";
 import type { Address, UserProfile } from "@/shared/contracts/api";
+import { addressKey } from "@/shared/lib";
+
+import { useAuth } from "../hooks/auth-context";
+import { avatarUploadErrorMessage, useAvatarUpload } from "../hooks/use-avatar-upload";
+import { profileOptions } from "../hooks/use-profile";
 
 type ProfileTab = "info" | "addresses" | "payment" | "security";
 
@@ -292,15 +293,16 @@ export function ProfilePage() {
                 </button>
               );
             })}
-            {/* Become a Seller */}
-            <button
-              onClick={() => navigate("/seller/register")}
-              className="flex items-center gap-2.5 px-3 py-2.5 rounded-[var(--radius-md)] text-[13px] font-medium cursor-pointer transition-colors w-full text-left text-text-secondary hover:bg-background hover:text-foreground"
-            >
-              <Store size={16} />
-              {t("profile.becomeSeller")}
-            </button>
           </div>
+
+          {/* Become a Seller */}
+          <button
+            onClick={() => navigate("/seller/register")}
+            className="flex items-center gap-2.5 px-3 py-2.5 mt-0.5 rounded-[var(--radius-md)] text-[13px] font-medium cursor-pointer transition-colors w-full text-left text-text-secondary hover:bg-background hover:text-foreground"
+          >
+            <Store size={16} />
+            {t("profile.becomeSeller")}
+          </button>
 
           {/* Logout */}
           <button

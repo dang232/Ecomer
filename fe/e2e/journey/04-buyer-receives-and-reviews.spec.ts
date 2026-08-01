@@ -230,7 +230,7 @@ test.describe.serial("Chapter 4 — Buyer reviews the ordered product", () => {
           // Match a unique substring of the review body (the timestamp).
           // The review may be in a list item or a card; the unique
           // substring is enough.
-          const stamp = (/run (\d+)/.exec(reviewBody))?.[1] ?? "";
+          const stamp = /run (\d+)/.exec(reviewBody)?.[1] ?? "";
           await expect
             .poll(async () => page.getByText(stamp).count(), {
               timeout: 30_000,

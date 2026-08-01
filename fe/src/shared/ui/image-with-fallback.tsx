@@ -1,4 +1,4 @@
-import { IconPhotoOff } from "@tabler/icons-react";
+import { ImageOff } from "lucide-react";
 import { useState, type ImgHTMLAttributes } from "react";
 
 type ImageFallbackProps = ImgHTMLAttributes<HTMLImageElement> & {
@@ -39,7 +39,7 @@ export function ImageWithFallback({
         className={`flex items-center justify-center bg-muted text-gray-300 ${className ?? ""}`}
         aria-label={alt || "image unavailable"}
       >
-        {placeholder ?? <IconPhotoOff size={20} />}
+        {placeholder ?? <ImageOff size={20} />}
       </div>
     );
   }

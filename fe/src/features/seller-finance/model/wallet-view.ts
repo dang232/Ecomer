@@ -57,7 +57,6 @@ const ACTIVE_PAYOUT_STATUSES = new Set<PayoutStatusUi>([
   "SUBMITTING",
   "SUBMITTED",
   "UNKNOWN",
-  "PENDING",
 ]);
 
 // ─── Presenter ───────────────────────────────────────────────────────────────
@@ -88,14 +87,13 @@ export function toWalletView(input: {
   const activePayoutVnd = activePayouts.reduce((sum, p) => sum + p.amount, 0);
 
   const hasActivePayout = activePayouts.length > 0;
-  const canRequestPayout =
-    availableVnd !== null && availableVnd > 0 && !hasActivePayout;
+  const canRequestPayout = availableVnd !== null && availableVnd > 0 && !hasActivePayout;
 
   const history: WalletHistoryItem[] = payouts.map((p) => ({
     id: p.id,
     amountVnd: p.amount,
     status: p.status,
-    requestedAt: p.requestedAt,
+    requestedAt: p.requestedAt ?? "",
   }));
 
   return {

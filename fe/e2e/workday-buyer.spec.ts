@@ -327,9 +327,10 @@ test.describe.serial("Workday — buyer (guest → register → shop → order)"
               headers: { Authorization: `Bearer ${accessToken}` },
             });
             if (list.ok()) {
-              const ids = (await readJson<OrderListResponse>(list)).data?.content?.map(
-                (o) => o.id ?? o.orderId,
-              ) ?? [];
+              const ids =
+                (await readJson<OrderListResponse>(list)).data?.content?.map(
+                  (o) => o.id ?? o.orderId,
+                ) ?? [];
               if (ids.includes(orderId)) break;
             }
             await page.waitForTimeout(500);

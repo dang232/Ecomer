@@ -1,5 +1,5 @@
-import { Bell, BellOff, Mail, Settings } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Bell, BellOff, Mail, Settings } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -30,7 +30,7 @@ const NOTIFICATION_TYPES = [
   "PAYOUT_COMPLETED",
 ] as const;
 
-const CHANNELS: ReadonlyArray<{ key: NotificationChannel; icon: typeof Bell }> = [
+const CHANNELS: readonly { key: NotificationChannel; icon: typeof Bell }[] = [
   { key: "IN_APP", icon: Bell },
   { key: "EMAIL", icon: Mail },
 ];
@@ -41,13 +41,14 @@ function normalizePreferences(preferences: NotificationPreferences): Notificatio
   const byType = new Map(preferences.typePreferences.map((entry) => [entry.type, entry]));
   const known = NOTIFICATION_TYPES.map(
     (type) =>
-      byType.get(type) ??
-      ({
+      byType.get(type) ?? {
         type,
         channels: ["IN_APP", "EMAIL"] satisfies NotificationChannel[],
-      } as TypePreference),
+      },
   );
-  const extras = preferences.typePreferences.filter((entry) => !NOTIFICATION_TYPES.includes(entry.type as (typeof NOTIFICATION_TYPES)[number]));
+  const extras = preferences.typePreferences.filter(
+    (entry) => !NOTIFICATION_TYPES.includes(entry.type as (typeof NOTIFICATION_TYPES)[number]),
+  );
   return {
     ...preferences,
     typePreferences: [...known, ...extras],
@@ -208,7 +209,11 @@ export function NotificationPreferencesPage() {
             )}
             <div>
               <p className="font-medium text-foreground">
-                {t(draft.muted ? "notificationPreferences.mutedTitle" : "notificationPreferences.activeTitle")}
+                {t(
+                  draft.muted
+                    ? "notificationPreferences.mutedTitle"
+                    : "notificationPreferences.activeTitle",
+                )}
               </p>
               <p className="text-sm text-muted-foreground">
                 {t(
@@ -276,9 +281,12 @@ export function NotificationPreferencesPage() {
                         type="button"
                         role="switch"
                         aria-checked={enabled ? "true" : "false"}
-                        aria-label={t(`notificationPreferences.types.${type}.channels.${channel.key}`, {
-                          defaultValue: `${type} ${channel.key}`,
-                        })}
+                        aria-label={t(
+                          `notificationPreferences.types.${type}.channels.${channel.key}`,
+                          {
+                            defaultValue: `${type} ${channel.key}`,
+                          },
+                        )}
                         onClick={() => toggleChannel(type, channel.key)}
                         className={`inline-flex items-center gap-2 rounded-[var(--radius-md)] border px-3 py-2 text-sm ${
                           enabled

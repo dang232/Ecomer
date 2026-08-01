@@ -1,8 +1,12 @@
-import { test, expect, type Page, type TestInfo } from "@playwright/test";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { test, expect, type Page, type TestInfo } from "@playwright/test";
+
 export { expectNoGlobalError } from "./_helpers";
+import { credentialForPersona, type Persona } from "./modernization/_credentials";
+export type { Persona } from "./modernization/_credentials";
 
 /**
  * Evidence helper for the persona-workday Playwright suite. Wraps
@@ -17,8 +21,6 @@ export { expectNoGlobalError } from "./_helpers";
  *   ├── video.webm                (gitignored)
  *   └── REPORT.md                 (committed, regenerated each run)
  */
-
-export type Persona = "buyer" | "seller" | "admin";
 
 interface StepRow {
   index: number;
@@ -220,16 +222,11 @@ export async function finalizeReport(persona: Persona): Promise<void> {
  */
 
 /**
- * Drive the /login form for one of the seeded realm users (`seller1`,
- * `admin1`, etc., all with password `test`). Polls until the SPA finishes
- * its redirect to /. Used by the seller and admin workday specs; the
- * buyer workday registers fresh and uses /register instead.
+ * Drive the /login form for a seeded persona. The central credential store
+ * resolves credentials so rotation is automatically respected.
  */
-export async function loginAsSeededUser(
-  page: Page,
-  username: string,
-  password = "test",
-): Promise<void> {
+export async function loginAsSeededUser(page: Page, persona: Persona): Promise<void> {
+  const { username, password } = credentialForPersona(persona);
   await page.goto("/login");
   await expect(page.getByText(/Sign in to VNShop|Đăng nhập VNShop/i).first()).toBeVisible({
     timeout: 20_000,
@@ -240,9 +237,9 @@ export async function loginAsSeededUser(
   await expect
     .poll(() => new URL(page.url()).pathname, {
       timeout: 30_000,
-      message: `login as ${username} did not navigate to the SPA`,
+      message: `login as ${persona} did not navigate to the SPA`,
     })
-    .toBe(username === "admin1" ? "/admin" : "/");
+    .toBe(persona === "admin" ? "/admin" : "/");
 }
 
 /**

@@ -1,17 +1,18 @@
-import { Loader2, Search, Send } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { Loader2, Search, Send } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 
 import { AccountNav } from "@/features/account";
-import { useAuth } from "../hooks/auth-context";
-import { useMarkThreadRead, useMessages, useSendMessage } from "../hooks/use-messages";
-import { THREADS_KEY, useThreads } from "../hooks/use-threads";
 import { ApiError } from "@/shared/api";
 import { openThread } from "@/shared/api/endpoints/messaging";
 import type { ChatMessage, MessageThreadSummary } from "@/shared/api/endpoints/messaging";
+
+import { useAuth } from "../hooks/auth-context";
+import { useMarkThreadRead, useMessages, useSendMessage } from "../hooks/use-messages";
+import { THREADS_KEY, useThreads } from "../hooks/use-threads";
 
 function useRelativeTime() {
   const { t, i18n } = useTranslation();

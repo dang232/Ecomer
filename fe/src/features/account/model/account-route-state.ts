@@ -13,7 +13,7 @@ export interface AccountRouteState {
   href: string;
 }
 
-const SECTION_BY_PATHNAME: ReadonlyArray<{ prefix: string; section: AccountSection }> = [
+const SECTION_BY_PATHNAME: readonly { prefix: string; section: AccountSection }[] = [
   { prefix: "/profile", section: "profile" },
   { prefix: "/wishlist", section: "wishlist" },
   { prefix: "/notifications", section: "notifications" },

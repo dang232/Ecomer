@@ -7,9 +7,14 @@ on:
         description: Merged staging desired-state commit on protected main
         required: true
         type: string
+      dispatch_token:
+        description: CD dispatch token for attestation and cutover gate
+        required: true
+        type: string
 
 permissions:
   contents: read
+  packages: read
 
 concurrency:
   group: production-promotion
@@ -19,13 +24,15 @@ jobs:
   verify-and-promote:
     name: Verify staging and open production PR
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 90
+    run-name: "promote ${{ inputs.staging_revision }} via ${{ inputs.dispatch_token }}"
     permissions:
       contents: write
       pull-requests: write
     env:
       GH_TOKEN: ${{ secrets.RELEASE_BOT_TOKEN }}
       STAGING_REVISION: ${{ inputs.staging_revision }}
+      DISPATCH_TOKEN: ${{ inputs.dispatch_token }}
     steps:
       - name: Validate full revision
         run: '[[ "$STAGING_REVISION" =~ ^[0-9a-f]{40}$ ]]'
@@ -160,6 +167,96 @@ jobs:
             grafana/k6@sha256:1f40432b1cbe7234e977f96c362c9bc550a2d2b583d014dd8669fe40d3e9e755 \
             run --summary-export=/evidence/staging-k6-summary.json /scripts/k6-release.js
 
+      - name: Upload performance evidence
+        if: always()
+        run: |
+          set -euo pipefail
+          mkdir -p performance/current
+          cp "$RUNNER_TEMP/staging-k6-summary.json" performance/current/
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: staging-performance-${{ inputs.staging_revision }}
+          path: |
+            performance/current/
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Login to GHCR
+        uses: docker/login-action@0a2efd3f8f6b0e6a8c8e8e8e8e8e8e8e8e8e8e8e # v3.3.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Select and verify frontend image from staging lock
+        run: |
+          set -euo pipefail
+          frontend_entries=( $(jq -r '.artifacts[] | select(.id == "frontend") | .digest' infra/release/locks/staging.json) )
+          if [[ ${#frontend_entries[@]} -ne 1 ]]; then
+            echo "ERROR: Expected exactly one frontend image digest, found ${#frontend_entries[@]}" >&2
+            exit 1
+          fi
+          frontend_image="$(jq -r '.artifacts[] | select(.id == "frontend") | .image' infra/release/locks/staging.json)"
+          frontend_digest="${frontend_entries[0]}"
+          if [[ -z "$frontend_image" || -z "$frontend_digest" ]]; then
+            echo "ERROR: Malformed frontend image or digest" >&2
+            exit 1
+          fi
+          echo "FRONTEND_IMAGE=ghcr.io/$frontend_image@$frontend_digest" >> "$GITHUB_ENV"
+          jq -n \
+            --arg image "$frontend_image" \
+            --arg digest "$frontend_digest" \
+            --argjson capturedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{image:$image,digest:$digest,capturedAt:$capturedAt}' \
+            > frontend-image-evidence.json
+
+      - name: Pull the exact frontend image
+        run: docker pull "$FRONTEND_IMAGE"
+
+      - name: Verify OCI attestation bundle
+        run: |
+          set -euo pipefail
+          source_commit="$(jq -r '.sourceCommit' infra/release/locks/staging.json)"
+          gh attestation verify "oci://$FRONTEND_IMAGE" \
+            --bundle-from-oci \
+            --signer-repo vnshop/cd-signer \
+            --expected-source-commit "$source_commit"
+          jq -n \
+            --arg sourceCommit "$source_commit" \
+            --argjson capturedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{sourceCommit:$sourceCommit,verifiedAt:$capturedAt}' \
+            > attestation-evidence.json
+
+      - name: Run cutover gate
+        shell: pwsh
+        run: |
+          $params = @(
+            "-StagingUrl", "https://staging.vnshop.invalid",
+            "-ImageReference", "$env:FRONTEND_IMAGE",
+            "-ExpectedSourceCommit", (jq -r '.sourceCommit' infra/release/locks/staging.json),
+            "-Registry", "ghcr.io",
+            "-Environment", "buyer,seller,admin"
+          )
+          & "$env:GITHUB_WORKSPACE/fe/scripts/run-cutover-gate.ps1" @params
+        env:
+          E2E_SELLER_USERNAME: ${{ secrets.E2E_SELLER_USERNAME }}
+          E2E_SELLER_PASSWORD: ${{ secrets.E2E_SELLER_PASSWORD }}
+          E2E_ADMIN_USERNAME: ${{ secrets.E2E_ADMIN_USERNAME }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+          DISPATCH_TOKEN: ${{ env.DISPATCH_TOKEN }}
+
+      - name: Upload cutover gate evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: staging-cutover-gate-${{ inputs.staging_revision }}
+          path: |
+            frontend-image-evidence.json
+            attestation-evidence.json
+            performance/current/
+          if-no-files-found: warn
+          retention-days: 90
+
       - name: Promote unchanged 19-digest lock
         run: |
           set -euo pipefail
@@ -212,8 +309,10 @@ jobs:
             expected-images.tsv
             desired-images.tsv
             staging-live-images.json
+            frontend-image-evidence.json
+            attestation-evidence.json
+            performance/current/
             fe/playwright-report/
             fe/test-results/
-            ${{ runner.temp }}/staging-k6-summary.json
           if-no-files-found: warn
           retention-days: 90

@@ -1,10 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  AlertCircle,
-  CheckCircle2,
-  Package,
-  RotateCcw,
-} from "lucide-react";
+import { AlertCircle, CheckCircle2, Package, RotateCcw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -17,11 +12,7 @@ import {
   rejectReturn,
 } from "@/shared/api/endpoints/returns";
 
-import {
-  RETURN_TAB_VALUES,
-  toSellerReturnRow,
-  type ReturnTab,
-} from "../model/return-queue-view";
+import { RETURN_TAB_VALUES, toSellerReturnRow, type ReturnTab } from "../model/return-queue-view";
 
 import { RejectReturnDialog } from "./reject-return-dialog";
 
@@ -85,10 +76,14 @@ export function ReturnsRoute() {
   const filtered = useMemo(() => {
     return allReturns.filter((r) => {
       switch (tab) {
-        case "requested": return r.status === "REQUESTED";
-        case "approved": return r.status === "APPROVED";
-        case "completed": return r.status === "COMPLETED";
-        case "rejected": return r.status === "REJECTED";
+        case "requested":
+          return r.status === "REQUESTED";
+        case "approved":
+          return r.status === "APPROVED";
+        case "completed":
+          return r.status === "COMPLETED";
+        case "rejected":
+          return r.status === "REJECTED";
       }
     });
   }, [allReturns, tab]);
@@ -156,11 +151,7 @@ export function ReturnsRoute() {
       {/* Empty — no returns at all */}
       {!returnsQuery.isLoading && allReturns.length === 0 && !returnsQuery.error ? (
         <div className="bg-card border border-border rounded-[var(--radius-lg)] p-8 text-center">
-          <Package
-            size={40}
-            className="mx-auto mb-3 text-muted-foreground"
-            aria-hidden="true"
-          />
+          <Package size={40} className="mx-auto mb-3 text-muted-foreground" aria-hidden="true" />
           <p className="text-sm text-muted-foreground">{t("return.seller.empty")}</p>
         </div>
       ) : null}
@@ -204,9 +195,7 @@ export function ReturnsRoute() {
                         {t(badge.labelKey)}
                       </span>
                     </div>
-                    <p className="text-sm text-text-secondary line-clamp-1">
-                      {ret.reason ?? "—"}
-                    </p>
+                    <p className="text-sm text-text-secondary line-clamp-1">{ret.reason ?? "—"}</p>
                   </div>
                   <div className="flex gap-2 shrink-0">
                     {ret.action === "approve" ? (

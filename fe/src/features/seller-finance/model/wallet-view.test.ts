@@ -14,9 +14,22 @@ function makePayout(overrides: Partial<Payout> & Pick<Payout, "id" | "amount" | 
   };
 }
 
+function makeWallet(overrides: Partial<Wallet>): Wallet {
+  return {
+    sellerId: undefined,
+    balance: 0,
+    pending: 0,
+    totalEarned: undefined,
+    lastPayoutAt: null,
+    currency: "VND",
+    updatedAt: undefined,
+    ...overrides,
+  };
+}
+
 describe("toWalletView", () => {
   it("separates available balance from active and settled payouts", () => {
-    const wallet: Wallet = { balance: 500_000, pending: 75_000 };
+    const wallet = makeWallet({ balance: 500_000, pending: 75_000 });
     const payouts: Payout[] = [
       makePayout({ id: "p-1", status: "REQUESTED", amount: 100_000 }),
       makePayout({ id: "p-2", status: "PAID", amount: 200_000 }),
@@ -31,7 +44,7 @@ describe("toWalletView", () => {
   });
 
   it("handles null wallet balance", () => {
-    const wallet: Wallet = { balance: null as unknown as number, pending: 0 };
+    const wallet = makeWallet({ balance: null as unknown as number, pending: 0 });
     const payouts: Payout[] = [];
 
     const view = toWalletView({ wallet, payouts });
@@ -41,14 +54,14 @@ describe("toWalletView", () => {
   });
 
   it("activePayoutVnd sums all active statuses", () => {
-    const wallet: Wallet = { balance: 1_000_000, pending: 0 };
+    const wallet = makeWallet({ balance: 1_000_000, pending: 0 });
     const payouts: Payout[] = [
       makePayout({ id: "p-1", status: "REQUESTED", amount: 50_000 }),
       makePayout({ id: "p-2", status: "APPROVED", amount: 60_000 }),
       makePayout({ id: "p-3", status: "SUBMITTING", amount: 70_000 }),
       makePayout({ id: "p-4", status: "SUBMITTED", amount: 80_000 }),
       makePayout({ id: "p-5", status: "UNKNOWN", amount: 90_000 }),
-      makePayout({ id: "p-6", status: "PENDING", amount: 100_000 }),
+      makePayout({ id: "p-6", status: "REQUESTED", amount: 100_000 }),
       makePayout({ id: "p-7", status: "PAID", amount: 200_000 }),
       makePayout({ id: "p-8", status: "FAILED", amount: 30_000 }),
     ];
@@ -59,10 +72,8 @@ describe("toWalletView", () => {
   });
 
   it("canRequestPayout is true when balance > 0 and no active payout", () => {
-    const wallet: Wallet = { balance: 500_000, pending: 0 };
-    const payouts: Payout[] = [
-      makePayout({ id: "p-1", status: "PAID", amount: 100_000 }),
-    ];
+    const wallet = makeWallet({ balance: 500_000, pending: 0 });
+    const payouts: Payout[] = [makePayout({ id: "p-1", status: "PAID", amount: 100_000 })];
 
     const view = toWalletView({ wallet, payouts });
 
@@ -70,7 +81,7 @@ describe("toWalletView", () => {
   });
 
   it("canRequestPayout is false when balance is 0", () => {
-    const wallet: Wallet = { balance: 0, pending: 0 };
+    const wallet = makeWallet({ balance: 0, pending: 0 });
     const payouts: Payout[] = [];
 
     const view = toWalletView({ wallet, payouts });
@@ -79,7 +90,7 @@ describe("toWalletView", () => {
   });
 
   it("canRequestPayout is false when balance is null", () => {
-    const wallet: Wallet = { balance: null as unknown as number, pending: 0 };
+    const wallet = makeWallet({ balance: null as unknown as number, pending: 0 });
     const payouts: Payout[] = [];
 
     const view = toWalletView({ wallet, payouts });
@@ -88,10 +99,8 @@ describe("toWalletView", () => {
   });
 
   it("canRequestPayout is false when an active payout is in-flight", () => {
-    const wallet: Wallet = { balance: 500_000, pending: 0 };
-    const payouts: Payout[] = [
-      makePayout({ id: "p-1", status: "REQUESTED", amount: 50_000 }),
-    ];
+    const wallet = makeWallet({ balance: 500_000, pending: 0 });
+    const payouts: Payout[] = [makePayout({ id: "p-1", status: "REQUESTED", amount: 50_000 })];
 
     const view = toWalletView({ wallet, payouts });
 
@@ -99,9 +108,14 @@ describe("toWalletView", () => {
   });
 
   it("maps payout fields correctly", () => {
-    const wallet: Wallet = { balance: 100_000, pending: 0 };
+    const wallet = makeWallet({ balance: 100_000, pending: 0 });
     const payouts: Payout[] = [
-      makePayout({ id: "p-x", status: "PAID", amount: 50_000, requestedAt: "2024-07-01T00:00:00Z" }),
+      makePayout({
+        id: "p-x",
+        status: "PAID",
+        amount: 50_000,
+        requestedAt: "2024-07-01T00:00:00Z",
+      }),
     ];
 
     const view = toWalletView({ wallet, payouts });

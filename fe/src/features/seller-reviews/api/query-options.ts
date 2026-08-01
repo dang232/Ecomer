@@ -1,4 +1,4 @@
-import { createQueryOptions } from "@tanstack/react-query";
+import { queryOptions } from "@tanstack/react-query";
 
 import { sellerReviews } from "@/shared/api/endpoints/reviews";
 
@@ -9,7 +9,7 @@ export const sellerReviewKeys = {
 };
 
 export const sellerReviewListOptions = (params: { q?: string; page: number; size?: number }) =>
-  /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return */ createQueryOptions({
+  queryOptions({
     queryKey: sellerReviewKeys.list({ ...params, size: params.size ?? 20 }),
     queryFn: () => sellerReviews({ q: params.q, page: params.page, size: params.size ?? 20 }),
   });

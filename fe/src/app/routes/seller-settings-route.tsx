@@ -21,6 +21,9 @@ export function SellerSettingsRoute() {
 
   return (
     <div className="space-y-6">
+      <header className="space-y-1">
+        <h1 className="text-2xl font-bold text-foreground">{t("seller.settings.title")}</h1>
+      </header>
       {profileQuery.error instanceof ApiError ? (
         <p className="text-sm text-red-500">{profileQuery.error.message}</p>
       ) : null}

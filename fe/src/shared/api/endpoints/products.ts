@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { api } from "@/shared/api/client";
 import {
   pageSchema,
   productDetailSchema,
@@ -7,8 +8,8 @@ import {
   productImageUploadUrlSchema,
   productSummarySchema,
   cursorPageSchema,
+  emptyResponseSchema,
 } from "@/shared/contracts/api";
-import { api } from "@/shared/api/client";
 
 export interface ProductListParams {
   page?: number;
@@ -115,7 +116,7 @@ export const sellerProductPublish = (id: string) =>
 
 /** DELETE /sellers/me/products/{id} — waits for 204. */
 export const sellerProductDelete = (id: string) =>
-  api.delete(`/sellers/me/products/${encodeURIComponent(id)}`);
+  api.delete(`/sellers/me/products/${encodeURIComponent(id)}`, emptyResponseSchema);
 
 export const sellerProductImageUploadUrl = (
   productId: string,

@@ -1,3 +1,4 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
   ArrowLeft,
@@ -8,16 +9,14 @@ import {
   Package,
   RotateCcw,
 } from "lucide-react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "motion/react";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { toast } from "sonner";
 
-import { Modal } from "@/shared/ui";
-import { ApiError } from "@/shared/api";
 import { AccountNav } from "@/features/account";
+import { ApiError } from "@/shared/api";
 import {
   getReturn,
   listReturns,
@@ -26,6 +25,7 @@ import {
   type ReturnStatus,
 } from "@/shared/api/endpoints/returns";
 import { formatPrice } from "@/shared/lib";
+import { Modal } from "@/shared/ui";
 
 const STATUS_CONFIG: Record<
   ReturnStatus,
@@ -326,6 +326,7 @@ export function ReturnStatusPage() {
         <Link
           to="/orders"
           className="p-2 rounded-lg border border-border hover:bg-muted transition-colors"
+          aria-label={t("return.request.backToOrders")}
         >
           <ArrowLeft size={20} />
         </Link>

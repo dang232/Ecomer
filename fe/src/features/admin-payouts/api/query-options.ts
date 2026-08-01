@@ -1,4 +1,4 @@
-import { createQueryOptions } from "@tanstack/react-query";
+import { queryOptions } from "@tanstack/react-query";
 
 import { adminAllPayouts } from "@/shared/api/endpoints/admin";
 
@@ -8,7 +8,7 @@ export const adminPayoutsQueryOptions = (params: {
   size?: number;
   q?: string;
 }) =>
-  createQueryOptions({
+  queryOptions({
     queryKey: [
       "admin",
       "payouts",

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { SellerOrderRow } from "../model/order-queue-view";
@@ -57,6 +57,24 @@ describe("OrderQueue", () => {
     );
     expect(screen.getByRole("button", { name: /accept/i })).toBeVisible();
     expect(screen.getByRole("button", { name: /reject/i })).toBeVisible();
+  });
+
+  it("exposes order detail as a separate keyboard-accessible control", () => {
+    const onRouteChange = vi.fn();
+    renderWithClient(
+      <OrderQueue
+        orders={[makeRow()]}
+        isLoading={false}
+        error={null}
+        routeState={{ q: "", selected: null }}
+        onRouteChange={onRouteChange}
+      />,
+    );
+
+    const detailButton = screen.getByRole("button", { name: "seller.orders.openDetail" });
+    expect(detailButton).toBeVisible();
+    fireEvent.click(detailButton);
+    expect(onRouteChange).toHaveBeenCalledWith({ selected: "sub-1" });
   });
 
   it("renders a row with a ship button for ACCEPTED", () => {

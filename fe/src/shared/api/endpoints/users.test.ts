@@ -69,4 +69,16 @@ describe("users endpoint /sellers/me contract", () => {
 
     expect(parsed.bankName).toBeNull();
   });
+
+  it("sellerProfileSchema accepts legacy-migrated payout destinations", () => {
+    const parsed = parse({
+      ...sellerProfileResponse,
+      destination: {
+        ...sellerProfileResponse.destination,
+        verificationState: "LEGACY_MIGRATED",
+      },
+    });
+
+    expect(parsed.destination?.verificationState).toBe("LEGACY_MIGRATED");
+  });
 });

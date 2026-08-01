@@ -78,7 +78,9 @@ export function OrderDecisionDialog({
               disabled={isPending}
               className="flex-1 rounded-xl bg-red-500 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
             >
-              {isPending ? (t("common.submitting") ?? "Submitting...") : (t("admin.orders.cancel") ?? "Cancel")}
+              {isPending
+                ? (t("common.submitting") ?? "Submitting...")
+                : (t("admin.orders.cancel") ?? "Cancel")}
             </button>
           </>
         }
@@ -112,7 +114,9 @@ export function OrderDecisionDialog({
               disabled={isPending}
               className="flex-1 rounded-xl bg-red-500 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
             >
-              {isPending ? (t("common.submitting") ?? "Submitting...") : (t("admin.orders.refundConfirmBtn") ?? "Refund")}
+              {isPending
+                ? (t("common.submitting") ?? "Submitting...")
+                : (t("admin.orders.refundConfirmBtn") ?? "Refund")}
             </button>
           </>
         }
@@ -129,9 +133,7 @@ export function OrderDecisionDialog({
             className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
             placeholder={t("admin.orders.reasonPlaceholder") ?? "Enter refund reason..."}
           />
-          {fieldError ? (
-            <p className="mt-1 text-xs text-red-500">{fieldError}</p>
-          ) : null}
+          {fieldError ? <p className="mt-1 text-xs text-red-500">{fieldError}</p> : null}
         </div>
       </Modal>
     );
@@ -160,7 +162,9 @@ export function OrderDecisionDialog({
               className="flex-1 rounded-xl py-2.5 text-sm font-semibold text-white disabled:opacity-50"
               style={{ background: "var(--admin-primary)" }}
             >
-              {isPending ? (t("common.submitting") ?? "Submitting...") : (t("common.confirm") ?? "Confirm")}
+              {isPending
+                ? (t("common.submitting") ?? "Submitting...")
+                : (t("common.confirm") ?? "Confirm")}
             </button>
           </>
         }

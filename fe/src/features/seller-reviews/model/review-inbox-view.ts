@@ -22,7 +22,7 @@ export function toSellerReviewRow(review: Review): SellerReviewRow {
     userName: review.userName,
     productName: review.productName,
     rating: review.rating,
-    comment: review.comment,
+    comment: review.comment ?? null,
     images: review.images ?? [],
     createdAt: review.createdAt ?? "",
   };

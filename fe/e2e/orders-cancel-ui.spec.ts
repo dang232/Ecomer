@@ -1,6 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
 
-import { loginViaOidc, uniqueTestId } from "./_auth";
 import {
   readJson,
   type AuthResponse,
@@ -8,6 +7,7 @@ import {
   type OrderResponse,
   type ProductListResponse,
 } from "./_api";
+import { loginViaOidc, uniqueTestId } from "./_auth";
 
 /**
  * UI-driven QA spec for the buyer orders flow.
@@ -116,9 +116,8 @@ async function placePendingCodOrder(
   for (let i = 0; i < 10; i++) {
     const list = await request.get(`${apiURL}/orders?size=10`, { headers });
     expect(list.ok()).toBeTruthy();
-    const ids = (await readJson<OrderListResponse>(list)).data?.content?.map(
-      (o) => o.id ?? o.orderId,
-    ) ?? [];
+    const ids =
+      (await readJson<OrderListResponse>(list)).data?.content?.map((o) => o.id ?? o.orderId) ?? [];
     if (ids.includes(orderId)) return orderId;
     await new Promise((r) => setTimeout(r, 500));
   }

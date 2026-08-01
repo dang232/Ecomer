@@ -6,12 +6,13 @@ import {
 } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 
-import { readJsonText } from "../../shared/api/read-json";
 import {
   productListV2,
   productListV2ParamsSchema,
   type ProductListV2Params,
 } from "@/shared/api/endpoints/products";
+
+import { readJsonText } from "../../shared/api/read-json";
 
 const PRODUCT_V2_STALE_TIME = 60_000;
 

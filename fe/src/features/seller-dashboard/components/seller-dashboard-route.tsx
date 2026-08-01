@@ -1,11 +1,5 @@
-import {
-  Package,
-  ShoppingBag,
-  Star,
-  TrendingUp,
-  Wallet,
-} from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Package, ShoppingBag, Star, TrendingUp, Wallet } from "lucide-react";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -66,10 +60,7 @@ export function SellerDashboardRoute() {
     staleTime: 60_000,
     retry: false,
   });
-  const chartData = useMemo(
-    () => toRevenueChartData(revenueQuery.data ?? []),
-    [revenueQuery.data],
-  );
+  const chartData = useMemo(() => toRevenueChartData(revenueQuery.data ?? []), [revenueQuery.data]);
   const hasRevenue = chartData.length > 0;
 
   const retryRevenue = useCallback(
@@ -113,6 +104,14 @@ export function SellerDashboardRoute() {
 
   return (
     <div className="space-y-6">
+      <header className="space-y-1">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+          {t("seller.dashboard.eyebrow")}
+        </p>
+        <h1 className="text-2xl font-bold text-foreground">{t("seller.dashboard.title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("seller.dashboard.subtitle")}</p>
+      </header>
+
       {/* KPI row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard

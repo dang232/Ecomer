@@ -39,7 +39,7 @@ export function SellerProfileSummary({ profile }: SellerProfileSummaryProps) {
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">{profile.shopName}</h1>
+          <h2 className="text-xl font-bold text-foreground">{profile.shopName}</h2>
           <StatusPill
             status={profile.approved ? "approved" : "pending"}
             tone={profile.approved ? "success" : "warning"}
@@ -75,15 +75,15 @@ export function SellerProfileSummary({ profile }: SellerProfileSummaryProps) {
           <>
             <ProfileField
               label={t("seller.settings.destination")}
-              value={(profile.destination as { last4: string }).last4}
+              value={profile.destination.last4}
             />
             <ProfileField
               label={t("seller.settings.verificationState")}
-              value={(profile.destination as { verificationState: string }).verificationState}
+              value={profile.destination.verificationState}
             />
             <ProfileField
               label={t("seller.settings.destinationBank")}
-              value={(profile.destination as { bankName: string }).bankName}
+              value={profile.destination.bankName}
             />
           </>
         ) : (

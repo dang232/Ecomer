@@ -9,9 +9,9 @@ const VALID_UUID = "11111111-1111-4111-8111-111111111111";
 
 describe("vietqr-confirmation model", () => {
   it("parses a confirmation with a bank reference", () => {
-    expect(
-      parseVietqrConfirmation({ paymentId: VALID_UUID, bankReference: "BANK-12345" }),
-    ).toEqual({ paymentId: VALID_UUID, bankReference: "BANK-12345" });
+    expect(parseVietqrConfirmation({ paymentId: VALID_UUID, bankReference: "BANK-12345" })).toEqual(
+      { paymentId: VALID_UUID, bankReference: "BANK-12345" },
+    );
   });
 
   it("parses a confirmation without a bank reference", () => {

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 
@@ -11,7 +11,7 @@ type PayoutFilter = "all" | "active" | "paid" | "failed";
 
 interface WalletPageProps {
   view: WalletView;
-  onRequestPayout: (body: { amount: number; currency: string }, idempotencyKey: string) => void;
+  onRequestPayout: (body: { amount: number; currency: string }) => void;
 }
 
 /**
@@ -25,10 +25,6 @@ export function WalletPage({ view, onRequestPayout }: WalletPageProps) {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [showPayoutDialog, setShowPayoutDialog] = useState(false);
-  // Stable ref so the key is not captured by stale closures during retry.
-  // The ref is NOT cleared on network error — only on success or explicit reset.
-  const idempotencyKeyRef = useRef<string | null>(null);
-
   const filter = (searchParams.get("filter") ?? "all") as PayoutFilter;
 
   const handleFilterChange = (next: PayoutFilter) => {
@@ -49,15 +45,10 @@ export function WalletPage({ view, onRequestPayout }: WalletPageProps) {
 
   const handleClosePayoutDialog = () => {
     setShowPayoutDialog(false);
-    // Clear the idempotency key when the user explicitly closes the dialog.
-    // NOT cleared on network/server failure — retries reuse the same key.
-    idempotencyKeyRef.current = null;
   };
 
   const handlePayoutSubmit = (amount: number) => {
-    const key = idempotencyKeyRef.current ?? crypto.randomUUID();
-    idempotencyKeyRef.current = key;
-    onRequestPayout({ amount, currency: "VND" }, key);
+    onRequestPayout({ amount, currency: "VND" });
   };
 
   return (
@@ -84,7 +75,9 @@ export function WalletPage({ view, onRequestPayout }: WalletPageProps) {
         </p>
         {view.pendingBalanceVnd !== null && view.pendingBalanceVnd > 0 ? (
           <p className="text-white/60 text-xs mb-3">
-            {t("seller.wallet.pendingHint", { amount: `₫${view.pendingBalanceVnd.toLocaleString("vi-VN")}` })}
+            {t("seller.wallet.pendingHint", {
+              amount: `₫${view.pendingBalanceVnd.toLocaleString("vi-VN")}`,
+            })}
           </p>
         ) : null}
         <div className="flex gap-3">
@@ -98,11 +91,7 @@ export function WalletPage({ view, onRequestPayout }: WalletPageProps) {
         </div>
       </div>
 
-      <PayoutHistory
-        history={view.history}
-        filter={filter}
-        onFilterChange={handleFilterChange}
-      />
+      <PayoutHistory history={view.history} filter={filter} onFilterChange={handleFilterChange} />
     </div>
   );
 }

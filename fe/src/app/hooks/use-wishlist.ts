@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { readJsonText } from "../../shared/api/read-json";
 import {
   addWishlistItem,
   clearWishlist as clearWishlistApi,
@@ -14,6 +13,8 @@ import {
   type WishlistResponse,
 } from "@/shared/api/endpoints/wishlist";
 import { productIdSchema, type ProductId } from "@/shared/contracts/api/branded-ids";
+
+import { readJsonText } from "../../shared/api/read-json";
 
 import { useAuth } from "./auth-context";
 

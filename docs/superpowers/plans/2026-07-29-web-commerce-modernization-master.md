@@ -46,24 +46,38 @@ Execute these plans in order. A later plan may begin only after all blocking gat
 
 ## Plan Progress
 
-Live status as of 2026-07-31. Updated when each task ships.
+Live status as of 2026-08-01. Local verification is recorded separately from
+protected-environment promotion evidence.
 
 | # | Plan | Task | Status | Commit / Notes |
 |---|---|---|---|---|
-| 01 | Baseline | all | **pending** | toolchain truth, baseline warnings, route inventory, buyer proxies not yet captured |
-| 02a | Checkout Lifecycle | all | **pending** | one-order invariant, payment-only retry, redirect recovery |
-| 02 | Boundaries | 3-4 | **pending** | unknown-to-Zod transport, test/E2E type coverage |
+| 01 | Baseline | all | **locally verified** | baseline evidence, route inventory, and buyer proxies recorded; protected rerun remains external |
+| 02a | Checkout Lifecycle | all | **locally verified** | one-order invariant, payment-only retry, and redirect recovery covered by source/tests |
+| 02 | Boundaries | 3-4 | **locally verified** | unknown-to-Zod transport and app/test/E2E type coverage pass locally |
 | 03 | Platform | 1-6 | **partial** | shared primitives scaffolded (`fe/src/shared/ui`); nesting/layouts not migrated |
 | 04 | Buyer | 1-7 | **partial** | cart + checkout page-view extraction shipped (`b7e411de`); page components still to adopt |
-| 05 | Seller | 1 | **shipped** | `12fa1b1a feat(fe): modernize seller dashboard` |
-| 05 | Seller | 2 | **shipped** | `5f9660bb feat(fe): modernize seller product workflow` |
-| 05 | Seller | 3 | **shipped** | `f8c13551 feat(fe): standardize seller work queues` |
-| 05 | Seller | 4 | **shipped** | `c8c71fbb feat(fe): clarify seller finance and settings` + `1f0f7558` (i18n duplicate merge + payout-flight test) |
-| 06 | Admin | 1 | **shipped** | `b27d6095 feat(fe): add admin shell, queue infrastructure, dashboard (plan06 t1)` |
-| 06 | Admin | 2 | **shipped** | `5d8a6cd2 feat(fe): add commerce admin queues (orders/coupons/users) (plan06 t2)` |
-| 06 | Admin | 3 | **shipped** | `bf094ea8 feat(fe): modernize trust and safety queues` |
-| 06 | Admin | 4 | **shipped** | `03caa726 feat(fe): modernize admin finance & health` |
-| 07 | Release | all | **pending** | preview removal, compat removal, coordinated promotion and rollback |
+| 05 | Seller | 1 | **locally verified** | dashboard and seller workflows pass focused unit/E2E checks; protected rerun remains external |
+| 05 | Seller | 2 | **locally verified** | product workflow passes focused unit/E2E checks; protected rerun remains external |
+| 05 | Seller | 3 | **locally verified** | queue navigation, actions, and order-service regression pass locally; protected rerun remains external |
+| 05 | Seller | 4 | **locally verified** | finance/settings and payout flight checks pass locally; protected rerun remains external |
+| 06 | Admin | 1 | **locally verified** | shell, dashboard, and queue infrastructure pass local checks; protected rerun remains external |
+| 06 | Admin | 2 | **locally verified** | commerce queues and semantic controls pass local checks; protected rerun remains external |
+| 06 | Admin | 3 | **locally verified** | trust and safety queues pass local checks; protected rerun remains external |
+| 06 | Admin | 4 | **locally verified** | finance and health queues pass local checks; protected rerun remains external |
+| 07 | Release | 1-2 | **partial** | persona batches passed previously; accessibility fixes are applied, but browser matrices cannot be rerun while Docker is unavailable |
+| 07 | Release | 3 | **partial** | fresh bundle evidence is within budget; fresh Lighthouse evidence is blocked by unavailable services |
+| 07 | Release | 4 | **partial** | cutover policy and source/build gates pass locally; exact-image gate is blocked by Docker |
+| 07 | Release | 5 | **pending** | protected staging, production promotion, immutable digest, and rollback evidence require protected access |
+
+### Local Verification Record (2026-08-01)
+
+- Frontend unit suite: 177 files and 1,017 tests passed.
+- Focused accessibility repair suite: 6 files and 19 tests passed; return endpoint tests: 14 tests passed.
+- Typecheck, full lint/policy checks, changed-file ESLint with zero warnings, formatting, E2E credential/type gates, release-workflow policy tests, cutover policy, and cutover-gate contract tests passed locally.
+- Production frontend build passed with no Vite chunk-size warning after vendor splitting. Fresh route bundle gzip growth is 5.5% home, 5.2% search, 5.0% product, 6.5% cart, and 5.4% checkout against the recorded baseline.
+- The opt-in `pnpm run build:analyze` command passed and writes `dist/stats.html`; the normal `pnpm run build` does not emit a report or open a browser.
+- The prior browser accessibility batch found 11 mobile violations. Source fixes now cover the reported checkout, returns, profile, seller orders/reviews/wallet, and admin dashboard/reviews issues, but the corrected browser matrix is not claimed until the stack is available for rerun.
+- Docker-backed production persona, visual, state, text-scale, Axe rerun, Lighthouse, exact-image, staging, production, and rollback gates remain open.
 
 **Branch:** `feat/search-catalog-cache-flow` (currently 35 commits ahead of `main`).
 

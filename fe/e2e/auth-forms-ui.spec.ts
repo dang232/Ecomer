@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+
 import { registerAndLoginViaOidc } from "./_auth";
 
 const PASSWORD = "Test1234!";

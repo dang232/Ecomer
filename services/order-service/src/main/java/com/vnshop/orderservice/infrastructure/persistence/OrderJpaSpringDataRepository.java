@@ -78,14 +78,17 @@ public interface OrderJpaSpringDataRepository extends JpaRepository<OrderJpaEnti
     @Query("""
         SELECT DISTINCT o FROM OrderJpaEntity o
         LEFT JOIN FETCH o.subOrders sub
-        LEFT JOIN FETCH sub.items item
         WHERE sub.sellerId = :sellerId
           AND sub.fulfillmentStatus IN :statuses
           AND (
               :term = ''
               OR lower(str(o.id)) LIKE :likeTerm
               OR lower(o.orderNumber) LIKE :likeTerm
-              OR lower(item.name) LIKE :likeTerm
+              OR EXISTS (
+                  SELECT item.id FROM OrderItemJpaEntity item
+                  WHERE item.subOrder = sub
+                    AND lower(item.name) LIKE :likeTerm
+              )
           )
         """)
     List<OrderJpaEntity> findBySellerIdAndFulfillmentStatusInAndQuery(

@@ -1,27 +1,26 @@
 import { describe, expect, it } from "vitest";
 
 import type { AdminPayout } from "@/shared/contracts/api";
+import { sellerIdSchema } from "@/shared/contracts/api/branded-ids";
 
 import { payoutActionsFor, toPayoutView } from "./payout-view";
 
 function payoutFixture(overrides: Partial<AdminPayout> = {}): AdminPayout {
   return {
     id: "p-1",
-    payoutId: "p-1",
-    sellerId: "2fa79e15-2e29-4b94-903e-15cc20fe36dc",
+    sellerId: sellerIdSchema.parse("2fa79e15-2e29-4b94-903e-15cc20fe36dc"),
     sellerName: "Alice Shop",
     amount: 150000,
     currency: "VND",
     status: "REQUESTED",
     requestedAt: "2026-07-22T10:00:00Z",
-    createdAt: "2026-07-22T10:00:00Z",
-    completedBy: null,
-    completedAt: null,
-    idempotencyKey: "idem-abc",
-    approvedBy: null,
-    paidBy: null,
-    externalReference: null,
-    evidenceReference: null,
+    completedBy: undefined,
+    completedAt: undefined,
+    idempotencyKey: undefined,
+    approvedBy: undefined,
+    paidBy: undefined,
+    externalReference: undefined,
+    evidenceReference: undefined,
     ...overrides,
   };
 }
@@ -109,7 +108,14 @@ describe("payoutActionsFor", () => {
   });
 
   it("terminal statuses expose no actions", () => {
-    for (const status of ["PAID", "REJECTED", "CANCELLED", "REVERSED", "COMPLETED", "FAILED"] as const) {
+    for (const status of [
+      "PAID",
+      "REJECTED",
+      "CANCELLED",
+      "REVERSED",
+      "COMPLETED",
+      "FAILED",
+    ] as const) {
       const a = payoutActionsFor(status);
       expect(a).toEqual({
         canApprove: false,

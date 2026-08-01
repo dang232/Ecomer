@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+import { orderIdSchema } from "@/shared/contracts/api/branded-ids";
+
 import { toSellerOrderRow } from "./order-queue-view";
 
 const baseOrder = {
   id: "sub-1",
-  orderId: "order-1",
+  orderId: orderIdSchema.parse("order-1"),
   createdAt: "2026-07-29T10:00:00Z",
   status: "PENDING_ACCEPTANCE" as const,
   items: [{ id: "item-1", productId: "p-1", name: "Widget", price: 10000, quantity: 2 }],

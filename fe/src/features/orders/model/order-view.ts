@@ -1,5 +1,5 @@
-import type { Order, OrderDetail, OrderListItem, SubOrder } from "@/shared/contracts/api";
 import type { OrderStatusUi } from "@/shared/contracts";
+import type { Order, OrderDetail, OrderListItem, SubOrder } from "@/shared/contracts/api";
 
 export type OrderAction = "cancel" | "request-return" | "buy-again";
 

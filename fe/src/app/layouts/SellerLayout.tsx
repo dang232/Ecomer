@@ -3,9 +3,9 @@ import { useTranslation } from "react-i18next";
 import { Outlet } from "react-router";
 
 import { SellerNav } from "@/features/seller";
+import { sellerPendingOrders } from "@/shared/api/endpoints/orders";
 
 import { ConsoleChrome } from "./ConsoleChrome";
-import { sellerPendingOrders } from "@/shared/api/endpoints/orders";
 import { ConsoleLayoutFooter } from "./ConsoleLayoutFooter";
 
 export function SellerLayout() {

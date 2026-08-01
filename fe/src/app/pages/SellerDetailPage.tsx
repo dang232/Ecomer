@@ -1,12 +1,13 @@
-import { Star, Package } from "lucide-react";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { Star, Package } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams, useNavigate } from "react-router";
 
-import { ImageWithFallback } from "@/shared/ui";
-import { sellerDetailOptions, sellerProductsOptions } from "../hooks/use-sellers";
-import { formatPrice } from "@/shared/lib";
 import type { ProductSummary } from "@/shared/contracts/api";
+import { formatPrice } from "@/shared/lib";
+import { ImageWithFallback } from "@/shared/ui";
+
+import { sellerDetailOptions, sellerProductsOptions } from "../hooks/use-sellers";
 
 function SellerProductCard({ product }: { product: ProductSummary }) {
   const navigate = useNavigate();

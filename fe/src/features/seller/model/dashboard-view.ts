@@ -54,9 +54,14 @@ export interface DashboardInputs {
 // `SellerProfile` and sometimes a presenter-shaped `SellerProfileView` (e.g.
 // when called directly from a Storybook fixture). They share fields, so we
 // tolerate both without forcing every call-site to construct the view.
+function isSellerProfileView(
+  profile: SellerProfileView | SellerProfile,
+): profile is SellerProfileView {
+  return "maskedDestination" in profile;
+}
+
 function asProfileView(profile: SellerProfileView | SellerProfile): SellerProfileView {
-  const candidate =
-    "maskedDestination" in profile ? profile.maskedDestination : profile.destination;
+  const candidate = isSellerProfileView(profile) ? profile.maskedDestination : profile.destination;
   const maskedDestination =
     candidate === null
       ? null
@@ -94,7 +99,11 @@ export function toSellerDashboardView(inputs: DashboardInputs): SellerDashboardV
     }
   }
   for (const payout of inputs.payouts) {
-    if (payout.status === "FAILED" || payout.status === "REJECTED" || payout.status === "REVERSED") {
+    if (
+      payout.status === "FAILED" ||
+      payout.status === "REJECTED" ||
+      payout.status === "REVERSED"
+    ) {
       tasks.push({
         id: `payout:${payout.id}`,
         kind: "payout",

@@ -1,10 +1,4 @@
-import {
-  BarChart3,
-  Package,
-  TrendingUp,
-  Users,
-  Wallet,
-} from "lucide-react";
+import { BarChart3, Package, TrendingUp, Users, Wallet } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -65,9 +59,7 @@ export function MarketplaceKpis({ values }: MarketplaceKpisProps) {
       <KpiCard
         icon={BarChart3}
         label={t("admin.dashboard.kpi.refundedAmount")}
-        value={
-          values.gmvVnd !== null ? "N/A" : "N/A"
-        }
+        value={values.gmvVnd !== null ? "N/A" : "N/A"}
         color="var(--warning)"
       />
       <KpiCard

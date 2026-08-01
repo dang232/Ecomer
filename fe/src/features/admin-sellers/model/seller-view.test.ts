@@ -14,6 +14,7 @@ describe("toSellerView", () => {
       approved: true,
       bankName: "Vietcombank",
       last4: "1234",
+      destination: null,
       tier: "GOLD",
       vacationMode: false,
     };
@@ -25,11 +26,10 @@ describe("toSellerView", () => {
   });
 
   it("falls back status to PENDING when neither status nor approved is present", () => {
-    const raw: SellerSummary = {
+    const raw = {
       id: "seller-2",
       shopName: "Bob Shop",
-      approved: false,
-    };
+    } as unknown as SellerSummary;
     const view = toSellerView(raw);
     expect(view.status).toBe("PENDING");
     expect(view.approved).toBe(false);
@@ -38,11 +38,11 @@ describe("toSellerView", () => {
   });
 
   it("infers approved from legacy status string", () => {
-    const raw: SellerSummary = {
+    const raw = {
       id: "seller-3",
       shopName: "Carol Shop",
       status: "APPROVED",
-    };
+    } as unknown as SellerSummary;
     const view = toSellerView(raw);
     expect(view.approved).toBe(true);
     expect(view.status).toBe("APPROVED");

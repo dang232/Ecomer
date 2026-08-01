@@ -5,15 +5,19 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
 
+import { OrderDetail, toOrderView, type OrderView } from "@/features/orders";
+import { ApiError } from "@/shared/api";
+import type { Order } from "@/shared/contracts/api";
+import { PageContainer, PageHeader } from "@/shared/ui";
+
 import { useAuth } from "../hooks/auth-context";
 import { useCart } from "../hooks/use-cart";
 import { useCancelOrder, useOrder } from "../hooks/use-orders";
-import { ApiError } from "@/shared/api";
-import { PageContainer, PageHeader } from "@/shared/ui";
-import { OrderDetail, toOrderView, type OrderView } from "@/features/orders";
-import type { Order } from "@/shared/contracts/api";
 
-function findSummaryInCache(queryClient: ReturnType<typeof useQueryClient>, id: string): Order | undefined {
+function findSummaryInCache(
+  queryClient: ReturnType<typeof useQueryClient>,
+  id: string,
+): Order | undefined {
   const cached = queryClient.getQueriesData<{ content?: Order[] }>({
     queryKey: ["orders"],
   });
@@ -89,7 +93,9 @@ export function OrderDetailPage() {
 
   if (orderQuery.isError) {
     const message =
-      orderQuery.error instanceof ApiError ? orderQuery.error.message : t("orders.detail.loadError");
+      orderQuery.error instanceof ApiError
+        ? orderQuery.error.message
+        : t("orders.detail.loadError");
     return (
       <div className="mx-auto max-w-3xl px-4 py-24 text-center">
         <Package size={48} className="mx-auto mb-4 text-muted-foreground/30" />

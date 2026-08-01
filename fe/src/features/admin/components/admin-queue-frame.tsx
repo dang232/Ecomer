@@ -1,10 +1,7 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import {
-  DataTable,
-  type DataTableColumn,
-} from "@/shared/ui/data-table";
+import { DataTable, type DataTableColumn } from "@/shared/ui/data-table";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { PageContainer } from "@/shared/ui/page-container";
 import { PageHeader } from "@/shared/ui/page-header";
@@ -100,11 +97,13 @@ export function AdminQueueFrame<T>({
       <TableToolbar ariaLabel={title}>
         <div className="flex flex-wrap items-center gap-2">
           {capabilities.search ? (
-            <SearchField value={q} onSubmit={onSearch} placeholder={t("admin.queue.searchPlaceholder")} />
+            <SearchField
+              value={q}
+              onSubmit={onSearch}
+              placeholder={t("admin.queue.searchPlaceholder")}
+            />
           ) : null}
-          {capabilities.status ? (
-            <StatusFilter value={status} onChange={onStatusChange} />
-          ) : null}
+          {capabilities.status ? <StatusFilter value={status} onChange={onStatusChange} /> : null}
           {capabilities.sort.length > 0 && onSortChange ? (
             <SortMenu options={capabilities.sort} value={sort} onChange={onSortChange} />
           ) : null}
@@ -184,7 +183,17 @@ function SearchField({ value, onSubmit, placeholder }: SearchFieldProps) {
         aria-label={placeholder ?? "Search"}
         className="text-muted-foreground hover:text-foreground"
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
           <circle cx="11" cy="11" r="8" />
           <path d="m21 21-4.35-4.35" />
         </svg>

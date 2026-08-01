@@ -32,6 +32,8 @@ export const adminSearchUsers = (params: { q?: string; page?: number; size?: num
     page: params.page ?? 0,
     size: params.size ?? 50,
   });
+
+export const adminListUsers = adminSearchUsers;
 export const adminBanUser = (id: string) =>
   api.post(`/admin/users/${encodeURIComponent(id)}/ban`, adminUserSchema);
 export const adminUnbanUser = (id: string) =>

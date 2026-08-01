@@ -22,7 +22,7 @@ vi.mock("react-router", () => ({
     const set = vi.fn((_key: string, value: string) => {
       params.set("filter", value);
     });
-     
+
     return [{ get }, { set }] as [{ get: typeof get }, { set: typeof set }];
   }),
 }));
@@ -39,8 +39,12 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("@tabler/icons-react", () => ({
-  IconWalletOff: () => createElement("span", null, "off"),
+vi.mock("lucide-react", () => ({
+  AlertCircle: () => createElement("span", null, "alert"),
+  CheckCircle2: () => createElement("span", null, "success"),
+  Info: () => createElement("span", null, "info"),
+  TriangleAlert: () => createElement("span", null, "warning"),
+  WalletMinimal: () => createElement("span", null, "off"),
 }));
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
@@ -73,11 +77,16 @@ describe("WalletPage filter chips use URL search params", () => {
         view={makeView({
           history: [
             { id: "p-1", amountVnd: 100_000, status: "PAID", requestedAt: "2024-07-01T00:00:00Z" },
-            { id: "p-2", amountVnd: 200_000, status: "FAILED", requestedAt: "2024-07-01T00:00:00Z" },
+            {
+              id: "p-2",
+              amountVnd: 200_000,
+              status: "FAILED",
+              requestedAt: "2024-07-01T00:00:00Z",
+            },
           ],
         })}
         onRequestPayout={vi.fn()}
-      />
+      />,
     );
 
     // Both rows visible at filter=all

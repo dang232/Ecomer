@@ -2,7 +2,7 @@ import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/rea
 import { useRef, useState, useCallback } from "react";
 import { z } from "zod";
 
-import { readJsonText } from "../../shared/api/read-json";
+import { fromServer, findVariant } from "@/features/catalog";
 import {
   addCartItem,
   clearCart as clearCartApi,
@@ -12,9 +12,10 @@ import {
   updateCartItem,
 } from "@/shared/api/endpoints/cart";
 import { productById } from "@/shared/api/endpoints/products";
-import { fromServer, findVariant } from "@/features/catalog";
 import type { Cart } from "@/shared/contracts/api";
 import { productIdSchema, sellerIdSchema } from "@/shared/contracts/api/branded-ids";
+
+import { readJsonText } from "../../shared/api/read-json";
 
 import { useAuth } from "./auth-context";
 

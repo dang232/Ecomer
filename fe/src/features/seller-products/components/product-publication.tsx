@@ -4,17 +4,12 @@
  * Surface: Publish, Continue editing, Delete draft.
  */
 
-import { IconRocket, IconPencil, IconTrash } from "@tabler/icons-react";
-import type { UseFormReturn } from "react-hook-form";
+import { Rocket, Pencil, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-
 
 import { Button } from "@/shared/ui";
 
-import type { SellerProductForm } from "../model/product-form";
-
 interface ProductPublicationProps {
-  form: UseFormReturn<SellerProductForm>;
   productId: string;
   onPublish: () => void;
   onDelete: () => void;
@@ -55,7 +50,7 @@ export function ProductPublication({
           pendingLabel={t("seller.products.editor.publication.publishing")}
           className="w-full justify-center"
         >
-          <IconRocket size={16} aria-hidden="true" />
+          <Rocket size={16} aria-hidden="true" />
           {t("seller.products.editor.publication.publish")}
         </Button>
 
@@ -65,7 +60,7 @@ export function ProductPublication({
           disabled={disabled}
           className="w-full justify-center"
         >
-          <IconPencil size={16} aria-hidden="true" />
+          <Pencil size={16} aria-hidden="true" />
           {t("seller.products.editor.publication.continueEditing")}
         </Button>
 
@@ -77,7 +72,7 @@ export function ProductPublication({
           pendingLabel={t("seller.products.editor.publication.deleting")}
           className="w-full justify-center text-error hover:bg-error-light"
         >
-          <IconTrash size={16} aria-hidden="true" />
+          <Trash2 size={16} aria-hidden="true" />
           {t("seller.products.editor.publication.deleteDraft")}
         </Button>
       </div>

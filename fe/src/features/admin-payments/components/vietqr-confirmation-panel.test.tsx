@@ -8,10 +8,7 @@ vi.mock("@/shared/api/endpoints/admin", () => ({
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (
-      key: string,
-      opts?: { defaultValue?: string; paymentId?: string },
-    ) => {
+    t: (key: string, opts?: { defaultValue?: string; paymentId?: string }) => {
       const dict: Record<string, string> = {
         "admin.payments.vietqr.panelTitle": "Confirm VietQR payment",
         "admin.payments.vietqr.panelSubtitle": "Payment: {{paymentId}}",

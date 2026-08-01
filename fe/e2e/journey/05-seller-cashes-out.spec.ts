@@ -1,16 +1,8 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
 
-import {
-  readJson,
-  type AuthResponse,
-  type PayoutListResponse,
-  type WalletResponse,
-} from "../_api";
+import { readJson, type AuthResponse, type PayoutListResponse, type WalletResponse } from "../_api";
 import { loginAsSeededUser, logoutViaUserMenu } from "../_workday-evidence";
-import {
-  credentialForPersona,
-  type Persona,
-} from "../modernization/_credentials";
+import { credentialForPersona, type Persona } from "../modernization/_credentials";
 
 import {
   bizStep,
@@ -135,10 +127,7 @@ test.describe.serial("Chapter 5 — Seller cashes out", () => {
           await expect
             .poll(
               async () => {
-                const token = await accessTokenForPersona(
-                  page.request,
-                  "seller",
-                );
+                const token = await accessTokenForPersona(page.request, "seller");
                 if (!token) return 0;
                 const r = await page.request.get(`${apiURL}/sellers/me/finance/wallet`, {
                   headers: { Authorization: `Bearer ${token}` },
@@ -243,10 +232,7 @@ test.describe.serial("Chapter 5 — Seller cashes out", () => {
           // drives the admin UI to complete the payout. This step proves
           // the cross-persona handoff: what the seller submits is what
           // the admin will see.
-          const adminToken = await accessTokenForPersona(
-            page.request,
-            "admin",
-          );
+          const adminToken = await accessTokenForPersona(page.request, "admin");
 
           await expect
             .poll(

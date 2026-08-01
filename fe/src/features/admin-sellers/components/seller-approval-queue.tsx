@@ -1,17 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { DataTableColumn } from "@/shared/ui/data-table";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { ApiError } from "@/shared/api";
-import {
-  adminApproveSeller,
-  adminRejectSeller,
-} from "@/shared/api/endpoints/admin";
-import { formatRelativeTime } from "@/shared/lib";
-
 import { ADMIN_QUEUE_CAPABILITIES, AdminQueueFrame } from "@/features/admin";
+import { ApiError } from "@/shared/api";
+import { adminApproveSeller, adminRejectSeller } from "@/shared/api/endpoints/admin";
+import { formatRelativeTime } from "@/shared/lib";
+import type { DataTableColumn } from "@/shared/ui/data-table";
+
 import { adminSellersQueryOptions } from "../api/query-options";
 import type { SellerView } from "../model/seller-view";
 import { toSellerView } from "../model/seller-view";
@@ -26,21 +23,16 @@ interface SellerApprovalQueueProps {
   onSelect: (id: string | null) => void;
 }
 
-export function SellerApprovalQueue({
-  q,
-  selected,
-  onSearch,
-  onSelect,
-}: SellerApprovalQueueProps) {
+export function SellerApprovalQueue({ q, selected, onSearch, onSelect }: SellerApprovalQueueProps) {
   const { t } = useTranslation();
   const qc = useQueryClient();
-  const [dialog, setDialog] = useState<
-    { variant: "approve" | "reject"; sellerId: string; shopName?: string | null } | null
-  >(null);
+  const [dialog, setDialog] = useState<{
+    variant: "approve" | "reject";
+    sellerId: string;
+    shopName?: string | null;
+  } | null>(null);
 
-  const { data: sellersRaw, isLoading, isError } = useQuery(
-    adminSellersQueryOptions({ q }),
-  );
+  const { data: sellersRaw, isLoading, isError } = useQuery(adminSellersQueryOptions({ q }));
   const sellers: SellerView[] = (sellersRaw ?? []).map(toSellerView);
 
   const approve = useMutation({
@@ -70,15 +62,13 @@ export function SellerApprovalQueue({
 
   const isMutating = approve.isPending || reject.isPending;
 
-  const selectedSeller = selected ? sellers.find((s) => s.id === selected) ?? null : null;
+  const selectedSeller = selected ? (sellers.find((s) => s.id === selected) ?? null) : null;
 
   const columns: DataTableColumn<SellerView>[] = [
     {
       id: "shopName",
       header: t("admin.sellers.applicationDialog.shopName") ?? "Shop",
-      cell: (row) => (
-        <span className="text-sm font-semibold text-foreground">{row.shopName}</span>
-      ),
+      cell: (row) => <span className="text-sm font-semibold text-foreground">{row.shopName}</span>,
     },
     {
       id: "status",
@@ -88,7 +78,7 @@ export function SellerApprovalQueue({
     {
       id: "appliedAt",
       header: t("admin.sellers.rowApplied", { relativeTime: "" }) ?? "Applied",
-      cell: (row) => row.appliedAt ? formatRelativeTime(row.appliedAt) : "—",
+      cell: (row) => (row.appliedAt ? formatRelativeTime(row.appliedAt) : "—"),
     },
     {
       id: "actions",
@@ -144,7 +134,9 @@ export function SellerApprovalQueue({
       >
         <SellerApplicationDrawer
           seller={selectedSeller}
-          onApprove={(id) => setDialog({ variant: "approve", sellerId: id, shopName: selectedSeller?.shopName })}
+          onApprove={(id) =>
+            setDialog({ variant: "approve", sellerId: id, shopName: selectedSeller?.shopName })
+          }
           isApproving={approve.isPending}
         />
       </AdminQueueFrame>

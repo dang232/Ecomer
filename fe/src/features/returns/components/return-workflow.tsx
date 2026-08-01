@@ -20,7 +20,7 @@ interface ReturnWorkflowProps {
   onSubmit: (input: ReturnWorkflowSubmit) => void;
 }
 
-const PICKUP_TYPE_OPTIONS: ReadonlyArray<{ value: PickupType; labelKey: string }> = [
+const PICKUP_TYPE_OPTIONS: readonly { value: PickupType; labelKey: string }[] = [
   { value: "pickup", labelKey: "return.request.pickup" },
   { value: "dropoff", labelKey: "return.request.dropoff" },
 ];
@@ -32,8 +32,10 @@ export function ReturnWorkflow({
   onSubmit,
 }: ReturnWorkflowProps) {
   const { t } = useTranslation();
-  const availableSubOrders = order?.subOrders ?? [];
-  const [subOrderId, setSubOrderId] = useState(initialSubOrderId ?? availableSubOrders[0]?.id ?? "");
+  const availableSubOrders = useMemo(() => order?.subOrders ?? [], [order?.subOrders]);
+  const [subOrderId, setSubOrderId] = useState(
+    initialSubOrderId ?? availableSubOrders[0]?.id ?? "",
+  );
   const [selectedItemId, setSelectedItemId] = useState("");
   const [reason, setReason] = useState("");
   const [pickupType, setPickupType] = useState<PickupType>("pickup");
@@ -130,7 +132,11 @@ export function ReturnWorkflow({
                       {t("orders.itemQuantity", { count: item.quantity })}
                     </p>
                   </div>
-                  {active ? <Check size={16} className="shrink-0 text-primary" /> : <Package size={16} className="shrink-0 text-muted-foreground" />}
+                  {active ? (
+                    <Check size={16} className="shrink-0 text-primary" />
+                  ) : (
+                    <Package size={16} className="shrink-0 text-muted-foreground" />
+                  )}
                 </button>
               );
             })}
@@ -171,7 +177,9 @@ export function ReturnWorkflow({
                 type="button"
                 onClick={() => setPickupType(option.value)}
                 className={`flex items-center justify-center gap-2 rounded-[var(--radius-md)] border px-4 py-3 text-sm font-medium transition-colors ${
-                  active ? "border-primary bg-primary/5 text-primary" : "border-border text-foreground hover:bg-muted"
+                  active
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "border-border text-foreground hover:bg-muted"
                 }`}
               >
                 {active ? <Check size={16} /> : null}

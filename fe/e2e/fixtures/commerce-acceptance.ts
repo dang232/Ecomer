@@ -210,10 +210,10 @@ export const COMMERCE_ACCEPTANCE = [
 ] as const satisfies readonly AcceptanceRoute[];
 
 export const ACCEPTANCE_VIEWPORTS = {
-  mobile: { width: 390, height: 844 },
-  tablet: { width: 768, height: 1024 },
-  desktop: { width: 1024, height: 768 },
-  wide: { width: 1440, height: 900 },
+  mobile: { label: "mobile" as const, width: 390, height: 844 },
+  tablet: { label: "tablet" as const, width: 768, height: 1024 },
+  desktop: { label: "desktop" as const, width: 1024, height: 768 },
+  wide: { label: "wide" as const, width: 1440, height: 900 },
 } as const;
 
 export async function resolveAcceptancePath(

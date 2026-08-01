@@ -779,6 +779,13 @@
       "reasonRequired": "Vui lòng nhập lý do"
     },
     "nav": {
+      "sectionOverview": "Tong quan",
+      "sectionCommerce": "Thuong mai",
+      "sectionTrust": "Tin cay va an toan",
+      "sectionFinance": "Tai chinh",
+      "sectionUsersSystem": "Nguoi dung va he thong",
+      "sidebarLabel": "Dieu huong Admin",
+      "mobileLabel": "Dieu huong Admin",
       "dashboard": "Tổng quan",
       "sellers": "Duyệt Seller",
       "reviews": "Kiểm duyệt",
@@ -806,6 +813,7 @@
       "day": "Ngày",
       "week": "Tuần",
       "month": "Tháng",
+      "granularity": "Mức độ tổng hợp",
       "exceptionsTitle": "Ngoại lệ",
       "exceptionsEmpty": "Không có ngoại lệ",
       "viewQueue": "Xem hàng đợi",
@@ -1805,6 +1813,7 @@
     },
     "detail": {
       "title": "Chi tiet don hang",
+      "timeline": "Tien trinh",
       "description": "Xem nhom nguoi ban, tien trinh don hang, va tong tien.",
       "back": "Quay lại đơn hàng",
       "orderNumber": "Đơn hàng",
@@ -2258,6 +2267,9 @@
   },
   "return": {
     "request": {
+      "subtitle": "Xem goi hang, chon san pham can tra neu co, va mo ta ro ly do.",
+      "selectItem": "Vui long chon san pham",
+      "itemLabel": "San pham can tra",
       "title": "Yêu cầu trả hàng",
       "backToOrders": "Quay lại đơn hàng",
       "orderIdLabel": "Mã đơn hàng",

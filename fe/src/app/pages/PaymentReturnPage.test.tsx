@@ -3,8 +3,9 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { CHECKOUT_RECOVERY_STORAGE_KEY } from "../../features/checkout";
 import type * as PaymentEndpoints from "@/shared/api/endpoints/payment";
+
+import { CHECKOUT_RECOVERY_STORAGE_KEY } from "../../features/checkout";
 
 const { paymentStatusMock } = vi.hoisted(() => ({ paymentStatusMock: vi.fn() }));
 vi.mock("@/shared/api/endpoints/payment", async (importOriginal) => {

@@ -3,8 +3,8 @@ import { AnimatePresence, motion } from "motion/react";
 import { useTranslation } from "react-i18next";
 
 import { ApiError } from "@/shared/api";
-import { formatPrice } from "@/shared/lib";
 import type { BuyerCoupon } from "@/shared/contracts/api";
+import { formatPrice } from "@/shared/lib";
 
 import type { Step } from "./types";
 

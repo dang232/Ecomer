@@ -12,11 +12,7 @@ import { z } from "zod";
 
 export const vietqrConfirmationSchema = z.object({
   paymentId: z.string().uuid("Payment id must be a UUID"),
-  bankReference: z
-    .string()
-    .trim()
-    .max(120, "Bank reference is too long")
-    .optional(),
+  bankReference: z.string().trim().max(120, "Bank reference is too long").optional(),
 });
 
 export type VietqrConfirmationInput = z.infer<typeof vietqrConfirmationSchema>;
@@ -26,15 +22,16 @@ export interface VietqrConfirmationParsed {
   bankReference?: string;
 }
 
-export function parseVietqrConfirmation(
-  raw: { paymentId: string; bankReference?: string },
-): VietqrConfirmationParsed {
+export function parseVietqrConfirmation(raw: {
+  paymentId: string;
+  bankReference?: string;
+}): VietqrConfirmationParsed {
   return vietqrConfirmationSchema.parse(raw);
 }
 
-export function buildVietqrConfirmationPayload(
-  bankReference: string | undefined,
-): { bankReference?: string } {
+export function buildVietqrConfirmationPayload(bankReference: string | undefined): {
+  bankReference?: string;
+} {
   const trimmed = bankReference?.trim();
   return trimmed ? { bankReference: trimmed } : {};
 }

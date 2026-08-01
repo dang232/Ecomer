@@ -22,9 +22,7 @@ const makeQueryClient = () =>
   });
 
 function TestWrapper({ children }: { children: React.ReactNode }) {
-  return (
-    <QueryClientProvider client={makeQueryClient()}>{children}</QueryClientProvider>
-  );
+  return <QueryClientProvider client={makeQueryClient()}>{children}</QueryClientProvider>;
 }
 
 describe("order-queue", () => {

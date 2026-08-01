@@ -3,11 +3,7 @@ import * as path from "node:path";
 
 import { test, type Page, type ConsoleMessage } from "@playwright/test";
 
-import {
-  readJsonOr,
-  type ProductListResponse,
-  type SellerSummary,
-} from "./_api";
+import { readJsonOr, type ProductListResponse, type SellerSummary } from "./_api";
 import { loginAsPersona, registerAndLoginViaOidc } from "./_auth";
 
 /**

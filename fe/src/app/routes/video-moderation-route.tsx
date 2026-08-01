@@ -9,10 +9,7 @@ import type { KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 
-import {
-  VideoAppealsQueue,
-  VideoModerationQueue,
-} from "@/features/admin-video";
+import { VideoAppealsQueue, VideoModerationQueue } from "@/features/admin-video";
 
 type SubTab = "queue" | "appeals";
 
@@ -22,7 +19,7 @@ export function VideoModerationRoute() {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const subTab = (tabParam === "appeals" ? "appeals" : "queue");
+  const subTab = tabParam === "appeals" ? "appeals" : "queue";
 
   const queueBtnRef = useRef<HTMLButtonElement>(null);
   const appealsBtnRef = useRef<HTMLButtonElement>(null);

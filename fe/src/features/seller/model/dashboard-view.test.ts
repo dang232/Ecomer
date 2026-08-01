@@ -20,9 +20,23 @@ describe("toSellerDashboardView", () => {
       },
       publicStats: null,
       pendingOrders: [
-        { id: "sub-1", orderId: orderIdSchema.parse("ord-1"), status: "PENDING_ACCEPTANCE", items: [], createdAt: undefined },
+        {
+          id: "sub-1",
+          orderId: orderIdSchema.parse("ord-1"),
+          status: "PENDING_ACCEPTANCE",
+          items: [],
+          createdAt: undefined,
+        },
       ] as PendingSubOrder[],
-      wallet: { balance: 500_000, pending: 0, sellerId: undefined, totalEarned: undefined, lastPayoutAt: null, currency: "VND", updatedAt: undefined },
+      wallet: {
+        balance: 500_000,
+        pending: 0,
+        sellerId: undefined,
+        totalEarned: undefined,
+        lastPayoutAt: null,
+        currency: "VND",
+        updatedAt: undefined,
+      },
       payouts: [
         {
           id: "pay-1",
@@ -52,13 +66,19 @@ describe("toSellerDashboardView", () => {
       },
       publicStats: { totalProducts: 12, ratingAvg: 4.6 } as unknown as PublicSeller,
       pendingOrders: [],
-      wallet: { balance: 0, pending: 0, sellerId: undefined, totalEarned: undefined, lastPayoutAt: null, currency: "VND", updatedAt: undefined },
+      wallet: {
+        balance: 0,
+        pending: 0,
+        sellerId: undefined,
+        totalEarned: undefined,
+        lastPayoutAt: null,
+        currency: "VND",
+        updatedAt: undefined,
+      },
       payouts: [],
       revenue: [{ date: "2026-07-29", revenue: 20, orderCount: 1 }],
     });
 
-    expect(view.revenue).toEqual([
-      { date: "2026-07-29", revenueVnd: 20, orders: 1 },
-    ]);
+    expect(view.revenue).toEqual([{ date: "2026-07-29", revenueVnd: 20, orders: 1 }]);
   });
 });

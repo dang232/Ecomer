@@ -89,10 +89,7 @@ describe("RequireAuth", () => {
 describe("RequireRole", () => {
   it("redirects to /login when not authenticated", () => {
     useAuthMock.mockReturnValue({ ready: true, authenticated: false, roles: [] });
-    renderRoute(
-      "/seller",
-      requireRole("SELLER", <div data-testid="seller-content">Seller</div>),
-    );
+    renderRoute("/seller", requireRole("SELLER", <div data-testid="seller-content">Seller</div>));
     expect(screen.getByTestId("login-page")).toBeInTheDocument();
     expect(screen.queryByTestId("seller-content")).toBeNull();
   });
@@ -100,10 +97,7 @@ describe("RequireRole", () => {
   it("preserves next for an unauthenticated role route", () => {
     useAuthMock.mockReturnValue({ ready: true, authenticated: false, roles: [] });
 
-    renderRoute(
-      "/seller/orders?page=2",
-      requireRole("SELLER", <div>Seller orders</div>),
-    );
+    renderRoute("/seller/orders?page=2", requireRole("SELLER", <div>Seller orders</div>));
 
     expect(screen.getByTestId("location")).toHaveTextContent(
       "/login?next=%2Fseller%2Forders%3Fpage%3D2",
@@ -116,10 +110,7 @@ describe("RequireRole", () => {
       authenticated: true,
       roles: ["BUYER"],
     });
-    renderRoute(
-      "/seller",
-      requireRole("SELLER", <div data-testid="seller-content">Seller</div>),
-    );
+    renderRoute("/seller", requireRole("SELLER", <div data-testid="seller-content">Seller</div>));
     expect(screen.getByTestId("home-page")).toBeInTheDocument();
     expect(screen.queryByTestId("seller-content")).toBeNull();
   });
@@ -130,10 +121,7 @@ describe("RequireRole", () => {
       authenticated: true,
       roles: ["BUYER", "SELLER"],
     });
-    renderRoute(
-      "/seller",
-      requireRole("SELLER", <div data-testid="seller-content">Seller</div>),
-    );
+    renderRoute("/seller", requireRole("SELLER", <div data-testid="seller-content">Seller</div>));
     expect(screen.getByTestId("seller-content")).toBeInTheDocument();
   });
 
@@ -143,10 +131,7 @@ describe("RequireRole", () => {
       authenticated: true,
       roles: ["BUYER", "SELLER"],
     });
-    renderRoute(
-      "/admin",
-      requireRole("ADMIN", <div data-testid="admin-content">Admin</div>),
-    );
+    renderRoute("/admin", requireRole("ADMIN", <div data-testid="admin-content">Admin</div>));
     expect(screen.getByTestId("home-page")).toBeInTheDocument();
 
     useAuthMock.mockReturnValue({
@@ -154,10 +139,7 @@ describe("RequireRole", () => {
       authenticated: true,
       roles: ["ADMIN"],
     });
-    renderRoute(
-      "/admin",
-      requireRole("ADMIN", <div data-testid="admin-content">Admin</div>),
-    );
+    renderRoute("/admin", requireRole("ADMIN", <div data-testid="admin-content">Admin</div>));
     expect(screen.getByTestId("admin-content")).toBeInTheDocument();
   });
 

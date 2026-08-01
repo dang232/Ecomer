@@ -7,13 +7,14 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
 import { AccountNav } from "@/features/account";
+import { ApiError } from "@/shared/api";
+import { formatPrice } from "@/shared/lib";
 import { ImageWithFallback } from "@/shared/ui";
+
 import { useAuth } from "../hooks/auth-context";
 import { useCart } from "../hooks/use-cart";
 import { productDetailOptions } from "../hooks/use-products";
 import { useWishlist } from "../hooks/use-wishlist";
-import { ApiError } from "@/shared/api";
-import { formatPrice } from "@/shared/lib";
 
 export function WishlistPage() {
   const navigate = useNavigate();

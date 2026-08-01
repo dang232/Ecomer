@@ -16,10 +16,7 @@ export interface VietqrConfirmationPanelProps {
   onConfirmed?: (bankReference: string | undefined) => void;
 }
 
-export function VietqrConfirmationPanel({
-  paymentId,
-  onConfirmed,
-}: VietqrConfirmationPanelProps) {
+export function VietqrConfirmationPanel({ paymentId, onConfirmed }: VietqrConfirmationPanelProps) {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [bankReference, setBankReference] = useState("");

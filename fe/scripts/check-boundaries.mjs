@@ -4,10 +4,6 @@ import { fileURLToPath } from "node:url";
 
 const feDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sourceDir = path.join(feDir, "src");
-const temporaryPersonaRouteBridges = new Set([
-  "src/features/admin/index.ts:src/app/pages/admin/AdminPage",
-  "src/features/seller/index.ts:src/app/pages/seller/SellerPage",
-]);
 
 export function inspectImport(file, specifier) {
   const candidate = specifier.startsWith("@/")
@@ -16,8 +12,6 @@ export function inspectImport(file, specifier) {
       ? path.posix.join(path.posix.dirname(file), specifier)
       : specifier;
   const resolved = path.posix.normalize(candidate);
-
-  if (temporaryPersonaRouteBridges.has(`${file}:${resolved}`)) return null;
 
   if (file.startsWith("src/shared/") && /^src\/(app|features)(?:\/|$)/.test(resolved)) {
     return "shared must not import app or features";

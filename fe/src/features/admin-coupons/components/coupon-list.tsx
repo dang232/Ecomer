@@ -16,7 +16,11 @@ export function CouponList() {
   const [showCreate, setShowCreate] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const { data: coupons = [], isLoading, isError } = useQuery({
+  const {
+    data: coupons = [],
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ["admin", "coupons"],
     queryFn: adminListCoupons,
     retry: false,
@@ -37,10 +41,7 @@ export function CouponList() {
 
   return (
     <>
-      <CouponEditor
-        open={showCreate}
-        onClose={() => setShowCreate(false)}
-      />
+      <CouponEditor open={showCreate} onClose={() => setShowCreate(false)} />
       {/* Detail drawer for existing coupons — read-only */}
       {selectedCoupon ? (
         <CouponDetailDrawer
@@ -80,7 +81,10 @@ export function CouponList() {
             <thead className="bg-muted">
               <tr>
                 {["Code", "Type", "Value", "Status", ""].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">
+                  <th
+                    key={h}
+                    className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground"
+                  >
                     {h}
                   </th>
                 ))}
@@ -133,14 +137,18 @@ interface CouponDetailDrawerProps {
   isDeactivating: boolean;
 }
 
-function CouponDetailDrawer({ coupon, onClose, onDeactivate, isDeactivating }: CouponDetailDrawerProps) {
+function CouponDetailDrawer({
+  coupon,
+  onClose,
+  onDeactivate,
+  isDeactivating,
+}: CouponDetailDrawerProps) {
   const { t } = useTranslation();
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-start justify-end" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-start justify-end">
       <div
         className="h-full w-full max-w-md bg-card border-l border-border flex flex-col"
-        onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={coupon.code}
@@ -152,7 +160,16 @@ function CouponDetailDrawer({ coupon, onClose, onDeactivate, isDeactivating }: C
             className="text-muted-foreground hover:text-foreground"
             aria-label="Close"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <path d="M18 6 6 18M6 6l12 12" />
             </svg>
           </button>
@@ -206,7 +223,8 @@ function CouponDetailDrawer({ coupon, onClose, onDeactivate, isDeactivating }: C
         </div>
 
         <div className="border-t border-border px-5 py-4 flex gap-3">
-          {coupon.active ? <button
+          {coupon.active ? (
+            <button
               onClick={onDeactivate}
               disabled={isDeactivating}
               className="flex-1 rounded-xl border border-red-200 py-2.5 text-sm font-semibold text-red-500 disabled:opacity-50"
@@ -214,7 +232,8 @@ function CouponDetailDrawer({ coupon, onClose, onDeactivate, isDeactivating }: C
               {isDeactivating
                 ? (t("common.submitting") ?? "Submitting...")
                 : (t("admin.coupons.deactivate") ?? "Deactivate")}
-            </button> : null}
+            </button>
+          ) : null}
           <button
             onClick={onClose}
             className="flex-1 rounded-xl border border-border py-2.5 text-sm font-semibold text-muted-foreground"

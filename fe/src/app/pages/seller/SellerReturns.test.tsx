@@ -19,7 +19,7 @@ const completeReturnMock = vi.fn();
 vi.mock("@/shared/api/endpoints/returns", () => ({
   listSellerReturns: (args: unknown) => listSellerReturnsMock(args) as Promise<unknown>,
   approveReturn: (id: unknown) => approveReturnMock(id) as Promise<unknown>,
-  rejectReturn: (id: unknown, body: unknown) => rejectReturnMock(id, body) as Promise<unknown>,
+  rejectReturn: (id: unknown) => rejectReturnMock(id) as Promise<unknown>,
   completeReturn: (id: unknown) => completeReturnMock(id) as Promise<unknown>,
 }));
 
@@ -110,22 +110,22 @@ describe("SellerReturns", () => {
     });
   });
 
-  it("rejects a pending return with reason", async () => {
+  it("rejects a pending return without collecting or sending a reason", async () => {
     listSellerReturnsMock.mockResolvedValueOnce([fixtureReturn]);
     renderWithProviders(<SellerReturns />);
 
     const rejectButton = await screen.findByRole("button", { name: /return\.seller\.reject/i });
     fireEvent.click(rejectButton);
 
-    // FormDialog renders a textarea for reason
-    const reasonInput = await screen.findByPlaceholderText(/rejectDialog\.reasonPlaceholder/i);
-    fireEvent.change(reasonInput, { target: { value: "Out of policy" } });
+    expect(
+      screen.queryByPlaceholderText(/rejectDialog\.reasonPlaceholder/i),
+    ).not.toBeInTheDocument();
 
     const submit = screen.getByRole("button", { name: /rejectDialog\.submitLabel/i });
     fireEvent.click(submit);
 
     await waitFor(() => {
-      expect(rejectReturnMock).toHaveBeenCalledWith("ret-001", { reason: "Out of policy" });
+      expect(rejectReturnMock).toHaveBeenCalledWith("ret-001");
     });
   });
 

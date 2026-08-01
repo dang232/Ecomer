@@ -2,11 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Return } from "@/shared/api/endpoints/returns";
 
-import {
-  canSellerAct,
-  filterReturnsByTab,
-  toSellerReturnRow,
-} from "./return-queue-view";
+import { canSellerAct, filterReturnsByTab, toSellerReturnRow } from "./return-queue-view";
 
 function makeReturn(overrides: Partial<Return> & { status: Return["status"] }): Return {
   return {

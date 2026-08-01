@@ -3,6 +3,10 @@ import { z } from "zod";
 
 import { configureApiOrigin } from "@/shared/config";
 
+const env = import.meta.env as Record<string, string | undefined>;
+const allowInsecureLocalRuntimeConfig = env.VITE_ALLOW_INSECURE_RUNTIME_CONFIG === "true";
+const allowDevelopmentApiProxy = import.meta.env.DEV;
+
 const providerIdSchema = z.enum(["cod", "vietqr", "stripe", "paypal", "vnpay", "momo", "sepay"]);
 
 const providerSchema = z.object({
@@ -15,24 +19,24 @@ const providerSchema = z.object({
 const appConfigSchema = z
   .object({
     schemaVersion: z.string().regex(/^1\.\d+$/, "unsupported runtime configuration major"),
-    generatedAt: z.string().datetime(),
-    expiresAt: z.string().datetime(),
-    runtimeConfigUri: z.string().url(),
-    webUri: z.string().url(),
-    apiUri: z.string().url(),
+    generatedAt: z.iso.datetime(),
+    expiresAt: z.iso.datetime(),
+    runtimeConfigUri: z.url(),
+    webUri: z.url(),
+    apiUri: z.url(),
     brand: z.object({ name: z.string(), tagline: z.string(), logoUrl: z.string() }),
     social: z.object({
-      facebook: z.string().url(),
-      instagram: z.string().url(),
-      twitter: z.string().url(),
-      youtube: z.string().url(),
+      facebook: z.url(),
+      instagram: z.url(),
+      twitter: z.url(),
+      youtube: z.url(),
     }),
     payment: z.object({ providers: z.array(z.string()), defaultMethod: z.string() }),
     auth: z.object({
       oauthProviders: z.array(z.string()),
-      issuerUri: z.string().url(),
-      callbackUri: z.string().url(),
-      logoutUri: z.string().url(),
+      issuerUri: z.url(),
+      callbackUri: z.url(),
+      logoutUri: z.url(),
       clientId: z.string().min(1),
     }),
     features: z.object({
@@ -46,23 +50,60 @@ const appConfigSchema = z
     websocket: z.object({
       notificationsPath: z.literal("/ws/notifications"),
       messagingPath: z.literal("/ws/messaging"),
-      notificationsUri: z.string().url(),
-      messagingUri: z.string().url(),
+      notificationsUri: z.url(),
+      messagingUri: z.url(),
       maxReconnectAttempts: z.number().int().nonnegative(),
       reconnectBaseMs: z.number().int().positive(),
       reconnectCapMs: z.number().int().positive(),
     }),
-    providers: z.array(providerSchema).length(7),
+    providers: z.array(providerSchema).length(providerIdSchema.options.length),
   })
   .superRefine((config, context) => {
-    const web = secureUrl(config.webUri, "https:", "/");
-    const api = secureUrl(config.apiUri, "https:", "/");
-    const issuer = secureUrl(config.auth.issuerUri, "https:", "/realms/vnshop");
-    const callback = secureUrl(config.auth.callbackUri, "https:", "/auth/callback");
-    const logout = secureUrl(config.auth.logoutUri, "https:", "/");
-    const notifications = secureUrl(config.websocket.notificationsUri, "wss:", "/ws/notifications");
-    const messaging = secureUrl(config.websocket.messagingUri, "wss:", "/ws/messaging");
-    const runtimeConfig = secureUrl(config.runtimeConfigUri, "https:", "/runtime-config.json");
+    const web = secureUrl(config.webUri, "https:", ["/"], allowInsecureLocalRuntimeConfig);
+    const api = secureUrl(
+      config.apiUri,
+      "https:",
+      allowDevelopmentApiProxy ? ["/", "/api/"] : ["/"],
+      allowInsecureLocalRuntimeConfig,
+    );
+    const issuer = secureUrl(
+      config.auth.issuerUri,
+      "https:",
+      ["/realms/vnshop"],
+      allowInsecureLocalRuntimeConfig,
+    );
+    const callback = secureUrl(
+      config.auth.callbackUri,
+      "https:",
+      ["/auth/callback"],
+      allowInsecureLocalRuntimeConfig,
+    );
+    const logout = secureUrl(
+      config.auth.logoutUri,
+      "https:",
+      ["/"],
+      allowInsecureLocalRuntimeConfig,
+    );
+    const notifications = secureUrl(
+      config.websocket.notificationsUri,
+      "wss:",
+      allowDevelopmentApiProxy
+        ? ["/ws/notifications", "/api/ws/notifications"]
+        : ["/ws/notifications"],
+      allowInsecureLocalRuntimeConfig,
+    );
+    const messaging = secureUrl(
+      config.websocket.messagingUri,
+      "wss:",
+      allowDevelopmentApiProxy ? ["/ws/messaging", "/api/ws/messaging"] : ["/ws/messaging"],
+      allowInsecureLocalRuntimeConfig,
+    );
+    const runtimeConfig = secureUrl(
+      config.runtimeConfigUri,
+      "https:",
+      ["/runtime-config.json"],
+      allowInsecureLocalRuntimeConfig,
+    );
 
     const invalid = (path: (string | number)[], message: string) =>
       context.addIssue({ code: "custom", path, message });
@@ -111,15 +152,18 @@ const appConfigSchema = z
 export type AppConfig = z.infer<typeof appConfigSchema>;
 export type ProviderConfig = z.infer<typeof providerSchema>;
 
-function secureUrl(value: string, protocol: "https:" | "wss:", path: string): URL | null {
+function secureUrl(
+  value: string,
+  protocol: "https:" | "wss:",
+  paths: readonly string[],
+  allowInsecure?: boolean,
+): URL | null {
   try {
     const url = new URL(value);
     const hostname = url.hostname.toLowerCase();
     const ipAddress = /^(?:\d{1,3}\.){3}\d{1,3}$/.test(hostname) || hostname.includes(":");
-    const localHttp =
-      allowInsecureLocalRuntimeConfig && hostname === "localhost" && url.protocol === "http:";
-    const localWs =
-      allowInsecureLocalRuntimeConfig && hostname === "localhost" && url.protocol === "ws:";
+    const localHttp = allowInsecure && hostname === "localhost" && url.protocol === "http:";
+    const localWs = allowInsecure && hostname === "localhost" && url.protocol === "ws:";
     const validProtocol =
       url.protocol === protocol || (protocol === "https:" ? localHttp : localWs);
     const validPort =
@@ -129,7 +173,7 @@ function secureUrl(value: string, protocol: "https:" | "wss:", path: string): UR
     if (
       !validProtocol ||
       !validPort ||
-      url.pathname !== path ||
+      !paths.includes(url.pathname) ||
       url.username !== "" ||
       url.password !== "" ||
       url.search !== "" ||
@@ -137,7 +181,7 @@ function secureUrl(value: string, protocol: "https:" | "wss:", path: string): UR
       hostname.includes("*") ||
       (!localHttp && !localWs && hostname === "localhost") ||
       hostname.endsWith(".localhost") ||
-      (!allowInsecureLocalRuntimeConfig && ipAddress)
+      (!allowInsecure && ipAddress)
     ) {
       return null;
     }
@@ -196,8 +240,6 @@ export const MAINTENANCE_CONFIG: AppConfig = {
   providers: disabledProviders,
 };
 
-const env = import.meta.env as Record<string, string | undefined>;
-const allowInsecureLocalRuntimeConfig = env.VITE_ALLOW_INSECURE_RUNTIME_CONFIG === "true";
 const CONFIG_URL = env.VITE_RUNTIME_CONFIG_URL ?? "/runtime-config.json";
 
 export async function fetchConfig(signal?: AbortSignal): Promise<AppConfig> {

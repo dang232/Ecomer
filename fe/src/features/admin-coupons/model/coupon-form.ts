@@ -1,14 +1,13 @@
 import { z } from "zod";
 
-export const COUPON_FORM_TYPES = ["PERCENT", "FIXED", "FREE_SHIPPING"] as const;
+export const COUPON_FORM_TYPES = ["PERCENT", "FIXED"] as const;
 export type CouponFormType = (typeof COUPON_FORM_TYPES)[number];
 
 /**
- * Zod form schema matching CouponWriteBody, with FREE_SHIPPING added.
+ * Zod form schema matching the backend CouponWriteBody contract.
  * Refinements enforce:
  * - PERCENT value > 0 and <= 100
  * - FIXED value >= 0
- * - FREE_SHIPPING allows value 0 (discount value is irrelevant for shipping waiver)
  */
 export const couponFormSchema = z
   .object({
@@ -39,6 +38,9 @@ export const couponFormSchema = z
       if (data.value > 100) {
         ctx.addIssue({
           code: z.ZodIssueCode.too_big,
+          maximum: 100,
+          origin: "number",
+          inclusive: true,
           message: "Percent value cannot exceed 100",
           path: ["value"],
         });
@@ -48,14 +50,13 @@ export const couponFormSchema = z
       if (data.value < 0) {
         ctx.addIssue({
           code: z.ZodIssueCode.too_small,
+          minimum: 0,
+          origin: "number",
+          inclusive: true,
           message: "Fixed discount cannot be negative",
           path: ["value"],
         });
       }
-    }
-    if (data.type === "FREE_SHIPPING") {
-      // FREE_SHIPPING value is ignored by the backend for shipping waiver;
-      // allow 0 but no validation needed
     }
   });
 

@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
+
+import { loginAsPersona } from "./_auth";
 import { expectNoGlobalError } from "./_helpers";
-import { loginViaOidc } from "./_auth";
 
 /**
  * UI-driven QA spec for the seller dashboard.
@@ -19,7 +20,7 @@ test.describe("seller dashboard UI", () => {
   test("Dashboard renders the four KPI cards (Balance, Pending, Views, Rating)", async ({
     page,
   }) => {
-    await loginViaOidc(page, "seller1");
+    await loginAsPersona(page, "seller");
     await page.goto("/seller");
 
     // Default tab is dashboard. Wait for the dashboard heading.
@@ -46,7 +47,7 @@ test.describe("seller dashboard UI", () => {
   test("Revenue 30-day section renders (proves seller-analytics schema parses)", async ({
     page,
   }) => {
-    await loginViaOidc(page, "seller1");
+    await loginAsPersona(page, "seller");
     await page.goto("/seller");
 
     await expect(

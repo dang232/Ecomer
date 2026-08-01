@@ -1,29 +1,20 @@
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 
-import {
-  adminApproveVideo,
-  adminRejectVideo,
-} from "@/shared/api/endpoints/admin";
-import { DataTable } from "@/shared/ui/data-table";
+import { adminApproveVideo, adminRejectVideo } from "@/shared/api/endpoints/admin";
+import { DataTable, type DataTableColumn } from "@/shared/ui/data-table";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { PageContainer } from "@/shared/ui/page-container";
 import { PageHeader } from "@/shared/ui/page-header";
 import { Pagination } from "@/shared/ui/pagination";
 
 import { adminVideoModerationQueryOptions } from "../api/query-options";
-import {
-  toVideoModerationView,
-  type VideoModerationView,
-} from "../model/video-queue-view";
+import { toVideoModerationView, type VideoModerationView } from "../model/video-queue-view";
 
 import { VideoDecisionDialog } from "./video-decision-dialog";
 import { VideoPreviewDrawer } from "./video-preview-drawer";
-
-const helper = createColumnHelper<VideoModerationView>();
 
 /**
  * Video moderation queue. URL owns `page` (1-based). Approval/rejection
@@ -39,9 +30,7 @@ export function VideoModerationQueue() {
   const page = Number.parseInt(searchParams.get("page") ?? "1", 10) || 1;
   const selected = searchParams.get("selected");
 
-  const { data, isLoading, isError } = useQuery(
-    adminVideoModerationQueryOptions({ page }),
-  );
+  const { data, isLoading, isError } = useQuery(adminVideoModerationQueryOptions({ page }));
 
   const [rejectTarget, setRejectTarget] = useState<{
     videoId: string;
@@ -83,24 +72,27 @@ export function VideoModerationQueue() {
   const items = (data?.content ?? []).map(toVideoModerationView);
   const selectedVideo = items.find((v) => v.videoId === selected) ?? null;
 
-  const columns: ColumnDef<VideoModerationView>[] = [
-    helper.accessor("videoId", { header: "Video ID" }),
-    helper.accessor("uploaderName", {
+  const columns: DataTableColumn<VideoModerationView>[] = [
+    { id: "videoId", header: "Video ID", cell: (row) => row.videoId },
+    {
+      id: "uploaderName",
       header: "Uploader",
-      cell: (info) => info.getValue() ?? "—",
-    }),
-    helper.accessor("nsfwScore", {
+      cell: (row) => row.uploaderName ?? "—",
+    },
+    {
+      id: "nsfwScore",
       header: "NSFW",
-      cell: (info) => {
-        const v = info.getValue();
+      cell: (row) => {
+        const v = row.nsfwScore;
         return v == null ? "—" : v.toFixed(2);
       },
-    }),
-    helper.accessor("durationSeconds", {
+    },
+    {
+      id: "durationSeconds",
       header: "Duration (s)",
-      cell: (info) => info.getValue() ?? "—",
-    }),
-    helper.accessor("status", { header: "Status" }),
+      cell: (row) => row.durationSeconds ?? "—",
+    },
+    { id: "status", header: "Status", cell: (row) => row.status },
   ];
 
   const handlePageChange = (next: number) => {
@@ -128,9 +120,7 @@ export function VideoModerationQueue() {
 
   return (
     <PageContainer density="compact">
-      <PageHeader
-        title={t("admin.videoModeration.title") ?? "Video Moderation"}
-      />
+      <PageHeader title={t("admin.videoModeration.title") ?? "Video Moderation"} />
 
       {isLoading ? (
         <div className="rounded-xl border border-border bg-card px-5 py-8 text-center text-sm text-muted-foreground">
@@ -141,20 +131,21 @@ export function VideoModerationQueue() {
           {t("admin.queue.loadErr")}
         </div>
       ) : items.length === 0 ? (
-        <EmptyState title={t("admin.queue.empty")} />
+        <EmptyState title={t("admin.queue.empty")} description="" icon={null} />
       ) : (
         <>
           <DataTable
             rows={items}
             columns={columns}
-            selectedId={selected}
-            onRowOpen={handleSelect}
-            selection="single"
+            rowKey={(row) => row.videoId}
+            selectedId={selected ?? undefined}
+            onRowOpen={(row) => handleSelect(row.videoId)}
+            caption={t("admin.videoModeration.title") ?? "Video Moderation"}
+            empty={null}
           />
           <Pagination
             page={page}
-            totalPages={data?.totalPages ?? 0}
-            totalElements={data?.totalElements ?? 0}
+            pageCount={data?.totalPages ?? 0}
             onPageChange={handlePageChange}
           />
         </>
@@ -164,9 +155,7 @@ export function VideoModerationQueue() {
         video={selectedVideo}
         onClose={() => handleSelect(null)}
         onApprove={(videoId) => approveMutation.mutate(videoId)}
-        onReject={(videoId) =>
-          setRejectTarget({ videoId, variant: "reject" })
-        }
+        onReject={(videoId) => setRejectTarget({ videoId, variant: "reject" })}
         isMutating={approveMutation.isPending || rejectMutation.isPending}
         approveLabel={t("admin.videoModeration.approve") ?? "Approve"}
         rejectLabel={t("admin.videoModeration.reject") ?? "Reject"}

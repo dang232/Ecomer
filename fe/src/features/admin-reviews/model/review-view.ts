@@ -19,6 +19,6 @@ export function toReviewView(raw: Review): ReviewView {
     userId: raw.userId,
     userName: raw.userName ?? null,
     rating: raw.rating,
-    comment: raw.comment,
+    comment: raw.comment ?? undefined,
   };
 }

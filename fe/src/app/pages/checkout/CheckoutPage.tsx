@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ArrowLeft, LogIn, Package } from "lucide-react";
+import { LogIn, Package } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
@@ -7,16 +7,6 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import {
-  createCheckoutRecoveryStore,
-  createCheckoutSubmissionController,
-  type CheckoutRecoveryStore,
-  type CheckoutSubmissionController,
-  type CheckoutSubmissionResult,
-} from "../../../features/checkout";
-import { readJsonText } from "../../../shared/api/read-json";
-import { useAuth } from "../../hooks/auth-context";
-import { useCart } from "../../hooks/use-cart";
 import { ApiError } from "@/shared/api";
 import {
   calculateCheckout,
@@ -36,6 +26,18 @@ import {
 } from "@/shared/api/endpoints/payment";
 import { myProfile } from "@/shared/api/endpoints/users";
 import { checkoutProviderSchema, type Address } from "@/shared/contracts/api";
+
+import {
+  CheckoutPageView,
+  createCheckoutRecoveryStore,
+  createCheckoutSubmissionController,
+  type CheckoutRecoveryStore,
+  type CheckoutSubmissionController,
+  type CheckoutSubmissionResult,
+} from "../../../features/checkout";
+import { readJsonText } from "../../../shared/api/read-json";
+import { useAuth } from "../../hooks/auth-context";
+import { useCart } from "../../hooks/use-cart";
 
 import { CheckoutAddressStep } from "./CheckoutAddressStep";
 import { CheckoutPaymentRecovery } from "./CheckoutPaymentRecovery";
@@ -629,21 +631,11 @@ export function CheckoutPage() {
   }
 
   return (
-    <div className="max-w-[1100px] mx-auto py-8 px-[var(--content-padding,1.5rem)]">
-      <div className="flex items-center gap-3 mb-8">
-        <button
-          onClick={() => (step === "address" ? navigate("/cart") : setStep(stepOrder[stepIdx - 1]))}
-          className="p-2 rounded-[var(--radius-lg)] hover:bg-card text-muted-foreground"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <h1 className="text-xl font-bold text-foreground">{t("checkout.title")}</h1>
-      </div>
-
-      {/* Stepper */}
-      <CheckoutStepper step={step} onStepChange={setStep} />
-
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
+    <CheckoutPageView
+      step={step}
+      onBack={() => (step === "address" ? navigate("/cart") : setStep(stepOrder[stepIdx - 1]))}
+      stepper={<CheckoutStepper step={step} onStepChange={setStep} />}
+      stage={
         <AnimatePresence mode="wait">
           <motion.div
             key={step}
@@ -700,7 +692,8 @@ export function CheckoutPage() {
             ) : null}
           </motion.div>
         </AnimatePresence>
-
+      }
+      summary={
         <CheckoutSummary
           cartItems={cartItems}
           subtotal={subtotal}
@@ -723,7 +716,7 @@ export function CheckoutPage() {
           handleRemoveCoupon={handleRemoveCoupon}
           handleNext={handleNext}
         />
-      </div>
-    </div>
+      }
+    />
   );
 }

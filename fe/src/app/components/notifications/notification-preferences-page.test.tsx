@@ -14,12 +14,14 @@ let currentLocale: "en" | "vi" = "en";
 
 vi.mock("@/shared/api/endpoints/notification-preferences", () => ({
   getNotificationPreferences: (...args: unknown[]) => getNotificationPreferencesMock(...args),
-  updateNotificationPreferences: (...args: unknown[]) =>
-    updateNotificationPreferencesMock(...args),
+  updateNotificationPreferences: (...args: unknown[]) => updateNotificationPreferencesMock(...args),
 }));
 
 function messageFor(locale: "en" | "vi", key: string): string | undefined {
-  const source = locale === "en" ? (enMessages as Record<string, unknown>) : (viMessages as Record<string, unknown>);
+  const source =
+    locale === "en"
+      ? (enMessages as Record<string, unknown>)
+      : (viMessages as Record<string, unknown>);
   return key.split(".").reduce<unknown>((value, part) => {
     if (value && typeof value === "object" && part in value) {
       return (value as Record<string, unknown>)[part];
@@ -185,7 +187,9 @@ describe("NotificationPreferencesPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
-    await waitFor(() => expect(screen.getByText("Could not save your notification preferences.")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText("Could not save your notification preferences.")).toBeInTheDocument(),
+    );
     await waitFor(() => expect(emailToggle).toHaveAttribute("aria-checked", "true"));
   });
 

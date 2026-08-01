@@ -13,12 +13,9 @@ import {
 } from "@/shared/api/endpoints/admin";
 import type { DashboardQueryParams } from "@/shared/api/endpoints/admin";
 
-export type AdminDashboardQueryParams = Pick<
-  DashboardQueryParams,
-  "from" | "to" | "granularity"
->;
+export type AdminDashboardQueryParams = Pick<DashboardQueryParams, "from" | "to" | "granularity">;
 
-const DEFAULT_PARAMS: AdminDashboardQueryParams = {
+const DEFAULT_PARAMS: Required<AdminDashboardQueryParams> = {
   from: new Date(Date.now() - 29 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
   to: new Date().toISOString().slice(0, 10),
   granularity: "day",
@@ -86,7 +83,7 @@ export const adminDashboardSellersCountOptions = () =>
   queryOptions({
     queryKey: adminDashboardKeys.counts.sellers(),
     queryFn: () => adminListSellers({ q: "" }),
-    select: (data) => data.content.length,
+    select: (data) => data.length,
     staleTime: 30_000,
     retry: false,
   });
@@ -103,8 +100,7 @@ export const adminDashboardReviewsCountOptions = () =>
 export const adminDashboardVideoCountOptions = () =>
   queryOptions({
     queryKey: adminDashboardKeys.counts.video(),
-    queryFn: () =>
-      adminVideoModerationQueue({ page: 0, size: 1 }),
+    queryFn: () => adminVideoModerationQueue({ page: 0, size: 1 }),
     select: (data) => data.totalElements,
     staleTime: 30_000,
     retry: false,

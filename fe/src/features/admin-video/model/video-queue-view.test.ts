@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type {
-  AdminVideoAppealItem,
-  AdminVideoModerationQueueItem,
-} from "@/shared/contracts/api";
+import type { AdminVideoAppealItem, AdminVideoModerationQueueItem } from "@/shared/contracts/api";
 
 import {
   appealUiPageToBackend,

@@ -36,7 +36,8 @@ export function OrdersPage() {
   );
 
   const filteredOrders = useMemo(
-    () => (activeTab === "all" ? allOrders : allOrders.filter((order) => order.status === activeTab)),
+    () =>
+      activeTab === "all" ? allOrders : allOrders.filter((order) => order.status === activeTab),
     [activeTab, allOrders],
   );
 

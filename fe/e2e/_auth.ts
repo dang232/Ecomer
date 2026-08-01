@@ -1,5 +1,8 @@
-import { expect, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
+
+import { expect, type Page } from "@playwright/test";
+
+import type { Persona } from "./modernization/_credentials";
 
 export function uniqueTestId(): string {
   return `${Date.now()}-${randomUUID()}`;
@@ -10,25 +13,31 @@ export function uniqueTestId(): string {
  * the API gateway's native auth boundary; the refresh token is set as an
  * httpOnly cookie and the access token stays in memory.
  */
-export async function loginViaOidc(page: Page, username: string, password = "test"): Promise<void> {
+export async function loginViaOidc(page: Page, username: string, password: string): Promise<void> {
   // Kept under the historical name for existing suites; this is a gateway-native login.
   await page.goto("/login");
-  await expect(
-    page.getByText(/Sign in to VNShop|\u0110\u0103ng nh\u1eadp VNShop/i).first(),
-  ).toBeVisible({
+  await expect(page.getByText(/Sign in to VNShop|Đăng nhập VNShop/i).first()).toBeVisible({
     timeout: 20_000,
   });
   await page.locator("#username").fill(username);
   await page.locator("#password").fill(password);
-  await page
-    .getByRole("button", { name: /sign in|continue to sign in|\u0110\u0103ng nh\u1eadp/i })
-    .click();
+  await page.getByRole("button", { name: /sign in|continue to sign in|Đăng nhập/i }).click();
   await expect
     .poll(() => new URL(page.url()).pathname, {
       timeout: 30_000,
       message: `native login as ${username} did not return to the SPA`,
     })
     .toMatch(/^\/(admin)?$/);
+}
+
+/**
+ * Login using a persona name. Resolves the persona to credentials via the
+ * centralized credential store so credential rotation is handled in one place.
+ */
+export async function loginAsPersona(page: Page, persona: Persona): Promise<void> {
+  const { credentialForPersona } = await import("./modernization/_credentials");
+  const { username, password } = credentialForPersona(persona);
+  await loginViaOidc(page, username, password);
 }
 
 export async function registerAndLoginViaOidc(
@@ -41,7 +50,7 @@ export async function registerAndLoginViaOidc(
   await page.locator("#email").fill(input.email);
   await page.locator("#password").fill(input.password);
   await page.locator("#confirm").fill(input.password);
-  await page.getByRole("button", { name: /create account|t\u1ea1o t\u00e0i kho\u1ea3n/i }).click();
+  await page.getByRole("button", { name: /create account|tạo tài khoản/i }).click();
   await expect
     .poll(() => new URL(page.url()).pathname, {
       timeout: 30_000,

@@ -1,7 +1,7 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
 
-import { loginAsSeededUser, logoutViaUserMenu } from "../_workday-evidence";
 import { readJson } from "../_api";
+import { loginAsSeededUser, logoutViaUserMenu } from "../_workday-evidence";
 import { credentialForPersona } from "../modernization/_credentials";
 
 import {
@@ -15,7 +15,6 @@ import {
   stopTrace,
 } from "./_journey-evidence";
 import { requireJourneyState, writeJourneyState } from "./_journey-state";
-
 
 /**
  * Chapter 3 — Seller fulfills the order.

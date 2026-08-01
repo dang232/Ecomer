@@ -66,10 +66,7 @@ describe("checkHealth", () => {
       }),
     );
 
-    const result = await checkHealth(
-      SERVICE_HEALTH_ENDPOINTS[0],
-      new AbortController().signal,
-    );
+    const result = await checkHealth(SERVICE_HEALTH_ENDPOINTS[0], new AbortController().signal);
 
     expect(result.id).toBe(SERVICE_HEALTH_ENDPOINTS[0].id);
     expect(result.status).toBe("down");
@@ -85,10 +82,7 @@ describe("checkHealth", () => {
       }),
     );
 
-    const result = await checkHealth(
-      SERVICE_HEALTH_ENDPOINTS[0],
-      new AbortController().signal,
-    );
+    const result = await checkHealth(SERVICE_HEALTH_ENDPOINTS[0], new AbortController().signal);
 
     expect(result.status).toBe("up");
     expect(result.statusCode).toBe(200);
