@@ -35,6 +35,7 @@ const testSchema = z
 const specSchema = z
   .object({
     title: z.string().optional(),
+    file: z.string().optional(),
     tests: z.array(testSchema).optional(),
   })
   .passthrough();
@@ -61,7 +62,7 @@ function collectTests(suite, lineage = []) {
   for (const spec of suite.specs ?? []) {
     const specLineage = spec.title ? [...nextLineage, spec.title] : nextLineage;
     for (const test of spec.tests ?? []) {
-      tests.push({ test, titlePath: specLineage });
+      tests.push({ test, titlePath: specLineage, specFile: spec.file });
     }
   }
   for (const child of suite.suites ?? []) {
@@ -136,23 +137,49 @@ export function parseRequiredPersonas(input) {
   return [...unique];
 }
 
+function personasForSpecFile(specFile) {
+  if (!specFile) {
+    return [];
+  }
+
+  const normalized = specFile.replace(/\\/g, "/");
+  const basename = normalized.slice(normalized.lastIndexOf("/") + 1);
+
+  switch (basename) {
+    case "buyer.spec.ts":
+      return ["buyer"];
+    case "seller.spec.ts":
+      return ["seller"];
+    case "admin.spec.ts":
+      return ["admin"];
+    case "cross-persona.spec.ts":
+      return ["buyer", "seller", "admin"];
+    default:
+      return [];
+  }
+}
+
 function inferCoveredPersonas(tests) {
   const covered = new Set();
 
-  for (const { test, titlePath } of tests) {
-    const haystack = [...titlePath, test.title]
-      .join(" ")
-      .toLowerCase();
-
-    for (const persona of personaSchema.options) {
-      const pattern = new RegExp(`\\b${persona}\\b`);
-      if (pattern.test(haystack)) {
-        covered.add(persona);
-      }
+  for (const { specFile } of tests) {
+    for (const persona of personasForSpecFile(specFile)) {
+      covered.add(persona);
     }
   }
 
   return covered;
+}
+
+export function inferCoveredPersonasFromSpecFiles(specFiles) {
+  const covered = new Set();
+  for (const specFile of specFiles) {
+    for (const persona of personasForSpecFile(specFile)) {
+      covered.add(persona);
+    }
+  }
+
+  return [...covered];
 }
 
 export function validateReport(report, options = {}) {

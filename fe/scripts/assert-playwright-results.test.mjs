@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 const {
+  inferCoveredPersonasFromSpecFiles,
   parseRequiredPersonas,
   validateReport,
 } = await import("./assert-playwright-results.mjs");
@@ -31,8 +32,8 @@ function makeReport(tests) {
   };
 }
 
-function makeSpec(title, tests) {
-  return { title, tests };
+function makeSpec(file, tests, title = file) {
+  return { file, title, tests };
 }
 
 function makeMultiSpecReport(specs) {
@@ -130,6 +131,17 @@ test("parses required personas from explicit input", () => {
   assert.deepEqual(parseRequiredPersonas("buyer,seller"), ["buyer", "seller"]);
 });
 
+test("maps covered personas from exact spec files", () => {
+  assert.deepEqual(
+    inferCoveredPersonasFromSpecFiles([
+      "e2e/modernization/buyer.spec.ts",
+      "e2e/modernization/cross-persona.spec.ts",
+      "e2e/modernization/unknown.spec.ts",
+    ]),
+    ["buyer", "seller", "admin"],
+  );
+});
+
 test("fails when a required persona is missing from the report via explicit config", () => {
   const findings = validateReport(
     makeMultiSpecReport([
@@ -161,6 +173,27 @@ test("passes when every required persona is present", () => {
       makeSpec("seller.spec.ts", [makeTest("seller journey")]),
       makeSpec("admin.spec.ts", [makeTest("admin journey")]),
     ]),
+    { requiredPersonas: ["buyer", "seller", "admin"] },
+  );
+
+  assert.deepEqual(findings, []);
+});
+
+test("buyer spec titles mentioning seller do not satisfy required seller coverage", () => {
+  const findings = validateReport(
+    makeMultiSpecReport([
+      makeSpec("buyer.spec.ts", [makeTest("buyer can message seller")]),
+      makeSpec("admin.spec.ts", [makeTest("admin journey")]),
+    ]),
+    { requiredPersonas: ["buyer", "seller", "admin"] },
+  );
+
+  assert(findings.some((finding) => finding.includes("Missing required personas: seller")));
+});
+
+test("cross-persona spec satisfies all required personas by file identity", () => {
+  const findings = validateReport(
+    makeMultiSpecReport([makeSpec("cross-persona.spec.ts", [makeTest("handoff journey")])]),
     { requiredPersonas: ["buyer", "seller", "admin"] },
   );
 
