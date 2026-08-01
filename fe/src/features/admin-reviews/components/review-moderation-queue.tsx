@@ -1,6 +1,6 @@
-import { IconStar } from "@tabler/icons-react";
+import { Star } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { DataTableColumn } from "@/shared/ui/data-table";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -11,8 +11,7 @@ import {
   adminRejectReview,
 } from "@/shared/api/endpoints/admin";
 
-import { ADMIN_QUEUE_CAPABILITIES } from "../../admin";
-import { AdminQueueFrame } from "../../admin/components/admin-queue-frame";
+import { ADMIN_QUEUE_CAPABILITIES, AdminQueueFrame } from "@/features/admin";
 import { adminReviewsQueryOptions } from "../api/query-options";
 import type { ReviewView } from "../model/review-view";
 import { toReviewView } from "../model/review-view";
@@ -70,38 +69,38 @@ export function ReviewModerationQueue({
   const isMutating = approve.isPending || reject.isPending;
   const selectedReview = selected ? reviews.find((r) => r.id === selected) ?? null : null;
 
-  const columns: ColumnDef<ReviewView>[] = [
+  const columns: DataTableColumn<ReviewView>[] = [
     {
-      accessorKey: "productName",
+      id: "productName",
       header: t("admin.reviewsModeration.productPrefix", { id: "" }) ?? "Product",
-      cell: ({ row }) => (
+      cell: (row) => (
         <span className="text-sm font-semibold text-foreground">
-          {row.original.productName ??
-            t("admin.reviewsModeration.productPrefix", { id: row.original.productId })}
+          {row.productName ??
+            t("admin.reviewsModeration.productPrefix", { id: row.productId })}
         </span>
       ),
     },
     {
-      accessorKey: "userName",
+      id: "userName",
       header: t("admin.reviewsModeration.anonGuest") ?? "User",
-      cell: ({ row }) => (
+      cell: (row) => (
         <span className="text-xs text-muted-foreground">
-          {row.original.userName ?? row.original.userId ?? t("admin.reviewsModeration.anonGuest")}
+          {row.userName ?? row.userId ?? t("admin.reviewsModeration.anonGuest")}
         </span>
       ),
     },
     {
-      accessorKey: "rating",
+      id: "rating",
       header: t("admin.reviewsModeration.anonGuest") ?? "Rating",
-      cell: ({ row }) => <Stars rating={row.original.rating} />,
+      cell: (row) => <Stars rating={row.rating} />,
     },
     {
-      accessorKey: "comment",
+      id: "comment",
       header: t("admin.reviewsModeration.commentLabel") ?? "Comment",
-      cell: ({ row }) =>
-        row.original.comment ? (
+      cell: (row) =>
+        row.comment ? (
           <span className="line-clamp-1 text-xs text-muted-foreground">
-            {row.original.comment}
+            {row.comment}
           </span>
         ) : (
           "—"
@@ -110,34 +109,31 @@ export function ReviewModerationQueue({
     {
       id: "actions",
       header: "",
-      cell: ({ row }) => {
-        const r = row.original;
-        return (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                approve.mutate(r.id);
-              }}
-              disabled={isMutating}
-              className="rounded-lg px-2 py-1 text-xs font-semibold text-white disabled:opacity-50"
-              style={{ background: "var(--success)" }}
-            >
-              {t("admin.reviewsModeration.approve")}
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setRejectFor(r.id);
-              }}
-              disabled={isMutating}
-              className="rounded-lg border border-red-200 px-2 py-1 text-xs font-semibold text-red-500 disabled:opacity-50"
-            >
-              {t("admin.reviewsModeration.reject")}
-            </button>
-          </div>
-        );
-      },
+      cell: (row) => (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              approve.mutate(row.id);
+            }}
+            disabled={isMutating}
+            className="rounded-lg px-2 py-1 text-xs font-semibold text-white disabled:opacity-50"
+            style={{ background: "var(--success)" }}
+          >
+            {t("admin.reviewsModeration.approve")}
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setRejectFor(row.id);
+            }}
+            disabled={isMutating}
+            className="rounded-lg border border-red-200 px-2 py-1 text-xs font-semibold text-red-500 disabled:opacity-50"
+          >
+            {t("admin.reviewsModeration.reject")}
+          </button>
+        </div>
+      ),
     },
   ];
 
@@ -192,7 +188,7 @@ function Stars({ rating }: { rating: number }) {
   return (
     <div className="flex items-center gap-0.5" aria-label={`Rating ${rating} of 5`}>
       {STAR_POSITIONS.map((position) => (
-        <IconStar
+        <Star
           key={position}
           size={14}
           fill={position <= rating ? "var(--warning)" : "var(--border)"}

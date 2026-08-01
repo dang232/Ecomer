@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { ColumnDef } from "@tanstack/react-table";
 import type { TFunction } from "i18next";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -11,9 +10,9 @@ import {
   adminRefundOrder,
   adminChangeOrderStatus,
 } from "@/shared/api/endpoints/admin";
+import type { DataTableColumn } from "@/shared/ui/data-table";
 
-import { ADMIN_QUEUE_CAPABILITIES } from "../../admin";
-import { AdminQueueFrame } from "../../admin/components/admin-queue-frame";
+import { ADMIN_QUEUE_CAPABILITIES, AdminQueueFrame } from "@/features/admin";
 import { adminOrdersQueryOptions } from "../api/query-options";
 import type { OrderView } from "../model/order-view";
 import { toOrderView } from "../model/order-view";
@@ -31,7 +30,7 @@ interface OrderQueueProps {
   onSelect: (id: string | null) => void;
 }
 
-type DialogVariant = "cancel" | "refund" | "change-status" | null;
+type DialogVariant = "cancel" | "refund" | "change-status";
 
 type DialogSetter = (
   next: { variant: DialogVariant; orderId: string; orderNumber?: string | null } | null,
@@ -105,7 +104,7 @@ export function AdminOrderQueue({
     setDialog,
   });
 
-  const selectedOrder = selected ? orders.find((o) => o.id === selected) : null;
+  const selectedOrder = selected ? orders.find((o) => o.id === selected) ?? null : null;
 
   return (
     <>
@@ -127,7 +126,7 @@ export function AdminOrderQueue({
         pagination={
           pageData
             ? {
-                page: page - 1, // UI page → display page
+                page: page,
                 totalPages: pageData.totalPages,
                 totalElements: pageData.totalElements,
               }
@@ -135,7 +134,7 @@ export function AdminOrderQueue({
         }
         onPageChange={onPageChange}
         drawerTitle={selectedOrder ? (selectedOrder.orderNumber ?? selectedOrder.id) : ""}
-        drawerDescription={selectedOrder?.buyerName}
+        drawerDescription={selectedOrder?.buyerName ?? undefined}
       >
         {selectedOrder ? (
           <div className="space-y-4">
@@ -177,7 +176,7 @@ export function AdminOrderQueue({
 
       {dialog ? (
         <OrderDecisionDialog
-          variant={dialog.variant!}
+          variant={dialog.variant}
           orderId={dialog.orderId}
           orderNumber={dialog.orderNumber}
           isPending={isMutating}
@@ -214,55 +213,49 @@ function buildOrderQueueColumns({
   t,
   isMutating,
   setDialog,
-}: OrderQueueColumnProps): ColumnDef<OrderView>[] {
+}: OrderQueueColumnProps): DataTableColumn<OrderView>[] {
   return [
     {
-      accessorKey: "orderNumber",
+      id: "orderNumber",
       header: t("admin.orders.th.orderNumber") ?? "Order #",
-      cell: ({ row }) => <OrderNumberCell order={row.original} />,
+      cell: (row) => <OrderNumberCell order={row} />,
     },
     {
-      accessorKey: "buyerName",
+      id: "buyerName",
       header: t("admin.orders.buyer") ?? "Buyer",
-      cell: ({ row }) => row.original.buyerName ?? row.original.buyerId ?? "—",
+      cell: (row) => row.buyerName ?? row.buyerId ?? "—",
     },
     {
-      accessorKey: "sellerName",
+      id: "sellerName",
       header: t("admin.orders.seller") ?? "Seller",
-      cell: ({ row }) => row.original.sellerName ?? row.original.sellerId ?? "—",
+      cell: (row) => row.sellerName ?? row.sellerId ?? "—",
     },
     {
-      accessorKey: "itemCount",
+      id: "itemCount",
       header: t("admin.orders.items") ?? "Items",
-      cell: ({ row }) => row.original.itemCount,
+      cell: (row) => row.itemCount,
     },
     {
-      accessorKey: "totalAmount",
+      id: "totalAmount",
       header: t("admin.orders.total") ?? "Total",
-      cell: ({ row }) =>
-        row.original.totalAmount
-          ? row.original.totalAmount.toLocaleString("vi-VN") + " ₫"
-          : "—",
+      cell: (row) => row.totalAmount ? `${row.totalAmount.toLocaleString("vi-VN")} ₫` : "—",
     },
     {
-      accessorKey: "status",
+      id: "status",
       header: t("admin.orders.status") ?? "Status",
-      cell: ({ row }) => <StatusChip status={row.original.status} />,
+      cell: (row) => <StatusChip status={row.status} />,
     },
     {
-      accessorKey: "createdAt",
+      id: "createdAt",
       header: t("admin.orders.date") ?? "Date",
-      cell: ({ row }) =>
-        row.original.createdAt
-          ? new Date(row.original.createdAt).toLocaleDateString("vi-VN")
-          : "—",
+      cell: (row) => row.createdAt ? new Date(row.createdAt).toLocaleDateString("vi-VN") : "—",
     },
     {
       id: "actions",
       header: "",
-      cell: ({ row }) => (
+      cell: (row) => (
         <OrderActionsCell
-          order={row.original}
+          order={row}
           isMutating={isMutating}
           t={t}
           setDialog={setDialog}

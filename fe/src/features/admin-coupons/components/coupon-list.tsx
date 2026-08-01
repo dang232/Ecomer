@@ -137,9 +137,7 @@ function CouponDetailDrawer({ coupon, onClose, onDeactivate, isDeactivating }: C
   const { t } = useTranslation();
 
   return (
-    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- backdrop click-outside dismisses drawer; full keyboard handling belongs to the dialog content above.
     <div className="fixed inset-0 z-50 bg-black/40 flex items-start justify-end" onClick={onClose}>
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- stop-propagation only; the outer backdrop owns the dismiss click. */}
       <div
         className="h-full w-full max-w-md bg-card border-l border-border flex flex-col"
         onClick={(e) => e.stopPropagation()}

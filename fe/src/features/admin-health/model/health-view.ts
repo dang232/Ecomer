@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { readJson } from "@/shared/api/read-json";
 import { apiUrl } from "@/shared/config";
 
 export interface ServiceDef {
@@ -83,12 +84,11 @@ export async function checkHealth(
         statusCode: response.status,
       };
     }
-    const body = (await response.json()) as unknown;
-    const parsed = healthSchema.safeParse(body);
-    const statusValue = parsed.success ? parsed.data.status?.toUpperCase() : "";
+    const parsed = await readJson(response, healthSchema).catch(() => null);
+    const statusValue = parsed?.status.toUpperCase() ?? "";
     return {
       id: service.id,
-      status: ["UP", "OK"].includes(statusValue ?? "") ? "up" : "down",
+      status: ["UP", "OK"].includes(statusValue) ? "up" : "down",
       latencyMs: Math.round(performance.now() - start),
       statusCode: response.status,
     };

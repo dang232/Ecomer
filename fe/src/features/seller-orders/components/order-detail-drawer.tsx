@@ -1,4 +1,4 @@
-import { IconPackage, IconX } from "@tabler/icons-react";
+import { Package, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { StatusPill } from "@/shared/ui";
@@ -43,7 +43,7 @@ export function OrderDetailDrawer({ row, onClose }: OrderDetailDrawerProps) {
             className="p-1.5 rounded-md hover:bg-background transition-colors"
             aria-label={t("seller.orders.detailDrawer.close")}
           >
-            <IconX size={18} className="text-muted-foreground" aria-hidden="true" />
+            <X size={18} className="text-muted-foreground" aria-hidden="true" />
           </button>
         </div>
 
@@ -51,7 +51,6 @@ export function OrderDetailDrawer({ row, onClose }: OrderDetailDrawerProps) {
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {/* Status */}
           <div className="flex items-center gap-3">
-            {/* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- StatusPill accepts string, FulfillmentStatus is a string subtype */}
             <StatusPill status={row.status} />
             <span className="text-xs text-muted-foreground">
               {new Date(row.createdAt).toLocaleString()}
@@ -64,7 +63,7 @@ export function OrderDetailDrawer({ row, onClose }: OrderDetailDrawerProps) {
               {t("seller.orders.detailDrawer.items", { count: row.itemCount })}
             </p>
             <div className="flex items-center gap-2 text-sm text-foreground">
-              <IconPackage size={14} className="text-muted-foreground" aria-hidden="true" />
+              <Package size={14} className="text-muted-foreground" aria-hidden="true" />
               {row.itemSummary}
             </div>
           </div>

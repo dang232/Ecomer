@@ -2,11 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Outlet } from "react-router";
 
-import { SellerNav } from "@/features/seller/components/seller-nav";
+import { SellerNav } from "@/features/seller";
 
-import { ConsoleChrome } from "../components/console-chrome";
+import { ConsoleChrome } from "./ConsoleChrome";
 import { sellerPendingOrders } from "@/shared/api/endpoints/orders";
-
 import { ConsoleLayoutFooter } from "./ConsoleLayoutFooter";
 
 export function SellerLayout() {

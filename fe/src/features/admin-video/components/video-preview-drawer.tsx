@@ -1,4 +1,4 @@
-import { IconVideo } from "@tabler/icons-react";
+import { Video } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
@@ -32,10 +32,14 @@ export function VideoPreviewDrawer({
   rejectLabel,
 }: VideoPreviewDrawerProps) {
   const { t } = useTranslation();
+  const videoId = video?.videoId ?? null;
   const { data: preview, isLoading } = useQuery({
-    queryKey: ["admin", "video", "preview", video?.videoId ?? ""],
-    queryFn: () => adminVideoPreview(video!.videoId),
-    enabled: video !== null,
+    queryKey: ["admin", "video", "preview", videoId ?? ""],
+    queryFn: async () => {
+      if (!videoId) throw new Error("A video ID is required to fetch a preview");
+      return adminVideoPreview(videoId);
+    },
+    enabled: videoId !== null,
     retry: false,
   });
 
@@ -84,7 +88,7 @@ export function VideoPreviewDrawer({
             </video>
           ) : (
             <div className="flex h-full w-full items-center justify-center">
-              <IconVideo size={48} className="text-white/40" aria-hidden="true" />
+              <Video size={48} className="text-white/40" aria-hidden="true" />
             </div>
           )}
         </div>

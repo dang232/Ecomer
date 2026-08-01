@@ -1,12 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { DataTableColumn } from "@/shared/ui/data-table";
 import type { TFunction } from "i18next";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { AdminQueueFrame } from "@/features/admin/components/admin-queue-frame";
-import { ADMIN_QUEUE_CAPABILITIES } from "@/features/admin/model/queue-capabilities";
+import { ADMIN_QUEUE_CAPABILITIES, AdminQueueFrame } from "@/features/admin";
 import { ApiError } from "@/shared/api";
 import {
   adminApprovePayout,
@@ -106,9 +105,11 @@ export function PayoutQueue({
         case "legacy-complete":
           return adminCompleteLegacyPayout(payout.id, {
             reason: values.reason,
-            externalReference: values.externalReference ?? "",
-            evidenceHash: values.evidenceHash ?? "",
-            maskedDestinationConfirmed: true,
+            evidence: {
+              externalReference: values.externalReference ?? "",
+              evidenceHash: values.evidenceHash ?? "",
+              maskedDestinationConfirmed: true,
+            },
           });
         case "legacy-fail":
           return adminFailLegacyPayout(payout.id, {
@@ -231,43 +232,42 @@ function buildPayoutQueueColumns({
   currentAdminId,
   isMutating,
   onAction,
-}: ColumnProps): ColumnDef<PayoutView>[] {
+}: ColumnProps): DataTableColumn<PayoutView>[] {
   return [
     {
-      accessorKey: "id",
+      id: "id",
       header: t("admin.payouts.th.id") ?? "Payout #",
-      cell: ({ row }) => <span className="font-mono text-xs">{row.original.id}</span>,
+      cell: (row) => <span className="font-mono text-xs">{row.id}</span>,
     },
     {
-      accessorKey: "sellerName",
+      id: "sellerName",
       header: t("admin.payouts.th.seller") ?? "Seller",
-      cell: ({ row }) => row.original.sellerName ?? row.original.sellerId,
+      cell: (row) => row.sellerName ?? row.sellerId,
     },
     {
-      accessorKey: "amount",
+      id: "amount",
       header: t("admin.payouts.th.amount") ?? "Amount",
-      cell: ({ row }) => `${formatPrice(row.original.amount)} ${row.original.currency}`,
+      cell: (row) => `${formatPrice(row.amount)} ${row.currency}`,
     },
     {
-      accessorKey: "status",
+      id: "status",
       header: t("admin.payouts.th.status") ?? "Status",
-      cell: ({ row }) => <StatusChip status={row.original.status} />,
+      cell: (row) => <StatusChip status={row.status} />,
     },
     {
-      accessorKey: "requestedAt",
+      id: "requestedAt",
       header: t("admin.payouts.th.requestedAt") ?? "Requested",
-      cell: ({ row }) =>
-        row.original.requestedAt ? new Date(row.original.requestedAt).toLocaleDateString() : "—",
+      cell: (row) => row.requestedAt ? new Date(row.requestedAt).toLocaleDateString() : "—",
     },
     {
       id: "actions",
       header: "",
-      cell: ({ row }) => (
+      cell: (row) => (
         <PayoutActionCell
-          row={row.original}
+          row={row}
           t={t}
           currentAdminId={currentAdminId}
-          approvedBy={row.original.approvedBy}
+          approvedBy={row.approvedBy}
           isMutating={isMutating}
           onAction={onAction}
         />
@@ -295,7 +295,11 @@ function PayoutActionCell({
     currentAdminId,
     approvedBy,
   });
-  const buttons: { variant: PayoutDecisionVariant; label: string; tone: "default" | "danger" | "primary" }[] = [];
+  const buttons: {
+    variant: PayoutDecisionVariant;
+    label: string;
+    tone: "default" | "danger" | "primary";
+  }[] = [];
   if (actions.canApprove) {
     buttons.push({ variant: "approve", label: t("admin.payouts.action.approve") ?? "Approve", tone: "primary" });
   }

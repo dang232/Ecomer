@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { DataTableColumn } from "@/shared/ui/data-table";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -11,8 +11,7 @@ import {
 } from "@/shared/api/endpoints/admin";
 import { formatRelativeTime } from "@/shared/lib";
 
-import { ADMIN_QUEUE_CAPABILITIES } from "../../admin";
-import { AdminQueueFrame } from "../../admin/components/admin-queue-frame";
+import { ADMIN_QUEUE_CAPABILITIES, AdminQueueFrame } from "@/features/admin";
 import { adminSellersQueryOptions } from "../api/query-options";
 import type { SellerView } from "../model/seller-view";
 import { toSellerView } from "../model/seller-view";
@@ -73,58 +72,52 @@ export function SellerApprovalQueue({
 
   const selectedSeller = selected ? sellers.find((s) => s.id === selected) ?? null : null;
 
-  const columns: ColumnDef<SellerView>[] = [
+  const columns: DataTableColumn<SellerView>[] = [
     {
-      accessorKey: "shopName",
+      id: "shopName",
       header: t("admin.sellers.applicationDialog.shopName") ?? "Shop",
-      cell: ({ row }) => (
-        <span className="text-sm font-semibold text-foreground">{row.original.shopName}</span>
+      cell: (row) => (
+        <span className="text-sm font-semibold text-foreground">{row.shopName}</span>
       ),
     },
     {
-      accessorKey: "status",
+      id: "status",
       header: t("admin.sellers.applicationDialog.status") ?? "Status",
-      cell: ({ row }) => <StatusChip seller={row.original} />,
+      cell: (row) => <StatusChip seller={row} />,
     },
     {
-      accessorKey: "appliedAt",
+      id: "appliedAt",
       header: t("admin.sellers.rowApplied", { relativeTime: "" }) ?? "Applied",
-      cell: ({ row }) =>
-        row.original.appliedAt
-          ? formatRelativeTime(row.original.appliedAt)
-          : "—",
+      cell: (row) => row.appliedAt ? formatRelativeTime(row.appliedAt) : "—",
     },
     {
       id: "actions",
       header: "",
-      cell: ({ row }) => {
-        const s = row.original;
-        return (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setDialog({ variant: "approve", sellerId: s.id, shopName: s.shopName });
-              }}
-              disabled={isMutating || s.approved}
-              className="rounded-lg px-2 py-1 text-xs font-semibold text-white disabled:opacity-50"
-              style={{ background: "var(--primary)" }}
-            >
-              {t("admin.sellers.approve")}
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setDialog({ variant: "reject", sellerId: s.id, shopName: s.shopName });
-              }}
-              disabled={isMutating || s.approved}
-              className="rounded-lg border border-red-200 px-2 py-1 text-xs font-semibold text-red-500 disabled:opacity-50"
-            >
-              {t("admin.sellers.reject")}
-            </button>
-          </div>
-        );
-      },
+      cell: (row) => (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setDialog({ variant: "approve", sellerId: row.id, shopName: row.shopName });
+            }}
+            disabled={isMutating || row.approved}
+            className="rounded-lg px-2 py-1 text-xs font-semibold text-white disabled:opacity-50"
+            style={{ background: "var(--primary)" }}
+          >
+            {t("admin.sellers.approve")}
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setDialog({ variant: "reject", sellerId: row.id, shopName: row.shopName });
+            }}
+            disabled={isMutating || row.approved}
+            className="rounded-lg border border-red-200 px-2 py-1 text-xs font-semibold text-red-500 disabled:opacity-50"
+          >
+            {t("admin.sellers.reject")}
+          </button>
+        </div>
+      ),
     },
   ];
 

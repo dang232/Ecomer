@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { SERVICE_HEALTH_ENDPOINTS, summarizeHealth } from "../model/health-view";
+import { SERVICE_HEALTH_ENDPOINTS, checkHealth, summarizeHealth } from "../model/health-view";
 
 describe("SERVICE_HEALTH_ENDPOINTS", () => {
   it("has at least 6 services", () => {
@@ -50,5 +50,47 @@ describe("summarizeHealth", () => {
 
   it("allUp is false when there are zero services", () => {
     expect(summarizeHealth([])).toEqual({ up: 0, down: 0, total: 0, allUp: false });
+  });
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe("checkHealth", () => {
+  it("marks a service down when the payload shape is invalid", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ state: "BROKEN" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+
+    const result = await checkHealth(
+      SERVICE_HEALTH_ENDPOINTS[0],
+      new AbortController().signal,
+    );
+
+    expect(result.id).toBe(SERVICE_HEALTH_ENDPOINTS[0].id);
+    expect(result.status).toBe("down");
+    expect(result.statusCode).toBe(200);
+    expect(result.latencyMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it("marks a service up when the payload status is UP", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ status: "UP" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+
+    const result = await checkHealth(
+      SERVICE_HEALTH_ENDPOINTS[0],
+      new AbortController().signal,
+    );
+
+    expect(result.status).toBe("up");
+    expect(result.statusCode).toBe(200);
   });
 });

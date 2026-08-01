@@ -1,1 +1,2 @@
-export { SellerPage } from "../../app/pages/seller/SellerPage";
+export { SellerNav } from "./components/seller-nav";
+export { ReturnsRoute as SellerReturnsRoute } from "../seller-returns";

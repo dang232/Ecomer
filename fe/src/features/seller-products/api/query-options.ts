@@ -8,12 +8,12 @@
 
 import { queryOptions } from "@tanstack/react-query";
 
-import { productListOptions } from "@/app/hooks/use-products";
 import type { Product } from "@/features/catalog";
 import { fromServer } from "@/features/catalog";
 import {
+  productList,
   sellerProductCreate,
-  sellerProductDelete,
+  sellerProductDelete as sellerProductDeleteEndpoint,
   sellerProductPublish,
   sellerProductUpdate,
 } from "@/shared/api/endpoints/products";
@@ -27,13 +27,31 @@ export const sellerProductKeys = {
   detail: (id: string) => [...sellerProductKeys.all, "detail", id] as const,
 };
 
+export interface ProductListQueryParams {
+  sellerId?: string;
+  page?: number;
+  size?: number;
+  categoryId?: string;
+  q?: string;
+}
+
 // ── List options ───────────────────────────────────────────────────────────────
 
-/**
- * Re-export of the shared product list options.
- * The endpoint returns ACTIVE catalog products only.
- */
-export { productListOptions };
+export const productListOptions = (params: ProductListQueryParams = {}, enabled = true) =>
+  queryOptions<Product[]>({
+    queryKey: ["catalog", "products", "list", params] as const,
+    queryFn: async () => {
+      const page = await productList({
+        size: params.size ?? 50,
+        page: params.page,
+        sellerId: params.sellerId,
+        categoryId: params.categoryId,
+        q: params.q,
+      });
+      return page.content.map(fromServer);
+    },
+    enabled,
+  });
 
 // ── Detail options ─────────────────────────────────────────────────────────────
 
@@ -51,14 +69,9 @@ export const sellerProductDetailOptions = (id: string) =>
 
 /** DELETE /sellers/me/products/{id} — waits for 204, invalidates list. */
 export async function sellerProductDelete(id: string): Promise<void> {
-  await sellerProductDelete.mutationFn(id);
+  await sellerProductDeleteEndpoint(id);
   // Caller (or a wrapper) should invalidate the list query.
 }
-
-sellerProductDelete.mutationFn = async (id: string): Promise<void> => {
-  const { api } = await import("@/shared/api/client");
-  await api.delete(`/sellers/me/products/${encodeURIComponent(id)}`);
-};
 
 /** Create a new product (returns DRAFT). */
 export async function sellerProductCreateAction(

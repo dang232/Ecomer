@@ -61,7 +61,7 @@ describe("ProductList", () => {
     const rows = [makeRow({ sold: null })];
     renderList(rows, { q: "", page: 1, mode: null, selected: null }, vi.fn());
 
-    expect(screen.getByText("–")).toBeInTheDocument();
+    expect(screen.getByText("-")).toBeInTheDocument();
   });
 
   it("shows price range when min != max", () => {

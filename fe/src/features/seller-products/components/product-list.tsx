@@ -9,19 +9,17 @@
  * NOT for an arbitrary unpublished product ID.
  */
 
-import { IconEdit, IconPlus, IconSearch } from "@tabler/icons-react";
-import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Edit3, Plus, Search } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 
-import { useDebouncedValue } from "@/app/hooks/use-debounced-value";
-import { useProducts } from "@/app/hooks/use-products";
-import { DataTable , ImageWithFallback } from "@/shared/ui";
+import { DataTable, ImageWithFallback, type DataTableColumn } from "@/shared/ui";
 
+import { productListOptions } from "../api/query-options";
 import type { ProductListRow } from "../model/product-list-view";
 import { toProductListRow } from "../model/product-list-view";
-
-// ── Route state ─────────────────────────────────────────────────────────────────
 
 export interface SellerProductsRouteState {
   q: string;
@@ -30,114 +28,102 @@ export interface SellerProductsRouteState {
   mode: "create" | "edit" | null;
 }
 
-// ── Props ───────────────────────────────────────────────────────────────────────
-
-interface ProductListProps {
+export interface ProductListProps {
   rows: readonly ProductListRow[];
   routeState: SellerProductsRouteState;
   onRouteChange: (next: SellerProductsRouteState) => void;
 }
 
-// ── Component ───────────────────────────────────────────────────────────────────
-
 export function ProductList({ rows, routeState, onRouteChange }: ProductListProps) {
   const { t } = useTranslation();
 
-  const columns = useMemo(() => [
-    {
-      id: "product",
-      header: t("seller.products.th.product"),
-      // eslint-disable-next-line react/no-unstable-nested-components
-      cell: (row: ProductListRow) => (
-        <div className="flex items-center gap-3">
-          {row.image ? (
-            <ImageWithFallback
-              src={row.image}
-              alt={row.name}
-              className="w-10 h-10 rounded-[var(--radius-md)] object-cover shrink-0"
-            />
-          ) : (
-            <div
-              className="w-10 h-10 rounded-[var(--radius-md)] bg-muted shrink-0"
-              aria-hidden="true"
-            />
-          )}
-          <span className="text-sm font-medium text-foreground max-w-[280px] truncate">
-            {row.name}
+  const columns = useMemo<DataTableColumn<ProductListRow>[]>(
+    () => [
+      {
+        id: "product",
+        header: t("seller.products.th.product"),
+        cell: (row) => (
+          <div className="flex items-center gap-3">
+            {row.image ? (
+              <ImageWithFallback
+                src={row.image}
+                alt={row.name}
+                className="h-10 w-10 shrink-0 rounded-[var(--radius-md)] object-cover"
+              />
+            ) : (
+              <div
+                className="h-10 w-10 shrink-0 rounded-[var(--radius-md)] bg-muted"
+                aria-hidden="true"
+              />
+            )}
+            <span className="max-w-[280px] truncate text-sm font-medium text-foreground">
+              {row.name}
+            </span>
+          </div>
+        ),
+        priority: "primary",
+      },
+      {
+        id: "price",
+        header: t("seller.products.th.price"),
+        cell: (row) => <span className="text-sm font-bold text-primary">{row.priceRange}</span>,
+        priority: "secondary",
+        align: "start",
+      },
+      {
+        id: "stock",
+        header: t("seller.products.th.stock"),
+        cell: (row) => (
+          <span className="text-sm text-foreground">{row.stockTotal.toLocaleString()}</span>
+        ),
+        priority: "secondary",
+        align: "center",
+      },
+      {
+        id: "sold",
+        header: t("seller.products.th.sold"),
+        cell: (row) => (
+          <span className="text-sm text-muted-foreground">
+            {row.sold != null ? row.sold.toLocaleString() : "-"}
           </span>
-        </div>
-      ),
-      priority: "primary" as const,
-    },
-    {
-      id: "price",
-      header: t("seller.products.th.price"),
-      // eslint-disable-next-line react/no-unstable-nested-components
-      cell: (row: ProductListRow) => (
-        <span className="text-sm font-bold text-primary">{row.priceRange}</span>
-      ),
-      priority: "secondary" as const,
-      align: "start" as const,
-    },
-    {
-      id: "stock",
-      header: t("seller.products.th.stock"),
-      // eslint-disable-next-line react/no-unstable-nested-components
-      cell: (row: ProductListRow) => (
-        <span className="text-sm text-foreground">{row.stockTotal.toLocaleString()}</span>
-      ),
-      priority: "secondary" as const,
-      align: "center" as const,
-    },
-    {
-      id: "sold",
-      header: t("seller.products.th.sold"),
-      // eslint-disable-next-line react/no-unstable-nested-components
-      cell: (row: ProductListRow) => (
-        <span className="text-sm text-muted-foreground">
-          {row.sold != null ? row.sold.toLocaleString() : "–"}
-        </span>
-      ),
-      priority: "tertiary" as const,
-      align: "center" as const,
-    },
-    {
-      id: "actions",
-      header: "",
-      // eslint-disable-next-line react/no-unstable-nested-components
-      cell: (row: ProductListRow) => (
-        <button
-          type="button"
-          onClick={() =>
-            onRouteChange({ ...routeState, selected: row.id, mode: "edit" })
-          }
-          className="p-1.5 rounded-[var(--radius-md)] hover:bg-primary-light text-primary transition-colors"
-          title={t("seller.products.editTooltip")}
-          aria-label={t("seller.products.editTooltip")}
-        >
-          <IconEdit size={14} aria-hidden="true" />
-        </button>
-      ),
-      align: "end" as const,
-    },
-  ], [t, routeState, onRouteChange]);
+        ),
+        priority: "tertiary",
+        align: "center",
+      },
+      {
+        id: "actions",
+        header: "",
+        cell: (row) => (
+          <button
+            type="button"
+            onClick={() => onRouteChange({ ...routeState, selected: row.id, mode: "edit" })}
+            className="rounded-[var(--radius-md)] p-1.5 text-primary transition-colors hover:bg-primary-light"
+            title={t("seller.products.editTooltip")}
+            aria-label={t("seller.products.editTooltip")}
+          >
+            <Edit3 size={14} aria-hidden="true" />
+          </button>
+        ),
+        align: "end",
+      },
+    ],
+    [onRouteChange, routeState, t],
+  );
 
   return (
     <div className="space-y-5">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-foreground">{t("seller.products.title")}</h2>
         <button
           type="button"
           onClick={() => onRouteChange({ ...routeState, mode: "create", selected: null })}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-md)] bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary-hover transition-colors"
+          className="flex items-center gap-2 rounded-[var(--radius-md)] bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover"
         >
-          <IconPlus size={16} aria-hidden="true" />
+          <Plus size={16} aria-hidden="true" />
           {t("seller.products.addNew")}
         </button>
       </div>
 
-      {/* Table */}
       <DataTable
         rows={rows}
         columns={columns}
@@ -154,20 +140,12 @@ export function ProductList({ rows, routeState, onRouteChange }: ProductListProp
   );
 }
 
-// ── Search wrapper with URL state ───────────────────────────────────────────────
-
 const PAGE_SIZE = 24;
 
 interface SellerProductsListRouteProps {
-  sellerId: string;
+  sellerId?: string;
 }
 
-/**
- * Full page component that wires URL state to the list.
- * Use this from the route file.
- *
- * Note: The catalog endpoint returns ACTIVE products only.
- */
 export function SellerProductsListRoute({ sellerId }: SellerProductsListRouteProps) {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -178,18 +156,27 @@ export function SellerProductsListRoute({ sellerId }: SellerProductsListRoutePro
   const mode = (searchParams.get("mode") ?? null) as "create" | "edit" | null;
 
   const [inputValue, setInputValue] = useState(q);
+  const [debouncedQ, setDebouncedQ] = useState(q.trim());
 
-  // Debounce the query parameter for the API request only.
-  const debouncedQ = useDebouncedValue(inputValue.trim(), 300);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQ(inputValue.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [inputValue]);
+
+  useEffect(() => {
+    setInputValue(q);
+  }, [q]);
 
   const routeState: SellerProductsRouteState = { q, page, selected, mode };
 
-  const { data: products = [], isLoading } = useProducts({
-    sellerId,
-    q: debouncedQ || undefined,
-    page: Math.max(0, page - 1),
-    size: PAGE_SIZE,
-  });
+  const { data: products = [], isLoading } = useQuery(
+    productListOptions({
+      sellerId,
+      q: debouncedQ || undefined,
+      page: Math.max(0, page - 1),
+      size: PAGE_SIZE,
+    }),
+  );
 
   const rows: readonly ProductListRow[] = products.map(toProductListRow);
   const hasMore = products.length === PAGE_SIZE;
@@ -197,7 +184,6 @@ export function SellerProductsListRoute({ sellerId }: SellerProductsListRoutePro
   const handleRouteChange = (next: SellerProductsRouteState) => {
     const params = new URLSearchParams(searchParams);
     if (next.q !== q) {
-      // Commit search to URL; reset page.
       params.set("q", next.q);
       params.set("page", "1");
     } else {
@@ -214,14 +200,14 @@ export function SellerProductsListRoute({ sellerId }: SellerProductsListRoutePro
     setSearchParams(params, { replace: true });
   };
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearchSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
     setSearchParams(
-      (prev) => {
-        const p = new URLSearchParams(prev);
-        p.set("q", inputValue.trim());
-        p.set("page", "1");
-        return p;
+      (previous) => {
+        const params = new URLSearchParams(previous);
+        params.set("q", inputValue.trim());
+        params.set("page", "1");
+        return params;
       },
       { replace: true },
     );
@@ -229,15 +215,14 @@ export function SellerProductsListRoute({ sellerId }: SellerProductsListRoutePro
 
   return (
     <div className="space-y-5">
-      {/* Search */}
       <form onSubmit={handleSearchSubmit} className="flex">
-        <div className="flex-1 flex items-center gap-3 bg-card border border-border rounded-[var(--radius-md)] px-4 py-2.5">
-          <IconSearch size={16} className="text-muted-foreground" aria-hidden="true" />
+        <div className="flex flex-1 items-center gap-3 rounded-[var(--radius-md)] border border-border bg-card px-4 py-2.5">
+          <Search size={16} className="text-muted-foreground" aria-hidden="true" />
           <input
             value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
+            onChange={(event) => setInputValue(event.target.value)}
             placeholder={t("seller.products.searchPlaceholder")}
-            className="flex-1 text-sm outline-none bg-transparent"
+            className="flex-1 bg-transparent text-sm outline-none"
             aria-label={t("seller.products.searchPlaceholder")}
           />
         </div>
@@ -249,18 +234,25 @@ export function SellerProductsListRoute({ sellerId }: SellerProductsListRoutePro
 
       <ProductList rows={rows} routeState={routeState} onRouteChange={handleRouteChange} />
 
-      {/* Pagination */}
-      {rows.length > 0 ? <nav
+      {rows.length > 0 ? (
+        <nav
           aria-label={t("seller.products.paginationLabel")}
           className="flex items-center justify-center gap-2"
         >
           <button
             type="button"
             onClick={() =>
-              setSearchParams((p) => { const n = new URLSearchParams(p); n.set("page", String(page - 1)); return n; }, { replace: true })
+              setSearchParams(
+                (params) => {
+                  const next = new URLSearchParams(params);
+                  next.set("page", String(page - 1));
+                  return next;
+                },
+                { replace: true },
+              )
             }
             disabled={page <= 1}
-            className="px-3 py-1.5 rounded-[var(--radius-md)] text-sm border border-border disabled:opacity-40 hover:bg-background transition-colors"
+            className="rounded-[var(--radius-md)] border border-border px-3 py-1.5 text-sm transition-colors hover:bg-background disabled:opacity-40"
           >
             {t("seller.products.prev")}
           </button>
@@ -270,14 +262,22 @@ export function SellerProductsListRoute({ sellerId }: SellerProductsListRoutePro
           <button
             type="button"
             onClick={() =>
-              setSearchParams((p) => { const n = new URLSearchParams(p); n.set("page", String(page + 1)); return n; }, { replace: true })
+              setSearchParams(
+                (params) => {
+                  const next = new URLSearchParams(params);
+                  next.set("page", String(page + 1));
+                  return next;
+                },
+                { replace: true },
+              )
             }
             disabled={!hasMore}
-            className="px-3 py-1.5 rounded-[var(--radius-md)] text-sm border border-border disabled:opacity-40 hover:bg-background transition-colors"
+            className="rounded-[var(--radius-md)] border border-border px-3 py-1.5 text-sm transition-colors hover:bg-background disabled:opacity-40"
           >
             {t("seller.products.next")}
           </button>
-        </nav> : null}
+        </nav>
+      ) : null}
     </div>
   );
 }

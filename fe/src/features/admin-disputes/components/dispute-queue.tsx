@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ColumnDef } from "@tanstack/react-table";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -9,9 +8,9 @@ import {
   adminOpenDisputes,
   adminResolveDispute,
 } from "@/shared/api/endpoints/admin";
+import type { DataTableColumn } from "@/shared/ui/data-table";
 
-import { ADMIN_QUEUE_CAPABILITIES } from "../../admin";
-import { AdminQueueFrame } from "../../admin/components/admin-queue-frame";
+import { ADMIN_QUEUE_CAPABILITIES, AdminQueueFrame } from "@/features/admin";
 import { toDisputeView } from "../model/dispute-view";
 import type { DisputeView } from "../model/dispute-view";
 
@@ -58,52 +57,49 @@ export function DisputeQueue({
     ? disputes.find((d) => d.id === selected) ?? null
     : null;
 
-  const columns: ColumnDef<DisputeView>[] = [
+  const columns: DataTableColumn<DisputeView>[] = [
     {
-      accessorKey: "orderNumber",
+      id: "orderNumber",
       header: t("admin.disputes.orderLabel", { id: "" }) ?? "Order",
-      cell: ({ row }) => (
+      cell: (row) => (
         <span className="text-sm font-semibold text-foreground">
           {t("admin.disputes.orderLabel", {
-            id: row.original.orderNumber ?? row.original.returnId,
+            id: row.orderNumber ?? row.returnId,
           })}
         </span>
       ),
     },
     {
-      accessorKey: "buyerName",
+      id: "buyerName",
       header: t("admin.disputes.buyerFallback") ?? "Buyer",
-      cell: ({ row }) => (
+      cell: (row) => (
         <span className="text-xs text-muted-foreground">
-          {row.original.buyerName ?? t("admin.disputes.buyerFallback")}
-          {row.original.sellerName ? ` · ${row.original.sellerName}` : ""}
+          {row.buyerName ?? t("admin.disputes.buyerFallback")}
+          {row.sellerName ? ` · ${row.sellerName}` : ""}
         </span>
       ),
     },
     {
-      accessorKey: "status",
+      id: "status",
       header: t("admin.disputes.resolveDialog.title") ?? "Status",
-      cell: ({ row }) => <StatusChip status={row.original.status} />,
+      cell: (row) => <StatusChip status={row.status} />,
     },
     {
       id: "actions",
       header: "",
-      cell: ({ row }) => {
-        const d = row.original;
-        return (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setResolveFor(d.id);
-            }}
-            disabled={resolve.isPending}
-            className="rounded-lg px-2 py-1 text-xs font-semibold text-white disabled:opacity-50"
-            style={{ background: "var(--primary)" }}
-          >
-            {t("admin.disputes.resolve")}
-          </button>
-        );
-      },
+      cell: (row) => (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setResolveFor(row.id);
+          }}
+          disabled={resolve.isPending}
+          className="rounded-lg px-2 py-1 text-xs font-semibold text-white disabled:opacity-50"
+          style={{ background: "var(--primary)" }}
+        >
+          {t("admin.disputes.resolve")}
+        </button>
+      ),
     },
   ];
 

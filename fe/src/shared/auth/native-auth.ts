@@ -28,6 +28,7 @@
 
 import { z } from "zod";
 
+import { readJsonText } from "@/shared/api/read-json";
 import { apiUrl } from "@/shared/config";
 
 /** Name of the non-httpOnly CSRF cookie set by user-service. */
@@ -170,7 +171,7 @@ async function readEnvelope(res: Response, fallbackErrorCode: string): Promise<T
   const text = await res.text().catch(() => "");
   let envelope: z.infer<typeof authEnvelopeSchema> = null;
   try {
-    envelope = text ? authEnvelopeSchema.parse(JSON.parse(text) as unknown) : null;
+    envelope = text ? readJsonText(text, authEnvelopeSchema) : null;
   } catch {
     /* keep envelope null and fall through */
   }
@@ -231,7 +232,7 @@ export function decodeJwt(token: string): JwtClaims | null {
     if (!segment) return null;
     const padded = segment + "=".repeat((4 - (segment.length % 4)) % 4);
     const json = atob(padded.replace(/-/g, "+").replace(/_/g, "/"));
-    return jwtClaimsSchema.parse(JSON.parse(decodeURIComponent(escape(json))) as unknown);
+    return readJsonText(decodeURIComponent(escape(json)), jwtClaimsSchema);
   } catch {
     return null;
   }

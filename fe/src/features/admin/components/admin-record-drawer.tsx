@@ -22,13 +22,18 @@ export function AdminRecordDrawer({
   children,
   title,
   description,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   footer,
 }: AdminRecordDrawerProps) {
   return (
-    <Drawer open={selectedId !== null} title={title} description={description} onOpenChange={(open) => {
-      if (!open) onClose();
-    }}>
+    <Drawer
+      open={selectedId !== null}
+      title={title}
+      description={description}
+      footer={footer}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
       {children}
     </Drawer>
   );
