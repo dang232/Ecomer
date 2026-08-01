@@ -51,15 +51,6 @@ function parsePersona(input: string): Persona {
   );
 }
 
-function resolveRequiredPersonasFromEnv(): Persona[] {
-  const selected = PERSONAS.filter(
-    (persona) =>
-      process.env[envKey(persona, "USERNAME")] !== undefined ||
-      process.env[envKey(persona, "PASSWORD")] !== undefined,
-  );
-  return selected.length > 0 ? [...selected] : ["buyer"];
-}
-
 function contractCredentialForPersona(persona: Persona): PersonaCredential {
   const username = process.env[envKey(persona, "USERNAME")];
   const password = process.env[envKey(persona, "PASSWORD")];
@@ -90,7 +81,12 @@ export function credentialForPersona(persona: Persona): PersonaCredential {
 export function requiredPersonas(): Persona[] {
   const env = process.env["E2E_REQUIRED_PERSONAS"]?.trim();
   if (!env) {
-    return isContractMode() ? resolveRequiredPersonasFromEnv() : [...PERSONAS];
+    if (isContractMode()) {
+      throw new Error(
+        "E2E_RELEASE_CONTRACT=true requires E2E_REQUIRED_PERSONAS to declare at least one persona",
+      );
+    }
+    return [...PERSONAS];
   }
 
   const unique = new Set<Persona>();
@@ -100,6 +96,11 @@ export function requiredPersonas(): Persona[] {
   }
 
   if (unique.size === 0) {
+    if (isContractMode()) {
+      throw new Error(
+        "E2E_RELEASE_CONTRACT=true requires E2E_REQUIRED_PERSONAS to declare at least one persona",
+      );
+    }
     throw new Error("E2E_REQUIRED_PERSONAS must contain at least one persona when set");
   }
 

@@ -19,6 +19,10 @@ const e2eDir = path.resolve(scriptDir, "..", "e2e");
 const allowedFiles = new Set(["modernization/_credentials.ts"]);
 const seededUsernames = new Set(["buyer1", "seller1", "admin1"]);
 const seededPassword = "test";
+const seededAliasPattern = new RegExp(
+  `^(?:${[...seededUsernames].join("|")})@[^@\\s]+$`,
+  "i",
+);
 
 function sourceKind(filePath) {
   return filePath.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
@@ -92,14 +96,44 @@ function fillTargetText(call) {
 }
 
 function isUsernameFieldFill(call, value) {
-  return seededUsernames.has(value) && /username/i.test(fillTargetText(call));
+  return isSeededPrincipal(value) && /username|email/i.test(fillTargetText(call));
 }
 
 function isPasswordFieldFill(call, value) {
   return value === seededPassword && /password/i.test(fillTargetText(call));
 }
 
+function isSeededPrincipal(value) {
+  return seededUsernames.has(value) || seededAliasPattern.test(value);
+}
+
 function inspectCallExpression(sourceFile, relPath, call, violations) {
+  if (ts.isIdentifier(call.expression) && call.expression.text === "loginViaOidc") {
+    const usernameValue = stringLiteralValue(call.arguments[1]);
+    const passwordValue = stringLiteralValue(call.arguments[2]);
+    if (usernameValue !== null && isSeededPrincipal(usernameValue)) {
+      violations.push(
+        formatViolation(
+          relPath,
+          positionLabel(sourceFile, call.arguments[1]),
+          "hard-coded seeded username in loginViaOidc call",
+          JSON.stringify(usernameValue),
+        ),
+      );
+    }
+    if (passwordValue === seededPassword) {
+      violations.push(
+        formatViolation(
+          relPath,
+          positionLabel(sourceFile, call.arguments[2]),
+          'hard-coded password "test" in loginViaOidc call',
+          JSON.stringify(passwordValue),
+        ),
+      );
+    }
+    return;
+  }
+
   if (!ts.isPropertyAccessExpression(call.expression)) {
     return;
   }
@@ -148,7 +182,7 @@ function inspectCallExpression(sourceFile, relPath, call, violations) {
     const usernameValue = username ? stringLiteralValue(username) : null;
     const passwordValue = password ? stringLiteralValue(password) : null;
 
-    if (usernameValue !== null && seededUsernames.has(usernameValue)) {
+    if (usernameValue !== null && isSeededPrincipal(usernameValue)) {
       violations.push(
         formatViolation(
           relPath,
@@ -171,30 +205,6 @@ function inspectCallExpression(sourceFile, relPath, call, violations) {
     return;
   }
 
-  if (ts.isIdentifier(call.expression.expression) && call.expression.expression.text === "loginViaOidc") {
-    const usernameValue = stringLiteralValue(call.arguments[1]);
-    const passwordValue = stringLiteralValue(call.arguments[2]);
-    if (usernameValue !== null && seededUsernames.has(usernameValue)) {
-      violations.push(
-        formatViolation(
-          relPath,
-          positionLabel(sourceFile, call.arguments[1]),
-          "hard-coded seeded username in loginViaOidc call",
-          JSON.stringify(usernameValue),
-        ),
-      );
-    }
-    if (passwordValue === seededPassword) {
-      violations.push(
-        formatViolation(
-          relPath,
-          positionLabel(sourceFile, call.arguments[2]),
-          'hard-coded password "test" in loginViaOidc call',
-          JSON.stringify(passwordValue),
-        ),
-      );
-    }
-  }
 }
 
 function inspectParameterDefaults(sourceFile, relPath, node, violations) {

@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-const { validateReport } = await import("./assert-playwright-results.mjs");
+const {
+  parseRequiredPersonas,
+  validateReport,
+} = await import("./assert-playwright-results.mjs");
 
 function makeTest(title, overrides = {}) {
   return {
@@ -23,6 +26,21 @@ function makeReport(tests) {
             tests,
           },
         ],
+      },
+    ],
+  };
+}
+
+function makeSpec(title, tests) {
+  return { title, tests };
+}
+
+function makeMultiSpecReport(specs) {
+  return {
+    suites: [
+      {
+        title: "e2e/modernization",
+        specs,
       },
     ],
   };
@@ -106,4 +124,45 @@ test("fails when a test entry has no recorded status", () => {
   );
 
   assert(findings.some((finding) => finding.includes("no test results were recorded")));
+});
+
+test("parses required personas from explicit input", () => {
+  assert.deepEqual(parseRequiredPersonas("buyer,seller"), ["buyer", "seller"]);
+});
+
+test("fails when a required persona is missing from the report via explicit config", () => {
+  const findings = validateReport(
+    makeMultiSpecReport([
+      makeSpec("buyer.spec.ts", [makeTest("buyer journey")]),
+      makeSpec("admin.spec.ts", [makeTest("admin journey")]),
+    ]),
+    { requiredPersonas: ["buyer", "seller", "admin"] },
+  );
+
+  assert(findings.some((finding) => finding.includes('Missing required personas: seller')));
+});
+
+test("fails when a required persona is missing from the report via env", () => {
+  const findings = validateReport(
+    makeMultiSpecReport([
+      makeSpec("buyer.spec.ts", [makeTest("buyer journey")]),
+      makeSpec("seller.spec.ts", [makeTest("seller journey")]),
+    ]),
+    { env: { E2E_REQUIRED_PERSONAS: "buyer,seller,admin" } },
+  );
+
+  assert(findings.some((finding) => finding.includes('Missing required personas: admin')));
+});
+
+test("passes when every required persona is present", () => {
+  const findings = validateReport(
+    makeMultiSpecReport([
+      makeSpec("buyer.spec.ts", [makeTest("buyer journey")]),
+      makeSpec("seller.spec.ts", [makeTest("seller journey")]),
+      makeSpec("admin.spec.ts", [makeTest("admin journey")]),
+    ]),
+    { requiredPersonas: ["buyer", "seller", "admin"] },
+  );
+
+  assert.deepEqual(findings, []);
 });

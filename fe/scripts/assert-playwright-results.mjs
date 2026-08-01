@@ -3,6 +3,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
+const personaSchema = z.enum(["buyer", "seller", "admin"]);
+
 const testResultSchema = z
   .object({
     status: z.string(),
@@ -53,13 +55,17 @@ const reportSchema = z
   })
   .passthrough();
 
-function collectTests(suite) {
+function collectTests(suite, lineage = []) {
   const tests = [];
+  const nextLineage = suite.title ? [...lineage, suite.title] : lineage;
   for (const spec of suite.specs ?? []) {
-    tests.push(...(spec.tests ?? []));
+    const specLineage = spec.title ? [...nextLineage, spec.title] : nextLineage;
+    for (const test of spec.tests ?? []) {
+      tests.push({ test, titlePath: specLineage });
+    }
   }
   for (const child of suite.suites ?? []) {
-    tests.push(...collectTests(child));
+    tests.push(...collectTests(child, nextLineage));
   }
   return tests;
 }
@@ -89,7 +95,7 @@ function duplicateTitlesByProject(tests) {
   const seen = new Set();
   const duplicates = [];
 
-  for (const test of tests) {
+  for (const { test } of tests) {
     const project = test.projectName ?? test.projectId ?? "default";
     const key = `${project}::${test.title}`;
     if (seen.has(key)) {
@@ -113,7 +119,43 @@ function errorMessages(errors = []) {
     .filter(Boolean);
 }
 
-export function validateReport(report) {
+export function parseRequiredPersonas(input) {
+  if (input === undefined) {
+    return [];
+  }
+
+  const trimmed = input.trim();
+  if (!trimmed) {
+    throw new Error("Required personas input must contain at least one persona when provided.");
+  }
+
+  const unique = new Set();
+  for (const rawPersona of trimmed.split(",")) {
+    unique.add(personaSchema.parse(rawPersona.trim()));
+  }
+  return [...unique];
+}
+
+function inferCoveredPersonas(tests) {
+  const covered = new Set();
+
+  for (const { test, titlePath } of tests) {
+    const haystack = [...titlePath, test.title]
+      .join(" ")
+      .toLowerCase();
+
+    for (const persona of personaSchema.options) {
+      const pattern = new RegExp(`\\b${persona}\\b`);
+      if (pattern.test(haystack)) {
+        covered.add(persona);
+      }
+    }
+  }
+
+  return covered;
+}
+
+export function validateReport(report, options = {}) {
   const parsed = reportSchema.safeParse(report);
   if (!parsed.success) {
     return [
@@ -123,18 +165,28 @@ export function validateReport(report) {
     ];
   }
 
-  const tests = parsed.data.suites.flatMap(collectTests);
+  const tests = parsed.data.suites.flatMap((suite) => collectTests(suite));
   if (tests.length === 0) {
     return ["Report contains zero tests - the selected suite did not run."];
   }
 
   const findings = [];
+  const requiredPersonas =
+    options.requiredPersonas ??
+    parseRequiredPersonas(options.env?.E2E_REQUIRED_PERSONAS ?? process.env.E2E_REQUIRED_PERSONAS);
+  const coveredPersonas = inferCoveredPersonas(tests);
+  const missingPersonas = requiredPersonas.filter((persona) => !coveredPersonas.has(persona));
+
+  if (missingPersonas.length > 0) {
+    findings.push(`Missing required personas: ${missingPersonas.join(", ")}`);
+  }
+
   const duplicates = duplicateTitlesByProject(tests);
   if (duplicates.length > 0) {
     findings.push(`Duplicate test titles found: ${duplicates.join(", ")}`);
   }
 
-  for (const test of tests) {
+  for (const { test } of tests) {
     const statuses = statusLabelsForTest(test);
     if (statuses.length === 0) {
       findings.push(`Malformed report entry for "${test.title}" - no test results were recorded.`);
@@ -173,12 +225,25 @@ export function validateReport(report) {
 }
 
 async function main(argv = process.argv.slice(2)) {
-  if (argv.length !== 1) {
-    console.error("Usage: node scripts/assert-playwright-results.mjs <json-report-path>");
+  let requiredPersonas;
+  const reportArgs = [];
+
+  for (const arg of argv) {
+    if (arg.startsWith("--required-personas=")) {
+      requiredPersonas = parseRequiredPersonas(arg.slice("--required-personas=".length));
+      continue;
+    }
+    reportArgs.push(arg);
+  }
+
+  if (reportArgs.length !== 1) {
+    console.error(
+      "Usage: node scripts/assert-playwright-results.mjs [--required-personas=buyer,seller,admin] <json-report-path>",
+    );
     process.exit(1);
   }
 
-  const reportPath = path.resolve(argv[0]);
+  const reportPath = path.resolve(reportArgs[0]);
   let raw;
   try {
     raw = await readFile(reportPath, "utf8");
@@ -195,7 +260,7 @@ async function main(argv = process.argv.slice(2)) {
     process.exit(1);
   }
 
-  const findings = validateReport(report);
+  const findings = validateReport(report, { requiredPersonas });
   if (findings.length > 0) {
     for (const finding of findings) {
       console.error(finding);
