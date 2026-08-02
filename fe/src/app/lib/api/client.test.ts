@@ -426,4 +426,99 @@ describe("request", () => {
       expect.objectContaining({ type: "auth:unauthorized" }),
     );
   });
+
+  it("retries parallel old-token requests after one successful same-tab refresh", async () => {
+    liveToken = "old-jwt";
+    const dispatchSpy = vi.spyOn(window, "dispatchEvent");
+    const refreshGate: {
+      promise: Promise<TokenSet>;
+      resolve: ((value: TokenSet) => void) | null;
+    } = {
+      promise: Promise.resolve({ accessToken: "unreachable", accessExpiresAt: 0 }),
+      resolve: null,
+    };
+    refreshGate.promise = new Promise<TokenSet>((resolve) => {
+      refreshGate.resolve = resolve;
+    });
+    const secondaryInitialResponse: {
+      promise: Promise<Response>;
+      resolve: ((value: Response) => void) | null;
+    } = {
+      promise: Promise.resolve(new Response("unreachable", { status: 500 })),
+      resolve: null,
+    };
+    secondaryInitialResponse.promise = new Promise<Response>((resolve) => {
+      secondaryInitialResponse.resolve = resolve;
+    });
+
+    refreshTokensMock
+      .mockImplementationOnce(() => refreshGate.promise)
+      .mockRejectedValueOnce(new Error("A second refresh must not be attempted"));
+    fetchSpy.mockImplementation((input, init) => {
+      const url = fetchInputToUrl(input);
+      const headers = init?.headers as Record<string, string>;
+      const isOldToken = headers.Authorization === "Bearer old-jwt";
+
+      if (url.endsWith("/me/primary")) {
+        return Promise.resolve(
+          isOldToken
+            ? new Response("unauthorized", { status: 401 })
+            : mockResponse({
+                body: {
+                  success: true,
+                  message: "ok",
+                  data: { id: "p1", name: "Primary" },
+                  errorCode: null,
+                  timestamp: "2026-05-15T00:00:00Z",
+                },
+              }),
+        );
+      }
+
+      if (url.endsWith("/me/secondary")) {
+        return isOldToken
+          ? secondaryInitialResponse.promise
+          : Promise.resolve(
+              mockResponse({
+                body: {
+                  success: true,
+                  message: "ok",
+                  data: { id: "p2", name: "Secondary" },
+                  errorCode: null,
+                  timestamp: "2026-05-15T00:00:00Z",
+                },
+              }),
+            );
+      }
+
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    const first = request({ method: "GET", path: "/me/primary", schema: productSchema });
+    const second = request({ method: "GET", path: "/me/secondary", schema: productSchema });
+
+    await waitFor(() => {
+      expect(refreshTokensMock).toHaveBeenCalledTimes(1);
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(refreshGate.resolve).not.toBeNull();
+    });
+
+    const releaseRefresh = refreshGate.resolve;
+    if (!releaseRefresh) throw new Error("Expected the refresh resolver to be captured");
+    releaseRefresh({ accessToken: "new-jwt", accessExpiresAt: Date.now() + 60_000 });
+    await expect(first).resolves.toEqual({ id: "p1", name: "Primary" });
+
+    const releaseSecondary401 = secondaryInitialResponse.resolve;
+    if (!releaseSecondary401) {
+      throw new Error("Expected the secondary 401 resolver to be captured");
+    }
+    releaseSecondary401(new Response("unauthorized", { status: 401 }));
+
+    await expect(second).resolves.toEqual({ id: "p2", name: "Secondary" });
+    expect(fetchSpy).toHaveBeenCalledTimes(4);
+    expect(refreshTokensMock).toHaveBeenCalledTimes(1);
+    expect(dispatchSpy).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: "auth:unauthorized" }),
+    );
+  });
 });

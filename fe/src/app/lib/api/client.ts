@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { getAccessToken } from "../auth/native-auth";
 import { apiUrl } from "../runtime-endpoints";
 
 import { ApiError, type ApiMeta } from "./envelope";
@@ -82,6 +83,12 @@ function settleSameTabRefresh(success: boolean): void {
   sameTabRefreshResolve?.(success);
   sameTabRefreshResolve = null;
   sameTabRefreshPromise = null;
+}
+
+function requestUsedStaleAccessToken(ctx: RequestContext): boolean {
+  const currentAccessToken = getAccessToken();
+  if (!currentAccessToken) return false;
+  return new Headers(ctx.init.headers).get("Authorization") !== `Bearer ${currentAccessToken}`;
 }
 
 async function retryAfterRefresh<TSchema extends z.ZodType>(
@@ -287,10 +294,24 @@ async function executeRequest<TSchema extends z.ZodType>(
     // `auth:unauthorized` — surfacing a thrown ApiError lets callers render
     // their own error UI while AuthProvider redirects.
     //
-    // Cross-tab coordination: if another tab is already refreshing, park behind
-    // its BroadcastChannel result instead of issuing a duplicate refresh.
+    // Prefer an in-flight local refresh. A request may have been sent with the
+    // old token even when its 401 arrives after that refresh settles, so replay
+    // stale-token requests before attempting another refresh.
     if (response.status === 401 && auth) {
-      if (crossTabRefreshPromise && !thisTabRefreshing) {
+      if (thisTabRefreshing) {
+        // This tab already owns a refresh. Wait for it, then retry once with
+        // the newly stored access token instead of forcing a logout race.
+        const succeeded = await ensureSameTabRefreshPromise();
+        if (!succeeded) {
+          window.dispatchEvent(new Event("auth:unauthorized"));
+          throw new ApiError(401, "UNAUTHORIZED", "Authentication required", correlationId);
+        }
+        response = await retryAfterRefresh(opts, requestCtx, correlationId, url, init);
+        if (response.status === 401) {
+          window.dispatchEvent(new Event("auth:unauthorized"));
+          throw new ApiError(401, "UNAUTHORIZED", "Authentication required", correlationId);
+        }
+      } else if (crossTabRefreshPromise) {
         // Another tab owns the refresh — wait for its outcome.
         const succeeded = await crossTabRefreshPromise;
         if (!succeeded) {
@@ -298,9 +319,14 @@ async function executeRequest<TSchema extends z.ZodType>(
           throw new ApiError(401, "UNAUTHORIZED", "Authentication required", correlationId);
         }
         response = await retryAfterRefresh(opts, requestCtx, correlationId, url, init);
-      } else if (!thisTabRefreshing) {
-        // This tab owns the refresh. Guard with !thisTabRefreshing so a second
-        // 401 arriving while we already hold the lock doesn't start a duplicate.
+      } else if (requestUsedStaleAccessToken(requestCtx)) {
+        response = await retryAfterRefresh(opts, requestCtx, correlationId, url, init);
+        if (response.status === 401) {
+          window.dispatchEvent(new Event("auth:unauthorized"));
+          throw new ApiError(401, "UNAUTHORIZED", "Authentication required", correlationId);
+        }
+      } else {
+        // This tab owns the refresh.
         thisTabRefreshing = true;
         void ensureSameTabRefreshPromise();
         REFRESH_CHANNEL?.postMessage({ type: "refresh-started" } satisfies RefreshMessage);
@@ -330,19 +356,6 @@ async function executeRequest<TSchema extends z.ZodType>(
         // post-refresh response is STILL 401, surface it as an unrecoverable
         // auth failure so the caller sees a clean 401 rather than a 503 (which
         // would happen if retryInterceptor skipped this 401 mid-retry).
-        if (response.status === 401) {
-          window.dispatchEvent(new Event("auth:unauthorized"));
-          throw new ApiError(401, "UNAUTHORIZED", "Authentication required", correlationId);
-        }
-      } else {
-        // This tab already owns a refresh. Wait for it, then retry once with
-        // the newly stored access token instead of forcing a logout race.
-        const succeeded = await ensureSameTabRefreshPromise();
-        if (!succeeded) {
-          window.dispatchEvent(new Event("auth:unauthorized"));
-          throw new ApiError(401, "UNAUTHORIZED", "Authentication required", correlationId);
-        }
-        response = await retryAfterRefresh(opts, requestCtx, correlationId, url, init);
         if (response.status === 401) {
           window.dispatchEvent(new Event("auth:unauthorized"));
           throw new ApiError(401, "UNAUTHORIZED", "Authentication required", correlationId);
