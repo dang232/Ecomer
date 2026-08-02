@@ -236,7 +236,12 @@ def workload_documents(item: dict) -> str:
           medium: Memory
           sizeLimit: {scratch_limit}
 '''
-    run_as_user = 101 if service_id == "frontend" else 10001
+    if service_id == "frontend":
+        run_as_user = 101
+    elif service_id == "video-moderator":
+        run_as_user = 65532
+    else:
+        run_as_user = 10001
     readiness = item["probe"]["readiness"]
     liveness = item["probe"]["liveness"]
     image = item["image"] + "@" + UNRESOLVED_DIGEST

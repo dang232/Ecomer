@@ -52,6 +52,7 @@ TOPICS=(
   "video.moderation.completed:3"
   "video.published:3"
   "video.rejected:3"
+  "video.moderation.dlt:3"
   "video.upload.completed.DLT:3"
   "video.transcode.completed.DLT:3"
   # GDPR topics
@@ -199,11 +200,12 @@ $ACL --add --allow-principal User:svc-video-transcoder --operation Write --topic
 $ACL --add --allow-principal User:svc-video-transcoder --operation Read --topic video.transcode.completed.DLT
 $ACL --add --allow-principal User:svc-video-transcoder --operation Write --topic video.transcode.completed.DLT
 
-# video-moderator (svc-video-moderator): consumes video.transcode.completed directly (no relay topic); produces video.moderation.completed, video.published, video.rejected
+# video-moderator (svc-video-moderator): consumes video.transcode.completed directly (no relay topic); produces video.moderation.completed, video.published, video.rejected, video.moderation.dlt
 $ACL --add --allow-principal User:svc-video-moderator --operation Read --topic video.transcode.completed
 $ACL --add --allow-principal User:svc-video-moderator --operation Write --topic video.moderation.completed
 $ACL --add --allow-principal User:svc-video-moderator --operation Write --topic video.published
 $ACL --add --allow-principal User:svc-video-moderator --operation Write --topic video.rejected
+$ACL --add --allow-principal User:svc-video-moderator --operation Write --topic video.moderation.dlt
 
 echo "All ACLs configured."
 rm -f $ADMIN_CONFIG

@@ -571,7 +571,7 @@ services:
     # Postgres (broader attack surface than MinIO-only), so defence-in-depth
     # matters. Model weights and frame extracts land in /tmp via tmpfs.
     tmpfs:
-      - /tmp/video-moderator:size=2G,noexec
+      - /tmp/video-moderator:size=2G,noexec,uid=65532,gid=65532,mode=1770
     security_opt:
       - no-new-privileges:true
     read_only: true
