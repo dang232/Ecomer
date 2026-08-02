@@ -110,6 +110,11 @@ public class SecurityConfig {
                 // token itself via WsJwtVerifier before binding the socket to a user.
                 // A query-token fallback remains in that service for older clients.
                 .pathMatchers("/ws/messaging").permitAll()
+                // Socket.IO sends its auth payload only after the Engine.IO upgrade,
+                // so this handshake has no Authorization header for the resource
+                // server to validate. notification-service verifies auth.token before
+                // it associates the socket with a user or joins a user room.
+                .pathMatchers("/ws/notifications/**").permitAll()
                 .pathMatchers("/actuator/health", "/actuator/info", "/actuator/prometheus").permitAll()
                 // ponytail: glob permits /<any>/actuator/health for downstream services — FE admin health checks carry no token
                 .pathMatchers("/" + "*/actuator/health", "/" + "*/actuator/info").permitAll()

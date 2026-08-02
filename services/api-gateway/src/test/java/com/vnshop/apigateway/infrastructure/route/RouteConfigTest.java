@@ -77,6 +77,9 @@ class RouteConfigTest {
         assertThat(matches(route(routes, "shipping-webhooks"), "/webhooks/ghn")).isTrue();
         assertThat(matches(route(routes, "shipping-webhooks"), "/webhooks/ghtk")).isTrue();
         assertThat(matches(route(routes, "shipping-webhooks"), "/webhooks/unknown")).isFalse();
+        assertThat(route(routes, "notifications-ws").getUri()).isEqualTo(URI.create("http://notification:80"));
+        assertThat(matches(route(routes, "notifications-ws"), "/ws/notifications/")).isTrue();
+        assertThat(matches(route(routes, "notifications-ws"), "/ws/messaging")).isFalse();
         assertThat(route(routes, "checkout").getUri()).isEqualTo(URI.create("http://order:80"));
         assertThat(route(routes, "checkout-coupons").getUri()).isEqualTo(URI.create("http://coupon:80"));
         assertThat(matches(route(routes, "checkout-coupons"), "/checkout/apply-coupon")).isTrue();
