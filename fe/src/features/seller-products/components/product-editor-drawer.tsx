@@ -1,19 +1,13 @@
 /**
- * ProductEditorDrawer — four-section drawer for product create/edit.
+ * Product editor for creating and updating seller catalog records.
  *
- * - Sticky footer with Cancel + Save.
- * - On close with isDirty: AlertDialog (Discard / Continue editing).
- * - Creation flow: save → POST → DRAFT returned → persist to sessionStorage → show
- *   publication recovery surface (Publish / Continue editing / Delete draft).
- * - Edit flow: save → PUT → done.
- *
- * Image removal before save is form-state-only; destructive activation/replacement
- * calls require confirmation (handled in the mutation layer).
+ * The form owns product fields. Local image files live in a separate state
+ * collection and are uploaded only after a product ID exists.
  */
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -28,16 +22,22 @@ import {
 import type { SellerProductWriteBody } from "@/shared/api/endpoints/products";
 import { AlertDialog, Button, Drawer } from "@/shared/ui";
 
+import { sellerProductCategoriesOptions, sellerProductDetailOptions } from "../api/query-options";
 import { clearDraftRecovery, getDraftRecovery, saveDraftRecovery } from "../model/draft-recovery";
-import { sellerProductFormSchema, toSellerProductWriteBody } from "../model/product-form";
+import {
+  emptySellerProductForm,
+  fromSellerProduct,
+  sellerProductFormSchema,
+  toSellerProductWriteBody,
+} from "../model/product-form";
 import type { SellerProductForm } from "../model/product-form";
+import { type PendingProductImage, uploadProductImages } from "../model/product-image-upload";
 
 import { ProductBasicFields } from "./product-basic-fields";
 import { ProductMediaFields } from "./product-media-fields";
 import { ProductPublication } from "./product-publication";
+import { ProductVideoFields } from "./product-video-fields";
 import { ProductVariantFields } from "./product-variant-fields";
-
-// ── Props ───────────────────────────────────────────────────────────────────────
 
 export interface ProductEditorDrawerProps {
   open: boolean;
@@ -48,118 +48,193 @@ export interface ProductEditorDrawerProps {
   onSave: (values: SellerProductForm) => Promise<void>;
 }
 
-// ── Image upload helper ────────────────────────────────────────────────────────
-
-async function _uploadImage(productId: string, file: File): Promise<string> {
-  const { sellerProductImageUploadUrl, sellerProductImageActivate } =
-    await import("@/shared/api/endpoints/products");
-  const presigned = await sellerProductImageUploadUrl(productId, {
-    contentType: file.type,
-    size: file.size,
-  });
-  const key = presigned.key ?? presigned.uploadUrl.split("?")[0];
-  const putRes = await fetch(presigned.uploadUrl, {
-    method: "PUT",
-    headers: { "Content-Type": file.type },
-    body: file,
-    signal: AbortSignal.timeout(30_000),
-  });
-  if (!putRes.ok) throw new Error(`HTTP_${putRes.status}`);
-  const activated = await sellerProductImageActivate(productId, { key });
-  return activated.url;
+interface SaveInput {
+  values: SellerProductForm;
+  body: SellerProductWriteBody;
+  pendingImages: readonly PendingProductImage[];
 }
 
-// ── Drawer ─────────────────────────────────────────────────────────────────────
+interface UpdateInput extends SaveInput {
+  productId: string;
+  keepDraftOpen: boolean;
+}
+
+interface SaveResult {
+  result: Awaited<ReturnType<typeof sellerProductCreate>>;
+  values: SellerProductForm;
+}
+
+class DraftMediaSaveError extends Error {
+  constructor(
+    readonly productId: string,
+    readonly values: SellerProductForm,
+    cause: unknown,
+  ) {
+    super("draft_media_save_failed", { cause });
+    this.name = "DraftMediaSaveError";
+  }
+}
+
+async function attachPendingImages(
+  productId: string,
+  values: SellerProductForm,
+  pendingImages: readonly PendingProductImage[],
+): Promise<SellerProductForm> {
+  if (pendingImages.length === 0) return values;
+  const uploaded = await uploadProductImages(productId, pendingImages);
+  return {
+    ...values,
+    images: [...values.images, ...uploaded].map((image, index) => ({
+      ...image,
+      sortOrder: index,
+    })),
+  };
+}
 
 export function ProductEditorDrawer({ open, product, onClose, onSave }: ProductEditorDrawerProps) {
   const { t } = useTranslation();
-  const qc = useQueryClient();
+  const queryClient = useQueryClient();
+  const isEdit = product !== null;
+  const categoriesQuery = useQuery(sellerProductCategoriesOptions());
+  const productDetailQuery = useQuery({
+    ...sellerProductDetailOptions(product?.id ?? ""),
+    enabled: open && isEdit && Boolean(product?.id),
+  });
 
-  const isEdit = !!product;
-
-  // Draft recovery: check on mount if we're recovering a draft.
   const [recoveredDraft, setRecoveredDraft] = useState<{
     productId: string;
     formValues: SellerProductForm;
   } | null>(null);
+  const [pendingImages, setPendingImages] = useState<PendingProductImage[]>([]);
+  const pendingImagesRef = useRef<PendingProductImage[]>([]);
+
+  const updatePendingImages = useCallback((nextImages: PendingProductImage[]) => {
+    setPendingImages((previousImages) => {
+      const nextIds = new Set(nextImages.map((image) => image.id));
+      previousImages.forEach((image) => {
+        if (!nextIds.has(image.id)) URL.revokeObjectURL(image.previewUrl);
+      });
+      return nextImages;
+    });
+  }, []);
+
+  const clearPendingImages = useCallback(() => updatePendingImages([]), [updatePendingImages]);
+
+  useEffect(() => {
+    pendingImagesRef.current = pendingImages;
+  }, [pendingImages]);
+
+  useEffect(
+    () => () => {
+      pendingImagesRef.current.forEach((image) => URL.revokeObjectURL(image.previewUrl));
+    },
+    [],
+  );
 
   const form = useForm<SellerProductForm>({
     resolver: zodResolver(sellerProductFormSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-      categoryId: "",
-      brand: "",
-      tags: [],
-      images: [],
-      variants: [{ sku: "", name: "", priceAmount: 0, stockQuantity: 0 }],
-    },
+    defaultValues: emptySellerProductForm(),
     mode: "onTouched",
   });
-
   const { reset, formState } = form;
   const isDirty = formState.isDirty;
 
-  // Check for draft recovery on open.
   useEffect(() => {
-    if (open && !isEdit) {
-      const draft = getDraftRecovery();
-      if (draft) {
-        setRecoveredDraft(draft);
-        reset(draft.formValues);
-      } else {
-        setRecoveredDraft(null);
-        reset({
-          name: "",
-          description: "",
-          categoryId: "",
-          brand: "",
-          tags: [],
-          images: [],
-          variants: [{ sku: "", name: "", priceAmount: 0, stockQuantity: 0 }],
-        });
-      }
+    if (!open) return;
+    clearPendingImages();
+    if (isEdit) {
+      setRecoveredDraft(null);
+      return;
     }
-  }, [open, isEdit, reset]);
 
-  // ── Mutations ───────────────────────────────────────────────────────────────
+    const draft = getDraftRecovery();
+    if (draft) {
+      setRecoveredDraft(draft);
+      reset(draft.formValues);
+    } else {
+      setRecoveredDraft(null);
+      reset(emptySellerProductForm());
+    }
+  }, [clearPendingImages, isEdit, open, product?.id, reset]);
+
+  useEffect(() => {
+    if (!open || !isEdit || !productDetailQuery.data) return;
+    clearPendingImages();
+    setRecoveredDraft(null);
+    reset(fromSellerProduct(productDetailQuery.data));
+  }, [clearPendingImages, isEdit, open, productDetailQuery.data, reset]);
+
+  const invalidateProductQueries = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["catalog", "products"] }),
+      queryClient.invalidateQueries({ queryKey: ["seller", "products"] }),
+    ]);
+  };
 
   const createMutation = useMutation({
-    mutationFn: async (body: SellerProductWriteBody) => {
-      const result = await sellerProductCreate(body);
-      return result;
+    mutationFn: async (input: SaveInput): Promise<SaveResult> => {
+      const created = await sellerProductCreate(input.body);
+      try {
+        const values = await attachPendingImages(created.id, input.values, input.pendingImages);
+        if (input.pendingImages.length > 0) {
+          const updated = await sellerProductUpdate(created.id, toSellerProductWriteBody(values));
+          return { result: updated, values };
+        }
+        return { result: created, values };
+      } catch (error) {
+        // Product creation completed before direct-to-storage upload. Keep the
+        // server draft recoverable so a transient media failure never forces a
+        // seller to re-enter the product data or create duplicate drafts.
+        throw new DraftMediaSaveError(created.id, input.values, error);
+      }
     },
-    onSuccess: async (result) => {
-      // Persist to sessionStorage for recovery.
-      saveDraftRecovery(result.id, form.getValues());
-
-      // Notify caller (invalidates queries, etc.)
-      await onSave(form.getValues());
-
-      // Transition to "draft saved — awaiting publication" state.
-      setRecoveredDraft({ productId: result.id, formValues: form.getValues() });
-
+    onSuccess: async ({ result, values }) => {
+      reset(values);
+      clearPendingImages();
+      saveDraftRecovery(result.id, values);
+      await onSave(values);
+      setRecoveredDraft({ productId: result.id, formValues: values });
       toast.success(t("seller.products.editor.saveOk"));
-      await qc.invalidateQueries({ queryKey: ["catalog", "products"] });
+      await invalidateProductQueries();
     },
-    onError: (err) => {
-      toast.error(err instanceof ApiError ? err.message : t("seller.products.editor.saveErr"));
+    onError: (error) => {
+      if (error instanceof DraftMediaSaveError) {
+        reset(error.values);
+        saveDraftRecovery(error.productId, error.values);
+        setRecoveredDraft({ productId: error.productId, formValues: error.values });
+        toast.error(t("seller.products.editor.savePartialErr"));
+        void invalidateProductQueries();
+        return;
+      }
+      toast.error(error instanceof ApiError ? error.message : t("seller.products.editor.saveErr"));
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (body: SellerProductWriteBody) => {
-      if (!product) throw new Error("No product id");
-      return sellerProductUpdate(product.id, body);
+    mutationFn: async (input: UpdateInput): Promise<SaveResult> => {
+      const values = await attachPendingImages(input.productId, input.values, input.pendingImages);
+      const result = await sellerProductUpdate(input.productId, toSellerProductWriteBody(values));
+      return { result, values };
     },
-    onSuccess: async () => {
-      await onSave(form.getValues());
+    onSuccess: async ({ values }, input) => {
+      reset(values);
+      clearPendingImages();
+      if (input.keepDraftOpen) {
+        saveDraftRecovery(input.productId, values);
+        setRecoveredDraft({ productId: input.productId, formValues: values });
+        toast.success(t("seller.products.editor.updateOk"));
+        await invalidateProductQueries();
+        return;
+      }
+      await onSave(values);
       toast.success(t("seller.products.editor.updateOk"));
-      await qc.invalidateQueries({ queryKey: ["catalog", "products"] });
+      await invalidateProductQueries();
       onClose();
     },
-    onError: (err) => {
-      toast.error(err instanceof ApiError ? err.message : t("seller.products.editor.updateErr"));
+    onError: (error) => {
+      toast.error(
+        error instanceof ApiError ? error.message : t("seller.products.editor.updateErr"),
+      );
     },
   });
 
@@ -168,15 +243,18 @@ export function ProductEditorDrawer({ open, product, onClose, onSave }: ProductE
       await sellerProductPublish(id);
       return id;
     },
-    onSuccess: async (_id: string) => {
+    onSuccess: async () => {
       clearDraftRecovery();
+      clearPendingImages();
       setRecoveredDraft(null);
       toast.success(t("seller.products.editor.publishOk"));
-      await qc.invalidateQueries({ queryKey: ["catalog", "products"] });
+      await invalidateProductQueries();
       onClose();
     },
-    onError: (err) => {
-      toast.error(err instanceof ApiError ? err.message : t("seller.products.editor.publishErr"));
+    onError: (error) => {
+      toast.error(
+        error instanceof ApiError ? error.message : t("seller.products.editor.publishErr"),
+      );
     },
   });
 
@@ -187,26 +265,35 @@ export function ProductEditorDrawer({ open, product, onClose, onSave }: ProductE
     },
     onSuccess: async () => {
       clearDraftRecovery();
+      clearPendingImages();
       setRecoveredDraft(null);
       toast.success(t("seller.products.editor.deleteOk"));
-      await qc.invalidateQueries({ queryKey: ["catalog", "products"] });
+      await invalidateProductQueries();
       onClose();
     },
-    onError: (err) => {
-      toast.error(err instanceof ApiError ? err.message : t("seller.products.editor.deleteErr"));
+    onError: (error) => {
+      toast.error(
+        error instanceof ApiError ? error.message : t("seller.products.editor.deleteErr"),
+      );
     },
   });
-
-  // ── Submit handler ──────────────────────────────────────────────────────────
 
   const handleSave = (values: SellerProductForm) => {
     if (createMutation.isPending || updateMutation.isPending) return;
     const body = toSellerProductWriteBody(values);
-    if (isEdit) {
-      updateMutation.mutate(body);
-    } else {
-      createMutation.mutate(body);
+    const images = [...pendingImages];
+    const existingProductId = recoveredDraft?.productId ?? product?.id;
+    if (existingProductId) {
+      updateMutation.mutate({
+        productId: existingProductId,
+        values,
+        body,
+        pendingImages: images,
+        keepDraftOpen: Boolean(recoveredDraft),
+      });
+      return;
     }
+    createMutation.mutate({ values, body, pendingImages: images });
   };
 
   const isBusy =
@@ -214,9 +301,10 @@ export function ProductEditorDrawer({ open, product, onClose, onSave }: ProductE
     updateMutation.isPending ||
     publishMutation.isPending ||
     deleteMutation.isPending;
-
-  // ── Discard dialog state ────────────────────────────────────────────────────
-
+  const isExistingProduct = isEdit || recoveredDraft !== null;
+  const persistedProductId = recoveredDraft?.productId ?? product?.id ?? null;
+  const editorLoading = isEdit && productDetailQuery.isPending;
+  const editorError = isEdit && productDetailQuery.isError;
   const [discardOpen, setDiscardOpen] = useState(false);
 
   const handleClose = () => {
@@ -224,76 +312,47 @@ export function ProductEditorDrawer({ open, product, onClose, onSave }: ProductE
     if (isDirty) {
       setDiscardOpen(true);
     } else {
+      clearPendingImages();
       onClose();
     }
   };
 
   const handleDiscardConfirm = () => {
     setDiscardOpen(false);
+    clearPendingImages();
     onClose();
   };
 
-  // ── Draft recovery: publish ─────────────────────────────────────────────────
-
   const handlePublish = () => {
-    if (!recoveredDraft) return;
-    publishMutation.mutate(recoveredDraft.productId);
+    if (recoveredDraft) publishMutation.mutate(recoveredDraft.productId);
   };
-
-  // ── Draft recovery: continue editing ───────────────────────────────────────
-
-  const handleContinueEditing = () => {
-    // Keep editor open; recovery stays in sessionStorage.
-    setRecoveredDraft(null);
-  };
-
-  // ── Draft recovery: delete ───────────────────────────────────────────────────
 
   const handleDelete = () => {
-    if (!recoveredDraft) return;
-    deleteMutation.mutate(recoveredDraft.productId);
+    if (recoveredDraft) deleteMutation.mutate(recoveredDraft.productId);
   };
 
-  // ── Footer ──────────────────────────────────────────────────────────────────
+  const handleContinueEditing = () => setRecoveredDraft(null);
 
+  const savePending = isExistingProduct ? updateMutation.isPending : createMutation.isPending;
+  const saveLabel = recoveredDraft
+    ? t("seller.products.editor.updateDraft")
+    : isEdit
+      ? t("seller.products.editor.save")
+      : t("seller.products.editor.saveDraft");
   const footer = (
     <>
       <Button variant="outline" onClick={handleClose} disabled={isBusy}>
         {t("seller.products.editor.cancel")}
       </Button>
-      {!isEdit && !recoveredDraft ? (
-        <Button
-          variant="primary"
-          onClick={form.handleSubmit(handleSave)}
-          disabled={isBusy}
-          pending={createMutation.isPending}
-          pendingLabel={t("seller.products.editor.saving")}
-        >
-          {t("seller.products.editor.saveDraft")}
-        </Button>
-      ) : null}
-      {recoveredDraft ? (
-        <Button
-          variant="accent"
-          onClick={form.handleSubmit(handleSave)}
-          disabled={isBusy}
-          pending={updateMutation.isPending}
-          pendingLabel={t("seller.products.editor.saving")}
-        >
-          {t("seller.products.editor.updateDraft")}
-        </Button>
-      ) : null}
-      {isEdit ? (
-        <Button
-          variant="primary"
-          onClick={form.handleSubmit(handleSave)}
-          disabled={isBusy}
-          pending={updateMutation.isPending}
-          pendingLabel={t("seller.products.editor.saving")}
-        >
-          {t("seller.products.editor.save")}
-        </Button>
-      ) : null}
+      <Button
+        variant="primary"
+        onClick={form.handleSubmit(handleSave)}
+        disabled={isBusy || editorLoading || editorError}
+        pending={savePending}
+        pendingLabel={t("seller.products.editor.saving")}
+      >
+        {saveLabel}
+      </Button>
     </>
   );
 
@@ -308,82 +367,97 @@ export function ProductEditorDrawer({ open, product, onClose, onSave }: ProductE
               ? t("seller.products.editor.titleDraft")
               : t("seller.products.editor.titleNew")
         }
+        description={t("seller.products.editor.description")}
+        footer={footer}
+        showCloseButton={false}
         onOpenChange={(next) => {
           if (!next) handleClose();
         }}
       >
-        <div className="space-y-6">
-          {/* Basic */}
-          <section aria-labelledby="basic-heading">
-            <h3
-              id="basic-heading"
-              className="text-sm font-semibold text-foreground mb-3 uppercase tracking-wide"
-            >
-              {t("seller.products.editor.sectionBasic")}
-            </h3>
-            <ProductBasicFields
-              register={form.register}
-              errors={form.formState.errors}
-              disabled={isBusy}
-            />
-          </section>
-
-          {/* Media */}
-          <section aria-labelledby="media-heading">
-            <h3
-              id="media-heading"
-              className="text-sm font-semibold text-foreground mb-3 uppercase tracking-wide"
-            >
-              {t("seller.products.editor.sectionMedia")}
-            </h3>
-            <ProductMediaFields form={form} disabled={isBusy} />
-          </section>
-
-          {/* Variants */}
-          <section aria-labelledby="variants-heading">
-            <h3
-              id="variants-heading"
-              className="text-sm font-semibold text-foreground mb-3 uppercase tracking-wide"
-            >
-              {t("seller.products.editor.sectionVariants")}
-            </h3>
-            <ProductVariantFields form={form} disabled={isBusy} />
-          </section>
-
-          {/* Publication — only shown for recovered drafts */}
-          {recoveredDraft ? (
-            <section aria-labelledby="publication-heading">
+        {editorLoading ? (
+          <div className="flex min-h-48 items-center justify-center text-sm text-muted-foreground">
+            {t("seller.products.editor.loading")}
+          </div>
+        ) : editorError ? (
+          <div className="flex min-h-48 flex-col items-center justify-center gap-3 text-center">
+            <p className="text-sm font-medium text-foreground">
+              {t("seller.products.editor.loadError")}
+            </p>
+            <Button variant="outline" size="sm" onClick={() => productDetailQuery.refetch()}>
+              {t("seller.products.editor.retry")}
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <section aria-labelledby="basic-heading">
               <h3
-                id="publication-heading"
-                className="text-sm font-semibold text-foreground mb-3 uppercase tracking-wide"
+                id="basic-heading"
+                className="mb-3 text-sm font-semibold uppercase tracking-wide text-foreground"
               >
-                {t("seller.products.editor.sectionPublication")}
+                {t("seller.products.editor.sectionBasic")}
               </h3>
-              <ProductPublication
-                productId={recoveredDraft.productId}
-                onPublish={handlePublish}
-                onDelete={handleDelete}
-                onContinueEditing={handleContinueEditing}
-                publishPending={publishMutation.isPending}
-                deletePending={deleteMutation.isPending}
+              <ProductBasicFields
+                register={form.register}
+                control={form.control}
+                errors={form.formState.errors}
+                categories={categoriesQuery.data ?? []}
+                categoriesLoading={categoriesQuery.isLoading}
+                categoriesError={categoriesQuery.isError}
                 disabled={isBusy}
               />
             </section>
-          ) : null}
-        </div>
+
+            <section aria-labelledby="media-heading">
+              <h3
+                id="media-heading"
+                className="mb-3 text-sm font-semibold uppercase tracking-wide text-foreground"
+              >
+                {t("seller.products.editor.sectionMedia")}
+              </h3>
+              <ProductMediaFields
+                form={form}
+                pendingImages={pendingImages}
+                onPendingImagesChange={updatePendingImages}
+                disabled={isBusy}
+              />
+              {persistedProductId ? (
+                <ProductVideoFields productId={persistedProductId} disabled={isBusy} />
+              ) : null}
+            </section>
+
+            <section aria-labelledby="variants-heading">
+              <h3
+                id="variants-heading"
+                className="mb-3 text-sm font-semibold uppercase tracking-wide text-foreground"
+              >
+                {t("seller.products.editor.sectionVariants")}
+              </h3>
+              <ProductVariantFields form={form} disabled={isBusy} />
+            </section>
+
+            {recoveredDraft ? (
+              <section aria-labelledby="publication-heading">
+                <h3
+                  id="publication-heading"
+                  className="mb-3 text-sm font-semibold uppercase tracking-wide text-foreground"
+                >
+                  {t("seller.products.editor.sectionPublication")}
+                </h3>
+                <ProductPublication
+                  productId={recoveredDraft.productId}
+                  onPublish={handlePublish}
+                  onDelete={handleDelete}
+                  onContinueEditing={handleContinueEditing}
+                  publishPending={publishMutation.isPending}
+                  deletePending={deleteMutation.isPending}
+                  disabled={isBusy}
+                />
+              </section>
+            ) : null}
+          </div>
+        )}
       </Drawer>
 
-      {/* Sticky footer rendered outside drawer scroll area */}
-      {open ? (
-        <div
-          className="fixed bottom-0 right-0 z-[60] w-full max-w-[min(100vw,36rem)] border-t border-border bg-card px-5 py-4 sm:px-6 flex flex-wrap items-center justify-end gap-3"
-          style={{ maxWidth: "min(100vw, 36rem)" }}
-        >
-          {footer}
-        </div>
-      ) : null}
-
-      {/* Discard confirmation */}
       <AlertDialog
         open={discardOpen}
         onClose={() => setDiscardOpen(false)}

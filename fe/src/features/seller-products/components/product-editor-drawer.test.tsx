@@ -14,6 +14,57 @@ import type { SellerProductForm } from "../model/product-form";
 
 import { ProductEditorDrawer } from "./product-editor-drawer";
 
+const { useVideoUploadMock, useVideoStatusMock, useProductVideosMock } = vi.hoisted(() => ({
+  useVideoUploadMock: vi.fn(() => ({
+    state: {
+      phase: "idle" as const,
+      progress: 0,
+      videoId: null,
+      error: null,
+      estimatedDuration: null,
+      filename: null,
+    },
+    upload: vi.fn(),
+    cancel: vi.fn(),
+    reset: vi.fn(),
+    retry: vi.fn(),
+  })),
+  useVideoStatusMock: vi.fn(() => ({
+    status: undefined,
+    data: undefined,
+    isStuck: false,
+    error: null,
+    isLoading: false,
+  })),
+  useProductVideosMock: vi.fn(() => ({
+    videos: [],
+    isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
+  })),
+}));
+
+vi.mock("@/features/videos", () => ({
+  VideoUploadDropzone: () => <div data-testid="video-upload-dropzone" />,
+  VideoUploadProgress: ({ videoId }: { videoId: string }) => (
+    <div data-testid="video-upload-progress" data-video-id={videoId} />
+  ),
+  useVideoUpload: useVideoUploadMock,
+  useVideoStatus: useVideoStatusMock,
+  useProductVideos: useProductVideosMock,
+}));
+
+vi.mock("../api/query-options", () => ({
+  sellerProductCategoriesOptions: () => ({
+    queryKey: ["seller-products-test-categories"],
+    queryFn: () => Promise.resolve([]),
+  }),
+  sellerProductDetailOptions: (id: string) => ({
+    queryKey: ["seller-products-test-detail", id],
+    queryFn: () => Promise.resolve({}),
+  }),
+}));
+
 // ── Mock child sections so we test drawer-level logic only ─────────────────────
 
 vi.mock("./product-basic-fields", () => ({
@@ -78,6 +129,8 @@ describe("ProductEditorDrawer", () => {
         brand: "",
         tags: [],
         images: [],
+        offerMode: "single",
+        offer: { sku: "", priceAmount: 0, stockQuantity: 0 },
         variants: [],
       },
     });
@@ -121,5 +174,40 @@ describe("ProductEditorDrawer", () => {
   it("renders no publication mock when opened in edit mode", () => {
     renderDrawer(true, { id: "p-1" }, vi.fn(), vi.fn());
     expect(screen.queryByTestId("publication")).not.toBeInTheDocument();
+  });
+
+  it("mounts the product video upload boundary after a draft has a server ID", async () => {
+    vi.mocked(draftRecovery.getDraftRecovery).mockReturnValueOnce({
+      productId: "draft-video-1",
+      formValues: {
+        name: "Draft",
+        description: "",
+        categoryId: "",
+        brand: "",
+        tags: [],
+        images: [],
+        offerMode: "single",
+        offer: { sku: "", priceAmount: 0, stockQuantity: 0 },
+        variants: [],
+      },
+    });
+
+    renderDrawer(true, null, vi.fn(), vi.fn());
+
+    await waitFor(() => {
+      expect(screen.getByTestId("video-upload-dropzone")).toBeInTheDocument();
+    });
+
+    expect(useVideoUploadMock).toHaveBeenCalledWith(
+      expect.objectContaining({ entityId: "draft-video-1", context: "PRODUCT" }),
+    );
+    expect(useProductVideosMock).toHaveBeenCalledWith("draft-video-1");
+  });
+
+  it("does not mount video upload before a new product is persisted", () => {
+    renderDrawer(true, null, vi.fn(), vi.fn());
+
+    expect(screen.queryByTestId("video-upload-dropzone")).not.toBeInTheDocument();
+    expect(useVideoUploadMock).not.toHaveBeenCalled();
   });
 });
