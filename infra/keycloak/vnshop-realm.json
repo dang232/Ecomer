@@ -285,7 +285,7 @@
     "realm-management": [
       {
         "client": "vnshop-admin-api",
-        "roles": ["manage-users", "view-users", "query-users"]
+        "roles": ["manage-users", "view-users", "query-users", "view-realm"]
       }
     ]
   },
@@ -320,8 +320,7 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["SELLER"],
-      "requiredActions": ["CONFIGURE_TOTP"]
+      "realmRoles": ["SELLER"]
     },
     {
       "username": "admin1",
@@ -337,8 +336,7 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["ADMIN"],
-      "requiredActions": ["CONFIGURE_TOTP"]
+      "realmRoles": ["ADMIN"]
     }
   ],
   "clientScopes": [
