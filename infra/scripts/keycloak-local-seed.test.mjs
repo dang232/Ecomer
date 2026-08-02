@@ -31,4 +31,5 @@ test("the bootstrap documents both default local QA repair and explicit MFA opt-
   assert.match(script, /REQUIRED_ACTIONS='\[\]/);
   assert.match(script, /REQUIRED_ACTIONS='\["CONFIGURE_TOTP"\]'/);
   assert.match(script, /requiredActions=\$\{REQUIRED_ACTIONS\}/);
+  assert.match(script, /\) \|\| user_id=""/);
 });

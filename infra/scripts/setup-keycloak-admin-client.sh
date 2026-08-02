@@ -70,7 +70,7 @@ repair_local_seed_users() {
   for username in seller1 admin1; do
     local user_id
     user_id=$(kcadm get users -r "${KC_REALM}" --query "username=${username}" --fields id 2>/dev/null \
-      | grep -oE '"id" : "[^"]+"' | head -1 | sed 's/"id" : "//;s/"//')
+      | grep -oE '"id" : "[^"]+"' | head -1 | sed 's/"id" : "//;s/"//') || user_id=""
     if [ -z "${user_id}" ]; then
       echo "  - ${username}: not present; leaving realm unchanged"
       continue
