@@ -36,8 +36,8 @@ import { type PendingProductImage, uploadProductImages } from "../model/product-
 import { ProductBasicFields } from "./product-basic-fields";
 import { ProductMediaFields } from "./product-media-fields";
 import { ProductPublication } from "./product-publication";
-import { ProductVideoFields } from "./product-video-fields";
 import { ProductVariantFields } from "./product-variant-fields";
+import { ProductVideoFields } from "./product-video-fields";
 
 export interface ProductEditorDrawerProps {
   open: boolean;

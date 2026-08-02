@@ -3,32 +3,42 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { VideoUploadState } from "@/features/videos/hooks/useVideoUpload";
 
+type VideoUploadMockValue = {
+  state: VideoUploadState;
+  upload: (file: File) => void;
+  cancel: () => void;
+  reset: () => void;
+  retry: () => void;
+};
+
 const { useVideoUploadMock, useProductVideosMock, uploadMock, cancelMock, retryMock } = vi.hoisted(
-  () => ({
-    uploadMock: vi.fn(),
-    cancelMock: vi.fn(),
-    retryMock: vi.fn(),
-    useVideoUploadMock: vi.fn(() => ({
+  () => {
+    const uploadMock = vi.fn<(file: File) => void>();
+    const cancelMock = vi.fn<() => void>();
+    const retryMock = vi.fn<() => void>();
+    const useVideoUploadMock = vi.fn<() => VideoUploadMockValue>(() => ({
       state: {
-        phase: "uploading" as VideoUploadState["phase"],
+        phase: "uploading",
         progress: 42,
-        videoId: "uploaded-video-1" as string | null,
-        error: null as string | null,
-        estimatedDuration: 12 as number | null,
-        filename: "demo.mp4" as string | null,
+        videoId: "uploaded-video-1",
+        error: null,
+        estimatedDuration: 12,
+        filename: "demo.mp4",
       },
       upload: uploadMock,
       cancel: cancelMock,
       reset: vi.fn(),
       retry: retryMock,
-    })),
-    useProductVideosMock: vi.fn(() => ({
+    }));
+    const useProductVideosMock = vi.fn(() => ({
       videos: [],
       isLoading: false,
       isError: false,
       refetch: vi.fn(),
-    })),
-  }),
+    }));
+
+    return { useVideoUploadMock, useProductVideosMock, uploadMock, cancelMock, retryMock };
+  },
 );
 
 vi.mock("@/features/videos", () => ({
@@ -92,12 +102,12 @@ describe("ProductVideoFields", () => {
   it("wires the dropzone retry action when the upload is in an error state", () => {
     useVideoUploadMock.mockReturnValueOnce({
       state: {
-        phase: "error" as VideoUploadState["phase"],
+        phase: "error",
         progress: 0,
-        videoId: null as string | null,
-        error: "video:upload-failed" as string | null,
-        estimatedDuration: null as number | null,
-        filename: "demo.mp4" as string | null,
+        videoId: null,
+        error: "video:upload-failed",
+        estimatedDuration: null,
+        filename: "demo.mp4",
       },
       upload: uploadMock,
       cancel: cancelMock,

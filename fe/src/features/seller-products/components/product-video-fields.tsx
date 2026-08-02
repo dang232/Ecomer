@@ -1,10 +1,11 @@
+import { useTranslation } from "react-i18next";
+
 import {
   VideoUploadDropzone,
   VideoUploadProgress,
   useProductVideos,
   useVideoUpload,
 } from "@/features/videos";
-import { useTranslation } from "react-i18next";
 
 interface ProductVideoFieldsProps {
   productId: string;
