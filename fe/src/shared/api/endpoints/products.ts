@@ -104,12 +104,9 @@ export const sellerProductList = (params: SellerProductListParams = {}) =>
 
 /** Authenticated seller-management detail. The server scopes ownership from the JWT. */
 export const sellerProductById = (id: string) =>
-  api.get(
-    `/sellers/me/products/${encodeURIComponent(id)}`,
-    productDetailSchema,
-    undefined,
-    { auth: true },
-  );
+  api.get(`/sellers/me/products/${encodeURIComponent(id)}`, productDetailSchema, undefined, {
+    auth: true,
+  });
 
 /** Body for create / update on the seller product endpoints. */
 export interface SellerVariant {
