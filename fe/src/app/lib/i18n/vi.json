@@ -15,6 +15,8 @@
     "light": "Sáng",
     "lightMode": "Chế độ sáng",
     "darkMode": "Chế độ tối",
+    "switchToLightMode": "Chuyển sang chế độ sáng",
+    "switchToDarkMode": "Chuyển sang chế độ tối",
     "announcement": "Miễn phí vận chuyển cho đơn từ 150k!",
     "announcementSuffix": "Mua ngay →"
   },
@@ -69,6 +71,10 @@
     "emptyTitle": "Giỏ hàng trống",
     "emptySub": "Hãy thêm sản phẩm vào giỏ hàng và quay lại nhé!",
     "continueShopping": "Tiếp tục mua sắm",
+    "clear": "Xoá giỏ hàng",
+    "clearConfirm": "Xoá giỏ hàng",
+    "clearConfirmTitle": "Xoá toàn bộ giỏ hàng?",
+    "clearConfirmDescription": "Tất cả sản phẩm sẽ bị xoá khỏi giỏ hàng.",
     "sellerFallback": "Người bán",
     "sellerUnavailable": "Không xác định người bán",
     "freeShippingTag": "Miễn phí vận chuyển",
@@ -87,6 +93,7 @@
     "shippingFee": "Phí vận chuyển",
     "free": "Miễn phí",
     "totalLabel": "Tổng cộng",
+    "merchandiseTotal": "Tổng tiền hàng",
     "savings": "Tiết kiệm {{amount}}",
     "proceedCheckout": "Tiến hành thanh toán",
     "guestBanner": "Đăng nhập để lưu giỏ hàng và thanh toán",
@@ -102,6 +109,7 @@
     "removeConfirmDescription": "{{name}} sẽ bị xoá khỏi giỏ hàng.",
     "errors": {
       "cantRemove": "Không thể xoá sản phẩm",
+      "cantClear": "Không thể xoá giỏ hàng",
       "cantUpdate": "Không thể cập nhật",
       "maxQty": "Số lượng tối đa là {{max}} sản phẩm"
     },
@@ -153,7 +161,7 @@
     "brandsTitle": "Thương hiệu",
     "categoriesTitle": "Danh mục",
     "filterToggle": "Lọc",
-    "resultsForQuery": "Kết quả cho \"{{q}}\"",
+    "resultsForQuery": "Kết quả cho \"{{query}}\"",
     "allProducts": "Tất cả sản phẩm",
     "resultCount": "{{count}} sản phẩm được tìm thấy",
     "emptyTitle": "Không tìm thấy sản phẩm",
@@ -219,8 +227,9 @@
       "videos": "Video"
     },
     "variants": "Tùy chọn",
-    "gallery": "Thư viện sản phẩm",
+    "gallery": "Thư viện phương tiện sản phẩm",
     "openZoom": "Mở ảnh phóng to",
+    "closeZoom": "Đóng ảnh phóng to",
     "viewImage": "Xem ảnh {{index}}",
     "zoomedImage": "Ảnh sản phẩm phóng to",
     "purchase": "Mua sản phẩm",
@@ -341,6 +350,7 @@
       "submitErr": "Không thể gửi câu hỏi",
       "loginToAsk": "Đăng nhập để đặt câu hỏi →",
       "loading": "Đang tải câu hỏi...",
+      "loadErr": "Không thể tải câu hỏi. Vui lòng thử lại.",
       "noAnswer": "Chưa có câu trả lời từ người bán.",
       "empty": "Chưa có câu hỏi nào.",
       "qPrefix": "Q: ",
@@ -479,6 +489,22 @@
       "description": "Danh muc va san pham dang kha dung van duoc hien thi ben duoi."
     }
   },
+  "publicSellers": {
+    "title": "Kham pha nha ban hang",
+    "description": "Xem cac shop da duoc xac minh tren VNShop.",
+    "listLabel": "Danh sach nha ban hang",
+    "loading": "Dang tai danh sach nha ban hang...",
+    "error": "Khong the tai danh sach nha ban hang.",
+    "retry": "Thu lai",
+    "emptyTitle": "Chua co nha ban hang",
+    "emptyDescription": "Hay quay lai sau de xem cac shop da duoc xac minh.",
+    "paginationLabel": "Phan trang danh sach nha ban hang",
+    "previous": "Trang truoc",
+    "next": "Trang sau",
+    "page": "Trang {{current}} / {{total}}",
+    "rating": "{{rating}} ({{count}} danh gia)",
+    "products": "{{count}} san pham"
+  },
   "consoleChrome": {
     "adminLabel": "Admin Console",
     "sellerLabel": "Kênh Người Bán",
@@ -518,6 +544,24 @@
     "sellerTools": "Công cụ người bán",
     "fees": "Phí & Hoa hồng",
     "help": "Trợ giúp & Hỗ trợ",
+    "support": {
+      "helpCenterDescription": "Tìm hỗ trợ cho đơn hàng, giao hàng, đổi trả và tài khoản của bạn.",
+      "shippingDescription": "Xem trạng thái giao hàng trong đơn hàng của bạn hoặc liên hệ đội ngũ hỗ trợ để được trợ giúp.",
+      "contactDescription": "Liên hệ đội ngũ hỗ trợ VNShop để được trợ giúp về đơn hàng hoặc tài khoản.",
+      "aboutDescription": "VNShop là nền tảng mua sắm trực tuyến, giúp bạn khám phá sản phẩm, theo dõi đơn hàng và quản lý đổi trả tại một nơi.",
+      "careersDescription": "Liên hệ đội ngũ hỗ trợ VNShop để được kết nối với bộ phận tuyển dụng về các cơ hội nghề nghiệp.",
+      "blogDescription": "Cập nhật về mua sắm và VNShop có thể được nhận qua đội ngũ hỗ trợ khi bạn cần trợ giúp.",
+      "pressDescription": "Liên hệ đội ngũ hỗ trợ VNShop để được kết nối với bộ phận truyền thông cho các yêu cầu báo chí.",
+      "privacyDescription": "VNShop sử dụng thông tin tài khoản và đơn hàng để cung cấp dịch vụ mua sắm, giao hàng và hỗ trợ. Liên hệ hỗ trợ nếu bạn có câu hỏi về quyền riêng tư.",
+      "termsDescription": "Việc sử dụng VNShop và các đơn hàng của bạn tuân theo các điều khoản dịch vụ của nền tảng. Liên hệ hỗ trợ nếu bạn cần làm rõ về đơn hàng hoặc tài khoản.",
+      "viewOrders": "Xem đơn hàng",
+      "manageReturns": "Quản lý đổi trả",
+      "phone": "Điện thoại",
+      "email": "Email",
+      "hours": "Giờ hỗ trợ",
+      "unavailable": "Thông tin liên hệ hỗ trợ hiện chưa khả dụng. Vui lòng thử lại sau.",
+      "close": "Đóng"
+    },
     "returns": "Đổi trả & Hoàn tiền",
     "contactUs": "Liên hệ",
     "company": "Công ty",
@@ -595,6 +639,7 @@
     "subtitle": "Miễn phí, không cần thẻ thanh toán.",
     "haveAccount": "Đã có tài khoản?",
     "signIn": "Đăng nhập",
+    "termsNotice": "Bằng cách tạo tài khoản, bạn đồng ý với Điều khoản dịch vụ và Chính sách bảo mật của VNShop.",
     "form": {
       "firstNameLabel": "Tên",
       "lastNameLabel": "Họ",
@@ -607,6 +652,7 @@
       "submit": "Tạo tài khoản",
       "submitting": "Đang tạo tài khoản...",
       "errorEmailTaken": "Email này đã được sử dụng.",
+      "errorPhoneTaken": "Số điện thoại này đã được sử dụng.",
       "errorWeakPassword": "Mật khẩu quá yếu. Cần ít nhất 8 ký tự.",
       "errorMismatch": "Mật khẩu xác nhận không khớp.",
       "errorFirstNameRequired": "Vui lòng nhập tên",
@@ -752,6 +798,7 @@
       "shippingFee": "Phí vận chuyển",
       "free": "Miễn phí",
       "discount": "Giảm giá",
+      "tax": "Thuế",
       "total": "Tổng cộng",
       "processing": "Đang xử lý...",
       "placeOrder": "Đặt hàng ngay",
@@ -1274,9 +1321,11 @@
       "bottomLabel": "Điều hướng nhanh người bán",
       "mobileLabel": "Kênh Người Bán",
       "moreLabel": "Thêm",
-      "sectionMain": "Tổng quan",
-      "sectionFinance": "Tài chính",
-      "sectionAccount": "Tài khoản"
+      "sectionOperate": "Vận hành",
+      "sectionGrow": "Phát triển",
+      "sectionMoney": "Tài chính",
+      "sectionShop": "Shop",
+      "ordersWithCount": "Đơn hàng, {{count}} đơn chờ xử lý"
     },
     "dashboard": {
       "eyebrow": "Hôm nay",
@@ -1285,35 +1334,48 @@
       "daysLabel": "Khung thời gian doanh thu",
       "daysOption": "{{count}}n",
       "revenueTitle": "Doanh thu · {{days}} ngày",
-      "revenueHint": "VND",
+      "revenueHint": "Doanh thu và số đơn từ các đơn hàng của shop",
+      "chartLegend": "Chú giải biểu đồ hiệu quả",
+      "revenueLegend": "Doanh thu",
+      "ordersLegend": "Đơn hàng",
       "revenueError": "Không tải được doanh thu: {{message}}",
       "revenueRetry": "Thử lại",
       "revenueLoading": "Đang tải…",
       "revenueEmpty": "Chưa có doanh thu trong khung này.",
       "urgentTitle": "Cần xử lý",
+      "urgentSubtitle": "Việc có thể ảnh hưởng đến giao hàng hoặc dòng tiền",
+      "urgentLoading": "Đang kiểm tra đơn hàng, trả hàng và payout…",
+      "urgentError": "Không thể kiểm tra một số việc cần xử lý.",
+      "urgentRetry": "Kiểm tra lại",
       "urgentEmpty": "Mọi thứ đã ổn.",
+      "urgentEmptyHint": "Đơn mới, yêu cầu trả hàng và vấn đề payout sẽ xuất hiện tại đây.",
+      "openTask": "Mở {{task}}",
+      "taskReference": "Tham chiếu {{id}}",
+      "statusApproved": "Quyền seller đang hoạt động",
+      "statusPending": "Đang chờ duyệt",
+      "tier": "Hạng · {{tier}}",
+      "vacationOn": "Đang bật chế độ nghỉ",
+      "viewStorefront": "Xem storefront",
+      "profileError": "Không thể tải hồ sơ seller.",
+      "workflowTitle": "Giữ shop vận hành thông suốt",
+      "workflowHint": "Ưu tiên xử lý đơn và trả hàng, sau đó phát triển catalog và đánh giá. Ví tiền và cài đặt shop được tách riêng để mỗi việc có một nơi rõ ràng.",
+      "manageShop": "Quản lý shop",
       "kpi": {
+        "sectionLabel": "Chỉ số hiệu quả seller",
+        "revenue": "Doanh thu ({{days}} ngày)",
+        "orders": "Đơn hàng ({{days}} ngày)",
         "balance": "Số dư ví",
         "pending": "Đơn cần xử lý",
         "views": "Lượt xem shop",
         "products": "Sản phẩm",
         "rating": "Điểm đánh giá",
         "noRating": "Chưa có đánh giá"
-      },
-      "revenue30dTitle": "Doanh thu 30 ngày",
-      "revenue30dHint": "Cập nhật theo dữ liệu đơn của bạn",
-      "revenue30dError": "Không tải được doanh thu: {{message}}",
-      "revenue30dLoading": "Đang tải doanh thu...",
-      "revenue30dEmpty": "Chưa có dữ liệu doanh thu trong 30 ngày qua.",
-      "orders30dTitle": "Số đơn 30 ngày",
-      "orders30dLoading": "Đang tải...",
-      "orders30dEmpty": "Chưa có đơn nào trong 30 ngày qua.",
-      "revenue30dRetry": "Thử lại"
+      }
     },
     "urgentTasks": {
       "order": "Đơn chờ xác nhận",
-      "payout": "Yêu cầu rút tiền cần xử lý",
-      "inventory": "Cảnh báo tồn kho"
+      "return": "Yêu cầu trả hàng chờ xem xét",
+      "payout": "Yêu cầu rút tiền cần xử lý"
     },
     "products": {
       "title": "Quản lý sản phẩm",
@@ -1331,6 +1393,7 @@
       "editTooltip": "Sửa sản phẩm",
       "prev": "Trang trước",
       "pageIndicator": "Trang {{current}} / {{total}}",
+      "pageIndicatorCurrent": "Trang {{current}}",
       "next": "Trang sau",
       "empty": "Chưa có sản phẩm nào.",
       "paginationLabel": "Phân trang danh sách sản phẩm",
@@ -1339,6 +1402,10 @@
         "titleNew": "Sản phẩm mới",
         "titleEdit": "Sửa sản phẩm",
         "titleDraft": "Bản nháp",
+        "description": "Thêm thông tin người mua cần, sau đó lưu bản nháp trước khi xuất bản.",
+        "loading": "Đang tải thông tin sản phẩm...",
+        "loadError": "Không thể tải sản phẩm này.",
+        "retry": "Thử lại",
         "cancel": "Huỷ",
         "save": "Lưu thay đổi",
         "saveDraft": "Lưu bản nháp",
@@ -1347,6 +1414,7 @@
         "saveOk": "Đã lưu sản phẩm",
         "updateOk": "Đã cập nhật sản phẩm",
         "saveErr": "Không thể lưu sản phẩm",
+        "savePartialErr": "Bản nháp đã được lưu nhưng không thể tải ảnh lên. Hãy kiểm tra ảnh rồi lưu lại.",
         "updateErr": "Không thể cập nhật sản phẩm",
         "publishOk": "Đã xuất bản sản phẩm",
         "publishErr": "Không thể xuất bản sản phẩm",
@@ -1358,6 +1426,10 @@
         "continueEditing": "Tiếp tục chỉnh sửa",
         "sectionBasic": "Thông tin cơ bản",
         "sectionMedia": "Hình ảnh",
+        "videoCreateHint": "Hãy lưu sản phẩm trước, sau đó thêm video từ màn hình chỉnh sửa.",
+        "videoDeleted": "Đã xóa video",
+        "videoDeleteErr": "Không thể xóa video",
+        "removeVideo": "Xóa video",
         "sectionVariants": "Phân loại & giá",
         "sectionPublication": "Xuất bản",
         "basic": {
@@ -1366,7 +1438,10 @@
           "namePlaceholder": "VD: Tai nghe không dây",
           "descriptionLabel": "Mô tả",
           "descriptionPlaceholder": "Mô tả sản phẩm của bạn...",
-          "categoryLabel": "ID danh mục",
+          "categoryLabel": "Danh mục",
+          "categoryPlaceholder": "Chọn danh mục",
+          "categoryLoading": "Đang tải danh mục...",
+          "categoryLoadError": "Danh mục tạm thời không khả dụng. Vui lòng thử lại sau.",
           "brandLabel": "Thương hiệu",
           "tagsLabel": "Tags",
           "tagsPlaceholder": "không dây, bluetooth, du lịch",
@@ -1375,22 +1450,41 @@
         "media": {
           "legend": "Hình ảnh sản phẩm",
           "label": "Hình ảnh",
+          "count": "{{count}} / {{max}}",
+          "saved": "Đã lưu",
+          "pending": "Sẽ tải lên khi lưu",
           "remove": "Xoá hình",
           "add": "Thêm hình",
           "maxReached": "Đã đạt tối đa {{max}} hình.",
           "invalidType": "{{name}} không phải định dạng hình được hỗ trợ.",
           "fileTooLarge": "{{name}} vượt quá giới hạn {{maxMb}} MB.",
-          "hint": "JPEG, PNG, WebP tối đa {{maxMb}} MB mỗi hình. Tối đa {{maxCount}} hình."
+          "hint": "JPEG, PNG, WebP tối đa {{maxMb}} MB mỗi hình. Tối đa {{maxCount}} hình.",
+          "pendingHint": "Hình mới sẽ được kiểm tra và tải lên sau khi bạn lưu sản phẩm."
         },
         "variants": {
           "legend": "Phân loại, giá và tồn kho",
-          "label": "Phân loại",
+          "label": "Giá và tồn kho",
+          "modeLabel": "Loại sản phẩm bán",
+          "modeSingle": "Một lựa chọn",
+          "modeVariants": "Có phân loại",
+          "singleHint": "Thiết lập một mức giá và tồn kho. Người mua sẽ không chọn phân loại.",
+          "variantsHint": "Thêm từng lựa chọn mà người mua có thể chọn, ví dụ như màu sắc hoặc kích cỡ.",
+          "optionListLabel": "Lựa chọn của người mua",
+          "itemTitle": "Phân loại {{number}}",
           "add": "Thêm phân loại",
           "remove": "Xoá phân loại",
-          "sku": "SKU",
+          "skuDisclosure": "Mã quản lý của cửa hàng (không bắt buộc)",
+          "sku": "Mã SKU cửa hàng (không bắt buộc)",
+          "skuPlaceholder": "VD: PHONE-DEN-128",
+          "skuHint": "Để trống để hệ thống tự tạo mã.",
           "name": "Tên",
+          "namePlaceholder": "VD: Đen / 128 GB",
           "price": "Giá",
-          "stock": "Tồn"
+          "pricePlaceholder": "VD: 990000",
+          "currency": "VND",
+          "stock": "Tồn",
+          "stockPlaceholder": "0",
+          "stockHint": "sản phẩm"
         },
         "publication": {
           "draftNotice": "Sản phẩm của bạn đã được lưu dưới dạng bản nháp và chưa hiển thị trên danh mục.",
@@ -1457,7 +1551,8 @@
         "title": "Đơn {{id}}",
         "parentOrder": "Mã đơn cha: {{id}}",
         "close": "Đóng",
-        "items": "{{count}} món"
+        "items": "{{count}} món",
+        "dateUnavailable": "Chưa có ngày"
       },
       "openDetail": "Xem đơn {{id}}",
       "rejectDialog": {
@@ -1572,12 +1667,14 @@
   },
   "profile": {
     "displayNameFallback": "Người dùng",
-    "loggedInVia": "Đã đăng nhập qua Keycloak",
+    "loggedInVia": "Đã đăng nhập qua VNShop",
     "logout": "Đăng xuất",
     "initSession": "Đang khởi tạo phiên đăng nhập...",
     "loginRequired": "Vui lòng đăng nhập",
     "sectionsLabel": "Các mục hồ sơ",
     "becomeSeller": "Trở thành người bán",
+    "sellerApplication": "Xem hồ sơ người bán",
+    "sellerHub": "Mở Kênh Người Bán",
     "avatar": {
       "uploadCta": "Tải ảnh đại diện",
       "uploading": "Đang tải lên…",
@@ -1616,14 +1713,13 @@
       "save": "Lưu thay đổi",
       "saving": "Đang lưu...",
       "loading": "Đang tải hồ sơ...",
-      "fallbackBanner": "Không tải được hồ sơ từ máy chủ. Hiển thị thông tin từ Keycloak. Một số tính năng có thể chưa hoạt động.",
+      "fallbackBanner": "Không tải được hồ sơ từ máy chủ. Đang hiển thị thông tin tài khoản hiện có; một số tính năng có thể chưa hoạt động.",
       "fields": {
         "name": "Họ và tên",
         "email": "Email",
         "phone": "Số điện thoại"
       },
       "notSet": "Chưa cập nhật",
-      "emailHint": "Email được Keycloak quản lý — cập nhật trong tài khoản Keycloak.",
       "updatedOk": "Đã cập nhật hồ sơ",
       "updatedErr": "Không thể cập nhật hồ sơ"
     },
@@ -1657,10 +1753,40 @@
     },
     "security": {
       "title": "Bảo mật tài khoản",
-      "subtitle": "Mật khẩu, xác thực 2 lớp và thiết bị đăng nhập do Keycloak quản lý.",
+      "subtitle": "Mật khẩu, xác thực 2 lớp và thiết bị đăng nhập được quản lý bởi dịch vụ tài khoản bảo vệ của VNShop.",
       "nativeBoundary": "Mật khẩu và bảo mật phiên đăng nhập được quản lý bởi dịch vụ tài khoản VNShop.",
-      "openKeycloak": "Mở trang quản lý tài khoản Keycloak"
+      "openKeycloak": "Mở cài đặt bảo mật tài khoản"
     }
+  },
+  "sellerRegistration": {
+    "initSession": "Đang khởi tạo phiên đăng nhập...",
+    "loginRequired": "Vui lòng đăng nhập để đăng ký bán hàng",
+    "backToProfile": "Về hồ sơ",
+    "title": "Trở thành người bán",
+    "subtitle": "Giới thiệu về shop của bạn. Quản trị viên sẽ duyệt hồ sơ trước khi bật quyền người bán.",
+    "account": "Đăng ký bằng {{email}}",
+    "shopNameLabel": "Tên shop",
+    "shopNamePlaceholder": "Ví dụ: Shop công nghệ của Dang",
+    "bankNameLabel": "Ngân hàng nhận tiền",
+    "bankNamePlaceholder": "Ví dụ: Vietcombank",
+    "required": "Vui lòng nhập thông tin này",
+    "tooShort": "Vui lòng nhập ít nhất 2 ký tự",
+    "reviewNotice": "Hiện chỉ cần tên shop và ngân hàng. Bạn có thể thêm thông tin tài khoản nhận tiền trong Kênh Người Bán sau khi được duyệt.",
+    "cancel": "Hủy",
+    "submit": "Gửi hồ sơ",
+    "submitting": "Đang gửi...",
+    "errorGeneric": "Không thể gửi hồ sơ người bán. Vui lòng thử lại.",
+    "successToast": "Đã gửi hồ sơ người bán",
+    "successTitle": "Đã gửi hồ sơ",
+    "successBody": "Hồ sơ người bán đang chờ quản trị viên duyệt. Công cụ người bán sẽ mở sau khi hồ sơ được duyệt.",
+    "approvedTitle": "Hồ sơ người bán đã được duyệt",
+    "approvedBody": "Shop của bạn đã được duyệt. Công cụ người bán hiện có trong Kênh Người Bán.",
+    "pendingNotice": "Hồ sơ đang được xem xét. Bạn có thể quay lại hồ sơ cá nhân trong lúc chờ duyệt.",
+    "approvedNotice": "Quyền người bán đã sẵn sàng. Mở Kênh Người Bán để quản lý shop này.",
+    "openSellerHub": "Mở Kênh Người Bán",
+    "statusLabel": "Trạng thái",
+    "successStatus": "Đang chờ duyệt",
+    "approvedStatus": "Đã duyệt"
   },
   "account": {
     "navigation": "Dieu huong tai khoan",
@@ -1836,6 +1962,7 @@
       "subtotal": "Tạm tính",
       "shipping": "Phí vận chuyển",
       "discount": "Giảm giá",
+      "tax": "Thuế",
       "total": "Tổng cộng",
       "notFound": "Không tìm thấy đơn hàng",
       "notFoundDescription": "Đơn hàng không tồn tại hoặc không thuộc tài khoản của bạn.",
@@ -1956,6 +2083,22 @@
         "channels": {
           "IN_APP": "Hoan tien trong ung dung",
           "EMAIL": "Hoan tien qua email"
+        }
+      },
+      "USER_REGISTERED": {
+        "label": "Chao mung tai khoan moi",
+        "description": "Nhan thong bao khi tai khoan VNShop moi cua ban san sang de su dung.",
+        "channels": {
+          "IN_APP": "Chao mung tai khoan moi trong ung dung",
+          "EMAIL": "Chao mung tai khoan moi qua email"
+        }
+      },
+      "USER_PASSWORD_RESET": {
+        "label": "Canh bao dat lai mat khau",
+        "description": "Nhan thong bao khi co yeu cau dat lai mat khau cho tai khoan cua ban.",
+        "channels": {
+          "IN_APP": "Canh bao dat lai mat khau trong ung dung",
+          "EMAIL": "Canh bao dat lai mat khau qua email"
         }
       },
       "SELLER_NEW_ORDER": {
@@ -2120,6 +2263,14 @@
         "PAYMENT_REFUNDED": {
           "label": "Hoàn tiền",
           "description": "Khi đơn hàng được hoàn tiền"
+        },
+        "USER_REGISTERED": {
+          "label": "Chao mung tai khoan moi",
+          "description": "Khi tai khoan moi cua ban tren VNShop san sang de su dung"
+        },
+        "USER_PASSWORD_RESET": {
+          "label": "Canh bao dat lai mat khau",
+          "description": "Khi co yeu cau dat lai mat khau cho tai khoan cua ban"
         },
         "SELLER_NEW_ORDER": {
           "label": "Đơn hàng mới (Seller)",

@@ -14,6 +14,7 @@ test("local seeded QA users do not force TOTP while the realm keeps MFA opt-in a
   const requiredAction = realm.requiredActions.find((action) => action.alias === "CONFIGURE_TOTP");
 
   for (const username of ["seller1", "admin1"]) {
+    assert.ok(users.has(username), `${username} seed is missing`);
     assert.ok(!users.get(username)?.requiredActions?.includes("CONFIGURE_TOTP"), username);
   }
 
@@ -31,5 +32,15 @@ test("the bootstrap documents both default local QA repair and explicit MFA opt-
   assert.match(script, /REQUIRED_ACTIONS='\[\]/);
   assert.match(script, /REQUIRED_ACTIONS='\["CONFIGURE_TOTP"\]'/);
   assert.match(script, /requiredActions=\$\{REQUIRED_ACTIONS\}/);
-  assert.match(script, /\) \|\| user_id=""/);
+});
+
+test("the bootstrap fails closed and selects exact seeded usernames", async () => {
+  const script = await readFile(bootstrapPath, "utf8");
+
+  assert.match(script, /--query "username=\$\{username\}"/);
+  assert.match(script, /--query "exact=true"/);
+  assert.match(script, /if ! user_json=\$\(/);
+  assert.match(script, /return 1/);
+  assert.doesNotMatch(script, /\|\| user_id=""/);
+  assert.doesNotMatch(script, /--rolename view-realm 2>\/dev\/null \|\| true/);
 });

@@ -68,12 +68,27 @@ kcadm config credentials \
 repair_local_seed_users() {
   echo "==> reconciling local seeded QA users (MFA required=${KEYCLOAK_LOCAL_SEED_MFA_REQUIRED})"
   for username in seller1 admin1; do
-    local user_id
-    user_id=$(kcadm get users -r "${KC_REALM}" --query "username=${username}" --fields id 2>/dev/null \
-      | grep -oE '"id" : "[^"]+"' | head -1 | sed 's/"id" : "//;s/"//') || user_id=""
-    if [ -z "${user_id}" ]; then
+    local user_json
+    if ! user_json=$(kcadm get users -r "${KC_REALM}" \
+      --query "username=${username}" \
+      --query "exact=true" \
+      --fields id,username); then
+      echo "  ! ${username}: Keycloak user lookup failed" >&2
+      return 1
+    fi
+
+    if ! printf '%s\n' "${user_json}" | grep -qE "\"username\"[[:space:]]*:[[:space:]]*\"${username}\""; then
       echo "  - ${username}: not present; leaving realm unchanged"
       continue
+    fi
+
+    local user_id
+    user_id=$(printf '%s\n' "${user_json}" \
+      | sed -nE 's/.*"id"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' \
+      | sed -n '1p')
+    if [ -z "${user_id}" ]; then
+      echo "  ! ${username}: Keycloak returned no user id" >&2
+      return 1
     fi
 
     kcadm update "users/${user_id}" -r "${KC_REALM}" \
@@ -100,7 +115,7 @@ kcadm add-roles -r "${KC_REALM}" \
   --uusername "service-account-${KC_CLIENT_ID}" \
   --cclientid realm-management \
   --rolename manage-users --rolename view-users --rolename query-users \
-  --rolename view-realm 2>/dev/null || true
+  --rolename view-realm
 
 echo "==> ensuring vnshop-api client has webOrigins for the SPA + dev server"
 # Without webOrigins set, Keycloak rejects CORS on /token from the FE origin

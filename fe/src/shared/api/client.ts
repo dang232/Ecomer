@@ -342,6 +342,28 @@ async function executeRequest<TSchema extends z.ZodType>(
       }
     }
 
+    // Spring DELETE endpoints deliberately return 204 without an API envelope.
+    // Validate the caller's empty-response schema directly instead of forcing
+    // a nonexistent JSON body through the normal envelope interceptor.
+    if (response.status === 204 || response.status === 205) {
+      const empty = opts.schema.safeParse(undefined);
+      if (!empty.success) {
+        throw new ApiError(
+          response.status,
+          "MALFORMED_RESPONSE",
+          "Server returned an empty response for an endpoint that requires data",
+          requestIdFrom(response, correlationId),
+        );
+      }
+      void telemetryInterceptor({ request: requestCtx, response, parsed: null });
+      return {
+        data: empty.data,
+        meta: { requestId: requestIdFrom(response, correlationId) },
+        status: response.status,
+        headers: response.headers,
+      };
+    }
+
     const responseChain: readonly ResponseInterceptor[] =
       opts.responseType === "blob"
         ? [blobResponseInterceptor, telemetryInterceptor, errorStatusInterceptor]

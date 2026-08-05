@@ -88,8 +88,8 @@ import { SMS_CHANNEL_PORT } from './domain/port/outbound/sms-channel.port';
     RedisModule,
   ],
   controllers: [
-    NotificationRestController,
     NotificationPreferencesController,
+    NotificationRestController,
     KafkaEventConsumer,
   ],
   providers: [

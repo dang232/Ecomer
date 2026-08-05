@@ -15,6 +15,8 @@ vi.mock("@/shared/auth", () => ({
 import { api, clearPublicResponseCache, request } from "@/shared/api/client";
 import { ApiError } from "@/shared/api/envelope";
 import type { TokenSet } from "@/shared/auth";
+import { notificationPreferencesSchema } from "@/shared/contracts/api/notification-preferences";
+import { emptyResponseSchema } from "@/shared/contracts/api/shared";
 
 interface MockResponseInit {
   status?: number;
@@ -166,6 +168,35 @@ describe("request", () => {
     expect((err as ApiError).errorCode).toBe("MALFORMED_RESPONSE");
   });
 
+  it("rejects raw notification preferences responses that skip the envelope", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      mockResponse({
+        body: {
+          muted: false,
+          typePreferences: [
+            {
+              type: "ORDER_SHIPPED",
+              channels: ["IN_APP", "EMAIL"],
+            },
+          ],
+          updatedAt: "2026-05-15T00:00:00Z",
+        },
+      }),
+    );
+
+    const err = await captureError(
+      request({
+        method: "GET",
+        path: "/notifications/preferences",
+        schema: notificationPreferencesSchema,
+        auth: false,
+      }),
+    );
+
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).errorCode).toBe("MALFORMED_RESPONSE");
+  });
+
   it("throws INVALID_JSON when the body isn't JSON", async () => {
     fetchSpy.mockResolvedValueOnce(
       new Response("<html>oops</html>", { status: 200, headers: { "content-type": "text/html" } }),
@@ -277,6 +308,14 @@ describe("request", () => {
     expect(await blob.text()).toBe("section,value\nsummary,900000\n");
     const [url] = fetchSpy.mock.calls[0];
     expect(new URL(fetchInputToUrl(url)).searchParams.get("from")).toBe("2026-07-01");
+  });
+
+  it("accepts a body-less successful delete when the caller expects an empty response", async () => {
+    fetchSpy.mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+    await expect(
+      api.delete("/sellers/me/products/p1", emptyResponseSchema),
+    ).resolves.toBeUndefined();
   });
 
   it("returns response metadata without changing the legacy data result", async () => {

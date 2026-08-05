@@ -17,3 +17,4 @@ data:
   VNSHOP_AUTH_CALLBACK_BASE_URL: https://api.vnshop.invalid/auth/oauth/callback
   VNSHOP_OBJECT_STORAGE_PUBLIC_ENDPOINT: https://storage.vnshop.invalid
   VNSHOP_USER_STORAGE_PUBLIC_ENDPOINT: https://storage.vnshop.invalid
+  MINIO_API_CORS_ALLOW_ORIGIN: https://web.vnshop.invalid

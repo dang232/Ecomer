@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -36,6 +38,15 @@ public class AdminFinanceController {
         return ApiResponse.ok(adminPayoutReadUseCase.completed(q).stream()
                 .map(payout -> PayoutResponse.fromDomain(payout.payout(), payout.sellerName()))
                 .toList());
+    }
+
+    @GetMapping("/payouts")
+    public ApiResponse<Page<PayoutResponse>> allPayouts(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String q,
+            Pageable pageable) {
+        return ApiResponse.ok(adminPayoutReadUseCase.all(q, status, pageable)
+                .map(this::toResponse));
     }
 
     @PostMapping("/payouts/{payoutId}/complete")

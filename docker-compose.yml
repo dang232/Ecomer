@@ -465,6 +465,7 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-vnshop}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-vnshop123}
+      MINIO_API_CORS_ALLOW_ORIGIN: ${MINIO_API_CORS_ALLOW_ORIGIN:-http://localhost:3000,http://localhost:5173}
     ports:
       - "9000:9000"   # S3 API
       - "9001:9001"   # MinIO console
@@ -490,10 +491,14 @@ services:
         mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-vnshop} ${MINIO_ROOT_PASSWORD:-vnshop123} &&
         mc mb --ignore-existing local/vnshop-products local/vnshop-reviews local/vnshop-invoices local/vnshop-avatars &&
         mc mb --ignore-existing local/vnshop-video-uploads-tmp local/vnshop-videos-staging local/vnshop-videos &&
-        mc anonymous set download local/vnshop-products &&
-        mc anonymous set download local/vnshop-reviews &&
-        mc anonymous set download local/vnshop-avatars &&
-        mc anonymous set download local/vnshop-videos &&
+        printf '%s' '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetObject"],"Resource":["arn:aws:s3:::vnshop-products/*"]}]}' > /tmp/vnshop-products-public.json &&
+        mc anonymous set-json /tmp/vnshop-products-public.json local/vnshop-products &&
+        printf '%s' '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetObject"],"Resource":["arn:aws:s3:::vnshop-reviews/*"]}]}' > /tmp/vnshop-reviews-public.json &&
+        mc anonymous set-json /tmp/vnshop-reviews-public.json local/vnshop-reviews &&
+        printf '%s' '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetObject"],"Resource":["arn:aws:s3:::vnshop-avatars/*"]}]}' > /tmp/vnshop-avatars-public.json &&
+        mc anonymous set-json /tmp/vnshop-avatars-public.json local/vnshop-avatars &&
+        printf '%s' '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetObject"],"Resource":["arn:aws:s3:::vnshop-videos/*"]}]}' > /tmp/vnshop-videos-public.json &&
+        mc anonymous set-json /tmp/vnshop-videos-public.json local/vnshop-videos &&
         # Auto-expire raw uploads after 24 h
         mc ilm rule add --expire-days 1 local/vnshop-video-uploads-tmp &&
         echo "minio buckets ready"
@@ -504,6 +509,7 @@ services:
       context: ./services/video-transcoder
       dockerfile: Dockerfile
     image: vnshop/video-transcoder:latest
+    restart: unless-stopped
     deploy:
       replicas: 3
       resources:
@@ -544,6 +550,7 @@ services:
     build:
       context: ./services/video-moderator
     image: vnshop/video-moderator:latest
+    restart: unless-stopped
     deploy:
       resources:
         limits:
@@ -851,8 +858,12 @@ services:
       VNSHOP_OBJECT_STORAGE_ENABLED: ${OBJECT_STORAGE_ENABLED:-true}
       VNSHOP_OBJECT_STORAGE_PROFILE: ${OBJECT_STORAGE_PROFILE:-MINIO}
       VNSHOP_OBJECT_STORAGE_BUCKET: ${OBJECT_STORAGE_BUCKET_PRODUCTS:-vnshop-products}
+      VNSHOP_OBJECT_STORAGE_REVIEW_BUCKET: ${OBJECT_STORAGE_BUCKET_REVIEWS:-vnshop-reviews}
+      S3_BUCKET_VIDEO_INPUT: ${S3_BUCKET_VIDEO_INPUT:-vnshop-video-uploads-tmp}
+      S3_BUCKET_VIDEO_STAGING: ${S3_BUCKET_VIDEO_STAGING:-vnshop-videos-staging}
       S3_BUCKET_PUBLIC: ${S3_BUCKET_PUBLIC:-vnshop-videos}
       VNSHOP_OBJECT_STORAGE_ENDPOINT: ${OBJECT_STORAGE_ENDPOINT:-http://minio:9000}
+      VNSHOP_OBJECT_STORAGE_PUBLIC_ENDPOINT: ${OBJECT_STORAGE_PUBLIC_ENDPOINT:-http://localhost:9000}
       VNSHOP_OBJECT_STORAGE_REGION: ${OBJECT_STORAGE_REGION:-auto}
       VNSHOP_OBJECT_STORAGE_ACCESS_KEY: ${OBJECT_STORAGE_ACCESS_KEY:-vnshop}
       VNSHOP_OBJECT_STORAGE_SECRET_KEY: ${OBJECT_STORAGE_SECRET_KEY:-vnshop123}
@@ -864,7 +875,9 @@ services:
       - ./infra/kafka/certs/kafka.truststore.jks:/etc/kafka/secrets/kafka.truststore.jks:ro
     tmpfs:
       # 6 GB tmpfs holds 1 × 500 MB upload in progress + ~5 GB headroom for concurrent sessions
-      - /tmp/video-uploads:size=6G,noexec
+      # The image runs as vnshop:vnshop (UID/GID 1000). Set ownership on the
+      # tmpfs mount itself because the mount hides any image-layer directory.
+      - /tmp/video-uploads:size=6G,uid=1000,gid=1000,mode=700,noexec
     deploy:
       resources:
         limits:

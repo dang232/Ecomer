@@ -55,12 +55,14 @@ class RouteConfigTest {
         List<Route> routes = locator.getRoutes().collectList().block();
 
         assertThat(routes).isNotNull().extracting(Route::getId)
-                .contains("products", "search", "flash-sale-reserve", "flash-sale-stock", "flash-sale-active",
-                "recommendations", "monitoring", "configuration");
+                .contains("products", "videos", "search", "flash-sale-reserve", "flash-sale-stock", "flash-sale-active",
+                        "recommendations", "monitoring", "configuration");
         assertThat(route(routes, "keycloak-oidc").getUri()).isEqualTo(URI.create("http://keycloak:80"));
         assertThat(matches(route(routes, "keycloak-oidc"), "/realms/vnshop/protocol/openid-connect/auth")).isTrue();
         assertThat(matches(route(routes, "keycloak-oidc"), "/admin/master/console/")).isFalse();
         assertThat(route(routes, "products").getUri()).isEqualTo(URI.create("http://product:80"));
+        assertThat(route(routes, "videos").getUri()).isEqualTo(URI.create("http://product:80"));
+        assertThat(matches(route(routes, "videos"), "/videos/upload/00000000-0000-0000-0000-000000000001")).isTrue();
         assertThat(route(routes, "search").getUri()).isEqualTo(URI.create("http://search:80"));
         assertThat(route(routes, "flash-sale-reserve").getUri()).isEqualTo(URI.create("http://inventory:80"));
         assertThat(route(routes, "recommendations").getUri()).isEqualTo(URI.create("http://recommendations:80"));

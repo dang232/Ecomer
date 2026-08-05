@@ -44,6 +44,14 @@ const basePreferences = {
   muted: false,
   typePreferences: [
     {
+      type: "USER_REGISTERED",
+      channels: ["IN_APP", "EMAIL"] as const,
+    },
+    {
+      type: "USER_PASSWORD_RESET",
+      channels: ["EMAIL"] as const,
+    },
+    {
       type: "ORDER_SHIPPED",
       channels: ["IN_APP", "EMAIL"] as const,
     },
@@ -73,19 +81,51 @@ describe("NotificationPreferencesPage", () => {
     currentLocale = "en";
   });
 
-  it.each([
-    ["en" as const, "Notification preferences", "Save changes"],
-    ["vi" as const, "Tuy chon thong bao", "Luu thay doi"],
-  ])("renders real %s locale copy instead of raw keys", async (locale, heading, saveLabel) => {
-    currentLocale = locale;
-    getNotificationPreferencesMock.mockResolvedValue(basePreferences);
-
-    renderWithClient(<NotificationPreferencesPage />);
-
-    expect(await screen.findByRole("heading", { name: heading })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: saveLabel })).toBeDisabled();
-    expect(screen.queryByText("notificationPreferences.title")).not.toBeInTheDocument();
+  it("keeps the duplicate Vietnamese notification preferences map aligned for new account events", () => {
+    expect(messageFor("vi", "notifications.preferences.types.USER_REGISTERED.label")).toBeDefined();
+    expect(
+      messageFor("vi", "notifications.preferences.types.USER_REGISTERED.description"),
+    ).toBeDefined();
+    expect(
+      messageFor("vi", "notifications.preferences.types.USER_PASSWORD_RESET.label"),
+    ).toBeDefined();
+    expect(
+      messageFor("vi", "notifications.preferences.types.USER_PASSWORD_RESET.description"),
+    ).toBeDefined();
   });
+
+  it.each([
+    [
+      "en" as const,
+      "Notification preferences",
+      "Save changes",
+      "New account welcome",
+      "Password reset security alerts",
+    ],
+    [
+      "vi" as const,
+      "Tuy chon thong bao",
+      "Luu thay doi",
+      "Chao mung tai khoan moi",
+      "Canh bao dat lai mat khau",
+    ],
+  ])(
+    "renders real %s locale copy instead of raw keys",
+    async (locale, heading, saveLabel, userRegisteredLabel, passwordResetLabel) => {
+      currentLocale = locale;
+      getNotificationPreferencesMock.mockResolvedValue(basePreferences);
+
+      renderWithClient(<NotificationPreferencesPage />);
+
+      expect(await screen.findByRole("heading", { name: heading })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: saveLabel })).toBeDisabled();
+      expect(screen.getByText(userRegisteredLabel)).toBeInTheDocument();
+      expect(screen.getByText(passwordResetLabel)).toBeInTheDocument();
+      expect(screen.queryByText("notificationPreferences.title")).not.toBeInTheDocument();
+      expect(screen.queryByText("USER_REGISTERED")).not.toBeInTheDocument();
+      expect(screen.queryByText("USER_PASSWORD_RESET")).not.toBeInTheDocument();
+    },
+  );
 
   it("loads preferences and saves the exact supported payload", async () => {
     getNotificationPreferencesMock.mockResolvedValue(basePreferences);
@@ -139,6 +179,14 @@ describe("NotificationPreferencesPage", () => {
           {
             type: "PAYMENT_REFUNDED",
             channels: ["IN_APP", "EMAIL"],
+          },
+          {
+            type: "USER_REGISTERED",
+            channels: ["IN_APP", "EMAIL"],
+          },
+          {
+            type: "USER_PASSWORD_RESET",
+            channels: ["EMAIL"],
           },
           {
             type: "SELLER_NEW_ORDER",

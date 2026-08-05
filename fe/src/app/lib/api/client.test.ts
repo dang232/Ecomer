@@ -2,6 +2,7 @@ import { waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
+import { emptyResponseSchema } from "../../types/api/shared";
 import type { TokenSet } from "../auth/native-auth";
 
 // Mock native-auth BEFORE importing the client.
@@ -279,6 +280,14 @@ describe("request", () => {
     expect(await blob.text()).toBe("section,value\nsummary,900000\n");
     const [url] = fetchSpy.mock.calls[0];
     expect(new URL(fetchInputToUrl(url)).searchParams.get("from")).toBe("2026-07-01");
+  });
+
+  it("accepts a body-less successful delete when the caller expects an empty response", async () => {
+    fetchSpy.mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+    await expect(
+      api.delete("/sellers/me/products/p1", emptyResponseSchema),
+    ).resolves.toBeUndefined();
   });
 
   it("returns response metadata without changing the legacy data result", async () => {

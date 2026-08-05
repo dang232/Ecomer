@@ -15,6 +15,8 @@
     "light": "Light",
     "lightMode": "Light mode",
     "darkMode": "Dark mode",
+    "switchToLightMode": "Switch to light mode",
+    "switchToDarkMode": "Switch to dark mode",
     "announcement": "Free shipping on orders over 150k!",
     "announcementSuffix": "Shop now →"
   },
@@ -69,6 +71,10 @@
     "emptyTitle": "Your cart is empty",
     "emptySub": "Add some products and come back any time!",
     "continueShopping": "Continue shopping",
+    "clear": "Clear cart",
+    "clearConfirm": "Clear cart",
+    "clearConfirmTitle": "Clear your cart?",
+    "clearConfirmDescription": "All items will be removed from your cart.",
     "sellerFallback": "Seller",
     "sellerUnavailable": "Seller unavailable",
     "freeShippingTag": "Free shipping",
@@ -87,6 +93,7 @@
     "shippingFee": "Shipping fee",
     "free": "Free",
     "totalLabel": "Total",
+    "merchandiseTotal": "Merchandise total",
     "savings": "You save {{amount}}",
     "proceedCheckout": "Proceed to checkout",
     "guestBanner": "Log in to save your cart and checkout",
@@ -102,6 +109,7 @@
     "removeConfirmDescription": "{{name}} will be removed from your cart.",
     "errors": {
       "cantRemove": "Couldn't remove item",
+      "cantClear": "Couldn't clear cart",
       "cantUpdate": "Couldn't update item",
       "maxQty": "Maximum quantity is {{max}} per item"
     },
@@ -219,8 +227,9 @@
       "videos": "Videos"
     },
     "variants": "Options",
-    "gallery": "Product gallery",
+    "gallery": "Product media gallery",
     "openZoom": "Open zoomed view",
+    "closeZoom": "Close zoomed view",
     "viewImage": "View image {{index}}",
     "zoomedImage": "Zoomed product image",
     "purchase": "Purchase product",
@@ -341,6 +350,7 @@
       "submitErr": "Couldn't submit question",
       "loginToAsk": "Sign in to ask a question →",
       "loading": "Loading questions...",
+      "loadErr": "Couldn't load questions. Try again.",
       "noAnswer": "No answer from the seller yet.",
       "empty": "No questions yet.",
       "qPrefix": "Q: ",
@@ -479,6 +489,22 @@
       "description": "Available categories and products are still shown below."
     }
   },
+  "publicSellers": {
+    "title": "Find a seller",
+    "description": "Browse verified shops on VNShop.",
+    "listLabel": "Public sellers",
+    "loading": "Loading sellers...",
+    "error": "Sellers could not be loaded.",
+    "retry": "Try again",
+    "emptyTitle": "No sellers yet",
+    "emptyDescription": "Check back soon for verified shops.",
+    "paginationLabel": "Seller list pagination",
+    "previous": "Previous seller page",
+    "next": "Next seller page",
+    "page": "Page {{current}} of {{total}}",
+    "rating": "{{rating}} ({{count}} ratings)",
+    "products": "{{count}} products"
+  },
   "consoleChrome": {
     "adminLabel": "Admin Console",
     "sellerLabel": "Seller Hub",
@@ -518,6 +544,24 @@
     "sellerTools": "Seller Tools",
     "fees": "Fees & Commission",
     "help": "Help & Support",
+    "support": {
+      "helpCenterDescription": "Get help with your orders, deliveries, returns, and account.",
+      "shippingDescription": "Review delivery status in your orders or contact our support team for help.",
+      "contactDescription": "Contact VNShop support for help with an order or your account.",
+      "aboutDescription": "VNShop is an online marketplace where you can discover products, track orders, and manage returns in one place.",
+      "careersDescription": "Contact VNShop support to be connected with the hiring team about career opportunities.",
+      "blogDescription": "Shopping and VNShop updates are available from the support team when you need help.",
+      "pressDescription": "Contact VNShop support to be connected with the communications team for press enquiries.",
+      "privacyDescription": "VNShop uses account and order information to provide shopping, delivery, and support services. Contact support with privacy questions.",
+      "termsDescription": "Your use of VNShop and orders are governed by the platform's terms of service. Contact support if you need clarification about an order or account.",
+      "viewOrders": "View orders",
+      "manageReturns": "Manage returns",
+      "phone": "Phone",
+      "email": "Email",
+      "hours": "Support hours",
+      "unavailable": "Support contact details are temporarily unavailable. Please try again later.",
+      "close": "Close"
+    },
     "returns": "Returns & Refunds",
     "contactUs": "Contact Us",
     "company": "Company",
@@ -595,6 +639,7 @@
     "subtitle": "Free forever. No credit card needed.",
     "haveAccount": "Already have an account?",
     "signIn": "Sign in",
+    "termsNotice": "By creating an account you agree to VNShop's Terms of Service and Privacy Policy.",
     "form": {
       "firstNameLabel": "First name",
       "lastNameLabel": "Last name",
@@ -607,6 +652,7 @@
       "submit": "Create account",
       "submitting": "Creating account...",
       "errorEmailTaken": "An account with that email already exists.",
+      "errorPhoneTaken": "An account with that phone number already exists.",
       "errorWeakPassword": "Password is too weak. Use at least 8 characters.",
       "errorMismatch": "Passwords don't match.",
       "errorFirstNameRequired": "First name is required",
@@ -752,6 +798,7 @@
       "shippingFee": "Shipping fee",
       "free": "Free",
       "discount": "Discount",
+      "tax": "Tax",
       "total": "Total",
       "processing": "Processing...",
       "placeOrder": "Place order",
@@ -1273,9 +1320,11 @@
       "bottomLabel": "Seller quick navigation",
       "mobileLabel": "Seller Hub",
       "moreLabel": "More",
-      "sectionMain": "Overview",
-      "sectionFinance": "Finance",
-      "sectionAccount": "Account"
+      "sectionOperate": "Operate",
+      "sectionGrow": "Grow",
+      "sectionMoney": "Money",
+      "sectionShop": "Shop",
+      "ordersWithCount": "Orders, {{count}} pending"
     },
     "dashboard": {
       "eyebrow": "Today",
@@ -1284,35 +1333,48 @@
       "daysLabel": "Revenue window",
       "daysOption": "{{count}}d",
       "revenueTitle": "Revenue · {{days}} days",
-      "revenueHint": "VND",
+      "revenueHint": "Revenue and order volume from paid seller orders",
+      "chartLegend": "Performance chart legend",
+      "revenueLegend": "Revenue",
+      "ordersLegend": "Orders",
       "revenueError": "Couldn't load revenue: {{message}}",
       "revenueRetry": "Retry",
       "revenueLoading": "Loading…",
       "revenueEmpty": "No revenue in this window.",
       "urgentTitle": "Needs attention",
+      "urgentSubtitle": "Work that can affect fulfilment or cash flow",
+      "urgentLoading": "Checking orders, returns, and payouts…",
+      "urgentError": "Some attention items could not be checked.",
+      "urgentRetry": "Check again",
       "urgentEmpty": "All caught up.",
+      "urgentEmptyHint": "New orders, return requests, and payout issues will appear here.",
+      "openTask": "Open {{task}}",
+      "taskReference": "Reference {{id}}",
+      "statusApproved": "Seller access active",
+      "statusPending": "Approval pending",
+      "tier": "Tier · {{tier}}",
+      "vacationOn": "Vacation mode on",
+      "viewStorefront": "View storefront",
+      "profileError": "We couldn't load your seller profile.",
+      "workflowTitle": "Keep the shop moving",
+      "workflowHint": "Operate fulfilment first, then grow the catalogue and reviews. Wallet and shop settings stay separate so every action has one home.",
+      "manageShop": "Manage shop",
       "kpi": {
+        "sectionLabel": "Seller performance metrics",
+        "revenue": "Revenue ({{days}} days)",
+        "orders": "Orders ({{days}} days)",
         "balance": "Wallet balance",
         "pending": "Pending orders",
         "views": "Shop views",
         "products": "Products",
         "rating": "Average rating",
         "noRating": "No ratings"
-      },
-      "revenue30dTitle": "Revenue (30 days)",
-      "revenue30dHint": "Live from your order data",
-      "revenue30dError": "Couldn't load revenue: {{message}}",
-      "revenue30dLoading": "Loading revenue...",
-      "revenue30dEmpty": "No revenue in the last 30 days yet.",
-      "orders30dTitle": "Orders (30 days)",
-      "orders30dLoading": "Loading...",
-      "orders30dEmpty": "No orders in the last 30 days yet.",
-      "revenue30dRetry": "Retry"
+      }
     },
     "urgentTasks": {
       "order": "Order awaiting confirmation",
-      "payout": "Payout needs attention",
-      "inventory": "Inventory alert"
+      "return": "Return request awaiting review",
+      "payout": "Payout needs attention"
     },
     "products": {
       "title": "Product management",
@@ -1330,6 +1392,7 @@
       "editTooltip": "Edit product",
       "prev": "Previous page",
       "pageIndicator": "Page {{current}} of {{total}}",
+      "pageIndicatorCurrent": "Page {{current}}",
       "next": "Next page",
       "empty": "No products yet.",
       "paginationLabel": "Product list pagination",
@@ -1338,6 +1401,10 @@
         "titleNew": "New product",
         "titleEdit": "Edit product",
         "titleDraft": "Draft product",
+        "description": "Add the details buyers need, then save a draft before publishing.",
+        "loading": "Loading product details...",
+        "loadError": "We couldn't load this product.",
+        "retry": "Try again",
         "cancel": "Cancel",
         "save": "Save changes",
         "saveDraft": "Save as draft",
@@ -1346,6 +1413,7 @@
         "saveOk": "Product saved",
         "updateOk": "Product updated",
         "saveErr": "Couldn't save product",
+        "savePartialErr": "Your draft was saved, but the image could not upload. Check the image and save again.",
         "updateErr": "Couldn't update product",
         "publishOk": "Product published",
         "publishErr": "Couldn't publish product",
@@ -1357,6 +1425,10 @@
         "continueEditing": "Continue editing",
         "sectionBasic": "Basic information",
         "sectionMedia": "Media",
+        "videoCreateHint": "Save the product first, then add a video from the edit screen.",
+        "videoDeleted": "Video removed",
+        "videoDeleteErr": "Couldn't remove video",
+        "removeVideo": "Remove video",
         "sectionVariants": "Variants & pricing",
         "sectionPublication": "Publication",
         "basic": {
@@ -1365,7 +1437,10 @@
           "namePlaceholder": "e.g. Wireless Headphones",
           "descriptionLabel": "Description",
           "descriptionPlaceholder": "Describe your product...",
-          "categoryLabel": "Category ID",
+          "categoryLabel": "Category",
+          "categoryPlaceholder": "Choose a category",
+          "categoryLoading": "Loading categories...",
+          "categoryLoadError": "Categories are unavailable. Try again shortly.",
           "brandLabel": "Brand",
           "tagsLabel": "Tags",
           "tagsPlaceholder": "wireless, bluetooth, travel",
@@ -1374,22 +1449,41 @@
         "media": {
           "legend": "Product media",
           "label": "Images",
+          "count": "{{count}} of {{max}}",
+          "saved": "Saved",
+          "pending": "Will upload on save",
           "remove": "Remove image",
           "add": "Add image",
           "maxReached": "Maximum {{max}} images reached.",
           "invalidType": "{{name}} is not a supported image type.",
           "fileTooLarge": "{{name}} exceeds {{maxMb}} MB limit.",
-          "hint": "JPEG, PNG, WebP up to {{maxMb}} MB each. Max {{maxCount}} images."
+          "hint": "JPEG, PNG, WebP up to {{maxMb}} MB each. Max {{maxCount}} images.",
+          "pendingHint": "New images are validated and uploaded after you save the product."
         },
         "variants": {
           "legend": "Variants, pricing and inventory",
-          "label": "Variants",
+          "label": "Pricing and inventory",
+          "modeLabel": "Product offer type",
+          "modeSingle": "One offer",
+          "modeVariants": "Options",
+          "singleHint": "Set one price and stock level. Buyers will not choose an option.",
+          "variantsHint": "Add an option for each choice a buyer can select, such as colour or size.",
+          "optionListLabel": "Customer options",
+          "itemTitle": "Variant {{number}}",
           "add": "Add variant",
           "remove": "Remove variant",
-          "sku": "SKU",
+          "skuDisclosure": "Merchant reference (optional)",
+          "sku": "Merchant SKU (optional)",
+          "skuPlaceholder": "e.g. PHONE-BLK-128",
+          "skuHint": "Leave blank to generate one automatically.",
           "name": "Name",
+          "namePlaceholder": "e.g. Black / 128 GB",
           "price": "Price",
-          "stock": "Stock"
+          "pricePlaceholder": "e.g. 990000",
+          "currency": "VND",
+          "stock": "Stock",
+          "stockPlaceholder": "0",
+          "stockHint": "units"
         },
         "publication": {
           "draftNotice": "Your product has been saved as a draft and is not yet visible in the catalog.",
@@ -1454,7 +1548,8 @@
         "title": "Order {{id}}",
         "parentOrder": "Parent order: {{id}}",
         "close": "Close",
-        "items": "{{count}} item(s)"
+        "items": "{{count}} item(s)",
+        "dateUnavailable": "Date unavailable"
       },
       "openDetail": "View order {{id}}",
       "rejectDialog": {
@@ -1569,12 +1664,14 @@
   },
   "profile": {
     "displayNameFallback": "User",
-    "loggedInVia": "Signed in via Keycloak",
+    "loggedInVia": "Signed in through VNShop",
     "logout": "Log out",
     "initSession": "Initialising your session...",
     "loginRequired": "Please sign in",
     "sectionsLabel": "Profile sections",
     "becomeSeller": "Become a seller",
+    "sellerApplication": "View seller application",
+    "sellerHub": "Open Seller Hub",
     "avatar": {
       "uploadCta": "Upload avatar",
       "uploading": "Uploading…",
@@ -1613,14 +1710,13 @@
       "save": "Save changes",
       "saving": "Saving...",
       "loading": "Loading profile...",
-      "fallbackBanner": "Couldn't load your profile from the server — showing what Keycloak has. Some features may be unavailable.",
+      "fallbackBanner": "Couldn't load your profile from the server. Showing available account details; some features may be unavailable.",
       "fields": {
         "name": "Full name",
         "email": "Email",
         "phone": "Phone"
       },
       "notSet": "Not set yet",
-      "emailHint": "Email is managed by Keycloak — update it in your Keycloak account.",
       "updatedOk": "Profile updated",
       "updatedErr": "Couldn't update profile"
     },
@@ -1654,10 +1750,40 @@
     },
     "security": {
       "title": "Account security",
-      "subtitle": "Passwords, 2FA and signed-in devices are managed by Keycloak.",
+      "subtitle": "Passwords, 2FA and signed-in devices are managed by VNShop's protected account service.",
       "nativeBoundary": "Password and session security are handled by VNShop's protected account service.",
-      "openKeycloak": "Open Keycloak account console"
+      "openKeycloak": "Open account security settings"
     }
+  },
+  "sellerRegistration": {
+    "initSession": "Initialising your session...",
+    "loginRequired": "Please sign in to apply as a seller",
+    "backToProfile": "Back to profile",
+    "title": "Become a seller",
+    "subtitle": "Tell us about your shop. An admin will review the application before seller access is enabled.",
+    "account": "Applying with {{email}}",
+    "shopNameLabel": "Shop name",
+    "shopNamePlaceholder": "e.g. Dang's Tech Shop",
+    "bankNameLabel": "Payout bank",
+    "bankNamePlaceholder": "e.g. Vietcombank",
+    "required": "This field is required",
+    "tooShort": "Enter at least 2 characters",
+    "reviewNotice": "Only your shop name and bank name are needed now. Add the payout account details later from Seller Hub after approval.",
+    "cancel": "Cancel",
+    "submit": "Submit application",
+    "submitting": "Submitting...",
+    "errorGeneric": "Couldn't submit the seller application. Please try again.",
+    "successToast": "Seller application submitted",
+    "successTitle": "Application submitted",
+    "successBody": "Your seller application is now waiting for admin approval. Seller tools will become available after approval.",
+    "approvedTitle": "Seller application approved",
+    "approvedBody": "Your shop is approved. Seller tools are now available in Seller Hub.",
+    "pendingNotice": "Your application is pending review. You can return to your profile while the team reviews it.",
+    "approvedNotice": "Your seller access is ready. Open Seller Hub to manage this shop.",
+    "openSellerHub": "Open Seller Hub",
+    "statusLabel": "Status",
+    "successStatus": "Pending review",
+    "approvedStatus": "Approved"
   },
   "account": {
     "navigation": "Account navigation",
@@ -1833,6 +1959,7 @@
       "subtotal": "Subtotal",
       "shipping": "Shipping",
       "discount": "Discount",
+      "tax": "Tax",
       "total": "Total",
       "notFound": "Order not found",
       "notFoundDescription": "This order does not exist or is not available to your account.",
@@ -1954,6 +2081,22 @@
         "channels": {
           "IN_APP": "Payment refunded in app",
           "EMAIL": "Payment refunded by email"
+        }
+      },
+      "USER_REGISTERED": {
+        "label": "New account welcome",
+        "description": "Get a confirmation when your new VNShop account is ready to use.",
+        "channels": {
+          "IN_APP": "New account welcome in app",
+          "EMAIL": "New account welcome by email"
+        }
+      },
+      "USER_PASSWORD_RESET": {
+        "label": "Password reset security alerts",
+        "description": "Stay informed when a password reset is requested for your account.",
+        "channels": {
+          "IN_APP": "Password reset alert in app",
+          "EMAIL": "Password reset alert by email"
         }
       },
       "SELLER_NEW_ORDER": {
@@ -2118,6 +2261,14 @@
         "PAYMENT_REFUNDED": {
           "label": "Refund",
           "description": "When an order is refunded"
+        },
+        "USER_REGISTERED": {
+          "label": "Welcome notification",
+          "description": "When your new account is ready to use"
+        },
+        "USER_PASSWORD_RESET": {
+          "label": "Password reset alert",
+          "description": "When a password reset is requested for your account"
         },
         "SELLER_NEW_ORDER": {
           "label": "New order (Seller)",

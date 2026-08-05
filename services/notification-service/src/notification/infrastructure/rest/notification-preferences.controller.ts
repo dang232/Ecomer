@@ -14,6 +14,14 @@ interface UpdatePreferencesBody {
   muted: boolean;
 }
 
+interface ApiResponse<T> {
+  success: true;
+  message: string;
+  data: T;
+  errorCode: null;
+  timestamp: string;
+}
+
 @Controller('notifications/preferences')
 @UseGuards(JwtAuthGuard)
 export class NotificationPreferencesController {
@@ -23,17 +31,27 @@ export class NotificationPreferencesController {
     private readonly updatePreferences: UpdatePreferencesUseCase,
   ) {}
 
+  private ok<T>(data: T): ApiResponse<T> {
+    return {
+      success: true,
+      message: 'Success',
+      data,
+      errorCode: null,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   @Get()
   async get(@Req() req: AuthenticatedRequest) {
     const prefs = await this.getPreferences.execute(req.user.sub);
-    return {
+    return this.ok({
       muted: prefs.muted,
       typePreferences: prefs.typePreferences.map((tp) => ({
         type: tp.type,
         channels: tp.channels,
       })),
       updatedAt: prefs.updatedAt.toISOString(),
-    };
+    });
   }
 
   @Put()
@@ -59,13 +77,13 @@ export class NotificationPreferencesController {
       muted: body.muted ?? false,
     });
 
-    return {
+    return this.ok({
       muted: prefs.muted,
       typePreferences: prefs.typePreferences.map((tp) => ({
         type: tp.type,
         channels: tp.channels,
       })),
       updatedAt: prefs.updatedAt.toISOString(),
-    };
+    });
   }
 }

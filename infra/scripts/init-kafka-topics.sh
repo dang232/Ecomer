@@ -99,8 +99,9 @@ $ACL --add --allow-principal User:svc-payment --operation Read --group payment-s
 # inventory-service (svc-inventory): produces inventory.released
 $ACL --add --allow-principal User:svc-inventory --operation Write --topic inventory.released
 
-# product-service (svc-product): produces product-events
+# product-service (svc-product): produces product-events and video upload handoffs
 $ACL --add --allow-principal User:svc-product --operation Write --topic product-events
+$ACL --add --allow-principal User:svc-product --operation Write --topic video.upload.completed
 # product-service: consumes delivered-order evidence for verified reviews
 $ACL --add --allow-principal User:svc-product --operation Read --topic order.delivered
 $ACL --add --allow-principal User:svc-product --operation Read --group product-service-review-purchases
@@ -202,6 +203,7 @@ $ACL --add --allow-principal User:svc-video-transcoder --operation Write --topic
 
 # video-moderator (svc-video-moderator): consumes video.transcode.completed directly (no relay topic); produces video.moderation.completed, video.published, video.rejected, video.moderation.dlt
 $ACL --add --allow-principal User:svc-video-moderator --operation Read --topic video.transcode.completed
+$ACL --add --allow-principal User:svc-video-moderator --operation Read --group moderator-worker
 $ACL --add --allow-principal User:svc-video-moderator --operation Write --topic video.moderation.completed
 $ACL --add --allow-principal User:svc-video-moderator --operation Write --topic video.published
 $ACL --add --allow-principal User:svc-video-moderator --operation Write --topic video.rejected

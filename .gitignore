@@ -266,3 +266,7 @@ app.*.symbols
 /services/configuration-service/dist
 /services/product-service/.omc
 /fe/.ua
+/.agents
+/.codex
+/.playwright-cli
+/.ua
