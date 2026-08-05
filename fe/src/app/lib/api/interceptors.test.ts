@@ -1,15 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
+import type { TokenSet } from "../auth/native-auth";
+
 // Mock native-auth BEFORE importing anything that pulls it in.
 let liveToken: string | null = null;
-const refreshTokensMock = vi.fn();
+const refreshTokensMock = vi.fn<() => Promise<TokenSet>>();
 vi.mock("../auth/native-auth", () => ({
   getAccessToken: () => liveToken,
   setLiveTokenSet: vi.fn((next: { accessToken: string } | null) => {
     liveToken = next?.accessToken ?? null;
   }),
-  refreshTokens: (...args: unknown[]) => refreshTokensMock(...args),
+  refreshTokens: () => refreshTokensMock(),
 }));
 
 import { api, request } from "./client";
@@ -48,6 +50,15 @@ function makeRequestCtx(overrides: Partial<RequestContext> = {}): RequestContext
     meta: { auth: false, hasBody: false },
     ...overrides,
   };
+}
+
+async function captureError<T>(promise: Promise<T>): Promise<unknown> {
+  try {
+    await promise;
+  } catch (error: unknown) {
+    return error;
+  }
+  throw new Error("Expected promise to reject");
 }
 
 beforeEach(() => {
@@ -144,20 +155,17 @@ describe("response interceptors", () => {
     expect(out).toBe(ctx);
   });
 
-  it("errorStatusInterceptor throws ApiError with errorCode/message from the body on non-2xx", () => {
+  it("errorStatusInterceptor throws ApiError with errorCode/message from the body on non-2xx", async () => {
     const ctx: ResponseContext = {
       request: makeRequestCtx(),
       response: new Response("ignored", { status: 500 }),
       parsed: { errorCode: "BOOM", message: "engine failed" },
     };
-    expect(() => errorStatusInterceptor(ctx)).toThrow(ApiError);
-    try {
-      errorStatusInterceptor(ctx);
-    } catch (err) {
-      expect((err as ApiError).status).toBe(500);
-      expect((err as ApiError).errorCode).toBe("BOOM");
-      expect((err as ApiError).message).toBe("engine failed");
-    }
+    const err = await captureError(Promise.resolve().then(() => errorStatusInterceptor(ctx)));
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).status).toBe(500);
+    expect((err as ApiError).errorCode).toBe("BOOM");
+    expect((err as ApiError).message).toBe("engine failed");
   });
 
   it("envelopeInterceptor unwraps the data field on success", async () => {
@@ -229,13 +237,15 @@ describe("interceptor chain ordering (via request())", () => {
 describe("401 retry path", () => {
   it("on 401: refreshes token then retries the same URL with the new bearer", async () => {
     liveToken = "old-jwt";
-    refreshTokensMock.mockImplementation(async () => ({
-      accessToken: "new-jwt",
-      accessExpiresAt: Date.now() + 60_000,
-    }));
+    refreshTokensMock.mockImplementation(() =>
+      Promise.resolve({
+        accessToken: "new-jwt",
+        accessExpiresAt: Date.now() + 60_000,
+      }),
+    );
 
     fetchSpy.mockResolvedValueOnce(new Response("unauthorized", { status: 401 }));
-    fetchSpy.mockImplementationOnce(async () =>
+    fetchSpy.mockResolvedValueOnce(
       jsonResponse({
         success: true,
         message: "ok",
@@ -265,11 +275,13 @@ describe("401 retry path", () => {
     fetchSpy.mockResolvedValueOnce(new Response("unauthorized", { status: 401 }));
 
     const dispatchSpy = vi.spyOn(window, "dispatchEvent");
-    const err = await request({
-      method: "GET",
-      path: "/me",
-      schema: z.object({ id: z.string() }),
-    }).catch((e) => e);
+    const err = await captureError(
+      request({
+        method: "GET",
+        path: "/me",
+        schema: z.object({ id: z.string() }),
+      }),
+    );
 
     expect(err).toBeInstanceOf(ApiError);
     expect((err as ApiError).status).toBe(401);
@@ -288,11 +300,13 @@ describe("401 retry path", () => {
     fetchSpy.mockResolvedValueOnce(new Response("unauthorized", { status: 401 }));
     fetchSpy.mockResolvedValueOnce(new Response("still unauthorized", { status: 401 }));
 
-    const err = await request({
-      method: "GET",
-      path: "/me",
-      schema: z.object({ id: z.string() }),
-    }).catch((e) => e);
+    const err = await captureError(
+      request({
+        method: "GET",
+        path: "/me",
+        schema: z.object({ id: z.string() }),
+      }),
+    );
 
     expect(err).toBeInstanceOf(ApiError);
     expect((err as ApiError).status).toBe(401);
@@ -496,7 +510,7 @@ describe("telemetryInterceptor", () => {
       response: new Response(null, { status: 200 }),
       parsed: null,
     };
-    telemetryInterceptor(ctx);
+    void telemetryInterceptor(ctx);
     const records = getTelemetry();
     expect(records).toHaveLength(1);
     expect(records[0].status).toBe(200);
@@ -522,7 +536,7 @@ describe("telemetryInterceptor", () => {
       response: new Response(null, { status: 503 }),
       parsed: { errorCode: "SVC_DOWN", message: "down" },
     };
-    telemetryInterceptor(ctx);
+    void telemetryInterceptor(ctx);
     const records = getTelemetry();
     expect(records[0].status).toBe(503);
     expect(records[0].attempts).toBe(3);

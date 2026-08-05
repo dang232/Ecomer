@@ -3,22 +3,32 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // ─── API mocks (must be declared before importing the module under test) ───────
 
-const adminVideoModerationQueueMock = vi.fn();
-const adminVideoPreviewMock = vi.fn();
-const adminApproveVideoMock = vi.fn();
-const adminRejectVideoMock = vi.fn();
-const adminVideoAppealsQueueMock = vi.fn();
-const adminApproveAppealMock = vi.fn();
-const adminRejectAppealMock = vi.fn();
+const {
+  adminVideoModerationQueueMock,
+  adminVideoPreviewMock,
+  adminApproveVideoMock,
+  adminRejectVideoMock,
+  adminVideoAppealsQueueMock,
+  adminApproveAppealMock,
+  adminRejectAppealMock,
+} = vi.hoisted(() => ({
+  adminVideoModerationQueueMock: vi.fn(),
+  adminVideoPreviewMock: vi.fn(),
+  adminApproveVideoMock: vi.fn(),
+  adminRejectVideoMock: vi.fn(),
+  adminVideoAppealsQueueMock: vi.fn(),
+  adminApproveAppealMock: vi.fn(),
+  adminRejectAppealMock: vi.fn(),
+}));
 
-vi.mock("../lib/api/endpoints/admin", () => ({
-  adminVideoModerationQueue: (...args: unknown[]) => adminVideoModerationQueueMock(...args),
-  adminVideoPreview: (...args: unknown[]) => adminVideoPreviewMock(...args),
-  adminApproveVideo: (...args: unknown[]) => adminApproveVideoMock(...args),
-  adminRejectVideo: (...args: unknown[]) => adminRejectVideoMock(...args),
-  adminVideoAppealsQueue: (...args: unknown[]) => adminVideoAppealsQueueMock(...args),
-  adminApproveAppeal: (...args: unknown[]) => adminApproveAppealMock(...args),
-  adminRejectAppeal: (...args: unknown[]) => adminRejectAppealMock(...args),
+vi.mock("@/shared/api/endpoints/admin", () => ({
+  adminVideoModerationQueue: adminVideoModerationQueueMock,
+  adminVideoPreview: adminVideoPreviewMock,
+  adminApproveVideo: adminApproveVideoMock,
+  adminRejectVideo: adminRejectVideoMock,
+  adminVideoAppealsQueue: adminVideoAppealsQueueMock,
+  adminApproveAppeal: adminApproveAppealMock,
+  adminRejectAppeal: adminRejectAppealMock,
 }));
 
 vi.mock("react-i18next", () => ({
@@ -27,7 +37,7 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
-import { makeWrapper } from "../test-utils/render-with-query-client";
+import { makeWrapper } from "@/shared/test/render-with-query-client";
 
 import {
   useVideoModerationQueue,
@@ -135,7 +145,7 @@ describe("useApproveVideo", () => {
     const { Wrapper } = makeWrapper();
     const { result } = renderHook(() => useApproveVideo(), { wrapper: Wrapper });
 
-    await act(async () => {
+    act(() => {
       result.current.mutate("vid-1");
     });
 
@@ -152,7 +162,7 @@ describe("useRejectVideo", () => {
     const { Wrapper } = makeWrapper();
     const { result } = renderHook(() => useRejectVideo(), { wrapper: Wrapper });
 
-    await act(async () => {
+    act(() => {
       result.current.mutate({ videoId: "vid-1", reason: "inappropriate content" });
     });
 
@@ -166,13 +176,19 @@ describe("useRejectVideo", () => {
 describe("useVideoAppeals", () => {
   it("returns appeal list on success", async () => {
     const appeals = [makeAppeal("vid-0"), makeAppeal("vid-1")];
-    adminVideoAppealsQueueMock.mockResolvedValue(appeals);
+    adminVideoAppealsQueueMock.mockResolvedValue({
+      content: appeals,
+      totalElements: appeals.length,
+      totalPages: 1,
+      page: 0,
+      size: appeals.length,
+    });
     const { Wrapper } = makeWrapper();
     const { result } = renderHook(() => useVideoAppeals(), { wrapper: Wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data).toHaveLength(2);
-    expect(result.current.data?.[0].videoId).toBe("vid-0");
+    expect(result.current.data?.content).toHaveLength(2);
+    expect(result.current.data?.content[0]?.videoId).toBe("vid-0");
   });
 });
 
@@ -184,7 +200,7 @@ describe("useApproveAppeal", () => {
     const { Wrapper } = makeWrapper();
     const { result } = renderHook(() => useApproveAppeal(), { wrapper: Wrapper });
 
-    await act(async () => {
+    act(() => {
       result.current.mutate("vid-0");
     });
 
@@ -201,7 +217,7 @@ describe("useRejectAppeal", () => {
     const { Wrapper } = makeWrapper();
     const { result } = renderHook(() => useRejectAppeal(), { wrapper: Wrapper });
 
-    await act(async () => {
+    act(() => {
       result.current.mutate({ videoId: "vid-0", reason: "policy violation" });
     });
 

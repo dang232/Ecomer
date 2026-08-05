@@ -1,4 +1,12 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+
+import {
+  readJson,
+  type AuthResponse,
+  type OrderListResponse,
+  type OrderResponse,
+  type ProductListResponse,
+} from "./_api";
 import { loginViaOidc, uniqueTestId } from "./_auth";
 
 /**
@@ -47,9 +55,10 @@ async function seedBuyer(request: APIRequestContext): Promise<SeededBuyer> {
     data: { username: email, password: PASSWORD },
   });
   expect(login.ok(), `login: ${login.status()} ${await login.text()}`).toBeTruthy();
-  const body = await login.json();
+  const body = await readJson<AuthResponse>(login);
   const accessToken = body?.data?.accessToken ?? body?.accessToken;
   expect(accessToken, "no access token after login").toBeTruthy();
+  if (!accessToken) throw new Error("login did not return an access token");
   return { email, accessToken };
 }
 
@@ -62,8 +71,9 @@ async function placePendingCodOrder(
   // Pull a real product so the order has something to reference.
   const products = await request.get(`${apiURL}/products?size=1`);
   expect(products.ok(), `products: ${products.status()}`).toBeTruthy();
-  const productId = (await products.json())?.data?.content?.[0]?.id;
+  const productId = (await readJson<ProductListResponse>(products)).data?.content?.[0]?.id;
   expect(productId, "expected a seeded product").toBeTruthy();
+  if (!productId) throw new Error("expected a seeded product");
 
   // Add to cart so the order has a server-side line item record.
   const add = await request.post(`${apiURL}/cart/items`, {
@@ -97,17 +107,17 @@ async function placePendingCodOrder(
     },
   });
   expect(place.ok(), `place order: ${place.status()} ${await place.text()}`).toBeTruthy();
-  const placeBody = await place.json();
+  const placeBody = await readJson<OrderResponse>(place);
   const orderId = placeBody?.data?.id ?? placeBody?.data?.orderId;
   expect(orderId, "no orderId on place response").toBeTruthy();
+  if (!orderId) throw new Error("place order did not return an order id");
 
   // CQRS read-model lag: poll briefly so the list endpoint actually returns it.
   for (let i = 0; i < 10; i++) {
     const list = await request.get(`${apiURL}/orders?size=10`, { headers });
     expect(list.ok()).toBeTruthy();
-    const ids = ((await list.json())?.data?.content ?? []).map(
-      (o: { id?: string; orderId?: string }) => o.id ?? o.orderId,
-    );
+    const ids =
+      (await readJson<OrderListResponse>(list)).data?.content?.map((o) => o.id ?? o.orderId) ?? [];
     if (ids.includes(orderId)) return orderId;
     await new Promise((r) => setTimeout(r, 500));
   }

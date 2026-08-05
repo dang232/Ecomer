@@ -1,15 +1,22 @@
 import { createElement, lazy, Suspense, type ReactNode } from "react";
 import { createBrowserRouter } from "react-router";
 
+import { PageSkeleton, ProductDetailSkeleton } from "@/shared/ui";
+
 import { ErrorBoundary } from "./components/error-boundary";
-import { PageSkeleton, ProductDetailSkeleton } from "./components/ui/page-skeleton";
-import { myOrdersOptions, orderDetailOptions } from "./hooks/use-orders";
+import { orderDetailOptions } from "./hooks/use-orders";
 import { productDetailOptions } from "./hooks/use-products";
 import { profileOptions } from "./hooks/use-profile";
 import { sellerDetailOptions, sellerProductsOptions } from "./hooks/use-sellers";
+import {
+  AdminLayout,
+  AuthLayout,
+  SellerLayout,
+  StandaloneLayout,
+  StorefrontLayout,
+} from "./layouts";
 import { RequireAuth, RequireRole } from "./lib/auth/role-guard";
 import { queryClient } from "./lib/query-client";
-import { Root } from "./pages/Root";
 import { RouteErrorPage } from "./pages/RouteErrorPage";
 
 const HomePage = lazy(() => import("./pages/HomePage").then((m) => ({ default: m.HomePage })));
@@ -37,11 +44,12 @@ const OrderDetailPage = lazy(() =>
 const ProfilePage = lazy(() =>
   import("./pages/ProfilePage").then((m) => ({ default: m.ProfilePage })),
 );
+const SellerRegisterPage = lazy(() =>
+  import("./pages/SellerRegisterPage").then((m) => ({ default: m.SellerRegisterPage })),
+);
 const WishlistPage = lazy(() =>
   import("./pages/WishlistPage").then((m) => ({ default: m.WishlistPage })),
 );
-const SellerPage = lazy(() => import("./pages/seller").then((m) => ({ default: m.SellerPage })));
-const AdminPage = lazy(() => import("./pages/admin").then((m) => ({ default: m.AdminPage })));
 const DesignSystemPage = lazy(() =>
   import("./pages/DesignSystemPage").then((m) => ({ default: m.DesignSystemPage })),
 );
@@ -53,6 +61,9 @@ const MessagesPage = lazy(() =>
 );
 const SellerDetailPage = lazy(() =>
   import("./pages/SellerDetailPage").then((m) => ({ default: m.SellerDetailPage })),
+);
+const PublicSellersPage = lazy(() =>
+  import("./pages/PublicSellersPage").then((m) => ({ default: m.PublicSellersPage })),
 );
 const PasswordResetPage = lazy(() =>
   import("./pages/PasswordResetPage").then((m) => ({ default: m.PasswordResetPage })),
@@ -78,7 +89,63 @@ const AccessDeniedPage = lazy(() =>
   import("./pages/AccessDeniedPage").then((m) => ({ default: m.AccessDeniedPage })),
 );
 
-/* eslint-disable react/no-children-prop -- createElement passes children via props by design */
+const SellerDashboardRoute = lazy(() =>
+  import("@/features/seller-dashboard").then((m) => ({ default: m.SellerDashboardRoute })),
+);
+const SellerProductsRoute = lazy(() =>
+  import("./routes/seller-products-route").then((m) => ({ default: m.SellerProductsRoute })),
+);
+const SellerOrderQueueRoute = lazy(() =>
+  import("@/features/seller-orders").then((m) => ({ default: m.SellerOrderQueueRoute })),
+);
+const ReturnsRoute = lazy(() =>
+  import("@/features/seller-returns").then((m) => ({ default: m.ReturnsRoute })),
+);
+const SellerReviewInboxRoute = lazy(() =>
+  import("@/features/seller-reviews").then((m) => ({ default: m.SellerReviewInboxRoute })),
+);
+const SellerWalletRoute = lazy(() =>
+  import("./routes/seller-wallet-route").then((m) => ({ default: m.SellerWalletRoute })),
+);
+const SellerSettingsRoute = lazy(() =>
+  import("./routes/seller-settings-route").then((m) => ({ default: m.SellerSettingsRoute })),
+);
+
+const AdminDashboard = lazy(() =>
+  import("@/features/admin-dashboard").then((m) => ({ default: m.AdminDashboard })),
+);
+const AdminOrderQueue = lazy(() =>
+  import("./routes/admin-orders-route").then((m) => ({ default: m.AdminOrderQueueRoute })),
+);
+const CouponList = lazy(() =>
+  import("@/features/admin-coupons").then((m) => ({ default: m.CouponList })),
+);
+const SellerApprovalQueue = lazy(() =>
+  import("./routes/admin-sellers-route").then((m) => ({
+    default: m.AdminSellerApprovalQueueRoute,
+  })),
+);
+const ReviewModerationQueue = lazy(() =>
+  import("./routes/admin-reviews-route").then((m) => ({
+    default: m.AdminReviewModerationQueueRoute,
+  })),
+);
+const VideoModerationRoute = lazy(() =>
+  import("./routes/video-moderation-route").then((m) => ({ default: m.VideoModerationRoute })),
+);
+const DisputeQueue = lazy(() =>
+  import("./routes/admin-disputes-route").then((m) => ({ default: m.AdminDisputeQueueRoute })),
+);
+const PayoutQueue = lazy(() =>
+  import("./routes/admin-payouts-route").then((m) => ({ default: m.AdminPayoutQueueRoute })),
+);
+const AdminUserQueue = lazy(() =>
+  import("./routes/admin-users-route").then((m) => ({ default: m.AdminUserQueueRoute })),
+);
+const SystemHealth = lazy(() =>
+  import("@/features/admin-health").then((m) => ({ default: m.SystemHealth })),
+);
+
 const lazyRoute = (el: ReactNode) =>
   createElement(Suspense, { fallback: createElement(PageSkeleton) }, el);
 const suspenseWithBoundary = (el: ReactNode) =>
@@ -93,23 +160,24 @@ const suspenseWithDetailBoundary = (el: ReactNode) =>
     null,
     createElement(Suspense, { fallback: createElement(ProductDetailSkeleton) }, el),
   );
-const guarded = (el: ReactNode) => createElement(RequireAuth, { children: lazyRoute(el) });
+const guarded = (el: ReactNode) => createElement(RequireAuth, null, lazyRoute(el));
 const guardedWithBoundary = (el: ReactNode) =>
-  createElement(RequireAuth, { children: suspenseWithBoundary(el) });
-const sellerOnly = (el: ReactNode) =>
-  createElement(RequireRole, { role: "SELLER", children: lazyRoute(el) });
+  createElement(RequireAuth, null, suspenseWithBoundary(el));
+const sellerOnly = (el: ReactNode) => createElement(RequireRole, { role: "SELLER" }, lazyRoute(el));
 const adminOnly = (el: ReactNode) =>
-  createElement(RequireRole, {
-    role: "ADMIN",
-    fallbackPath: "/access-denied",
-    children: lazyRoute(el),
-  });
-/* eslint-enable react/no-children-prop */
+  createElement(
+    RequireRole,
+    {
+      role: "ADMIN",
+      fallbackPath: "/access-denied",
+    },
+    lazyRoute(el),
+  );
 
 export const router = createBrowserRouter([
   {
     path: "/",
-    Component: Root,
+    Component: StorefrontLayout,
     errorElement: createElement(RouteErrorPage),
     children: [
       { index: true, element: lazyRoute(createElement(HomePage)) },
@@ -129,10 +197,6 @@ export const router = createBrowserRouter([
       {
         path: "orders",
         element: guardedWithBoundary(createElement(OrdersPage)),
-        loader: () => {
-          void queryClient.prefetchQuery(myOrdersOptions());
-          return null;
-        },
       },
       {
         path: "orders/:id",
@@ -158,20 +222,21 @@ export const router = createBrowserRouter([
           return null;
         },
       },
+      {
+        path: "seller/register",
+        element: guardedWithBoundary(createElement(SellerRegisterPage)),
+      },
       { path: "wishlist", element: guardedWithBoundary(createElement(WishlistPage)) },
-      { path: "login", element: lazyRoute(createElement(LoginPage)) },
-      { path: "register", element: lazyRoute(createElement(RegisterPage)) },
-      { path: "password-reset", element: lazyRoute(createElement(PasswordResetPage)) },
-      { path: "access-denied", element: lazyRoute(createElement(AccessDeniedPage)) },
-      { path: "seller/*", element: sellerOnly(createElement(SellerPage)) },
-      { path: "admin/*", element: adminOnly(createElement(AdminPage)) },
       { path: "design-system", element: lazyRoute(createElement(DesignSystemPage)) },
-      { path: "payment/return/:provider", element: lazyRoute(createElement(PaymentReturnPage)) },
       { path: "messages", element: guardedWithBoundary(createElement(MessagesPage)) },
       { path: "notifications", element: guarded(createElement(NotificationsPage)) },
       {
         path: "notifications/preferences",
         element: guarded(createElement(NotificationPreferencesPage)),
+      },
+      {
+        path: "sellers",
+        element: suspenseWithBoundary(createElement(PublicSellersPage)),
       },
       {
         path: "sellers/:id",
@@ -184,6 +249,53 @@ export const router = createBrowserRouter([
         },
       },
       { path: "*", element: lazyRoute(createElement(NotFoundPage)) },
+    ],
+  },
+  {
+    Component: AuthLayout,
+    children: [
+      { path: "/login", element: lazyRoute(createElement(LoginPage)) },
+      { path: "/register", element: lazyRoute(createElement(RegisterPage)) },
+      { path: "/password-reset", element: lazyRoute(createElement(PasswordResetPage)) },
+      { path: "/access-denied", element: lazyRoute(createElement(AccessDeniedPage)) },
+    ],
+  },
+  {
+    path: "/seller",
+    element: sellerOnly(createElement(SellerLayout)),
+    children: [
+      { index: true, element: lazyRoute(createElement(SellerDashboardRoute)) },
+      { path: "products", element: lazyRoute(createElement(SellerProductsRoute)) },
+      { path: "orders", element: lazyRoute(createElement(SellerOrderQueueRoute)) },
+      { path: "returns", element: lazyRoute(createElement(ReturnsRoute)) },
+      { path: "reviews", element: lazyRoute(createElement(SellerReviewInboxRoute)) },
+      { path: "wallet", element: lazyRoute(createElement(SellerWalletRoute)) },
+      { path: "settings", element: lazyRoute(createElement(SellerSettingsRoute)) },
+    ],
+  },
+  {
+    path: "/admin",
+    element: adminOnly(createElement(AdminLayout)),
+    children: [
+      { index: true, element: lazyRoute(createElement(AdminDashboard)) },
+      { path: "orders", element: lazyRoute(createElement(AdminOrderQueue)) },
+      { path: "coupons", element: lazyRoute(createElement(CouponList)) },
+      { path: "sellers", element: lazyRoute(createElement(SellerApprovalQueue)) },
+      { path: "reviews", element: lazyRoute(createElement(ReviewModerationQueue)) },
+      { path: "video", element: lazyRoute(createElement(VideoModerationRoute)) },
+      { path: "disputes", element: lazyRoute(createElement(DisputeQueue)) },
+      { path: "payouts", element: lazyRoute(createElement(PayoutQueue)) },
+      { path: "users", element: lazyRoute(createElement(AdminUserQueue)) },
+      { path: "health", element: lazyRoute(createElement(SystemHealth)) },
+    ],
+  },
+  {
+    Component: StandaloneLayout,
+    children: [
+      {
+        path: "/payment/return/:provider",
+        element: lazyRoute(createElement(PaymentReturnPage)),
+      },
     ],
   },
 ]);

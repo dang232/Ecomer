@@ -1,15 +1,19 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { makeWrapper } from "../test-utils/render-with-query-client";
+import type * as SearchEndpoints from "@/shared/api/endpoints/search";
+import { makeWrapper } from "@/shared/test/render-with-query-client";
 
 import { useSearchV2 } from "./use-search-v2";
 
-const searchProductsV2Mock = vi.fn();
+type CursorSearchParams = SearchEndpoints.CursorSearchParams;
 
-vi.mock("../lib/api/endpoints/search", () => ({
-  searchProductsV2: (...args: unknown[]) => searchProductsV2Mock(...args),
-}));
+const searchProductsV2Mock = vi.hoisted(() => vi.fn());
+
+vi.mock("@/shared/api/endpoints/search", async (importOriginal) => {
+  const actual = await importOriginal<typeof SearchEndpoints>();
+  return { ...actual, searchProductsV2: searchProductsV2Mock as typeof actual.searchProductsV2 };
+});
 
 const firstPage = {
   data: {
@@ -62,5 +66,74 @@ describe("useSearchV2", () => {
 
     await waitFor(() => expect(result.current.data?.pages).toHaveLength(2));
     expect(searchProductsV2Mock).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not reuse a retained cursor when query, filter, and sort change", async () => {
+    const newestParams: CursorSearchParams = {
+      q: "phone",
+      category: "audio",
+      sort: "newest",
+      limit: 20,
+      includeFacets: true,
+    };
+    const priceLowParams: CursorSearchParams = {
+      q: "headphones",
+      category: "electronics",
+      sort: "price-low",
+      limit: 20,
+      includeFacets: true,
+    };
+    const newestPage = {
+      ...firstPage,
+      data: { ...firstPage.data, nextCursor: "newest-next" },
+    };
+    const priceLowPage = {
+      ...firstPage,
+      data: { ...firstPage.data, nextCursor: "price-low-next" },
+    };
+
+    searchProductsV2Mock.mockImplementation((request: CursorSearchParams) =>
+      Promise.resolve(request.sort === "newest" ? newestPage : priceLowPage),
+    );
+    const { Wrapper } = makeWrapper();
+
+    const { result, rerender } = renderHook(
+      ({ params }: { params: CursorSearchParams }) => useSearchV2(params),
+      { initialProps: { params: newestParams }, wrapper: Wrapper },
+    );
+
+    await waitFor(() =>
+      expect(searchProductsV2Mock).toHaveBeenCalledWith(
+        { ...newestParams, cursor: undefined },
+        expect.any(AbortSignal),
+      ),
+    );
+    await waitFor(() =>
+      expect(searchProductsV2Mock).toHaveBeenCalledWith(
+        { ...newestParams, cursor: "newest-next" },
+        expect.any(AbortSignal),
+      ),
+    );
+
+    rerender({ params: priceLowParams });
+
+    await waitFor(() =>
+      expect(searchProductsV2Mock).toHaveBeenCalledWith(
+        { ...priceLowParams, cursor: undefined },
+        expect.any(AbortSignal),
+      ),
+    );
+    await waitFor(() => expect(result.current.isPlaceholderData).toBe(false));
+    await waitFor(() =>
+      expect(searchProductsV2Mock).toHaveBeenCalledWith(
+        { ...priceLowParams, cursor: "price-low-next" },
+        expect.any(AbortSignal),
+      ),
+    );
+
+    const requests = searchProductsV2Mock.mock.calls.map(
+      ([request]) => request as CursorSearchParams,
+    );
+    expect(requests).not.toContainEqual({ ...priceLowParams, cursor: "newest-next" });
   });
 });

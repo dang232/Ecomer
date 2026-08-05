@@ -17,6 +17,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -110,10 +111,19 @@ public class KeycloakAdminClient implements KeycloakAdminPort {
      * path.
      */
     public void assignBuyerRole(String userId) {
+        assignRealmRole(userId, "BUYER");
+    }
+
+    @Override
+    public void assignSellerRole(String userId) {
+        assignRealmRole(userId, "SELLER");
+    }
+
+    private void assignRealmRole(String userId, String roleName) {
         String token = adminToken();
         try {
             String roleBody = http.get()
-                    .uri(baseUrl + "/admin/realms/" + realm + "/roles/BUYER")
+                    .uri(baseUrl + "/admin/realms/" + realm + "/roles/" + roleName)
                     .header("Authorization", "Bearer " + token)
                     .retrieve()
                     .body(String.class);
@@ -130,9 +140,11 @@ public class KeycloakAdminClient implements KeycloakAdminPort {
                     .retrieve()
                     .toBodilessEntity();
         } catch (HttpStatusCodeException e) {
-            throw new KeycloakAdminException(e.getStatusCode().value(), "role_assign_failed", parseError(e.getResponseBodyAsString(), "Couldn't assign BUYER role"));
+            throw new KeycloakAdminException(e.getStatusCode().value(), "role_assign_failed",
+                    parseError(e.getResponseBodyAsString(), "Couldn't assign " + roleName + " role"));
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
-            throw new KeycloakAdminException(500, "role_assign_failed", "Couldn't parse Keycloak role response");
+            throw new KeycloakAdminException(500, "role_assign_failed",
+                    "Couldn't parse Keycloak " + roleName + " role response");
         }
     }
 
@@ -152,6 +164,56 @@ public class KeycloakAdminClient implements KeycloakAdminPort {
     @Override
     public void enableUser(String userId) {
         setUserEnabled(userId, true);
+    }
+
+    /** Delete a newly-created identity when its buyer profile cannot be created. */
+    @Override
+    public void deleteUser(String userId) {
+        try {
+            http.delete()
+                    .uri(baseUrl + "/admin/realms/" + realm + "/users/" + userId)
+                    .header("Authorization", "Bearer " + adminToken())
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (HttpStatusCodeException e) {
+            if (e.getStatusCode().value() == 404) {
+                return;
+            }
+            throw new KeycloakAdminException(e.getStatusCode().value(), "user_delete_failed",
+                    parseError(e.getResponseBodyAsString(), "Couldn't delete the incomplete Keycloak user"));
+        }
+    }
+
+    /**
+     * Legacy-recovery read for buyer profiles that were stored before
+     * user-service owned account email. New registrations already persist the
+     * request email and profile updates never write email back to Keycloak.
+     */
+    @Override
+    public Optional<String> findEmailByUserId(String userId) {
+        if (userId == null || userId.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            String body = http.get()
+                    .uri(baseUrl + "/admin/realms/" + realm + "/users/" + userId)
+                    .header("Authorization", "Bearer " + adminToken())
+                    .retrieve()
+                    .body(String.class);
+            if (body == null) {
+                return Optional.empty();
+            }
+            String email = MAPPER.readTree(body).path("email").asText(null);
+            return email == null || email.isBlank() ? Optional.empty() : Optional.of(email.trim());
+        } catch (HttpStatusCodeException e) {
+            if (e.getStatusCode().value() == 404) {
+                return Optional.empty();
+            }
+            throw new KeycloakAdminException(e.getStatusCode().value(), "email_lookup_failed",
+                    parseError(e.getResponseBodyAsString(), "Couldn't read Keycloak user email"));
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new KeycloakAdminException(500, "email_lookup_failed", "Couldn't parse Keycloak user response");
+        }
     }
 
     private void setUserEnabled(String userId, boolean enabled) {

@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import {
   listActiveFlashSaleCampaigns,
   type ActiveFlashSaleCampaign,
-} from "../lib/api/endpoints/flash-sale";
+} from "@/shared/api/endpoints/flash-sale";
 
 export const flashSaleCampaignsOptions = () =>
   queryOptions<ActiveFlashSaleCampaign[]>({

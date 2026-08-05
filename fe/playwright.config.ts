@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+import { validateCredentials } from "./e2e/modernization/_credentials";
+
 /**
  * Playwright config for VNShop frontend smoke + buyer happy-path E2E.
  *
@@ -9,7 +11,7 @@ import { defineConfig, devices } from "@playwright/test";
  *    (`bash infra/scripts/setup-keycloak-admin-client.sh`).
  *  - Frontend reachable at VITE_E2E_BASE_URL — defaults to the dockerised FE
  *    at http://localhost:3000 so the suite exercises the production bundle.
- *    Set VITE_E2E_BASE_URL=http://localhost:5173 to run against `npm run dev`
+ *    Set VITE_E2E_BASE_URL=http://localhost:5173 to run against `pnpm run dev`
  *    (and also unset E2E_SKIP_WEBSERVER so Playwright boots vite for you).
  */
 
@@ -28,6 +30,8 @@ const hostResolverRules = ingressIp
 // pointed at the dev port. Default behaviour: assume the stack is running.
 const skipWebServer = process.env.E2E_SKIP_WEBSERVER !== undefined || baseURL.includes(":3000");
 
+validateCredentials();
+
 export default defineConfig({
   testDir: "./e2e",
   timeout: 60_000,
@@ -39,7 +43,20 @@ export default defineConfig({
   // looks like real bugs. One worker keeps the suite deterministic.
   workers: 1,
   retries: process.env.CI ? 1 : 0,
-  reporter: [["list"], ["html", { open: "never" }]],
+  reporter: [
+    ["list"],
+    ["html", { open: "never" }],
+    [
+      "json",
+      {
+        outputFile:
+          process.env.PLAYWRIGHT_JSON_OUTPUT_FILE ??
+          "test-results/playwright-results.json",
+      },
+    ],
+  ],
+  snapshotPathTemplate:
+    "{testDir}/modernization/__snapshots__/{projectName}/{arg}{ext}",
   use: {
     baseURL,
     ignoreHTTPSErrors: false,
@@ -61,7 +78,7 @@ export default defineConfig({
   webServer: skipWebServer
     ? undefined
     : {
-        command: "npm run dev",
+        command: "pnpm run dev",
         url: baseURL,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,

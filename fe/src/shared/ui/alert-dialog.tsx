@@ -5,7 +5,7 @@ import { cn } from "../lib/cn";
 import { Button } from "./button";
 import { Dialog } from "./dialog";
 
-interface AlertDialogProps {
+export interface AlertDialogProps {
   open: boolean;
   onClose: () => void;
   onConfirm: () => void;

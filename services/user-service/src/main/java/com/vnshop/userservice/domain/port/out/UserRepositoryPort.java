@@ -1,6 +1,7 @@
 package com.vnshop.userservice.domain.port.out;
 
 import com.vnshop.userservice.domain.BuyerProfile;
+import com.vnshop.userservice.domain.PhoneNumber;
 import com.vnshop.userservice.domain.SellerProfile;
 
 import java.util.List;
@@ -12,6 +13,9 @@ public interface UserRepositoryPort {
     BuyerProfile saveBuyer(BuyerProfile buyerProfile);
 
     Optional<BuyerProfile> findBuyerByKeycloakId(String keycloakId);
+
+    /** Exact canonical-phone lookup used to enforce buyer phone ownership. */
+    Optional<BuyerProfile> findBuyerByPhone(PhoneNumber phone);
 
     /**
      * Batch lookup for public profile rendering. Returns only the buyers

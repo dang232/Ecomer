@@ -1,4 +1,6 @@
-import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { test, expect, type APIRequestContext } from "@playwright/test";
+
+import { readJson, type ProductListResponse } from "./_api";
 import { expectNoGlobalError } from "./_helpers";
 
 /**
@@ -23,8 +25,9 @@ interface SeededProduct {
 async function firstProduct(request: APIRequestContext): Promise<SeededProduct> {
   const r = await request.get(`${apiURL}/products?size=1`);
   expect(r.ok()).toBeTruthy();
-  const p = (await r.json())?.data?.content?.[0];
+  const p = (await readJson<ProductListResponse>(r)).data?.content?.[0];
   expect(p?.id, "expected a seeded product").toBeTruthy();
+  if (!p) throw new Error("expected a seeded product");
   return { id: p.id, name: p.name };
 }
 

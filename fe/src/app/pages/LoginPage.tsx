@@ -3,8 +3,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useNavigate, useSearchParams } from "react-router";
 
+import { useAuth } from "../hooks/auth-context";
 import { useAppConfig } from "../hooks/use-app-config";
-import { useAuth } from "../hooks/use-auth";
 import { resolvePostLoginRedirect, sanitizeRedirect } from "../lib/auth/sanitize-redirect";
 
 const OAUTH_ERROR_KEYS: Record<string, string> = {
@@ -35,11 +35,17 @@ export function LoginPage() {
       try {
         await loginWithPassword(username.trim(), password);
       } catch (loginError) {
+        const errorCode =
+          loginError && typeof loginError === "object" && "errorCode" in loginError
+            ? (loginError as { errorCode?: unknown }).errorCode
+            : undefined;
         setError(
-          loginError instanceof Error
-            ? loginError.message
+          errorCode === "invalid_credentials"
+            ? t("login.form.errorInvalidCredentials", {
+                defaultValue: "Wrong email/username or password.",
+              })
             : t("login.form.errorGeneric", {
-                defaultValue: "Sign-in could not be completed. Please try again.",
+                defaultValue: "Couldn't sign in. Try again in a moment.",
               }),
         );
       } finally {

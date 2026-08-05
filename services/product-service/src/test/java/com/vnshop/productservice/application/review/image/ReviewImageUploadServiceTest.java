@@ -53,6 +53,24 @@ class ReviewImageUploadServiceTest {
                     .build()));
 
     @Test
+    void createsSignedUploadUrlWithTheMetadataRequiredByTheBrowser() {
+        UUID reviewId = UUID.randomUUID();
+        reviewRepository.save(review(reviewId));
+
+        ReviewImageUploadResponse response = service.createUpload(new ReviewImageUploadRequest(
+                reviewId.toString(), "buyer-1", "front.png", "image/png", "image/png",
+                1024, "a".repeat(64), 800, 600));
+
+        assertThat(response.objectKey()).startsWith("reviews/" + reviewId + "/images/").endsWith(".png");
+        assertThat(response.uploadUrl()).isEqualTo(URI.create("https://storage.test/" + response.objectKey()));
+        assertThat(response.uploadHeaders()).containsEntry("Content-Type", "image/png")
+                .containsEntry("x-amz-meta-storage-class", "REVIEW_IMAGE")
+                .containsEntry("x-amz-meta-sha256", "a".repeat(64))
+                .containsEntry("x-amz-meta-image-width", "800")
+                .containsEntry("x-amz-meta-image-height", "600");
+    }
+
+    @Test
     void activateRejectsRequestForUnknownReviewWithAccessDenied() {
         UUID reviewId = UUID.randomUUID();
 
@@ -97,6 +115,57 @@ class ReviewImageUploadServiceTest {
         assertThat(metadataRepository.findByKeyCalls).isEmpty();
     }
 
+    @Test
+    void activatesUploadedReviewImageAndReturnsBrowserFacingUrl() {
+        UUID reviewId = UUID.randomUUID();
+        String objectKey = "reviews/" + reviewId + "/images/front.png";
+        reviewRepository.save(review(reviewId));
+        ObjectMetadata metadata = metadata(objectKey);
+        metadataRepository.saved.put(objectKey, metadata);
+        objectStorage.objects.put(objectKey, metadata);
+
+        ReviewImageActivationResponse response = service.activate(
+                reviewId.toString(), "buyer-1", objectKey, activationRequest());
+
+        assertThat(response.quarantineState()).isEqualTo("ACTIVE");
+        assertThat(response.checksumSha256()).isEqualTo("a".repeat(64));
+        assertThat(response.url()).isEqualTo(URI.create("https://cdn.test/" + objectKey));
+        assertThat(reviewRepository.findReviewById(reviewId).orElseThrow().images())
+                .containsExactly(response.url().toString());
+    }
+
+    @Test
+    void activationRejectsWhenThePresignedReviewObjectWasNeverUploaded() {
+        UUID reviewId = UUID.randomUUID();
+        String objectKey = "reviews/" + reviewId + "/images/missing.png";
+        reviewRepository.save(review(reviewId));
+        metadataRepository.saved.put(objectKey, metadata(objectKey));
+
+        assertThatThrownBy(() -> service.activate(
+                reviewId.toString(), "buyer-1", objectKey, activationRequest()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("uploaded review image object not found");
+    }
+
+    private static Review review(UUID reviewId) {
+        return new Review(reviewId, "product-1", "buyer-1", "order-1", 5,
+                "great", List.of(), true, 0, java.util.Set.of(), ReviewStatus.PENDING, java.time.Instant.now());
+    }
+
+    private static ObjectMetadata metadata(String objectKey) {
+        return ObjectMetadata.builder()
+                .key(objectKey)
+                .storageClass(ObjectStorageClass.REVIEW_IMAGE)
+                .contentType("image/png")
+                .contentLength(1024)
+                .sha256Hex("a".repeat(64))
+                .quarantineState(com.vnshop.productservice.domain.storage.ObjectQuarantineState.PENDING_VALIDATION)
+                .imageWidth(800)
+                .imageHeight(600)
+                .createdAt(java.time.Instant.now())
+                .build();
+    }
+
     private static ReviewImageActivationRequest activationRequest() {
         return new ReviewImageActivationRequest(
                 "image/png", 1024, "a".repeat(64), 800, 600);
@@ -129,12 +198,14 @@ class ReviewImageUploadServiceTest {
     }
 
     private static final class FakeObjectStorage implements ObjectStoragePort {
+        private final Map<String, ObjectMetadata> objects = new HashMap<>();
+
         @Override public void putObject(String key, InputStream content, ObjectMetadata metadata) {}
         @Override public URI getSignedUploadUrl(String key, ObjectMetadata metadata) { return URI.create("https://storage.test/" + key); }
         @Override public URI getSignedDownloadUrl(String key, ObjectStorageClass storageClass) { return URI.create("https://storage.test/" + key); }
         @Override public void deleteObject(String key) {}
         @Override public URI publicUrl(String key) { return URI.create("https://cdn.test/" + key); }
-        @Override public Optional<ObjectMetadata> headObject(String key) { return Optional.empty(); }
+        @Override public Optional<ObjectMetadata> headObject(String key) { return Optional.ofNullable(objects.get(key)); }
         @Override public void copyObject(String sourceKey, String destinationKey) {}
     }
 }

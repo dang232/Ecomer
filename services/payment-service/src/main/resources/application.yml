@@ -64,12 +64,12 @@ spring:
 
 payment:
   # Per-method enable flags. Set the env var to "true" to turn the method on.
-  # COD and VietQR default on (no external creds needed). VNPay/MoMo/Stripe/PayPal
-  # default off — flip the matching env var when sandbox creds are available.
+  # COD defaults on. Every provider with buyer-visible destination or browser
+  # configuration defaults off until its complete configuration is supplied.
   cod:
     enabled: ${COD_ENABLED:true}
   vietqr:
-    enabled: ${VIETQR_ENABLED:true}
+    enabled: ${VIETQR_ENABLED:false}
   paypal:
     enabled: ${PAYPAL_ENABLED:false}
     client-id: ${PAYPAL_CLIENT_ID:}
@@ -95,7 +95,7 @@ payment:
     pay-url: ${VNPAY_PAY_URL:https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
     tmn-code: ${VNPAY_TMN_CODE:}
     hash-secret: ${VNPAY_HASH_SECRET:}
-    return-url: ${VNPAY_RETURN_URL:http://localhost:8080/payment/vnpay/return}
+    return-url: ${VNPAY_RETURN_URL:${VNSHOP_FRONTEND_URL:http://localhost:3000}/payment/return/vnpay}
     ipn-url: ${VNPAY_IPN_URL:http://localhost:8080/payment/vnpay/ipn}
     version: ${VNPAY_VERSION:2.1.0}
     command: ${VNPAY_COMMAND:pay}
@@ -110,7 +110,7 @@ payment:
     partner-code: ${MOMO_PARTNER_CODE:}
     access-key: ${MOMO_ACCESS_KEY:}
     secret-key: ${MOMO_SECRET_KEY:}
-    redirect-url: ${MOMO_REDIRECT_URL:http://localhost:8080/payment/momo/return}
+    redirect-url: ${MOMO_REDIRECT_URL:${VNSHOP_FRONTEND_URL:http://localhost:3000}/payment/return/momo}
     ipn-url: ${MOMO_IPN_URL:http://localhost:8080/payment/momo/ipn}
     request-type: ${MOMO_REQUEST_TYPE:captureWallet}
     lang: ${MOMO_LANG:vi}
@@ -139,6 +139,10 @@ vietqr:
 # timeout-check-interval-seconds controls how frequently the sweep runs.
 payment.vietqr.timeout-minutes: ${VIETQR_TIMEOUT_MINUTES:10}
 payment.vietqr.timeout-check-interval-seconds: ${VIETQR_TIMEOUT_CHECK_INTERVAL_SECONDS:60}
+
+vnshop:
+  public-api-url: ${VNSHOP_PUBLIC_API_URL:}
+  frontend-url: ${VNSHOP_FRONTEND_URL:http://localhost:3000}
 
 config-service:
   url: ${CONFIG_SERVICE_URL:http://configuration-service:8097}

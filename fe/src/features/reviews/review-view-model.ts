@@ -1,4 +1,4 @@
-import type { Review } from "../../app/types/api";
+import type { Review } from "@/shared/contracts/api";
 
 export type ReviewPublicationOutcome = "published" | "pending" | "rejected";
 

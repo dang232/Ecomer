@@ -1,0 +1,205 @@
+/**
+ * Unit tests for native-auth.ts — focused on the CSRF double-submit fix.
+ *
+ * <p>user-service's {@code CsrfProtectionFilter} requires the SPA to send the
+ * {@code X-CSRF-Token} header on {@code POST /auth/refresh} and
+ * {@code POST /auth/logout}. The header value must match the
+ * {@code vnshop_csrf} cookie. These tests pin that contract: the helper
+ * reads the cookie, attaches the header on the two protected endpoints, and
+ * does <em>not</em> attach it on login (which is excluded by the filter).
+ */
+import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
+
+import {
+  CSRF_COOKIE_NAME,
+  CSRF_HEADER_NAME,
+  ACCESS_TOKEN_REFRESH_BUFFER_MS,
+  csrfAuthHeader,
+  isAccessTokenRefreshDue,
+  passwordLogin,
+  readCookieValue,
+  refreshTokens,
+  revokeTokens,
+} from "@/shared/auth";
+
+const CSRF_TOKEN_VALUE = "test-csrf-token-abc123";
+
+function setDocumentCookie(cookieString: string): void {
+  // happy-dom lets us stub document.cookie via a getter
+  Object.defineProperty(document, "cookie", {
+    value: cookieString,
+    writable: true,
+    configurable: true,
+  });
+}
+
+function getLastFetchCall(): { url: string; init: RequestInit } {
+  // `fetchMock` is the spy we install in beforeEach; assert against that
+  // directly so we never depend on the global having our stub attached.
+  const calls = fetchMock.mock.calls;
+  expect(calls.length).toBeGreaterThan(0);
+  const last = calls.at(-1);
+  if (!last) throw new Error("Expected a fetch call");
+  const [input, init] = last;
+  const url =
+    typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+  return { url, init: init ?? {} };
+}
+
+let fetchMock: Mock<typeof globalThis.fetch>;
+
+function getHeadersAsObject(init: RequestInit): Record<string, string> {
+  const headers = init.headers;
+  if (!headers) return {};
+  if (headers instanceof Headers) {
+    const out: Record<string, string> = {};
+    headers.forEach((value, key) => {
+      out[key] = value;
+    });
+    return out;
+  }
+  if (Array.isArray(headers)) {
+    const out: Record<string, string> = {};
+    for (const [key, value] of headers) {
+      out[key] = value;
+    }
+    return out;
+  }
+  return headers;
+}
+
+function mockFetchReturningAuthSession(): void {
+  fetchMock.mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        success: true,
+        data: { accessToken: "fake-access-token", accessExpiresIn: 900 },
+        errorCode: null,
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    ),
+  );
+}
+
+beforeEach(() => {
+  // Spy on the real global fetch. vi.restoreAllMocks() in afterEach
+  // restores the original implementation so this test does not pollute
+  // other test files that rely on the real fetch.
+  fetchMock = vi.fn<typeof globalThis.fetch>();
+  vi.spyOn(globalThis, "fetch").mockImplementation(fetchMock);
+  setDocumentCookie("");
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe("readCookieValue", () => {
+  it("returns the value of the named cookie", () => {
+    setDocumentCookie(`${CSRF_COOKIE_NAME}=${CSRF_TOKEN_VALUE}; other=foo`);
+    expect(readCookieValue(CSRF_COOKIE_NAME)).toBe(CSRF_TOKEN_VALUE);
+  });
+
+  it("returns an empty string when the cookie is absent", () => {
+    setDocumentCookie("session=abc; theme=dark");
+    expect(readCookieValue(CSRF_COOKIE_NAME)).toBe("");
+  });
+
+  it("returns an empty string when document.cookie is empty", () => {
+    setDocumentCookie("");
+    expect(readCookieValue(CSRF_COOKIE_NAME)).toBe("");
+  });
+
+  it("decodes URI-encoded values", () => {
+    setDocumentCookie(`${CSRF_COOKIE_NAME}=hello%20world`);
+    expect(readCookieValue(CSRF_COOKIE_NAME)).toBe("hello world");
+  });
+});
+
+describe("access-token refresh timing", () => {
+  it("refreshes only inside the configured expiry buffer", () => {
+    const now = 1_000_000;
+
+    expect(
+      isAccessTokenRefreshDue({ accessExpiresAt: now + ACCESS_TOKEN_REFRESH_BUFFER_MS + 1 }, now),
+    ).toBe(false);
+    expect(
+      isAccessTokenRefreshDue({ accessExpiresAt: now + ACCESS_TOKEN_REFRESH_BUFFER_MS }, now),
+    ).toBe(true);
+  });
+});
+
+describe("csrfAuthHeader", () => {
+  it("returns the CSRF header when the cookie is present", () => {
+    setDocumentCookie(`${CSRF_COOKIE_NAME}=${CSRF_TOKEN_VALUE}`);
+    expect(csrfAuthHeader()).toEqual({ [CSRF_HEADER_NAME]: CSRF_TOKEN_VALUE });
+  });
+
+  it("returns undefined when the cookie is missing", () => {
+    setDocumentCookie("other=foo");
+    expect(csrfAuthHeader()).toBeUndefined();
+  });
+});
+
+describe("refreshTokens", () => {
+  it("attaches the X-CSRF-Token header on /auth/refresh", async () => {
+    setDocumentCookie(`${CSRF_COOKIE_NAME}=${CSRF_TOKEN_VALUE}`);
+    mockFetchReturningAuthSession();
+
+    await refreshTokens();
+
+    const { url, init } = getLastFetchCall();
+    expect(url).toContain("/auth/refresh");
+    expect(init.method).toBe("POST");
+    expect(init.credentials).toBe("include");
+    const headers = getHeadersAsObject(init);
+    expect(headers[CSRF_HEADER_NAME]).toBe(CSRF_TOKEN_VALUE);
+  });
+
+  it("rejects locally without a request when the CSRF cookie is missing", async () => {
+    setDocumentCookie("");
+    mockFetchReturningAuthSession();
+
+    await expect(refreshTokens()).rejects.toMatchObject({
+      statusCode: 403,
+      errorCode: "csrf_missing",
+    });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("revokeTokens", () => {
+  it("attaches the X-CSRF-Token header on /auth/logout", async () => {
+    setDocumentCookie(`${CSRF_COOKIE_NAME}=${CSRF_TOKEN_VALUE}`);
+    mockFetchReturningAuthSession();
+
+    await revokeTokens();
+
+    const { url, init } = getLastFetchCall();
+    expect(url).toContain("/auth/logout");
+    expect(init.method).toBe("POST");
+    expect(init.credentials).toBe("include");
+    const headers = getHeadersAsObject(init);
+    expect(headers[CSRF_HEADER_NAME]).toBe(CSRF_TOKEN_VALUE);
+  });
+});
+
+describe("passwordLogin", () => {
+  it("returns the token set without attaching the CSRF header on /auth/login", async () => {
+    setDocumentCookie(`${CSRF_COOKIE_NAME}=${CSRF_TOKEN_VALUE}`);
+    mockFetchReturningAuthSession();
+
+    await expect(passwordLogin("user", "pass")).resolves.toMatchObject({
+      accessToken: "fake-access-token",
+    });
+
+    const { url, init } = getLastFetchCall();
+    expect(url).toContain("/auth/login");
+    expect(init.method).toBe("POST");
+    const headers = getHeadersAsObject(init);
+    expect(headers[CSRF_HEADER_NAME]).toBeUndefined();
+    // Sanity: the body Content-Type is still set for the JSON payload
+    expect(headers["Content-Type"]).toBe("application/json");
+  });
+});

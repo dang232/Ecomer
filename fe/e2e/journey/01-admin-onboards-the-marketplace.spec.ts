@@ -1,5 +1,8 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
 
+import { readJson, type AuthResponse } from "../_api";
+import { loginAsSeededUser, logoutViaUserMenu } from "../_workday-evidence";
+
 import {
   bizStep,
   copyArtifacts,
@@ -10,7 +13,6 @@ import {
   startTrace,
   stopTrace,
 } from "./_journey-evidence";
-import { loginAsSeededUser, logoutViaUserMenu } from "../_workday-evidence";
 import { resetJourneyState, writeJourneyState } from "./_journey-state";
 
 /**
@@ -77,7 +79,7 @@ test.describe.serial("Chapter 1 — Admin onboards the marketplace", () => {
     pendingSellerEmail = seeded.email;
   });
 
-  test.afterEach(async ({}, testInfo) => {
+  test.afterEach(({ page: _page }, testInfo) => {
     rememberOutputDir("01-admin-onboards", testInfo);
   });
 
@@ -99,7 +101,7 @@ test.describe.serial("Chapter 1 — Admin onboards the marketplace", () => {
         "AC-1.1",
         "Admin opens the pending sellers queue and sees the new application",
         async () => {
-          await loginAsSeededUser(page, "admin1");
+          await loginAsSeededUser(page, "admin");
           await page.goto("/admin");
           await expect(
             page.getByText(/Admin Dashboard|Tổng quan|Admin Console/i).first(),
@@ -112,7 +114,7 @@ test.describe.serial("Chapter 1 — Admin onboards the marketplace", () => {
 
           // The pending application's display name carries our run's
           // timestamp so we can disambiguate from other Journey leftovers.
-          const stamp = pendingSellerEmail.match(/_(\d+)@/)?.[1] ?? "";
+          const stamp = /_(\d+)@/.exec(pendingSellerEmail)?.[1] ?? "";
           await expect
             .poll(async () => page.getByText(new RegExp(`Journey Pending Shop ${stamp}`)).count(), {
               timeout: 30_000,
@@ -134,7 +136,7 @@ test.describe.serial("Chapter 1 — Admin onboards the marketplace", () => {
           // pick the Approve button inside it. The .divide-y > div selector
           // narrows to the row container so the parent matcher doesn't also
           // match nested ancestors.
-          const stamp = pendingSellerEmail.match(/_(\d+)@/)?.[1] ?? "";
+          const stamp = /_(\d+)@/.exec(pendingSellerEmail)?.[1] ?? "";
           const shopName = `Journey Pending Shop ${stamp}`;
           const row = page.locator(".divide-y > div", { hasText: shopName }).first();
           await expect(row).toBeVisible({ timeout: 10_000 });
@@ -163,7 +165,9 @@ test.describe.serial("Chapter 1 — Admin onboards the marketplace", () => {
               async () => {
                 const r = await page.request.get(`${apiURL}/sellers?size=50`);
                 if (!r.ok()) return false;
-                const list: Array<{ shopName?: string }> = (await r.json())?.data?.content ?? [];
+                const list =
+                  (await readJson<{ data?: { content?: { shopName?: string }[] } }>(r)).data
+                    ?.content ?? [];
                 return list.some((s) => /Journey Pending Shop/i.test(s.shopName ?? ""));
               },
               {
@@ -276,15 +280,17 @@ async function seedPendingSeller(
     reg.ok(),
     `journey: register seller account: ${reg.status()} ${await reg.text()}`,
   ).toBeTruthy();
-  const keycloakId = (await reg.json())?.data?.userId;
+  const keycloakId = (await readJson<{ data?: { userId?: string } }>(reg)).data?.userId;
   expect(keycloakId, "no keycloakId on register response").toBeTruthy();
+  if (!keycloakId) throw new Error("register response did not include a keycloakId");
 
   const login = await request.post(`${apiURL}/auth/login`, {
     data: { username: email, password: PASSWORD },
   });
   expect(login.ok(), `journey: login seller-to-be: ${login.status()}`).toBeTruthy();
-  const accessToken = (await login.json())?.data?.accessToken;
+  const accessToken = (await readJson<AuthResponse>(login)).data?.accessToken;
   expect(accessToken, "no access token after login").toBeTruthy();
+  if (!accessToken) throw new Error("login response did not include an access token");
 
   const sellerReg = await request.post(`${apiURL}/sellers/register`, {
     headers: { Authorization: `Bearer ${accessToken}` },

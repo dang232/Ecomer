@@ -1,8 +1,12 @@
-import { test, Page } from "@playwright/test";
 import { mkdir } from "fs/promises";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
-import { loginViaOidc } from "./_auth";
+
+import { test } from "@playwright/test";
+import type { Page } from "@playwright/test";
+
+import { loginAsPersona } from "./_auth";
+import type { Persona } from "./modernization/_credentials";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -24,8 +28,8 @@ async function snap(page: Page, name: string, full = true) {
   throw lastError;
 }
 
-async function loginAs(page: Page, email: string) {
-  await loginViaOidc(page, email, "test");
+async function loginAs(page: Page, persona: Persona) {
+  await loginAsPersona(page, persona);
 }
 
 // ─── GUEST FLOWS ──────────────────────────────────────────────────
@@ -92,10 +96,6 @@ test("15 — 404 page", async ({ page }) => {
 test("16 — Dark mode toggle", async ({ page }) => {
   await page.goto("/");
   await page.waitForLoadState("networkidle");
-  const toggle = page
-    .locator("button")
-    .filter({ has: page.locator("svg") })
-    .nth(0);
   // Find the theme toggle in the navbar
   const themeBtn = page.locator(
     'button[aria-label*="theme"], button[aria-label*="dark"], button[aria-label*="Theme"]',
@@ -135,54 +135,54 @@ test("18 — Password Reset page", async ({ page }) => {
 
 // ─── BUYER FLOWS ──────────────────────────────────────────────────
 test("19 — Buyer: logged-in homepage", async ({ page }) => {
-  await loginAs(page, "buyer1@vnshop.local");
+  await loginAs(page, "buyer");
   await snap(page, "19-buyer-logged-in-home", false);
 });
 
 test("20 — Buyer: Cart page", async ({ page }) => {
-  await loginAs(page, "buyer1@vnshop.local");
+  await loginAs(page, "buyer");
   await page.goto("/cart");
   await page.waitForLoadState("networkidle");
   await snap(page, "20-buyer-cart-page");
 });
 
 test("21 — Buyer: Profile page", async ({ page }) => {
-  await loginAs(page, "buyer1@vnshop.local");
+  await loginAs(page, "buyer");
   await page.goto("/profile");
   await page.waitForLoadState("networkidle");
   await snap(page, "21-buyer-profile-page");
 });
 
 test("22 — Buyer: Wishlist", async ({ page }) => {
-  await loginAs(page, "buyer1@vnshop.local");
+  await loginAs(page, "buyer");
   await page.goto("/wishlist");
   await page.waitForLoadState("networkidle");
   await snap(page, "22-buyer-wishlist-page");
 });
 
 test("23 — Buyer: Orders", async ({ page }) => {
-  await loginAs(page, "buyer1@vnshop.local");
+  await loginAs(page, "buyer");
   await page.goto("/orders");
   await page.waitForLoadState("networkidle");
   await snap(page, "23-buyer-orders-page");
 });
 
 test("24 — Buyer: Notifications", async ({ page }) => {
-  await loginAs(page, "buyer1@vnshop.local");
+  await loginAs(page, "buyer");
   await page.goto("/notifications");
   await page.waitForLoadState("networkidle");
   await snap(page, "24-buyer-notifications-page");
 });
 
 test("25 — Buyer: Messages", async ({ page }) => {
-  await loginAs(page, "buyer1@vnshop.local");
+  await loginAs(page, "buyer");
   await page.goto("/messages");
   await page.waitForLoadState("networkidle");
   await snap(page, "25-buyer-messages-page");
 });
 
 test("26 — Buyer: Add to cart from product detail", async ({ page }) => {
-  await loginAs(page, "buyer1@vnshop.local");
+  await loginAs(page, "buyer");
   await page.goto("/");
   await page.waitForLoadState("networkidle");
   const link = page.locator('a[href*="/product/"]').first();
@@ -203,7 +203,7 @@ test("26 — Buyer: Add to cart from product detail", async ({ page }) => {
 });
 
 test("27 — Buyer: Checkout page", async ({ page }) => {
-  await loginAs(page, "buyer1@vnshop.local");
+  await loginAs(page, "buyer");
   await page.goto("/checkout");
   await page.waitForLoadState("networkidle");
   await page.waitForTimeout(1000);
@@ -212,14 +212,14 @@ test("27 — Buyer: Checkout page", async ({ page }) => {
 
 // ─── SELLER FLOWS ─────────────────────────────────────────────────
 test("28 — Seller: Dashboard", async ({ page }) => {
-  await loginAs(page, "seller1@vnshop.local");
+  await loginAs(page, "seller");
   await page.goto("/seller");
   await page.waitForLoadState("networkidle");
   await snap(page, "28-seller-dashboard");
 });
 
 test("29 — Seller: Products tab", async ({ page }) => {
-  await loginAs(page, "seller1@vnshop.local");
+  await loginAs(page, "seller");
   await page.goto("/seller");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /^Products$/i }).click();
@@ -228,7 +228,7 @@ test("29 — Seller: Products tab", async ({ page }) => {
 });
 
 test("30 — Seller: Orders tab", async ({ page }) => {
-  await loginAs(page, "seller1@vnshop.local");
+  await loginAs(page, "seller");
   await page.goto("/seller");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /^Orders$/i }).click();
@@ -237,7 +237,7 @@ test("30 — Seller: Orders tab", async ({ page }) => {
 });
 
 test("31 — Seller: Reviews tab", async ({ page }) => {
-  await loginAs(page, "seller1@vnshop.local");
+  await loginAs(page, "seller");
   await page.goto("/seller");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /^Reviews$/i }).click();
@@ -246,7 +246,7 @@ test("31 — Seller: Reviews tab", async ({ page }) => {
 });
 
 test("32 — Seller: Wallet tab", async ({ page }) => {
-  await loginAs(page, "seller1@vnshop.local");
+  await loginAs(page, "seller");
   await page.goto("/seller");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /^Wallet$/i }).click();
@@ -255,7 +255,7 @@ test("32 — Seller: Wallet tab", async ({ page }) => {
 });
 
 test("33 — Seller: Settings tab", async ({ page }) => {
-  await loginAs(page, "seller1@vnshop.local");
+  await loginAs(page, "seller");
   await page.goto("/seller");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /^Settings$/i }).click();
@@ -265,14 +265,14 @@ test("33 — Seller: Settings tab", async ({ page }) => {
 
 // ─── ADMIN FLOWS ──────────────────────────────────────────────────
 test("34 — Admin: Dashboard", async ({ page }) => {
-  await loginAs(page, "admin1@vnshop.local");
+  await loginAs(page, "admin");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
   await snap(page, "34-admin-dashboard");
 });
 
 test("35 — Admin: Approve Sellers", async ({ page }) => {
-  await loginAs(page, "admin1@vnshop.local");
+  await loginAs(page, "admin");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /Approve Sellers/i }).click();
@@ -281,7 +281,7 @@ test("35 — Admin: Approve Sellers", async ({ page }) => {
 });
 
 test("36 — Admin: Moderation", async ({ page }) => {
-  await loginAs(page, "admin1@vnshop.local");
+  await loginAs(page, "admin");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /^Moderation(?:,|$)/i }).click();
@@ -290,7 +290,7 @@ test("36 — Admin: Moderation", async ({ page }) => {
 });
 
 test("37 — Admin: Coupons", async ({ page }) => {
-  await loginAs(page, "admin1@vnshop.local");
+  await loginAs(page, "admin");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /^Coupons$/i }).click();
@@ -299,7 +299,7 @@ test("37 — Admin: Coupons", async ({ page }) => {
 });
 
 test("38 — Admin: Disputes", async ({ page }) => {
-  await loginAs(page, "admin1@vnshop.local");
+  await loginAs(page, "admin");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /^Disputes$/i }).click();
@@ -308,7 +308,7 @@ test("38 — Admin: Disputes", async ({ page }) => {
 });
 
 test("39 — Admin: Payouts", async ({ page }) => {
-  await loginAs(page, "admin1@vnshop.local");
+  await loginAs(page, "admin");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /^Payouts$/i }).click();
@@ -317,7 +317,7 @@ test("39 — Admin: Payouts", async ({ page }) => {
 });
 
 test("40 — Admin: Users tab", async ({ page }) => {
-  await loginAs(page, "admin1@vnshop.local");
+  await loginAs(page, "admin");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /^Users$/i }).click();
@@ -326,7 +326,7 @@ test("40 — Admin: Users tab", async ({ page }) => {
 });
 
 test("41 — Admin: Orders tab", async ({ page }) => {
-  await loginAs(page, "admin1@vnshop.local");
+  await loginAs(page, "admin");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /^Orders$/i }).click();
@@ -335,7 +335,7 @@ test("41 — Admin: Orders tab", async ({ page }) => {
 });
 
 test("42 — Admin: Health tab", async ({ page }) => {
-  await loginAs(page, "admin1@vnshop.local");
+  await loginAs(page, "admin");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /^System Health$/i }).click();

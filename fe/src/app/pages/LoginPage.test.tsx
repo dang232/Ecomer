@@ -2,16 +2,37 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const useAuthMock = vi.fn();
+import { AuthError } from "@/shared/auth";
 
-vi.mock("../hooks/use-auth", () => ({ useAuth: () => useAuthMock() }));
+const useAuthMock = vi.fn<() => unknown>();
+const i18nMock = vi.hoisted(
+  (): {
+    language: "en" | "vi";
+    translations: Record<"en" | "vi", Record<string, string>>;
+  } => ({
+    language: "en",
+    translations: {
+      en: {
+        "login.form.errorInvalidCredentials": "Wrong email/username or password.",
+        "login.form.errorGeneric": "Couldn't sign in. Try again in a moment.",
+      },
+      vi: {
+        "login.form.errorInvalidCredentials": "Sai email/tên đăng nhập hoặc mật khẩu.",
+        "login.form.errorGeneric": "Không thể đăng nhập. Vui lòng thử lại.",
+      },
+    },
+  }),
+);
+
+vi.mock("../hooks/auth-context", () => ({ useAuth: () => useAuthMock() }));
 vi.mock("../hooks/use-app-config", () => ({
   useAppConfig: () => ({ auth: { oauthProviders: ["google"] } }),
 }));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (_key: string, options?: Record<string, unknown>) =>
-      typeof options?.defaultValue === "string" ? options.defaultValue : _key,
+    t: (key: string, options?: Record<string, unknown>) =>
+      i18nMock.translations[i18nMock.language][key] ??
+      (typeof options?.defaultValue === "string" ? options.defaultValue : key),
   }),
 }));
 
@@ -34,6 +55,7 @@ describe("LoginPage native auth", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    i18nMock.language = "en";
     useAuthMock.mockReturnValue({
       ready: true,
       authenticated: false,
@@ -43,7 +65,46 @@ describe("LoginPage native auth", () => {
     });
   });
 
-  it("submits credentials through the native auth boundary", async () => {
+  it.each([
+    ["English", "en", "Wrong email/username or password."],
+    ["Vietnamese", "vi", "Sai email/tên đăng nhập hoặc mật khẩu."],
+  ] as const)(
+    "renders the localized invalid-credentials message in %s",
+    async (_languageName, language, localizedMessage) => {
+      i18nMock.language = language;
+      loginWithPassword.mockRejectedValueOnce(
+        new AuthError(401, "invalid_credentials", "Auth failed (HTTP 401)"),
+      );
+      renderLogin();
+
+      fireEvent.change(screen.getByLabelText(/email or username/i), {
+        target: { value: "buyer1" },
+      });
+      fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: "wrong" } });
+      fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+
+      const alert = await screen.findByRole("alert");
+      expect(alert).toHaveTextContent(localizedMessage);
+      expect(alert).not.toHaveTextContent("Auth failed (HTTP 401)");
+    },
+  );
+
+  it("keeps other login failures behind the localized generic message", async () => {
+    loginWithPassword.mockRejectedValueOnce(new Error("backend detail"));
+    renderLogin();
+
+    fireEvent.change(screen.getByLabelText(/email or username/i), {
+      target: { value: "buyer1" },
+    });
+    fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: "wrong" } });
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Couldn't sign in. Try again in a moment.");
+    expect(alert).not.toHaveTextContent("backend detail");
+  });
+
+  it("submits credentials through the native auth boundary", () => {
     renderLogin("/login?next=%2Forders%3Fstatus%3DSHIPPED");
 
     fireEvent.change(screen.getByLabelText(/email or username/i), {

@@ -1,12 +1,13 @@
-import { IconBell } from "@tabler/icons-react";
+import { Bell } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
-import { useAuth } from "../hooks/use-auth";
+import type { Notification } from "@/shared/contracts/api/notification";
+
+import { useAuth } from "../hooks/auth-context";
 import { useNotifications } from "../hooks/use-notifications";
-import type { Notification } from "../types/api/notification";
 
 import { NotificationIcon } from "./notifications/notification-icon";
 
@@ -133,7 +134,7 @@ export function NotificationBell() {
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        <IconBell size={22} className={pulse ? "animate-bounce" : ""} />
+        <Bell size={22} className={pulse ? "animate-bounce" : ""} />
         {unreadCount > 0 ? (
           <span
             className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 rounded-full text-white text-[10px] font-bold flex items-center justify-center"
@@ -180,7 +181,7 @@ export function NotificationBell() {
 
               {!isLoading && groups.length === 0 ? (
                 <div className="px-4 py-10 text-center">
-                  <IconBell size={32} className="mx-auto mb-3 text-muted-foreground/30" />
+                  <Bell size={32} className="mx-auto mb-3 text-muted-foreground/30" />
                   <p className="text-sm text-muted-foreground">{t("notificationBell.empty")}</p>
                 </div>
               ) : null}

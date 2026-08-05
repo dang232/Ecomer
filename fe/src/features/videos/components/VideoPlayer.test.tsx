@@ -20,7 +20,7 @@ describe("VideoPlayer", () => {
 
   it("renders a native video element with the provided src", () => {
     const { container } = render(<VideoPlayer src="http://example.com/video.mp4" />);
-    const video = container.querySelector("video") as HTMLVideoElement;
+    const video = container.querySelector("video")!;
     expect(video).not.toBeNull();
     expect(video.src).toBe("http://example.com/video.mp4");
   });
@@ -29,8 +29,31 @@ describe("VideoPlayer", () => {
     const { container } = render(
       <VideoPlayer src="http://example.com/video.mp4" poster="http://example.com/thumb.jpg" />,
     );
-    const video = container.querySelector("video") as HTMLVideoElement;
+    const video = container.querySelector("video")!;
     expect(video.getAttribute("poster")).toBe("http://example.com/thumb.jpg");
+  });
+
+  it("renders the provided caption track", () => {
+    const { container } = render(
+      <VideoPlayer
+        src="http://example.com/video.mp4"
+        tracks={[
+          {
+            src: "http://example.com/captions.vtt",
+            srclang: "vi",
+            label: "Vietnamese",
+            default: true,
+          },
+        ]}
+      />,
+    );
+    const track = container.querySelector("track");
+
+    expect(track).toHaveAttribute("kind", "captions");
+    expect(track).toHaveAttribute("src", "http://example.com/captions.vtt");
+    expect(track).toHaveAttribute("srclang", "vi");
+    expect(track).toHaveAttribute("label", "Vietnamese");
+    expect(track).toHaveAttribute("default");
   });
 
   it("shows the play overlay button before first play", () => {
@@ -41,19 +64,19 @@ describe("VideoPlayer", () => {
 
   it("video element has controls attribute for accessibility", () => {
     const { container } = render(<VideoPlayer src="http://example.com/video.mp4" />);
-    const video = container.querySelector("video") as HTMLVideoElement;
+    const video = container.querySelector("video")!;
     expect(video).toHaveAttribute("controls");
   });
 
   it("video element has playsInline attribute", () => {
     const { container } = render(<VideoPlayer src="http://example.com/video.mp4" />);
-    const video = container.querySelector("video") as HTMLVideoElement;
+    const video = container.querySelector("video")!;
     expect(video).toHaveAttribute("playsinline");
   });
 
   it("hides the overlay after play event fires on the video element", () => {
     const { container } = render(<VideoPlayer src="http://example.com/video.mp4" />);
-    const video = container.querySelector("video") as HTMLVideoElement;
+    const video = container.querySelector("video")!;
 
     // Simulate the video's play event — the component listens via onPlay
     fireEvent.play(video);

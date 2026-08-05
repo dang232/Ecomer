@@ -1,9 +1,11 @@
-import { test, expect, type Page } from "@playwright/test";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { test, expect, type Page } from "@playwright/test";
+
+import { loginAsPersona } from "./_auth";
 import { expectNoGlobalError } from "./_helpers";
-import { loginViaOidc } from "./_auth";
 
 /**
  * E2E spec for Video FE Integration — proves the video UI wiring renders
@@ -39,15 +41,15 @@ async function screenshot(page: Page, slug: string) {
   throw lastError;
 }
 
-async function loginViaUI(page: Page, username: string) {
-  await loginViaOidc(page, username);
+async function loginViaUI(page: Page, persona: "buyer" | "seller" | "admin") {
+  await loginAsPersona(page, persona);
 }
 
 // ─── Admin: Video Moderation tab renders ───────────────────────────────────
 
 test.describe("video integration — admin", () => {
   test("Admin page loads and Video Moderation nav item is visible", async ({ page }) => {
-    await loginViaUI(page, "admin1");
+    await loginViaUI(page, "admin");
     await page.goto("/admin");
 
     // Confirm admin page loaded
@@ -80,7 +82,7 @@ test.describe("video integration — admin", () => {
 
 test.describe("video integration — seller", () => {
   test("Seller dashboard loads and product modal has Videos section", async ({ page }) => {
-    await loginViaUI(page, "seller1");
+    await loginViaUI(page, "seller");
     await page.goto("/seller");
 
     // Wait for seller page to render

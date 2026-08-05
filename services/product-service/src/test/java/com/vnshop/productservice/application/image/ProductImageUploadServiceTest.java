@@ -46,6 +46,12 @@ class ProductImageUploadServiceTest {
         assertThat(response.objectKey()).startsWith("products/00000000-0000-0000-0000-000000000001/images/").endsWith(".png");
         assertThat(response.checksumSha256()).isEqualTo("a".repeat(64));
         assertThat(response.quarantineState()).isEqualTo("PENDING_VALIDATION");
+        assertThat(response.uploadHeaders()).containsEntry("Content-Type", "image/png")
+                .containsEntry("x-amz-meta-storage-class", "PRODUCT_IMAGE")
+                .containsEntry("x-amz-meta-sha256", "a".repeat(64))
+                .containsEntry("x-amz-meta-quarantine-state", "PENDING_VALIDATION")
+                .containsEntry("x-amz-meta-image-width", "800")
+                .containsEntry("x-amz-meta-image-height", "600");
         ObjectMetadata metadata = metadataRepository.saved.get(response.objectKey());
         assertThat(metadata.getQuarantineState()).isEqualTo(ObjectQuarantineState.PENDING_VALIDATION);
         assertThat(metadata.getSha256Hex()).isEqualTo("a".repeat(64));
@@ -141,6 +147,73 @@ class ProductImageUploadServiceTest {
         assertThat(metadataRepository.findByKeyCalls).isEmpty();
     }
 
+    @Test
+    void activatesImageAndReturnsBrowserFacingPublicUrl() {
+        UUID productId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        String objectKey = "products/" + productId + "/images/front.png";
+        productRepository.save(product(productId, "seller-1"));
+        ObjectMetadata metadata = ObjectMetadata.builder()
+                .key(objectKey)
+                .storageClass(ObjectStorageClass.PRODUCT_IMAGE)
+                .contentType("image/png")
+                .contentLength(1024)
+                .sha256Hex("a".repeat(64))
+                .quarantineState(ObjectQuarantineState.PENDING_VALIDATION)
+                .imageWidth(800)
+                .imageHeight(600)
+                .createdAt(Instant.now())
+                .build();
+        metadataRepository.saved.put(objectKey, metadata);
+        objectStorage.objects.put(objectKey, metadata);
+
+        ProductImageActivationResponse response = service.activate(
+                productId.toString(),
+                "seller-1",
+                objectKey,
+                ProductImageActivationRequest.builder()
+                        .detectedContentType("image/png")
+                        .contentLength(1024)
+                        .sha256Hex("a".repeat(64))
+                        .imageWidth(800)
+                        .imageHeight(600)
+                        .build());
+
+        assertThat(response.quarantineState()).isEqualTo("ACTIVE");
+        assertThat(response.url()).isEqualTo(URI.create("https://cdn.test/" + objectKey));
+    }
+
+    @Test
+    void activationRejectsWhenThePresignedObjectWasNeverUploaded() {
+        UUID productId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        String objectKey = "products/" + productId + "/images/missing.png";
+        productRepository.save(product(productId, "seller-1"));
+        metadataRepository.saved.put(objectKey, ObjectMetadata.builder()
+                .key(objectKey)
+                .storageClass(ObjectStorageClass.PRODUCT_IMAGE)
+                .contentType("image/png")
+                .contentLength(1024)
+                .sha256Hex("a".repeat(64))
+                .quarantineState(ObjectQuarantineState.PENDING_VALIDATION)
+                .imageWidth(800)
+                .imageHeight(600)
+                .createdAt(Instant.now())
+                .build());
+
+        assertThatThrownBy(() -> service.activate(
+                productId.toString(),
+                "seller-1",
+                objectKey,
+                ProductImageActivationRequest.builder()
+                        .detectedContentType("image/png")
+                        .contentLength(1024)
+                        .sha256Hex("a".repeat(64))
+                        .imageWidth(800)
+                        .imageHeight(600)
+                        .build()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("uploaded image object not found");
+    }
+
     private ProductImageUploadRequest.ProductImageUploadRequestBuilder validRequest() {
         return ProductImageUploadRequest.builder()
                 .productId("00000000-0000-0000-0000-000000000001")
@@ -216,6 +289,7 @@ class ProductImageUploadServiceTest {
     private static final class FakeObjectStorage implements ObjectStoragePort {
         private String lastKey;
         private ObjectMetadata lastMetadata;
+        private final Map<String, ObjectMetadata> objects = new HashMap<>();
 
         @Override
         public void putObject(String key, InputStream content, ObjectMetadata metadata) {
@@ -239,7 +313,7 @@ class ProductImageUploadServiceTest {
 
         @Override
         public Optional<ObjectMetadata> headObject(String key) {
-            return Optional.empty();
+            return Optional.ofNullable(objects.get(key));
         }
 
         @Override

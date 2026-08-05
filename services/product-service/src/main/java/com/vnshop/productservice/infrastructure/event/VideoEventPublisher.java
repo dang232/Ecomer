@@ -9,6 +9,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 /**
  * Publishes {@link VideoEvent} records to Kafka.
  *
@@ -29,13 +32,14 @@ import org.springframework.stereotype.Component;
 @Component
 public class VideoEventPublisher implements VideoEventPublisherPort {
     private static final Logger LOGGER = LoggerFactory.getLogger(VideoEventPublisher.class);
-    private static final String TOPIC = "video-events";
+    private static final String DEFAULT_TOPIC = "video-events";
+    private static final String UPLOAD_COMPLETED_TOPIC = "video.upload.completed";
     static final String ALERT_MARKER = "[VIDEO-EVENT-PUBLISH-FAILED]";
 
-    private final KafkaTemplate<String, VideoEvent> kafkaTemplate;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
     private final Counter publishFailureCounter;
 
-    public VideoEventPublisher(KafkaTemplate<String, VideoEvent> kafkaTemplate,
+    public VideoEventPublisher(KafkaTemplate<String, Object> kafkaTemplate,
             MeterRegistry meterRegistry) {
         this.kafkaTemplate = kafkaTemplate;
         this.publishFailureCounter = Counter.builder("video.event.publish.failed")
@@ -47,7 +51,7 @@ public class VideoEventPublisher implements VideoEventPublisherPort {
     public void publish(VideoEvent event) {
         LOGGER.info("Publishing video event {} for video {}", event.eventType(), event.videoId());
         try {
-            kafkaTemplate.send(TOPIC, event.videoId(), event);
+            kafkaTemplate.send(topicFor(event), event.videoId(), messageFor(event));
         } catch (RuntimeException exception) {
             // H9: log at ERROR with a stable marker for log-based alerts, and
             // increment a metric counter. We do NOT rethrow — see class javadoc.
@@ -55,5 +59,33 @@ public class VideoEventPublisher implements VideoEventPublisherPort {
             LOGGER.error("{} videoId={} eventType={} error={}",
                     ALERT_MARKER, event.videoId(), event.eventType(), exception.getMessage(), exception);
         }
+    }
+
+    private static String topicFor(VideoEvent event) {
+        return event.eventType() == VideoEvent.EventType.VIDEO_UPLOAD_COMPLETED
+                ? UPLOAD_COMPLETED_TOPIC
+                : DEFAULT_TOPIC;
+    }
+
+    private static Object messageFor(VideoEvent event) {
+        if (event.eventType() != VideoEvent.EventType.VIDEO_UPLOAD_COMPLETED) {
+            return event;
+        }
+
+        Map<String, Object> payload = event.payload();
+        Map<String, Object> message = new LinkedHashMap<>();
+        message.put("videoId", event.videoId());
+        message.put("ownerType", payload.get("ownerType"));
+        message.put("productId", blankToNull(payload.get("productId")));
+        message.put("reviewId", blankToNull(payload.get("reviewId")));
+        message.put("rawKey", payload.get("rawKey"));
+        message.put("extension", payload.get("extension"));
+        message.put("sha256", payload.get("sha256"));
+        message.put("fileSizeBytes", payload.get("fileSizeBytes"));
+        return message;
+    }
+
+    private static Object blankToNull(Object value) {
+        return value instanceof String text && text.isBlank() ? null : value;
     }
 }

@@ -23,20 +23,42 @@ def update_video_moderation(
     video_id: str,
     nsfw_score: float,
     verdict: str,
+    status: str,
+    transcoded_object_key: str,
+    poster_object_key: str,
+    duration_seconds: int | float,
+    published: bool,
+    rejection_reason: str | None,
 ) -> None:
-    """Update nsfw_score and moderation_verdict for the given video_id."""
+    """Persist the moderation outcome and the media location for a video."""
     sql = """
         UPDATE product_svc.videos
         SET
             nsfw_score         = %(nsfw_score)s,
             moderation_verdict = %(verdict)s,
+            status             = %(status)s,
+            transcoded_object_key = %(transcoded_object_key)s,
+            poster_object_key  = %(poster_object_key)s,
+            duration_seconds   = %(duration_seconds)s,
+            rejection_reason   = %(rejection_reason)s,
             moderated_at       = NOW()
+            , published_at = CASE
+                WHEN %(published)s THEN COALESCE(published_at, NOW())
+                ELSE NULL
+            END
+            , updated_at = NOW()
         WHERE video_id = %(video_id)s
     """
     params = {
         "video_id": video_id,
         "nsfw_score": nsfw_score,
         "verdict": verdict,
+        "status": status,
+        "transcoded_object_key": transcoded_object_key,
+        "poster_object_key": poster_object_key,
+        "duration_seconds": duration_seconds,
+        "published": published,
+        "rejection_reason": rejection_reason,
     }
     try:
         with _get_conn() as conn:
@@ -44,10 +66,11 @@ def update_video_moderation(
                 cur.execute(sql, params)
             conn.commit()
         logger.info(
-            "Updated DB: videoId=%s nsfw_score=%.4f verdict=%s",
+            "Updated DB: videoId=%s nsfw_score=%.4f verdict=%s status=%s",
             video_id,
             nsfw_score,
             verdict,
+            status,
         )
     except Exception:
         logger.exception("Failed to update DB for videoId=%s", video_id)

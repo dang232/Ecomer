@@ -1,18 +1,22 @@
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
-import { makeWrapper } from "../test-utils/render-with-query-client";
+import type { PurchasedCartItem } from "@/features/checkout";
+import { makeWrapper } from "@/shared/test/render-with-query-client";
+
+import { readJsonText } from "../../shared/api/read-json";
 
 import { useCart } from "./use-cart";
 
-vi.mock("../lib/auth/native-auth", () => ({
+vi.mock("@/shared/auth", () => ({
   getAccessToken: () => null,
   setLiveTokenSet: vi.fn(),
   refreshTokens: vi.fn(),
 }));
 
 // Mock product endpoint used by guest cart hydration
-vi.mock("../lib/api/endpoints/products", () => ({
+vi.mock("@/shared/api/endpoints/products", () => ({
   productById: vi.fn().mockResolvedValue(null),
 }));
 
@@ -45,8 +49,8 @@ function cartEnvelope(data: unknown, status = 200): Response {
   );
 }
 
-const useAuthMock = vi.fn();
-vi.mock("./use-auth", () => ({
+const useAuthMock = vi.fn<() => { ready: boolean; authenticated: boolean }>();
+vi.mock("./auth-context", () => ({
   useAuth: () => useAuthMock(),
 }));
 
@@ -89,6 +93,20 @@ describe("useCart", () => {
       });
 
       expect(result.current.items).toHaveLength(2);
+    });
+
+    it("ignores malformed guest cart storage", async () => {
+      useAuthMock.mockReturnValue({ ready: true, authenticated: false });
+      localStorage.setItem(
+        "vnshop:guest-cart",
+        JSON.stringify([{ productId: "prod-1", quantity: 0 }]),
+      );
+
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
+
+      await waitFor(() => expect(result.current.isGuest).toBe(true));
+      expect(result.current.items).toEqual([]);
     });
 
     it("should add item to guest cart", async () => {
@@ -317,17 +335,22 @@ describe("useCart", () => {
         await expect(result.current.executeMerge()).resolves.toBe(true);
       });
 
-      const postCall = fetchSpy.mock.calls.find(
-        ([, request]) => (request as RequestInit | undefined)?.method === "POST",
-      );
-      expect(postCall).toBeDefined();
-      const [, request] = postCall as [RequestInfo | URL, RequestInit];
+      const postCall = fetchSpy.mock.calls.find(([, request]) => request?.method === "POST");
+      if (!postCall) throw new Error("Expected a cart merge request");
+      const [, request] = postCall;
       expect(request).toMatchObject({ method: "POST" });
-      expect(JSON.parse((request as RequestInit).body as string)).toMatchObject({
-        sessionId: expect.any(String),
-        idempotencyKey: expect.any(String),
-        items: [{ productId: "prod-1", quantity: 2 }],
-      });
+      if (typeof request?.body !== "string") throw new Error("Expected a JSON request body");
+      const mergePayload = readJsonText(
+        request.body,
+        z.object({
+          sessionId: z.string(),
+          idempotencyKey: z.string(),
+          items: z.array(z.object({ productId: z.string(), quantity: z.number() })),
+        }),
+      );
+      expect(mergePayload.sessionId).not.toBe("");
+      expect(mergePayload.idempotencyKey).not.toBe("");
+      expect(mergePayload.items).toEqual([{ productId: "prod-1", quantity: 2 }]);
       expect(result.current.items).toMatchObject([{ productId: "prod-1", quantity: 7 }]);
       expect(result.current.itemCount).toBe(7);
     });
@@ -441,10 +464,10 @@ describe("useCart", () => {
       });
 
       useAuthMock.mockReturnValue({ ready: true, authenticated: true });
-      fetchSpy.mockImplementation(((_input: RequestInfo | URL, init?: RequestInit) => {
+      fetchSpy.mockImplementation((_input, init) => {
         if (!init?.method || init.method === "GET") return initialCartPending;
         return Promise.resolve(cartEnvelope(updatedCart));
-      }) as typeof fetch);
+      });
       localStorage.removeItem("vnshop:guest-cart");
 
       const { Wrapper } = makeWrapper();
@@ -455,14 +478,66 @@ describe("useCart", () => {
       });
 
       await waitFor(() => {
-        const postCall = fetchSpy.mock.calls.find(
-          ([, request]) => (request as RequestInit | undefined)?.method === "POST",
-        );
+        const postCall = fetchSpy.mock.calls.find(([, request]) => request?.method === "POST");
         expect(postCall).toBeDefined();
       });
 
       resolveInitialCart(cartEnvelope(initialCart));
       await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2));
+    });
+
+    it("removes only purchased quantities while preserving concurrent cart additions", async () => {
+      const initialCart = {
+        items: [
+          { productId: "purchased", variantId: "blue", quantity: 1, price: 100 },
+          { productId: "exact", quantity: 2, price: 50 },
+        ],
+        itemCount: 3,
+        totalAmount: 200,
+      };
+      const latestCart = {
+        items: [
+          { productId: "purchased", variantId: "blue", quantity: 3, price: 100 },
+          { productId: "exact", quantity: 2, price: 50 },
+          { productId: "added-after-checkout", quantity: 1, price: 25 },
+        ],
+        itemCount: 6,
+        totalAmount: 375,
+      };
+
+      useAuthMock.mockReturnValue({ ready: true, authenticated: true });
+      fetchSpy
+        .mockResolvedValueOnce(cartEnvelope(initialCart))
+        .mockResolvedValueOnce(cartEnvelope(latestCart))
+        .mockResolvedValueOnce(cartEnvelope(latestCart))
+        .mockResolvedValueOnce(cartEnvelope(latestCart));
+
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
+
+      await waitFor(() => expect(result.current.isReady).toBe(true));
+
+      const purchased: PurchasedCartItem[] = [
+        { productId: "purchased", variantId: "blue", quantity: 1 },
+        { productId: "exact", quantity: 2 },
+      ];
+      await act(async () => {
+        await result.current.removePurchasedItems(purchased);
+      });
+
+      const putCall = fetchSpy.mock.calls.find(([, request]) => request?.method === "PUT");
+      expect(putCall?.[0]).toContain("/cart/items/purchased%3Ablue");
+      const putBody = putCall?.[1]?.body;
+      if (typeof putBody !== "string") throw new Error("Expected a JSON cart update body");
+      expect(JSON.parse(putBody)).toEqual({ quantity: 2 });
+      const deleteCall = fetchSpy.mock.calls.find(([, request]) => request?.method === "DELETE");
+      expect(deleteCall?.[0]).toContain("/cart/items/exact");
+      expect(
+        fetchSpy.mock.calls.some(
+          ([, request]) =>
+            typeof request?.body === "string" && request.body.includes("added-after-checkout"),
+        ),
+      ).toBe(false);
     });
   });
 });

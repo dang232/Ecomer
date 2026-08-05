@@ -2,25 +2,26 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError } from "../lib/api/envelope";
-import type { JwtClaims, TokenSet } from "../lib/auth/native-auth";
+import type { RegisterInput } from "@/shared/api/endpoints/auth";
+import { ApiError } from "@/shared/api/envelope";
+import type { JwtClaims, TokenSet } from "@/shared/auth";
 
 const mocks = vi.hoisted(() => ({
-  decodeJwt: vi.fn(),
-  setLiveTokenSet: vi.fn(),
-  registerUser: vi.fn(),
-  passwordLogin: vi.fn(),
-  refreshTokens: vi.fn(),
-  revokeTokens: vi.fn(),
+  decodeJwt: vi.fn<(token: string) => JwtClaims | null>(),
+  setLiveTokenSet: vi.fn<(tokenSet: TokenSet | null) => void>(),
+  registerUser: vi.fn<(input: RegisterInput) => Promise<void>>(),
+  passwordLogin: vi.fn<(username: string, password: string) => Promise<TokenSet>>(),
+  refreshTokens: vi.fn<() => Promise<TokenSet>>(),
+  revokeTokens: vi.fn<() => Promise<void>>(),
   accessTokenRefreshBufferMs: 60_000,
 }));
 
-vi.mock("../lib/auth/native-auth", () => ({
+vi.mock("@/shared/auth", () => ({
   decodeJwt: (token: string) => mocks.decodeJwt(token),
   setLiveTokenSet: (tokenSet: TokenSet | null) => mocks.setLiveTokenSet(tokenSet),
-  passwordLogin: (...args: unknown[]) => mocks.passwordLogin(...args),
-  refreshTokens: (...args: unknown[]) => mocks.refreshTokens(...args),
-  revokeTokens: (...args: unknown[]) => mocks.revokeTokens(...args),
+  passwordLogin: (username: string, password: string) => mocks.passwordLogin(username, password),
+  refreshTokens: () => mocks.refreshTokens(),
+  revokeTokens: () => mocks.revokeTokens(),
   ACCESS_TOKEN_REFRESH_BUFFER_MS: mocks.accessTokenRefreshBufferMs,
   isAccessTokenRefreshDue: (tokenSet: { accessExpiresAt: number }) =>
     tokenSet.accessExpiresAt - Date.now() <= mocks.accessTokenRefreshBufferMs,
@@ -35,11 +36,12 @@ vi.mock("../lib/auth/native-auth", () => ({
   },
 }));
 
-vi.mock("../lib/api/endpoints/auth", () => ({
-  registerUser: (...args: unknown[]) => mocks.registerUser(...args),
+vi.mock("@/shared/api/endpoints/auth", () => ({
+  registerUser: (input: RegisterInput) => mocks.registerUser(input),
 }));
 
-import { AuthProvider, useAuth, useHasRole } from "./use-auth";
+import { useAuth, useHasRole } from "./auth-context";
+import { AuthProvider } from "./use-auth";
 
 const tokenSet: TokenSet = {
   accessToken: "access-token",
@@ -144,6 +146,23 @@ describe("AuthProvider native session", () => {
     expect(result.current.authenticated).toBe(false);
   });
 
+  it("exposes a manual refresh so newly granted roles appear without logout", async () => {
+    const sellerTokenSet = { ...tokenSet, accessToken: "seller-access-token" };
+    mocks.refreshTokens.mockResolvedValueOnce(tokenSet).mockResolvedValueOnce(sellerTokenSet);
+    mocks.decodeJwt.mockImplementation((token) =>
+      token === "seller-access-token"
+        ? { ...claims, realm_access: { roles: ["BUYER", "SELLER"] } }
+        : claims,
+    );
+    const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
+    await waitFor(() => expect(result.current.ready).toBe(true));
+
+    await act(async () => result.current.refresh());
+
+    expect(result.current.roles).toEqual(["BUYER", "SELLER"]);
+    expect(mocks.setLiveTokenSet).toHaveBeenLastCalledWith(sellerTokenSet);
+  });
+
   it("does not let an in-flight refresh restore a session after logout", async () => {
     const expiringTokenSet = { ...tokenSet, accessExpiresAt: Date.now() + 30_000 };
     mocks.refreshTokens.mockResolvedValueOnce(expiringTokenSet);
@@ -156,7 +175,9 @@ describe("AuthProvider native session", () => {
     });
     mocks.refreshTokens.mockReturnValueOnce(pendingRefresh);
 
-    act(() => window.dispatchEvent(new Event("focus")));
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
     expect(mocks.refreshTokens).toHaveBeenCalledTimes(2);
 
     act(() => result.current.logout());

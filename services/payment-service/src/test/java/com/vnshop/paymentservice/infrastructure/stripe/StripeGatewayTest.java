@@ -67,7 +67,8 @@ class StripeGatewayTest {
         assertThat(intent.fxRate()).isEqualByComparingTo("0.00004");
 
         var paramsCaptor = forClass(PaymentIntentCreateParams.class);
-        verify(client).create(paramsCaptor.capture(), org.mockito.ArgumentMatchers.any(RequestOptions.class));
+        var optionsCaptor = forClass(RequestOptions.class);
+        verify(client).create(paramsCaptor.capture(), optionsCaptor.capture());
         PaymentIntentCreateParams params = paramsCaptor.getValue();
         // 100000 VND * 0.00004 USD/VND = 4 USD = 400 cents
         assertThat(params.getAmount()).isEqualTo(400L);
@@ -76,6 +77,8 @@ class StripeGatewayTest {
         assertThat(params.getMetadata()).containsEntry("orderId", "ORDER-1");
         assertThat(params.getMetadata()).containsEntry("vndAmount", "100000");
         assertThat(params.getMetadata()).containsEntry("fxRate", "0.00004");
+        assertThat(optionsCaptor.getValue().getIdempotencyKey())
+                .isEqualTo("create:stripe:00000000-0000-0000-0000-000000000123");
     }
 
     private static PaymentIntent stubIntent(String id, String clientSecret) {

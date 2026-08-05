@@ -2,10 +2,10 @@ import { Star } from "lucide-react";
 import { memo } from "react";
 import { useNavigate } from "react-router";
 
-import type { RecentlyViewedItem } from "../hooks/use-recently-viewed";
-import { formatPrice } from "../lib/format";
+import { formatPrice } from "@/shared/lib";
+import { ImageWithFallback } from "@/shared/ui";
 
-import { ImageWithFallback } from "./image-with-fallback";
+import type { RecentlyViewedItem } from "../hooks/use-recently-viewed";
 
 // ─── Recently Viewed Card ────────────────────────────────────────────────────────
 const RecentlyViewedCard = memo(function RecentlyViewedCard({

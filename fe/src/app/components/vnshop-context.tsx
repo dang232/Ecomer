@@ -1,25 +1,15 @@
-/* eslint-disable react-refresh/only-export-components --
- * VNShopProvider keeps the legacy useVNShop hook colocated to avoid touching
- * every importing page during the live-API migration. New code should pull
- * from useAuth / useCart / useWishlist directly.
- */
-import {
-  createContext,
-  useContext,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { useAuth } from "../hooks/use-auth";
+import type { Product } from "@/features/catalog";
+
+import { useAuth } from "../hooks/auth-context";
 import { useCart } from "../hooks/use-cart";
 import { useProfile } from "../hooks/use-profile";
 import { useWishlist } from "../hooks/use-wishlist";
-import type { Product } from "../types/ui";
+
+import { VNShopContext } from "./vnshop-context-value";
 
 interface User {
   id: string;
@@ -51,8 +41,6 @@ interface VNShopContextType {
   toggleTheme: () => void;
 }
 
-const VNShopContext = createContext<VNShopContextType | null>(null);
-
 function pickRole(roles: string[]): "buyer" | "seller" | "admin" {
   if (roles.includes("ADMIN")) return "admin";
   if (roles.includes("SELLER")) return "seller";
@@ -75,11 +63,10 @@ export function VNShopProvider({ children }: { children: ReactNode }) {
     }
   });
 
-  // Sync the HTML class on mount so the initial value from localStorage takes effect.
+  // Keep the document root synchronized when the persisted setting changes.
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isDark]);
 
   const cartCount = cart.itemCount;
 
@@ -220,10 +207,4 @@ export function VNShopProvider({ children }: { children: ReactNode }) {
   );
 
   return <VNShopContext.Provider value={value}>{children}</VNShopContext.Provider>;
-}
-
-export function useVNShop() {
-  const ctx = useContext(VNShopContext);
-  if (!ctx) throw new Error("useVNShop must be used within VNShopProvider");
-  return ctx;
 }

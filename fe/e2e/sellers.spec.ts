@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 
-const baseURL = process.env.VITE_E2E_BASE_URL ?? "http://localhost:3000";
+import { readJson, type SellerListResponse } from "./_api";
+
 const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
 
 /**
@@ -18,10 +19,12 @@ test.describe("public sellers", () => {
       res.status(),
       `expected 200 from /sellers, body: ${(await res.text()).slice(0, 200)}`,
     ).toBe(200);
-    const body = await res.json();
+    const body = await readJson<SellerListResponse>(res);
     const data = body?.data;
     expect(data, `unexpected envelope: ${JSON.stringify(body).slice(0, 200)}`).toBeTruthy();
+    if (!data) throw new Error("unexpected envelope from /sellers");
     expect(Array.isArray(data.content)).toBeTruthy();
+    if (!data.content) throw new Error("unexpected sellers content shape");
     expect(typeof data.page).toBe("number");
     expect(typeof data.size).toBe("number");
     expect(typeof data.totalElements).toBe("number");
@@ -36,7 +39,7 @@ test.describe("public sellers", () => {
     const res = await request.get(`${apiURL}/sellers/00000000-0000-0000-0000-000000000000`);
     expect([200, 404]).toContain(res.status());
     if (res.status() === 200) {
-      const body = await res.json();
+      const body = await readJson<SellerListResponse>(res);
       expect(body?.data).not.toHaveProperty("bankName");
       expect(body?.data).not.toHaveProperty("bankAccount");
     }
@@ -51,12 +54,14 @@ test.describe("public sellers", () => {
     // Pre-fetch the list so the test branches deterministically on
     // "we have approved sellers" vs "fallback to coming-soon".
     const listRes = await request.get(`${apiURL}/sellers?page=0&size=8`);
-    const list = listRes.ok() ? ((await listRes.json())?.data?.content ?? []) : [];
+    const list = listRes.ok()
+      ? ((await readJson<SellerListResponse>(listRes)).data?.content ?? [])
+      : [];
 
     if (list.length > 0) {
       // Real cards path — the first seller's shop name should be visible
       // on the home page. Allow generous timeout for cold-start fetches.
-      const shopName = list[0].shopName;
+      const shopName = list[0]?.shopName ?? list[0]?.id ?? "";
       await expect(page.getByText(shopName, { exact: false }).first()).toBeVisible({
         timeout: 20_000,
       });
@@ -69,12 +74,16 @@ test.describe("public sellers", () => {
 
   test("/sellers/:id renders detail or not-found without crashing", async ({ page, request }) => {
     const listRes = await request.get(`${apiURL}/sellers?page=0&size=1`);
-    const first = listRes.ok() ? (await listRes.json())?.data?.content?.[0] : null;
+    const first = listRes.ok()
+      ? (await readJson<SellerListResponse>(listRes)).data?.content?.[0]
+      : null;
 
     if (first?.id) {
       await page.goto(`/sellers/${first.id}`);
       // Shop name is the most reliable signal that the header rendered.
-      await expect(page.getByText(first.shopName, { exact: false }).first()).toBeVisible({
+      await expect(
+        page.getByText(first.shopName ?? first.id, { exact: false }).first(),
+      ).toBeVisible({
         timeout: 20_000,
       });
       // Ensure the visit-shop CTA / banner area landed (page didn't crash).

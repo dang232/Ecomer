@@ -111,4 +111,22 @@ class BuyerProfileTest {
         BuyerProfile p = new BuyerProfile("kc-1", "  alice@example.com  ", "Alice", PHONE, "avatar", null);
         assertThat(p.email()).isEqualTo("alice@example.com");
     }
+
+    @Test
+    void backfillEmailIfMissing_seedsOnceAndNeverOverwrites() {
+        BuyerProfile p = new BuyerProfile("kc-1", null, "Alice", PHONE, "avatar", null);
+
+        assertThat(p.backfillEmailIfMissing("  registered@example.com  ")).isTrue();
+        assertThat(p.email()).isEqualTo("registered@example.com");
+        assertThat(p.backfillEmailIfMissing("changed@example.com")).isFalse();
+        assertThat(p.email()).isEqualTo("registered@example.com");
+    }
+
+    @Test
+    void backfillEmailIfMissing_ignoresBlankRecoveryValues() {
+        BuyerProfile p = new BuyerProfile("kc-1", null, "Alice", PHONE, "avatar", null);
+
+        assertThat(p.backfillEmailIfMissing("   ")).isFalse();
+        assertThat(p.email()).isNull();
+    }
 }

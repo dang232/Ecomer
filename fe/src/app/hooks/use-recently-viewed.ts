@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
+import { z } from "zod";
+
+import { readJsonText } from "../../shared/api/read-json";
 
 const STORAGE_KEY = "vnshop:recently-viewed";
 const DEFAULT_LIMIT = 20;
@@ -11,6 +14,16 @@ export interface RecentlyViewedItem {
   rating: number;
   viewedAt: number;
 }
+
+const recentlyViewedItemSchema = z.object({
+  productId: z.string().min(1),
+  name: z.string(),
+  image: z.string(),
+  price: z.number().nonnegative(),
+  rating: z.number().nonnegative(),
+  viewedAt: z.number().finite(),
+});
+const recentlyViewedSchema = z.array(recentlyViewedItemSchema);
 
 /**
  * Recently viewed products hook - stores in localStorage for MVP.
@@ -26,13 +39,14 @@ export function useRecentlyViewed(limit: number = DEFAULT_LIMIT) {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        const parsed = JSON.parse(raw) as RecentlyViewedItem[];
-        if (Array.isArray(parsed)) {
-          setItems(parsed.slice(0, limit));
-        }
+        setItems(readJsonText(raw, recentlyViewedSchema).slice(0, limit));
       }
     } catch {
-      /* ignore malformed data */
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch {
+        /* browser storage is unavailable */
+      }
     }
   }, [limit]);
 

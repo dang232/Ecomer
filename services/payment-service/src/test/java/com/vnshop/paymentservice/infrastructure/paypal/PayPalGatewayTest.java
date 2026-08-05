@@ -63,6 +63,7 @@ class PayPalGatewayTest {
         server.expect(requestTo(props.baseUrl() + "/v2/checkout/orders"))
                 .andExpect(method(POST))
                 .andExpect(header("Authorization", "Bearer AT-1"))
+                .andExpect(header("PayPal-Request-Id", "create:paypal:" + paymentId()))
                 .andExpect(jsonPath("$.intent").value("CAPTURE"))
                 .andExpect(jsonPath("$.purchase_units[0].reference_id").value(paymentId().toString()))
                 .andExpect(jsonPath("$.purchase_units[0].custom_id").value(paymentId().toString()))
@@ -94,6 +95,8 @@ class PayPalGatewayTest {
         server.expect(requestTo(props.baseUrl() + "/v2/checkout/orders/ORDER-XYZ/capture"))
                 .andExpect(method(POST))
                 .andExpect(header("Authorization", "Bearer AT-2"))
+                .andExpect(header("PayPal-Request-Id", "capture:ORDER-XYZ"))
+                .andExpect(header("Prefer", "return=representation"))
                 .andRespond(withSuccess(
                         "{\"id\":\"ORDER-XYZ\",\"status\":\"COMPLETED\","
                                 + "\"purchase_units\":[{\"payments\":{\"captures\":[{\"id\":\"CAPTURE-1\",\"status\":\"COMPLETED\"}]}}]}",
@@ -125,7 +128,7 @@ class PayPalGatewayTest {
     }
 
     @Test
-    void captureFallsBackToOrderIdWhenCaptureArrayMissing() {
+    void captureLooksUpTheOrderWhenTheCaptureResponseIsMinimal() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         PayPalProperties props = sandboxProps();
@@ -137,12 +140,21 @@ class PayPalGatewayTest {
                 .andRespond(withSuccess(
                         "{\"id\":\"ORDER-FALLBACK\",\"status\":\"COMPLETED\"}",
                         MediaType.APPLICATION_JSON));
+        server.expect(requestTo(props.baseUrl() + "/v1/oauth2/token"))
+                .andRespond(withSuccess("{\"access_token\":\"AT-4B\"}", MediaType.APPLICATION_JSON));
+        server.expect(requestTo(props.baseUrl() + "/v2/checkout/orders/ORDER-FALLBACK"))
+                .andExpect(header("Authorization", "Bearer AT-4B"))
+                .andRespond(withSuccess(
+                        "{\"id\":\"ORDER-FALLBACK\",\"status\":\"COMPLETED\","
+                                + "\"purchase_units\":[{\"payments\":{\"captures\":[{\"id\":\"CAPTURE-FALLBACK\",\"status\":\"COMPLETED\"}]}}]}",
+                        MediaType.APPLICATION_JSON));
 
         PayPalGateway.PayPalCapture capture = gateway.capture("ORDER-FALLBACK");
 
         assertThat(capture.paypalOrderId()).isEqualTo("ORDER-FALLBACK");
-        assertThat(capture.captureId()).isEqualTo("ORDER-FALLBACK");
+        assertThat(capture.captureId()).isEqualTo("CAPTURE-FALLBACK");
         assertThat(capture.status()).isEqualTo("COMPLETED");
+        server.verify();
     }
 
     @Test

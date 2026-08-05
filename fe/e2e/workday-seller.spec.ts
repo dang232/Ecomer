@@ -1,4 +1,6 @@
 import { test, expect } from "@playwright/test";
+
+import { readJson, type SellerListResponse } from "./_api";
 import {
   copyArtifacts,
   expectNoGlobalError,
@@ -42,7 +44,7 @@ test.describe.serial("Workday — seller (login → console tour → logout)", (
     await resetPersona("seller");
   });
 
-  test.afterEach(async ({}, testInfo) => {
+  test.afterEach(({ page: _page }, testInfo) => {
     rememberOutputDir("seller", testInfo);
   });
 
@@ -60,18 +62,19 @@ test.describe.serial("Workday — seller (login → console tour → logout)", (
     try {
       let sellerId = "";
 
-      await step(page, "seller", "Login as seller1 via /login form", async () => {
-        await loginAsSeededUser(page, "seller1");
+      await step(page, "seller", "Login as seller via /login form", async () => {
+        await loginAsSeededUser(page, "seller");
       });
 
       await step(page, "seller", "/seller dashboard mounts with four KPI cards", async () => {
         await page.goto("/seller");
-        await expect(
-          page.getByRole("heading", { name: /^(Dashboard|Tổng quan)$/i }).first(),
-        ).toBeVisible({ timeout: 20_000 });
+        // The current Seller Hub uses the shop name as its page title rather
+        // than a generic "Dashboard" heading. Keep the mount assertion on the
+        // stable route-level signal and verify the business metrics below.
+        await expect(page.getByTestId("seller-dashboard")).toBeVisible({ timeout: 20_000 });
         for (const matcher of [
           /Wallet balance|Số dư ví/i,
-          /Pending orders|Đơn cần xử lý/i,
+          /Orders \(30 days\)|Đơn \(30 ngày\)/i,
           /Products|Sản phẩm/i,
           /Average rating|Điểm đánh giá/i,
         ]) {
@@ -93,7 +96,7 @@ test.describe.serial("Workday — seller (login → console tour → logout)", (
       });
 
       await step(page, "seller", "Products tab table chrome renders", async () => {
-        const productsTab = page.getByRole("button", { name: /^(Products|Sản phẩm)$/i }).first();
+        const productsTab = page.getByRole("link", { name: /^(Products|Sản phẩm)$/i }).first();
         await expect(productsTab).toBeVisible({ timeout: 10_000 });
         await productsTab.click();
         await expect(page.getByText(/Product management|Quản lý sản phẩm/i).first()).toBeVisible({
@@ -116,7 +119,7 @@ test.describe.serial("Workday — seller (login → console tour → logout)", (
       });
 
       await step(page, "seller", "Orders tab queue parses without Zod leak", async () => {
-        const ordersTab = page.getByRole("button", { name: /^(Orders|Đơn hàng)$/ }).first();
+        const ordersTab = page.getByRole("link", { name: /^(Orders|Đơn hàng)/i }).first();
         await expect(ordersTab).toBeVisible({ timeout: 10_000 });
         await ordersTab.click();
         // The current shell exposes the tab as the visible Orders heading.
@@ -127,7 +130,7 @@ test.describe.serial("Workday — seller (login → console tour → logout)", (
       });
 
       await step(page, "seller", "Wallet tab renders balance + history sections", async () => {
-        const walletTab = page.getByRole("button", { name: /^(Wallet|Ví tiền)$/i }).first();
+        const walletTab = page.getByRole("link", { name: /^(Wallet|Ví tiền)$/i }).first();
         await expect(walletTab).toBeVisible({ timeout: 10_000 });
         await walletTab.click();
         await expect(page.getByText(/Wallet & Payouts|Ví & Thanh toán/i).first()).toBeVisible({
@@ -154,16 +157,16 @@ test.describe.serial("Workday — seller (login → console tour → logout)", (
         // page expects.
         const r = await page.request.get(`${apiURL}/sellers?size=20`);
         expect(r.ok(), `sellers list: ${r.status()}`).toBeTruthy();
-        const body = await r.json();
-        const list: Array<{ id?: string; userId?: string; shopName?: string }> =
-          body?.data?.content ?? body?.content ?? [];
+        const body = await readJson<SellerListResponse>(r);
+        const list = body.data?.content ?? body.content ?? [];
         // Pick the first seller — single-seller seed usually means seller1 IS
         // the only entry. If multiple, prefer one whose shopName mentions
         // "seller1" or just take the first.
         const match = list[0];
         sellerId = match?.id ?? "";
-        test.skip(!sellerId, "no public sellers seeded — skipping the public-storefront step");
-        if (!sellerId) return;
+        if (!sellerId) {
+          throw new Error("No public sellers seeded — cannot test public storefront step");
+        }
 
         await page.goto(`/sellers/${sellerId}`);
         await expect(

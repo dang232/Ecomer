@@ -1,8 +1,8 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-import { productById, productList } from "../lib/api/endpoints/products";
-import { fromServer } from "../lib/api/product-mapper";
-import type { Product } from "../types/ui";
+import { fromServer } from "@/features/catalog";
+import type { Product } from "@/features/catalog";
+import { productById, productList } from "@/shared/api/endpoints/products";
 
 export interface ProductListQueryParams {
   sellerId?: string;

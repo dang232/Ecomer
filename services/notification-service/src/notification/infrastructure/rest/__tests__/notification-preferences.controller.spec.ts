@@ -41,15 +41,22 @@ describe('NotificationPreferencesController', () => {
   });
 
   describe('GET /notifications/preferences', () => {
-    it('returns serialised preferences for authenticated user', async () => {
+    it('returns an ApiResponse envelope for authenticated user', async () => {
       const prefs = NotificationPreferences.createDefault('user-1');
       mockPrefsRepo.findByUserId.mockResolvedValue(prefs);
 
       const result = await controller.get(fakeReq);
 
-      expect(result.muted).toBe(false);
-      expect(Array.isArray(result.typePreferences)).toBe(true);
-      expect(typeof result.updatedAt).toBe('string');
+      expect(result).toMatchObject({
+        success: true,
+        message: 'Success',
+        errorCode: null,
+      });
+      expect(typeof result.timestamp).toBe('string');
+      expect(result).not.toHaveProperty('muted');
+      expect(result.data.muted).toBe(false);
+      expect(Array.isArray(result.data.typePreferences)).toBe(true);
+      expect(typeof result.data.updatedAt).toBe('string');
     });
 
     it('creates default preferences on first access (repo returns null)', async () => {
@@ -57,7 +64,7 @@ describe('NotificationPreferencesController', () => {
 
       const result = await controller.get(fakeReq);
 
-      expect(result.muted).toBe(false);
+      expect(result.data.muted).toBe(false);
       expect(mockPrefsRepo.save).toHaveBeenCalled();
     });
 
@@ -67,7 +74,7 @@ describe('NotificationPreferencesController', () => {
 
       const result = await controller.get(fakeReq);
 
-      for (const tp of result.typePreferences) {
+      for (const tp of result.data.typePreferences) {
         expect(tp).toHaveProperty('type');
         expect(tp).toHaveProperty('channels');
       }
@@ -75,7 +82,7 @@ describe('NotificationPreferencesController', () => {
   });
 
   describe('PUT /notifications/preferences', () => {
-    it('updates preferences and returns updated shape', async () => {
+    it('updates preferences and returns an ApiResponse envelope', async () => {
       const existingPrefs = NotificationPreferences.createDefault('user-1');
       mockPrefsRepo.findByUserId.mockResolvedValue(existingPrefs);
 
@@ -91,7 +98,14 @@ describe('NotificationPreferencesController', () => {
 
       const result = await controller.update(fakeReq, body);
 
-      expect(result.muted).toBe(false);
+      expect(result).toMatchObject({
+        success: true,
+        message: 'Success',
+        errorCode: null,
+      });
+      expect(typeof result.timestamp).toBe('string');
+      expect(result).not.toHaveProperty('muted');
+      expect(result.data.muted).toBe(false);
       expect(mockPrefsRepo.save).toHaveBeenCalled();
     });
 
@@ -111,7 +125,7 @@ describe('NotificationPreferencesController', () => {
 
       const result = await controller.update(fakeReq, body);
 
-      const types = result.typePreferences.map((tp: any) => tp.type);
+      const types = result.data.typePreferences.map((tp: any) => tp.type);
       expect(types).not.toContain('INVALID_TYPE');
     });
 
@@ -130,7 +144,7 @@ describe('NotificationPreferencesController', () => {
 
       const result = await controller.update(fakeReq, body);
 
-      const orderPref = result.typePreferences.find(
+      const orderPref = result.data.typePreferences.find(
         (tp: any) => tp.type === NotificationType.ORDER_CREATED,
       );
       expect(orderPref?.channels).not.toContain('BAD_CHANNEL');
@@ -145,7 +159,7 @@ describe('NotificationPreferencesController', () => {
         muted: true,
       });
 
-      expect(result.muted).toBe(true);
+      expect(result.data.muted).toBe(true);
     });
 
     it('defaults muted to false when not provided in body', async () => {
@@ -155,7 +169,7 @@ describe('NotificationPreferencesController', () => {
         typePreferences: [],
       } as any);
 
-      expect(result.muted).toBe(false);
+      expect(result.data.muted).toBe(false);
     });
   });
 });

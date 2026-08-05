@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { Address } from "../../types/api";
+import type { Address } from "@/shared/contracts/api";
 
 import { CheckoutAddressStep } from "./CheckoutAddressStep";
 
@@ -63,11 +63,11 @@ describe("CheckoutAddressStep", () => {
       </Wrapper>,
     );
 
-    const radios = screen.getAllByRole("radio");
+    const radios = screen.getAllByRole<HTMLInputElement>("radio");
     expect(radios).toHaveLength(2);
     for (const radio of radios) {
       expect(radio.tagName).toBe("INPUT");
-      expect((radio as HTMLInputElement).type).toBe("radio");
+      expect(radio.type).toBe("radio");
     }
   });
 
@@ -84,7 +84,7 @@ describe("CheckoutAddressStep", () => {
       </Wrapper>,
     );
 
-    const radios = screen.getAllByRole("radio") as HTMLInputElement[];
+    const radios = screen.getAllByRole<HTMLInputElement>("radio");
     expect(radios[0].checked).toBe(false);
     expect(radios[1].checked).toBe(true);
 
@@ -107,7 +107,7 @@ describe("CheckoutAddressStep", () => {
       </Wrapper>,
     );
 
-    const radios = screen.getAllByRole("radio") as HTMLInputElement[];
+    const radios = screen.getAllByRole<HTMLInputElement>("radio");
     // Real radios fire `change` on arrow-key nav in the browser. Clicking an
     // unchecked radio sets it to checked and dispatches change.
     fireEvent.click(radios[1]);
@@ -127,7 +127,7 @@ describe("CheckoutAddressStep", () => {
       </Wrapper>,
     );
 
-    const radios = screen.getAllByRole("radio") as HTMLInputElement[];
+    const radios = screen.getAllByRole<HTMLInputElement>("radio");
     // Both share a name → they participate in a single arrow-key group.
     expect(radios[0].name).toBe(radios[1].name);
     // Native <input type="radio"> without an explicit tabIndex attribute is in
@@ -152,7 +152,7 @@ describe("CheckoutAddressStep", () => {
       </Wrapper>,
     );
 
-    const radio0 = screen.getAllByRole("radio")[0] as HTMLInputElement;
+    const radio0 = screen.getAllByRole<HTMLInputElement>("radio")[0];
     const label = radio0.closest("label");
     expect(label).not.toBeNull();
     expect(label!.getAttribute("for")).toBe(radio0.id);

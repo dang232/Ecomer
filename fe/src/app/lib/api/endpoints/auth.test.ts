@@ -90,10 +90,11 @@ describe("registerUser", () => {
       }),
     );
 
-    const err = await registerUser(sampleInput).catch((e) => e);
+    const err: unknown = await registerUser(sampleInput).catch((error: unknown) => error);
     expect(err).toBeInstanceOf(ApiError);
-    expect((err as ApiError).errorCode).toBe("EMAIL_TAKEN");
-    expect((err as ApiError).message).toBe("Email already registered");
+    if (!(err instanceof ApiError)) throw new Error("Expected registerUser to throw ApiError");
+    expect(err.errorCode).toBe("EMAIL_TAKEN");
+    expect(err.message).toBe("Email already registered");
   });
 });
 
@@ -117,6 +118,9 @@ describe("requestPasswordReset", () => {
     const init = fetchSpy.mock.calls[0][1];
     expect(init?.credentials).toBe("include");
     expect(init?.headers).toMatchObject({ "Content-Type": "application/json" });
-    expect(JSON.parse(String(init?.body))).toEqual({ email: "u@example.com" });
+    const body = init?.body;
+    expect(typeof body).toBe("string");
+    if (typeof body !== "string") throw new Error("Expected a JSON request body");
+    expect(JSON.parse(body)).toEqual({ email: "u@example.com" });
   });
 });

@@ -1,7 +1,8 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { Review } from "../../../app/types/api";
+import { reviewSchema, type Review } from "@/shared/contracts/api";
+
 import type { ProductReviewController } from "../use-product-review-controller";
 
 import { ProductReviewsSection } from "./product-reviews-section";
@@ -10,7 +11,12 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) => {
       const value = typeof options?.defaultValue === "string" ? options.defaultValue : key;
-      return value.replace(/{{(\w+)}}/g, (_, name: string) => String(options?.[name] ?? ""));
+      return value.replace(/{{(\w+)}}/g, (_, name: string) => {
+        const replacement = options?.[name];
+        return typeof replacement === "string" || typeof replacement === "number"
+          ? String(replacement)
+          : "";
+      });
     },
     i18n: { resolvedLanguage: "en-US" },
   }),
@@ -20,7 +26,7 @@ vi.mock("../../videos/components/ReviewVideoDisplay", () => ({
   ReviewVideoDisplay: () => null,
 }));
 
-const review: Review = {
+const review: Review = reviewSchema.parse({
   id: "review-1",
   productId: "00000000-0000-0000-0000-000000000001",
   userName: "Mai Nguyen",
@@ -31,7 +37,7 @@ const review: Review = {
   verifiedPurchase: true,
   status: "APPROVED",
   createdAt: "2026-07-15T10:31:20Z",
-};
+});
 
 function controller(overrides: Partial<ProductReviewController> = {}): ProductReviewController {
   return {

@@ -1,69 +1,54 @@
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { mapPaymentOptions, type RawPaymentMethod } from "./types";
+import type { PaymentMethodOption } from "@/shared/contracts/api";
 
-/** Stub i18next TFunction — returns the key as-is. */
-const t = ((key: string) => key) as unknown as Parameters<typeof mapPaymentOptions>[1];
+import { CheckoutPaymentStep } from "./CheckoutPaymentStep";
+import { toPaymentOptions } from "./types";
 
-describe("mapPaymentOptions (extracted from CheckoutPage)", () => {
-  it("console.warn fires once per unknown payment code", () => {
-    const warnSpy = vi.spyOn(console, "warn").mockReturnValue(undefined);
+const t = ((key: string) => key) as unknown as Parameters<typeof toPaymentOptions>[1];
 
-    const rawMethods: RawPaymentMethod[] = [
-      { code: "VNPAY", name: "VNPay", enabled: true },
-      { code: "STRIPE", name: "Stripe", enabled: true },
-      { code: "UNKNOWN_GATEWAY_XYZ", name: "Unknown GW", enabled: true },
-      { code: "ANOTHER_UNKNOWN", name: "Another", enabled: true },
+describe("toPaymentOptions", () => {
+  it("keeps only enabled server-advertised flows implemented by checkout", () => {
+    const methods: PaymentMethodOption[] = [
+      { id: "cod", name: "Cash", enabled: true },
+      { id: "vnpay", name: "VNPay", enabled: true },
+      { id: "momo", name: "MoMo", enabled: false },
+      { id: "vietqr", name: "VietQR", enabled: true },
+      { id: "stripe", name: "Stripe", enabled: true },
+      { id: "paypal", name: "PayPal", enabled: true },
+      { id: "sepay", name: "SePay", enabled: true },
+      { id: "bank", name: "Bank", enabled: true },
     ];
 
-    const result = mapPaymentOptions(rawMethods, t);
-
-    // Two unknown codes -> two warnings
-    expect(warnSpy).toHaveBeenCalledTimes(2);
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("UNKNOWN_GATEWAY_XYZ"));
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("ANOTHER_UNKNOWN"));
-
-    // Unknown codes still produce a PaymentOption with generic fallback
-    const unknownOption = result.find((o) => o.id === ("UNKNOWN_GATEWAY_XYZ" as string));
-    expect(unknownOption).toBeDefined();
-    expect(unknownOption!.name).toBe("Unknown GW");
-
-    warnSpy.mockRestore();
+    expect(toPaymentOptions(methods, t).map((option) => option.id)).toEqual([
+      "COD",
+      "VNPAY",
+      "VIETQR",
+      "STRIPE",
+      "PAYPAL",
+    ]);
   });
 
-  it("no warn for all-known payment codes", () => {
-    const warnSpy = vi.spyOn(console, "warn").mockReturnValue(undefined);
-
-    const rawMethods: RawPaymentMethod[] = [
-      { code: "VNPAY", name: "VNPay", enabled: true },
-      { code: "STRIPE", name: "Stripe", enabled: true },
-      { code: "COD", name: "COD", enabled: true },
-    ];
-
-    mapPaymentOptions(rawMethods, t);
-
-    expect(warnSpy).not.toHaveBeenCalled();
-    warnSpy.mockRestore();
+  it("does not invent fallback payment methods when capability loading fails", () => {
+    expect(toPaymentOptions(undefined, t)).toEqual([]);
   });
 
-  it("returns full fallback list when data is undefined", () => {
-    const result = mapPaymentOptions(undefined, t);
-    expect(result).toHaveLength(7);
-    expect(result[0].id).toBe("VNPAY");
+  it("shows a blocking alert with no radios when capability loading fails", () => {
+    render(
+      <CheckoutPaymentStep
+        paymentOptions={[]}
+        selectedPaymentId="COD"
+        setSelectedPaymentId={vi.fn()}
+        loadError={new Error("offline")}
+      />,
+    );
+
+    expect(screen.getByRole("alert")).toBeVisible();
+    expect(screen.queryAllByRole("radio")).toHaveLength(0);
   });
 
-  it("filters out disabled payment methods", () => {
-    const warnSpy = vi.spyOn(console, "warn").mockReturnValue(undefined);
-
-    const rawMethods: RawPaymentMethod[] = [
-      { code: "VNPAY", name: "VNPay", enabled: true },
-      { code: "UNKNOWN_DISABLED", name: "Disabled", enabled: false },
-    ];
-
-    mapPaymentOptions(rawMethods, t);
-
-    // Disabled unknown code should NOT trigger a warn
-    expect(warnSpy).not.toHaveBeenCalled();
-    warnSpy.mockRestore();
+  it("omits disabled capabilities", () => {
+    expect(toPaymentOptions([{ id: "COD", name: "Cash", enabled: false }], t)).toEqual([]);
   });
 });

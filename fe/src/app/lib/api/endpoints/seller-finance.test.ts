@@ -14,7 +14,7 @@ describe("requestPayout", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("sends only amount and currency with the supplied idempotency key", async () => {
-    vi.mocked(api.post).mockResolvedValue({} as never);
+    vi.mocked(api.post).mockResolvedValue({});
 
     await requestPayout({ amount: 125_000, currency: "VND" }, "payout-key-1");
 
@@ -28,7 +28,7 @@ describe("requestPayout", () => {
   });
 
   it("forwards the same key when a retry repeats the request", async () => {
-    vi.mocked(api.post).mockResolvedValue({} as never);
+    vi.mocked(api.post).mockResolvedValue({});
     const body = { amount: 125_000, currency: "VND" } as const;
 
     await requestPayout(body, "payout-key-reused");

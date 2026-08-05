@@ -1,7 +1,9 @@
 package com.vnshop.userservice.infrastructure.web;
 
 import com.vnshop.userservice.application.NoSessionException;
+import com.vnshop.userservice.application.PhoneAlreadyRegisteredException;
 import com.vnshop.userservice.application.RefreshTokenRejectedException;
+import com.vnshop.userservice.application.RegistrationIdentityCompensationException;
 import com.vnshop.userservice.domain.SellerNotFoundException;
 import com.vnshop.userservice.infrastructure.keycloak.KeycloakAdminException;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +27,19 @@ public class ApiExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiResponse<Void> badRequest(IllegalArgumentException exception) {
         return ApiResponse.error(exception.getMessage(), "bad_request");
+    }
+
+    @ExceptionHandler(PhoneAlreadyRegisteredException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ApiResponse<Void> phoneAlreadyRegistered(PhoneAlreadyRegisteredException exception) {
+        return ApiResponse.error(exception.getMessage(), "phone_taken");
+    }
+
+    @ExceptionHandler(RegistrationIdentityCompensationException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ApiResponse<Void> registrationCompensationFailure(RegistrationIdentityCompensationException exception) {
+        log.error("Registration identity compensation failed", exception);
+        return ApiResponse.error("Registration could not be completed safely", "registration_failed");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

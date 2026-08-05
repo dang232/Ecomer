@@ -2,6 +2,7 @@ package com.vnshop.productservice.infrastructure.persistence;
 
 import com.vnshop.productservice.domain.Product;
 import com.vnshop.productservice.domain.CatalogProduct;
+import com.vnshop.productservice.domain.ProductStatus;
 import com.vnshop.productservice.application.CatalogCursor;
 import com.vnshop.productservice.application.CatalogCursorSort;
 import com.vnshop.productservice.domain.port.out.ProductRepositoryPort;
@@ -59,6 +60,22 @@ public class ProductJpaRepository implements ProductRepositoryPort {
     @Override
     public List<Product> findBySellerId(String sellerId) {
         return springDataRepository.findBySellerId(sellerId).stream().map(ProductJpaEntity::toDomain).toList();
+    }
+
+    @Override
+    public Page<Product> findSellerProducts(
+            String sellerId, String q, String categoryId, ProductStatus status, Pageable pageable) {
+        return springDataRepository.findSellerProducts(
+                        sellerId, blankToNull(q), blankToNull(categoryId),
+                        status == null ? null : status.name(), pageable)
+                .map(ProductJpaEntity::toDomain);
+    }
+
+    @Override
+    public Optional<Product> findByIdAndSellerId(UUID productId, String sellerId) {
+        return springDataRepository.findByIdAndSellerIdAndStatusNot(
+                        productId, sellerId, ProductStatus.DELETED.name())
+                .map(ProductJpaEntity::toDomain);
     }
 
     @Override

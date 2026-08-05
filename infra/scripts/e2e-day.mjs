@@ -124,6 +124,7 @@ async function main() {
   await record("auth", "register fresh buyer via /auth/register", async () => {
     const stamp = Date.now();
     ctx.buyerEmail = `e2e_buyer_${stamp}@vnshop.local`;
+    ctx.buyerPhone = `+849${String(stamp).slice(-8)}`;
     ctx.buyerPassword = "Test1234!";
     const res = await http("POST", "/auth/register", {
       body: {
@@ -1031,7 +1032,7 @@ async function main() {
   await record("user", "PUT /users/me (upsert profile)", async () => {
     await http("PUT", "/users/me", {
       token: ctx.buyerToken,
-      body: { name: "E2E Buyer", phone: "+84900000001", avatarUrl: null },
+      body: { name: "E2E Buyer", phone: ctx.buyerPhone, avatarUrl: null },
       expect: [200, 201],
     });
   });

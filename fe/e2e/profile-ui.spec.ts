@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+
 import { loginViaOidc, uniqueTestId } from "./_auth";
 
 /**
@@ -8,8 +9,8 @@ import { loginViaOidc, uniqueTestId } from "./_auth";
  *   - /profile loads without the page-wide error fallback (post-pt28
  *     userProfileSchema alignment — BE returns BuyerProfileResponse with
  *     keycloakId/avatarUrl, FE schema aliases via transform)
- *   - The buyer's email is rendered from the JWT (since BE BuyerProfile
- *     does NOT carry email — it lives in Keycloak)
+ *   - The buyer's registered email is rendered from the persisted buyer
+ *     profile, with the JWT claim retained as a compatibility fallback
  *   - The "Add address" form posts to /users/me/addresses and the new
  *     row appears
  *   - Default address is preserved across reload (post-mutation refresh)
@@ -23,23 +24,16 @@ const PASSWORD = "Test1234!";
 
 interface SeededBuyer {
   email: string;
-  accessToken: string;
 }
 
 async function seedBuyer(request: APIRequestContext): Promise<SeededBuyer> {
   const stamp = uniqueTestId();
-  const email = `e2e_qa_profile_${stamp}@vnshop.local`;
+  const email = `e2e_profile_${stamp}@example.com`;
   const reg = await request.post(`${apiURL}/auth/register`, {
     data: { firstName: "QA", lastName: "Profile", email, password: PASSWORD },
   });
   expect(reg.ok(), `register: ${reg.status()} ${await reg.text()}`).toBeTruthy();
-  const login = await request.post(`${apiURL}/auth/login`, {
-    data: { username: email, password: PASSWORD },
-  });
-  expect(login.ok(), `login: ${login.status()}`).toBeTruthy();
-  const accessToken = (await login.json())?.data?.accessToken;
-  expect(accessToken).toBeTruthy();
-  return { email, accessToken };
+  return { email };
 }
 
 async function loadProfileAuthenticated(page: Page, email: string): Promise<void> {
@@ -59,17 +53,19 @@ test.describe("profile page UI — buyer flow", () => {
     const buyer = await seedBuyer(page.request);
     await loadProfileAuthenticated(page, buyer.email);
 
-    // Pre-pt28 the page rendered the global error fallback because the
-    // userProfileSchema required `id` and `email` strings, but BE returned
-    // BuyerProfileResponse(keycloakId, name, phone, avatarUrl, addresses) —
-    // no top-level id, no email at all (email lives in Keycloak).
-    //
-    // Post-fix: schema aliases keycloakId → id and treats email as optional.
+    // The profile response stores the registration email in user-service and
+    // the FE keeps a JWT fallback for older profiles that may omit it.
     // The Personal Info tab is the default and renders editable fields.
 
     await expect(
       page.getByRole("heading", { name: /Personal info|Thông tin cá nhân/i }),
     ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(buyer.email, { exact: true }).first()).toBeVisible();
+
+    await page.getByRole("button", { name: /^Edit$|^Chỉnh sửa$/i }).click();
+    await expect(page.getByRole("button", { name: /^Cancel$|^Hủy$/i })).toHaveCount(1);
+    await expect(page.getByRole("button", { name: /save changes|lưu thay đổi/i })).toHaveCount(1);
+    await page.getByRole("button", { name: /^Cancel$|^Hủy$/i }).click();
 
     // Pre-fix the page rendered "Có lỗi xảy ra" / "Something went wrong"
     // with a Zod error block. Assert that copy is NOT present.

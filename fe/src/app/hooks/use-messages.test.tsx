@@ -1,15 +1,17 @@
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const useAuthMock = vi.fn();
-vi.mock("./use-auth", () => ({
+type UnknownCall = (...args: unknown[]) => unknown;
+
+const useAuthMock = vi.fn<() => unknown>();
+vi.mock("./auth-context", () => ({
   useAuth: () => useAuthMock(),
 }));
 
-const listMessagesMock = vi.fn();
-const sendMessageMock = vi.fn();
-const markThreadReadMock = vi.fn();
-vi.mock("../lib/api/endpoints/messaging", async (importActual) => {
+const listMessagesMock = vi.fn<UnknownCall>();
+const sendMessageMock = vi.fn<UnknownCall>();
+const markThreadReadMock = vi.fn<UnknownCall>();
+vi.mock("@/shared/api/endpoints/messaging", async (importActual) => {
   const actual: object = await importActual();
   return {
     ...actual,
@@ -19,7 +21,7 @@ vi.mock("../lib/api/endpoints/messaging", async (importActual) => {
   };
 });
 
-import { makeWrapper } from "../test-utils/render-with-query-client";
+import { makeWrapper } from "@/shared/test/render-with-query-client";
 
 import { messagesKey, useMessages, useSendMessage } from "./use-messages";
 

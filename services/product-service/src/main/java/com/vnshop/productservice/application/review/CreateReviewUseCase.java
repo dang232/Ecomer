@@ -1,6 +1,7 @@
 package com.vnshop.productservice.application.review;
 
 import com.vnshop.productservice.domain.review.Review;
+import com.vnshop.productservice.domain.review.ReviewEligibilityException;
 import com.vnshop.productservice.domain.review.ReviewModerationDecision;
 import com.vnshop.productservice.domain.review.ReviewModerationRequest;
 import com.vnshop.productservice.domain.review.ReviewStatus;
@@ -46,6 +47,9 @@ public class CreateReviewUseCase {
 
         boolean verifiedPurchase = purchaseVerification.hasDeliveredPurchase(
                 command.buyerId(), command.productId(), command.orderId());
+        if (!verifiedPurchase) {
+            throw new ReviewEligibilityException();
+        }
         String sanitizedText = contentSanitizer.sanitize(command.text());
         ReviewModerationDecision decision = Objects.requireNonNull(reviewModeration.assess(
                 new ReviewModerationRequest(sanitizedText, command.rating(), verifiedPurchase, command.images())),

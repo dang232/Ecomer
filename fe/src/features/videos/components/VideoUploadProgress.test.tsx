@@ -1,7 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { VideoStatusResponse } from "../../../app/types/api/video";
+import type { VideoStatusResponse } from "@/shared/contracts/api/video";
+
 import type { UseVideoStatusResult } from "../hooks/useVideoStatus";
 import { useVideoStatus } from "../hooks/useVideoStatus";
 
@@ -11,7 +12,7 @@ import { VideoUploadProgress } from "./VideoUploadProgress";
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) => {
-      if (opts && "reason" in opts) return `${key}:${opts.reason}`;
+      if (typeof opts?.reason === "string") return `${key}:${opts.reason}`;
       return key;
     },
   }),

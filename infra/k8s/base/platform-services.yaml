@@ -280,6 +280,8 @@ spec:
           valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-minio-root-user}}
         - name: MINIO_ROOT_PASSWORD
           valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-minio-root-password}}
+        - name: MINIO_API_CORS_ALLOW_ORIGIN
+          valueFrom: {configMapKeyRef: {name: vnshop-app-config, key: MINIO_API_CORS_ALLOW_ORIGIN}}
         resources:
           requests: {cpu: 100m, memory: 256Mi}
           limits: {cpu: "1", memory: 1Gi}

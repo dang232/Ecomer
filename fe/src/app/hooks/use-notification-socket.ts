@@ -2,11 +2,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { io, type Socket } from "socket.io-client";
 
-import { showNotificationToast } from "../components/notification-toast";
-import { notificationSchema, type Notification } from "../types/api/notification";
+import { notificationSchema, type Notification } from "@/shared/contracts/api/notification";
 
+import { showNotificationToast } from "../components/show-notification-toast";
+
+import { useAuth } from "./auth-context";
 import { useAppConfig } from "./use-app-config";
-import { useAuth } from "./use-auth";
 
 const RECONNECT_BASE_MS = 2000;
 const RECONNECT_CAP_MS = 30_000;

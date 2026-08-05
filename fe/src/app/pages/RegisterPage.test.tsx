@@ -7,15 +7,15 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const useAuthMock = vi.fn();
+const useAuthMock = vi.fn<() => unknown>();
 const registerMock = vi.fn();
 const loginWithPasswordMock = vi.fn();
 
-vi.mock("../hooks/use-auth", () => ({
+vi.mock("../hooks/auth-context", () => ({
   useAuth: () => useAuthMock(),
 }));
 
-vi.mock("../lib/api/endpoints/users", () => ({
+vi.mock("@/shared/api/endpoints/users", () => ({
   myProfile: vi.fn(),
   setDefaultAddress: vi.fn(),
   removeAddress: vi.fn(),
@@ -28,8 +28,11 @@ vi.mock("../lib/api/endpoints/users", () => ({
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) => {
-      if (typeof opts?.defaultValue === "string") return opts.defaultValue;
       const FIXTURES: Record<string, string> = {
+        "login.termsNotice":
+          "By signing in you agree to VNShop's Terms of Service and Privacy Policy.",
+        "register.termsNotice":
+          "By creating an account you agree to VNShop's Terms of Service and Privacy Policy.",
         "register.form.phoneHelper": "Select your country and enter your number",
         "register.form.errorPhoneInvalid": "Phone must be a valid international number.",
         "register.form.errorEmailInvalid": "Enter a valid email address.",
@@ -38,10 +41,13 @@ vi.mock("react-i18next", () => ({
         "register.form.errorFirstNameRequired": "First name is required",
         "register.form.errorLastNameRequired": "Last name is required",
         "register.form.errorEmailTaken": "An account with that email already exists.",
+        "register.form.errorPhoneTaken": "An account with that phone number already exists.",
         "register.form.errorWeakPassword": "Password is too weak. Use at least 8 characters.",
         "register.form.errorGeneric": "Couldn't create account. Try again in a moment.",
       };
-      return FIXTURES[key] ?? key;
+      if (key in FIXTURES) return FIXTURES[key];
+      if (typeof opts?.defaultValue === "string") return opts.defaultValue;
+      return key;
     },
     i18n: { resolvedLanguage: "en" },
   }),
@@ -65,8 +71,8 @@ const PHONE_ERROR_ID = "phone-error";
 const PHONE_ERROR_RE = /(too short|too long|not valid)/i;
 
 const setInputValue = (input: HTMLInputElement, value: string) => {
-  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
-  setter?.call(input, value);
+  const setter = Reflect.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+  if (setter) Reflect.apply(setter, input, [value]);
   input.dispatchEvent(new Event("input", { bubbles: true }));
 };
 
@@ -103,7 +109,7 @@ const fillRequiredFields = (overrides: { phone?: string } = {}) => {
     target: { value: "alice@example.com" },
   });
   if (overrides.phone !== undefined) {
-    const phoneInput = screen.getByLabelText(/phone/i) as HTMLInputElement;
+    const phoneInput = screen.getByLabelText<HTMLInputElement>(/phone/i);
     setInputValue(phoneInput, overrides.phone);
   }
   fireEvent.change(screen.getByLabelText(/^password/i), {
@@ -150,9 +156,24 @@ describe("RegisterPage phone field (CountryPhoneInput)", () => {
     expect(helper?.textContent).toMatch(/Select your country and enter your number/i);
   });
 
+  it("uses sign-up terms copy instead of the login notice", () => {
+    renderPage();
+
+    expect(
+      screen.getByText(
+        "By creating an account you agree to VNShop's Terms of Service and Privacy Policy.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "By signing in you agree to VNShop's Terms of Service and Privacy Policy.",
+      ),
+    ).not.toBeInTheDocument();
+  });
+
   it("strips non-digit input from the visible input", () => {
     renderPage();
-    const input = screen.getByLabelText(/phone/i) as HTMLInputElement;
+    const input = screen.getByLabelText<HTMLInputElement>(/phone/i);
     setInputValue(input, "+1a2b3c4d5e hello +84");
     // Letters, '+', and the literal word are stripped. The visible value
     // contains only digits and AsYouType formatting spaces — no letters.
@@ -162,7 +183,7 @@ describe("RegisterPage phone field (CountryPhoneInput)", () => {
 
   it("shows a 'too short' error when fewer digits than the country requires", async () => {
     renderPage();
-    const input = screen.getByLabelText(/phone/i) as HTMLInputElement;
+    const input = screen.getByLabelText<HTMLInputElement>(/phone/i);
     setInputValue(input, "1234");
     await waitFor(() => {
       const alert = document.getElementById(PHONE_ERROR_ID);
@@ -174,7 +195,7 @@ describe("RegisterPage phone field (CountryPhoneInput)", () => {
 
   it("clears the error as soon as the user has the right number of digits", async () => {
     renderPage();
-    const input = screen.getByLabelText(/phone/i) as HTMLInputElement;
+    const input = screen.getByLabelText<HTMLInputElement>(/phone/i);
     setInputValue(input, "1234");
     await waitFor(() => {
       expect(document.getElementById(PHONE_ERROR_ID)).not.toBeNull();
@@ -197,7 +218,7 @@ describe("RegisterPage phone field (CountryPhoneInput)", () => {
 
   it("opens the country dropdown and re-formats the value with the new country", async () => {
     renderPage();
-    const input = screen.getByLabelText(/phone/i) as HTMLInputElement;
+    const input = screen.getByLabelText<HTMLInputElement>(/phone/i);
     setInputValue(input, "912345678"); // 9 valid VN digits
 
     // Switch to US via the dropdown.
@@ -231,7 +252,7 @@ describe("RegisterPage phone field (CountryPhoneInput)", () => {
   });
 
   it("surfaces a BE validation_error on phone as a field error, not a banner", async () => {
-    const { AuthError } = await import("../lib/auth/native-auth");
+    const { AuthError } = await import("@/shared/auth");
     registerMock.mockRejectedValueOnce(
       new AuthError(400, "validation_error", "phone: phone must be in E.164"),
     );
@@ -242,5 +263,35 @@ describe("RegisterPage phone field (CountryPhoneInput)", () => {
       expect(document.getElementById(PHONE_ERROR_ID)?.getAttribute("role")).toBe("alert");
     });
     expect(screen.queryByText(/phone: phone must be in E\.164/)).not.toBeInTheDocument();
+  });
+
+  it("surfaces a duplicate phone as a phone field error", async () => {
+    const { AuthError } = await import("@/shared/auth");
+    registerMock.mockRejectedValueOnce(new AuthError(409, "phone_taken", "Phone already used"));
+    renderPage();
+    fillRequiredFields({ phone: "912345678" });
+    fireEvent.click(screen.getByRole("button", { name: /create account/i }));
+
+    await waitFor(() => {
+      expect(document.getElementById(PHONE_ERROR_ID)?.getAttribute("role")).toBe("alert");
+    });
+    expect(
+      screen.getByText("An account with that phone number already exists."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Phone already used")).not.toBeInTheDocument();
+  });
+
+  it("surfaces a duplicate email as an email field error", async () => {
+    const { AuthError } = await import("@/shared/auth");
+    registerMock.mockRejectedValueOnce(new AuthError(409, "email_taken", "Email already used"));
+    renderPage();
+    fillRequiredFields({ phone: "912345678" });
+    fireEvent.click(screen.getByRole("button", { name: /create account/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("An account with that email already exists.")).toBeInTheDocument();
+    });
+    expect(screen.getByLabelText(/^email/i)).toHaveAttribute("aria-invalid", "true");
+    expect(screen.queryByText("Email already used")).not.toBeInTheDocument();
   });
 });

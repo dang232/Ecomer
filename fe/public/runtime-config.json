@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "1.0",
+  "generatedAt": "2026-07-31T11:54:00.000Z",
+  "expiresAt": "2026-07-31T11:59:00.000Z",
+  "runtimeConfigUri": "http://localhost:5173/runtime-config.json",
+  "webUri": "http://localhost:5173/",
+  "apiUri": "http://localhost:8080/",
+  "brand": { "name": "VNShop", "tagline": "MARKETPLACE", "logoUrl": "" },
+  "social": {
+    "facebook": "https://facebook.com",
+    "instagram": "https://instagram.com",
+    "twitter": "https://x.com",
+    "youtube": "https://youtube.com"
+  },
+  "payment": { "providers": ["COD", "VietQR"], "defaultMethod": "COD" },
+  "auth": {
+    "oauthProviders": [],
+    "issuerUri": "http://localhost:8085/realms/vnshop",
+    "callbackUri": "http://localhost:5173/auth/callback",
+    "logoutUri": "http://localhost:5173/",
+    "clientId": "vnshop-web"
+  },
+  "features": {
+    "checkout": true,
+    "flashSale": true,
+    "messaging": true,
+    "notifications": true,
+    "reviews": true
+  },
+  "support": { "phone": "1900-0000", "email": "support@vnshop.vn", "hours": "24/7" },
+  "websocket": {
+    "notificationsPath": "/ws/notifications",
+    "messagingPath": "/ws/messaging",
+    "notificationsUri": "ws://localhost:8080/ws/notifications",
+    "messagingUri": "ws://localhost:8080/ws/messaging",
+    "maxReconnectAttempts": 5,
+    "reconnectBaseMs": 2000,
+    "reconnectCapMs": 30000
+  },
+  "providers": [
+    { "id": "cod", "status": "enabled", "mode": "stub", "reasonCode": "PORTFOLIO_STUB" },
+    { "id": "vietqr", "status": "enabled", "mode": "demo", "reasonCode": "PORTFOLIO_DEMO" },
+    { "id": "stripe", "status": "disabled", "mode": "sandbox", "reasonCode": "DISABLED_BY_CONFIGURATION" },
+    { "id": "paypal", "status": "disabled", "mode": "sandbox", "reasonCode": "DISABLED_BY_CONFIGURATION" },
+    { "id": "vnpay", "status": "disabled", "mode": "disabled", "reasonCode": "DISABLED_BY_POLICY" },
+    { "id": "momo", "status": "disabled", "mode": "disabled", "reasonCode": "DISABLED_BY_POLICY" },
+    { "id": "sepay", "status": "disabled", "mode": "disabled", "reasonCode": "DISABLED_BY_POLICY" }
+  ]
+}

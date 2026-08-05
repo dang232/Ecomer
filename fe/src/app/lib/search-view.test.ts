@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Product } from "../types/ui";
+import type { Product } from "@/features/catalog";
 
 import en from "./i18n/en.json";
 import vi from "./i18n/vi.json";

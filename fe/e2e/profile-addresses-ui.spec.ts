@@ -1,6 +1,8 @@
-import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
-import { expectNoGlobalError } from "./_helpers";
+import { test, expect, type APIRequestContext } from "@playwright/test";
+
 import { loginViaOidc, uniqueTestId } from "./_auth";
+import { readJson, type AuthResponse } from "./_api";
+import { expectNoGlobalError } from "./_helpers";
 
 /**
  * UI-driven QA spec for the Profile → Addresses tab.
@@ -36,8 +38,9 @@ async function seedBuyer(request: APIRequestContext): Promise<SeededBuyer> {
     data: { username: email, password: PASSWORD },
   });
   expect(login.ok()).toBeTruthy();
-  const accessToken = (await login.json())?.data?.accessToken;
+  const accessToken = (await readJson<AuthResponse>(login)).data?.accessToken;
   expect(accessToken).toBeTruthy();
+  if (!accessToken) throw new Error("login did not return an access token");
   return { email, accessToken };
 }
 

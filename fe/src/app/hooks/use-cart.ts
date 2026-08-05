@@ -1,6 +1,13 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState, useCallback } from "react";
+import { z } from "zod";
 
+import { fromServer, findVariant } from "@/features/catalog";
+import {
+  calculateCartCleanupOperations,
+  cartLineKey,
+  type PurchasedCartItem,
+} from "@/features/checkout";
 import {
   addCartItem,
   clearCart as clearCartApi,
@@ -8,13 +15,14 @@ import {
   mergeCart,
   removeCartItem,
   updateCartItem,
-} from "../lib/api/endpoints/cart";
-import { productById } from "../lib/api/endpoints/products";
-import { fromServer, findVariant } from "../lib/api/product-mapper";
-import type { Cart } from "../types/api";
-import type { ProductId, SellerId } from "../types/api/branded-ids";
+} from "@/shared/api/endpoints/cart";
+import { productById } from "@/shared/api/endpoints/products";
+import type { Cart } from "@/shared/contracts/api";
+import { productIdSchema, sellerIdSchema } from "@/shared/contracts/api/branded-ids";
 
-import { useAuth } from "./use-auth";
+import { readJsonText } from "../../shared/api/read-json";
+
+import { useAuth } from "./auth-context";
 
 const CART_KEY = ["cart"] as const;
 const GUEST_STORAGE_KEY = "vnshop:guest-cart";
@@ -22,31 +30,20 @@ const GUEST_SESSION_STORAGE_KEY = "vnshop:guest-cart-session";
 
 const EMPTY_CART: Cart = { items: [], itemCount: 0, totalAmount: 0 };
 
-interface GuestCartItem {
-  productId: string;
-  quantity: number;
-  variantId?: string;
-}
+const guestCartItemSchema = z.object({
+  productId: productIdSchema,
+  quantity: z.number().int().positive(),
+  variantId: z.string().min(1).optional(),
+});
+const guestCartSchema = z.array(guestCartItemSchema);
+type GuestCartItem = z.infer<typeof guestCartItemSchema>;
 
 function readGuestCart(): GuestCartItem[] {
   if (typeof localStorage === "undefined") return [];
   try {
     const raw = localStorage.getItem(GUEST_STORAGE_KEY);
     if (!raw) return [];
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .filter(
-        (it): it is GuestCartItem =>
-          typeof it === "object" &&
-          it !== null &&
-          typeof (it as GuestCartItem).productId === "string" &&
-          typeof (it as GuestCartItem).quantity === "number" &&
-          (it as GuestCartItem).quantity > 0 &&
-          (typeof (it as GuestCartItem).variantId === "string" ||
-            (it as GuestCartItem).variantId === undefined),
-      )
-      .map((it) => ({ productId: it.productId, quantity: it.quantity, variantId: it.variantId }));
+    return readJsonText(raw, guestCartSchema);
   } catch {
     return [];
   }
@@ -66,17 +63,21 @@ function writeGuestCart(items: GuestCartItem[]): void {
 }
 
 function guestSessionId(): string {
-  const current = localStorage.getItem(GUEST_SESSION_STORAGE_KEY);
-  if (current) return current;
-  const sessionId = crypto.randomUUID();
-  localStorage.setItem(GUEST_SESSION_STORAGE_KEY, sessionId);
-  return sessionId;
+  try {
+    const current = localStorage.getItem(GUEST_SESSION_STORAGE_KEY);
+    if (current) return current;
+    const sessionId = crypto.randomUUID();
+    localStorage.setItem(GUEST_SESSION_STORAGE_KEY, sessionId);
+    return sessionId;
+  } catch {
+    return crypto.randomUUID();
+  }
 }
 
 function guestItemsToCart(items: GuestCartItem[]): Cart {
   return {
     items: items.map((it) => ({
-      productId: it.productId as ProductId,
+      productId: it.productId,
       name: undefined,
       image: undefined,
       price: 0,
@@ -104,7 +105,7 @@ function optimisticAdd(
   } else {
     // Skeleton item — name/price/image will reconcile from the server response.
     items.push({
-      productId: productId as ProductId,
+      productId: productIdSchema.parse(productId),
       name: undefined,
       image: undefined,
       price: 0,
@@ -243,15 +244,60 @@ export function useCart() {
   // Guest-mode mutations: localStorage-backed, no server round-trip.
   const isGuest = ready && !authenticated;
 
+  const removePurchasedItems = useCallback(
+    async (purchasedItems: readonly PurchasedCartItem[]): Promise<void> => {
+      if (purchasedItems.length === 0) return;
+
+      if (isGuest) {
+        setGuestItems((current) => {
+          const operations = calculateCartCleanupOperations(current, purchasedItems);
+          const next = current.map((item) => {
+            const operation = operations.find(
+              (candidate) =>
+                cartLineKey(candidate.productId, candidate.variantId) ===
+                cartLineKey(item.productId, item.variantId),
+            );
+            return operation?.kind === "update" ? { ...item, quantity: operation.quantity } : item;
+          });
+          const removedKeys = new Set(
+            operations
+              .filter((operation) => operation.kind === "remove")
+              .map((operation) => cartLineKey(operation.productId, operation.variantId)),
+          );
+          const kept = next.filter(
+            (item) => !removedKeys.has(cartLineKey(item.productId, item.variantId)),
+          );
+          writeGuestCart(kept);
+          return kept;
+        });
+        return;
+      }
+
+      if (!ready || !authenticated) return;
+      const latest = await query.refetch();
+      const operations = calculateCartCleanupOperations(latest.data?.items ?? [], purchasedItems);
+      for (const operation of operations) {
+        const itemKey = cartLineKey(operation.productId, operation.variantId);
+        if (operation.kind === "remove") {
+          await removeItem.mutateAsync(itemKey);
+        } else {
+          await updateItem.mutateAsync({ productId: itemKey, quantity: operation.quantity });
+        }
+      }
+    },
+    [authenticated, isGuest, ready, query, removeItem, updateItem],
+  );
+
   const guestAdd = (productId: string, quantity: number, variantId?: string) => {
+    const parsedProductId = productIdSchema.parse(productId);
     setGuestItems((prev) => {
       const existing = prev.findIndex(
-        (i) => i.productId === productId && i.variantId === variantId,
+        (i) => i.productId === parsedProductId && i.variantId === variantId,
       );
       const next =
         existing >= 0
           ? prev.map((i, idx) => (idx === existing ? { ...i, quantity: i.quantity + quantity } : i))
-          : [...prev, { productId, quantity, variantId }];
+          : [...prev, { productId: parsedProductId, quantity, variantId }];
       writeGuestCart(next);
       return next;
     });
@@ -307,7 +353,7 @@ export function useCart() {
           const raw = productQueries[idx]?.data;
           if (!raw) {
             return {
-              productId: item.productId as ProductId,
+              productId: item.productId,
               name: undefined,
               image: undefined,
               price: 0,
@@ -318,16 +364,17 @@ export function useCart() {
           }
           const variant = findVariant(raw, item.variantId);
           const mapped = fromServer(raw);
+          const sellerId = sellerIdSchema.safeParse(mapped.sellerId);
           const price = variant?.priceAmount ?? mapped.price;
           const image = variant?.imageUrl ?? mapped.image;
           return {
-            productId: item.productId as ProductId,
+            productId: item.productId,
             name: mapped.name,
             image,
             price,
             originalPrice: mapped.originalPrice,
             quantity: item.quantity,
-            sellerId: mapped.sellerId as SellerId,
+            sellerId: sellerId.success ? sellerId.data : undefined,
             variantId: item.variantId,
           };
         }),
@@ -512,6 +559,7 @@ export function useCart() {
       if (!query.isSuccess) return;
       return clear.mutate(undefined, options);
     },
+    removePurchasedItems,
     refetch: query.refetch,
   };
 }

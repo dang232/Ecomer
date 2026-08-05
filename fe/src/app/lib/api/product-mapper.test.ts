@@ -128,4 +128,13 @@ describe("fromServer variant price fallback", () => {
     };
     expect(fromServer(p).price).toBe(150);
   });
+
+  it("normalizes a null variant image URL to the optional UI field", () => {
+    const result = fromServer({
+      id: "p-null-variant-image" as ProductId,
+      name: "P",
+      variants: [{ sku: "SKU-1", imageUrl: null, priceAmount: 150 }],
+    });
+    expect(result.variants?.[0]?.imageUrl).toBeUndefined();
+  });
 });

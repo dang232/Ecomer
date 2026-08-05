@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
-import { loginViaOidc } from "./_auth";
+
+import { loginAsPersona } from "./_auth";
 
 /**
  * Role-gated route smoke. Covers two surfaces:
@@ -15,7 +16,7 @@ import { loginViaOidc } from "./_auth";
 
 test.describe("seller routes", () => {
   test("/seller renders for a SELLER user", async ({ page }) => {
-    await loginViaOidc(page, "seller1");
+    await loginAsPersona(page, "seller");
     await page.goto("/seller");
     // RequireRole sends non-sellers to / — confirming we stay under /seller
     // is sufficient for the smoke. The page itself renders multi-tab navigation.
@@ -25,14 +26,14 @@ test.describe("seller routes", () => {
 
 test.describe("admin routes", () => {
   test("/admin renders for an ADMIN user", async ({ page }) => {
-    await loginViaOidc(page, "admin1");
+    await loginAsPersona(page, "admin");
     await page.goto("/admin");
     await expect.poll(() => new URL(page.url()).pathname, { timeout: 15_000 }).toMatch(/^\/admin/);
   });
 
   test("buyer is redirected away from /admin", async ({ page }) => {
     // seller1 has SELLER + BUYER but not ADMIN, so RequireRole bounces.
-    await loginViaOidc(page, "seller1");
+    await loginAsPersona(page, "seller");
     await page.goto("/admin");
     // Expect to land somewhere other than /admin (RequireRole's fallback is /).
     await expect

@@ -1,5 +1,14 @@
 import { test, expect, type Page } from "@playwright/test";
+
+import {
+  readJson,
+  type AuthResponse,
+  type OrderListResponse,
+  type OrderResponse,
+  type ProductListResponse,
+} from "../_api";
 import { registerAndLoginViaOidc } from "../_auth";
+import { logoutViaUserMenu } from "../_workday-evidence";
 
 import {
   bizStep,
@@ -11,7 +20,6 @@ import {
   startTrace,
   stopTrace,
 } from "./_journey-evidence";
-import { logoutViaUserMenu } from "../_workday-evidence";
 import { requireJourneyState, writeJourneyState } from "./_journey-state";
 
 /**
@@ -86,7 +94,7 @@ test.describe.serial("Chapter 2 — Buyer discovers and orders", () => {
     });
   });
 
-  test.afterEach(async ({}, testInfo) => {
+  test.afterEach(({ page: _page }, testInfo) => {
     rememberOutputDir("02-buyer-orders", testInfo);
   });
 
@@ -169,19 +177,18 @@ test.describe.serial("Chapter 2 — Buyer discovers and orders", () => {
           // — there's no top-level `price` field on ProductResponse.
           const r = await page.request.get(`${apiURL}/products?size=50`);
           expect(r.ok(), `products: ${r.status()}`).toBeTruthy();
-          const catalog = (await r.json())?.data?.content ?? [];
+          const catalog = (await readJson<ProductListResponse>(r)).data?.content ?? [];
           const search = await page.request.get(
             `${apiURL}/search?q=${encodeURIComponent("E2E Test Product")}&size=50`,
           );
           expect(search.ok(), `search: ${search.status()}`).toBeTruthy();
-          const indexed = (await search.json())?.data?.content ?? [];
-          const indexedId = indexed.find((candidate: { id?: string }) =>
-            catalog.some(
-              (candidateProduct: { id?: string }) => candidateProduct.id === candidate.id,
-            ),
+          const indexed = (await readJson<ProductListResponse>(search)).data?.content ?? [];
+          const indexedId = indexed.find((candidate) =>
+            catalog.some((candidateProduct) => candidateProduct.id === candidate.id),
           )?.id;
-          const p = catalog.find((candidate: { id?: string }) => candidate.id === indexedId);
+          const p = catalog.find((candidate) => candidate.id === indexedId);
           expect(p?.id, "expected at least one seeded product").toBeTruthy();
+          if (!p) throw new Error("expected at least one seeded product");
           productId = p.id;
           productName = p.name;
           productUnitPriceVnd = Number(p?.variants?.[0]?.priceAmount);
@@ -233,8 +240,8 @@ test.describe.serial("Chapter 2 — Buyer discovers and orders", () => {
                   `${apiURL}/search?q=${encodeURIComponent(productName)}&size=20`,
                 );
                 if (!r.ok()) return [];
-                const body = await r.json();
-                const ids: string[] = body?.data?.content?.map((p: { id: string }) => p.id) ?? [];
+                const body = await readJson<ProductListResponse>(r);
+                const ids: string[] = body.data?.content?.map((p) => p.id) ?? [];
                 return ids;
               },
               {
@@ -261,7 +268,8 @@ test.describe.serial("Chapter 2 — Buyer discovers and orders", () => {
             data: { username: buyerEmail, password: PASSWORD },
           });
           expect(login.ok(), `auth/login for ${buyerEmail}: ${login.status()}`).toBeTruthy();
-          const accessToken = (await login.json())?.data?.accessToken;
+          const accessToken = (await readJson<AuthResponse>(login)).data?.accessToken;
+          if (!accessToken) throw new Error("login response did not include an access token");
           await page.request.post(`${apiURL}/users/me/addresses`, {
             headers: { Authorization: `Bearer ${accessToken}` },
             data: {
@@ -354,7 +362,8 @@ test.describe.serial("Chapter 2 — Buyer discovers and orders", () => {
           const login = await page.request.post(`${apiURL}/auth/login`, {
             data: { username: buyerEmail, password: PASSWORD },
           });
-          const accessToken = (await login.json())?.data?.accessToken;
+          const accessToken = (await readJson<AuthResponse>(login)).data?.accessToken;
+          if (!accessToken) throw new Error("login response did not include an access token");
           const idem = `qa-journey-${Date.now()}`;
           const place = await page.request.post(`${apiURL}/orders`, {
             headers: {
@@ -373,7 +382,7 @@ test.describe.serial("Chapter 2 — Buyer discovers and orders", () => {
             },
           });
           expect(place.ok(), `place order: ${place.status()} ${await place.text()}`).toBeTruthy();
-          const placeBody = await place.json();
+          const placeBody = await readJson<OrderResponse>(place);
           placedOrderId = placeBody?.data?.id ?? placeBody?.data?.orderId ?? "";
           expect(placedOrderId, "no orderId on place response").toBeTruthy();
 
@@ -386,9 +395,10 @@ test.describe.serial("Chapter 2 — Buyer discovers and orders", () => {
                   headers: { Authorization: `Bearer ${accessToken}` },
                 });
                 if (!list.ok()) return false;
-                const ids = ((await list.json())?.data?.content ?? []).map(
-                  (o: { id?: string; orderId?: string }) => o.id ?? o.orderId,
-                );
+                const ids =
+                  (await readJson<OrderListResponse>(list)).data?.content?.map(
+                    (o) => o.id ?? o.orderId,
+                  ) ?? [];
                 return ids.includes(placedOrderId);
               },
               {

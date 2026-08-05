@@ -15,6 +15,8 @@
     "light": "Light",
     "lightMode": "Light mode",
     "darkMode": "Dark mode",
+    "switchToLightMode": "Switch to light mode",
+    "switchToDarkMode": "Switch to dark mode",
     "announcement": "Free shipping on orders over 150k!",
     "announcementSuffix": "Shop now →"
   },
@@ -69,7 +71,12 @@
     "emptyTitle": "Your cart is empty",
     "emptySub": "Add some products and come back any time!",
     "continueShopping": "Continue shopping",
+    "clear": "Clear cart",
+    "clearConfirm": "Clear cart",
+    "clearConfirmTitle": "Clear your cart?",
+    "clearConfirmDescription": "All items will be removed from your cart.",
     "sellerFallback": "Seller",
+    "sellerUnavailable": "Seller unavailable",
     "freeShippingTag": "Free shipping",
     "shipFee": "Ship {{fee}}",
     "couponHeader": "Coupon code",
@@ -86,14 +93,23 @@
     "shippingFee": "Shipping fee",
     "free": "Free",
     "totalLabel": "Total",
+    "merchandiseTotal": "Merchandise total",
     "savings": "You save {{amount}}",
     "proceedCheckout": "Proceed to checkout",
     "guestBanner": "Log in to save your cart and checkout",
     "loginBtn": "Log in",
     "sslNotice": "Payment information is SSL-256-bit encrypted",
     "priceUnavailable": "Price unavailable",
+    "lineTotal": "Line total: {{amount}}",
+    "quantity": "Quantity for {{name}}",
+    "decreaseQuantity": "Decrease quantity for {{name}}",
+    "increaseQuantity": "Increase quantity for {{name}}",
+    "removeItem": "Remove",
+    "removeConfirmTitle": "Remove this item?",
+    "removeConfirmDescription": "{{name}} will be removed from your cart.",
     "errors": {
       "cantRemove": "Couldn't remove item",
+      "cantClear": "Couldn't clear cart",
       "cantUpdate": "Couldn't update item",
       "maxQty": "Maximum quantity is {{max}} per item"
     },
@@ -175,6 +191,8 @@
     "loading": "Loading products...",
     "resultsUnavailable": "Search results are unavailable",
     "productCount": "{{count}} products",
+    "productCountForQuery": "{{count}} results for '{{query}}'",
+    "fallbackLabel": "Showing catalog results",
     "sortLabel": "Sort products",
     "fallbackUnavailable": "Live search is temporarily unavailable.",
     "fallbackIndexing": "Showing catalog results while search catches up.",
@@ -202,6 +220,31 @@
     "loadError": "error"
   },
   "product": {
+    "detailTabs": {
+      "details": "Details",
+      "reviews": "Reviews",
+      "questions": "Questions",
+      "videos": "Videos"
+    },
+    "variants": "Options",
+    "gallery": "Product media gallery",
+    "openZoom": "Open zoomed view",
+    "closeZoom": "Close zoomed view",
+    "viewImage": "View image {{index}}",
+    "zoomedImage": "Zoomed product image",
+    "purchase": "Purchase product",
+    "purchaseAssurances": "Purchase assurances",
+    "information": "Product information",
+    "sections": "Product sections",
+    "soldBy": "Sold by",
+    "contactSeller": "Contact seller",
+    "inStock": "In stock",
+    "lowStock": "Low stock",
+    "outOfStock": "Out of stock",
+    "increaseQuantity": "Increase quantity",
+    "decreaseQuantity": "Decrease quantity",
+    "addWishlist": "Add to wishlist",
+    "removeWishlist": "Remove from wishlist",
     "sold": "Sold",
     "new": "New",
     "viewMore": "View more products →",
@@ -307,6 +350,7 @@
       "submitErr": "Couldn't submit question",
       "loginToAsk": "Sign in to ask a question →",
       "loading": "Loading questions...",
+      "loadErr": "Couldn't load questions. Try again.",
       "noAnswer": "No answer from the seller yet.",
       "empty": "No questions yet.",
       "qPrefix": "Q: ",
@@ -392,6 +436,75 @@
       "cta": "Browse catalog"
     }
   },
+  "storefront": {
+    "accountMenu": "Account menu",
+    "campaign": {
+      "eyebrow": "Featured deal",
+      "action": "View product"
+    },
+    "shortcuts": {
+      "label": "Storefront shortcuts",
+      "vouchers": "Vouchers",
+      "shipping": "Shipping",
+      "mall": "Official shops",
+      "video": "Video",
+      "delivery": "Fast delivery"
+    },
+    "categories": {
+      "title": "Browse categories",
+      "navigation": "Product categories"
+    },
+    "flashSale": {
+      "endsSoon": "Limited stock, while it lasts"
+    },
+    "sellers": {
+      "title": "Featured sellers"
+    },
+    "mobileNav": {
+      "label": "Storefront navigation",
+      "home": "Home",
+      "search": "Search",
+      "cart": "Cart",
+      "account": "Account"
+    },
+    "trust": {
+      "protection": "Buyer protection",
+      "protectionDetail": "Payments are handled safely.",
+      "returns": "Easy returns",
+      "returnsDetail": "Start a supported return from your order.",
+      "shipping": "Tracked delivery",
+      "shippingDetail": "Follow your package from pickup."
+    },
+    "empty": {
+      "title": "The storefront is waiting for products",
+      "description": "Browse the catalog while new marketplace listings arrive.",
+      "action": "Browse catalog"
+    },
+    "error": {
+      "title": "We could not load the storefront",
+      "retry": "Try again"
+    },
+    "partial": {
+      "title": "Some storefront sections are unavailable",
+      "description": "Available categories and products are still shown below."
+    }
+  },
+  "publicSellers": {
+    "title": "Find a seller",
+    "description": "Browse verified shops on VNShop.",
+    "listLabel": "Public sellers",
+    "loading": "Loading sellers...",
+    "error": "Sellers could not be loaded.",
+    "retry": "Try again",
+    "emptyTitle": "No sellers yet",
+    "emptyDescription": "Check back soon for verified shops.",
+    "paginationLabel": "Seller list pagination",
+    "previous": "Previous seller page",
+    "next": "Next seller page",
+    "page": "Page {{current}} of {{total}}",
+    "rating": "{{rating}} ({{count}} ratings)",
+    "products": "{{count}} products"
+  },
   "consoleChrome": {
     "adminLabel": "Admin Console",
     "sellerLabel": "Seller Hub",
@@ -431,6 +544,24 @@
     "sellerTools": "Seller Tools",
     "fees": "Fees & Commission",
     "help": "Help & Support",
+    "support": {
+      "helpCenterDescription": "Get help with your orders, deliveries, returns, and account.",
+      "shippingDescription": "Review delivery status in your orders or contact our support team for help.",
+      "contactDescription": "Contact VNShop support for help with an order or your account.",
+      "aboutDescription": "VNShop is an online marketplace where you can discover products, track orders, and manage returns in one place.",
+      "careersDescription": "Contact VNShop support to be connected with the hiring team about career opportunities.",
+      "blogDescription": "Shopping and VNShop updates are available from the support team when you need help.",
+      "pressDescription": "Contact VNShop support to be connected with the communications team for press enquiries.",
+      "privacyDescription": "VNShop uses account and order information to provide shopping, delivery, and support services. Contact support with privacy questions.",
+      "termsDescription": "Your use of VNShop and orders are governed by the platform's terms of service. Contact support if you need clarification about an order or account.",
+      "viewOrders": "View orders",
+      "manageReturns": "Manage returns",
+      "phone": "Phone",
+      "email": "Email",
+      "hours": "Support hours",
+      "unavailable": "Support contact details are temporarily unavailable. Please try again later.",
+      "close": "Close"
+    },
     "returns": "Returns & Refunds",
     "contactUs": "Contact Us",
     "company": "Company",
@@ -508,6 +639,7 @@
     "subtitle": "Free forever. No credit card needed.",
     "haveAccount": "Already have an account?",
     "signIn": "Sign in",
+    "termsNotice": "By creating an account you agree to VNShop's Terms of Service and Privacy Policy.",
     "form": {
       "firstNameLabel": "First name",
       "lastNameLabel": "Last name",
@@ -520,6 +652,7 @@
       "submit": "Create account",
       "submitting": "Creating account...",
       "errorEmailTaken": "An account with that email already exists.",
+      "errorPhoneTaken": "An account with that phone number already exists.",
       "errorWeakPassword": "Password is too weak. Use at least 8 characters.",
       "errorMismatch": "Passwords don't match.",
       "errorFirstNameRequired": "First name is required",
@@ -597,6 +730,8 @@
     "payment": {
       "header": "Payment method",
       "sslNotice": "All transactions are SSL-256-bit encrypted and fully secured",
+      "unavailable": "Payment options are unavailable. Try again before placing your order.",
+      "retry": "Retry payment options",
       "initFailedPrefix": "Couldn't initiate payment: {{message}}",
       "initFailedShort": "Couldn't initiate payment",
       "placeOrderFailed": "Couldn't place the order. Please try again.",
@@ -610,7 +745,23 @@
       "codName": "Cash on delivery",
       "codDesc": "Pay cash when the parcel arrives",
       "complete": "Complete payment for order {{id}}",
-      "retryHint": "Your order was placed. Return to the Orders page to retry payment."
+      "retryHint": "Your order was placed. Return to the Orders page to retry payment.",
+      "recovery": {
+        "checkingTitle": "Checking your order",
+        "checkingBody": "VNShop is confirming whether your original checkout request completed.",
+        "uncertainTitle": "Your order needs a quick check",
+        "uncertainBody": "Checkout will not submit another order automatically. Review your orders before starting a new checkout.",
+        "abandonHint": "After reviewing your orders, you can return to the cart when you are ready for a new checkout.",
+        "paymentFailedTitle": "Your order was placed",
+        "paymentFailedBody": "Payment for order {{id}} was not initialized. You can retry payment without placing another order.",
+        "retryPayment": "Retry payment",
+        "viewOrder": "View order",
+        "viewOrders": "View orders",
+        "continueTitle": "Continue payment",
+        "continueBody": "Your order is saved. Continue the existing payment session.",
+        "continuePayment": "Continue payment",
+        "redirectExpiredBody": "The previous payment redirect is no longer available. Continue from your order instead."
+      }
     },
     "review": {
       "header": "Review your order",
@@ -621,7 +772,8 @@
       "paymentMethod": "Payment",
       "productsCount": "Items ({{count}})",
       "lowStock": "Low stock — only {{count}} left",
-      "sellerFallback": "Unknown seller"
+      "sellerFallback": "Unknown seller",
+      "quantity": "Quantity"
     },
     "summary": {
       "title": "Your order",
@@ -646,6 +798,7 @@
       "shippingFee": "Shipping fee",
       "free": "Free",
       "discount": "Discount",
+      "tax": "Tax",
       "total": "Total",
       "processing": "Processing...",
       "placeOrder": "Place order",
@@ -664,7 +817,22 @@
   "admin": {
     "console": "Admin Console",
     "consoleSub": "VNShop Marketplace",
+    "queue": {
+      "searchPlaceholder": "Search queue",
+      "loading": "Loading queue…",
+      "loadErr": "Could not load the queue. Try again.",
+      "empty": "Nothing pending here.",
+      "reasonLabel": "Reason",
+      "reasonRequired": "Reason is required"
+    },
     "nav": {
+      "sectionOverview": "Overview",
+      "sectionCommerce": "Commerce",
+      "sectionTrust": "Trust and Safety",
+      "sectionFinance": "Finance",
+      "sectionUsersSystem": "Users and System",
+      "sidebarLabel": "Admin navigation",
+      "mobileLabel": "Admin navigation",
       "dashboard": "Dashboard",
       "sellers": "Approve Sellers",
       "reviews": "Moderation",
@@ -687,6 +855,15 @@
       "kpiLoadFail": "Couldn't load KPIs: {{message}}",
       "kpiLoadFailFriendly": "Couldn't load the dashboard. Check your connection and try again.",
       "retry": "Retry",
+      "from": "From",
+      "to": "To",
+      "day": "Day",
+      "week": "Week",
+      "month": "Month",
+      "exceptionsTitle": "Exceptions",
+      "granularity": "Granularity",
+      "exceptionsEmpty": "No exceptions",
+      "viewQueue": "View queue",
       "kpi": {
         "paidGmv": "Paid GMV",
         "refundedAmount": "Refunded amount",
@@ -761,6 +938,7 @@
       "approveErr": "Couldn't approve",
       "rejectOk": "Review rejected",
       "rejectErr": "Couldn't reject",
+      "commentLabel": "Comment",
       "rejectDialog": {
         "title": "Reject review",
         "submit": "Reject",
@@ -806,8 +984,12 @@
         "maxDiscountPlaceholder": "100000",
         "missingCode": "Please enter a coupon code",
         "invalidValue": "Invalid value",
-        "percentTooLarge": "Percent discount can't exceed 100"
-      }
+        "percentTooLarge": "Percent discount can't exceed 100",
+        "maxUsesLabel": "Max uses",
+        "perUserLimitLabel": "Per-user limit",
+        "validUntilLabel": "Valid until"
+      },
+      "loadErr": "Couldn't load coupons"
     },
     "disputes": {
       "title": "Disputes",
@@ -855,17 +1037,32 @@
       "refundConfirmTitle": "Issue refund?",
       "refundConfirmDescription": "This will return the full amount to the buyer. Please provide a reason.",
       "refundConfirmBtn": "Refund",
-      "accept": "Accept"
+      "accept": "Accept",
+      "cancelConfirmTitle": "Cancel order?",
+      "cancelConfirmDescription": "This action cannot be undone. The order will be marked as cancelled.",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "Enter a reason for this action...",
+      "changeStatusTitle": "Change order status",
+      "newStatus": "New status",
+      "total": "Total",
+      "status": "Status",
+      "date": "Date",
+      "th": {
+        "orderNumber": "Order #"
+      },
+      "changeStatus": "Change status"
     },
     "health": {
       "title": "System Health",
+      "subtitle": "Live actuator check across services",
       "refresh": "Refresh",
       "checking": "Checking...",
       "allUp": "All systems operational",
       "someDown": "Some services are down",
       "up": "Up",
       "down": "Down",
-      "lastChecked": "Last checked: {{time}}"
+      "lastChecked": "Last checked: {{time}}",
+      "latencyMs": "{{ms}} ms"
     },
     "users": {
       "title": "User Management",
@@ -891,10 +1088,25 @@
       "phonePlaceholder": "Search by phone...",
       "searchPlaceholder": "Search by name, email, phone, or ID...",
       "unknownName": "Unnamed buyer",
-      "page": "Page {{page}} of {{pages}}"
+      "page": "Page {{page}} of {{pages}}",
+      "drawer": {
+        "title": "User details",
+        "orderHistory": "Order history",
+        "loadingOrders": "Loading orders...",
+        "noOrders": "No orders yet"
+      },
+      "loadErr": "Couldn't load users",
+      "th": {
+        "name": "Name",
+        "email": "Email",
+        "status": "Status"
+      },
+      "active": "Active",
+      "view": "View"
     },
     "payouts": {
       "title": "Payout requests",
+      "subtitle": "Approve, submit, and reconcile seller payouts",
       "loading": "Loading...",
       "empty": "No payout requests",
       "emptyCompleted": "No completed payouts yet",
@@ -910,7 +1122,34 @@
       "updateErr": "Couldn't update",
       "tab": {
         "requested": "Requested",
-        "paid": "Paid"
+        "paid": "Paid",
+        "pending": "Pending",
+        "completed": "Completed"
+      },
+      "th": {
+        "id": "Payout #",
+        "seller": "Seller",
+        "amount": "Amount",
+        "status": "Status",
+        "requestedAt": "Requested"
+      },
+      "action": {
+        "approve": "Approve",
+        "reject": "Reject",
+        "submit": "Submit",
+        "unknown": "Unknown",
+        "paid": "Paid",
+        "legacyComplete": "Complete",
+        "legacyFail": "Fail"
+      },
+      "toast": {
+        "approve": { "ok": "Payout approved" },
+        "reject": { "ok": "Payout rejected" },
+        "submit": { "ok": "Payout submitted" },
+        "unknown": { "ok": "Payout marked unknown" },
+        "paid": { "ok": "Payout marked paid" },
+        "legacy-complete": { "ok": "Payout completed" },
+        "legacy-fail": { "ok": "Payout failed" }
       },
       "completedBy": "Completed by {{id}}",
       "completedByUnknown": "Completed (admin not recorded)",
@@ -932,6 +1171,65 @@
         "externalReferencePlaceholder": "Bank transfer reference",
         "evidenceHashLabel": "Evidence hash",
         "evidenceHashPlaceholder": "sha256:..."
+      },
+      "decisionDialog": {
+        "reasonLabel": "Reason",
+        "reasonPlaceholder": "Why this action?",
+        "providerReferenceLabel": "Provider reference",
+        "providerReferencePlaceholder": "Bank transfer id",
+        "attemptIdLabel": "Attempt id",
+        "attemptIdPlaceholder": "Retry attempt id",
+        "evidenceLabel": "Evidence",
+        "evidencePlaceholder": "Receipt link or note",
+        "externalReferenceLabel": "External reference",
+        "externalReferencePlaceholder": "Bank transfer reference",
+        "evidenceHashLabel": "Evidence hash",
+        "evidenceHashPlaceholder": "sha256:..."
+      },
+      "providerReferenceRequired": "Provider reference is required",
+      "attemptIdRequired": "Attempt id is required",
+      "evidenceRequired": "Evidence is required",
+      "legacyCompleteRequired": "Legacy complete is required",
+      "legacyFailAtLeastOne": "At least one of attempt id or evidence is required for legacy fail",
+      "dialogs": {
+        "subtitle": "Review and record the payout result.",
+        "approve": {
+          "title": "Approve payout?",
+          "submit": "Approve payout"
+        },
+        "reject": {
+          "title": "Reject payout?",
+          "submit": "Reject payout"
+        }
+      },
+      "fields": {
+        "providerReference": "Provider reference",
+        "providerReferencePlaceholder": "Bank transfer id",
+        "attemptId": "Attempt id",
+        "attemptIdPlaceholder": "Retry attempt id",
+        "evidence": "Evidence",
+        "evidencePlaceholder": "Receipt link or note",
+        "externalReference": "External reference",
+        "externalReferencePlaceholder": "Bank transfer reference",
+        "evidenceHash": "Evidence hash",
+        "evidenceHashPlaceholder": "sha256:...",
+        "maskedDestinationAuto": "Account: auto-filled from provider",
+        "reasonOptional": "Reason (optional)",
+        "reasonPlaceholder": "Optional notes for this action",
+        "reason": "Reason",
+        "submit": "Submit",
+        "reject": "Reject"
+      }
+    },
+    "payments": {
+      "vietqr": {
+        "panelTitle": "Confirm VietQR payment",
+        "panelSubtitle": "Payment: {{paymentId}}",
+        "bankReference": "Bank reference (optional)",
+        "bankReferencePlaceholder": "BANK-12345 — leave blank to auto-generate",
+        "bankReferenceHelp": "If the buyer provided a bank reference (often the payment id), paste it here. Otherwise the BE assigns a synthetic VIETQR-MANUAL-* reference.",
+        "confirm": "Confirm payment",
+        "confirmOk": "VietQR payment confirmed"
       }
     },
     "videoModeration": {
@@ -977,6 +1275,7 @@
       "empty": "No appeals pending",
       "loadErr": "Failed to load appeals",
       "approve": "Approve",
+      "reject": "Reject",
       "rejectFinal": "Reject",
       "approveOk": "Appeal approved",
       "approveErr": "Couldn't approve appeal",
@@ -1003,6 +1302,11 @@
     "loggedIn": "Signed in",
     "ordersToHandle": "{{count}} orders pending",
     "shopFallback": "My Shop",
+    "rejectDialog": {
+      "title": "Reject request",
+      "subtitle": "Are you sure you want to reject this request?",
+      "submitLabel": "Reject"
+    },
     "nav": {
       "dashboard": "Dashboard",
       "products": "Products",
@@ -1010,32 +1314,67 @@
       "reviews": "Reviews",
       "wallet": "Wallet",
       "settings": "Settings",
+      "returns": "Returns",
       "sidebarLabel": "Seller navigation",
-      "sectionMain": "Main",
-      "sectionFinance": "Finance",
-      "sectionAccount": "Account",
-      "mobileLabel": "Seller Hub"
+      "mainLabel": "Seller workspace",
+      "bottomLabel": "Seller quick navigation",
+      "mobileLabel": "Seller Hub",
+      "moreLabel": "More",
+      "sectionOperate": "Operate",
+      "sectionGrow": "Grow",
+      "sectionMoney": "Money",
+      "sectionShop": "Shop",
+      "ordersWithCount": "Orders, {{count}} pending"
     },
     "dashboard": {
+      "eyebrow": "Today",
       "title": "Dashboard",
-      "subtitle": "Live data",
+      "subtitle": "Snapshot of your shop performance.",
+      "daysLabel": "Revenue window",
+      "daysOption": "{{count}}d",
+      "revenueTitle": "Revenue · {{days}} days",
+      "revenueHint": "Revenue and order volume from paid seller orders",
+      "chartLegend": "Performance chart legend",
+      "revenueLegend": "Revenue",
+      "ordersLegend": "Orders",
+      "revenueError": "Couldn't load revenue: {{message}}",
+      "revenueRetry": "Retry",
+      "revenueLoading": "Loading…",
+      "revenueEmpty": "No revenue in this window.",
+      "urgentTitle": "Needs attention",
+      "urgentSubtitle": "Work that can affect fulfilment or cash flow",
+      "urgentLoading": "Checking orders, returns, and payouts…",
+      "urgentError": "Some attention items could not be checked.",
+      "urgentRetry": "Check again",
+      "urgentEmpty": "All caught up.",
+      "urgentEmptyHint": "New orders, return requests, and payout issues will appear here.",
+      "openTask": "Open {{task}}",
+      "taskReference": "Reference {{id}}",
+      "statusApproved": "Seller access active",
+      "statusPending": "Approval pending",
+      "tier": "Tier · {{tier}}",
+      "vacationOn": "Vacation mode on",
+      "viewStorefront": "View storefront",
+      "profileError": "We couldn't load your seller profile.",
+      "workflowTitle": "Keep the shop moving",
+      "workflowHint": "Operate fulfilment first, then grow the catalogue and reviews. Wallet and shop settings stay separate so every action has one home.",
+      "manageShop": "Manage shop",
       "kpi": {
+        "sectionLabel": "Seller performance metrics",
+        "revenue": "Revenue ({{days}} days)",
+        "orders": "Orders ({{days}} days)",
         "balance": "Wallet balance",
         "pending": "Pending orders",
         "views": "Shop views",
         "products": "Products",
         "rating": "Average rating",
         "noRating": "No ratings"
-      },
-      "revenue30dTitle": "Revenue (30 days)",
-      "revenue30dHint": "Live from your order data",
-      "revenue30dError": "Couldn't load revenue: {{message}}",
-      "revenue30dLoading": "Loading revenue...",
-      "revenue30dEmpty": "No revenue in the last 30 days yet.",
-      "orders30dTitle": "Orders (30 days)",
-      "orders30dLoading": "Loading...",
-      "orders30dEmpty": "No orders in the last 30 days yet.",
-      "revenue30dRetry": "Retry"
+      }
+    },
+    "urgentTasks": {
+      "order": "Order awaiting confirmation",
+      "return": "Return request awaiting review",
+      "payout": "Payout needs attention"
     },
     "products": {
       "title": "Product management",
@@ -1053,7 +1392,109 @@
       "editTooltip": "Edit product",
       "prev": "Previous page",
       "pageIndicator": "Page {{current}} of {{total}}",
-      "next": "Next page"
+      "pageIndicatorCurrent": "Page {{current}}",
+      "next": "Next page",
+      "empty": "No products yet.",
+      "paginationLabel": "Product list pagination",
+      "caption": "Seller product catalog",
+      "editor": {
+        "titleNew": "New product",
+        "titleEdit": "Edit product",
+        "titleDraft": "Draft product",
+        "description": "Add the details buyers need, then save a draft before publishing.",
+        "loading": "Loading product details...",
+        "loadError": "We couldn't load this product.",
+        "retry": "Try again",
+        "cancel": "Cancel",
+        "save": "Save changes",
+        "saveDraft": "Save as draft",
+        "updateDraft": "Update draft",
+        "saving": "Saving...",
+        "saveOk": "Product saved",
+        "updateOk": "Product updated",
+        "saveErr": "Couldn't save product",
+        "savePartialErr": "Your draft was saved, but the image could not upload. Check the image and save again.",
+        "updateErr": "Couldn't update product",
+        "publishOk": "Product published",
+        "publishErr": "Couldn't publish product",
+        "deleteOk": "Draft deleted",
+        "deleteErr": "Couldn't delete draft",
+        "discardTitle": "Discard changes?",
+        "discardDescription": "You have unsaved changes. If you close now, your changes will be lost.",
+        "discard": "Discard",
+        "continueEditing": "Continue editing",
+        "sectionBasic": "Basic information",
+        "sectionMedia": "Media",
+        "videoCreateHint": "Save the product first, then add a video from the edit screen.",
+        "videoDeleted": "Video removed",
+        "videoDeleteErr": "Couldn't remove video",
+        "removeVideo": "Remove video",
+        "sectionVariants": "Variants & pricing",
+        "sectionPublication": "Publication",
+        "basic": {
+          "legend": "Basic information",
+          "nameLabel": "Product name",
+          "namePlaceholder": "e.g. Wireless Headphones",
+          "descriptionLabel": "Description",
+          "descriptionPlaceholder": "Describe your product...",
+          "categoryLabel": "Category",
+          "categoryPlaceholder": "Choose a category",
+          "categoryLoading": "Loading categories...",
+          "categoryLoadError": "Categories are unavailable. Try again shortly.",
+          "brandLabel": "Brand",
+          "tagsLabel": "Tags",
+          "tagsPlaceholder": "wireless, bluetooth, travel",
+          "tagsHint": "Separate tags with commas. Max 20 tags."
+        },
+        "media": {
+          "legend": "Product media",
+          "label": "Images",
+          "count": "{{count}} of {{max}}",
+          "saved": "Saved",
+          "pending": "Will upload on save",
+          "remove": "Remove image",
+          "add": "Add image",
+          "maxReached": "Maximum {{max}} images reached.",
+          "invalidType": "{{name}} is not a supported image type.",
+          "fileTooLarge": "{{name}} exceeds {{maxMb}} MB limit.",
+          "hint": "JPEG, PNG, WebP up to {{maxMb}} MB each. Max {{maxCount}} images.",
+          "pendingHint": "New images are validated and uploaded after you save the product."
+        },
+        "variants": {
+          "legend": "Variants, pricing and inventory",
+          "label": "Pricing and inventory",
+          "modeLabel": "Product offer type",
+          "modeSingle": "One offer",
+          "modeVariants": "Options",
+          "singleHint": "Set one price and stock level. Buyers will not choose an option.",
+          "variantsHint": "Add an option for each choice a buyer can select, such as colour or size.",
+          "optionListLabel": "Customer options",
+          "itemTitle": "Variant {{number}}",
+          "add": "Add variant",
+          "remove": "Remove variant",
+          "skuDisclosure": "Merchant reference (optional)",
+          "sku": "Merchant SKU (optional)",
+          "skuPlaceholder": "e.g. PHONE-BLK-128",
+          "skuHint": "Leave blank to generate one automatically.",
+          "name": "Name",
+          "namePlaceholder": "e.g. Black / 128 GB",
+          "price": "Price",
+          "pricePlaceholder": "e.g. 990000",
+          "currency": "VND",
+          "stock": "Stock",
+          "stockPlaceholder": "0",
+          "stockHint": "units"
+        },
+        "publication": {
+          "draftNotice": "Your product has been saved as a draft and is not yet visible in the catalog.",
+          "draftHint": "Draft ID: {{id}}…",
+          "publish": "Publish now",
+          "publishing": "Publishing…",
+          "continueEditing": "Continue editing",
+          "deleteDraft": "Delete draft",
+          "deleting": "Deleting…"
+        }
+      }
     },
     "orders": {
       "title": "Order management",
@@ -1088,28 +1529,35 @@
         "title": "Confirm Order",
         "body": "Accept this order and begin processing?",
         "confirm": "Confirm"
+      },
+      "shipDialog": {
+        "title": "Hand off to carrier",
+        "subOrderLabel": "Sub-order: {{id}}",
+        "cancel": "Cancel",
+        "submit": "Hand off",
+        "submitting": "Submitting...",
+        "carrierLabel": "Carrier",
+        "carrierOther": "Other",
+        "carrierOtherPlaceholder": "Carrier name",
+        "trackingNumberLabel": "Tracking number",
+        "trackingNumberPlaceholder": "e.g. GHN1234567890",
+        "missingCarrier": "Please enter a carrier name",
+        "missingTracking": "Please enter a tracking number"
+      },
+      "detailDrawer": {
+        "title": "Order {{id}}",
+        "parentOrder": "Parent order: {{id}}",
+        "close": "Close",
+        "items": "{{count}} item(s)",
+        "dateUnavailable": "Date unavailable"
+      },
+      "openDetail": "View order {{id}}",
+      "rejectDialog": {
+        "title": "Reject order",
+        "subtitle": "Are you sure you want to reject this order?",
+        "submitLabel": "Reject order",
+        "confirmBody": "Are you sure you want to reject this order?"
       }
-    },
-    "shipDialog": {
-      "title": "Hand off to carrier",
-      "subOrderLabel": "Sub-order: {{id}}",
-      "cancel": "Cancel",
-      "submit": "Hand off",
-      "submitting": "Submitting...",
-      "carrierLabel": "Carrier",
-      "carrierOther": "Other",
-      "carrierOtherPlaceholder": "Carrier name",
-      "trackingNumberLabel": "Tracking number",
-      "trackingNumberPlaceholder": "e.g. GHN1234567890",
-      "missingCarrier": "Please enter a carrier name",
-      "missingTracking": "Please enter a tracking number"
-    },
-    "rejectDialog": {
-      "title": "Reject order",
-      "submitLabel": "Reject order",
-      "subtitle": "Order: {{id}}",
-      "reasonLabel": "Rejection reason",
-      "reasonPlaceholder": "Out of stock, can't deliver to that address..."
     },
     "wallet": {
       "title": "Wallet & Payouts",
@@ -1136,9 +1584,22 @@
         "exceedsBalance": "Amount exceeds your available balance"
       },
       "payoutOk": "Withdrawal request submitted",
-      "payoutErr": "Couldn't submit request"
+      "payoutErr": "Couldn't submit request",
+      "pendingHint": "Pending settlement: {{amount}}"
     },
-    "reviewsTab": {
+    "settings": {
+      "title": "Shop settings",
+      "tier": "Tier",
+      "vacationMode": "Vacation mode",
+      "vacationOn": "On",
+      "vacationOff": "Off",
+      "bank": "Bank name",
+      "destination": "Destination",
+      "verificationState": "Status",
+      "destinationBank": "Bank",
+      "manageAccount": "Manage account"
+    },
+    "reviews": {
       "title": "Customer reviews",
       "subtitle": "Feedback for products in your shop",
       "searchPlaceholder": "Search product, review, or order",
@@ -1148,11 +1609,8 @@
       "productFallback": "Product",
       "previous": "Previous",
       "next": "Next",
-      "page": "Page {{page}} of {{pages}}"
-    },
-    "settings": {
-      "title": "Shop settings",
-      "comingSoon": "Shop profile updates will land once the backend ships a seller-profile endpoint."
+      "page": "Page {{page}} of {{pages}}",
+      "imageAlt": "Review image {{count}}"
     },
     "productModal": {
       "titleAdd": "Add new product",
@@ -1206,12 +1664,14 @@
   },
   "profile": {
     "displayNameFallback": "User",
-    "loggedInVia": "Signed in via Keycloak",
+    "loggedInVia": "Signed in through VNShop",
     "logout": "Log out",
     "initSession": "Initialising your session...",
     "loginRequired": "Please sign in",
     "sectionsLabel": "Profile sections",
     "becomeSeller": "Become a seller",
+    "sellerApplication": "View seller application",
+    "sellerHub": "Open Seller Hub",
     "avatar": {
       "uploadCta": "Upload avatar",
       "uploading": "Uploading…",
@@ -1250,14 +1710,13 @@
       "save": "Save changes",
       "saving": "Saving...",
       "loading": "Loading profile...",
-      "fallbackBanner": "Couldn't load your profile from the server — showing what Keycloak has. Some features may be unavailable.",
+      "fallbackBanner": "Couldn't load your profile from the server. Showing available account details; some features may be unavailable.",
       "fields": {
         "name": "Full name",
         "email": "Email",
         "phone": "Phone"
       },
       "notSet": "Not set yet",
-      "emailHint": "Email is managed by Keycloak — update it in your Keycloak account.",
       "updatedOk": "Profile updated",
       "updatedErr": "Couldn't update profile"
     },
@@ -1291,9 +1750,49 @@
     },
     "security": {
       "title": "Account security",
-      "subtitle": "Passwords, 2FA and signed-in devices are managed by Keycloak.",
+      "subtitle": "Passwords, 2FA and signed-in devices are managed by VNShop's protected account service.",
       "nativeBoundary": "Password and session security are handled by VNShop's protected account service.",
-      "openKeycloak": "Open Keycloak account console"
+      "openKeycloak": "Open account security settings"
+    }
+  },
+  "sellerRegistration": {
+    "initSession": "Initialising your session...",
+    "loginRequired": "Please sign in to apply as a seller",
+    "backToProfile": "Back to profile",
+    "title": "Become a seller",
+    "subtitle": "Tell us about your shop. An admin will review the application before seller access is enabled.",
+    "account": "Applying with {{email}}",
+    "shopNameLabel": "Shop name",
+    "shopNamePlaceholder": "e.g. Dang's Tech Shop",
+    "bankNameLabel": "Payout bank",
+    "bankNamePlaceholder": "e.g. Vietcombank",
+    "required": "This field is required",
+    "tooShort": "Enter at least 2 characters",
+    "reviewNotice": "Only your shop name and bank name are needed now. Add the payout account details later from Seller Hub after approval.",
+    "cancel": "Cancel",
+    "submit": "Submit application",
+    "submitting": "Submitting...",
+    "errorGeneric": "Couldn't submit the seller application. Please try again.",
+    "successToast": "Seller application submitted",
+    "successTitle": "Application submitted",
+    "successBody": "Your seller application is now waiting for admin approval. Seller tools will become available after approval.",
+    "approvedTitle": "Seller application approved",
+    "approvedBody": "Your shop is approved. Seller tools are now available in Seller Hub.",
+    "pendingNotice": "Your application is pending review. You can return to your profile while the team reviews it.",
+    "approvedNotice": "Your seller access is ready. Open Seller Hub to manage this shop.",
+    "openSellerHub": "Open Seller Hub",
+    "statusLabel": "Status",
+    "successStatus": "Pending review",
+    "approvedStatus": "Approved"
+  },
+  "account": {
+    "navigation": "Account navigation",
+    "sections": {
+      "profile": "Profile",
+      "wishlist": "Wishlist",
+      "notifications": "Notifications",
+      "messages": "Messages",
+      "returns": "Returns"
     }
   },
   "messaging": {
@@ -1344,14 +1843,21 @@
   },
   "orders": {
     "pageTitle": "My Orders",
+    "listDescription": "Track current orders, review delivery progress, and revisit completed purchases.",
+    "tabLabel": "Order status filters",
     "loginPromptTitle": "Log in to view your orders",
     "initSession": "Initialising your session...",
     "loading": "Loading orders...",
     "loadError": "Couldn't load orders",
     "backToHome": "Back to home",
     "empty": "No orders to show",
+    "emptyHint": "Your new purchases will appear here once checkout is complete.",
     "orderId": "Order ID:",
     "orderNumber": "Order {{id}}",
+    "sellerLabel": "Seller: {{seller}}",
+    "placedAt": "Placed {{date}}",
+    "placedAtLong": "Placed {{date}}",
+    "itemQuantity": "Quantity: {{count}}",
     "itemCountSummary": "{{count}} items",
     "loadingItems": "Loading product details...",
     "totalLabel": "Total:",
@@ -1424,7 +1930,13 @@
       "title": "Cancel order #{{id}}?",
       "description": "This action cannot be undone."
     },
+    "timeline": {
+      "placed": "Order placed",
+      "pendingTimestamp": "Timestamp unavailable"
+    },
     "detail": {
+      "title": "Order details",
+      "description": "Review the seller groups, timeline, and totals for this order.",
       "back": "Back to orders",
       "orderNumber": "Order",
       "createdAt": "Placed on {{date}}",
@@ -1442,10 +1954,12 @@
       "paymentCompleted": "Paid",
       "paymentFailed": "Payment failed",
       "unknownPayment": "Not available",
+      "timeline": "Timeline",
       "totals": "Order summary",
       "subtotal": "Subtotal",
       "shipping": "Shipping",
       "discount": "Discount",
+      "tax": "Tax",
       "total": "Total",
       "notFound": "Order not found",
       "notFoundDescription": "This order does not exist or is not available to your account.",
@@ -1477,6 +1991,7 @@
     "loading": "Loading...",
     "comingSoon": "{{feature}} is coming soon!",
     "cancel": "Cancel",
+    "back": "Back",
     "confirm": "Confirm",
     "unavailable": "—",
     "save": "Save",
@@ -1485,7 +2000,10 @@
     "prev": "Previous",
     "retry": "Retry",
     "refresh": "Refresh",
-    "tryAgain": "Try again"
+    "tryAgain": "Try again",
+    "notProvided": "Not provided",
+    "submitting": "Submitting...",
+    "close": "Close"
   },
   "sellerDetail": {
     "notFound": "Shop not found",
@@ -1496,7 +2014,140 @@
     "ratingsLabel": "{{count}} ratings",
     "productCount": "{{count}} products",
     "error": "Couldn't load shop details.",
-    "visitShop": "Visit shop"
+    "visitShop": "Visit shop",
+    "contactSeller": "Contact seller"
+  },
+  "notificationPreferences": {
+    "title": "Notification preferences",
+    "subtitle": "Choose which supported updates VNShop can send to you.",
+    "save": "Save changes",
+    "saving": "Saving...",
+    "saved": "Preferences saved.",
+    "saveError": "Could not save your notification preferences.",
+    "loadError": "Could not load your notification preferences.",
+    "muteToggle": "Mute all notifications",
+    "mutedTitle": "All notifications are muted",
+    "mutedDescription": "You will not receive in-app or email updates until you turn notifications back on.",
+    "activeTitle": "Notifications are on",
+    "activeDescription": "Adjust each supported notification type below.",
+    "channels": {
+      "IN_APP": "In app",
+      "EMAIL": "Email"
+    },
+    "types": {
+      "ORDER_CREATED": {
+        "label": "Order created",
+        "description": "A new order has been accepted into your account.",
+        "channels": {
+          "IN_APP": "Order created in app",
+          "EMAIL": "Order created by email"
+        }
+      },
+      "ORDER_CANCELLED": {
+        "label": "Order cancelled",
+        "description": "An order was cancelled before delivery.",
+        "channels": {
+          "IN_APP": "Order cancelled in app",
+          "EMAIL": "Order cancelled by email"
+        }
+      },
+      "ORDER_SHIPPED": {
+        "label": "Order shipped",
+        "description": "A seller handed your order to the carrier.",
+        "channels": {
+          "IN_APP": "Order shipped in app",
+          "EMAIL": "Order shipped by email"
+        }
+      },
+      "ORDER_DELIVERED": {
+        "label": "Order delivered",
+        "description": "Your order has been delivered successfully.",
+        "channels": {
+          "IN_APP": "Order delivered in app",
+          "EMAIL": "Order delivered by email"
+        }
+      },
+      "PAYMENT_COMPLETED": {
+        "label": "Payment completed",
+        "description": "A payment was captured successfully.",
+        "channels": {
+          "IN_APP": "Payment completed in app",
+          "EMAIL": "Payment completed by email"
+        }
+      },
+      "PAYMENT_REFUNDED": {
+        "label": "Payment refunded",
+        "description": "A refund has been issued.",
+        "channels": {
+          "IN_APP": "Payment refunded in app",
+          "EMAIL": "Payment refunded by email"
+        }
+      },
+      "USER_REGISTERED": {
+        "label": "New account welcome",
+        "description": "Get a confirmation when your new VNShop account is ready to use.",
+        "channels": {
+          "IN_APP": "New account welcome in app",
+          "EMAIL": "New account welcome by email"
+        }
+      },
+      "USER_PASSWORD_RESET": {
+        "label": "Password reset security alerts",
+        "description": "Stay informed when a password reset is requested for your account.",
+        "channels": {
+          "IN_APP": "Password reset alert in app",
+          "EMAIL": "Password reset alert by email"
+        }
+      },
+      "SELLER_NEW_ORDER": {
+        "label": "Seller order alert",
+        "description": "A seller account received a new order that needs attention.",
+        "channels": {
+          "IN_APP": "Seller order alert in app",
+          "EMAIL": "Seller order alert by email"
+        }
+      },
+      "PRODUCT_APPROVED": {
+        "label": "Product approved",
+        "description": "A seller product was approved for publication.",
+        "channels": {
+          "IN_APP": "Product approved in app",
+          "EMAIL": "Product approved by email"
+        }
+      },
+      "PRODUCT_REJECTED": {
+        "label": "Product rejected",
+        "description": "A seller product needs fixes before it can go live.",
+        "channels": {
+          "IN_APP": "Product rejected in app",
+          "EMAIL": "Product rejected by email"
+        }
+      },
+      "REVIEW_REPLIED": {
+        "label": "Review replied",
+        "description": "A seller replied to one of your reviews.",
+        "channels": {
+          "IN_APP": "Review reply in app",
+          "EMAIL": "Review reply by email"
+        }
+      },
+      "RETURN_REQUESTED": {
+        "label": "Return requested",
+        "description": "A return request was created for one of your orders.",
+        "channels": {
+          "IN_APP": "Return request in app",
+          "EMAIL": "Return request by email"
+        }
+      },
+      "PAYOUT_COMPLETED": {
+        "label": "Payout completed",
+        "description": "A seller payout finished successfully.",
+        "channels": {
+          "IN_APP": "Payout completed in app",
+          "EMAIL": "Payout completed by email"
+        }
+      }
+    }
   },
   "paymentReturn": {
     "pending": {
@@ -1521,6 +2172,10 @@
       "fallback": "Please check your orders page for the latest status.",
       "noOrderId": "No order ID found in the URL parameters.",
       "checkFailed": "Couldn't check payment status.",
+      "invalidProvider": "This payment return provider is not supported.",
+      "invalidRecovery": "We couldn't verify this payment return. Check your orders for the latest status.",
+      "mismatchedRecovery": "This payment return does not match the saved payment session.",
+      "pendingTooLong": "Payment is still pending. Check your orders for the latest status.",
       "goOrders": "Go to orders"
     }
   },
@@ -1606,6 +2261,14 @@
         "PAYMENT_REFUNDED": {
           "label": "Refund",
           "description": "When an order is refunded"
+        },
+        "USER_REGISTERED": {
+          "label": "Welcome notification",
+          "description": "When your new account is ready to use"
+        },
+        "USER_PASSWORD_RESET": {
+          "label": "Password reset alert",
+          "description": "When a password reset is requested for your account"
         },
         "SELLER_NEW_ORDER": {
           "label": "New order (Seller)",
@@ -1754,6 +2417,7 @@
   "return": {
     "request": {
       "title": "Request Return",
+      "subtitle": "Review the package, choose the affected item when available, and explain the issue clearly.",
       "backToOrders": "Back to orders",
       "orderIdLabel": "Order ID",
       "orderIdPlaceholder": "Enter order ID",
@@ -1776,6 +2440,8 @@
       "success": "Return request submitted",
       "error": "Failed to submit return request",
       "selectOrder": "Please enter order ID",
+      "selectItem": "Please select an item",
+      "itemLabel": "Affected item",
       "selectReason": "Please select a return reason",
       "reasonTooShort": "Description must be at least 10 characters"
     },

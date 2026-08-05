@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { CheckoutStepper } from "./CheckoutStepper";
@@ -38,7 +38,9 @@ describe("CheckoutStepper", () => {
     // Future steps (payment, review) are non-focusable spans
     const future = document.querySelector('[data-step-id="payment"]')!;
     expect(future.tagName).toBe("SPAN");
+    expect(future.getAttribute("role")).toBe("img");
     expect(future.getAttribute("aria-current")).toBeNull();
+    expect(future.getAttribute("aria-label")).toBe("Payment");
     expect(future.hasAttribute("href")).toBe(false);
 
     // Completed steps (address) are focusable anchors
@@ -86,8 +88,8 @@ describe("CheckoutStepper", () => {
     const onStepChange = vi.fn();
     render(<CheckoutStepper step="payment" onStepChange={onStepChange} />);
 
-    const done = document.querySelector('[data-step-id="address"]')! as HTMLAnchorElement;
-    done.click();
+    const done = document.querySelector<HTMLElement>('[data-step-id="address"]')!;
+    fireEvent.click(done);
     expect(onStepChange).toHaveBeenCalledWith("address");
   });
 

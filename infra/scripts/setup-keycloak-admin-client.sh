@@ -9,7 +9,8 @@
 #   2. Add a "client roles" protocol mapper to the realm-default "roles" scope
 #      so resource_access.<client>.roles lands in the access token.
 #   3. Grant the service account the realm-management.{manage-users,view-users,
-#      query-users} roles.
+#      query-users,view-realm} roles. view-realm is required when the service
+#      account looks up SELLER/BUYER realm roles before mapping them to users.
 #
 # Run this whenever the keycloak-postgres volume gets wiped, or after a fresh
 # `docker compose up`. If the realm import handled all three steps natively the
@@ -22,6 +23,9 @@
 #   KC_ADMIN_USER      master-realm admin user (default: admin)
 #   KC_ADMIN_PASS      master-realm admin password (default: admin)
 #   KC_CLIENT_ID       service-account client to configure (default: vnshop-admin-api)
+#   KEYCLOAK_LOCAL_SEED_MFA_REQUIRED
+#                      set true only when local seeded seller/admin QA users
+#                      must enroll TOTP; default false repairs them for QA
 
 set -euo pipefail
 
@@ -31,6 +35,20 @@ KC_REALM="${KC_REALM:-vnshop}"
 KC_ADMIN_USER="${KC_ADMIN_USER:-admin}"
 KC_ADMIN_PASS="${KC_ADMIN_PASS:-admin}"
 KC_CLIENT_ID="${KC_CLIENT_ID:-vnshop-admin-api}"
+KEYCLOAK_LOCAL_SEED_MFA_REQUIRED="${KEYCLOAK_LOCAL_SEED_MFA_REQUIRED:-false}"
+
+case "${KEYCLOAK_LOCAL_SEED_MFA_REQUIRED}" in
+  true)
+    REQUIRED_ACTIONS='["CONFIGURE_TOTP"]'
+    ;;
+  false)
+    REQUIRED_ACTIONS='[]'
+    ;;
+  *)
+    echo "KEYCLOAK_LOCAL_SEED_MFA_REQUIRED must be true or false" >&2
+    exit 2
+    ;;
+esac
 
 # MSYS_NO_PATHCONV stops Git Bash from rewriting the in-container paths into
 # Windows paths (which makes docker exec choke).
@@ -47,6 +65,40 @@ kcadm config credentials \
   --user "${KC_ADMIN_USER}" \
   --password "${KC_ADMIN_PASS}" >/dev/null
 
+repair_local_seed_users() {
+  echo "==> reconciling local seeded QA users (MFA required=${KEYCLOAK_LOCAL_SEED_MFA_REQUIRED})"
+  for username in seller1 admin1; do
+    local user_json
+    if ! user_json=$(kcadm get users -r "${KC_REALM}" \
+      --query "username=${username}" \
+      --query "exact=true" \
+      --fields id,username); then
+      echo "  ! ${username}: Keycloak user lookup failed" >&2
+      return 1
+    fi
+
+    if ! printf '%s\n' "${user_json}" | grep -qE "\"username\"[[:space:]]*:[[:space:]]*\"${username}\""; then
+      echo "  - ${username}: not present; leaving realm unchanged"
+      continue
+    fi
+
+    local user_id
+    user_id=$(printf '%s\n' "${user_json}" \
+      | sed -nE 's/.*"id"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' \
+      | sed -n '1p')
+    if [ -z "${user_id}" ]; then
+      echo "  ! ${username}: Keycloak returned no user id" >&2
+      return 1
+    fi
+
+    kcadm update "users/${user_id}" -r "${KC_REALM}" \
+      -s "requiredActions=${REQUIRED_ACTIONS}" >/dev/null
+    echo "  + ${username}: requiredActions=${REQUIRED_ACTIONS}"
+  done
+}
+
+repair_local_seed_users
+
 echo "==> looking up client uuid for ${KC_CLIENT_ID}"
 CLIENT_UUID=$(kcadm get clients -r "${KC_REALM}" --query "clientId=${KC_CLIENT_ID}" --fields id 2>/dev/null \
   | grep -oE '"id" : "[^"]+"' | head -1 | sed 's/"id" : "//;s/"//')
@@ -62,7 +114,8 @@ echo "==> ensuring realm-management roles mapped to service account"
 kcadm add-roles -r "${KC_REALM}" \
   --uusername "service-account-${KC_CLIENT_ID}" \
   --cclientid realm-management \
-  --rolename manage-users --rolename view-users --rolename query-users 2>/dev/null || true
+  --rolename manage-users --rolename view-users --rolename query-users \
+  --rolename view-realm
 
 echo "==> ensuring vnshop-api client has webOrigins for the SPA + dev server"
 # Without webOrigins set, Keycloak rejects CORS on /token from the FE origin

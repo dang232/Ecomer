@@ -1,14 +1,15 @@
-import { IconStar, IconPackage } from "@tabler/icons-react";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { Star, Package } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useParams, useNavigate } from "react-router";
+import { Link, useParams, useNavigate } from "react-router";
 
-import { ImageWithFallback } from "../components/image-with-fallback";
+import type { Product } from "@/features/catalog";
+import { formatPrice } from "@/shared/lib";
+import { ImageWithFallback } from "@/shared/ui";
+
 import { sellerDetailOptions, sellerProductsOptions } from "../hooks/use-sellers";
-import { formatPrice } from "../lib/format";
-import type { ProductSummary } from "../types/api";
 
-function SellerProductCard({ product }: { product: ProductSummary }) {
+function SellerProductCard({ product }: { product: Product }) {
   const navigate = useNavigate();
 
   const image =
@@ -52,7 +53,7 @@ function SellerProductCard({ product }: { product: ProductSummary }) {
         </div>
         {product.rating !== undefined ? (
           <div className="flex items-center gap-1 mt-1.5">
-            <IconStar size={11} fill="var(--accent)" color="var(--accent)" />
+            <Star size={11} fill="var(--accent)" color="var(--accent)" />
             <span className="text-xs font-semibold text-foreground">{product.rating}</span>
           </div>
         ) : null}
@@ -155,7 +156,7 @@ export function SellerDetailPage() {
             <div className="flex items-center gap-4 mt-1.5 flex-wrap text-sm text-muted-foreground">
               {seller.ratingAvg !== null && seller.ratingAvg !== undefined ? (
                 <span className="flex items-center gap-1">
-                  <IconStar size={13} fill="var(--accent)" color="var(--accent)" />
+                  <Star size={13} fill="var(--accent)" color="var(--accent)" />
                   <span className="font-semibold text-foreground">
                     {seller.ratingAvg.toFixed(1)}
                   </span>
@@ -163,10 +164,19 @@ export function SellerDetailPage() {
                 </span>
               ) : null}
               <span className="flex items-center gap-1">
-                <IconPackage size={13} />
+                <Package size={13} />
                 {t("sellerDetail.productCount", { count: seller.totalProducts })}
               </span>
               <span>{t("sellerDetail.joined", { date: joinedDate })}</span>
+            </div>
+            <div className="mt-4">
+              <Link
+                to={`/messages?with=${encodeURIComponent(seller.id)}`}
+                className="inline-flex items-center rounded-[var(--radius-md)] bg-primary px-4 py-2 text-sm font-semibold text-white"
+                aria-label="Contact seller"
+              >
+                {t("product.contactSeller")}
+              </Link>
             </div>
           </div>
         </div>
@@ -188,7 +198,7 @@ export function SellerDetailPage() {
 
         {products.length === 0 ? (
           <div className="py-16 text-center text-muted-foreground">
-            <IconPackage size={48} className="mx-auto mb-3 text-gray-200" />
+            <Package size={48} className="mx-auto mb-3 text-gray-200" />
             <p className="text-sm">{t("sellerDetail.noProducts")}</p>
           </div>
         ) : (

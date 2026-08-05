@@ -1,5 +1,19 @@
-import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
-import { loginViaOidc, registerAndLoginViaOidc, uniqueTestId } from "./_auth";
+import { test, expect, type APIRequestContext } from "@playwright/test";
+
+import {
+  readJson,
+  type AuthResponse,
+  type CartResponse,
+  type CheckoutCalculationResponse,
+  type CouponResponse,
+  type NotificationCountResponse,
+  type NotificationListResponse,
+  type OrderListResponse,
+  type OrderResponse,
+  type ProductListResponse,
+} from "./_api";
+import { loginAsPersona, registerAndLoginViaOidc, uniqueTestId } from "./_auth";
+import { credentialForPersona } from "./modernization/_credentials";
 
 /**
  * Day-in-the-life simulation: drives every documented user flow end-to-end
@@ -63,26 +77,35 @@ async function registerBuyer(request: APIRequestContext): Promise<AuthResult> {
     login.ok(),
     `post-register login failed: ${login.status()} ${await login.text()}`,
   ).toBeTruthy();
-  const body = await login.json();
+  const body = await readJson<AuthResponse>(login);
   const token = body?.data?.accessToken ?? body?.accessToken;
   expect(
     token,
     `no accessToken in login response: ${JSON.stringify(body).slice(0, 200)}`,
   ).toBeTruthy();
+  if (!token) throw new Error("login response did not include an access token");
   return { accessToken: token, email };
 }
 
-async function loginByUsername(request: APIRequestContext, username: string): Promise<AuthResult> {
+async function loginForPersona(
+  request: APIRequestContext,
+  persona: "buyer" | "seller" | "admin",
+): Promise<AuthResult> {
+  const cred = credentialForPersona(persona);
   const r = await request.post(`${apiURL}/auth/login`, {
-    data: { username, password: "test" },
+    data: { username: cred.username, password: cred.password },
   });
-  expect(r.ok(), `login ${username} failed: ${r.status()} ${await r.text()}`).toBeTruthy();
-  const body = await r.json();
+  expect(
+    r.ok(),
+    `loginForPersona(${persona}) failed: ${r.status()} ${await r.text()}`,
+  ).toBeTruthy();
+  const body = await readJson<AuthResponse>(r);
   const token = body?.data?.accessToken ?? body?.accessToken;
   expect(
     token,
-    `no accessToken for ${username}: ${JSON.stringify(body).slice(0, 200)}`,
+    `no accessToken for ${persona}: ${JSON.stringify(body).slice(0, 200)}`,
   ).toBeTruthy();
+  if (!token) throw new Error(`login response did not include an access token for ${persona}`);
   return { accessToken: token };
 }
 
@@ -95,10 +118,11 @@ async function firstProduct(
 ): Promise<{ id: string; sellerId?: string }> {
   const r = await request.get(`${apiURL}/products?size=1`);
   expect(r.ok(), `products fetch failed: ${r.status()}`).toBeTruthy();
-  const body = await r.json();
+  const body = await readJson<ProductListResponse>(r);
   const id = body?.data?.content?.[0]?.id;
   const sellerId = body?.data?.content?.[0]?.sellerId ?? body?.data?.content?.[0]?.seller?.id;
   expect(id, "no products seeded").toBeTruthy();
+  if (!id) throw new Error("no products seeded");
   return { id, sellerId };
 }
 
@@ -106,7 +130,7 @@ test.describe("day simulation — anonymous explore", () => {
   test("anonymous: catalog + search + product detail are reachable", async ({ request }) => {
     const home = await request.get(`${apiURL}/products?size=4`);
     expect(home.ok()).toBeTruthy();
-    const body = await home.json();
+    const body = await readJson<ProductListResponse>(home);
     expect(body?.data?.content?.length ?? 0).toBeGreaterThan(0);
 
     const cats = await request.get(`${apiURL}/categories`);
@@ -138,7 +162,7 @@ test.describe("day simulation — buyer", () => {
 
     const cart = await request.get(`${apiURL}/cart`, { headers });
     expect(cart.ok()).toBeTruthy();
-    const cartBody = await cart.json();
+    const cartBody = await readJson<CartResponse>(cart);
     expect(cartBody?.data?.items?.length ?? 0).toBeGreaterThan(0);
 
     const upd = await request.put(`${apiURL}/cart/items/${product.id}`, {
@@ -186,7 +210,7 @@ test.describe("day simulation — buyer", () => {
       data: { items: [{ productId: product.id, quantity: 1 }] },
     });
     expect(calc.ok(), `checkout calc: ${calc.status()} ${await calc.text()}`).toBeTruthy();
-    const calcBody = await calc.json();
+    const calcBody = await readJson<CheckoutCalculationResponse>(calc);
     const itemsTotal = calcBody?.data?.itemsTotal ?? 0;
     expect(Number(itemsTotal)).toBeGreaterThan(0);
 
@@ -216,12 +240,13 @@ test.describe("day simulation — buyer", () => {
       console.log(`place order failed: ${place.status()} ${await place.text()}`);
     }
     expect(place.ok()).toBeTruthy();
-    const placeBody = await place.json();
+    const placeBody = await readJson<OrderResponse>(place);
     const orderId = placeBody?.data?.id ?? placeBody?.data?.orderId;
     expect(
       orderId,
       `no order id in response: ${JSON.stringify(placeBody).slice(0, 300)}`,
     ).toBeTruthy();
+    if (!orderId) throw new Error("place order did not return an order id");
 
     // 6) Idempotency: replay returns same order
     const replay = await request.post(`${apiURL}/orders`, {
@@ -238,7 +263,7 @@ test.describe("day simulation — buyer", () => {
       },
     });
     expect(replay.ok()).toBeTruthy();
-    const replayBody = await replay.json();
+    const replayBody = await readJson<OrderResponse>(replay);
     const replayId = replayBody?.data?.id ?? replayBody?.data?.orderId;
     expect(replayId).toBe(orderId);
 
@@ -252,8 +277,8 @@ test.describe("day simulation — buyer", () => {
     for (let attempt = 0; attempt < 10; attempt++) {
       const list = await request.get(`${apiURL}/orders?size=10`, { headers });
       expect(list.ok()).toBeTruthy();
-      const listBody = await list.json();
-      const ids = (listBody?.data?.content ?? []).map((o: { id: string }) => o.id);
+      const listBody = await readJson<OrderListResponse>(list);
+      const ids = (listBody.data?.content ?? []).map((o) => o.id ?? o.orderId);
       if (ids.includes(orderId)) {
         foundInList = true;
         break;
@@ -280,8 +305,8 @@ test.describe("day simulation — buyer", () => {
 
     const before = await request.get(`${apiURL}/notifications/unread-count`, { headers });
     expect(before.ok()).toBeTruthy();
-    const beforeBody = await before.json();
-    const beforeCount = (beforeBody?.data ?? beforeBody)?.count ?? 0;
+    const beforeBody = await readJson<NotificationCountResponse>(before);
+    const beforeCount = beforeBody.data?.count ?? beforeBody.count ?? 0;
 
     const trigger = await request.post(`${apiURL}/notifications/test`, { headers });
     expect(
@@ -295,18 +320,18 @@ test.describe("day simulation — buyer", () => {
 
     const after = await request.get(`${apiURL}/notifications/unread-count`, { headers });
     expect(after.ok()).toBeTruthy();
-    const afterBody = await after.json();
-    const afterCount = (afterBody?.data ?? afterBody)?.count ?? 0;
+    const afterBody = await readJson<NotificationCountResponse>(after);
+    const afterCount = afterBody.data?.count ?? afterBody.count ?? 0;
     expect(afterCount).toBeGreaterThanOrEqual(beforeCount + 1);
 
     const list = await request.get(`${apiURL}/notifications?size=5`, { headers });
     expect(list.ok()).toBeTruthy();
-    const listBody = await list.json();
-    const items: Array<{ id: string; read?: boolean }> =
-      (listBody?.data ?? listBody)?.content ?? [];
+    const listBody = await readJson<NotificationListResponse>(list);
+    const items = listBody.data?.content ?? listBody.content ?? [];
     expect(items.length).toBeGreaterThan(0);
 
-    const target = items[0]!;
+    const target = items[0];
+    if (!target) throw new Error("notification list was unexpectedly empty");
     const markRead = await request.post(`${apiURL}/notifications/${target.id}/read`, { headers });
     expect(markRead.ok(), `mark-read: ${markRead.status()}`).toBeTruthy();
 
@@ -314,8 +339,8 @@ test.describe("day simulation — buyer", () => {
     expect(markAll.ok()).toBeTruthy();
 
     const tail = await request.get(`${apiURL}/notifications/unread-count`, { headers });
-    const tailBody = await tail.json();
-    expect((tailBody?.data ?? tailBody)?.count ?? 0).toBe(0);
+    const tailBody = await readJson<NotificationCountResponse>(tail);
+    expect(tailBody.data?.count ?? tailBody.count ?? 0).toBe(0);
   });
 
   test("buyer UI: register → home → cart → checkout step renders without crash", async ({
@@ -361,7 +386,7 @@ test.describe("day simulation — seller", () => {
   test("seller: dashboard read paths (revenue + wallet + analytics + orders)", async ({
     request,
   }) => {
-    const auth = await loginByUsername(request, "seller1");
+    const auth = await loginForPersona(request, "seller");
     const headers = authHeaders(auth);
 
     const me = await request.get(`${apiURL}/sellers/me`, { headers });
@@ -384,7 +409,7 @@ test.describe("day simulation — seller", () => {
   });
 
   test("seller UI: dashboard renders without crash", async ({ page }) => {
-    await loginViaOidc(page, "seller1", "test");
+    await loginAsPersona(page, "seller");
 
     await page.goto("/seller");
     await expect(page.locator("body")).not.toContainText(/something went wrong|đã xảy ra lỗi/i, {
@@ -397,7 +422,7 @@ test.describe("day simulation — admin", () => {
   test("admin: dashboard + sellers + reviews + coupons + payouts + disputes read paths", async ({
     request,
   }) => {
-    const auth = await loginByUsername(request, "admin1");
+    const auth = await loginForPersona(request, "admin");
     const headers = authHeaders(auth);
 
     const summary = await request.get(`${apiURL}/admin/dashboard/summary`, { headers });
@@ -429,7 +454,7 @@ test.describe("day simulation — admin", () => {
   });
 
   test("admin: coupon CRUD round-trip", async ({ request }) => {
-    const auth = await loginByUsername(request, "admin1");
+    const auth = await loginForPersona(request, "admin");
     const headers = authHeaders(auth);
 
     const code = `DAYSIM${Date.now().toString().slice(-6)}`;
@@ -446,11 +471,12 @@ test.describe("day simulation — admin", () => {
       },
     });
     expect(created.ok(), `coupon create: ${created.status()} ${await created.text()}`).toBeTruthy();
-    const body = await created.json();
+    const body = await readJson<CouponResponse>(created);
     // CouponController returns the response shape directly (no ApiResponse
     // envelope), so id is at the top level.
     const id = body?.id ?? body?.data?.id ?? body?.couponId;
     expect(id, `no coupon id: ${JSON.stringify(body).slice(0, 200)}`).toBeTruthy();
+    if (!id) throw new Error("coupon create did not return an id");
 
     const deact = await request.post(`${apiURL}/admin/coupons/${id}/deactivate`, { headers });
     expect(deact.ok(), `coupon deactivate: ${deact.status()}`).toBeTruthy();
@@ -464,8 +490,10 @@ test.describe("day simulation — payment-method shells", () => {
 
     const r = await request.get(`${apiURL}/checkout/payment-methods`, { headers });
     expect(r.ok(), `payment-methods: ${r.status()} ${await r.text()}`).toBeTruthy();
-    const body = await r.json();
-    const methods: Array<{ method?: string; code?: string; enabled?: boolean }> = body?.data ?? [];
+    const body = await readJson<{ data?: { method?: string; code?: string; enabled?: boolean }[] }>(
+      r,
+    );
+    const methods: { method?: string; code?: string; enabled?: boolean }[] = body?.data ?? [];
     expect(Array.isArray(methods)).toBeTruthy();
     expect(methods.length).toBeGreaterThan(0);
 
@@ -518,7 +546,7 @@ test.describe("day simulation — payment-method shells", () => {
 
     const buyerA = await registerBuyer(request);
     const headersA = authHeaders(buyerA);
-    const seller1 = await loginByUsername(request, "seller1");
+    const seller1 = await loginForPersona(request, "seller");
     const headersSeller1 = authHeaders(seller1);
     const product = await firstProduct(request);
 
@@ -538,11 +566,14 @@ test.describe("day simulation — payment-method shells", () => {
       },
     });
     expect(place.ok(), `place order: ${place.status()} ${await place.text()}`).toBeTruthy();
-    const placeBody = await place.json();
+    const placeBody = await readJson<OrderResponse>(place);
     const orderId = placeBody?.data?.id;
-    const subOrderId: number = placeBody?.data?.subOrders?.[0]?.subOrderId;
+    const subOrderId = placeBody?.data?.subOrders?.[0]?.subOrderId;
     expect(orderId, "no orderId in place response").toBeTruthy();
     expect(subOrderId, "no subOrderId in place response").toBeTruthy();
+    if (!orderId || subOrderId === undefined) {
+      throw new Error("place order did not return order and sub-order ids");
+    }
 
     // Step 2: confirm COD payment so the order advances past PENDING.
     const pay = await request.post(`${apiURL}/payment/cod/confirm`, {
@@ -574,9 +605,10 @@ test.describe("day simulation — payment-method shells", () => {
       returnReq.ok(),
       `request return: ${returnReq.status()} ${await returnReq.text()}`,
     ).toBeTruthy();
-    const returnBody = await returnReq.json();
-    const returnId: string = returnBody?.data?.returnId;
+    const returnBody = await readJson<{ data?: { returnId?: string } }>(returnReq);
+    const returnId = returnBody.data?.returnId;
     expect(returnId, "no returnId in return response").toBeTruthy();
+    if (!returnId) throw new Error("return request did not return a return id");
 
     // Probe 1 (seller IDOR): a fresh buyer acts as the wrong-seller attacker.
     // ReturnAuthorization.requireSellerOwnsReturn fires before any state check.
@@ -646,8 +678,9 @@ test.describe("day simulation — payment-method shells", () => {
       },
     });
     expect(place.ok(), `place: ${place.status()} ${await place.text()}`).toBeTruthy();
-    const orderId = (await place.json())?.data?.id;
+    const orderId = (await readJson<OrderResponse>(place)).data?.id;
     expect(orderId).toBeTruthy();
+    if (!orderId) throw new Error("place order did not return an order id");
 
     // Sanity: buyer A can read it.
     const ownGet = await request.get(`${apiURL}/orders/${orderId}`, { headers: headersA });
@@ -704,9 +737,10 @@ test.describe("day simulation — notification IDOR (pt15 fix)", () => {
       headers: headersA,
     });
     expect(list.ok(), `list notifications: ${list.status()} ${await list.text()}`).toBeTruthy();
-    const listBody = await list.json();
-    const notificationId = (listBody?.data ?? listBody)?.content?.[0]?.id;
+    const listBody = await readJson<NotificationListResponse>(list);
+    const notificationId = (listBody.data?.content ?? listBody.content)?.[0]?.id;
     expect(notificationId, "no notification id in list response").toBeTruthy();
+    if (!notificationId) throw new Error("notification list did not return an id");
 
     // Sanity: buyer A can read their own notification.
     const ownGet = await request.get(`${apiURL}/notifications/${notificationId}`, {
@@ -808,7 +842,7 @@ test.describe("day simulation — flash-sale buyerId impersonation (pt22 fix)", 
     // what we're checking is that the request was *accepted by the BE
     // shape* (i.e. removing buyerId didn't break the wire contract).
     if (reserve.ok()) {
-      const body = await reserve.json();
+      const body = await readJson<{ data?: { status?: string } }>(reserve);
       const status = body?.data?.status;
       expect(["RESERVED", "REJECTED"]).toContain(status);
     } else {

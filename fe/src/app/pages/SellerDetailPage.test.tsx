@@ -4,17 +4,20 @@ import { type ReactNode, Suspense } from "react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
+import { ApiError } from "@/shared/api";
+
 import { ErrorBoundary } from "../components/error-boundary";
-import { ApiError } from "../lib/api";
 
-const getSellerMock = vi.fn();
-const productListMock = vi.fn();
+type UnknownCall = (...args: unknown[]) => unknown;
 
-vi.mock("../lib/api/endpoints/sellers", () => ({
+const getSellerMock = vi.fn<UnknownCall>();
+const productListMock = vi.fn<UnknownCall>();
+
+vi.mock("@/shared/api/endpoints/sellers", () => ({
   getSeller: (...args: unknown[]) => getSellerMock(...args),
 }));
 
-vi.mock("../lib/api/endpoints/products", () => ({
+vi.mock("@/shared/api/endpoints/products", () => ({
   productList: (...args: unknown[]) => productListMock(...args),
 }));
 
@@ -78,6 +81,10 @@ describe("SellerDetailPage", () => {
 
     await waitFor(() => expect(screen.getByText("TechZone")).toBeInTheDocument());
     expect(screen.getByText("STANDARD")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Contact seller" })).toHaveAttribute(
+      "href",
+      "/messages?with=s1",
+    );
   });
 
   it("renders not-found state on 404", async () => {
@@ -103,5 +110,25 @@ describe("SellerDetailPage", () => {
     await waitFor(() =>
       expect(screen.getByText("This shop has no products yet.")).toBeInTheDocument(),
     );
+  });
+
+  it("renders the active variant price on public seller product cards", async () => {
+    getSellerMock.mockResolvedValue(SELLER);
+    productListMock.mockResolvedValue({
+      content: [
+        {
+          id: "product-1",
+          name: "Sony headphones",
+          variants: [{ priceAmount: 8_990_000, priceCurrency: "VND" }],
+        },
+      ],
+      totalElements: 1,
+    });
+
+    const { Wrapper } = makeWrapper();
+    render(<SellerDetailPage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getByText("Sony headphones")).toBeInTheDocument());
+    expect(screen.getByText(/8\.990\.000/)).toBeInTheDocument();
   });
 });

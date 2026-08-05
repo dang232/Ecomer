@@ -18,7 +18,8 @@
 
 @custom-variant dark (&:is(.dark *));
 
-:root {
+:root,
+.dark {
   --background: var(--color-canvas);
   --foreground: var(--color-text);
   --card: var(--color-surface);
@@ -28,34 +29,36 @@
   --popover-foreground: var(--color-text);
 
   /* ── Brand tokens ─────────────────────────────────────────────────────── */
-  --primary: var(--color-action-primary);
-  --primary-foreground: var(--color-on-action-primary);
-  --primary-light: var(--color-action-primary-subtle);
-  --primary-hover: var(--color-action-primary-hover);
-  --primary-subtle: var(--color-action-primary-subtle);
-  --primary-dark: var(--color-action-primary-hover);
-  --primary-deep: var(--color-action-primary);
-  --primary-light-rgb: var(--color-action-primary-rgb);
+  --primary: var(--web-brand);
+  --primary-foreground: var(--web-on-brand);
+  --primary-light: var(--web-brand-subtle);
+  --primary-hover: var(--web-brand-hover);
+  --primary-subtle: var(--web-brand-subtle);
+  --primary-dark: var(--web-brand-hover);
+  --primary-deep: var(--web-brand);
+  --primary-light-rgb: var(--web-brand-rgb);
 
   /* ── Accent & Status ──────────────────────────────────────────────────── */
-  --rating: var(--color-commerce-accent);
-  --accent: var(--color-commerce-accent);
-  --accent-foreground: var(--color-on-commerce-accent);
+  --rating: var(--web-campaign-accent);
+  --accent: var(--web-campaign-accent);
+  --accent-foreground: var(--web-on-campaign-accent);
   --accent-light: var(--color-warning-subtle);
   --accent-dark: var(--color-warning-text);
-  --returned: var(--color-action-primary);
-  --returned-light: var(--color-action-primary-subtle);
+  --returned: var(--web-cobalt);
+  --returned-light: var(--web-brand-subtle);
   --success: var(--color-success);
   --success-light: var(--color-success-subtle);
   --success-rgb: var(--color-success-rgb);
   --error: var(--color-danger);
   --error-light: var(--color-danger-subtle);
   --error-rgb: var(--color-danger-rgb);
-  --warning-rgb: var(--color-commerce-accent-rgb);
-  --info: var(--color-info);
+  --warning-rgb: var(--web-campaign-accent-rgb);
+  --info: var(--web-cobalt);
   --info-light: var(--color-info-subtle);
   --warning: var(--color-warning-text);
   --warning-light: var(--color-warning-subtle);
+  --commerce-info: var(--web-cobalt);
+  --utility-strong: var(--web-graphite);
 
   /* ── Surface tokens ───────────────────────────────────────────────────── */
   --surface-primary: var(--color-surface);

@@ -1,40 +1,58 @@
-/**
- * Tests for PaymentReturnPage i18n wiring (P0-6).
- *
- * All user-facing strings must come from t() — the mock returns the key itself,
- * so English-locale rendering never contains Vietnamese characters.
- */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// paymentStatus is called on mount; mock it so the page skips the network layer
-// and renders deterministically without timers.
-const paymentStatusMock = vi.fn();
-vi.mock("../lib/api/endpoints/payment", () => ({
-  paymentStatus: (...args: unknown[]) => paymentStatusMock(...args),
-}));
+import type * as PaymentEndpoints from "@/shared/api/endpoints/payment";
+
+import { CHECKOUT_RECOVERY_STORAGE_KEY } from "../../features/checkout";
+
+const { paymentStatusMock } = vi.hoisted(() => ({ paymentStatusMock: vi.fn() }));
+vi.mock("@/shared/api/endpoints/payment", async (importOriginal) => {
+  const actual = await importOriginal<typeof PaymentEndpoints>();
+  return { ...actual, paymentStatus: paymentStatusMock as typeof actual.paymentStatus };
+});
 
 import { PaymentReturnPage } from "./PaymentReturnPage";
 
-function renderPage(initialEntries = ["/payment-return/vnpay"]) {
+const paymentId = "11111111-1111-4111-8111-111111111111";
+const orderKey = "22222222-2222-4222-8222-222222222222";
+const paymentKey = "33333333-3333-4333-8333-333333333333";
+
+function writeRedirectRecovery(provider: "VNPAY" | "MOMO" = "VNPAY") {
+  sessionStorage.setItem(
+    CHECKOUT_RECOVERY_STORAGE_KEY,
+    JSON.stringify({
+      version: 1,
+      phase: "redirect",
+      provider,
+      orderKey,
+      paymentKey,
+      cartFingerprint: "cart",
+      orderId: "ORDER-456",
+      paymentId,
+      total: 123_000,
+    }),
+  );
+}
+
+function renderPage(initialEntries = [`/payment/return/vnpay?vnp_TxnRef=${paymentId}`]) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return {
-    ...render(
-      <QueryClientProvider client={client}>
-        <MemoryRouter initialEntries={initialEntries}>
-          <PaymentReturnPage />
-        </MemoryRouter>
-      </QueryClientProvider>,
-    ),
-    client,
-  };
+  return render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={initialEntries}>
+        <Routes>
+          <Route path="/payment/return/:provider" element={<PaymentReturnPage />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
 }
 
 beforeEach(() => {
+  sessionStorage.clear();
   paymentStatusMock.mockReset();
 });
 
@@ -42,64 +60,51 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("PaymentReturnPage i18n (P0-6)", () => {
-  describe("en-locale rendering — no Vietnamese characters", () => {
-    /**
-     * The i18next mock returns the key itself (e.g. "paymentReturn.pending.title").
-     * If any hardcoded Vietnamese literal were rendered instead, this test would fail.
-     */
-    it("pending phase: no Vietnamese characters in page content", async () => {
-      // Resolve immediately with a terminal status so we jump past the polling phase.
-      paymentStatusMock.mockResolvedValueOnce({ status: "COMPLETED" });
+describe("PaymentReturnPage", () => {
+  it("maps the validated VNPay reference to the recovered order ID", async () => {
+    writeRedirectRecovery();
+    paymentStatusMock.mockResolvedValueOnce({ status: "COMPLETED" });
 
-      // Set ?orderId= so the page doesn't short-circuit to the error phase.
-      const { container } = renderPage(["/payment-return/vnpay?orderId=ORDER-123"]);
+    renderPage();
 
-      // Wait for the page to finish rendering after the async paymentStatus call.
-      await waitFor(() => {
-        expect(screen.getByRole("heading", { level: 1 })).toBeDefined();
-      });
-
-      expect(container.textContent).not.toMatch(
-        /[àáảãạăằắẳẵặâầấậẩẫèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i,
-      );
-    });
-
-    it("completed phase: renders paymentReturn key for title, not the literal", async () => {
-      paymentStatusMock.mockResolvedValueOnce({ status: "COMPLETED" });
-      const { container } = renderPage(["/payment-return/vnpay?orderId=ORDER-456"]);
-      await waitFor(() => {
-        expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
-          "paymentReturn.completed.title",
-        );
-      });
-
-      // Confirm no Vietnamese literals leaked in
-      expect(container.textContent).not.toMatch(/Thanh toán thành công/i);
-    });
-
-    it("failed phase: renders paymentReturn.failed.title key", async () => {
-      paymentStatusMock.mockResolvedValueOnce({ status: "FAILED" });
-      const { container } = renderPage(["/payment-return/momo?orderId=ORDER-789"]);
-      await waitFor(() => {
-        expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
-          "paymentReturn.failed.title",
-        );
-      });
-
-      expect(container.textContent).not.toMatch(/Thanh toán không thành công/i);
-    });
-
-    it("error phase (no orderId): uses paymentReturn.error.noOrderId key", async () => {
-      // No ?orderId= → page short-circuits to error phase immediately.
-      const { container } = renderPage(["/payment-return/vnpay"]);
-      await waitFor(() => {
-        expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
-          "paymentReturn.error.title",
-        );
-      });
-
-      expect(container.textContent).not.toMatch(/Không tìm thấy mã đơn/i);
-    });
+    await waitFor(() => expect(paymentStatusMock).toHaveBeenCalledWith("ORDER-456"));
+    expect(sessionStorage.getItem(CHECKOUT_RECOVERY_STORAGE_KEY)).toBeNull();
   });
+
+  it("rejects a provider or reference mismatch without polling", async () => {
+    writeRedirectRecovery();
+    renderPage(["/payment/return/momo?orderId=wrong-reference"]);
+
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+        "paymentReturn.error.title",
+      ),
+    );
+    expect(paymentStatusMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects missing or malformed recovery without guessing an order ID", async () => {
+    sessionStorage.setItem(CHECKOUT_RECOVERY_STORAGE_KEY, "not-json");
+    renderPage();
+
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+        "paymentReturn.error.title",
+      ),
+    );
+    expect(paymentStatusMock).not.toHaveBeenCalled();
+  });
+
+  it.each(["COMPLETED", "FAILED", "PAYMENT_TIMEOUT"])(
+    "stops polling and clears recovery for %s",
+    async (status) => {
+      writeRedirectRecovery();
+      paymentStatusMock.mockResolvedValueOnce({ status });
+
+      renderPage();
+
+      await waitFor(() => expect(paymentStatusMock).toHaveBeenCalledTimes(1));
+      await waitFor(() => expect(sessionStorage.getItem(CHECKOUT_RECOVERY_STORAGE_KEY)).toBeNull());
+    },
+  );
 });

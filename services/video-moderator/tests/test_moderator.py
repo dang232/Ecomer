@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.config import Settings
-from app.moderator import Moderator, _score_frame
+from app.moderator import Moderator, _extract_frames, _score_frame
 
 
 # ---------------------------------------------------------------------------
@@ -51,6 +51,31 @@ class TestScoreFrame:
         mock_detector.detect.return_value = []
         score = _score_frame(mock_detector, "frame.jpg")
         assert score == 0.0
+
+
+class TestExtractFrames:
+    def test_uses_safe_jpeg_flags_and_falls_back_to_first_frame_for_short_video(
+        self, tmp_path
+    ):
+        output_dir = tmp_path / "frames"
+        output_dir.mkdir()
+        calls = []
+
+        def fake_run(command, **_kwargs):
+            calls.append(command)
+            if len(calls) == 2:
+                (output_dir / "frame_0001.jpg").write_bytes(b"jpeg")
+            return MagicMock(returncode=0, stderr="")
+
+        with patch("app.moderator.subprocess.run", side_effect=fake_run):
+            frames = _extract_frames("short.mp4", str(output_dir), 5)
+
+        assert frames == [str(output_dir / "frame_0001.jpg")]
+        assert calls[0][calls[0].index("-threads") + 1] == "1"
+        assert calls[0][calls[0].index("-strict") + 1] == "-2"
+        assert calls[0][calls[0].index("-vf") + 1] == "fps=1/5,format=yuvj420p"
+        assert "-frames:v" in calls[1]
+        assert calls[1][calls[1].index("-frames:v") + 1] == "1"
 
     def test_returns_zero_when_no_nsfw_labels(self, mock_detector):
         mock_detector.detect.return_value = [{"label": "UNKNOWN_LABEL", "score": 0.9, "box": []}]

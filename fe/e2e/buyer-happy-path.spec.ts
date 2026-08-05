@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
+
 import { registerAndLoginViaOidc } from "./_auth";
+import { readJson, type ProductListResponse } from "./_api";
 
 const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
 const PASSWORD = "Test1234!";
@@ -18,8 +20,9 @@ test.describe("buyer happy path", () => {
     });
     const apiRes = await request.get(`${apiURL}/products?size=1`);
     expect(apiRes.ok()).toBeTruthy();
-    const productId = (await apiRes.json())?.data?.content?.[0]?.id;
+    const productId = (await readJson<ProductListResponse>(apiRes)).data?.content?.[0]?.id;
     expect(productId, "expected at least one product seeded").toBeTruthy();
+    if (!productId) throw new Error("expected at least one product seeded");
     await page.goto(`/product/${productId}`);
     const addBtn = page
       .getByRole("button", { name: /add to cart|th\u00eam v\u00e0o gi\u1ecf/i })

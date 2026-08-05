@@ -1,11 +1,11 @@
 import { expect, test } from "@playwright/test";
 
-import { loginViaOidc } from "./_auth";
+import { loginAsPersona } from "./_auth";
 import { expectNoGlobalError } from "./_helpers";
 
 test.describe("dashboard charts", () => {
   test("admin revenue area and top-products column charts render live data", async ({ page }) => {
-    await loginViaOidc(page, "admin1");
+    await loginAsPersona(page, "admin");
     await page.goto("/admin");
 
     await expect(page.getByTestId("admin-revenue-chart")).toBeVisible({ timeout: 30_000 });
@@ -32,18 +32,16 @@ test.describe("dashboard charts", () => {
     });
   });
 
-  test("seller revenue area and orders column charts render live data", async ({ page }) => {
-    await loginViaOidc(page, "seller1");
+  test("seller performance chart renders revenue and order series from live data", async ({
+    page,
+  }) => {
+    await loginAsPersona(page, "seller");
     await page.goto("/seller");
 
-    await expect(page.getByTestId("seller-revenue-chart")).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByTestId("seller-orders-chart")).toBeVisible({ timeout: 30_000 });
-    await expect(
-      page.getByTestId("seller-revenue-chart").locator(".recharts-area-area"),
-    ).toHaveCount(1);
-    await expect(
-      page.getByTestId("seller-orders-chart").locator(".recharts-bar-rectangle"),
-    ).not.toHaveCount(0);
+    const performanceChart = page.getByTestId("seller-performance-chart");
+    await expect(performanceChart).toBeVisible({ timeout: 30_000 });
+    await expect(performanceChart.locator(".recharts-area-area")).toHaveCount(1);
+    await expect(performanceChart.locator(".recharts-bar-rectangle")).not.toHaveCount(0);
     await expectNoGlobalError(page);
     await page.screenshot({
       path: "e2e/evidence/full-audit/dashboard-charts-seller.png",

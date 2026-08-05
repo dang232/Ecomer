@@ -1,38 +1,43 @@
 import {
-  IconArrowBack,
-  IconBell,
-  IconBuildingStore,
-  IconCircleCheck,
-  IconCircleX,
-  IconCreditCard,
-  IconMessage,
-  IconPackage,
-  IconPlayerPlay,
-  IconPlayerStop,
-  IconReceiptRefund,
-  IconShoppingCart,
-  IconTruck,
-  IconWallet,
-  IconX,
-} from "@tabler/icons-react";
+  ArrowLeft,
+  Bell,
+  Store,
+  CheckCircle2,
+  XCircle,
+  CreditCard,
+  KeyRound,
+  MessageSquare,
+  Package,
+  Play,
+  Square,
+  Receipt,
+  ShoppingCart,
+  Truck,
+  UserPlus,
+  Wallet,
+  X,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
-import type { NotificationType } from "../../types/api/notification";
+import type { NotificationType } from "@/shared/contracts/api/notification";
 
-const ICON_MAP: Record<NotificationType, typeof IconBell> = {
-  ORDER_CREATED: IconShoppingCart,
-  ORDER_CANCELLED: IconX,
-  ORDER_SHIPPED: IconTruck,
-  ORDER_DELIVERED: IconPackage,
-  PAYMENT_COMPLETED: IconCreditCard,
-  PAYMENT_REFUNDED: IconReceiptRefund,
-  SELLER_NEW_ORDER: IconBuildingStore,
-  PRODUCT_APPROVED: IconCircleCheck,
-  PRODUCT_REJECTED: IconCircleX,
-  REVIEW_REPLIED: IconMessage,
-  RETURN_REQUESTED: IconArrowBack,
-  PAYOUT_COMPLETED: IconWallet,
-  VIDEO_PUBLISHED: IconPlayerPlay,
-  VIDEO_REJECTED: IconPlayerStop,
+const ICON_MAP: Record<NotificationType, LucideIcon> = {
+  ORDER_CREATED: ShoppingCart,
+  ORDER_CANCELLED: X,
+  ORDER_SHIPPED: Truck,
+  ORDER_DELIVERED: Package,
+  PAYMENT_COMPLETED: CreditCard,
+  PAYMENT_REFUNDED: Receipt,
+  USER_REGISTERED: UserPlus,
+  USER_PASSWORD_RESET: KeyRound,
+  SELLER_NEW_ORDER: Store,
+  PRODUCT_APPROVED: CheckCircle2,
+  PRODUCT_REJECTED: XCircle,
+  REVIEW_REPLIED: MessageSquare,
+  RETURN_REQUESTED: ArrowLeft,
+  PAYOUT_COMPLETED: Wallet,
+  VIDEO_PUBLISHED: Play,
+  VIDEO_REJECTED: Square,
 };
 
 const COLOR_MAP: Record<NotificationType, string> = {
@@ -42,6 +47,8 @@ const COLOR_MAP: Record<NotificationType, string> = {
   ORDER_DELIVERED: "text-green-600",
   PAYMENT_COMPLETED: "text-green-500",
   PAYMENT_REFUNDED: "text-amber-500",
+  USER_REGISTERED: "text-sky-500",
+  USER_PASSWORD_RESET: "text-violet-500",
   SELLER_NEW_ORDER: "text-blue-600",
   PRODUCT_APPROVED: "text-green-500",
   PRODUCT_REJECTED: "text-red-500",
@@ -58,7 +65,7 @@ interface NotificationIconProps {
 }
 
 export function NotificationIcon({ type, size = 16 }: NotificationIconProps) {
-  const Icon = ICON_MAP[type] ?? IconBell;
+  const Icon = ICON_MAP[type] ?? Bell;
   const colorClass = COLOR_MAP[type] ?? "text-muted-foreground";
   return <Icon size={size} className={colorClass} />;
 }

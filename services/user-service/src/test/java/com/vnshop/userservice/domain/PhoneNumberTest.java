@@ -63,6 +63,14 @@ class PhoneNumberTest {
                 .hasMessageContaining("E.164");
     }
 
+    @Test
+    void invalidFormat_moreThanFifteenDigitsAfterPlus_throwsIllegalArgument() {
+        // ITU-T E.164 caps the complete international number at 15 digits.
+        assertThatThrownBy(() -> new PhoneNumber("+8491234567890123"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("E.164");
+    }
+
     // --- parseOrNull: the FE/controller-facing factory that owns the
     //     null/blank-tolerance rule so callers don't re-derive it. ---
 

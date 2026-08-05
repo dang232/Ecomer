@@ -1,7 +1,8 @@
 import { z } from "zod";
 
-import { sellerIdSchema } from "./branded-ids";
 import { parsePayoutStatus } from "../../lib/domain-enums";
+
+import { sellerIdSchema } from "./branded-ids";
 
 // BE seller-finance-service WalletResponse(sellerId, availableBalance,
 // pendingBalance, totalEarned, lastPayoutAt). FE legacy consumers want

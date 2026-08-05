@@ -1,14 +1,14 @@
 # VNShop Web (frontend)
 
-React 18 + Vite 6 + Tailwind v4 SPA. Talks to the backend through the Spring Cloud Gateway at `:8080`. Authenticates through the gateway's native httpOnly-cookie boundary; Keycloak stays internal to the service network.
+React 19.2.8 + Vite 7.3.6 + Tailwind v4 SPA. Talks to the backend through the Spring Cloud Gateway at `:8080`. Authenticates through the gateway's native httpOnly-cookie boundary; Keycloak stays internal to the service network.
 
 ## Quick start (local)
 
 ```bash
 cp .env.example .env.local
 # edit .env.local if your gateway runs somewhere else
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 ```
 
 App runs at http://localhost:5173 (Vite default). Sign in through the gateway's
@@ -16,10 +16,10 @@ native form; Keycloak is not a browser configuration surface.
 
 ## Scripts
 
-- `npm run dev` — Vite dev server with HMR.
-- `npm run build` — type-check then production build to `dist/`.
-- `npm run typecheck` — TypeScript only, no emit.
-- `npm run preview` — serve the built `dist/` for a smoke test.
+- `pnpm run dev` — Vite dev server with HMR.
+- `pnpm run build` — type-check then production build to `dist/`.
+- `pnpm run typecheck` — TypeScript only, no emit.
+- `pnpm run preview` — serve the built `dist/` for a smoke test.
 
 ## Layout
 

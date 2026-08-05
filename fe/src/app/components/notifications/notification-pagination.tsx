@@ -1,4 +1,4 @@
-import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useSearchParams } from "react-router";
 
 interface NotificationPaginationProps {
@@ -27,7 +27,7 @@ export function NotificationPagination({ totalPages, currentPage }: Notification
         aria-label="Previous page"
         className="rounded-lg p-2 hover:bg-muted disabled:opacity-60 transition-colors"
       >
-        <IconChevronLeft size={16} />
+        <ChevronLeft size={16} />
       </button>
       <span className="text-sm text-muted-foreground" aria-current="page">
         Trang {currentPage + 1} / {totalPages}
@@ -38,7 +38,7 @@ export function NotificationPagination({ totalPages, currentPage }: Notification
         aria-label="Next page"
         className="rounded-lg p-2 hover:bg-muted disabled:opacity-60 transition-colors"
       >
-        <IconChevronRight size={16} />
+        <ChevronRight size={16} />
       </button>
     </nav>
   );

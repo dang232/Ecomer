@@ -119,6 +119,26 @@ class MomoCallbackServiceTest {
     }
 
     @Test
+    void ipnAcknowledgedWithoutLedgerOrOutboxWritesWhenPaymentAlreadyCompleted() {
+        CapturingPaymentRepository repository = new CapturingPaymentRepository(
+                payment(PaymentStatus.COMPLETED, "pre-existing-txn"));
+        CapturingLedgerRepository ledgerRepository = new CapturingLedgerRepository();
+        CapturingCallbackLogStore callbackLogStore = new CapturingCallbackLogStore();
+        CapturingPaymentCallbackOutbox outbox = new CapturingPaymentCallbackOutbox();
+        MomoCallbackService service = service(repository, ledgerRepository, callbackLogStore, outbox);
+
+        MomoIpnRequest request = MomoGatewayTest.ipn(paymentId().toString(), 2812345678L, 0, 120000L);
+        MomoCallbackService.MomoIpnResult result = service.handleIpn(request);
+
+        assertThat(result.resultCode()).isEqualTo(0);
+        assertThat(repository.payment.status()).isEqualTo(PaymentStatus.COMPLETED);
+        assertThat(repository.payment.transactionRef()).isEqualTo("pre-existing-txn");
+        assertThat(repository.savedPayments).isEmpty(); // no re-save
+        assertThat(ledgerRepository.savedEntries).isEmpty();
+        assertThat(outbox.savedRecords).isEmpty();
+    }
+
+    @Test
     void gatewayReturnVerificationDoesNotMutatePayment() {
         CapturingPaymentRepository repository = new CapturingPaymentRepository(payment(PaymentStatus.PENDING, null));
         MomoGateway gateway = new MomoGateway(PROPERTIES, new CapturingMomoClient());

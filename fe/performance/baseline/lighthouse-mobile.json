@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "configuration": {
+    "viewport": "390x844",
+    "formFactor": "mobile",
+    "cpuSlowdown": 4,
+    "runsPerRoute": 3,
+    "throttling": {
+      "rttMs": 150,
+      "throughputKbps": 1638.4,
+      "requestLatencyMs": 150,
+      "downloadThroughputKbps": 1638.4,
+      "uploadThroughputKbps": 750
+    }
+  },
+  "routes": [
+    {
+      "route": "home",
+      "url": "/",
+      "runs": [
+        {
+          "lcpMs": 1855.0832823486328,
+          "cls": 0.5052783533863521
+        },
+        {
+          "lcpMs": 1873.0507000000002,
+          "cls": 0
+        },
+        {
+          "lcpMs": 1813.8500695251464,
+          "cls": 0.001711006742208661
+        }
+      ],
+      "medianLcpMs": 1855.0832823486328,
+      "medianCls": 0.001711006742208661
+    },
+    {
+      "route": "search",
+      "url": "/search?q=phone",
+      "runs": [
+        {
+          "lcpMs": 1552.5611000000004,
+          "cls": 0.08900636427191662
+        },
+        {
+          "lcpMs": 1312.4647999999997,
+          "cls": 0.08900636427191662
+        },
+        {
+          "lcpMs": 1278.6863,
+          "cls": 0.08900636427191662
+        }
+      ],
+      "medianLcpMs": 1312.4647999999997,
+      "medianCls": 0.08900636427191662
+    },
+    {
+      "route": "product",
+      "url": "/product/2ff65816-fa6d-4bb2-beaf-47d5fffa0445",
+      "runs": [
+        {
+          "lcpMs": 2056.2716499999997,
+          "cls": 0.001723851016683858
+        },
+        {
+          "lcpMs": 2168.51295,
+          "cls": 0
+        },
+        {
+          "lcpMs": 2082.5713,
+          "cls": 0.0002981792948185212
+        }
+      ],
+      "medianLcpMs": 2082.5713,
+      "medianCls": 0.0002981792948185212
+    },
+    {
+      "route": "cart",
+      "url": "/cart",
+      "runs": [
+        {
+          "lcpMs": 1279.6781695251464,
+          "cls": 0.001711006742208661
+        },
+        {
+          "lcpMs": 1772.5744000000002,
+          "cls": 0
+        },
+        {
+          "lcpMs": 1300.8701695251464,
+          "cls": 0.001723851016683858
+        }
+      ],
+      "medianLcpMs": 1300.8701695251464,
+      "medianCls": 0.001711006742208661
+    },
+    {
+      "route": "checkout",
+      "url": "/checkout",
+      "runs": [
+        {
+          "lcpMs": 1323.9692999999997,
+          "cls": 0.0001107370274053904
+        },
+        {
+          "lcpMs": 1423.2629695251462,
+          "cls": 0
+        },
+        {
+          "lcpMs": 1399.2910195251468,
+          "cls": 0.1753676257790187
+        }
+      ],
+      "medianLcpMs": 1399.2910195251468,
+      "medianCls": 0.0001107370274053904
+    }
+  ]
+}

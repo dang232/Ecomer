@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { cursorPageSchema } from "./shared";
 import { productSummarySchema } from "./product";
+import { cursorPageSchema } from "./shared";
 
 const facetEntrySchema = z
   .object({

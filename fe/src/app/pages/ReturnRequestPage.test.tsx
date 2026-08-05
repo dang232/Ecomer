@@ -1,25 +1,29 @@
 /** Tests for ReturnRequestPage */
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 import { createElement } from "react";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+type MotionDivProps = HTMLAttributes<HTMLDivElement> & { children?: ReactNode };
+
 vi.mock("motion/react", () => ({
   AnimatePresence: ({ children }: { children: ReactNode }) => children,
   motion: {
-    div: ({ children, ...props }: any) => createElement("div", props, children),
+    div: ({ children, ...props }: MotionDivProps) => createElement("div", props, children),
   },
 }));
 
-const requestReturnMock = vi.fn();
+type UnknownCall = (...args: unknown[]) => unknown;
 
-vi.mock("../lib/api/endpoints/returns", () => ({
+const requestReturnMock = vi.fn<UnknownCall>();
+
+vi.mock("@/shared/api/endpoints/returns", () => ({
   requestReturn: (...args: unknown[]) => requestReturnMock(...args),
   RETURN_REASON_VALUES: ["damaged", "wrong_item", "changed_mind", "not_as_described", "other"],
 }));
 
-vi.mock("../lib/api", () => ({
+vi.mock("@/shared/api", () => ({
   ApiError: class ApiError extends Error {
     constructor(public message: string) {
       super(message);
@@ -43,7 +47,12 @@ vi.mock("react-i18next", () => ({
 }));
 
 vi.mock("@tanstack/react-query", () => ({
-  queryOptions: (opts: any) => opts,
+  queryOptions: passthrough,
+  useQuery: vi.fn(() => ({
+    data: undefined,
+    isLoading: false,
+    isError: false,
+  })),
   useMutation: vi.fn(() => ({
     mutate: requestReturnMock,
     mutateAsync: requestReturnMock,
@@ -51,6 +60,10 @@ vi.mock("@tanstack/react-query", () => ({
   })),
   useQueryClient: vi.fn(() => ({ invalidateQueries: vi.fn() })),
 }));
+
+function passthrough<T>(options: T): T {
+  return options;
+}
 
 vi.mock("sonner", () => ({
   toast: {
@@ -81,16 +94,15 @@ describe("ReturnRequestPage", () => {
   it("renders form fields", () => {
     renderWithRouter(<ReturnRequestPage />);
 
-    expect(screen.getByLabelText(/orderIdLabel/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/reasonLabel/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/package/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/return reason/i)).toBeInTheDocument();
   });
 
   it("renders pickup type options", () => {
     renderWithRouter(<ReturnRequestPage />);
 
-    // The pickup/dropoff options are rendered as radio button labels
-    expect(screen.getAllByText(/pickup/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/dropoff/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/carrier pickup/i)).toBeInTheDocument();
+    expect(screen.getByText(/drop off/i)).toBeInTheDocument();
   });
 
   it("renders submit button", () => {
@@ -100,29 +112,27 @@ describe("ReturnRequestPage", () => {
   });
 
   it("shows validation error when submitting without subOrderId", async () => {
-    const { toast } = await import("sonner");
     renderWithRouter(<ReturnRequestPage />);
 
     const submitButton = screen.getByRole("button", { name: /submit/i });
-    submitButton.click();
+    fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("return.request.selectOrder");
+      expect(screen.getByText("return.request.selectOrder")).toBeInTheDocument();
     });
   });
 
   it("shows validation error when submitting without reason", async () => {
-    const { toast } = await import("sonner");
     renderWithRouter(<ReturnRequestPage />);
 
-    const subOrderInput = screen.getByLabelText(/orderIdLabel/i);
+    const subOrderInput = screen.getByLabelText(/package/i);
     fireEvent.change(subOrderInput, { target: { value: "sub-123" } });
 
     const submitButton = screen.getByRole("button", { name: /submit/i });
-    submitButton.click();
+    fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("return.request.selectReason");
+      expect(screen.getByText("return.request.reasonTooShort")).toBeInTheDocument();
     });
   });
 
@@ -131,14 +141,16 @@ describe("ReturnRequestPage", () => {
 
     renderWithRouter(<ReturnRequestPage />);
 
-    const subOrderInput = screen.getByLabelText(/orderIdLabel/i);
+    const subOrderInput = screen.getByLabelText(/package/i);
     fireEvent.change(subOrderInput, { target: { value: "sub-123" } });
 
-    const reasonSelect = screen.getByLabelText(/reasonLabel/i);
-    fireEvent.change(reasonSelect, { target: { value: "damaged" } });
+    const reasonField = screen.getByLabelText(/return reason/i);
+    fireEvent.change(reasonField, {
+      target: { value: "The item arrived damaged and the box was crushed." },
+    });
 
     const submitButton = screen.getByRole("button", { name: /submit/i });
-    submitButton.click();
+    fireEvent.click(submitButton);
 
     await waitFor(() => {
       expect(requestReturnMock).toHaveBeenCalled();

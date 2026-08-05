@@ -1,12 +1,16 @@
 package com.vnshop.userservice.infrastructure.persistence;
 
+import com.vnshop.userservice.application.PhoneAlreadyRegisteredException;
 import com.vnshop.userservice.domain.BuyerProfile;
+import com.vnshop.userservice.domain.PhoneNumber;
 import com.vnshop.userservice.domain.SellerProfile;
 import com.vnshop.userservice.domain.port.out.UserRepositoryPort;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import java.util.List;
 import java.util.Optional;
+import java.util.Objects;
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -21,6 +25,8 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public class UserJpaRepository implements UserRepositoryPort {
+    private static final String PHONE_CLAIM_UNIQUE_INDEX = "uq_buyer_profiles_phone_claim";
+
     private final EntityManager entityManager;
 
     public UserJpaRepository(@Lazy EntityManager entityManager) {
@@ -31,13 +37,49 @@ public class UserJpaRepository implements UserRepositoryPort {
     @Transactional
     public BuyerProfile saveBuyer(BuyerProfile buyerProfile) {
         BuyerProfileJpaEntity entity = BuyerProfileJpaEntity.fromDomain(buyerProfile);
-        findBuyerEntityByKeycloakId(buyerProfile.keycloakId()).ifPresent(existing -> entity.setId(existing.getId()));
-        return entityManager.merge(entity).toDomain();
+        Optional<BuyerProfileJpaEntity> existing = findBuyerEntityByKeycloakId(buyerProfile.keycloakId());
+        existing.ifPresent(current -> {
+            entity.setId(current.getId());
+            entity.setPhoneClaim(Objects.equals(current.getPhone(), entity.getPhone())
+                    ? current.getPhoneClaim()
+                    : entity.getPhone());
+        });
+        if (existing.isEmpty()) {
+            entity.setPhoneClaim(entity.getPhone());
+        }
+        try {
+            BuyerProfileJpaEntity persisted = entityManager.merge(entity);
+            // Force the unique claim check inside this transaction so callers
+            // can return the stable phone_taken contract instead of a commit-time 500.
+            entityManager.flush();
+            return persisted.toDomain();
+        } catch (RuntimeException exception) {
+            if (violatedPhoneClaimUniqueIndex(exception)) {
+                throw new PhoneAlreadyRegisteredException();
+            }
+            throw exception;
+        }
     }
 
     @Override
     public Optional<BuyerProfile> findBuyerByKeycloakId(String keycloakId) {
         return findBuyerEntityByKeycloakId(keycloakId).map(BuyerProfileJpaEntity::toDomain);
+    }
+
+    @Override
+    public Optional<BuyerProfile> findBuyerByPhone(PhoneNumber phone) {
+        if (phone == null) {
+            return Optional.empty();
+        }
+        return entityManager.createQuery(
+                        "select distinct buyer from BuyerProfileJpaEntity buyer left join fetch buyer.addresses "
+                                + "where buyer.phone = :phone",
+                        BuyerProfileJpaEntity.class
+                )
+                .setParameter("phone", phone.value())
+                .getResultStream()
+                .findFirst()
+                .map(BuyerProfileJpaEntity::toDomain);
     }
 
     @Override
@@ -185,6 +227,7 @@ public class UserJpaRepository implements UserRepositoryPort {
         findBuyerEntityByKeycloakId(keycloakId).ifPresent(entity -> {
             entity.setName("[REDACTED]");
             entity.setPhone(null);
+            entity.setPhoneClaim(null);
             entity.setAvatarUrl(null);
             entity.getAddresses().clear();
             entityManager.merge(entity);
@@ -199,6 +242,18 @@ public class UserJpaRepository implements UserRepositoryPort {
                 .setParameter("keycloakId", keycloakId)
                 .getResultStream()
                 .findFirst();
+    }
+
+    private boolean violatedPhoneClaimUniqueIndex(Throwable exception) {
+        Throwable current = exception;
+        while (current != null) {
+            if (current instanceof ConstraintViolationException violation
+                    && PHONE_CLAIM_UNIQUE_INDEX.equals(violation.getConstraintName())) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     private Optional<SellerProfileJpaEntity> findSellerEntityByKeycloakId(String keycloakId) {

@@ -33,7 +33,30 @@ public class VideoJpaRepository implements VideoRepositoryPort {
 
     @Override
     public Video save(Video video) {
-        return videoRepo.save(VideoJpaEntity.fromDomain(video)).toDomain();
+        VideoJpaEntity entity = videoRepo.findById(video.videoId())
+                .orElseGet(() -> VideoJpaEntity.fromDomain(video));
+        entity.setStatus(video.status().name());
+        entity.setRawObjectKey(video.stagingKey());
+        if (video.processedKey() != null || video.publicKey() != null) {
+            entity.setTranscodedObjectKey(video.processedKey() != null ? video.processedKey() : video.publicKey());
+        }
+        if (video.posterKey() != null) {
+            entity.setPosterObjectKey(video.posterKey());
+        }
+        entity.setRejectionReason(video.rejectionReason());
+        entity.setModeratedBy(video.moderatedBy());
+        entity.setModeratedAt(video.moderatedAt());
+        entity.setPublishedAt(video.publishedAt());
+        return videoRepo.save(entity).toDomain();
+    }
+
+    public void recordRawUpload(UUID videoId, String contentType, long sizeBytes, String sha256Hex) {
+        VideoJpaEntity entity = videoRepo.findById(videoId)
+                .orElseThrow(() -> new IllegalStateException("Video not found: " + videoId));
+        entity.setContentType(contentType);
+        entity.setRawSizeBytes(sizeBytes);
+        entity.setSha256Hex(sha256Hex);
+        videoRepo.save(entity);
     }
 
     @Override

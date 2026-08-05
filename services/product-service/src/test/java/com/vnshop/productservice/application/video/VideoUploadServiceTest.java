@@ -13,6 +13,7 @@ import com.vnshop.productservice.domain.video.VideoStatus;
 import com.vnshop.productservice.domain.video.VideoStatusHistory;
 import com.vnshop.productservice.domain.video.port.out.VideoEventPublisherPort;
 import com.vnshop.productservice.infrastructure.persistence.video.VideoJpaRepository;
+import com.vnshop.productservice.infrastructure.storage.VideoStorageProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
@@ -29,6 +30,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 class VideoUploadServiceTest {
 
@@ -42,7 +48,9 @@ class VideoUploadServiceTest {
     private VideoUploadService service;
 
     private static final String UPLOADER = "user-123";
+    private static final String OTHER_UPLOADER = "user-456";
     private static final UUID PRODUCT_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
+    private static final UUID OTHER_PRODUCT_ID = UUID.fromString("00000000-0000-0000-0000-000000000002");
 
     // MP4 magic bytes: 4 zero bytes then "ftyp"
     private static final byte[] VALID_MP4_HEADER = new byte[12];
@@ -60,7 +68,8 @@ class VideoUploadServiceTest {
         // The FakeVideoRedisPort at the bottom of this file backs onto the same
         // redisStore map so existing tests that pre-populate keys like
         // "video:concurrent:user-123" continue to assert against the same state.
-        service = new VideoUploadService(videoRepository, localStaging, eventPublisher, videoRedis);
+        service = new VideoUploadService(videoRepository, localStaging, eventPublisher, videoRedis,
+                new VideoStorageProperties("vnshop-video-uploads-tmp", "vnshop-videos-staging", "vnshop-videos"));
     }
 
     @Test
@@ -70,7 +79,8 @@ class VideoUploadServiceTest {
         assertThat(video.status()).isEqualTo(VideoStatus.UPLOADING);
         assertThat(video.ownerId()).isEqualTo(UPLOADER);
         assertThat(video.productId()).isEqualTo(PRODUCT_ID.toString());
-        assertThat(video.stagingKey()).startsWith("videos/staging/");
+        assertThat(video.stagingKey()).startsWith("vnshop-video-uploads-tmp/uploads/");
+        assertThat(video.stagingKey()).endsWith(".mp4");
         assertThat(videoRepository.saved).hasSize(1);
         assertThat(videoRepository.history).hasSize(1);
     }
@@ -164,6 +174,16 @@ class VideoUploadServiceTest {
     }
 
     @Test
+    void appendChunk_rejectsDeclaredLengthDifferentFromPayload() {
+        Video video = service.createUploadSession(UPLOADER, VideoOwnerType.PRODUCT, PRODUCT_ID, "idem-length", 1024);
+
+        assertThatThrownBy(() -> service.appendChunk(
+                        video.videoId(), UPLOADER, 0, VALID_MP4_HEADER.length - 1, VALID_MP4_HEADER))
+                .isInstanceOf(VideoValidationException.class)
+                .hasMessageContaining("chunk length");
+    }
+
+    @Test
     void appendChunk_finalisesUploadWhenOffsetReachesTotalSize() {
         // 100-byte video: first chunk (50 bytes MP4 header) doesn't finalise, second chunk (50 bytes) does.
         Video video = service.createUploadSession(UPLOADER, VideoOwnerType.PRODUCT, PRODUCT_ID, "idem-final", 100);
@@ -192,8 +212,16 @@ class VideoUploadServiceTest {
 
         assertThat(finalised.status()).isEqualTo(VideoStatus.UPLOADED);
         assertThat(eventPublisher.published).hasSize(1);
-        assertThat(eventPublisher.published.get(0).eventType())
+        VideoEvent event = eventPublisher.published.get(0);
+        assertThat(event.eventType())
                 .isEqualTo(VideoEvent.EventType.VIDEO_UPLOAD_COMPLETED);
+        assertThat(event.payload())
+                .containsEntry("rawKey", "uploads/" + video.videoId() + ".mp4")
+                .containsEntry("extension", "mp4")
+                .containsEntry("sha256", "0123456789abcdef".repeat(4))
+                .containsEntry("fileSizeBytes", 1024L);
+        assertThat(videoRepository.rawUploads)
+                .containsEntry(video.videoId(), "video/mp4|1024|" + "0123456789abcdef".repeat(4));
     }
 
     @Test
@@ -287,6 +315,59 @@ class VideoUploadServiceTest {
     }
 
     @Test
+    void createUploadSession_sameRawKeyForDifferentProducts_createsSeparateVideos() {
+        Video first = service.createUploadSession(UPLOADER, VideoOwnerType.PRODUCT, PRODUCT_ID, "shared-key", 1024);
+
+        Video second = service.createUploadSession(
+                UPLOADER, VideoOwnerType.PRODUCT, OTHER_PRODUCT_ID, "shared-key", 2048);
+
+        assertThat(second.videoId()).isNotEqualTo(first.videoId());
+        assertThat(second.productId()).isEqualTo(OTHER_PRODUCT_ID.toString());
+        assertThat(videoRepository.saved).hasSize(2);
+    }
+
+    @Test
+    void createUploadSession_sameRawKeyConcurrentRequests_createOneVideo() throws Exception {
+        videoRedis.coordinateIdempotencyReads("concurrent-key", 2);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        try {
+            Future<Video> first = executor.submit(() -> service.createUploadSession(
+                    UPLOADER, VideoOwnerType.PRODUCT, PRODUCT_ID, "concurrent-key", 1024));
+            Future<Video> second = executor.submit(() -> service.createUploadSession(
+                    UPLOADER, VideoOwnerType.PRODUCT, PRODUCT_ID, "concurrent-key", 1024));
+
+            assertThat(first.get(5, TimeUnit.SECONDS).videoId())
+                    .isEqualTo(second.get(5, TimeUnit.SECONDS).videoId());
+            assertThat(videoRepository.saved).hasSize(1);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void cancelUpload_releasesIdempotencyMappingForFreshPost() {
+        Video first = service.createUploadSession(UPLOADER, VideoOwnerType.PRODUCT, PRODUCT_ID, "cancel-key", 1024);
+
+        service.cancelUpload(first.videoId(), UPLOADER);
+
+        Video second = service.createUploadSession(UPLOADER, VideoOwnerType.PRODUCT, PRODUCT_ID, "cancel-key", 1024);
+
+        assertThat(second.videoId()).isNotEqualTo(first.videoId());
+    }
+
+    @Test
+    void createUploadSession_sameEntityAndKeyFromDifferentUploader_createsSeparateVideos() {
+        Video first = service.createUploadSession(UPLOADER, VideoOwnerType.PRODUCT, PRODUCT_ID, "shared-user-key", 1024);
+
+        Video second = service.createUploadSession(
+                OTHER_UPLOADER, VideoOwnerType.PRODUCT, PRODUCT_ID, "shared-user-key", 1024);
+
+        assertThat(second.videoId()).isNotEqualTo(first.videoId());
+        assertThat(second.ownerId()).isEqualTo(OTHER_UPLOADER);
+    }
+
+    @Test
     void findAndAuthorise_hidesVideoFromDifferentUser() {
         Video video = service.createUploadSession(UPLOADER, VideoOwnerType.PRODUCT, PRODUCT_ID, "idem-13", 1024);
 
@@ -331,6 +412,7 @@ class VideoUploadServiceTest {
 
     private static final class FakeVideoRepository extends VideoJpaRepository {
         final Map<UUID, Video> saved = new HashMap<>();
+        final Map<UUID, String> rawUploads = new HashMap<>();
         final List<VideoStatusHistory> history = new ArrayList<>();
         long todayCount = 0;
         long productCount = 0;
@@ -344,6 +426,9 @@ class VideoUploadServiceTest {
         @Override public Page<Video> findByStatus(VideoStatus status, Pageable pageable) { return Page.empty(); }
         @Override public Video save(Video video) { saved.put(video.videoId(), video); return video; }
         @Override public void saveHistory(VideoStatusHistory h) { history.add(h); }
+        @Override public void recordRawUpload(UUID id, String contentType, long sizeBytes, String sha256Hex) {
+            rawUploads.put(id, contentType + "|" + sizeBytes + "|" + sha256Hex);
+        }
         @Override public long countUploaderVideosToday(String uploaderId) { return todayCount; }
         @Override public long countActiveVideosForProduct(UUID productId) { return productCount; }
         @Override public long countActiveVideosForReview(UUID reviewId) { return reviewCount; }
@@ -426,11 +511,20 @@ class VideoUploadServiceTest {
         private static final String OFFSET_KEY_PREFIX       = "video:offset:";
         private static final String TOTAL_SIZE_KEY_PREFIX   = "video:total-size:";
         private static final String IDEMPOTENCY_KEY_PREFIX  = "video:idempotency:";
+        private static final String IDEMPOTENCY_RESERVATION_KEY_PREFIX = "video:idempotency:reservation:";
+        private static final String IDEMPOTENCY_VIDEO_KEY_PREFIX = "video:idempotency:video:";
 
         private final Map<String, String> store;
+        private volatile String coordinatedKey;
+        private volatile CountDownLatch coordinatedReads;
 
         FakeVideoRedisPort(Map<String, String> store) {
             this.store = store;
+        }
+
+        void coordinateIdempotencyReads(String idempotencyKey, int participants) {
+            coordinatedKey = idempotencyKey;
+            coordinatedReads = new CountDownLatch(participants);
         }
 
         @Override
@@ -502,13 +596,61 @@ class VideoUploadServiceTest {
         }
 
         @Override
-        public void setIdempotencyKey(String idempotencyKey, String videoId, Duration ttl) {
+        public synchronized boolean claimIdempotencyKey(String idempotencyKey, String videoId, Duration ttl) {
+            return store.putIfAbsent(IDEMPOTENCY_RESERVATION_KEY_PREFIX + idempotencyKey, videoId) == null;
+        }
+
+        @Override
+        public synchronized boolean completeIdempotencyKey(String idempotencyKey, String videoId, Duration ttl) {
+            String reservationKey = IDEMPOTENCY_RESERVATION_KEY_PREFIX + idempotencyKey;
+            if (!videoId.equals(store.get(reservationKey))) {
+                return false;
+            }
             store.put(IDEMPOTENCY_KEY_PREFIX + idempotencyKey, videoId);
+            store.put(IDEMPOTENCY_VIDEO_KEY_PREFIX + videoId, idempotencyKey);
+            store.remove(reservationKey);
+            return true;
+        }
+
+        @Override
+        public synchronized void releaseIdempotencyReservation(String idempotencyKey, String videoId) {
+            String reservationKey = IDEMPOTENCY_RESERVATION_KEY_PREFIX + idempotencyKey;
+            if (videoId.equals(store.get(reservationKey))) {
+                store.remove(reservationKey);
+            }
+        }
+
+        @Override
+        public synchronized void releaseIdempotencyKeyForVideo(String videoId) {
+            String idempotencyKey = store.get(IDEMPOTENCY_VIDEO_KEY_PREFIX + videoId);
+            if (idempotencyKey != null && videoId.equals(store.get(IDEMPOTENCY_KEY_PREFIX + idempotencyKey))) {
+                store.remove(IDEMPOTENCY_KEY_PREFIX + idempotencyKey);
+                store.remove(IDEMPOTENCY_VIDEO_KEY_PREFIX + videoId);
+            }
         }
 
         @Override
         public String getIdempotencyKey(String idempotencyKey) {
+            if (coordinatedKey != null && idempotencyKey.endsWith(":" + coordinatedKey)) {
+                CountDownLatch reads = coordinatedReads;
+                if (reads != null) {
+                    reads.countDown();
+                    try {
+                        if (!reads.await(5, TimeUnit.SECONDS)) {
+                            throw new AssertionError("Timed out coordinating concurrent idempotency reads");
+                        }
+                    } catch (InterruptedException ex) {
+                        Thread.currentThread().interrupt();
+                        throw new AssertionError("Interrupted coordinating concurrent idempotency reads", ex);
+                    }
+                }
+            }
             return store.get(IDEMPOTENCY_KEY_PREFIX + idempotencyKey);
+        }
+
+        @Override
+        public boolean hasIdempotencyReservation(String idempotencyKey) {
+            return store.containsKey(IDEMPOTENCY_RESERVATION_KEY_PREFIX + idempotencyKey);
         }
     }
 }

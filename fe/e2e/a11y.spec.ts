@@ -1,7 +1,8 @@
-import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { test, expect, type Page } from "@playwright/test";
+
+import { loginAsPersona } from "./_auth";
 import { expectNoGlobalError } from "./_helpers";
-import { loginViaOidc } from "./_auth";
 
 /**
  * WCAG 2.1 AA accessibility gate for the three primary personas.
@@ -115,11 +116,13 @@ test.describe("a11y — buyer home page", () => {
 
     // Buyer-facing signal: a product card or the login CTA must render.
     const guestLoginCta = page
-      .getByRole("button", {
+      .getByRole("link", {
         name: /^(Log in|Đăng nhập)$/i,
       })
       .first();
-    const productCard = page.locator("[data-testid='product-card']").first();
+    const productCard = page
+      .locator("[data-testid='product-tile'], [data-testid='product-card']")
+      .first();
 
     await expect(guestLoginCta.or(productCard).first()).toBeVisible({ timeout: 30_000 });
 
@@ -134,7 +137,7 @@ test.describe("a11y — seller dashboard", () => {
   test("Seller dashboard passes axe-core wcag2a + wcag2aa (no serious/critical)", async ({
     page,
   }) => {
-    await loginViaOidc(page, "seller1");
+    await loginAsPersona(page, "seller");
     await page.goto("/seller");
     await installCsrfPatch(page);
 
@@ -151,7 +154,7 @@ test.describe("a11y — seller dashboard", () => {
 
 test.describe("a11y — admin panel", () => {
   test("Admin panel passes axe-core wcag2a + wcag2aa (no serious/critical)", async ({ page }) => {
-    await loginViaOidc(page, "admin1");
+    await loginAsPersona(page, "admin");
     await page.goto("/admin");
     await installCsrfPatch(page);
 

@@ -1,23 +1,32 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
+import { z } from "zod";
 
-import { messageSchema, type ChatMessage, type MessagesPage } from "../lib/api/endpoints/messaging";
+import {
+  messageSchema,
+  type ChatMessage,
+  type MessagesPage,
+} from "@/shared/api/endpoints/messaging";
 
+import { readJsonText } from "../../shared/api/read-json";
+
+import { useAuth } from "./auth-context";
 import { useAppConfig } from "./use-app-config";
-import { useAuth } from "./use-auth";
 import { messagesKey } from "./use-messages";
 import { THREADS_KEY } from "./use-threads";
 
-interface ServerEnvelope {
-  type?: string;
-  payload?: {
-    threadId?: string;
-    senderId?: string;
-    messageId?: string;
-    body?: string;
-    sentAt?: string;
-  } & Record<string, unknown>;
-}
+const messagingEnvelopeSchema = z
+  .object({ type: z.string().optional(), payload: z.unknown().optional() })
+  .passthrough();
+const messagePayloadSchema = z
+  .object({
+    threadId: z.string().optional(),
+    senderId: z.string().optional(),
+    messageId: z.string().optional(),
+    body: z.string().optional(),
+    sentAt: z.string().optional(),
+  })
+  .passthrough();
 
 const RECONNECT_BASE_MS = 1000;
 const RECONNECT_CAP_MS = 30_000;
@@ -81,31 +90,33 @@ export function useMessagingSocket(): void {
       socket.addEventListener("message", (event) => {
         if (!isCurrent()) return;
         try {
-          const raw: unknown = JSON.parse(typeof event.data === "string" ? event.data : "");
-          const envelope = raw as ServerEnvelope;
+          const envelope = readJsonText(
+            typeof event.data === "string" ? event.data : "",
+            messagingEnvelopeSchema,
+          );
 
           // Handle batch catch-up response from server
           if (envelope.type === "message:catch-up") {
-            const batch = (raw as { payload?: unknown[] }).payload;
-            if (!Array.isArray(batch)) return;
-            for (const item of batch) {
-              const parsed = messageSchema.safeParse(item);
-              if (!parsed.success) continue;
-              appendIfNew(qc, parsed.data);
-              if (parsed.data.sentAt) {
-                lastSeenRef.current = parsed.data.sentAt;
+            const batch = z.array(messageSchema).safeParse(envelope.payload);
+            if (!batch.success) return;
+            for (const message of batch.data) {
+              appendIfNew(qc, message);
+              if (message.sentAt) {
+                lastSeenRef.current = message.sentAt;
               }
             }
             return;
           }
 
           if (envelope.type !== "message" || !envelope.payload) return;
+          const payload = messagePayloadSchema.safeParse(envelope.payload);
+          if (!payload.success) return;
           const incoming = messageSchema.safeParse({
-            id: envelope.payload.messageId,
-            threadId: envelope.payload.threadId,
-            senderId: envelope.payload.senderId,
-            body: envelope.payload.body,
-            sentAt: envelope.payload.sentAt,
+            id: payload.data.messageId,
+            threadId: payload.data.threadId,
+            senderId: payload.data.senderId,
+            body: payload.data.body,
+            sentAt: payload.data.sentAt,
           });
           if (!incoming.success) return;
           if (incoming.data.sentAt) {

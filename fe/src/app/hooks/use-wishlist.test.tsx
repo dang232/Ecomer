@@ -1,17 +1,19 @@
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const useAuthMock = vi.fn();
-vi.mock("./use-auth", () => ({
+type UnknownCall = (...args: unknown[]) => unknown;
+
+const useAuthMock = vi.fn<() => unknown>();
+vi.mock("./auth-context", () => ({
   useAuth: () => useAuthMock(),
 }));
 
-const getWishlistMock = vi.fn();
-const addWishlistItemMock = vi.fn();
-const toggleWishlistItemMock = vi.fn();
-const removeWishlistItemMock = vi.fn();
-const clearWishlistMock = vi.fn();
-vi.mock("../lib/api/endpoints/wishlist", () => ({
+const getWishlistMock = vi.fn<UnknownCall>();
+const addWishlistItemMock = vi.fn<UnknownCall>();
+const toggleWishlistItemMock = vi.fn<UnknownCall>();
+const removeWishlistItemMock = vi.fn<UnknownCall>();
+const clearWishlistMock = vi.fn<UnknownCall>();
+vi.mock("@/shared/api/endpoints/wishlist", () => ({
   getWishlist: (...args: unknown[]) => getWishlistMock(...args),
   addWishlistItem: (...args: unknown[]) => addWishlistItemMock(...args),
   toggleWishlistItem: (...args: unknown[]) => toggleWishlistItemMock(...args),
@@ -19,7 +21,7 @@ vi.mock("../lib/api/endpoints/wishlist", () => ({
   clearWishlist: (...args: unknown[]) => clearWishlistMock(...args),
 }));
 
-import { makeWrapper } from "../test-utils/render-with-query-client";
+import { makeWrapper } from "@/shared/test/render-with-query-client";
 
 import { useWishlist } from "./use-wishlist";
 

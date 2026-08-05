@@ -110,7 +110,7 @@
 - [x] i18n keys (vi.json + en.json)
 - [x] Unit tests (12 API tests + 7 page tests)
 - [x] Routes added (/returns, /returns/new)
-- [ ] Seller approval UI in SellerOrdersPage - needs /seller/returns endpoint from backend
+- [x] Seller approval UI in `SellerReturns` (approve / reject / complete) — `/seller/returns` route wired in `fe/src/app/routes.ts`
 
 **Files created:**
 - `fe/src/app/pages/ReturnRequestPage.tsx` (new)

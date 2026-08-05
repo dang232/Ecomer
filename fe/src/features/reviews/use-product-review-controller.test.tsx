@@ -1,23 +1,26 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { makeWrapper } from "../../app/test-utils/render-with-query-client";
-import { reviewSchema, type Review } from "../../app/types/api";
+import { reviewSchema, type Review } from "@/shared/contracts/api";
+import { makeWrapper } from "@/shared/test/render-with-query-client";
 
 import { useProductReviewController } from "./use-product-review-controller";
 
+type UnknownCall = (...args: unknown[]) => unknown;
+type UnknownVoidCall = (...args: unknown[]) => void;
+
 const mocks = vi.hoisted(() => ({
-  createReview: vi.fn(),
-  reviewsByProduct: vi.fn(),
-  voteReviewHelpful: vi.fn(),
-  toastError: vi.fn(),
-  toastSuccess: vi.fn(),
+  createReview: vi.fn<UnknownCall>(),
+  reviewsByProduct: vi.fn<UnknownCall>(),
+  voteReviewHelpful: vi.fn<UnknownCall>(),
+  toastError: vi.fn<UnknownVoidCall>(),
+  toastSuccess: vi.fn<UnknownVoidCall>(),
 }));
 
-vi.mock("../../app/lib/api/endpoints/reviews", () => ({
-  createReview: (...args: unknown[]) => mocks.createReview(...args),
-  reviewsByProduct: (...args: unknown[]) => mocks.reviewsByProduct(...args),
-  voteReviewHelpful: (...args: unknown[]) => mocks.voteReviewHelpful(...args),
+vi.mock("@/shared/api/endpoints/reviews", () => ({
+  createReview: mocks.createReview,
+  reviewsByProduct: mocks.reviewsByProduct,
+  voteReviewHelpful: mocks.voteReviewHelpful,
 }));
 
 vi.mock("react-i18next", () => ({
@@ -28,8 +31,8 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("sonner", () => ({
   toast: {
-    error: (...args: unknown[]) => mocks.toastError(...args),
-    success: (...args: unknown[]) => mocks.toastSuccess(...args),
+    error: mocks.toastError,
+    success: mocks.toastSuccess,
   },
 }));
 

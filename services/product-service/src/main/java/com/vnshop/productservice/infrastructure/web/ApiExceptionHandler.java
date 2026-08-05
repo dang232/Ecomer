@@ -6,6 +6,7 @@ import com.vnshop.productservice.application.video.VideoNotFoundException;
 import com.vnshop.productservice.application.video.VideoQuotaExceededException;
 import com.vnshop.productservice.application.video.VideoUploadRateLimitException;
 import com.vnshop.productservice.application.video.VideoValidationException;
+import com.vnshop.productservice.domain.review.ReviewEligibilityException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -17,6 +18,12 @@ public class ApiExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiResponse<Void> badRequest(IllegalArgumentException exception) {
         return ApiResponse.error(exception.getMessage(), "bad_request");
+    }
+
+    @ExceptionHandler(ReviewEligibilityException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ApiResponse<Void> reviewEligibility(ReviewEligibilityException exception) {
+        return ApiResponse.error(exception.getMessage(), "review_purchase_required");
     }
 
     @ExceptionHandler(ProductAccessDeniedException.class)

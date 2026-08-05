@@ -91,7 +91,7 @@ class VideoAdminServiceTest {
         assertThat(result.moderatedBy()).isEqualTo("admin-1");
         assertThat(result.publishedAt()).isNotNull();
 
-        verify(objectStoragePort).copyObject("vnshop-videos-staging/abc.mp4", PUBLIC_BUCKET + "/" + videoId);
+        verify(objectStoragePort).copyObject("vnshop-videos-staging/abc.mp4", PUBLIC_BUCKET + "/abc.mp4");
         verify(objectStoragePort).deleteObject("vnshop-videos-staging/abc.mp4");
 
         ArgumentCaptor<VideoEvent> eventCaptor = ArgumentCaptor.forClass(VideoEvent.class);
@@ -101,6 +101,28 @@ class VideoAdminServiceTest {
         ArgumentCaptor<VideoStatusHistory> historyCaptor = ArgumentCaptor.forClass(VideoStatusHistory.class);
         verify(videoRepositoryPort).saveHistory(historyCaptor.capture());
         assertThat(historyCaptor.getValue().toStatus()).isEqualTo(VideoStatus.PUBLISHED);
+    }
+
+    @Test
+    void approve_promotesTheProcessedVideoAndPosterInsteadOfThePrivateRawUpload() {
+        Video processed = new Video(videoId, "owner-1", "product-1", null,
+                "vnshop-video-uploads-tmp/uploads/raw.mp4", null,
+                "vnshop-videos-staging/products/product-1/videos/video_720p.mp4",
+                "vnshop-videos-staging/products/product-1/videos/video_poster.jpg",
+                VideoStatus.PENDING_REVIEW, null, null, null, null, Instant.now());
+        when(videoRepositoryPort.findById(videoId)).thenReturn(Optional.of(processed));
+        when(videoRepositoryPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Video result = service.approve(videoId, "admin-1");
+
+        assertThat(result.publicKey()).isEqualTo("test-videos/products/product-1/videos/video_720p.mp4");
+        assertThat(result.posterKey()).isEqualTo("test-videos/products/product-1/videos/video_poster.jpg");
+        verify(objectStoragePort).copyObject(
+                "vnshop-videos-staging/products/product-1/videos/video_720p.mp4",
+                "test-videos/products/product-1/videos/video_720p.mp4");
+        verify(objectStoragePort).copyObject(
+                "vnshop-videos-staging/products/product-1/videos/video_poster.jpg",
+                "test-videos/products/product-1/videos/video_poster.jpg");
     }
 
     @Test

@@ -1,5 +1,9 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
 
+import { readJson } from "../_api";
+import { loginAsSeededUser, logoutViaUserMenu } from "../_workday-evidence";
+import { credentialForPersona } from "../modernization/_credentials";
+
 import {
   bizStep,
   copyArtifacts,
@@ -10,7 +14,6 @@ import {
   startTrace,
   stopTrace,
 } from "./_journey-evidence";
-import { loginAsSeededUser, logoutViaUserMenu } from "../_workday-evidence";
 import { requireJourneyState, writeJourneyState } from "./_journey-state";
 
 /**
@@ -82,7 +85,7 @@ test.describe.serial("Chapter 3 — Seller fulfills the order", () => {
     });
   });
 
-  test.afterEach(async ({}, testInfo) => {
+  test.afterEach(({ page: _page }, testInfo) => {
     rememberOutputDir("03-seller-fulfills", testInfo);
   });
 
@@ -147,7 +150,7 @@ test.describe.serial("Chapter 3 — Seller fulfills the order", () => {
           // actually shows its form (an authed visit to /login redirects
           // to /).
           await page.context().clearCookies();
-          await loginAsSeededUser(page, "seller1");
+          await loginAsSeededUser(page, "seller");
           await page.goto("/seller");
           await expect(
             page.getByText(/Dashboard|Tổng quan|Seller Hub|Kênh Người Bán/i).first(),
@@ -295,19 +298,25 @@ async function findSubOrderForOrder(
   // seller1 / test is the realm-imported seller that owns the seeded
   // products. The buyer in chapter 2 ordered one of those products, so
   // seller1's /seller/orders/pending will contain the sub-order.
-  const login = await request.post(`${apiURL}/auth/login`, {
-    data: { username: "seller1", password: "test" },
+  const { username, password } = credentialForPersona("seller");
+  const loginResponse = await request.post(`${apiURL}/auth/login`, {
+    data: { username, password },
   });
-  if (!login.ok()) return null;
-  const accessToken = (await login.json())?.data?.accessToken;
+  if (!loginResponse.ok()) return null;
+  const loginBody = await readJson<{
+    data?: { accessToken?: string };
+    accessToken?: string;
+  }>(loginResponse);
+  const accessToken = loginBody.data?.accessToken ?? loginBody.accessToken ?? null;
   if (!accessToken) return null;
 
   const r = await request.get(`${apiURL}/seller/orders/pending`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (!r.ok()) return null;
-  const list: Array<{ id?: string; subOrders?: Array<{ subOrderId?: number }> }> =
-    (await r.json())?.data ?? [];
+  const list =
+    (await readJson<{ data?: { id?: string; subOrders?: { subOrderId?: number }[] }[] }>(r)).data ??
+    [];
   const parent = list.find((o) => o.id === parentOrderId);
   if (!parent) return null;
   // A multi-seller order would have multiple sub-orders; chapter 2 ordered

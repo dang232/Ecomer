@@ -1,7 +1,9 @@
 package com.vnshop.orderservice.infrastructure.web;
 
 import com.vnshop.orderservice.application.CheckoutOrderUseCase;
+import com.vnshop.orderservice.application.FindOrderByIdempotencyKeyUseCase.OrderByIdempotencyKeyNotFoundException;
 import com.vnshop.orderservice.application.OrderAccessDeniedException;
+import com.vnshop.orderservice.application.ListReturnsUseCase.ReturnNotFoundException;
 import com.vnshop.orderservice.domain.InvoiceAccessDeniedException;
 import com.vnshop.orderservice.domain.coupon.CouponException;
 import com.vnshop.orderservice.infrastructure.cart.CartUnavailableException;
@@ -39,6 +41,18 @@ public class ApiExceptionHandler {
     public ApiResponse<Void> orderAccessDenied(OrderAccessDeniedException exception) {
         log.warn("order-access-denied: {}", exception.getMessage());
         return ApiResponse.error("Not authorized for this order", "ORDER_ACCESS_DENIED");
+    }
+
+    @ExceptionHandler(ReturnNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ApiResponse<Void> returnNotFound(ReturnNotFoundException exception) {
+        return ApiResponse.error("Resource not found", "NOT_FOUND");
+    }
+
+    @ExceptionHandler(OrderByIdempotencyKeyNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ApiResponse<Void> idempotencyKeyOrderNotFound(OrderByIdempotencyKeyNotFoundException exception) {
+        return ApiResponse.error("Resource not found", "NOT_FOUND");
     }
 
     @ExceptionHandler(CheckoutOrderUseCase.ProductNotFoundException.class)

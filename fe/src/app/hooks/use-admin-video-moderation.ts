@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { ApiError } from "../lib/api";
+import { ApiError } from "@/shared/api";
 import {
   adminApproveAppeal,
   adminApproveVideo,
@@ -12,7 +12,7 @@ import {
   adminVideoModerationQueue,
   adminVideoPreview,
   type AdminVideoModerationQueueParams,
-} from "../lib/api/endpoints/admin";
+} from "@/shared/api/endpoints/admin";
 
 // ─── Query keys ───────────────────────────────────────────────────────────────
 
@@ -40,7 +40,10 @@ export function useVideoModerationQueue(params: AdminVideoModerationQueueParams 
 export function useVideoPreview(videoId: string | null) {
   return useQuery({
     queryKey: videoModerationKeys.preview(videoId ?? ""),
-    queryFn: () => adminVideoPreview(videoId!),
+    queryFn: () => {
+      if (!videoId) throw new Error("A video ID is required for preview");
+      return adminVideoPreview(videoId);
+    },
     enabled: !!videoId,
     retry: false,
     // Presigned URLs expire; don't cache for long.
@@ -88,7 +91,7 @@ export function useRejectVideo() {
 export function useVideoAppeals() {
   return useQuery({
     queryKey: videoModerationKeys.appeals(),
-    queryFn: adminVideoAppealsQueue,
+    queryFn: () => adminVideoAppealsQueue({ page: 0, size: 20 }),
     retry: false,
     // BA audit 2026-06-16 P1-14: cache for 5 minutes so switching tabs
     // doesn't re-fetch every time (Linh's documented #1 complaint).

@@ -1,28 +1,35 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const avatarUploadMock = vi.fn();
-const avatarActivateMock = vi.fn();
+type UnknownCall = (...args: unknown[]) => unknown;
+type AvatarErrorCall = (error: Error) => void;
 
-vi.mock("../lib/api/endpoints/users", () => ({
+const avatarUploadMock = vi.fn<UnknownCall>();
+const avatarActivateMock = vi.fn<UnknownCall>();
+
+vi.mock("@/shared/api/endpoints/users", () => ({
   avatarUpload: (...args: unknown[]) => avatarUploadMock(...args),
   avatarActivate: (...args: unknown[]) => avatarActivateMock(...args),
 }));
 
-import { makeWrapper } from "../test-utils/render-with-query-client";
+import { makeWrapper } from "@/shared/test/render-with-query-client";
 
 import { __testables__, useAvatarUpload } from "./use-avatar-upload";
 
-function makeFile(opts: { name?: string; type?: string; size?: number } = {}) {
-  const size = opts.size ?? 1024;
+const ABC_DIGEST = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
+
+function makeFile(
+  opts: { name?: string; type?: string; size?: number; bytes?: Uint8Array<ArrayBuffer> } = {},
+) {
+  const bytes = opts.bytes ?? new Uint8Array(opts.size ?? 1024);
   // Real File object so the size + type + arrayBuffer code path lights up.
-  const file = new File([new Uint8Array(size)], opts.name ?? "selfie.jpg", {
+  const file = new File([bytes], opts.name ?? "selfie.jpg", {
     type: opts.type ?? "image/jpeg",
   });
   // jsdom's File doesn't always implement arrayBuffer; polyfill for the hook.
   if (!file.arrayBuffer) {
     Object.defineProperty(file, "arrayBuffer", {
-      value: () => Promise.resolve(new ArrayBuffer(size)),
+      value: () => Promise.resolve(bytes.slice().buffer),
     });
   }
   return file;
@@ -48,7 +55,7 @@ describe("useAvatarUpload", () => {
   describe("preflight (client-side checks)", () => {
     it("rejects files over 2 MB before any API call", async () => {
       const { Wrapper } = makeWrapper();
-      const onError = vi.fn();
+      const onError = vi.fn<AvatarErrorCall>();
       const { result } = renderHook(() => useAvatarUpload({ onError }), { wrapper: Wrapper });
       const huge = makeFile({ size: 3 * 1024 * 1024 });
 
@@ -57,7 +64,7 @@ describe("useAvatarUpload", () => {
       });
       await waitFor(() => expect(onError).toHaveBeenCalled());
 
-      expect(onError.mock.calls[0][0].message).toBe("avatar:too-large");
+      expect(onError.mock.calls[0]?.[0]?.message).toBe("avatar:too-large");
       expect(avatarUploadMock).not.toHaveBeenCalled();
       expect(fetch).not.toHaveBeenCalled();
       expect(avatarActivateMock).not.toHaveBeenCalled();
@@ -65,7 +72,7 @@ describe("useAvatarUpload", () => {
 
     it("rejects unsupported content types before any API call", async () => {
       const { Wrapper } = makeWrapper();
-      const onError = vi.fn();
+      const onError = vi.fn<AvatarErrorCall>();
       const { result } = renderHook(() => useAvatarUpload({ onError }), { wrapper: Wrapper });
       const wrong = makeFile({ type: "image/gif", name: "anim.gif" });
 
@@ -74,7 +81,7 @@ describe("useAvatarUpload", () => {
       });
       await waitFor(() => expect(onError).toHaveBeenCalled());
 
-      expect(onError.mock.calls[0][0].message).toBe("avatar:wrong-type");
+      expect(onError.mock.calls[0]?.[0]?.message).toBe("avatar:wrong-type");
       expect(avatarUploadMock).not.toHaveBeenCalled();
     });
 
@@ -131,6 +138,30 @@ describe("useAvatarUpload", () => {
       expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["users", "me"] });
       expect(onSuccess.mock.calls[0][0]).toContain("/vnshop-avatars/");
     });
+
+    it("uploads avatars when Web Crypto is unavailable", async () => {
+      const { Wrapper } = makeWrapper();
+      vi.stubGlobal("crypto", undefined);
+      avatarUploadMock.mockResolvedValue({
+        objectKey: "avatars/u1/abc.jpg",
+        uploadUrl: "http://minio/sig",
+        expiresInSeconds: 300,
+      });
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, status: 200 });
+      avatarActivateMock.mockResolvedValue({ id: "u1", avatar: "http://minio/avatar.jpg" });
+
+      const { result } = renderHook(() => useAvatarUpload(), { wrapper: Wrapper });
+      const file = makeFile({ bytes: new Uint8Array([97, 98, 99]) });
+
+      await act(async () => {
+        result.current.mutate(file);
+      });
+      await waitFor(() => expect(avatarActivateMock).toHaveBeenCalled());
+
+      expect(avatarUploadMock).toHaveBeenCalledWith(
+        expect.objectContaining({ sha256Hex: ABC_DIGEST }),
+      );
+    });
   });
 
   describe("error paths", () => {
@@ -144,7 +175,7 @@ describe("useAvatarUpload", () => {
       });
       (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: false, status: 502 });
 
-      const onError = vi.fn();
+      const onError = vi.fn<AvatarErrorCall>();
       const { result } = renderHook(() => useAvatarUpload({ onError }), { wrapper: Wrapper });
 
       await act(async () => {
@@ -152,7 +183,7 @@ describe("useAvatarUpload", () => {
       });
       await waitFor(() => expect(onError).toHaveBeenCalled());
 
-      expect(onError.mock.calls[0][0].message).toBe("avatar:put-failed:502");
+      expect(onError.mock.calls[0]?.[0]?.message).toBe("avatar:put-failed:502");
       expect(avatarActivateMock).not.toHaveBeenCalled();
       expect(invalidateSpy).not.toHaveBeenCalled();
     });
@@ -168,7 +199,7 @@ describe("useAvatarUpload", () => {
       (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, status: 200 });
       avatarActivateMock.mockRejectedValue(new Error("activate-rejected"));
 
-      const onError = vi.fn();
+      const onError = vi.fn<AvatarErrorCall>();
       const { result } = renderHook(() => useAvatarUpload({ onError }), { wrapper: Wrapper });
 
       await act(async () => {
@@ -176,7 +207,7 @@ describe("useAvatarUpload", () => {
       });
       await waitFor(() => expect(onError).toHaveBeenCalled());
 
-      expect(onError.mock.calls[0][0].message).toBe("activate-rejected");
+      expect(onError.mock.calls[0]?.[0]?.message).toBe("activate-rejected");
       expect(invalidateSpy).not.toHaveBeenCalled();
     });
   });

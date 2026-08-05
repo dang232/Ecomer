@@ -316,7 +316,7 @@ public class ElasticsearchSearchAdapter implements SearchRepository {
             String query, String categoryId, String brand, BigDecimal minPrice, BigDecimal maxPrice, Float minRating,
             List<String> tags, Boolean sameDay, Boolean verifiedOnly, Boolean officialOnly) {
         List<SearchFacetsResponse.FacetEntry> facets = runTermsFacet(
-                "tags", buildSearchQuery(query, categoryId, brand, minPrice, maxPrice, minRating, tags,
+                "tags.keyword", buildSearchQuery(query, categoryId, brand, minPrice, maxPrice, minRating, tags,
                         sameDay, verifiedOnly, officialOnly));
         return facets.isEmpty()
                 ? fallbackRepository.tagFacetsFor(query, categoryId, brand, minPrice, maxPrice, minRating, tags,

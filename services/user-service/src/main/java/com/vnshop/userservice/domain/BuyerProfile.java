@@ -44,7 +44,11 @@ public class BuyerProfile {
     }
 
     public static BuyerProfile createDefault(String keycloakId) {
-        return new BuyerProfile(keycloakId, null, null, null, List.of());
+        return createDefault(keycloakId, null);
+    }
+
+    public static BuyerProfile createDefault(String keycloakId, String email) {
+        return new BuyerProfile(keycloakId, email, null, null, null, List.of());
     }
 
     public String keycloakId() {
@@ -53,6 +57,23 @@ public class BuyerProfile {
 
     public String email() {
         return email;
+    }
+
+    /**
+     * Seeds the account email for profiles created before registration owned
+     * this field. An established profile email is never replaced from an
+     * identity-provider lookup.
+     */
+    public boolean backfillEmailIfMissing(String registrationEmail) {
+        if (email != null) {
+            return false;
+        }
+        String normalized = normalizeOptional(registrationEmail);
+        if (normalized == null) {
+            return false;
+        }
+        email = normalized;
+        return true;
     }
 
     public String name() {

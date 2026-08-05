@@ -1,7 +1,8 @@
 import { z } from "zod";
 
-import { productIdSchema, sellerIdSchema } from "./branded-ids";
 import { parsePayoutStatus } from "../../lib/domain-enums";
+
+import { productIdSchema, sellerIdSchema } from "./branded-ids";
 
 // BE user-service BuyerProfileResponse(keycloakId, email, name, phone, avatarUrl, banned).
 // Used by admin user management panel.
@@ -220,6 +221,21 @@ export type Dispute = z.infer<typeof disputeSchema>;
 // createdAt, completedBy, createdAt). Same shape as the order-service finance
 // projection. Legacy callers expect id + requestedAt; keep accepting both.
 // sellerName is joined from the seller-service when the BE supports it (P1-8).
+const adminPayoutStatusSchema = z.enum([
+  "REQUESTED",
+  "APPROVED",
+  "SUBMITTING",
+  "SUBMITTED",
+  "PAID",
+  "UNKNOWN",
+  "REJECTED",
+  "CANCELLED",
+  "REVERSED",
+  "PENDING",
+  "COMPLETED",
+  "FAILED",
+]);
+
 export const adminPayoutSchema = z
   .object({
     // Legacy
@@ -229,7 +245,7 @@ export const adminPayoutSchema = z
     payoutId: z.string().optional(),
     createdAt: z.string().optional(),
     sellerId: sellerIdSchema,
-    sellerName: z.string().optional(),
+    sellerName: z.string().nullish(),
     amount: z.number(),
     status: z.string(),
     currency: z.string().optional(),
@@ -245,7 +261,7 @@ export const adminPayoutSchema = z
     sellerId: raw.sellerId,
     sellerName: raw.sellerName,
     amount: raw.amount,
-    status: parsePayoutStatus(raw.status),
+    status: adminPayoutStatusSchema.parse(raw.status),
     requestedAt: raw.requestedAt ?? raw.createdAt,
     completedBy: raw.completedBy ?? undefined,
     completedAt: raw.completedAt ?? undefined,

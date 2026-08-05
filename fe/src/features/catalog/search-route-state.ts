@@ -3,7 +3,7 @@ import {
   routeParam,
   type RouteState,
   writeRouteState,
-} from "../../app/routing/route-state";
+} from "../../shared/routing/route-state";
 
 export const searchSortValues = ["popular", "price-low", "price-high", "newest"] as const;
 

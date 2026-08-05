@@ -17,7 +17,6 @@ export default tseslint.config(
       "*.tsbuildinfo",
       "playwright-report",
       "test-results",
-      "e2e",
       "src/imports",
       "scripts",
     ],
@@ -119,31 +118,107 @@ export default tseslint.config(
 
       "no-console": ["warn", { allow: ["warn", "error"] }],
       eqeqeq: ["error", "smart"],
+
+      "import/no-restricted-paths": [
+        "error",
+        {
+          zones: [
+            { target: "./src/shared", from: "./src/app" },
+            { target: "./src/shared", from: "./src/features" },
+            { target: "./src/features", from: "./src/app" },
+          ],
+        },
+      ],
     },
   },
 
   {
-    files: ["**/*.test.{ts,tsx}", "**/test-setup.ts", "**/*.config.{ts,js,mjs,cjs}"],
-    // Vitest files are intentionally excluded from the application tsconfig.
-    // Lint their syntax and React rules without asking the TypeScript project
-    // service to resolve them as production modules.
-    extends: [tseslint.configs.disableTypeChecked],
+    files: ["src/app/**/*.{ts,tsx}"],
     rules: {
-      "@typescript-eslint/no-explicit-any": "off",
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@/features/*/*"],
+              message: "App composition must import a feature's public index.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  {
+    files: ["src/features/admin/index.ts", "src/features/seller/index.ts"],
+    rules: {
+      "import/no-restricted-paths": "off",
+    },
+  },
+
+  {
+    files: [
+      "src/features/admin-dashboard/**/*.{ts,tsx}",
+      "src/features/admin-orders/**/*.{ts,tsx}",
+      "src/features/admin-coupons/**/*.{ts,tsx}",
+      "src/features/admin-users/**/*.{ts,tsx}",
+      "src/features/admin-sellers/**/*.{ts,tsx}",
+      "src/features/admin-reviews/**/*.{ts,tsx}",
+      "src/features/admin-video/**/*.{ts,tsx}",
+      "src/features/admin-disputes/**/*.{ts,tsx}",
+      "src/features/admin-payouts/**/*.{ts,tsx}",
+      "src/features/admin-payments/**/*.{ts,tsx}",
+      "src/features/admin-health/**/*.{ts,tsx}",
+    ],
+    rules: {
+      "@typescript-eslint/no-unsafe-member-access": "off",
       "@typescript-eslint/no-unsafe-argument": "off",
       "@typescript-eslint/no-unsafe-assignment": "off",
-      "@typescript-eslint/no-unsafe-call": "off",
-      "@typescript-eslint/no-unsafe-member-access": "off",
       "@typescript-eslint/no-unsafe-return": "off",
-      "@typescript-eslint/no-floating-promises": "off",
-      "@typescript-eslint/no-misused-promises": "off",
-      "@typescript-eslint/no-base-to-string": "off",
-      "@typescript-eslint/no-empty-function": "off",
-      "@typescript-eslint/require-await": "off",
-      "jsx-a11y/aria-role": "off",
-      "jsx-a11y/label-has-associated-control": "off",
-      "react/jsx-no-leaked-render": "off",
-      "react/no-array-index-key": "off",
+      "@typescript-eslint/no-unsafe-call": "off",
+      "react/no-unstable-nested-components": "off",
+    },
+  },
+
+  {
+    files: ["src/features/seller-products/**/*.ts", "src/features/seller-products/**/*.tsx"],
+    rules: {
+      "import/no-restricted-paths": "off",
+    },
+  },
+
+  {
+    files: ["**/*.config.{ts,js,mjs,cjs}"],
+    extends: [tseslint.configs.disableTypeChecked],
+  },
+
+  {
+    files: ["**/*.test.{ts,tsx}", "**/test-setup.ts"],
+    languageOptions: {
+      globals: { ...globals.browser, ...globals.node },
+      parserOptions: {
+        projectService: false,
+        project: "./tsconfig.test.json",
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/no-unsafe-assignment": "error",
+      "@typescript-eslint/no-unsafe-member-access": "error",
+      "@typescript-eslint/no-unsafe-return": "error",
+    },
+  },
+
+  {
+    files: ["e2e/**/*.ts"],
+    languageOptions: {
+      globals: { ...globals.browser, ...globals.node },
+      parserOptions: {
+        projectService: false,
+        project: "./tsconfig.e2e.json",
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
   },
 

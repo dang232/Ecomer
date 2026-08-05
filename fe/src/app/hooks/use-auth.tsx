@@ -1,17 +1,7 @@
-/* eslint-disable react-refresh/only-export-components -- provider and hooks share one public module. */
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
-import { registerUser, type RegisterInput } from "../lib/api/endpoints/auth";
-import { ApiError } from "../lib/api/envelope";
+import { registerUser, type RegisterInput } from "@/shared/api/endpoints/auth";
+import { ApiError } from "@/shared/api/envelope";
 import {
   AuthError,
   ACCESS_TOKEN_REFRESH_BUFFER_MS,
@@ -23,35 +13,10 @@ import {
   setLiveTokenSet,
   type JwtClaims,
   type TokenSet,
-} from "../lib/auth/native-auth";
-import { apiUrl } from "../lib/runtime-endpoints";
+} from "@/shared/auth";
+import { apiUrl } from "@/shared/config";
 
-export type Role = "BUYER" | "SELLER" | "ADMIN";
-export type { RegisterInput };
-
-export interface AuthProfile {
-  id: string;
-  email: string;
-  firstName?: string;
-  lastName?: string;
-  username?: string;
-}
-
-interface AuthState {
-  ready: boolean;
-  authenticated: boolean;
-  token: string | undefined;
-  profile: AuthProfile | undefined;
-  roles: Role[];
-  subject: string | undefined;
-  login: (redirectTo?: string) => void;
-  loginWithPassword: (username: string, password: string) => Promise<void>;
-  beginOAuthLogin: (provider: "google" | "facebook", next?: string) => void;
-  register: (input: RegisterInput) => Promise<void>;
-  logout: (redirectTo?: string) => void;
-}
-
-const AuthContext = createContext<AuthState | null>(null);
+import { AuthContext, type AuthProfile, type AuthState, type Role } from "./auth-context";
 
 function safeReturnPath(value: string | undefined): string {
   if (!value || !value.startsWith("/") || value.startsWith("//")) return "/";
@@ -183,6 +148,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [applyTokenSet],
   );
 
+  const refresh = useCallback(async () => {
+    try {
+      await refreshSession();
+    } catch (error) {
+      if (!logoutInProgressRef.current) applyTokenSet(null);
+      throw error;
+    }
+  }, [applyTokenSet, refreshSession]);
+
   const beginOAuthLogin = useCallback((provider: "google" | "facebook", next?: string) => {
     const returnPath = safeReturnPath(next ?? window.location.pathname + window.location.search);
     const query = new URLSearchParams({ next: returnPath });
@@ -231,21 +205,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subject: claims?.sub,
       login,
       loginWithPassword,
+      refresh,
       beginOAuthLogin,
       register,
       logout,
     };
-  }, [beginOAuthLogin, login, loginWithPassword, logout, ready, register, tokenSet]);
+  }, [beginOAuthLogin, login, loginWithPassword, logout, ready, refresh, register, tokenSet]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth(): AuthState {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error("useAuth must be used within AuthProvider");
-  return context;
-}
-
-export function useHasRole(role: Role): boolean {
-  return useAuth().roles.includes(role);
 }

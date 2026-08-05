@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+
 import {
   copyArtifacts,
   expectNoGlobalError,
@@ -40,7 +41,7 @@ test.describe.serial("Workday — admin (login → console + coupon CRUD → log
     await resetPersona("admin");
   });
 
-  test.afterEach(async ({}, testInfo) => {
+  test.afterEach(({ page: _page }, testInfo) => {
     rememberOutputDir("admin", testInfo);
   });
 
@@ -58,8 +59,8 @@ test.describe.serial("Workday — admin (login → console + coupon CRUD → log
     try {
       const couponCode = `WORKDAY${Date.now() % 1_000_000}`;
 
-      await step(page, "admin", "Login as admin1 via /login form", async () => {
-        await loginAsSeededUser(page, "admin1");
+      await step(page, "admin", "Login as admin via /login form", async () => {
+        await loginAsSeededUser(page, "admin");
       });
 
       await step(page, "admin", "/admin dashboard mounts as default tab", async () => {
@@ -71,11 +72,12 @@ test.describe.serial("Workday — admin (login → console + coupon CRUD → log
       });
 
       await step(page, "admin", "Sellers approval queue renders", async () => {
-        const sellersTab = page
-          .getByRole("button", { name: /^(Approve Sellers|Duyệt Seller)/i })
+        const sellersLink = page
+          .getByRole("link", { name: /^(Approve Sellers|Duyệt Seller)/i })
           .first();
-        await expect(sellersTab).toBeVisible({ timeout: 10_000 });
-        await sellersTab.click();
+        await expect(sellersLink).toBeVisible({ timeout: 10_000 });
+        await expect(sellersLink).toHaveAttribute("href", "/admin/sellers");
+        await sellersLink.click();
         await expect(
           page
             .getByText(
@@ -87,9 +89,10 @@ test.describe.serial("Workday — admin (login → console + coupon CRUD → log
       });
 
       await step(page, "admin", "Open Coupons tab", async () => {
-        const couponsTab = page.getByRole("button", { name: /^(Coupons|Coupon)/i }).first();
-        await expect(couponsTab).toBeVisible({ timeout: 10_000 });
-        await couponsTab.click();
+        const couponsLink = page.getByRole("link", { name: /^(Coupons|Coupon)/i }).first();
+        await expect(couponsLink).toBeVisible({ timeout: 10_000 });
+        await expect(couponsLink).toHaveAttribute("href", "/admin/coupons");
+        await couponsLink.click();
         await expect(page.getByText(/Coupon management|Quản lý coupon/i).first()).toBeVisible({
           timeout: 15_000,
         });
@@ -153,9 +156,10 @@ test.describe.serial("Workday — admin (login → console + coupon CRUD → log
       });
 
       await step(page, "admin", "Disputes tab parses", async () => {
-        const disputesTab = page.getByRole("button", { name: /^(Disputes|Khiếu nại)$/i }).first();
-        await expect(disputesTab).toBeVisible({ timeout: 10_000 });
-        await disputesTab.click();
+        const disputesLink = page.getByRole("link", { name: /^(Disputes|Khiếu nại)$/i }).first();
+        await expect(disputesLink).toBeVisible({ timeout: 10_000 });
+        await expect(disputesLink).toHaveAttribute("href", "/admin/disputes");
+        await disputesLink.click();
         await expect(
           page
             .getByText(/Disputes|Khiếu nại|No open disputes|Không có khiếu nại nào đang mở/i)
@@ -165,9 +169,10 @@ test.describe.serial("Workday — admin (login → console + coupon CRUD → log
       });
 
       await step(page, "admin", "Payouts tab parses", async () => {
-        const payoutsTab = page.getByRole("button", { name: /^(Payouts|Rút tiền)$/i }).first();
-        await expect(payoutsTab).toBeVisible({ timeout: 10_000 });
-        await payoutsTab.click();
+        const payoutsLink = page.getByRole("link", { name: /^(Payouts|Rút tiền)$/i }).first();
+        await expect(payoutsLink).toBeVisible({ timeout: 10_000 });
+        await expect(payoutsLink).toHaveAttribute("href", "/admin/payouts");
+        await payoutsLink.click();
         await expect(
           page
             .getByText(

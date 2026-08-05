@@ -1,4 +1,8 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type APIRequestContext } from "@playwright/test";
+
+import { readJson, type AuthResponse, type PayoutListResponse, type WalletResponse } from "../_api";
+import { loginAsSeededUser, logoutViaUserMenu } from "../_workday-evidence";
+import { credentialForPersona, type Persona } from "../modernization/_credentials";
 
 import {
   bizStep,
@@ -10,7 +14,6 @@ import {
   startTrace,
   stopTrace,
 } from "./_journey-evidence";
-import { loginAsSeededUser, logoutViaUserMenu } from "../_workday-evidence";
 import { requireJourneyState, writeJourneyState } from "./_journey-state";
 
 /**
@@ -42,6 +45,24 @@ import { requireJourneyState, writeJourneyState } from "./_journey-state";
 
 const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
 
+async function accessTokenForPersona(
+  request: APIRequestContext,
+  persona: Persona,
+): Promise<string> {
+  const { username, password } = credentialForPersona(persona);
+  const loginResponse = await request.post(`${apiURL}/auth/login`, {
+    data: { username, password },
+  });
+  expect(
+    loginResponse.ok(),
+    `persona login (${persona}) failed: ${loginResponse.status()} ${await loginResponse.text()}`,
+  ).toBeTruthy();
+  const body = await readJson<AuthResponse>(loginResponse);
+  const accessToken = body.data?.accessToken ?? body.accessToken;
+  expect(accessToken, `no access token returned for ${persona}`).toBeTruthy();
+  return accessToken ?? "";
+}
+
 test.use({
   video: "on",
   trace: "off",
@@ -67,7 +88,7 @@ test.describe.serial("Chapter 5 — Seller cashes out", () => {
     });
   });
 
-  test.afterEach(async ({}, testInfo) => {
+  test.afterEach(({ page: _page }, testInfo) => {
     rememberOutputDir("05-seller-cashes-out", testInfo);
   });
 
@@ -106,17 +127,15 @@ test.describe.serial("Chapter 5 — Seller cashes out", () => {
           await expect
             .poll(
               async () => {
-                const login = await page.request.post(`${apiURL}/auth/login`, {
-                  data: { username: "seller1", password: "test" },
-                });
-                if (!login.ok()) return 0;
-                const token = (await login.json())?.data?.accessToken;
+                const token = await accessTokenForPersona(page.request, "seller");
                 if (!token) return 0;
                 const r = await page.request.get(`${apiURL}/sellers/me/finance/wallet`, {
                   headers: { Authorization: `Bearer ${token}` },
                 });
                 if (!r.ok()) return 0;
-                const balance = Number((await r.json())?.data?.availableBalance ?? 0);
+                const balance = Number(
+                  (await readJson<WalletResponse>(r)).data?.availableBalance ?? 0,
+                );
                 if (balance > 0) {
                   payoutAmountVnd = balance;
                 }
@@ -139,7 +158,7 @@ test.describe.serial("Chapter 5 — Seller cashes out", () => {
         "Seller logs into the SPA and the Wallet tab shows the same balance",
         async () => {
           await page.context().clearCookies();
-          await loginAsSeededUser(page, "seller1");
+          await loginAsSeededUser(page, "seller");
           await page.goto("/seller");
           await expect(
             page.getByText(/Dashboard|Tổng quan|Seller Hub|Kênh Người Bán/i).first(),
@@ -213,11 +232,7 @@ test.describe.serial("Chapter 5 — Seller cashes out", () => {
           // drives the admin UI to complete the payout. This step proves
           // the cross-persona handoff: what the seller submits is what
           // the admin will see.
-          const adminLogin = await page.request.post(`${apiURL}/auth/login`, {
-            data: { username: "admin1", password: "test" },
-          });
-          expect(adminLogin.ok(), `admin login: ${adminLogin.status()}`).toBeTruthy();
-          const adminToken = (await adminLogin.json())?.data?.accessToken;
+          const adminToken = await accessTokenForPersona(page.request, "admin");
 
           await expect
             .poll(
@@ -226,12 +241,7 @@ test.describe.serial("Chapter 5 — Seller cashes out", () => {
                   headers: { Authorization: `Bearer ${adminToken}` },
                 });
                 if (!r.ok()) return null;
-                const list: Array<{
-                  payoutId?: string;
-                  sellerId?: string;
-                  amount?: number;
-                  status?: string;
-                }> = (await r.json())?.data ?? [];
+                const list = (await readJson<PayoutListResponse>(r)).data ?? [];
                 // seller1's keycloakId is what the wallet credit went
                 // against. Find the most recent PENDING payout for that
                 // seller — it's the one chapter 5 just submitted.

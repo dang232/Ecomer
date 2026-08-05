@@ -46,7 +46,10 @@ public class FfmpegCommandBuilder {
                 "-c:a", "aac",
                 "-b:a", "128k",
                 "-map", "0:v:0",
-                "-map", "0:a:0",
+                // Product videos are allowed to be silent. The optional map keeps
+                // the AAC settings for uploads that do contain an audio stream
+                // without rejecting valid video-only files.
+                "-map", "0:a:0?",
                 "-map_metadata", "-1",
                 "-movflags", "+faststart",
                 "-fs", String.valueOf(properties.outputSizeLimitBytes()),
@@ -71,20 +74,22 @@ public class FfmpegCommandBuilder {
                 "-i", transcodedFile.toAbsolutePath().toString(),
                 "-frames:v", "1",
                 "-q:v", "2",
+                "-threads", "1",
+                "-pix_fmt", "yuvj420p",
                 posterFile.toAbsolutePath().toString()
         );
     }
 
     /**
      * Calculates the seek position for poster extraction:
-     * {@code max(1.0, duration * 0.1)} seconds.
+     * {@code duration * 0.1} seconds, or the first frame when duration is unknown.
      *
      * @param durationSeconds total duration of the video; &lt;= 0 defaults to 1.0
      */
     public double posterSeekSeconds(double durationSeconds) {
         if (durationSeconds <= 0) {
-            return 1.0;
+            return 0.0;
         }
-        return Math.max(1.0, durationSeconds * 0.1);
+        return durationSeconds * 0.1;
     }
 }

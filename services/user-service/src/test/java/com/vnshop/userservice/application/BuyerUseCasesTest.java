@@ -2,6 +2,8 @@ package com.vnshop.userservice.application;
 
 import com.vnshop.userservice.domain.BuyerProfile;
 import com.vnshop.userservice.domain.PhoneNumber;
+import com.vnshop.userservice.domain.FullName;
+import com.vnshop.userservice.domain.port.out.KeycloakAdminPort;
 import com.vnshop.userservice.domain.port.out.UserRepositoryPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,6 +17,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -23,6 +26,9 @@ class BuyerUseCasesTest {
 
     @Mock
     private UserRepositoryPort userRepositoryPort;
+
+    @Mock
+    private KeycloakAdminPort keycloakAdminPort;
 
     private static final PhoneNumber PHONE = new PhoneNumber("+84912345678");
 
@@ -37,7 +43,7 @@ class BuyerUseCasesTest {
         BuyerProfile b = buyer("kc-1");
         when(userRepositoryPort.findBuyerByKeycloakId("kc-1")).thenReturn(Optional.of(b));
 
-        ViewBuyerProfileUseCase useCase = new ViewBuyerProfileUseCase(userRepositoryPort);
+        ViewBuyerProfileUseCase useCase = new ViewBuyerProfileUseCase(userRepositoryPort, keycloakAdminPort);
         BuyerProfile result = useCase.view("kc-1");
 
         assertThat(result.keycloakId()).isEqualTo("kc-1");
@@ -51,7 +57,7 @@ class BuyerUseCasesTest {
     when(userRepositoryPort.saveBuyer(any(BuyerProfile.class)))
     .thenAnswer(invocation -> invocation.getArgument(0));
 
-    ViewBuyerProfileUseCase useCase = new ViewBuyerProfileUseCase(userRepositoryPort);
+    ViewBuyerProfileUseCase useCase = new ViewBuyerProfileUseCase(userRepositoryPort, keycloakAdminPort);
     BuyerProfile result = useCase.view("kc-1");
 
     assertThat(result.keycloakId()).isEqualTo("kc-1");
@@ -61,6 +67,84 @@ class BuyerUseCasesTest {
     assertThat(result.addresses()).isEmpty();
     verify(userRepositoryPort).saveBuyer(any(BuyerProfile.class));
 }
+
+    @Test
+    void viewBuyer_missingEmail_backfillsItOnceFromKeycloak() {
+        BuyerProfile profile = new BuyerProfile("kc-legacy", null, "Alice", PHONE, "avatar", null);
+        when(userRepositoryPort.findBuyerByKeycloakId("kc-legacy")).thenReturn(Optional.of(profile));
+        when(keycloakAdminPort.findEmailByUserId("kc-legacy")).thenReturn(Optional.of(" legacy@example.com "));
+        when(userRepositoryPort.saveBuyer(profile)).thenReturn(profile);
+
+        BuyerProfile result = new ViewBuyerProfileUseCase(userRepositoryPort, keycloakAdminPort).view("kc-legacy");
+
+        assertThat(result.email()).isEqualTo("legacy@example.com");
+        verify(userRepositoryPort).saveBuyer(profile);
+    }
+
+    @Test
+    void viewBuyer_existingEmail_doesNotQueryOrOverwriteKeycloakValue() {
+        BuyerProfile profile = new BuyerProfile("kc-owned", "account@example.com", "Alice", PHONE, "avatar", null);
+        when(userRepositoryPort.findBuyerByKeycloakId("kc-owned")).thenReturn(Optional.of(profile));
+
+        BuyerProfile result = new ViewBuyerProfileUseCase(userRepositoryPort, keycloakAdminPort).view("kc-owned");
+
+        assertThat(result.email()).isEqualTo("account@example.com");
+        verify(keycloakAdminPort, never()).findEmailByUserId(any());
+        verify(userRepositoryPort, never()).saveBuyer(profile);
+    }
+
+    @Test
+    void viewBuyer_keycloakLookupFailure_keepsExistingProfileReadable() {
+        BuyerProfile profile = new BuyerProfile("kc-unavailable", null, "Alice", PHONE, "avatar", null);
+        when(userRepositoryPort.findBuyerByKeycloakId("kc-unavailable")).thenReturn(Optional.of(profile));
+        when(keycloakAdminPort.findEmailByUserId("kc-unavailable")).thenThrow(new IllegalStateException("offline"));
+
+        BuyerProfile result = new ViewBuyerProfileUseCase(userRepositoryPort, keycloakAdminPort).view("kc-unavailable");
+
+        assertThat(result).isSameAs(profile);
+        assertThat(result.email()).isNull();
+        verify(userRepositoryPort, never()).saveBuyer(profile);
+    }
+
+    // --- RegisterBuyerUseCase ---
+
+    @Test
+    void registerBuyer_persistsTheRegistrationEmail() {
+        when(userRepositoryPort.findBuyerByKeycloakId("kc-new")).thenReturn(Optional.empty());
+        when(userRepositoryPort.saveBuyer(any(BuyerProfile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        BuyerProfile result = new RegisterBuyerUseCase(userRepositoryPort).register(new RegisterBuyerCommand(
+                "kc-new", "  buyer@example.com ", FullName.of("Buyer", "One"), PHONE, null));
+
+        assertThat(result.email()).isEqualTo("buyer@example.com");
+    }
+
+    @Test
+    void registerBuyer_existingProfile_backfillsEmailWithoutReplacingProfileFields() {
+        BuyerProfile profile = new BuyerProfile("kc-existing", null, "Existing Name", PHONE, "avatar", null);
+        when(userRepositoryPort.findBuyerByKeycloakId("kc-existing")).thenReturn(Optional.of(profile));
+        when(userRepositoryPort.saveBuyer(profile)).thenReturn(profile);
+
+        BuyerProfile result = new RegisterBuyerUseCase(userRepositoryPort).register(new RegisterBuyerCommand(
+                "kc-existing", "buyer@example.com", FullName.of("Different", "Name"), null, null));
+
+        assertThat(result.email()).isEqualTo("buyer@example.com");
+        assertThat(result.name()).isEqualTo("Existing Name");
+        assertThat(result.phone()).isEqualTo(PHONE);
+        verify(userRepositoryPort).saveBuyer(profile);
+    }
+
+    @Test
+    void registerBuyer_phoneOwnedByAnotherBuyer_isRejected() {
+        when(userRepositoryPort.findBuyerByKeycloakId("kc-new")).thenReturn(Optional.empty());
+        when(userRepositoryPort.findBuyerByPhone(PHONE)).thenReturn(Optional.of(buyer("kc-existing")));
+
+        assertThatThrownBy(() -> new RegisterBuyerUseCase(userRepositoryPort).register(new RegisterBuyerCommand(
+                "kc-new", "buyer@example.com", FullName.of("Buyer", "One"), PHONE, null)))
+                .isInstanceOf(PhoneAlreadyRegisteredException.class);
+
+        verify(userRepositoryPort, never()).saveBuyer(any());
+    }
 
     // --- UpsertBuyerProfileUseCase (existing buyer branch) ---
 
@@ -78,6 +162,23 @@ class BuyerUseCasesTest {
 
         assertThat(result.keycloakId()).isEqualTo("kc-1");
         verify(userRepositoryPort).saveBuyer(existing);
+    }
+
+    @Test
+    void upsert_existingBuyer_changingToAnotherBuyersPhone_isRejected() {
+        BuyerProfile existing = buyer("kc-1");
+        PhoneNumber claimedPhone = new PhoneNumber("+84987654321");
+        when(userRepositoryPort.findBuyerByKeycloakId("kc-1")).thenReturn(Optional.of(existing));
+        when(userRepositoryPort.findBuyerByPhone(claimedPhone)).thenReturn(Optional.of(buyer("kc-other")));
+
+        RegisterBuyerUseCase registerUseCase = new RegisterBuyerUseCase(userRepositoryPort);
+        UpsertBuyerProfileUseCase useCase = new UpsertBuyerProfileUseCase(userRepositoryPort, registerUseCase);
+
+        assertThatThrownBy(() -> useCase.upsert(new UpsertBuyerProfileCommand(
+                "kc-1", "Bob", claimedPhone.value(), "https://cdn.example.com/new-avatar.jpg")))
+                .isInstanceOf(PhoneAlreadyRegisteredException.class);
+
+        verify(userRepositoryPort, never()).saveBuyer(existing);
     }
 
     // --- UpsertBuyerProfileUseCase (new buyer branch) ---

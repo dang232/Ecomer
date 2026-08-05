@@ -10,49 +10,6 @@
  * page boundary.
  */
 
-export interface Product {
-  id: string;
-  name: string;
-  nameEn: string;
-  price: number;
-  originalPrice?: number;
-  discount?: number;
-  image: string;
-  images: string[];
-  category: string;
-  categoryId?: string;
-  categoryLabel: string;
-  brand?: string;
-  sellerId: string;
-  sellerName: string;
-  rating: number;
-  reviewCount: number;
-  sold: number;
-  stock: number;
-  description: string;
-  badge?: "flash" | "new" | "bestseller" | "hot";
-  colors?: string[];
-  sizes?: string[];
-  variants?: {
-    sku?: string;
-    name?: string;
-    priceAmount?: number;
-    priceCurrency?: string;
-    imageUrl?: string;
-    stockQuantity?: number;
-  }[];
-  shipping: string;
-  shippingFee: number;
-  location: string;
-  tags: string[];
-  /** Same-day delivery flag (set by Same-day delivery filter on SearchPage) */
-  sameDayDelivery?: boolean;
-  /** Verified seller flag (set by Verified only filter on SearchPage) */
-  verified?: boolean;
-  /** Official store flag (set by Official stores filter on SearchPage) */
-  isOfficial?: boolean;
-}
-
 export interface UIOrder {
   id: string;
   date: string;

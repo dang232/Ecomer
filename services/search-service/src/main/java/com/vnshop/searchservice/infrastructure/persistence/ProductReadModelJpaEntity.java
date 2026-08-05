@@ -14,6 +14,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Collection;
 import java.util.List;
@@ -77,7 +78,7 @@ public class ProductReadModelJpaEntity {
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(schema = "search_svc", name = "product_read_model_tags", joinColumns = @JoinColumn(name = "product_id"))
     @Column(name = "tag_key", nullable = false)
-    private List<String> tags = List.of();
+    private List<String> tags = new ArrayList<>();
 
     protected ProductReadModelJpaEntity() {
     }
@@ -110,7 +111,7 @@ public class ProductReadModelJpaEntity {
         this.sameDayDelivery = sameDayDelivery;
         this.verified = verified;
         this.isOfficial = isOfficial;
-        this.tags = tags == null ? List.of() : List.copyOf(tags);
+        this.tags = tags == null ? new ArrayList<>() : new ArrayList<>(tags);
     }
 
     public ProductReadModelJpaEntity(String productId, String name, String description, String categoryId, String brand, String status,
@@ -186,6 +187,10 @@ public class ProductReadModelJpaEntity {
 
     public void setReviewCount(Integer reviewCount) {
         this.reviewCount = reviewCount;
+    }
+
+    public List<String> getTags() {
+        return tags;
     }
 
     private static String stringValue(Object value) {

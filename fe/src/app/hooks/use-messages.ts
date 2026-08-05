@@ -6,9 +6,9 @@ import {
   sendMessage,
   type ChatMessage,
   type MessagesPage,
-} from "../lib/api/endpoints/messaging";
+} from "@/shared/api/endpoints/messaging";
 
-import { useAuth } from "./use-auth";
+import { useAuth } from "./auth-context";
 import { THREADS_KEY } from "./use-threads";
 
 export const messagesKey = (threadId: string | undefined) =>
@@ -24,7 +24,10 @@ export function useMessages(threadId: string | undefined, limit = 50) {
   const { ready, authenticated } = useAuth();
   return useQuery({
     queryKey: messagesKey(threadId),
-    queryFn: () => listMessages(threadId!, { limit }),
+    queryFn: () => {
+      if (!threadId) throw new Error("A thread ID is required to load messages");
+      return listMessages(threadId, { limit });
+    },
     enabled: ready && authenticated && !!threadId,
     retry: false,
   });
@@ -44,7 +47,10 @@ export function useSendMessage(threadId: string | undefined) {
     { body: string },
     { previous?: MessagesPage; placeholderId?: string }
   >({
-    mutationFn: ({ body }) => sendMessage(threadId!, { body }),
+    mutationFn: ({ body }) => {
+      if (!threadId) throw new Error("A thread ID is required to send a message");
+      return sendMessage(threadId, { body });
+    },
     onMutate: async ({ body }) => {
       if (!threadId) return {};
       const key = messagesKey(threadId);

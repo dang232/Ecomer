@@ -1,6 +1,8 @@
 import { test, expect, type Page, type APIRequestContext } from "@playwright/test";
-import { expectNoGlobalError } from "../_helpers";
+
 import { loginViaOidc, uniqueTestId } from "../_auth";
+import { readJson, type AuthResponse, type ProductListResponse } from "../_api";
+import { expectNoGlobalError } from "../_helpers";
 
 /**
  * Critical user flow: Product Search → Add to Cart → Checkout
@@ -36,8 +38,9 @@ async function seedBuyer(request: APIRequestContext): Promise<TestBuyer> {
     data: { username: email, password: PASSWORD },
   });
   expect(login.ok()).toBeTruthy();
-  const accessToken = (await login.json())?.data?.accessToken;
+  const accessToken = (await readJson<AuthResponse>(login)).data?.accessToken;
   expect(accessToken).toBeTruthy();
+  if (!accessToken) throw new Error("login did not return an access token");
   return { email, accessToken };
 }
 
@@ -71,8 +74,9 @@ async function addProductToCart(
 async function getFirstProductId(request: APIRequestContext): Promise<string> {
   const r = await request.get(`${apiURL}/products?size=1`);
   expect(r.ok()).toBeTruthy();
-  const id = (await r.json())?.data?.content?.[0]?.id;
+  const id = (await readJson<ProductListResponse>(r)).data?.content?.[0]?.id;
   expect(id, "expected a seeded product").toBeTruthy();
+  if (!id) throw new Error("expected a seeded product");
   return id;
 }
 
@@ -121,7 +125,7 @@ test.describe("Checkout Flow", () => {
     await page.goto("/cart");
 
     // Cart should show the product
-    await expect(page.getByRole("button", { name: /View|Xem/ }).first()).toBeVisible({
+    await expect(page.getByRole("link", { name: /View|Xem/ }).first()).toBeVisible({
       timeout: 15_000,
     });
 
@@ -282,7 +286,7 @@ test.describe("Checkout Flow", () => {
     await authenticatePage(page, buyer);
     await page.goto("/cart");
 
-    await expect(page.getByRole("button", { name: /View|Xem/ }).first()).toBeVisible({
+    await expect(page.getByRole("link", { name: /View|Xem/ }).first()).toBeVisible({
       timeout: 15_000,
     });
 
@@ -304,16 +308,20 @@ test.describe("Checkout Flow", () => {
     await authenticatePage(page, buyer);
     await page.goto("/cart");
 
-    await expect(page.getByRole("button", { name: /View|Xem/ }).first()).toBeVisible({
+    await expect(page.getByRole("link", { name: /View|Xem/ }).first()).toBeVisible({
       timeout: 15_000,
     });
 
     // Remove item
-    const removeBtn = page.getByRole("button", { name: /Remove .* from cart|Xóa/i }).first();
+    const removeBtn = page.getByRole("button", { name: /^Remove$|^Xo/i }).first();
     await removeBtn.click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: /^Remove$|^Xo/i })
+      .click();
 
     // Cart should now be empty or item should be gone
-    await expect(page.getByRole("button", { name: /View|Xem/ }).first()).toHaveCount(0, {
+    await expect(page.getByRole("link", { name: /View|Xem/ }).first()).toHaveCount(0, {
       timeout: 10_000,
     });
 

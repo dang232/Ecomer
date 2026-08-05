@@ -1,6 +1,7 @@
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { cancelOrder, myOrders, orderById } from "../lib/api/endpoints/orders";
+import { cancelOrder, myOrders, orderById } from "@/shared/api/endpoints/orders";
+import type { Order, Page } from "@/shared/contracts/api";
 
 export const myOrdersOptions = (params: { page?: number; size?: number; status?: string } = {}) =>
   queryOptions({
@@ -11,7 +12,10 @@ export const myOrdersOptions = (params: { page?: number; size?: number; status?:
 export const orderDetailOptions = (id: string | undefined) =>
   queryOptions({
     queryKey: ["orders", "detail", id] as const,
-    queryFn: () => orderById(id!),
+    queryFn: () => {
+      if (!id) throw new Error("An order ID is required");
+      return orderById(id);
+    },
     enabled: !!id,
   });
 
@@ -27,10 +31,34 @@ export function useCancelOrder() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => cancelOrder(id),
-    onSuccess: (_, id) => {
-      // Prefix-invalidate all order list variants, then the specific detail.
-      void qc.invalidateQueries({ queryKey: ["orders"] });
-      void qc.invalidateQueries({ queryKey: orderDetailOptions(id).queryKey });
+    onSuccess: (cancelledOrder, id) => {
+      qc.setQueriesData<Page<Order>>(
+        {
+          queryKey: ["orders"],
+          predicate: (query) => query.queryKey[1] !== "detail",
+        },
+        (page) => {
+          if (!page) return page;
+
+          return {
+            ...page,
+            content: page.content.map((order) =>
+              order.id === cancelledOrder.id ? cancelledOrder : order,
+            ),
+          };
+        },
+      );
+      qc.setQueryData<Order>(orderDetailOptions(id).queryKey, cancelledOrder);
+
+      // The cancel response is authoritative, while GET /orders reads an
+      // asynchronously projected summary. Mark both caches stale for a later
+      // refresh without immediately refetching the projection and overwriting
+      // the confirmed cancellation with an older row.
+      void qc.invalidateQueries({ queryKey: ["orders"], refetchType: "none" });
+      void qc.invalidateQueries({
+        queryKey: orderDetailOptions(id).queryKey,
+        refetchType: "none",
+      });
     },
   });
 }

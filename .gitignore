@@ -247,6 +247,7 @@ app.*.symbols
 !/docs/PRODUCTION-READINESS-CLOSURE-PLAN.md
 !/docs/PENETRATION-TESTING-REPORT-2026-07-11.md
 !/docs/SESSION-HANDOVER-2026-07-10.md
+!/docs/SESSION-HANDOVER-2026-07-31.md
 !/docs/SESSION-HANDOVER-AUDIT-2026-07-10.md
 !/docs/SESSION-HANDOVER-PENTEST-2026-07-11.md
 !/docs/SPRINT-2026-07-MEDIUM-BLOCKERS.md
@@ -264,3 +265,8 @@ app.*.symbols
 !/docs/superpowers/plans/2026-07-24-marketplace-settlement-and-finance.md
 /services/configuration-service/dist
 /services/product-service/.omc
+/fe/.ua
+/.agents
+/.codex
+/.playwright-cli
+/.ua

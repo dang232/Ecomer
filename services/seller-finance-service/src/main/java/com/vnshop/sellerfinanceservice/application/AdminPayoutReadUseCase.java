@@ -4,6 +4,9 @@ import com.vnshop.sellerfinanceservice.domain.Payout;
 import com.vnshop.sellerfinanceservice.domain.PayoutStatus;
 import com.vnshop.sellerfinanceservice.domain.port.out.PayoutRepositoryPort;
 import com.vnshop.sellerfinanceservice.domain.port.out.SellerDirectoryPort;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -37,6 +40,37 @@ public class AdminPayoutReadUseCase {
                 ? payoutRepositoryPort.findByStatus(PayoutStatus.PAID)
                 : payoutRepositoryPort.findByStatus(PayoutStatus.PAID, query));
         return enrich(payouts);
+    }
+
+    /**
+     * Read model used by the admin queue. The repository remains the source of
+     * truth for exact wire statuses; this method only combines the legacy
+     * pending/completed groups when no filter is selected and applies the
+     * requested page after seller-name enrichment.
+     */
+    public Page<EnrichedPayout> all(String query, String status, Pageable pageable) {
+        List<EnrichedPayout> rows;
+        if (status == null || status.isBlank() || "ALL".equalsIgnoreCase(status)) {
+            rows = new java.util.ArrayList<>(pending(query));
+            rows.addAll(completed(query));
+        } else {
+            PayoutStatus requestedStatus;
+            try {
+                requestedStatus = PayoutStatus.valueOf(status.trim().toUpperCase());
+            } catch (IllegalArgumentException exception) {
+                throw new IllegalArgumentException("status is invalid: " + status, exception);
+            }
+            List<Payout> payouts = query == null || query.isBlank()
+                    ? payoutRepositoryPort.findByStatus(requestedStatus)
+                    : payoutRepositoryPort.findByStatus(requestedStatus, query);
+            rows = enrich(payouts);
+        }
+
+        int pageNumber = pageable.getPageNumber();
+        int pageSize = pageable.getPageSize();
+        int fromIndex = Math.min(pageNumber * pageSize, rows.size());
+        int toIndex = Math.min(fromIndex + pageSize, rows.size());
+        return new PageImpl<>(rows.subList(fromIndex, toIndex), pageable, rows.size());
     }
 
     public EnrichedPayout enrich(Payout payout) {

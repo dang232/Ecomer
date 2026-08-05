@@ -3,6 +3,7 @@ package com.vnshop.userservice.application;
 import com.vnshop.userservice.domain.BuyerProfile;
 import com.vnshop.userservice.domain.PhoneNumber;
 import com.vnshop.userservice.domain.port.out.UserRepositoryPort;
+import java.util.Objects;
 
 public class UpsertBuyerProfileUseCase {
 
@@ -25,6 +26,9 @@ public class UpsertBuyerProfileUseCase {
         PhoneNumber phone = PhoneNumber.parseOrNull(command.phone());
         return userRepositoryPort.findBuyerByKeycloakId(command.keycloakId())
                 .map(existing -> {
+                    if (!Objects.equals(existing.phone(), phone)) {
+                        registerBuyerUseCase.assertPhoneAvailable(phone, existing.keycloakId());
+                    }
                     existing.updateProfile(safeName, phone, command.avatarUrl());
                     return userRepositoryPort.saveBuyer(existing);
                 })

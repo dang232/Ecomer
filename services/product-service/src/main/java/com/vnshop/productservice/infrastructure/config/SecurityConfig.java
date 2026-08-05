@@ -26,6 +26,7 @@ import java.util.stream.Stream;
 @EnableMethodSecurity
 public class SecurityConfig {
     private static final String REFRESH_TOKEN_COOKIE = "vnshop_rt";
+    private static final String TUS_UPLOAD_PATH = "/videos/upload";
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -36,7 +37,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api-docs", "/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers(HttpMethod.GET, "/reviews/seller/me").hasRole("SELLER")
-                        .requestMatchers(HttpMethod.GET, "/products/**", "/categories/**", "/reviews/**", "/questions/**", "/sellers/**", "/api/v1/videos").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/products/**", "/categories/**", "/reviews/**", "/questions/**", "/sellers/**", "/videos").permitAll()
                         .requestMatchers(HttpMethod.POST, "/reviews/seller-summaries").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/prometheus", "/actuator/info").permitAll()
                         .anyRequest().authenticated()
@@ -57,6 +58,10 @@ public class SecurityConfig {
     private RequestMatcher cookieAuthenticatedRequestMatcher() {
         return request -> {
             if (List.of("GET", "HEAD", "OPTIONS", "TRACE").contains(request.getMethod())) {
+                return false;
+            }
+            String path = request.getRequestURI();
+            if (path.equals(TUS_UPLOAD_PATH) || path.startsWith(TUS_UPLOAD_PATH + "/")) {
                 return false;
             }
             return request.getCookies() != null

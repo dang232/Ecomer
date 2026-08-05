@@ -37,8 +37,12 @@ public class ObjectStorageConfig {
     }
 
     @Bean
-    S3ObjectStorageAdapter s3ObjectStorageAdapter(S3Client s3Client, S3Presigner s3Presigner, ObjectStorageProperties properties) {
-        return new S3ObjectStorageAdapter(s3Client, s3Presigner, properties);
+    S3ObjectStorageAdapter s3ObjectStorageAdapter(
+            S3Client s3Client,
+            S3Presigner s3Presigner,
+            ObjectStorageProperties properties,
+            VideoStorageProperties videoStorageProperties) {
+        return new S3ObjectStorageAdapter(s3Client, s3Presigner, properties, videoStorageProperties);
     }
 
     private StaticCredentialsProvider credentialsProvider(ObjectStorageProperties properties) {

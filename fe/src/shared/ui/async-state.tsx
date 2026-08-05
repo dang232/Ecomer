@@ -2,19 +2,28 @@ import type { ReactNode } from "react";
 
 import type { AsyncStatus } from "./async-state-model";
 
-interface AsyncStateProps {
+export interface AsyncStateProps {
   status: AsyncStatus;
   children: ReactNode;
   loading: ReactNode;
   error: ReactNode;
   empty: ReactNode;
+  partial?: ReactNode;
   retry?: {
     label: string;
     onClick: () => void;
   };
 }
 
-export function AsyncState({ status, children, loading, error, empty, retry }: AsyncStateProps) {
+export function AsyncState({
+  status,
+  children,
+  loading,
+  error,
+  empty,
+  partial,
+  retry,
+}: AsyncStateProps) {
   if (status === "loading") {
     return (
       <div role="status" aria-busy="true" aria-live="polite">
@@ -47,6 +56,8 @@ export function AsyncState({ status, children, loading, error, empty, retry }: A
       </div>
     );
   }
+
+  if (status === "partial") return partial ?? children;
 
   return children;
 }

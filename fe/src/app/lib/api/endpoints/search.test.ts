@@ -10,6 +10,7 @@ vi.mock("../client", () => ({
 }));
 
 import { api } from "../client";
+
 import { searchProductsV2 } from "./search";
 
 describe("searchProductsV2", () => {

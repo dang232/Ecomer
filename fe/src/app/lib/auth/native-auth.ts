@@ -26,7 +26,36 @@
  * cookie (same-origin policy) and therefore cannot forge the header.
  */
 
+import { z } from "zod";
+
 import { apiUrl } from "../runtime-endpoints";
+
+const authSessionSchema = z.object({
+  accessToken: z.string().trim().min(1),
+  accessExpiresIn: z.number().positive(),
+});
+
+const authEnvelopeSchema = z
+  .object({
+    success: z.boolean(),
+    message: z.string().optional(),
+    data: authSessionSchema.optional(),
+    errorCode: z.string().nullable().optional(),
+  })
+  .passthrough()
+  .nullable();
+
+const jwtClaimsSchema = z
+  .object({
+    sub: z.string(),
+    email: z.string().optional(),
+    given_name: z.string().optional(),
+    family_name: z.string().optional(),
+    preferred_username: z.string().optional(),
+    realm_access: z.object({ roles: z.array(z.string()).optional() }).optional(),
+    exp: z.number().optional(),
+  })
+  .passthrough();
 
 /** Name of the non-httpOnly CSRF cookie set by user-service. */
 export const CSRF_COOKIE_NAME = "vnshop_csrf";
@@ -50,15 +79,7 @@ export function isAccessTokenRefreshDue(
   return tokenSet.accessExpiresAt - now <= bufferMs;
 }
 
-export interface JwtClaims {
-  sub: string;
-  email?: string;
-  given_name?: string;
-  family_name?: string;
-  preferred_username?: string;
-  realm_access?: { roles?: string[] };
-  exp?: number;
-}
+export type JwtClaims = z.infer<typeof jwtClaimsSchema>;
 
 export class AuthError extends Error {
   readonly statusCode: number;
@@ -83,19 +104,7 @@ export function setLiveTokenSet(next: TokenSet | null): void {
   liveTokenSet = next;
 }
 
-interface AuthSessionResponse {
-  accessToken: string;
-  accessExpiresIn: number;
-}
-
-interface ApiEnvelope<T> {
-  success: boolean;
-  message?: string;
-  data?: T;
-  errorCode?: string;
-}
-
-function tokenSetFrom(payload: AuthSessionResponse): TokenSet {
+function tokenSetFrom(payload: z.infer<typeof authSessionSchema>): TokenSet {
   // Guard: reject empty access tokens to prevent silent auth failures
   if (
     !payload.accessToken ||
@@ -157,9 +166,9 @@ async function postAuth(
 
 async function readEnvelope(res: Response, fallbackErrorCode: string): Promise<TokenSet> {
   const text = await res.text().catch(() => "");
-  let envelope: ApiEnvelope<AuthSessionResponse> | null = null;
+  let envelope: z.infer<typeof authEnvelopeSchema> | null = null;
   try {
-    envelope = text ? (JSON.parse(text) as ApiEnvelope<AuthSessionResponse>) : null;
+    envelope = text ? authEnvelopeSchema.parse(JSON.parse(text)) : null;
   } catch {
     /* keep envelope null and fall through */
   }
@@ -220,7 +229,8 @@ export function decodeJwt(token: string): JwtClaims | null {
     if (!segment) return null;
     const padded = segment + "=".repeat((4 - (segment.length % 4)) % 4);
     const json = atob(padded.replace(/-/g, "+").replace(/_/g, "/"));
-    return JSON.parse(decodeURIComponent(escape(json))) as JwtClaims;
+    const parsed = jwtClaimsSchema.safeParse(JSON.parse(decodeURIComponent(escape(json))));
+    return parsed.success ? parsed.data : null;
   } catch {
     return null;
   }

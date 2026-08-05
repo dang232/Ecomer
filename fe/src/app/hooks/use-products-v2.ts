@@ -6,7 +6,13 @@ import {
 } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 
-import { productListV2, type ProductListV2Params } from "../lib/api/endpoints/products";
+import {
+  productListV2,
+  productListV2ParamsSchema,
+  type ProductListV2Params,
+} from "@/shared/api/endpoints/products";
+
+import { readJsonText } from "../../shared/api/read-json";
 
 const PRODUCT_V2_STALE_TIME = 60_000;
 
@@ -40,7 +46,10 @@ export const productV2Options = (
 export function useProductsV2(params: ProductListV2Params = {}, enabled = true) {
   const client = useQueryClient();
   const paramsKey = JSON.stringify(params);
-  const stableParams = useMemo(() => JSON.parse(paramsKey) as ProductListV2Params, [paramsKey]);
+  const stableParams = useMemo(
+    () => readJsonText(paramsKey, productListV2ParamsSchema),
+    [paramsKey],
+  );
   const query = useInfiniteQuery(productV2Options(stableParams, client, enabled));
   const lastPage = query.data?.pages.at(-1);
   const nextCursor = lastPage?.data.hasMore ? (lastPage.data.nextCursor ?? undefined) : undefined;

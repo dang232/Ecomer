@@ -50,7 +50,7 @@ describe("CheckoutShippingStep", () => {
       expect(screen.queryByText(new RegExp(`\\b${REMAINING_KEY}\\b`))).not.toBeInTheDocument();
     });
 
-    it("shows the remainingForFreeShipping key when subtotal < threshold (300k < 500k)", () => {
+    it("shows standard shipping as free below the legacy threshold", () => {
       render(
         <CheckoutShippingStep
           shippingOptions={[standardOption]}
@@ -64,12 +64,12 @@ describe("CheckoutShippingStep", () => {
 
       // 300k < 500k → freeShipping = false → t() is called with { amount }
       // Mock returns "REMAINING:200000.₫"
-      expect(screen.getByText(/REMAINING:200/)).toBeInTheDocument();
+      expect(screen.getByText(new RegExp(`\\b${FREE_BANNER_KEY}\\b`))).toBeInTheDocument();
       // banner key must NOT appear
-      expect(screen.queryByText(new RegExp(`\\b${FREE_BANNER_KEY}\\b`))).not.toBeInTheDocument();
+      expect(screen.queryByText(new RegExp(`\\b${REMAINING_KEY}\\b`))).not.toBeInTheDocument();
     });
 
-    it("passes the correct remaining amount to t() (500k - 300k = 200k)", () => {
+    it("does not calculate a threshold amount for the zero-fee contract", () => {
       render(
         <CheckoutShippingStep
           shippingOptions={[standardOption]}
@@ -82,10 +82,11 @@ describe("CheckoutShippingStep", () => {
       );
 
       // The mock t() returns "REMAINING:amount"
-      expect(screen.getByText(/REMAINING:.*200/)).toBeInTheDocument();
+      expect(screen.getByText(new RegExp(`\\b${FREE_BANNER_KEY}\\b`))).toBeInTheDocument();
+      expect(screen.queryByText(new RegExp(`\\b${REMAINING_KEY}\\b`))).not.toBeInTheDocument();
     });
 
-    it("at exactly the threshold (500k), remaining shows 0 amount (strict > condition)", () => {
+    it("keeps standard shipping free at the legacy threshold", () => {
       render(
         <CheckoutShippingStep
           shippingOptions={[standardOption]}
@@ -98,7 +99,8 @@ describe("CheckoutShippingStep", () => {
       );
 
       // 500000 > 500000 === false → freeShipping = false → remaining shown
-      expect(screen.getByText(/REMAINING:.*0/)).toBeInTheDocument();
+      expect(screen.getByText(new RegExp(`\\b${FREE_BANNER_KEY}\\b`))).toBeInTheDocument();
+      expect(screen.queryByText(new RegExp(`\\b${REMAINING_KEY}\\b`))).not.toBeInTheDocument();
     });
   });
 });

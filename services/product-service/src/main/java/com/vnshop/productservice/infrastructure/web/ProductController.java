@@ -15,6 +15,7 @@ import com.vnshop.productservice.application.PublishProductUseCase;
 import com.vnshop.productservice.application.CatalogCursorSort;
 import com.vnshop.productservice.application.CatalogV2Query;
 import com.vnshop.productservice.application.CatalogV2Response;
+import com.vnshop.productservice.domain.ProductStatus;
 import com.vnshop.productservice.infrastructure.config.JwtPrincipalUtil;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -106,6 +107,24 @@ public class ProductController {
     @PreAuthorize("hasRole('SELLER') or hasRole('ADMIN')")
     public void delete(@PathVariable UUID id) {
         deleteProductUseCase.delete(id, JwtPrincipalUtil.currentSellerId());
+    }
+
+    @GetMapping("/sellers/me/products")
+    @PreAuthorize("hasRole('SELLER')")
+    public ApiResponse<Page<ProductResponse>> findSellerProducts(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String categoryId,
+            @RequestParam(required = false) ProductStatus status,
+            Pageable pageable) {
+        return ApiResponse.ok(getProductUseCase.findSellerProducts(
+                JwtPrincipalUtil.currentSellerId(), q, categoryId, status, pageable));
+    }
+
+    @GetMapping("/sellers/me/products/{id}")
+    @PreAuthorize("hasRole('SELLER')")
+    public ApiResponse<ProductResponse> findSellerProduct(@PathVariable UUID id) {
+        return ApiResponse.ok(getProductUseCase.findSellerProductById(
+                id, JwtPrincipalUtil.currentSellerId()));
     }
 
     /**

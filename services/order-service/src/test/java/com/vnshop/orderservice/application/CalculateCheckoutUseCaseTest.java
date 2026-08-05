@@ -43,7 +43,7 @@ class CalculateCheckoutUseCaseTest {
     private final CalculateCheckoutUseCase useCase = new CalculateCheckoutUseCase(cart, catalog);
 
     @Test
-    void cartSnapshotPathSumsLineTotalsAndAddsStandardShipping() {
+    void cartSnapshotPathSumsLineTotalsAndMatchesPersistedOrderTotals() {
         catalog.add(new CatalogProduct("p1", "seller-A", "Item 1",
                 List.of(new CatalogProduct.Variant("sku1", new Money(new BigDecimal("100000"), "VND"))), ""));
         catalog.add(new CatalogProduct("p2", "seller-A", "Item 2",
@@ -55,9 +55,10 @@ class CalculateCheckoutUseCaseTest {
         CheckoutBreakdown breakdown = useCase.calculate("cart-1");
 
         assertThat(breakdown.itemsTotal()).isEqualByComparingTo("450000");
-        assertThat(breakdown.shippingEstimate()).isEqualByComparingTo("30000");
+        assertThat(breakdown.shippingEstimate()).isEqualByComparingTo("0");
         assertThat(breakdown.discount()).isEqualByComparingTo("0");
-        assertThat(breakdown.finalAmount()).isEqualByComparingTo("480000");
+        assertThat(breakdown.taxTotal()).isEqualByComparingTo("45000");
+        assertThat(breakdown.finalAmount()).isEqualByComparingTo("495000");
     }
 
     @Test
@@ -70,8 +71,10 @@ class CalculateCheckoutUseCaseTest {
 
         CheckoutBreakdown breakdown = useCase.calculate("cart-stale");
 
-        // 150000 (catalog price) * 2 + 30000 shipping = 330000; stale cart price is ignored.
+        // 150000 (catalog price) * 2 + 30000 VAT = 330000; stale cart price is ignored.
         assertThat(breakdown.itemsTotal()).isEqualByComparingTo("300000");
+        assertThat(breakdown.shippingEstimate()).isEqualByComparingTo("0");
+        assertThat(breakdown.taxTotal()).isEqualByComparingTo("30000");
         assertThat(breakdown.finalAmount()).isEqualByComparingTo("330000");
     }
 
@@ -84,9 +87,27 @@ class CalculateCheckoutUseCaseTest {
 
         CheckoutBreakdown breakdown = useCase.calculate(List.of(new CheckoutLineItem("p1", "sku1", 2)));
 
-        // 199000 * 2 + 30000 standard shipping = 428000.
+        // 199000 * 2 + 40000 per-item rounded VAT = 438000.
         assertThat(breakdown.itemsTotal()).isEqualByComparingTo("398000");
-        assertThat(breakdown.finalAmount()).isEqualByComparingTo("428000");
+        assertThat(breakdown.shippingEstimate()).isEqualByComparingTo("0");
+        assertThat(breakdown.taxTotal()).isEqualByComparingTo("40000");
+        assertThat(breakdown.finalAmount()).isEqualByComparingTo("438000");
+    }
+
+    @Test
+    void sonyPreviewMatchesPlacedOrderTaxAndPersistedZeroShippingContract() {
+        catalog.add(new CatalogProduct(
+                "sony", "seller-A", "Sony item",
+                List.of(new CatalogProduct.Variant("sony-sku", new Money(new BigDecimal("8990000"), "VND"))),
+                ""));
+
+        CheckoutBreakdown breakdown = useCase.calculate(
+                List.of(new CheckoutLineItem("sony", "sony-sku", 1)));
+
+        // The placed-order path persists zero shipping and adds 10% VAT,
+        // rounded per item: 8,990,000 + 899,000 = 9,889,000.
+        assertThat(breakdown.shippingEstimate()).isEqualByComparingTo("0");
+        assertThat(breakdown.finalAmount()).isEqualByComparingTo("9889000");
     }
 
     @Test
@@ -142,10 +163,11 @@ class CalculateCheckoutUseCaseTest {
                 "SAVE50",
                 "user-1");
 
-        // 200000 items + 30000 shipping - 50000 discount = 180000.
+        // 200000 items + 20000 VAT - 50000 discount = 170000.
         assertThat(breakdown.itemsTotal()).isEqualByComparingTo("200000");
         assertThat(breakdown.discount()).isEqualByComparingTo("50000");
-        assertThat(breakdown.finalAmount()).isEqualByComparingTo("180000");
+        assertThat(breakdown.taxTotal()).isEqualByComparingTo("20000");
+        assertThat(breakdown.finalAmount()).isEqualByComparingTo("170000");
     }
 
     @Test
@@ -170,7 +192,8 @@ class CalculateCheckoutUseCaseTest {
         // Invalid coupon → preview stays interactive with zero discount; the
         // /checkout/apply-coupon round-trip is what surfaces the reason.
         assertThat(breakdown.discount()).isEqualByComparingTo("0");
-        assertThat(breakdown.finalAmount()).isEqualByComparingTo("230000");
+        assertThat(breakdown.taxTotal()).isEqualByComparingTo("20000");
+        assertThat(breakdown.finalAmount()).isEqualByComparingTo("220000");
     }
 
     @Test
@@ -213,10 +236,11 @@ class CalculateCheckoutUseCaseTest {
                 "user-1");
 
         // Discount is capped at items subtotal so finalAmount never goes
-        // below standard shipping (we never invert the cart total even if
-        // coupon-service hands back a buggy discount).
+        // below zero (we never invert the cart total even if coupon-service
+        // hands back a buggy discount).
         assertThat(breakdown.discount()).isEqualByComparingTo("100000");
-        assertThat(breakdown.finalAmount()).isEqualByComparingTo("30000");
+        assertThat(breakdown.taxTotal()).isEqualByComparingTo("10000");
+        assertThat(breakdown.finalAmount()).isEqualByComparingTo("10000");
     }
 
     private static final class FakeCartRepository implements CartRepositoryPort {

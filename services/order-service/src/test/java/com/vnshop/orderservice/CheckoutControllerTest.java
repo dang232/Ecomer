@@ -61,9 +61,10 @@ class CheckoutControllerTest {
         when(useCase.calculate("user-42")).thenReturn(
                 new CheckoutBreakdown(
                         new BigDecimal("450000"),
-                        new BigDecimal("30000"),
                         BigDecimal.ZERO,
-                        new BigDecimal("480000")));
+                        BigDecimal.ZERO,
+                        new BigDecimal("45000"),
+                        new BigDecimal("495000")));
 
         MockMvc mvc = MockMvcBuilders
                 .standaloneSetup(new CheckoutController(useCase, mock(ShippingQuotePort.class)))
@@ -80,9 +81,10 @@ class CheckoutControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.itemsTotal").value(450000))
-                .andExpect(jsonPath("$.data.shippingEstimate").value(30000))
+                .andExpect(jsonPath("$.data.shippingEstimate").value(0))
                 .andExpect(jsonPath("$.data.discount").value(0))
-                .andExpect(jsonPath("$.data.finalAmount").value(480000));
+                .andExpect(jsonPath("$.data.taxTotal").value(45000))
+                .andExpect(jsonPath("$.data.finalAmount").value(495000));
     }
 
     @Test

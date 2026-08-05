@@ -1,4 +1,6 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
+
+import { readJson, type ProductListResponse } from "./_api";
 import { expectNoGlobalError } from "./_helpers";
 
 /**
@@ -85,7 +87,7 @@ test.describe("search filters UI", () => {
       "http://localhost:8080/products?categoryId=electronics&size=50",
     );
     expect(response.ok()).toBeTruthy();
-    const body = await response.json();
+    const body = await readJson<ProductListResponse>(response);
     const catalogCount = body?.data?.totalElements ?? 0;
     expect(catalogCount).toBeGreaterThan(0);
 

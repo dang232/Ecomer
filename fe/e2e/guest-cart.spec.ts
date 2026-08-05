@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 
-const baseURL = process.env.VITE_E2E_BASE_URL ?? "http://localhost:3000";
+import { readJson, type ProductListResponse } from "./_api";
+
 const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
 
 /**
@@ -19,8 +20,9 @@ test.describe("guest cart", () => {
   }) => {
     const productRes = await request.get(`${apiURL}/products?size=1`);
     expect(productRes.ok()).toBeTruthy();
-    const product = (await productRes.json())?.data?.content?.[0];
+    const product = (await readJson<ProductListResponse>(productRes)).data?.content?.[0];
     expect(product?.id, "expected at least one product in the catalog").toBeTruthy();
+    if (!product) throw new Error("expected at least one product in the catalog");
 
     await page.goto("/");
     await page.evaluate(

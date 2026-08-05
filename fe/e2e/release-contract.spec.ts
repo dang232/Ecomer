@@ -1,4 +1,4 @@
-import { expect, test, type Page, type Response } from "@playwright/test";
+import { expect, test, type Response } from "@playwright/test";
 
 interface RuntimeConfig {
   schemaVersion: string;
@@ -17,12 +17,12 @@ interface RuntimeConfig {
     notificationsUri: string;
     messagingUri: string;
   };
-  providers: Array<{
+  providers: {
     id: string;
     status: string;
     mode: string;
     reasonCode: string;
-  }>;
+  }[];
 }
 
 const releaseContract = process.env.E2E_RELEASE_CONTRACT === "true";
@@ -87,7 +87,7 @@ test.describe("staging release contract", () => {
     );
     await page.goto("/profile");
     const profileResponse = await profileResponsePromise;
-    expect(profileResponse.request().headers()["authorization"]).toMatch(/^Bearer ey/);
+    expect(profileResponse.request().headers().authorization).toMatch(/^Bearer ey/);
     expect(profileResponse.ok(), `GET /users/me returned ${profileResponse.status()}`).toBe(true);
 
     await expect
@@ -103,10 +103,13 @@ test.describe("staging release contract", () => {
 
 async function expectTrustedTls(response: Response | null): Promise<void> {
   expect(response, "HTTPS navigation must return a response").not.toBeNull();
-  const details = await response!.securityDetails();
+  if (!response) throw new Error("HTTPS navigation did not return a response");
+  const details = await response.securityDetails();
   expect(details, "HTTPS response must expose TLS security details").not.toBeNull();
-  expect(details!.protocol).toMatch(/^TLS 1\.[23]$/);
-  expect(details!.issuer.toLowerCase()).toContain(expectedIssuer.toLowerCase());
+  if (!details) throw new Error("HTTPS response did not expose TLS security details");
+  if (!details.issuer) throw new Error("HTTPS response did not expose a TLS issuer");
+  expect(details.protocol).toMatch(/^TLS 1\.[23]$/);
+  expect(details.issuer.toLowerCase()).toContain(expectedIssuer.toLowerCase());
 }
 
 function expectRuntimeConfig(config: RuntimeConfig): void {

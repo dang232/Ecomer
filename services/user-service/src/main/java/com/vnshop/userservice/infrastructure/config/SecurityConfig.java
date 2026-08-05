@@ -77,6 +77,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/refresh", "/auth/logout")
                         .permitAll()
                         .requestMatchers(AUTH_REQUEST_MATCHER).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/sellers/me").authenticated()
                         .requestMatchers(HttpMethod.GET, "/sellers", "/sellers/{id}", "/sellers/public-profiles").permitAll()
                         .requestMatchers(HttpMethod.GET, "/users/public-profiles").permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")

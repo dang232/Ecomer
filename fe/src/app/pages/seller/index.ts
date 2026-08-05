@@ -1,1 +1,0 @@
-export { SellerPage } from "./SellerPage";

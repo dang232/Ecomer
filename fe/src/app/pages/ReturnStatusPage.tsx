@@ -1,62 +1,63 @@
-import {
-  IconAlertCircle,
-  IconArrowLeft,
-  IconCheck,
-  IconCircleCheck,
-  IconCircleX,
-  IconClock,
-  IconPackage,
-  IconRotate,
-} from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  AlertCircle,
+  ArrowLeft,
+  Check,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Package,
+  RotateCcw,
+} from "lucide-react";
 import { motion } from "motion/react";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { toast } from "sonner";
 
-import { Modal } from "../components/ui/modal";
-import { ApiError } from "../lib/api";
+import { AccountNav } from "@/features/account";
+import { ApiError } from "@/shared/api";
 import {
   getReturn,
   listReturns,
   openDispute,
   type Return,
   type ReturnStatus,
-} from "../lib/api/endpoints/returns";
-import { formatPrice } from "../lib/format";
+} from "@/shared/api/endpoints/returns";
+import { formatPrice } from "@/shared/lib";
+import { Modal } from "@/shared/ui";
 
 const STATUS_CONFIG: Record<
   ReturnStatus,
-  { labelKey: string; icon: typeof IconClock; color: string; bg: string }
+  { labelKey: string; icon: typeof Clock; color: string; bg: string }
 > = {
   REQUESTED: {
     labelKey: "return.status.requested",
-    icon: IconClock,
+    icon: Clock,
     color: "var(--warning)",
     bg: "var(--warning-light)",
   },
   APPROVED: {
     labelKey: "return.status.approved",
-    icon: IconCircleCheck,
+    icon: CheckCircle2,
     color: "var(--info)",
     bg: "var(--info-light)",
   },
   REJECTED: {
     labelKey: "return.status.rejected",
-    icon: IconCircleX,
+    icon: XCircle,
     color: "var(--error)",
     bg: "var(--error-light)",
   },
   COMPLETED: {
     labelKey: "return.status.completed",
-    icon: IconCheck,
+    icon: Check,
     color: "var(--success)",
     bg: "var(--success-light)",
   },
   DISPUTED: {
     labelKey: "return.status.disputed",
-    icon: IconAlertCircle,
+    icon: AlertCircle,
     color: "var(--returned)",
     bg: "var(--returned-light)",
   },
@@ -87,7 +88,7 @@ function ReturnTimeline({ status }: { status: ReturnStatus }) {
               aria-hidden="true"
             >
               {isPast ? (
-                <IconCheck size={16} style={{ color: config.color }} />
+                <Check size={16} style={{ color: config.color }} />
               ) : isCurrent ? (
                 <config.icon size={16} style={{ color: config.color }} />
               ) : (
@@ -242,7 +243,7 @@ function ReturnCard({ returnItem }: { returnItem: Return }) {
       >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <IconRotate size={16} className="text-muted-foreground" />
+            <RotateCcw size={16} className="text-muted-foreground" />
             <span className="text-xs font-mono text-muted-foreground">
               #{returnItem.id.slice(0, 8).toUpperCase()}
             </span>
@@ -258,7 +259,7 @@ function ReturnCard({ returnItem }: { returnItem: Return }) {
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <IconPackage size={16} className="text-muted-foreground" />
+            <Package size={16} className="text-muted-foreground" />
             <span className="text-sm font-medium font-mono">
               {returnItem.orderId?.slice(0, 8).toUpperCase()}
             </span>
@@ -307,7 +308,7 @@ export function ReturnStatusPage() {
   if (returnsQuery.isError) {
     return (
       <div className="max-w-2xl mx-auto py-8 px-4 text-center">
-        <IconAlertCircle size={48} className="mx-auto mb-4 text-error" />
+        <AlertCircle size={48} className="mx-auto mb-4 text-error" />
         <p className="text-muted-foreground mb-4">{t("return.status.loadError")}</p>
         <button
           onClick={() => returnsQuery.refetch()}
@@ -325,11 +326,14 @@ export function ReturnStatusPage() {
         <Link
           to="/orders"
           className="p-2 rounded-lg border border-border hover:bg-muted transition-colors"
+          aria-label={t("return.request.backToOrders")}
         >
-          <IconArrowLeft size={20} />
+          <ArrowLeft size={20} />
         </Link>
         <h1 className="text-2xl font-bold text-foreground">{t("return.status.title")}</h1>
       </div>
+
+      <AccountNav />
 
       {returns.length > 0 ? (
         <div>
@@ -339,7 +343,7 @@ export function ReturnStatusPage() {
         </div>
       ) : (
         <div className="py-16 text-center bg-card rounded-[var(--radius-lg)] border border-border">
-          <IconPackage size={48} className="mx-auto mb-4 text-gray-200" />
+          <Package size={48} className="mx-auto mb-4 text-gray-200" />
           <p className="text-muted-foreground font-medium">{t("return.status.empty")}</p>
           <Link
             to="/orders"

@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
-import { loginViaOidc } from "./_auth";
+
+import { loginAsPersona } from "./_auth";
+import { readJson, type ProductListResponse } from "./_api";
 
 const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
 
@@ -13,7 +15,7 @@ const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
  */
 test.describe("authenticated routes", () => {
   test.beforeEach(async ({ page }) => {
-    await loginViaOidc(page, "seller1");
+    await loginAsPersona(page, "seller");
   });
 
   test("/orders renders without bouncing to /login", async ({ page }) => {
@@ -46,7 +48,7 @@ test.describe("search", () => {
     // FE side filters returning anything.
     const apiRes = await page.request.get(`${apiURL}/products?size=1`);
     expect(apiRes.ok()).toBeTruthy();
-    const apiBody = await apiRes.json();
+    const apiBody = await readJson<ProductListResponse>(apiRes);
     const name: string = apiBody?.data?.content?.[0]?.name ?? "Sony";
     const term = name.split(" ")[0];
 

@@ -6,13 +6,15 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
-import { ImageWithFallback } from "../components/image-with-fallback";
-import { useAuth } from "../hooks/use-auth";
+import { AccountNav } from "@/features/account";
+import { ApiError } from "@/shared/api";
+import { formatPrice } from "@/shared/lib";
+import { ImageWithFallback } from "@/shared/ui";
+
+import { useAuth } from "../hooks/auth-context";
 import { useCart } from "../hooks/use-cart";
 import { productDetailOptions } from "../hooks/use-products";
 import { useWishlist } from "../hooks/use-wishlist";
-import { ApiError } from "../lib/api";
-import { formatPrice } from "../lib/format";
 
 export function WishlistPage() {
   const navigate = useNavigate();
@@ -67,6 +69,8 @@ export function WishlistPage() {
 
   return (
     <div className="max-w-[1100px] mx-auto py-8 px-8">
+      <AccountNav />
+
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-foreground">
           {t("wishlist.pageTitle")}

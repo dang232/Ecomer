@@ -1,438 +1,292 @@
-import {
-  ShoppingBag,
-  Heart,
-  Bell,
-  User,
-  Menu,
-  X,
-  Home,
-  Package,
-  LogOut,
-  Settings,
-  Store,
-  ChevronDown,
-  Sparkles,
-} from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
-import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { Heart, Moon, ShoppingBag, Sun, User, type LucideIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
+
+import { ImageWithFallback, LiveRegion } from "@/shared/ui";
 
 import { useCart } from "../hooks/use-cart";
 import { useSearchSuggestions } from "../hooks/use-search-suggestions";
+import { useVNShop } from "../hooks/use-vnshop";
 import { useWishlist } from "../hooks/use-wishlist";
-import { comingSoon } from "../lib/ui/coming-soon";
 
-import { ImageWithFallback } from "./image-with-fallback";
 import { LanguageSwitcher } from "./language-switcher";
 import { NotificationBell } from "./notification-bell";
 import { SearchAutocomplete } from "./search-autocomplete";
-import { LiveRegion } from "./ui/live-region";
-import { useVNShop } from "./vnshop-context";
 
-// ─── Announcement Bar ──────────────────────────────────────────────────────────
+interface CategoryLink {
+  id: string;
+  labelKey: string;
+  defaultLabel: string;
+}
+
+const categoryLinks: readonly CategoryLink[] = [
+  { id: "all", labelKey: "home.tabs.all", defaultLabel: "All" },
+  { id: "electronics", labelKey: "categories.electronics", defaultLabel: "Electronics" },
+  { id: "fashion", labelKey: "categories.fashion", defaultLabel: "Fashion" },
+  { id: "home", labelKey: "categories.home", defaultLabel: "Home & Living" },
+  { id: "software", labelKey: "categories.software", defaultLabel: "Software" },
+  { id: "beauty", labelKey: "categories.beauty", defaultLabel: "Beauty" },
+  { id: "sports", labelKey: "categories.sports", defaultLabel: "Sports" },
+];
+
+function ActionLink({
+  to,
+  label,
+  icon: Icon,
+  count,
+}: {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  count?: number;
+}) {
+  return (
+    <Link
+      to={to}
+      aria-label={label}
+      className="relative inline-flex min-h-[var(--target-web)] min-w-[var(--target-web)] items-center justify-center rounded-[var(--radius-control)] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <Icon className="h-5 w-5" aria-hidden="true" />
+      {count && count > 0 ? (
+        <span className="absolute right-0.5 top-0.5 grid min-h-4 min-w-4 place-items-center rounded-full bg-error px-1 text-[10px] font-bold text-white">
+          {count > 99 ? "99+" : count}
+        </span>
+      ) : null}
+    </Link>
+  );
+}
+
 export function AnnouncementBar() {
   const { t } = useTranslation();
   return (
-    <div className="bg-primary text-white text-center py-2.5 px-4 text-xs font-medium tracking-tight animate-fade-in">
-      <Sparkles className="inline w-3.5 h-3.5 -mt-0.5 mr-1.5" />
-      {t("nav.announcement", { defaultValue: "New users get" })}{" "}
-      <span className="text-primary-light font-semibold">₫50,000 OFF</span>{" "}
-      {t("nav.announcementSuffix", { defaultValue: "first order — Code:" })}{" "}
-      <strong>VNWELCOME</strong>
+    <div className="bg-primary px-4 py-2 text-center text-xs font-medium text-primary-foreground">
+      {t("nav.announcement")} {t("nav.announcementSuffix")}
     </div>
   );
 }
-
-// ─── Categories Bar ────────────────────────────────────────────────────────────
-const CATEGORIES_CONFIG = [
-  { id: "all", labelKey: "home.tabs.all", default: "All" },
-  { id: "electronics", labelKey: "categories.electronics", default: "Electronics" },
-  { id: "fashion", labelKey: "categories.fashion", default: "Fashion" },
-  { id: "home", labelKey: "categories.home", default: "Home & Living" },
-  { id: "software", labelKey: "categories.software", default: "Software" },
-  { id: "beauty", labelKey: "categories.beauty", default: "Beauty" },
-  { id: "sports", labelKey: "categories.sports", default: "Sports" },
-  { id: "books", labelKey: "categories.books", default: "Books" },
-  { id: "automotive", labelKey: "categories.automotive", default: "Automotive" },
-  { id: "digital", labelKey: "categories.digital", default: "Digital Goods" },
-  { id: "food", labelKey: "categories.food", default: "Food & Beverage" },
-] as const;
 
 export function CategoriesBar() {
-  const navigate = useNavigate();
   const { t } = useTranslation();
-  const [active, setActive] = useState("all");
-
-  const categories = useMemo(
-    () =>
-      CATEGORIES_CONFIG.map((cat) => ({
-        id: cat.id,
-        label: t(cat.labelKey, { defaultValue: cat.default }),
-      })),
-    [t],
-  );
+  const location = useLocation();
 
   return (
-    <div className="flex gap-1 px-[var(--content-padding)] py-3 bg-card border-b border-border overflow-x-auto scrollbar-hide">
-      {categories.map((cat) => (
-        <button
-          key={cat.id}
-          onClick={() => {
-            setActive(cat.id);
-            if (cat.id !== "all") {
-              void navigate(`/search?cat=${cat.id}`);
-            } else {
-              void navigate("/");
-            }
-          }}
-          className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-medium transition-all duration-[var(--duration-fast)] select-none ${
-            active === cat.id
-              ? "bg-primary text-white shadow-[0_2px_8px_oklch(from_var(--primary)_l_c_h_/_0.3)]"
-              : "text-muted-foreground hover:bg-muted hover:text-foreground"
-          }`}
-        >
-          {cat.label}
-        </button>
-      ))}
-    </div>
+    <nav
+      aria-label={t("storefront.categories.navigation")}
+      className="hidden border-t border-border bg-card md:block"
+    >
+      <div className="mx-auto flex max-w-[1440px] gap-1 overflow-x-auto px-4 py-2 sm:px-6 lg:px-8">
+        {categoryLinks.map((category) => {
+          const href = category.id === "all" ? "/" : `/search?cat=${category.id}`;
+          const active =
+            (category.id === "all" && location.pathname === "/") ||
+            new URLSearchParams(location.search).get("cat") === category.id;
+          return (
+            <Link
+              key={category.id}
+              to={href}
+              aria-current={active ? "page" : undefined}
+              className={`shrink-0 rounded-[var(--radius-round)] px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                active
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+            >
+              {t(category.labelKey, { defaultValue: category.defaultLabel })}
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
   );
 }
 
-// ─── Navbar ────────────────────────────────────────────────────────────────────
 export function Navbar() {
   const navigate = useNavigate();
-  const { user, isLoggedIn, logout } = useVNShop();
+  const { t } = useTranslation();
+  const { user, isDark, isLoggedIn, logout, toggleTheme } = useVNShop();
   const { itemCount: cartCount } = useCart();
   const { ids: wishlist } = useWishlist();
   const [searchQ, setSearchQ] = useState("");
-  const { suggestions } = useSearchSuggestions(searchQ);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  const { t } = useTranslation();
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const mobileMenuRef = useRef<HTMLDivElement>(null);
   const [cartAnnouncement, setCartAnnouncement] = useState("");
-  const isMounted = useRef(false);
+  const cartCountRef = useRef(cartCount);
+  const { suggestions } = useSearchSuggestions(searchQ);
 
-  // Track scroll for nav shadow
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  // Announce cart count changes to screen readers, but not on initial mount
-  useEffect(() => {
-    if (!isMounted.current) {
-      isMounted.current = true;
-      return;
-    }
-    if (cartCount === 0) {
-      setCartAnnouncement(t("cart.empty"));
-    } else {
+    if (cartCountRef.current !== cartCount) {
       setCartAnnouncement(t("cart.itemCount", { count: cartCount }));
+      cartCountRef.current = cartCount;
     }
   }, [cartCount, t]);
 
-  const closeUserMenu = useCallback(() => {
-    setUserMenuOpen(false);
-    triggerRef.current?.focus();
-  }, []);
-
-  const handleDropdownKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLDivElement>) => {
-      if (!menuRef.current) return;
-      const items = Array.from(
-        menuRef.current.querySelectorAll<HTMLElement>("button[role='menuitem']"),
-      );
-      const focused = document.activeElement as HTMLElement;
-      const idx = items.indexOf(focused);
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        items[(idx + 1) % items.length]?.focus();
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        items[(idx - 1 + items.length) % items.length]?.focus();
-      } else if (e.key === "Home") {
-        e.preventDefault();
-        items[0]?.focus();
-      } else if (e.key === "End") {
-        e.preventDefault();
-        items[items.length - 1]?.focus();
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        closeUserMenu();
-      }
-    },
-    [closeUserMenu],
-  );
-
-  const handleMobileMenuKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === "Escape") {
-      setMenuOpen(false);
-      return;
-    }
-    if (e.key !== "Tab" || !mobileMenuRef.current) return;
-    const focusable = Array.from(
-      mobileMenuRef.current.querySelectorAll<HTMLElement>(
-        "button, input, a, [tabindex]:not([tabindex='-1'])",
-      ),
-    ).filter((el) => !el.hasAttribute("disabled"));
-    if (focusable.length === 0) return;
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (e.shiftKey) {
-      if (document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      }
-    } else {
-      if (document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    }
-  }, []);
-
-  const submitSearch = (q: string) => {
-    void navigate(`/search?q=${encodeURIComponent(q)}`);
+  const submitSearch = (query: string) => {
+    const normalized = query.trim();
+    void navigate(normalized ? `/search?q=${encodeURIComponent(normalized)}` : "/search");
   };
+  const themeActionLabel = isDark ? t("nav.switchToLightMode") : t("nav.switchToDarkMode");
 
   return (
-    <>
+    <header className="sticky top-0 z-40 border-b border-border bg-card">
       <LiveRegion message={cartAnnouncement} />
-
-      <nav
-        className={`sticky top-0 z-50 flex items-center px-[var(--content-padding)] h-[var(--nav-height)] bg-card/85 backdrop-blur-xl backdrop-saturate-[1.2] border-b border-border transition-shadow duration-[var(--duration-base)] ${
-          scrolled ? "shadow-md" : ""
-        }`}
-      >
-        {/* Logo */}
+      <AnnouncementBar />
+      <div className="mx-auto grid h-14 max-w-[1440px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 md:h-16 md:gap-4 sm:px-6 lg:px-8">
         <Link
           to="/"
-          className="shrink-0 text-xl font-extrabold text-primary tracking-tight mr-5 hover:scale-[1.02] transition-transform duration-[var(--duration-fast)]"
+          className="text-xl font-extrabold text-[var(--web-brand)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label="VNShop home"
         >
           VNShop
         </Link>
 
-        {/* Search — desktop */}
-        <div className="flex-1 max-w-[560px] hidden sm:block relative">
+        <div className="hidden min-w-0 md:block">
           <SearchAutocomplete
             value={searchQ}
             onValueChange={setSearchQ}
             suggestions={suggestions}
             onSubmit={submitSearch}
-            placeholder={t("search.placeholder", {
-              defaultValue: "Search for products, brands, and categories...",
-            })}
+            placeholder={t("search.placeholder")}
           />
         </div>
 
-        {/* Right actions */}
-        <div className="flex items-center gap-1.5 ml-auto">
-          <LanguageSwitcher />
-          <NotificationBell />
-
+        <div className="flex items-center justify-end gap-1">
+          <div className="hidden lg:block">
+            <LanguageSwitcher />
+          </div>
           <button
-            onClick={() => navigate("/wishlist")}
-            className="relative flex items-center justify-center w-9 h-9 rounded-[var(--radius-md)] text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-[var(--duration-fast)]"
-            title={t("auth.wishlist")}
-            aria-label={t("auth.wishlist")}
+            type="button"
+            onClick={toggleTheme}
+            aria-label={themeActionLabel}
+            aria-pressed={isDark}
+            title={themeActionLabel}
+            className="hidden min-h-[var(--target-web)] min-w-[var(--target-web)] items-center justify-center rounded-[var(--radius-control)] text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:inline-flex"
           >
-            <Heart className="w-5 h-5" />
-            {wishlist.length > 0 ? (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 rounded-full bg-error text-white text-[10px] font-bold flex items-center justify-center animate-bounce-in shadow-[0_0_0_2px_var(--card)]">
-                {wishlist.length}
-              </span>
-            ) : null}
+            {isDark ? (
+              <Sun className="h-5 w-5" aria-hidden="true" />
+            ) : (
+              <Moon className="h-5 w-5" aria-hidden="true" />
+            )}
           </button>
-
           <button
-            onClick={() => navigate("/cart")}
-            className="relative flex items-center justify-center w-9 h-9 rounded-[var(--radius-md)] text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-[var(--duration-fast)]"
-            title={t("cart.title")}
-            aria-label={t("cart.title")}
+            type="button"
+            onClick={toggleTheme}
+            aria-label={themeActionLabel}
+            aria-pressed={isDark}
+            title={themeActionLabel}
+            className="inline-flex min-h-[var(--target-web)] min-w-[var(--target-web)] items-center justify-center rounded-[var(--radius-control)] text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
           >
-            <ShoppingBag className="w-5 h-5" />
-            {cartCount > 0 ? (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 rounded-full bg-error text-white text-[10px] font-bold flex items-center justify-center animate-bounce-in shadow-[0_0_0_2px_var(--card)]">
-                {cartCount}
-              </span>
-            ) : null}
+            {isDark ? (
+              <Sun className="h-5 w-5" aria-hidden="true" />
+            ) : (
+              <Moon className="h-5 w-5" aria-hidden="true" />
+            )}
           </button>
-
-          {/* User menu */}
-          {isLoggedIn ? (
-            <div className="relative ml-1">
+          <div className="hidden md:block">
+            <NotificationBell />
+          </div>
+          <div className="hidden sm:block">
+            <ActionLink
+              to="/wishlist"
+              label={t("auth.wishlist")}
+              icon={Heart}
+              count={wishlist.length}
+            />
+          </div>
+          <ActionLink to="/cart" label={t("cart.title")} icon={ShoppingBag} count={cartCount} />
+          <div className="relative hidden md:block">
+            {isLoggedIn ? (
               <button
-                ref={triggerRef}
-                onClick={() => setUserMenuOpen((o) => !o)}
-                className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-[var(--radius-md)] hover:bg-muted transition-colors"
-                aria-label="Account menu"
-                aria-expanded={userMenuOpen}
-                aria-haspopup="true"
+                type="button"
+                data-account-menu-trigger
+                aria-label={t("storefront.accountMenu")}
+                aria-expanded={menuOpen}
+                aria-haspopup="menu"
+                onClick={() => setMenuOpen((open) => !open)}
+                className="inline-flex min-h-[var(--target-web)] items-center gap-2 rounded-[var(--radius-control)] px-2 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <ImageWithFallback
                   src={user?.avatar ?? ""}
-                  alt={user?.name ?? ""}
-                  className="w-8 h-8 rounded-full object-cover border-2 border-border"
-                  placeholder={
-                    <div className="w-full h-full rounded-full flex items-center justify-center text-xs font-bold text-primary-foreground bg-primary">
-                      {user?.name?.charAt(0)?.toUpperCase() ?? "?"}
-                    </div>
-                  }
+                  alt=""
+                  className="h-7 w-7 rounded-full object-cover"
                 />
-                <span className="hidden md:block text-sm font-medium text-foreground max-w-[80px] truncate">
-                  {user?.name?.split(" ").pop()}
-                </span>
-                <ChevronDown className="w-3.5 h-3.5 hidden md:block text-muted-foreground" />
+                <span className="hidden lg:inline">{user?.name ?? t("auth.myAccount")}</span>
               </button>
-              <AnimatePresence>
-                {userMenuOpen ? (
-                  <motion.div
-                    ref={menuRef}
-                    role="menu"
-                    onKeyDown={handleDropdownKeyDown}
-                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute right-0 top-full mt-2 w-52 rounded-[var(--radius-xl)] shadow-xl border border-border bg-card overflow-hidden z-50"
-                  >
-                    <div className="p-4 border-b border-border">
-                      <p className="font-semibold text-sm text-foreground">{user?.name}</p>
-                      <p className="text-xs mt-0.5 text-muted-foreground">{user?.email}</p>
-                    </div>
-                    {[
-                      {
-                        icon: User,
-                        label: t("auth.myAccount"),
-                        action: () => void navigate("/profile"),
-                      },
-                      {
-                        icon: Package,
-                        label: t("auth.myOrders"),
-                        action: () => void navigate("/orders"),
-                      },
-                      {
-                        icon: Heart,
-                        label: t("auth.wishlist"),
-                        action: () => void navigate("/wishlist"),
-                      },
-                      {
-                        icon: Bell,
-                        label: t("auth.notifications"),
-                        action: () => void navigate("/notifications"),
-                      },
-                      {
-                        icon: Settings,
-                        label: t("auth.settings"),
-                        action: () => comingSoon("Settings", t),
-                      },
-                    ].map((item) => (
-                      <button
-                        key={item.label}
-                        role="menuitem"
-                        onClick={() => {
-                          item.action();
-                          setUserMenuOpen(false);
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-muted transition-colors text-left text-foreground"
-                      >
-                        <item.icon className="w-4 h-4 text-primary" />
-                        {item.label}
-                      </button>
-                    ))}
-                    <div className="border-t border-border">
-                      <button
-                        role="menuitem"
-                        onClick={() => {
-                          logout("/");
-                          setUserMenuOpen(false);
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-error-light transition-colors text-left text-error"
-                      >
-                        <LogOut className="w-4 h-4" /> {t("auth.logout")}
-                      </button>
-                    </div>
-                  </motion.div>
-                ) : null}
-              </AnimatePresence>
-            </div>
-          ) : (
-            <Link
-              to="/login"
-              className="ml-1 flex items-center gap-1.5 px-4 py-2 rounded-[var(--radius-md)] text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary-hover transition-colors"
-            >
-              <User className="w-4 h-4" /> {t("auth.login", { defaultValue: "Sign In" })}
-            </Link>
-          )}
-
-          {/* Mobile menu toggle */}
-          <button
-            className="md:hidden flex items-center justify-center w-9 h-9 rounded-[var(--radius-md)] text-muted-foreground hover:bg-muted"
-            onClick={() => setMenuOpen((o) => !o)}
-            aria-label="Open menu"
-            aria-expanded={menuOpen}
-          >
-            {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-        </div>
-      </nav>
-
-      {/* Mobile menu */}
-      <AnimatePresence>
-        {menuOpen ? (
-          <motion.div
-            ref={mobileMenuRef}
-            onKeyDown={handleMobileMenuKeyDown}
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="md:hidden border-b border-border overflow-hidden bg-card z-40 relative"
-          >
-            <div className="p-4 space-y-1">
-              {/* Mobile search */}
-              <div className="mb-3 sm:hidden">
-                <SearchAutocomplete
-                  value={searchQ}
-                  onValueChange={setSearchQ}
-                  suggestions={suggestions}
-                  onSubmit={(q) => {
-                    submitSearch(q);
+            ) : (
+              <Link
+                to="/login"
+                className="inline-flex min-h-[var(--target-web)] items-center gap-2 rounded-[var(--radius-control)] bg-primary px-3 text-sm font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <User className="h-4 w-4" aria-hidden="true" />
+                {t("auth.login")}
+              </Link>
+            )}
+            {menuOpen && isLoggedIn ? (
+              <div
+                role="menu"
+                className="absolute right-0 top-[calc(100%+0.5rem)] z-50 grid min-w-52 border border-border bg-card p-1 shadow-[var(--shadow-lg)]"
+              >
+                <Link
+                  to="/profile"
+                  role="menuitem"
+                  onClick={() => setMenuOpen(false)}
+                  className="px-3 py-2 text-sm hover:bg-muted"
+                >
+                  {t("auth.myAccount")}
+                </Link>
+                <Link
+                  to="/orders"
+                  role="menuitem"
+                  onClick={() => setMenuOpen(false)}
+                  className="px-3 py-2 text-sm hover:bg-muted"
+                >
+                  {t("auth.myOrders")}
+                </Link>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={toggleTheme}
+                  className="flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted"
+                >
+                  {isDark ? (
+                    <Sun className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <Moon className="h-4 w-4" aria-hidden="true" />
+                  )}
+                  {themeActionLabel}
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    logout("/");
                     setMenuOpen(false);
                   }}
-                  placeholder={t("search.mobilePlaceholder", { defaultValue: "Search..." })}
-                />
-              </div>
-              {[
-                { icon: Home, label: t("nav.home"), path: "/" },
-                { icon: Package, label: t("auth.myOrders"), path: "/orders" },
-                { icon: Heart, label: t("auth.wishlist"), path: "/wishlist" },
-                { icon: User, label: t("auth.myAccount"), path: "/profile" },
-                { icon: Store, label: t("nav.sellerChannel"), path: "/seller" },
-              ].map((item) => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setMenuOpen(false)}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-md)] text-foreground hover:bg-muted transition-colors text-sm font-medium text-left"
+                  className="px-3 py-2 text-left text-sm text-error hover:bg-error-light"
                 >
-                  <item.icon className="w-[18px] h-[18px] text-muted-foreground" />
-                  {item.label}
-                </Link>
-              ))}
-              <div className="flex items-center gap-2 px-3 py-2.5">
-                <LanguageSwitcher />
+                  {t("auth.logout")}
+                </button>
               </div>
-            </div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-    </>
+            ) : null}
+          </div>
+          <Link
+            to={isLoggedIn ? "/profile" : "/login"}
+            aria-label={t("auth.myAccount")}
+            className="inline-flex min-h-[var(--target-web)] min-w-[var(--target-web)] items-center justify-center rounded-[var(--radius-control)] text-muted-foreground hover:bg-muted md:hidden"
+          >
+            <User className="h-5 w-5" aria-hidden="true" />
+          </Link>
+        </div>
+      </div>
+      <div className="border-t border-border px-4 py-2 md:hidden">
+        <SearchAutocomplete
+          value={searchQ}
+          onValueChange={setSearchQ}
+          suggestions={suggestions}
+          onSubmit={submitSearch}
+          placeholder={t("search.mobilePlaceholder")}
+        />
+      </div>
+      <CategoriesBar />
+    </header>
   );
 }

@@ -11,6 +11,7 @@ import com.vnshop.orderservice.application.CancelOrderUseCase;
 import com.vnshop.orderservice.application.CheckoutOrderUseCase;
 import com.vnshop.orderservice.application.CompleteReturnUseCase;
 import com.vnshop.orderservice.application.CreateOrderUseCase;
+import com.vnshop.orderservice.application.FindOrderByIdempotencyKeyUseCase;
 import com.vnshop.orderservice.application.finance.AllocateOrderFinancialsUseCase;
 import com.vnshop.orderservice.application.DisputeQueryUseCase;
 import com.vnshop.orderservice.application.DisputeUseCase;
@@ -160,8 +161,10 @@ public class UseCaseConfig {
     CalculateCheckoutUseCase calculateCheckoutUseCase(
             CartRepositoryPort cartRepositoryPort,
             ProductCatalogPort productCatalogPort,
-            com.vnshop.orderservice.domain.port.out.CouponValidationPort couponValidationPort) {
-        return new CalculateCheckoutUseCase(cartRepositoryPort, productCatalogPort, couponValidationPort);
+            com.vnshop.orderservice.domain.port.out.CouponValidationPort couponValidationPort,
+            TaxCalculationService taxCalculationService) {
+        return new CalculateCheckoutUseCase(
+                cartRepositoryPort, productCatalogPort, couponValidationPort, taxCalculationService);
     }
 
     @Bean
@@ -192,6 +195,11 @@ public class UseCaseConfig {
     @Bean
     ViewOrderUseCase viewOrderUseCase(OrderRepositoryPort orderRepositoryPort) {
         return new ViewOrderUseCase(orderRepositoryPort);
+    }
+
+    @Bean
+    FindOrderByIdempotencyKeyUseCase findOrderByIdempotencyKeyUseCase(OrderRepositoryPort orderRepositoryPort) {
+        return new FindOrderByIdempotencyKeyUseCase(orderRepositoryPort);
     }
 
     @Bean

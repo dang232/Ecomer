@@ -1,7 +1,7 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-import { categoryTree } from "../lib/api/endpoints/categories";
-import type { Category } from "../types/api";
+import { categoryTree } from "@/shared/api/endpoints/categories";
+import type { Category } from "@/shared/contracts";
 
 export const categoriesOptions = () =>
   queryOptions<Category[]>({
@@ -11,8 +11,4 @@ export const categoriesOptions = () =>
 
 export function useCategories() {
   return useQuery(categoriesOptions());
-}
-
-export function categoryDisplayLabel(category: Pick<Category, "id" | "name" | "label">): string {
-  return category.label ?? category.name ?? category.id;
 }

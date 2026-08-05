@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
-import { videoStatus } from "../../../app/lib/api/endpoints/videos";
-import type { VideoStatus, VideoStatusResponse } from "../../../app/types/api/video";
+import { videoStatus } from "@/shared/api/endpoints/videos";
+import type { VideoStatus, VideoStatusResponse } from "@/shared/contracts/api/video";
 
 // ─── Poll intervals per pipeline stage ───────────────────────────────────────
 
@@ -61,7 +61,10 @@ export function useVideoStatus(
 
   const query = useQuery({
     queryKey: ["videos", "status", videoId],
-    queryFn: () => videoStatus(videoId!),
+    queryFn: () => {
+      if (!videoId) throw new Error("A video ID is required to load status");
+      return videoStatus(videoId);
+    },
     enabled,
     retry: 2,
     refetchInterval(q) {

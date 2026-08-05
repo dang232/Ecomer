@@ -1,206 +1,327 @@
-import { IconBell, IconBellCog, IconBellOff, IconMail } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Bell, BellOff, Mail, Settings } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
-import { useNotificationPreferences } from "../../hooks/use-notification-preferences";
-import type { TypePreference, NotificationChannel } from "../../types/api/notification-preferences";
+import {
+  getNotificationPreferences,
+  updateNotificationPreferences,
+} from "@/shared/api/endpoints/notification-preferences";
+import type {
+  NotificationChannel,
+  NotificationPreferences,
+  TypePreference,
+} from "@/shared/contracts/api/notification-preferences";
 
-const NOTIFICATION_TYPE_LABELS: Record<string, { label: string; description: string }> = {
-  ORDER_CREATED: { label: "Đơn hàng mới", description: "Khi đơn hàng được tạo thành công" },
-  ORDER_CANCELLED: { label: "Đơn hàng bị hủy", description: "Khi đơn hàng bị hủy" },
-  ORDER_SHIPPED: { label: "Đã giao cho vận chuyển", description: "Khi đơn hàng được gửi đi" },
-  ORDER_DELIVERED: { label: "Đã giao hàng", description: "Khi đơn hàng giao thành công" },
-  PAYMENT_COMPLETED: {
-    label: "Thanh toán thành công",
-    description: "Khi thanh toán được xác nhận",
-  },
-  PAYMENT_REFUNDED: { label: "Hoàn tiền", description: "Khi đơn hàng được hoàn tiền" },
-  SELLER_NEW_ORDER: {
-    label: "Đơn hàng mới (Seller)",
-    description: "Khi có đơn hàng mới cần xử lý",
-  },
-  PRODUCT_APPROVED: { label: "Sản phẩm được duyệt", description: "Khi sản phẩm được admin duyệt" },
-  PRODUCT_REJECTED: { label: "Sản phẩm bị từ chối", description: "Khi sản phẩm bị từ chối" },
-  REVIEW_REPLIED: {
-    label: "Phản hồi đánh giá",
-    description: "Khi có phản hồi cho đánh giá của bạn",
-  },
-  RETURN_REQUESTED: { label: "Yêu cầu trả hàng", description: "Khi có yêu cầu trả hàng" },
-  PAYOUT_COMPLETED: { label: "Rút tiền thành công", description: "Khi lệnh rút tiền hoàn tất" },
-};
+const PREFERENCES_KEY = ["notifications", "preferences"] as const;
 
-const CHANNELS: { key: NotificationChannel; label: string; icon: typeof IconBell }[] = [
-  { key: "IN_APP", label: "Trong ứng dụng", icon: IconBell },
-  { key: "EMAIL", label: "Email", icon: IconMail },
+const NOTIFICATION_TYPES = [
+  "ORDER_CREATED",
+  "ORDER_CANCELLED",
+  "ORDER_SHIPPED",
+  "ORDER_DELIVERED",
+  "PAYMENT_COMPLETED",
+  "PAYMENT_REFUNDED",
+  "USER_REGISTERED",
+  "USER_PASSWORD_RESET",
+  "SELLER_NEW_ORDER",
+  "PRODUCT_APPROVED",
+  "PRODUCT_REJECTED",
+  "REVIEW_REPLIED",
+  "RETURN_REQUESTED",
+  "PAYOUT_COMPLETED",
+] as const;
+
+const CHANNELS: readonly { key: NotificationChannel; icon: typeof Bell }[] = [
+  { key: "IN_APP", icon: Bell },
+  { key: "EMAIL", icon: Mail },
 ];
 
+type SaveState = "idle" | "saving" | "saved" | "error";
+
+function normalizePreferences(preferences: NotificationPreferences): NotificationPreferences {
+  const byType = new Map(preferences.typePreferences.map((entry) => [entry.type, entry]));
+  const known = NOTIFICATION_TYPES.map(
+    (type) =>
+      byType.get(type) ?? {
+        type,
+        channels: ["IN_APP", "EMAIL"] satisfies NotificationChannel[],
+      },
+  );
+  const extras = preferences.typePreferences.filter(
+    (entry) => !NOTIFICATION_TYPES.includes(entry.type as (typeof NOTIFICATION_TYPES)[number]),
+  );
+  return {
+    ...preferences,
+    typePreferences: [...known, ...extras],
+  };
+}
+
 export function NotificationPreferencesPage() {
-  const { preferences, isLoading, update, isUpdating } = useNotificationPreferences();
-  const [localPrefs, setLocalPrefs] = useState<TypePreference[]>([]);
-  const [muted, setMuted] = useState(false);
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const [draft, setDraft] = useState<NotificationPreferences | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+
+  const query = useQuery({
+    queryKey: PREFERENCES_KEY,
+    queryFn: getNotificationPreferences,
+    retry: false,
+  });
 
   useEffect(() => {
-    if (preferences) {
-      setLocalPrefs(preferences.typePreferences);
-      setMuted(preferences.muted);
+    if (query.data) {
+      setDraft(normalizePreferences(query.data));
       setDirty(false);
     }
-  }, [preferences]);
+  }, [query.data]);
+
+  const mutation = useMutation<
+    NotificationPreferences,
+    Error,
+    { muted: boolean; typePreferences: TypePreference[] },
+    { previous?: NotificationPreferences }
+  >({
+    mutationFn: updateNotificationPreferences,
+    onMutate: async (body) => {
+      setSaveState("saving");
+      await queryClient.cancelQueries({ queryKey: PREFERENCES_KEY });
+      const previous = queryClient.getQueryData<NotificationPreferences>(PREFERENCES_KEY);
+      queryClient.setQueryData<NotificationPreferences>(PREFERENCES_KEY, (current) =>
+        current
+          ? {
+              ...current,
+              muted: body.muted,
+              typePreferences: body.typePreferences,
+              updatedAt: new Date().toISOString(),
+            }
+          : current,
+      );
+      return { previous };
+    },
+    onSuccess: (next) => {
+      const normalized = normalizePreferences(next);
+      queryClient.setQueryData(PREFERENCES_KEY, normalized);
+      setDraft(normalized);
+      setDirty(false);
+      setSaveState("saved");
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previous) {
+        const normalized = normalizePreferences(context.previous);
+        queryClient.setQueryData(PREFERENCES_KEY, normalized);
+        setDraft(normalized);
+      }
+      setSaveState("error");
+    },
+  });
+
+  const preferenceByType = useMemo(() => {
+    return new Map((draft?.typePreferences ?? []).map((entry) => [entry.type, entry]));
+  }, [draft?.typePreferences]);
+  const renderedTypes = useMemo(
+    () => draft?.typePreferences.map((entry) => entry.type) ?? [...NOTIFICATION_TYPES],
+    [draft?.typePreferences],
+  );
 
   const toggleChannel = (type: string, channel: NotificationChannel) => {
-    setLocalPrefs((prev) => {
-      const existing = prev.find((p) => p.type === type);
-      if (!existing) {
-        // Type not in prefs yet — add with this channel toggled off (was default on)
-        return [
-          ...prev,
-          { type, channels: CHANNELS.map((c) => c.key).filter((c) => c !== channel) },
-        ];
-      }
-      const hasChannel = existing.channels.includes(channel);
-      const newChannels = hasChannel
-        ? existing.channels.filter((c) => c !== channel)
-        : [...existing.channels, channel];
-      return prev.map((p) => (p.type === type ? { ...p, channels: newChannels } : p));
+    setDraft((current) => {
+      if (!current) return current;
+      const nextPreferences = current.typePreferences.map((entry) => {
+        if (entry.type !== type) return entry;
+        const enabled = entry.channels.includes(channel);
+        return {
+          ...entry,
+          channels: enabled
+            ? entry.channels.filter((value) => value !== channel)
+            : [...entry.channels, channel],
+        };
+      });
+      return { ...current, typePreferences: nextPreferences };
     });
     setDirty(true);
+    setSaveState("idle");
   };
 
-  const isChannelEnabled = (type: string, channel: NotificationChannel): boolean => {
-    const pref = localPrefs.find((p) => p.type === type);
-    if (!pref) return true; // Default: all enabled
-    return pref.channels.includes(channel);
+  const save = () => {
+    if (!draft) return;
+    mutation.mutate({
+      muted: draft.muted,
+      typePreferences: draft.typePreferences,
+    });
   };
 
-  const handleSave = () => {
-    update({ muted, typePreferences: localPrefs });
-    setDirty(false);
-  };
-
-  const handleToggleMute = () => {
-    setMuted((prev) => !prev);
-    setDirty(true);
-  };
-
-  if (isLoading) {
+  if (query.isError) {
     return (
-      <div className="mx-auto max-w-2xl px-4 py-6">
+      <div className="mx-auto max-w-3xl rounded-[var(--radius-lg)] border border-border bg-card px-6 py-8">
+        <p className="text-sm text-error">{t("notificationPreferences.loadError")}</p>
+      </div>
+    );
+  }
+
+  if (query.isLoading || !draft) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-8">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-muted rounded w-48" />
-          <div className="h-4 bg-muted rounded w-64" />
-          {Array.from({ length: 6 }).map((_, i) => (
-            // eslint-disable-next-line react/no-array-index-key -- loading skeleton placeholders have no stable identity
-            <div key={i} className="h-16 bg-muted rounded" />
-          ))}
+          <div className="h-8 w-48 rounded bg-muted" />
+          <div className="h-24 rounded bg-muted" />
+          <div className="h-16 rounded bg-muted" />
+          <div className="h-16 rounded bg-muted" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <IconBellCog size={24} className="text-foreground" />
-          <h1 className="text-xl font-semibold text-foreground">Cài đặt thông báo</h1>
+    <div className="mx-auto max-w-3xl rounded-[var(--radius-lg)] border border-border bg-card px-6 py-6">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <Settings size={22} className="text-foreground" />
+          <div>
+            <h1 className="text-xl font-semibold text-foreground">
+              {t("notificationPreferences.title", { defaultValue: "Notification preferences" })}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {t("notificationPreferences.subtitle", {
+                defaultValue: "Choose which supported updates VNShop can send to you.",
+              })}
+            </p>
+          </div>
         </div>
-        {dirty ? (
-          <button
-            onClick={handleSave}
-            disabled={isUpdating}
-            className="rounded-md px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-            style={{ backgroundColor: "var(--primary)" }}
-          >
-            {isUpdating ? "Đang lưu..." : "Lưu thay đổi"}
-          </button>
-        ) : null}
-      </div>
+        <button
+          type="button"
+          onClick={save}
+          disabled={!dirty || mutation.isPending}
+          className="rounded-[var(--radius-md)] bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+        >
+          {mutation.isPending
+            ? t("notificationPreferences.saving", { defaultValue: "Saving..." })
+            : t("notificationPreferences.save", { defaultValue: "Save changes" })}
+        </button>
+      </header>
 
-      {/* Global mute toggle */}
-      <div className="mb-6 rounded-lg border border-border p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {muted ? (
-              <IconBellOff size={20} className="text-muted-foreground" />
+      <section className="mt-6 rounded-[var(--radius-md)] border border-border p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            {draft.muted ? (
+              <BellOff size={20} className="mt-0.5 text-muted-foreground" />
             ) : (
-              <IconBell size={20} className="text-foreground" />
+              <Bell size={20} className="mt-0.5 text-foreground" />
             )}
             <div>
               <p className="font-medium text-foreground">
-                {muted ? "Tắt tất cả thông báo" : "Thông báo đang bật"}
+                {t(
+                  draft.muted
+                    ? "notificationPreferences.mutedTitle"
+                    : "notificationPreferences.activeTitle",
+                )}
               </p>
               <p className="text-sm text-muted-foreground">
-                {muted
-                  ? "Bạn sẽ không nhận bất kỳ thông báo nào"
-                  : "Tùy chỉnh từng loại thông báo bên dưới"}
+                {t(
+                  draft.muted
+                    ? "notificationPreferences.mutedDescription"
+                    : "notificationPreferences.activeDescription",
+                  {
+                    defaultValue: draft.muted
+                      ? "You will not receive in-app or email updates until you turn notifications back on."
+                      : "Adjust each supported notification type below.",
+                  },
+                )}
               </p>
             </div>
           </div>
           <button
-            onClick={handleToggleMute}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              !muted ? "bg-[var(--primary)]" : "bg-muted"
-            }`}
+            type="button"
             role="switch"
-            aria-checked={!muted}
-            aria-label="Bật/tắt thông báo"
+            aria-checked={draft.muted ? "true" : "false"}
+            aria-label={t("notificationPreferences.muteToggle", {
+              defaultValue: "Mute all notifications",
+            })}
+            onClick={() => {
+              setDraft((current) => (current ? { ...current, muted: !current.muted } : current));
+              setDirty(true);
+              setSaveState("idle");
+            }}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full ${
+              draft.muted ? "bg-muted" : "bg-primary"
+            }`}
           >
             <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                !muted ? "translate-x-6" : "translate-x-1"
+              className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
+                draft.muted ? "translate-x-1" : "translate-x-6"
               }`}
             />
           </button>
         </div>
-      </div>
+      </section>
 
-      {/* Per-type preferences */}
-      <div className={`space-y-2 ${muted ? "opacity-50 pointer-events-none" : ""}`}>
-        {/* Column headers */}
-        <div className="flex items-center justify-end gap-4 px-4 pb-2 border-b border-border">
-          {CHANNELS.map((ch) => (
-            <div key={ch.key} className="flex items-center gap-1 w-24 justify-center">
-              <ch.icon size={14} className="text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">{ch.label}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Type rows */}
-        {Object.entries(NOTIFICATION_TYPE_LABELS).map(([type, { label, description }]) => (
-          <div
-            key={type}
-            className="flex items-center justify-between rounded-lg px-4 py-3 hover:bg-muted/50 transition-colors"
-          >
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">{label}</p>
-              <p className="text-xs text-muted-foreground truncate">{description}</p>
-            </div>
-            <div className="flex items-center gap-4">
-              {CHANNELS.map((ch) => (
-                <div key={ch.key} className="w-24 flex justify-center">
-                  <button
-                    onClick={() => toggleChannel(type, ch.key)}
-                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                      isChannelEnabled(type, ch.key) ? "bg-[var(--primary)]" : "bg-muted"
-                    }`}
-                    role="switch"
-                    aria-checked={isChannelEnabled(type, ch.key)}
-                    aria-label={`${label} — ${ch.label}`}
-                  >
-                    <span
-                      className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                        isChannelEnabled(type, ch.key) ? "translate-x-5" : "translate-x-1"
-                      }`}
-                    />
-                  </button>
+      <div className={`mt-6 space-y-3 ${draft.muted ? "pointer-events-none opacity-50" : ""}`}>
+        {renderedTypes.map((type) => {
+          const preference = preferenceByType.get(type) ?? { type, channels: ["IN_APP", "EMAIL"] };
+          return (
+            <section
+              key={type}
+              className="rounded-[var(--radius-md)] border border-border px-4 py-4"
+            >
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="font-medium text-foreground">
+                    {t(`notificationPreferences.types.${type}.label`, { defaultValue: type })}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {t(`notificationPreferences.types.${type}.description`, { defaultValue: type })}
+                  </p>
                 </div>
-              ))}
-            </div>
-          </div>
-        ))}
+                <div className="flex gap-3">
+                  {CHANNELS.map((channel) => {
+                    const enabled = preference.channels.includes(channel.key);
+                    const Icon = channel.icon;
+                    return (
+                      <button
+                        key={channel.key}
+                        type="button"
+                        role="switch"
+                        aria-checked={enabled ? "true" : "false"}
+                        aria-label={t(
+                          `notificationPreferences.types.${type}.channels.${channel.key}`,
+                          {
+                            defaultValue: `${type} ${channel.key}`,
+                          },
+                        )}
+                        onClick={() => toggleChannel(type, channel.key)}
+                        className={`inline-flex items-center gap-2 rounded-[var(--radius-md)] border px-3 py-2 text-sm ${
+                          enabled
+                            ? "border-primary bg-primary/5 text-primary"
+                            : "border-border text-muted-foreground"
+                        }`}
+                      >
+                        <Icon size={16} />
+                        {t(`notificationPreferences.channels.${channel.key}`, {
+                          defaultValue: channel.key === "IN_APP" ? "In app" : "Email",
+                        })}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </section>
+          );
+        })}
       </div>
+
+      {saveState === "saved" ? (
+        <p className="mt-4 text-sm text-success">
+          {t("notificationPreferences.saved", { defaultValue: "Preferences saved." })}
+        </p>
+      ) : null}
+      {saveState === "error" ? (
+        <p className="mt-4 text-sm text-error">
+          {t("notificationPreferences.saveError", {
+            defaultValue: "Could not save your notification preferences.",
+          })}
+        </p>
+      ) : null}
     </div>
   );
 }

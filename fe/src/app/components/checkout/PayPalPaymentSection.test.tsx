@@ -5,16 +5,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const noop = () => undefined;
 
-const paypalCreateMock = vi.fn();
-const paypalCaptureMock = vi.fn();
-vi.mock("../../lib/api/endpoints/payment", () => ({
+type UnknownCall = (...args: unknown[]) => unknown;
+
+const paypalCreateMock = vi.fn<UnknownCall>();
+const paypalCaptureMock = vi.fn<UnknownCall>();
+vi.mock("@/shared/api/endpoints/payment", () => ({
   paypalCreate: (...args: unknown[]) => paypalCreateMock(...args),
   paypalCapture: (...args: unknown[]) => paypalCaptureMock(...args),
 }));
 
-const toastErrorMock = vi.fn();
+const toastErrorMock = vi.fn<(message: string) => void>();
 vi.mock("sonner", () => ({
-  toast: { error: (msg: string) => toastErrorMock(msg) },
+  toast: { error: (message: string) => toastErrorMock(message) },
 }));
 
 // Stub the PayPal SDK so the test never reaches paypal.com. The Buttons stub

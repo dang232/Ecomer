@@ -1,7 +1,9 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
-const apiPostMock = vi.fn();
-const apiGetMock = vi.fn();
+type UnknownCall = (...args: unknown[]) => unknown;
+
+const apiPostMock = vi.fn<UnknownCall>();
+const apiGetMock = vi.fn<UnknownCall>();
 
 vi.mock("../client", () => ({
   api: {
@@ -165,15 +167,13 @@ describe("returns API", () => {
   });
 
   describe("rejectReturn", () => {
-    it("posts rejection reason", async () => {
+    it("posts rejection without a request body", async () => {
       const mockReturn = { id: "ret-1", status: "REJECTED" };
       apiPostMock.mockResolvedValue(mockReturn);
 
-      const result = await rejectReturn("ret-1", { reason: "Invalid reason" });
+      const result = await rejectReturn("ret-1");
 
-      expect(apiPostMock).toHaveBeenCalledWith("/returns/ret-1/reject", expect.anything(), {
-        reason: "Invalid reason",
-      });
+      expect(apiPostMock).toHaveBeenCalledWith("/returns/ret-1/reject", expect.anything());
       expect(result).toEqual(mockReturn);
     });
   });

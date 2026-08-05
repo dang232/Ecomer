@@ -16,6 +16,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverterAdapter;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.security.web.server.csrf.CookieServerCsrfTokenRepository;
+import org.springframework.security.web.server.csrf.ServerCsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
@@ -38,6 +39,9 @@ public class SecurityConfig {
     private static final Set<HttpMethod> SAFE_METHODS = Set.of(
             HttpMethod.GET, HttpMethod.HEAD, HttpMethod.OPTIONS, HttpMethod.TRACE);
     private static final String REFRESH_TOKEN_COOKIE = "vnshop_rt";
+    private static final String TUS_UPLOAD_PATH = "/videos/upload";
+    private static final Set<String> PUBLIC_AUTH_PATHS = Set.of(
+            "/auth/login", "/auth/register", "/auth/password-reset-request", "/auth/forgot-password");
     private static final String CSRF_COOKIE = "vnshop_csrf";
     private static final String CSRF_HEADER = "X-CSRF-Token";
 
@@ -59,7 +63,8 @@ public class SecurityConfig {
                 .toList());
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         cfg.setAllowedHeaders(List.of("*"));
-        cfg.setExposedHeaders(List.of("X-Correlation-Id"));
+        cfg.setExposedHeaders(List.of(
+                "Location", "Tus-Resumable", "Upload-Offset", "X-Correlation-Id"));
         // Cookie-based auth (vnshop_rt refresh-token cookie issued by
         // user-service /auth/login) requires the browser to include
         // credentials on cross-origin requests. Concrete allowed-origins
@@ -84,6 +89,7 @@ public class SecurityConfig {
             .cors(org.springframework.security.config.Customizer.withDefaults())
             .csrf(csrf -> csrf
                 .csrfTokenRepository(csrfTokenRepository())
+                .csrfTokenRequestHandler(csrfTokenRequestAttributeHandler())
                 .requireCsrfProtectionMatcher(this::requiresCsrfProtection))
             .authorizeExchange(exchanges -> exchanges
                 // Browsers send a no-auth OPTIONS preflight before any
@@ -93,6 +99,9 @@ public class SecurityConfig {
                 // Seller review management is a protected read model even
                 // though public product reviews share the /reviews prefix.
                 .pathMatchers(HttpMethod.GET, "/reviews/seller/me").hasRole("SELLER")
+                .pathMatchers(HttpMethod.GET, "/sellers/me").authenticated()
+                // Only the public collection is anonymous. Upload status remains owner-authenticated.
+                .pathMatchers(HttpMethod.GET, "/videos").permitAll()
                 .pathMatchers(HttpMethod.GET, "/products/**", "/categories/**", "/search/**",
                         "/reviews/**", "/questions/**", "/recommendations/**", "/health",
                         "/api/config", "/api/config/public", "/sellers", "/sellers/*", "/flash-sale/active",
@@ -108,6 +117,11 @@ public class SecurityConfig {
                 // token itself via WsJwtVerifier before binding the socket to a user.
                 // A query-token fallback remains in that service for older clients.
                 .pathMatchers("/ws/messaging").permitAll()
+                // Socket.IO sends its auth payload only after the Engine.IO upgrade,
+                // so this handshake has no Authorization header for the resource
+                // server to validate. notification-service verifies auth.token before
+                // it associates the socket with a user or joins a user room.
+                .pathMatchers("/ws/notifications/**").permitAll()
                 .pathMatchers("/actuator/health", "/actuator/info", "/actuator/prometheus").permitAll()
                 // ponytail: glob permits /<any>/actuator/health for downstream services — FE admin health checks carry no token
                 .pathMatchers("/" + "*/actuator/health", "/" + "*/actuator/info").permitAll()
@@ -156,12 +170,19 @@ public class SecurityConfig {
         return repository;
     }
 
+    ServerCsrfTokenRequestAttributeHandler csrfTokenRequestAttributeHandler() {
+        return new ServerCsrfTokenRequestAttributeHandler();
+    }
+
     private Mono<ServerWebExchangeMatcher.MatchResult> requiresCsrfProtection(
             org.springframework.web.server.ServerWebExchange exchange) {
         var request = exchange.getRequest();
         boolean cookieAuthenticated = request.getCookies().containsKey(REFRESH_TOKEN_COOKIE);
+        String path = request.getPath().pathWithinApplication().value();
         boolean stateChanging = request.getMethod() != null && !SAFE_METHODS.contains(request.getMethod());
-        return cookieAuthenticated && stateChanging
+        boolean tusUpload = path.equals(TUS_UPLOAD_PATH) || path.startsWith(TUS_UPLOAD_PATH + "/");
+        boolean publicAuth = PUBLIC_AUTH_PATHS.contains(path);
+        return cookieAuthenticated && stateChanging && !tusUpload && !publicAuth
                 ? ServerWebExchangeMatcher.MatchResult.match()
                 : ServerWebExchangeMatcher.MatchResult.notMatch();
     }

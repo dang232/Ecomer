@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
+
+import { loginAsPersona } from "./_auth";
 import { expectNoGlobalError } from "./_helpers";
-import { loginViaOidc } from "./_auth";
 
 /**
  * UI-driven QA spec for the admin coupon CRUD flow.
@@ -21,9 +22,10 @@ async function gotoCouponsTab(page: Page): Promise<void> {
   await expect(page.getByText(/Admin Dashboard|Tổng quan|Admin Console/i).first()).toBeVisible({
     timeout: 20_000,
   });
-  const tab = page.getByRole("button", { name: /^(Coupons|Coupon)$/i }).first();
-  await expect(tab).toBeVisible({ timeout: 10_000 });
-  await tab.click();
+  const link = page.getByRole("link", { name: /^(Coupons|Coupon)$/i }).first();
+  await expect(link).toBeVisible({ timeout: 10_000 });
+  await expect(link).toHaveAttribute("href", "/admin/coupons");
+  await link.click();
   await expect(page.getByText(/Coupon management|Quản lý coupon/i).first()).toBeVisible({
     timeout: 15_000,
   });
@@ -31,7 +33,7 @@ async function gotoCouponsTab(page: Page): Promise<void> {
 
 test.describe("admin coupon CRUD UI", () => {
   test("Empty code triggers inline validation toast (no BE round-trip)", async ({ page }) => {
-    await loginViaOidc(page, "admin1");
+    await loginAsPersona(page, "admin");
     await gotoCouponsTab(page);
 
     // Open the dialog.
@@ -58,7 +60,7 @@ test.describe("admin coupon CRUD UI", () => {
   });
 
   test("Creating a FIXED coupon round-trips and the row appears in the table", async ({ page }) => {
-    await loginViaOidc(page, "admin1");
+    await loginAsPersona(page, "admin");
     await gotoCouponsTab(page);
 
     // Generate a unique code so re-runs don't collide with previously
@@ -103,7 +105,7 @@ test.describe("admin coupon CRUD UI", () => {
   });
 
   test("Deactivating an active coupon flips its status badge to Paused", async ({ page }) => {
-    await loginViaOidc(page, "admin1");
+    await loginAsPersona(page, "admin");
     await gotoCouponsTab(page);
 
     // Create a coupon first (mirrors the previous test's setup so this can

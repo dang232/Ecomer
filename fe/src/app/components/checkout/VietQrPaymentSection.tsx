@@ -1,22 +1,31 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { paymentStatus, vietqrCreate } from "../../lib/api/endpoints/payment";
+import { paymentStatus, vietqrCreate } from "@/shared/api/endpoints/payment";
 
 interface Props {
   orderId: string;
   idempotencyKey: string;
+  initialization?: {
+    qrImageUrl: string;
+    reference: string;
+  };
   onCompleted: () => void;
 }
 
-export function VietQrPaymentSection({ orderId, idempotencyKey, onCompleted }: Props) {
+export function VietQrPaymentSection({
+  orderId,
+  idempotencyKey,
+  initialization,
+  onCompleted,
+}: Props) {
   const { t } = useTranslation();
   const [qr, setQr] = useState<{
     qrImageUrl: string;
-    accountNo: string;
-    accountName: string;
+    accountNo?: string;
+    accountName?: string;
     reference: string;
-  } | null>(null);
+  } | null>(initialization ?? null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -87,12 +96,16 @@ export function VietQrPaymentSection({ orderId, idempotencyKey, onCompleted }: P
         data-testid="vietqr-image"
       />
       <div className="text-sm text-foreground space-y-1">
-        <p>
-          <strong>{t("vietqr.accountLabel")}</strong> {qr.accountNo}
-        </p>
-        <p>
-          <strong>{t("vietqr.nameLabel")}</strong> {qr.accountName}
-        </p>
+        {qr.accountNo ? (
+          <p>
+            <strong>{t("vietqr.accountLabel")}</strong> {qr.accountNo}
+          </p>
+        ) : null}
+        {qr.accountName ? (
+          <p>
+            <strong>{t("vietqr.nameLabel")}</strong> {qr.accountName}
+          </p>
+        ) : null}
         <p>
           <strong>{t("vietqr.referenceLabel")}</strong> <code>{qr.reference}</code>
         </p>

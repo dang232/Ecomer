@@ -1,8 +1,8 @@
-import { IconInbox } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
+import { Inbox } from "lucide-react";
 import { useSearchParams } from "react-router";
 
-import { listThreads } from "../../lib/api/endpoints/notifications";
+import { listThreads } from "@/shared/api/endpoints/notifications";
 
 import { NotificationPagination } from "./notification-pagination";
 import { NotificationThread } from "./notification-thread";
@@ -10,6 +10,14 @@ import { NotificationThread } from "./notification-thread";
 interface NotificationThreadListProps {
   onMarkRead: (id: string) => void;
 }
+
+const NOTIFICATION_SKELETON_IDS = [
+  "notification-thread-skeleton-1",
+  "notification-thread-skeleton-2",
+  "notification-thread-skeleton-3",
+  "notification-thread-skeleton-4",
+  "notification-thread-skeleton-5",
+] as const;
 
 export function NotificationThreadList({ onMarkRead }: NotificationThreadListProps) {
   const [params] = useSearchParams();
@@ -24,11 +32,8 @@ export function NotificationThreadList({ onMarkRead }: NotificationThreadListPro
   if (isLoading) {
     return (
       <div className="space-y-3">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div
-            key={`notification-thread-skeleton-${i}`}
-            className="h-14 rounded-xl bg-muted animate-pulse"
-          />
+        {NOTIFICATION_SKELETON_IDS.map((skeletonId) => (
+          <div key={skeletonId} className="h-14 rounded-xl bg-muted animate-pulse" />
         ))}
       </div>
     );
@@ -37,7 +42,7 @@ export function NotificationThreadList({ onMarkRead }: NotificationThreadListPro
   if (!data || data.content.length === 0) {
     return (
       <div className="py-12 text-center">
-        <IconInbox size={40} className="mx-auto mb-3 text-muted-foreground/30" />
+        <Inbox size={40} className="mx-auto mb-3 text-muted-foreground/30" />
         <p className="text-sm text-muted-foreground">Không có thông báo nào</p>
       </div>
     );

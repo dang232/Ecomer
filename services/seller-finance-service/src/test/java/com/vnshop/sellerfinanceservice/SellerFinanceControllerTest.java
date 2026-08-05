@@ -220,6 +220,32 @@ class SellerFinanceControllerTest {
         assertThat(row.get("sellerName").asText()).isEqualTo("Alice Shop");
     }
 
+    @Test
+    void adminPayoutPageReturnsTheContractUsedByTheAdminQueue() throws Exception {
+        UUID payoutId = UUID.randomUUID();
+        Payout payout = new Payout(
+                payoutId,
+                SELLER_ID,
+                new BigDecimal("125.50"),
+                PayoutStatus.PENDING,
+                Instant.parse("2026-05-14T00:00:00Z"));
+        when(payoutRepositoryPort.findByStatus(PayoutStatus.PENDING, "alice"))
+                .thenReturn(List.of(payout));
+
+        HttpRequest request = authorizedRequest(
+                "/admin/finance/payouts?status=PENDING&q=alice&page=0&size=10")
+                .GET()
+                .build();
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        JsonNode body = objectMapper.readTree(response.body());
+
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(body.get("data").get("content")).hasSize(1);
+        assertThat(body.get("data").get("content").get(0).get("payoutId").asText())
+                .isEqualTo(payoutId.toString());
+        assertThat(body.get("data").get("totalElements").asInt()).isEqualTo(1);
+    }
+
     private HttpRequest.Builder authorizedRequest(String path) {
         return HttpRequest.newBuilder(url(path))
                 .header("Authorization", "Bearer token");

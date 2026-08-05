@@ -3,26 +3,56 @@ import { type HTMLAttributes, type ReactNode, createElement } from "react";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({
+type CursorFixture = {
+  pages: { data: { items: Record<string, unknown>[]; facets?: unknown } }[];
+};
+
+interface SearchPageMocks {
+  catalogRefetch: ReturnType<typeof vi.fn>;
+  searchError: unknown;
+  searchRefetch: ReturnType<typeof vi.fn>;
+  v2SearchRefetch: ReturnType<typeof vi.fn>;
+  v2Error: unknown;
+  v2SearchIsFetching: boolean;
+  v2SearchIsFetchingNextPage: boolean;
+  v2SearchIsPlaceholderData: boolean;
+  v2FetchNextPage: ReturnType<typeof vi.fn>;
+  v2HasNextPage: boolean;
+  v2SearchData: CursorFixture | undefined;
+  v2CatalogData: CursorFixture | undefined;
+  v2CatalogError: unknown;
+  v2CatalogIsLoading: boolean;
+  v2CatalogIsFetching: boolean;
+  v2CatalogIsFetchingNextPage: boolean;
+  v2CatalogIsPlaceholderData: boolean;
+  v2CatalogRefetch: ReturnType<typeof vi.fn>;
+  v2ProductsEnabled: boolean;
+  v2SearchParams: Record<string, unknown> | undefined;
+  renderVietnameseSearchHeading: boolean;
+}
+
+const mocks = vi.hoisted<SearchPageMocks>(() => ({
+  catalogRefetch: vi.fn(),
+  searchError: null,
+  searchRefetch: vi.fn(),
   v2SearchRefetch: vi.fn(),
-  v2Error: null as unknown,
+  v2Error: null,
   v2SearchIsFetching: false,
   v2SearchIsFetchingNextPage: false,
   v2SearchIsPlaceholderData: false,
   v2FetchNextPage: vi.fn(),
   v2HasNextPage: false,
-  v2SearchData: undefined as
-    { pages: { data: { items: Record<string, unknown>[]; facets?: unknown } }[] } | undefined,
-  v2CatalogData: undefined as
-    { pages: { data: { items: Record<string, unknown>[]; facets?: unknown } }[] } | undefined,
-  v2CatalogError: null as unknown,
+  v2SearchData: undefined,
+  v2CatalogData: undefined,
+  v2CatalogError: null,
   v2CatalogIsLoading: false,
   v2CatalogIsFetching: false,
   v2CatalogIsFetchingNextPage: false,
   v2CatalogIsPlaceholderData: false,
   v2CatalogRefetch: vi.fn(),
   v2ProductsEnabled: false,
-  v2SearchParams: undefined as Record<string, unknown> | undefined,
+  v2SearchParams: undefined,
+  renderVietnameseSearchHeading: false,
 }));
 
 vi.mock("motion/react", () => ({
@@ -37,13 +67,16 @@ vi.mock("motion/react", () => ({
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) => {
+      if (key === "search.resultsForQuery" && mocks.renderVietnameseSearchHeading) {
+        return `Kết quả cho "${String(options?.query)}"`;
+      }
       if (typeof options?.defaultValue === "string") return options.defaultValue;
       return key;
     },
   }),
 }));
 
-vi.mock("../components/vnshop-context", () => ({
+vi.mock("../hooks/use-vnshop", () => ({
   useVNShop: () => ({
     toggleWishlist: vi.fn(),
     isWishlisted: () => false,
@@ -114,8 +147,6 @@ vi.mock("../hooks/use-products-v2", () => ({
   },
 }));
 
-vi.mock("../lib/api/catalog-flags", () => ({ catalogV2Enabled: true }));
-
 import { SearchPage } from "./SearchPage";
 
 function renderPage(entry = "/search") {
@@ -127,6 +158,9 @@ function renderPage(entry = "/search") {
 }
 
 beforeEach(() => {
+  mocks.catalogRefetch.mockReset();
+  mocks.searchError = null;
+  mocks.searchRefetch.mockReset();
   mocks.v2SearchRefetch.mockReset();
   mocks.v2Error = null;
   mocks.v2SearchIsFetching = false;
@@ -144,9 +178,20 @@ beforeEach(() => {
   mocks.v2CatalogRefetch.mockReset();
   mocks.v2ProductsEnabled = false;
   mocks.v2SearchParams = undefined;
+  mocks.renderVietnameseSearchHeading = false;
 });
 
 describe("SearchPage", () => {
+  it("renders the Vietnamese search heading with the query interpolation value", () => {
+    mocks.renderVietnameseSearchHeading = true;
+
+    renderPage("/search?q=zzxjourneycheck");
+
+    expect(
+      screen.getByRole("heading", { name: 'Kết quả cho "zzxjourneycheck"' }),
+    ).toBeInTheDocument();
+  });
+
   it("opens the shared filter controls in a mobile dialog", () => {
     renderPage();
 

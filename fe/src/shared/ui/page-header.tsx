@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import { cn } from "../lib/cn";
 
-interface PageHeaderProps {
+export interface PageHeaderProps {
   title: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;

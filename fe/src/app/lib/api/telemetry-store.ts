@@ -35,8 +35,6 @@ export function recordTelemetry(rec: TelemetryRecord): void {
     buffer.splice(0, buffer.length - BUFFER_SIZE);
   }
   if (isDev()) {
-    // ponytail: replace with Sentry.addBreadcrumb when telemetry ships.
-    // eslint-disable-next-line no-console
     console.debug(
       `[vnshop] ${safe.method} ${safe.path} ${safe.status ?? "—"} ${safe.durationMs}ms attempt=${safe.attempts}`,
     );

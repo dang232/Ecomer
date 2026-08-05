@@ -15,6 +15,8 @@ import com.vnshop.productservice.domain.storage.ObjectValidationResult;
 import java.net.URI;
 import java.time.Instant;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -53,10 +55,21 @@ public class ProductImageUploadService {
         return ProductImageUploadResponse.builder()
                 .objectKey(pending.getKey())
                 .uploadUrl(uploadUrl)
+                .uploadHeaders(uploadHeaders(pending))
                 .checksumSha256(pending.getSha256Hex())
                 .quarantineState(pending.getQuarantineState().name())
                 .expiresInSeconds(ObjectStorageClass.PRODUCT_IMAGE.uploadTtl().toSeconds())
                 .build();
+    }
+
+    private Map<String, String> uploadHeaders(ObjectMetadata metadata) {
+        return Map.of(
+                "Content-Type", metadata.getContentType(),
+                "x-amz-meta-storage-class", metadata.getStorageClass().name(),
+                "x-amz-meta-sha256", metadata.getSha256Hex(),
+                "x-amz-meta-quarantine-state", metadata.getQuarantineState().name(),
+                "x-amz-meta-image-width", metadata.getImageWidth().toString(),
+                "x-amz-meta-image-height", metadata.getImageHeight().toString());
     }
 
     public ProductImageActivationResponse activate(String productId, String sellerId, String objectKey, ProductImageActivationRequest request) {
@@ -70,13 +83,23 @@ public class ProductImageUploadService {
         }
         ObjectMetadata metadata = objectMetadataRepositoryPort.findByKey(objectKey)
                 .orElseThrow(() -> new IllegalArgumentException("object metadata not found"));
+        ObjectMetadata storedObject = objectStoragePort.headObject(objectKey)
+                .orElseThrow(() -> new IllegalArgumentException("uploaded image object not found"));
+        if (!Objects.equals(storedObject.getContentType(), metadata.getContentType())
+                || storedObject.getContentLength() != metadata.getContentLength()
+                || !Objects.equals(storedObject.getSha256Hex(), metadata.getSha256Hex())
+                || !Objects.equals(storedObject.getImageWidth(), metadata.getImageWidth())
+                || !Objects.equals(storedObject.getImageHeight(), metadata.getImageHeight())) {
+            throw new IllegalArgumentException("uploaded image metadata does not match upload declaration");
+        }
+        if (storedObject.getContentLength() != request.contentLength()
+                || !Objects.equals(storedObject.getSha256Hex(), request.sha256Hex())
+                || !Objects.equals(storedObject.getImageWidth(), request.imageWidth())
+                || !Objects.equals(storedObject.getImageHeight(), request.imageHeight())) {
+            throw new IllegalArgumentException("uploaded image metadata does not match activation request");
+        }
         ObjectValidationResult result = objectValidationService.validate(ObjectValidationRequest.builder()
-                .metadata(metadata.toBuilder()
-                        .contentLength(request.contentLength())
-                        .sha256Hex(request.sha256Hex())
-                        .imageWidth(request.imageWidth())
-                        .imageHeight(request.imageHeight())
-                        .build())
+                .metadata(storedObject)
                 .expectedSha256Hex(metadata.getSha256Hex())
                 .detectedContentType(request.detectedContentType())
                 // Pt19 audit: avScanClean is no longer accepted on the wire — a
@@ -87,10 +110,10 @@ public class ProductImageUploadService {
                 .avScanClean(true)
                 .build());
         ObjectMetadata activated = metadata.toBuilder()
-                .contentLength(request.contentLength())
-                .sha256Hex(request.sha256Hex())
-                .imageWidth(request.imageWidth())
-                .imageHeight(request.imageHeight())
+                .contentLength(storedObject.getContentLength())
+                .sha256Hex(storedObject.getSha256Hex())
+                .imageWidth(storedObject.getImageWidth())
+                .imageHeight(storedObject.getImageHeight())
                 .quarantineState(result.active() ? ObjectQuarantineState.ACTIVE : ObjectQuarantineState.REJECTED)
                 .build();
         objectMetadataRepositoryPort.save(activated);
@@ -100,7 +123,8 @@ public class ProductImageUploadService {
         return new ProductImageActivationResponse(
                 activated.getKey(),
                 activated.getSha256Hex(),
-                activated.getQuarantineState().name());
+                activated.getQuarantineState().name(),
+                objectStoragePort.publicUrl(activated.getKey()));
     }
 
     private ObjectValidationResult validate(ProductImageUploadRequest request, ObjectMetadata metadata) {

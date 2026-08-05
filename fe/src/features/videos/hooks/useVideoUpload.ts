@@ -1,42 +1,40 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import * as tus from "tus-js-client";
+import { z } from "zod";
 
-import { videoUploadInit } from "../../../app/lib/api/endpoints/videos";
-import type { VideoContext } from "../../../app/types/api/video";
+import { csrfAuthHeader, getAccessToken } from "@/shared/auth/native-auth";
+import { apiUrl } from "@/shared/config/runtime-endpoints";
+import type { VideoContext } from "@/shared/contracts/api/video";
+import { sha256FileHex } from "@/shared/lib/sha256";
 
-// ─── Constants ───────────────────────────────────────────────────────────────
+import { readJsonText } from "../../../shared/api/read-json";
 
-const MAX_PRODUCT_VIDEO_BYTES = 500 * 1024 * 1024; // 500 MB
-const MAX_REVIEW_VIDEO_BYTES = 200 * 1024 * 1024; // 200 MB
+const MAX_PRODUCT_VIDEO_BYTES = 500 * 1024 * 1024;
+const MAX_REVIEW_VIDEO_BYTES = 200 * 1024 * 1024;
+const DURATION_METADATA_TIMEOUT_MS = 5_000;
 
 const ALLOWED_VIDEO_TYPES = [
   "video/mp4",
-  "video/quicktime", // .mov
+  "video/quicktime",
   "video/webm",
-  "video/x-matroska", // .mkv
+  "video/x-matroska",
 ] as const;
 
 const ALLOWED_VIDEO_EXTENSIONS = ["mp4", "mov", "webm", "mkv"] as const;
 
 const LS_RESUME_KEY = "vnshop:video-upload-resume";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
 export type VideoUploadPhase =
   "idle" | "validating" | "initiating" | "uploading" | "complete" | "error";
 
 export interface VideoUploadState {
   phase: VideoUploadPhase;
-  /** Upload progress 0–100. */
   progress: number;
-  /** Server-assigned video ID once initiation succeeds. */
+  entityId: string | null;
   videoId: string | null;
-  /** Error message if phase === "error". */
   error: string | null;
-  /** Estimated duration in seconds from the video element metadata. */
   estimatedDuration: number | null;
-  /** Filename of the file being uploaded. */
   filename: string | null;
 }
 
@@ -47,20 +45,59 @@ export interface VideoUploadOptions {
   onError?: (error: Error) => void;
 }
 
-// ─── Resume URL cache ────────────────────────────────────────────────────────
+const resumeEntrySchema = z.object({
+  videoId: z.string().min(1),
+  uploadUrl: z.string().url(),
+  filename: z.string().min(1),
+  sizeBytes: z.number().positive(),
+  contentHash: z.string().length(64),
+  idempotencyKey: z.string().min(1),
+});
+type ResumeEntry = z.infer<typeof resumeEntrySchema>;
 
-interface ResumeEntry {
-  videoId: string;
-  uploadUrl: string;
-  filename: string;
-  sizeBytes: number;
+type UploadLocation = Pick<ResumeEntry, "videoId" | "uploadUrl">;
+
+function parseUploadLocation(location: string, requestUrl: string): UploadLocation {
+  try {
+    const request = new URL(requestUrl);
+    const upload = new URL(location, request);
+    const prefix = `${request.pathname.replace(/\/$/, "")}/`;
+
+    if (
+      upload.origin !== request.origin ||
+      upload.search ||
+      upload.hash ||
+      !upload.pathname.startsWith(prefix)
+    ) {
+      throw new Error("invalid upload location");
+    }
+
+    const encodedVideoId = upload.pathname.slice(prefix.length);
+    if (!encodedVideoId || encodedVideoId.includes("/")) {
+      throw new Error("invalid upload location");
+    }
+
+    const videoId = decodeURIComponent(encodedVideoId);
+    if (!videoId) {
+      throw new Error("invalid upload location");
+    }
+
+    return { videoId, uploadUrl: upload.toString() };
+  } catch {
+    throw new Error("video:invalid-upload-location");
+  }
 }
 
 function getResumeEntry(idempotencyKey: string): ResumeEntry | null {
   try {
     const raw = localStorage.getItem(`${LS_RESUME_KEY}:${idempotencyKey}`);
-    return raw ? (JSON.parse(raw) as ResumeEntry) : null;
+    return raw ? readJsonText(raw, resumeEntrySchema) : null;
   } catch {
+    try {
+      localStorage.removeItem(`${LS_RESUME_KEY}:${idempotencyKey}`);
+    } catch {
+      /* browser storage is unavailable */
+    }
     return null;
   }
 }
@@ -69,7 +106,7 @@ function setResumeEntry(idempotencyKey: string, entry: ResumeEntry): void {
   try {
     localStorage.setItem(`${LS_RESUME_KEY}:${idempotencyKey}`, JSON.stringify(entry));
   } catch {
-    // localStorage full — silently skip; upload still works, just no resume
+    // best-effort cache only
   }
 }
 
@@ -81,9 +118,6 @@ function clearResumeEntry(idempotencyKey: string): void {
   }
 }
 
-// ─── Pre-flight validation ───────────────────────────────────────────────────
-
-/** Client-side preflight. BE re-validates everything; this avoids needless round-trips. */
 export function preflightVideo(file: File, context: VideoContext): void {
   const maxBytes = context === "PRODUCT" ? MAX_PRODUCT_VIDEO_BYTES : MAX_REVIEW_VIDEO_BYTES;
   const maxMb = maxBytes / (1024 * 1024);
@@ -101,36 +135,41 @@ export function preflightVideo(file: File, context: VideoContext): void {
   }
 }
 
-// ─── Duration estimation ─────────────────────────────────────────────────────
-
-/** Load a File into a temporary <video> element to read its duration. */
 export function estimateDuration(file: File): Promise<number | null> {
   return new Promise((resolve) => {
     const url = URL.createObjectURL(file);
     const video = document.createElement("video");
     video.preload = "metadata";
+    let settled = false;
+    const timeout = window.setTimeout(() => finish(null), DURATION_METADATA_TIMEOUT_MS);
+
     const cleanup = () => {
       URL.revokeObjectURL(url);
       video.src = "";
     };
+
+    const finish = (duration: number | null) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      cleanup();
+      resolve(duration);
+    };
+
     video.onloadedmetadata = () => {
-      const dur = isFinite(video.duration) && video.duration > 0 ? video.duration : null;
-      cleanup();
-      resolve(dur);
+      const duration =
+        Number.isFinite(video.duration) && video.duration > 0 ? video.duration : null;
+      finish(duration);
     };
-    video.onerror = () => {
-      cleanup();
-      resolve(null);
-    };
+    video.onerror = () => finish(null);
     video.src = url;
   });
 }
 
-// ─── Hook ────────────────────────────────────────────────────────────────────
-
 const INITIAL_STATE: VideoUploadState = {
   phase: "idle",
   progress: 0,
+  entityId: null,
   videoId: null,
   error: null,
   estimatedDuration: null,
@@ -139,125 +178,185 @@ const INITIAL_STATE: VideoUploadState = {
 
 export function useVideoUpload(options: VideoUploadOptions) {
   const [state, setState] = useState<VideoUploadState>(INITIAL_STATE);
-  // Keep a ref to the active tus Upload so we can abort it on cancel.
   const uploadRef = useRef<tus.Upload | null>(null);
-  // Stable idempotency key per file — regenerated when a new upload begins.
-  const idempotencyKeyRef = useRef<string>("");
-  // BA audit 2026-06-16 P2-4: keep a ref to the last file so retry() can
-  // re-upload without the user re-selecting from disk.
+  const idempotencyKeyRef = useRef("");
+  const resumeKeyRef = useRef("");
   const lastFileRef = useRef<File | null>(null);
+  const runVersionRef = useRef(0);
 
-  const reset = useCallback(() => {
+  const clearActiveUpload = useCallback((clearResume = true) => {
+    runVersionRef.current += 1;
     uploadRef.current?.abort(true).catch(() => undefined);
     uploadRef.current = null;
-    setState(INITIAL_STATE);
+    if (clearResume && resumeKeyRef.current) {
+      clearResumeEntry(resumeKeyRef.current);
+    }
+    idempotencyKeyRef.current = "";
+    resumeKeyRef.current = "";
+    lastFileRef.current = null;
   }, []);
 
-  const cancel = useCallback(() => {
-    if (uploadRef.current) {
-      void uploadRef.current.abort(true).catch(() => undefined);
-      uploadRef.current = null;
-    }
-    if (idempotencyKeyRef.current) {
-      clearResumeEntry(idempotencyKeyRef.current);
-    }
+  const reset = useCallback(() => {
+    clearActiveUpload();
     setState(INITIAL_STATE);
-  }, []);
+  }, [clearActiveUpload]);
+
+  const cancel = useCallback(() => {
+    clearActiveUpload();
+    setState(INITIAL_STATE);
+  }, [clearActiveUpload]);
+
+  useEffect(() => {
+    clearActiveUpload();
+    setState(INITIAL_STATE);
+  }, [clearActiveUpload, options.context, options.entityId]);
 
   const upload = useCallback(
     async (file: File) => {
+      const runVersion = runVersionRef.current + 1;
+      runVersionRef.current = runVersion;
+      const isCurrentRun = () => runVersionRef.current === runVersion;
+
       lastFileRef.current = file;
-      // 1. Validate
-      setState({ ...INITIAL_STATE, phase: "validating", filename: file.name });
+      setState({
+        ...INITIAL_STATE,
+        phase: "validating",
+        entityId: options.entityId,
+        filename: file.name,
+      });
+
       try {
         preflightVideo(file, options.context);
       } catch (err) {
-        const msg = err instanceof Error ? err.message : "video:unknown";
-        setState((s) => ({ ...s, phase: "error", error: msg }));
-        options.onError?.(err instanceof Error ? err : new Error(msg));
+        if (!isCurrentRun()) return;
+        const message = err instanceof Error ? err.message : "video:unknown";
+        setState((current) => ({ ...current, phase: "error", error: message }));
+        options.onError?.(err instanceof Error ? err : new Error(message));
         return;
       }
 
-      // 2. Estimate duration (non-blocking — best effort)
-      setState((s) => ({ ...s, phase: "validating" }));
+      setState((current) => ({ ...current, phase: "validating", entityId: options.entityId }));
       const durationSeconds = await estimateDuration(file);
+      if (!isCurrentRun()) return;
 
-      // 3. Idempotency key — stable for this file across refreshes
-      //    Key is based on name + size + last-modified so the same file reuses the same slot.
-      const idempotencyKey = `${file.name}:${file.size}:${file.lastModified}`;
+      const contentHash = await sha256FileHex(file);
+      if (!isCurrentRun()) return;
+
+      const resumeKey = `${options.context}:${options.entityId}:${file.name}:${file.size}:${file.lastModified}:${contentHash}`;
+      resumeKeyRef.current = resumeKey;
+      const cached = getResumeEntry(resumeKey);
+      const idempotencyKey =
+        cached?.contentHash === contentHash ? cached.idempotencyKey : crypto.randomUUID();
       idempotencyKeyRef.current = idempotencyKey;
 
-      // 4. Initiate upload (or recover resume URL from localStorage)
-      setState((s) => ({ ...s, phase: "initiating", estimatedDuration: durationSeconds }));
+      setState((current) => ({
+        ...current,
+        phase: "initiating",
+        entityId: options.entityId,
+        estimatedDuration: durationSeconds,
+      }));
 
-      let tusEndpoint: string;
-      let videoId: string;
+      const tusEndpoint = apiUrl("/videos/upload");
+      const accessToken = getAccessToken();
+      const uploadHeaders = {
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        ...(csrfAuthHeader() ?? {}),
+      };
+      let videoId: string | null = null;
+      let uploadUrl: string | null = null;
 
-      const cached = getResumeEntry(idempotencyKey);
-      if (cached?.sizeBytes === file.size && cached?.filename === file.name) {
-        tusEndpoint = cached.uploadUrl;
-        videoId = cached.videoId;
-      } else {
+      if (cached?.sizeBytes === file.size && cached.filename === file.name) {
         try {
-          const init = await videoUploadInit({
-            entityId: options.entityId,
-            context: options.context,
-            filename: file.name,
-            contentType: file.type,
-            sizeBytes: file.size,
-            durationSeconds: durationSeconds ?? undefined,
-            idempotencyKey: crypto.randomUUID(),
-          });
-          tusEndpoint = init.tusEndpoint;
-          videoId = init.videoId;
-          setResumeEntry(idempotencyKey, {
-            videoId,
-            uploadUrl: tusEndpoint,
-            filename: file.name,
-            sizeBytes: file.size,
-          });
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : "video:init-failed";
-          setState((s) => ({ ...s, phase: "error", error: msg }));
-          options.onError?.(err instanceof Error ? err : new Error(msg));
-          return;
+          const parsed = parseUploadLocation(cached.uploadUrl, tusEndpoint);
+          if (parsed.videoId === cached.videoId) {
+            videoId = parsed.videoId;
+            uploadUrl = parsed.uploadUrl;
+          } else {
+            clearResumeEntry(resumeKey);
+          }
+        } catch {
+          clearResumeEntry(resumeKey);
         }
       }
+      if (!isCurrentRun()) return;
 
-      setState((s) => ({ ...s, phase: "uploading", videoId }));
+      setState((current) => ({
+        ...current,
+        phase: "uploading",
+        entityId: options.entityId,
+        videoId,
+      }));
 
-      // 5. Drive tus upload
       const tusUpload = new tus.Upload(file, {
         endpoint: tusEndpoint,
+        uploadUrl,
+        fingerprint: () => Promise.resolve(idempotencyKey),
+        removeFingerprintOnSuccess: true,
+        headers: uploadHeaders,
         retryDelays: [0, 1000, 3000, 5000],
-        chunkSize: 5 * 1024 * 1024, // 5 MB chunks
+        chunkSize: 5 * 1024 * 1024,
         metadata: {
           filename: file.name,
           filetype: file.type,
-          videoId,
-          entityId: options.entityId,
-          context: options.context,
+          ownerType: options.context,
+          ownerId: options.entityId,
           idempotencyKey,
         },
+        onAfterResponse(request, response) {
+          if (!isCurrentRun()) return;
+          if (request.getMethod() !== "POST" || response.getStatus() !== 201) return;
+
+          const location = response.getHeader("Location");
+          if (!location) throw new Error("video:invalid-upload-location");
+
+          const parsed = parseUploadLocation(location, request.getURL());
+          videoId = parsed.videoId;
+          uploadUrl = parsed.uploadUrl;
+          setResumeEntry(resumeKey, {
+            videoId,
+            uploadUrl,
+            filename: file.name,
+            sizeBytes: file.size,
+            contentHash,
+            idempotencyKey,
+          });
+          setState((current) => ({ ...current, entityId: options.entityId, videoId }));
+        },
         onProgress(bytesUploaded, bytesTotal) {
-          const pct = bytesTotal > 0 ? Math.round((bytesUploaded / bytesTotal) * 100) : 0;
-          setState((s) => ({ ...s, progress: pct }));
+          if (!isCurrentRun()) return;
+          const progress = bytesTotal > 0 ? Math.round((bytesUploaded / bytesTotal) * 100) : 0;
+          setState((current) => ({ ...current, entityId: options.entityId, progress }));
         },
         onSuccess() {
-          clearResumeEntry(idempotencyKey);
-          setState((s) => ({ ...s, phase: "complete", progress: 100 }));
-          toast.success("Video uploaded, processing…");
+          if (!isCurrentRun()) return;
+          if (!videoId) {
+            const error = new Error("video:missing-upload-location");
+            setState((current) => ({ ...current, phase: "error", error: error.message }));
+            options.onError?.(error);
+            return;
+          }
+
+          clearResumeEntry(resumeKey);
+          uploadRef.current = null;
+          setState((current) => ({
+            ...current,
+            phase: "complete",
+            entityId: options.entityId,
+            progress: 100,
+          }));
+          toast.success("Video uploaded, processing...");
           options.onComplete?.(videoId);
         },
         onError(err) {
-          const msg = err instanceof Error ? err.message : "video:upload-failed";
-          setState((s) => ({ ...s, phase: "error", error: msg }));
-          options.onError?.(err instanceof Error ? err : new Error(msg));
+          if (!isCurrentRun()) return;
+          const message = err instanceof Error ? err.message : "video:upload-failed";
+          setState((current) => ({ ...current, phase: "error", error: message }));
+          options.onError?.(err instanceof Error ? err : new Error(message));
         },
       });
 
-      // Check for a previous partial upload to resume
       const previousUploads = await tusUpload.findPreviousUploads();
+      if (!isCurrentRun()) return;
       if (previousUploads.length > 0) {
         tusUpload.resumeFromPreviousUpload(previousUploads[0]);
       }
@@ -268,31 +367,28 @@ export function useVideoUpload(options: VideoUploadOptions) {
     [options],
   );
 
-  // P2-4: retry the last file without requiring the user to re-select it
   const retry = useCallback(() => {
-    const last = lastFileRef.current;
-    if (last) void upload(last);
+    const lastFile = lastFileRef.current;
+    if (lastFile) void upload(lastFile);
   }, [upload]);
 
   return { state, upload, cancel, reset, retry };
 }
-
-// ─── Error message helper ────────────────────────────────────────────────────
 
 export function videoUploadErrorMessage(
   error: unknown,
   t: (key: string, opts?: Record<string, unknown>) => string,
 ): string {
   if (!(error instanceof Error)) return t("video.upload.errors.generic");
-  const msg = error.message;
-  if (msg === "video:empty") return t("video.upload.errors.empty");
-  if (msg === "video:wrong-type") return t("video.upload.errors.wrongType");
-  if (msg === "video:wrong-extension") return t("video.upload.errors.wrongExtension");
-  if (msg === "video:init-failed") return t("video.upload.errors.initFailed");
-  if (msg === "video:upload-failed") return t("video.upload.errors.uploadFailed");
-  if (msg.startsWith("video:too-large:")) {
-    const mb = msg.split(":")[2];
-    return t("video.upload.errors.tooLarge", { maxMb: mb });
+  const message = error.message;
+  if (message === "video:empty") return t("video.upload.errors.empty");
+  if (message === "video:wrong-type") return t("video.upload.errors.wrongType");
+  if (message === "video:wrong-extension") return t("video.upload.errors.wrongExtension");
+  if (message === "video:init-failed") return t("video.upload.errors.initFailed");
+  if (message === "video:upload-failed") return t("video.upload.errors.uploadFailed");
+  if (message.startsWith("video:too-large:")) {
+    const maxMb = message.split(":")[2];
+    return t("video.upload.errors.tooLarge", { maxMb });
   }
   return t("video.upload.errors.generic");
 }

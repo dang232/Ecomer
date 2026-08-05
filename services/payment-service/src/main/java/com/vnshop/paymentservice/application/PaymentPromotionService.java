@@ -55,7 +55,7 @@ public class PaymentPromotionService {
 
     @Transactional
     public PromotionResult promote(PromotionCommand command) {
-        Optional<Payment> existing = paymentRepository.findById(command.paymentId());
+        Optional<Payment> existing = paymentRepository.findByIdForUpdate(command.paymentId());
         if (existing.isEmpty()) {
             return PromotionResult.notFound();
         }

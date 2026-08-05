@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { searchFacets, type SearchFacets } from "../lib/api/endpoints/search";
+import { searchFacets, type SearchFacets } from "@/shared/api/endpoints/search";
 
 interface UseSearchFacetsParams {
   q?: string;

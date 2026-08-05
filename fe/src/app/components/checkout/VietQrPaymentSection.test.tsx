@@ -10,9 +10,11 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // --- API stubs ---
-const paymentStatusMock = vi.fn();
-const vietqrCreateMock = vi.fn();
-vi.mock("../../lib/api/endpoints/payment", () => ({
+type UnknownCall = (...args: unknown[]) => unknown;
+
+const paymentStatusMock = vi.fn<UnknownCall>();
+const vietqrCreateMock = vi.fn<UnknownCall>();
+vi.mock("@/shared/api/endpoints/payment", () => ({
   paymentStatus: (...args: unknown[]) => paymentStatusMock(...args),
   vietqrCreate: (...args: unknown[]) => vietqrCreateMock(...args),
 }));
@@ -40,7 +42,7 @@ afterEach(() => {
 describe("VietQrPaymentSection i18n (P0-6)", () => {
   it("loading state renders t('vietqr.creating') key — no hardcoded Vietnamese", async () => {
     // Never resolve the QR so the component stays in loading state.
-    vietqrCreateMock.mockImplementation(() => new Promise(() => {}));
+    vietqrCreateMock.mockImplementation(() => new Promise<never>(() => undefined));
     const Wrapper = makeWrapper();
     const { container } = render(
       <Wrapper>
@@ -68,7 +70,7 @@ describe("VietQrPaymentSection i18n (P0-6)", () => {
       reference: "REF123",
     });
     // Payment status never resolves (no COMPLETED), so the component stays on the QR view.
-    paymentStatusMock.mockImplementation(() => new Promise(() => {}));
+    paymentStatusMock.mockImplementation(() => new Promise<never>(() => undefined));
 
     const Wrapper = makeWrapper();
     const { container } = render(
@@ -101,7 +103,7 @@ describe("VietQrPaymentSection i18n (P0-6)", () => {
       accountName: "VNShop Seller",
       reference: "REF-456",
     });
-    paymentStatusMock.mockImplementation(() => new Promise(() => {}));
+    paymentStatusMock.mockImplementation(() => new Promise<never>(() => undefined));
 
     const Wrapper = makeWrapper();
     const { container } = render(

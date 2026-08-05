@@ -58,8 +58,9 @@ public class UseCaseConfig {
     }
 
     @Bean
-    ApproveSellerUseCase approveSellerUseCase(UserRepositoryPort userRepositoryPort) {
-        return new ApproveSellerUseCase(userRepositoryPort);
+    ApproveSellerUseCase approveSellerUseCase(
+            UserRepositoryPort userRepositoryPort, KeycloakAdminPort keycloakAdminPort) {
+        return new ApproveSellerUseCase(userRepositoryPort, keycloakAdminPort);
     }
 
     @Bean
@@ -78,8 +79,9 @@ public class UseCaseConfig {
     }
 
     @Bean
-    ViewBuyerProfileUseCase viewBuyerProfileUseCase(UserRepositoryPort userRepositoryPort) {
-        return new ViewBuyerProfileUseCase(userRepositoryPort);
+    ViewBuyerProfileUseCase viewBuyerProfileUseCase(
+            UserRepositoryPort userRepositoryPort, KeycloakAdminPort keycloakAdminPort) {
+        return new ViewBuyerProfileUseCase(userRepositoryPort, keycloakAdminPort);
     }
 
     @Bean

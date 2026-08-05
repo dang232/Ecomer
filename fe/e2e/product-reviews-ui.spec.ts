@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
+
 import { loginViaOidc } from "./_auth";
+import { readJson, type ProductListResponse } from "./_api";
 
 const apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
 const password = "Test1234!";
@@ -19,21 +21,22 @@ test("buyer can select a rating, submit a comment, and see live review totals", 
 
   const productsResponse = await request.get(`${apiURL}/products?size=1`);
   expect(productsResponse.ok()).toBeTruthy();
-  const product = (await productsResponse.json())?.data?.content?.[0];
+  const product = (await readJson<ProductListResponse>(productsResponse)).data?.content?.[0];
   expect(product?.id).toBeTruthy();
+  if (!product) throw new Error("expected a seeded product");
 
   const reviewsResponse = await request.get(`${apiURL}/reviews/product/${product.id}`);
   expect(reviewsResponse.ok()).toBeTruthy();
-  const liveReviews = (await reviewsResponse.json())?.data ?? [];
+  const liveReviews = (await readJson<{ data?: { id?: string }[] }>(reviewsResponse)).data ?? [];
 
   await loginViaOidc(page, email, password);
 
   await page.goto(`/product/${product.id}`);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 20_000 });
 
-  const reviewsTab = page.getByRole("tab", { name: /^Reviews \(\d+\)$/ }).first();
+  const reviewsTab = page.getByRole("tab", { name: "Reviews", exact: true }).first();
   await reviewsTab.click();
-  await expect(reviewsTab).toHaveText(`Reviews (${liveReviews.length})`);
+  await expect(reviewsTab).toHaveText("Reviews");
   await expect(page.getByTestId("review-summary")).toContainText(String(liveReviews.length));
 
   const stars = page.getByRole("radio", { name: /^\d stars$/ });

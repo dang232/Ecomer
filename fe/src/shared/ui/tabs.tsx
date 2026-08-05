@@ -8,7 +8,7 @@ export interface TabItem<TValue extends string = string> {
   disabled?: boolean;
 }
 
-interface TabsProps<TValue extends string> {
+export interface TabsProps<TValue extends string> {
   ariaLabel: string;
   value: TValue;
   items: readonly TabItem<TValue>[];

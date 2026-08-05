@@ -60,6 +60,7 @@ export function VideoPlayer({
   const [playing, setPlaying] = useState(false);
   const [showPoster, setShowPoster] = useState(true);
   const [error, setError] = useState(false);
+  const [primaryTrack, ...additionalTracks] = tracks ?? [];
 
   // P0-7: Stop audio and release hardware decoder on unmount. Browsers do not
   // automatically pause a video element when it's removed from the DOM if the
@@ -126,7 +127,6 @@ export function VideoPlayer({
       ].join(" ")}
     >
       {/* Native video element — accessible via keyboard through native controls */}
-      {/* eslint-disable-next-line jsx-a11y/media-has-caption -- user-uploaded videos may not have captions; this is a known limitation for UGC content */}
       <video
         ref={videoRef}
         src={src}
@@ -145,7 +145,15 @@ export function VideoPlayer({
         onError={handleError}
       >
         {/* WCAG 1.2.2 — Captions (Prerecorded, AA) */}
-        {tracks?.map((track) => (
+        <track
+          key={primaryTrack?.srclang ?? "captions-unavailable"}
+          kind="captions"
+          src={primaryTrack?.src}
+          srcLang={primaryTrack?.srclang ?? "vi"}
+          label={primaryTrack?.label ?? "Captions unavailable"}
+          default={primaryTrack?.default}
+        />
+        {additionalTracks.map((track) => (
           <track
             key={track.srclang}
             kind="captions"

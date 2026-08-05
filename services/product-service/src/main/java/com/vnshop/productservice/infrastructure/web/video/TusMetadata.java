@@ -20,7 +20,8 @@ import java.util.Map;
  *   <li>{@code idempotencyKey} — client deduplication key</li>
  * </ul>
  */
-public record TusMetadata(VideoOwnerType ownerType, String ownerId, String idempotencyKey) {
+public record TusMetadata(VideoOwnerType ownerType, String ownerId, String idempotencyKey,
+        String extension) {
 
     public static TusMetadata parse(String headerValue) {
         Map<String, String> fields = new HashMap<>();
@@ -49,7 +50,25 @@ public record TusMetadata(VideoOwnerType ownerType, String ownerId, String idemp
         String ownerId = required(fields, "ownerId");
         String idempotencyKey = required(fields, "idempotencyKey");
 
-        return new TusMetadata(ownerType, ownerId, idempotencyKey);
+        return new TusMetadata(ownerType, ownerId, idempotencyKey, extensionFor(fields));
+    }
+
+    private static String extensionFor(Map<String, String> fields) {
+        String filename = fields.getOrDefault("filename", "").strip();
+        int separator = filename.lastIndexOf('.');
+        if (separator >= 0 && separator < filename.length() - 1) {
+            String extension = filename.substring(separator + 1).toLowerCase(java.util.Locale.ROOT);
+            if (java.util.Set.of("mp4", "mov", "webm", "mkv").contains(extension)) {
+                return extension;
+            }
+        }
+
+        return switch (fields.getOrDefault("filetype", "")) {
+            case "video/quicktime" -> "mov";
+            case "video/webm" -> "webm";
+            case "video/x-matroska" -> "mkv";
+            default -> "mp4";
+        };
     }
 
     private static String required(Map<String, String> fields, String key) {

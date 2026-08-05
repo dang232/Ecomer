@@ -2,9 +2,9 @@ import { Check, CheckCircle, ChevronRight, Tag } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useTranslation } from "react-i18next";
 
-import { ApiError } from "../../lib/api";
-import { formatPrice } from "../../lib/format";
-import type { BuyerCoupon } from "../../types/api";
+import { ApiError } from "@/shared/api";
+import type { BuyerCoupon } from "@/shared/contracts/api";
+import { formatPrice } from "@/shared/lib";
 
 import type { Step } from "./types";
 
@@ -12,10 +12,12 @@ interface Props {
   cartItems: { productId: string; name?: string | null; price: number; quantity: number }[];
   subtotal: number;
   shippingFee: number;
+  tax: number;
   discount: number;
   finalTotal: number;
   step: Step;
   isProcessing: boolean;
+  canSubmit: boolean;
   addresses: { length: number };
   appliedCoupon: string | null;
   couponInput: string;
@@ -40,10 +42,12 @@ export function CheckoutSummary({
   cartItems,
   subtotal,
   shippingFee,
+  tax,
   discount,
   finalTotal,
   step,
   isProcessing,
+  canSubmit,
   addresses,
   appliedCoupon,
   couponInput,
@@ -255,6 +259,12 @@ export function CheckoutSummary({
               {shippingFee === 0 ? t("checkout.summary.free") : formatPrice(shippingFee)}
             </span>
           </div>
+          {tax > 0 ? (
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">{t("checkout.summary.tax")}</span>
+              <span className="text-foreground">{formatPrice(tax)}</span>
+            </div>
+          ) : null}
           {discount > 0 ? (
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">{t("checkout.summary.discount")}</span>
@@ -270,7 +280,7 @@ export function CheckoutSummary({
         {/* CTA */}
         <button
           onClick={handleNext}
-          disabled={isProcessing || (step === "address" && addresses.length === 0)}
+          disabled={isProcessing || !canSubmit || (step === "address" && addresses.length === 0)}
           className="w-full py-3.5 rounded-[var(--radius-lg)] bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isProcessing ? (

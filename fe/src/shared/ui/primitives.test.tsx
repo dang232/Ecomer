@@ -3,10 +3,15 @@ import { Search } from "lucide-react";
 import { describe, expect, it, vi } from "vitest";
 
 import { Button } from "./button";
+import { Checkbox } from "./checkbox";
 import { Field } from "./field";
 import { IconButton } from "./icon-button";
+import { Pagination } from "./pagination";
+import { SegmentedControl } from "./segmented-control";
 import { StatusIndicator } from "./status-indicator";
+import { Switch } from "./switch";
 import { Tabs } from "./tabs";
+import { Tooltip } from "./tooltip";
 
 describe("shared UI primitives", () => {
   it("uses safe button defaults and a stable target size", () => {
@@ -90,5 +95,58 @@ describe("shared UI primitives", () => {
   it("renders status text in addition to color", () => {
     render(<StatusIndicator tone="success">Approved</StatusIndicator>);
     expect(screen.getByText("Approved")).toBeInTheDocument();
+  });
+
+  it("renders pagination as navigation with disabled boundaries", () => {
+    const onPageChange = vi.fn();
+    render(<Pagination page={1} pageCount={3} onPageChange={onPageChange} />);
+
+    expect(screen.getByRole("button", { name: /previous/i })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    expect(onPageChange).toHaveBeenCalledWith(2);
+  });
+
+  it("uses native checkbox and switch semantics", () => {
+    render(
+      <>
+        <Checkbox label="Apply promotion" />
+        <Switch label="Notify buyers" />
+      </>,
+    );
+
+    expect(screen.getByRole("checkbox", { name: "Apply promotion" })).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "Notify buyers" })).toBeInTheDocument();
+  });
+
+  it("changes segmented control values with the keyboard", () => {
+    const onValueChange = vi.fn();
+    render(
+      <SegmentedControl
+        ariaLabel="Chart interval"
+        value="week"
+        onValueChange={onValueChange}
+        items={[
+          { value: "day", label: "Day" },
+          { value: "week", label: "Week" },
+          { value: "month", label: "Month" },
+        ]}
+      />,
+    );
+
+    fireEvent.keyDown(screen.getByRole("radio", { name: "Week" }), { key: "ArrowRight" });
+    expect(onValueChange).toHaveBeenCalledWith("month");
+  });
+
+  it("labels icon-only controls through tooltip content", () => {
+    render(
+      <Tooltip label="Filter products">
+        <IconButton label="Filter products">
+          <Search />
+        </IconButton>
+      </Tooltip>,
+    );
+
+    expect(screen.getByRole("button", { name: "Filter products" })).toBeVisible();
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Filter products");
   });
 });

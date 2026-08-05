@@ -1,8 +1,8 @@
 import { CreditCard, MapPin, Package, Truck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { formatPrice } from "../../lib/format";
-import type { Address, CartItem } from "../../types/api";
+import type { Address, CartItem } from "@/shared/contracts/api";
+import { formatPrice } from "@/shared/lib";
 
 import { formatAddressLine } from "./format";
 import type { PaymentOption, ShippingOption } from "./types";
@@ -117,16 +117,8 @@ export function CheckoutReviewStep({
         </h3>
         <div className="space-y-3">
           {cartItems.map((item) => {
-            /* These fields may arrive from the cart API (P2-3 audit) */
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
-            const extra = item as any;
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-            const variant = extra.variant as string | undefined;
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-            const sellerName = extra.sellerName as string | undefined;
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-            const stock = extra.stock as number | undefined;
-            const isLowStock = stock !== undefined && stock < item.quantity;
+            const variant = item.variantId;
+            const sellerName = item.sellerName;
             return (
               <div key={item.productId} className="flex items-center gap-3">
                 {item.image ? (
@@ -150,14 +142,6 @@ export function CheckoutReviewStep({
                     {sellerName ??
                       t("checkout.review.sellerFallback", { defaultValue: "Unknown seller" })}
                   </p>
-                  {isLowStock ? (
-                    <p className="text-xs text-orange-600 dark:text-orange-400 mt-0.5">
-                      {t("checkout.review.lowStock", {
-                        count: stock,
-                        defaultValue: `Low stock — only ${stock} left`,
-                      })}
-                    </p>
-                  ) : null}
                   <p className="text-xs text-muted-foreground">x{item.quantity}</p>
                 </div>
                 <span className="text-sm font-bold text-primary shrink-0">

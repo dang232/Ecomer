@@ -6,8 +6,9 @@
  * implementations and the silent field-drop that existed in the search path.
  */
 
+import type { Product } from "@/features/catalog";
+
 import type { ProductDetail, ProductSummary } from "../../types/api";
-import type { Product } from "../../types/ui";
 
 /** Derive a discount percentage from original and current price. */
 export function pct(
@@ -71,7 +72,8 @@ export function findVariant(
   sku: string | undefined,
 ): { sku?: string; name?: string; priceAmount?: number; imageUrl?: string } | undefined {
   if (!sku) return undefined;
-  return p.variants?.find((v) => (v as { sku?: string }).sku === sku);
+  const variant = p.variants?.find((candidate) => candidate.sku === sku);
+  return variant ? { ...variant, imageUrl: variant.imageUrl ?? undefined } : undefined;
 }
 
 /**
@@ -103,9 +105,9 @@ export function fromServer(p: ProductSummary | ProductDetail): Product {
     image: primaryImage,
     images: images.length > 0 ? images : primaryImage ? [primaryImage] : [],
     category: p.category ?? p.categoryId ?? "",
-    categoryId: p.categoryId,
+    categoryId: p.categoryId ?? undefined,
     categoryLabel: p.category ?? p.categoryId ?? "",
-    brand: (p as { brand?: string }).brand,
+    brand: p.brand ?? undefined,
     sellerId: p.sellerId ?? "",
     sellerName: p.sellerName ?? "",
     rating: p.rating ?? 0,
@@ -115,7 +117,10 @@ export function fromServer(p: ProductSummary | ProductDetail): Product {
     description: detail.description ?? "",
     colors: detail.colors ?? parsedAttributes?.colors, // BE value wins; parsed fallback if absent
     sizes: detail.sizes ?? parsedAttributes?.sizes, // same fallback logic
-    variants: p.variants,
+    variants: p.variants?.map((variant) => ({
+      ...variant,
+      imageUrl: variant.imageUrl ?? undefined,
+    })),
     shipping: "Tiêu chuẩn",
     shippingFee: 0,
     location: "Việt Nam",

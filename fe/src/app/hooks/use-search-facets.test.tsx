@@ -1,12 +1,14 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const searchFacetsMock = vi.fn();
-vi.mock("../lib/api/endpoints/search", () => ({
+type UnknownCall = (...args: unknown[]) => unknown;
+
+const searchFacetsMock = vi.fn<UnknownCall>();
+vi.mock("@/shared/api/endpoints/search", () => ({
   searchFacets: (...args: unknown[]) => searchFacetsMock(...args),
 }));
 
-import { makeWrapper } from "../test-utils/render-with-query-client";
+import { makeWrapper } from "@/shared/test/render-with-query-client";
 
 import { useSearchFacets } from "./use-search-facets";
 

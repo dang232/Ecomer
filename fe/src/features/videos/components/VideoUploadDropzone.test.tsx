@@ -22,6 +22,7 @@ vi.mock("react-i18next", () => ({
 const idleState: VideoUploadState = {
   phase: "idle",
   progress: 0,
+  entityId: null,
   videoId: null,
   error: null,
   estimatedDuration: null,
@@ -31,6 +32,7 @@ const idleState: VideoUploadState = {
 const uploadingState: VideoUploadState = {
   phase: "uploading",
   progress: 42,
+  entityId: "product-42",
   videoId: "vid-123",
   error: null,
   estimatedDuration: null,
@@ -40,6 +42,7 @@ const uploadingState: VideoUploadState = {
 const errorState: VideoUploadState = {
   phase: "error",
   progress: 0,
+  entityId: "product-42",
   videoId: null,
   error: "video:wrong-type",
   estimatedDuration: null,
@@ -49,6 +52,7 @@ const errorState: VideoUploadState = {
 const completeState: VideoUploadState = {
   phase: "complete",
   progress: 100,
+  entityId: "product-42",
   videoId: "vid-123",
   error: null,
   estimatedDuration: null,
@@ -91,7 +95,7 @@ describe("VideoUploadDropzone", () => {
 
   it("renders a hidden file input accepting video formats", () => {
     const { container } = renderDropzone();
-    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
     expect(input).not.toBeNull();
     expect(input.accept).toContain("video/mp4");
   });
@@ -103,7 +107,7 @@ describe("VideoUploadDropzone", () => {
     const { container } = renderDropzone({ onFileSelected });
 
     const file = new File(["video"], "test.mp4", { type: "video/mp4" });
-    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
 
     fireEvent.change(input, { target: { files: [file] } });
 
@@ -117,7 +121,7 @@ describe("VideoUploadDropzone", () => {
 
     const file1 = new File(["video1"], "test1.mp4", { type: "video/mp4" });
     const file2 = new File(["video2"], "test2.mp4", { type: "video/mp4" });
-    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
 
     fireEvent.change(input, { target: { files: [file1, file2] } });
 
@@ -128,7 +132,7 @@ describe("VideoUploadDropzone", () => {
     const onFileSelected = vi.fn();
     const { container } = renderDropzone({ onFileSelected });
 
-    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
     fireEvent.change(input, { target: { files: null } });
 
     expect(onFileSelected).not.toHaveBeenCalled();
@@ -141,7 +145,7 @@ describe("VideoUploadDropzone", () => {
     const { container } = renderDropzone({ onFileSelected, disabled: true });
 
     const file = new File(["video"], "test.mp4", { type: "video/mp4" });
-    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
 
     fireEvent.change(input, { target: { files: [file] } });
 
@@ -150,13 +154,13 @@ describe("VideoUploadDropzone", () => {
 
   it("renders the dropzone button with reduced opacity when disabled", () => {
     const { container } = renderDropzone({ disabled: true });
-    const dropzoneBtn = container.querySelector('[role="button"]') as HTMLElement;
+    const dropzoneBtn = container.querySelector<HTMLElement>('[role="button"]')!;
     expect(dropzoneBtn.className).toContain("opacity-50");
   });
 
   it("sets tabIndex to -1 on the dropzone div when disabled", () => {
     const { container } = renderDropzone({ disabled: true });
-    const dropzoneBtn = container.querySelector('[role="button"]') as HTMLElement;
+    const dropzoneBtn = container.querySelector<HTMLElement>('[role="button"]')!;
     expect(dropzoneBtn.tabIndex).toBe(-1);
   });
 
@@ -164,9 +168,9 @@ describe("VideoUploadDropzone", () => {
 
   it("applies drag-over border style when a file is dragged over the dropzone", () => {
     const { container } = renderDropzone();
-    const dropzoneBtn = container.querySelector('[role="button"]') as HTMLElement;
+    const dropzoneBtn = container.querySelector<HTMLElement>('[role="button"]')!;
 
-    fireEvent.dragOver(dropzoneBtn, { preventDefault: () => {} });
+    fireEvent.dragOver(dropzoneBtn);
 
     expect(dropzoneBtn.className).toContain("border-primary");
     expect(dropzoneBtn.className).toContain("bg-surface-elevated");
@@ -174,9 +178,9 @@ describe("VideoUploadDropzone", () => {
 
   it("removes drag-over style when drag leaves the dropzone", () => {
     const { container } = renderDropzone();
-    const dropzoneBtn = container.querySelector('[role="button"]') as HTMLElement;
+    const dropzoneBtn = container.querySelector<HTMLElement>('[role="button"]')!;
 
-    fireEvent.dragOver(dropzoneBtn, { preventDefault: () => {} });
+    fireEvent.dragOver(dropzoneBtn);
     fireEvent.dragLeave(dropzoneBtn);
 
     // Word-boundary regex so we don't false-positive on the hover variant "hover:border-primary"
@@ -185,9 +189,9 @@ describe("VideoUploadDropzone", () => {
 
   it("does not apply drag-over style when disabled", () => {
     const { container } = renderDropzone({ disabled: true });
-    const dropzoneBtn = container.querySelector('[role="button"]') as HTMLElement;
+    const dropzoneBtn = container.querySelector<HTMLElement>('[role="button"]')!;
 
-    fireEvent.dragOver(dropzoneBtn, { preventDefault: () => {} });
+    fireEvent.dragOver(dropzoneBtn);
 
     // Word-boundary regex so we don't false-positive on the hover variant "hover:border-primary"
     expect(dropzoneBtn.className).not.toMatch(/(^|\s)border-primary(\s|$)/);
@@ -198,12 +202,11 @@ describe("VideoUploadDropzone", () => {
   it("calls onFileSelected when a file is dropped onto the dropzone", () => {
     const onFileSelected = vi.fn();
     const { container } = renderDropzone({ onFileSelected });
-    const dropzoneBtn = container.querySelector('[role="button"]') as HTMLElement;
+    const dropzoneBtn = container.querySelector<HTMLElement>('[role="button"]')!;
 
     const file = new File(["video"], "test.mp4", { type: "video/mp4" });
     fireEvent.drop(dropzoneBtn, {
       dataTransfer: { files: [file] },
-      preventDefault: () => {},
     });
 
     expect(onFileSelected).toHaveBeenCalledWith(file);
@@ -213,14 +216,14 @@ describe("VideoUploadDropzone", () => {
 
   it("is keyboard accessible via Enter key — dropzone has tabIndex 0 when enabled", () => {
     const { container } = renderDropzone();
-    const dropzoneBtn = container.querySelector('[role="button"]') as HTMLElement;
+    const dropzoneBtn = container.querySelector<HTMLElement>('[role="button"]')!;
     expect(dropzoneBtn.tabIndex).toBe(0);
   });
 
   it("triggers click on the hidden input when Enter is pressed on the dropzone", () => {
     const { container } = renderDropzone();
-    const dropzoneBtn = container.querySelector('[role="button"]') as HTMLElement;
-    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const dropzoneBtn = container.querySelector<HTMLElement>('[role="button"]')!;
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
     const clickSpy = vi.spyOn(input, "click");
 
     fireEvent.keyDown(dropzoneBtn, { key: "Enter" });
@@ -230,8 +233,8 @@ describe("VideoUploadDropzone", () => {
 
   it("triggers click on the hidden input when Space is pressed on the dropzone", () => {
     const { container } = renderDropzone();
-    const dropzoneBtn = container.querySelector('[role="button"]') as HTMLElement;
-    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const dropzoneBtn = container.querySelector<HTMLElement>('[role="button"]')!;
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
     const clickSpy = vi.spyOn(input, "click");
 
     fireEvent.keyDown(dropzoneBtn, { key: " " });
@@ -241,8 +244,8 @@ describe("VideoUploadDropzone", () => {
 
   it("does not trigger click when Enter is pressed and dropzone is disabled", () => {
     const { container } = renderDropzone({ disabled: true });
-    const dropzoneBtn = container.querySelector('[role="button"]') as HTMLElement;
-    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const dropzoneBtn = container.querySelector<HTMLElement>('[role="button"]')!;
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
     const clickSpy = vi.spyOn(input, "click");
 
     fireEvent.keyDown(dropzoneBtn, { key: "Enter" });
@@ -252,7 +255,7 @@ describe("VideoUploadDropzone", () => {
 
   it("has an aria-label on the dropzone button for screen readers", () => {
     const { container } = renderDropzone();
-    const dropzoneBtn = container.querySelector('[role="button"]') as HTMLElement;
+    const dropzoneBtn = container.querySelector<HTMLElement>('[role="button"]')!;
     expect(dropzoneBtn).toHaveAttribute("aria-label", "video.upload.dropzone.ariaLabel");
   });
 

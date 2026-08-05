@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Navigate, useLocation } from "react-router";
 import { toast } from "sonner";
 
-import { useAuth, type Role } from "../../hooks/use-auth";
+import { useAuth, type Role } from "../../hooks/auth-context";
 
 /* ------------------------------------------------------------------ */
 /*  Helper: renders <Navigate> after firing a toast on mount           */
@@ -62,20 +62,22 @@ export function RequireAuth({ children, loginPath = "/login" }: RequireAuthProps
 
 interface RequireRoleProps {
   role: Role;
-  children: ReactNode;
+  children?: ReactNode;
   fallbackPath?: string;
 }
 
 export function RequireRole({ role, children, fallbackPath = "/" }: RequireRoleProps) {
   const { ready, authenticated, roles } = useAuth();
+  const location = useLocation();
   const { t } = useTranslation();
 
   if (!ready) return null;
 
   if (!authenticated) {
+    const next = encodeURIComponent(location.pathname + location.search);
     return (
       <RedirectWithToast
-        to="/login"
+        to={`/login?next=${next}`}
         replace
         message={t("auth.loginRequired", { defaultValue: "Please sign in to continue" })}
       />

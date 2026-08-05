@@ -10,7 +10,7 @@ import {
   parseOptionalPhone,
 } from "../components/form/CountryPhoneInput";
 import { FormField } from "../components/form/FormField";
-import { useAuth } from "../hooks/use-auth";
+import { useAuth } from "../hooks/auth-context";
 import { sanitizeRedirect } from "../lib/auth/sanitize-redirect";
 import { isValidEmail } from "../lib/validation/email";
 import { MIN_PASSWORD_LENGTH } from "../lib/validation/password";
@@ -100,7 +100,9 @@ export function RegisterPage() {
             ? (err as { message?: unknown }).message
             : undefined;
         if (errorCode === "email_taken") {
-          setServerError(t("register.form.errorEmailTaken"));
+          setErrors({ email: t("register.form.errorEmailTaken") });
+        } else if (errorCode === "phone_taken") {
+          setErrors({ phone: t("register.form.errorPhoneTaken") });
         } else if (errorCode === "weak_password") {
           setServerError(t("register.form.errorWeakPassword"));
         } else if (
@@ -287,9 +289,9 @@ export function RegisterPage() {
 
         {/* Terms */}
         <p className="mt-4 text-center text-xs text-muted-foreground">
-          {t("login.termsNotice", {
+          {t("register.termsNotice", {
             defaultValue:
-              "By creating an account you agree to our Terms of Service and Privacy Policy.",
+              "By creating an account you agree to VNShop's Terms of Service and Privacy Policy.",
           })}
         </p>
 

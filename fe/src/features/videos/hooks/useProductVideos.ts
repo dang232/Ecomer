@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { videosByEntity } from "../../../app/lib/api/endpoints/videos";
-import type { Video } from "../../../app/types/api/video";
+import { videosByEntity } from "@/shared/api/endpoints/videos";
+import type { Video } from "@/shared/contracts/api/video";
 
 /**
  * Fetches all published videos attached to a product.
