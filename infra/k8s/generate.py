@@ -942,8 +942,7 @@ def write_generated_files() -> None:
     deployables = CATALOG["deployables"]
     if len(deployables) != CATALOG["expectedCount"]:
         raise SystemExit("deployable catalog count does not match expectedCount")
-    # The generated manifests contain secretKeyRef names only; Kubernetes provides the values.
-    missing_ports = sorted({item["id"] for item in deployables} - set(PORTS))  # noqa: py/clear-text-storage-sensitive-data
+    missing_ports = sorted({item["id"] for item in deployables} - set(PORTS))
     if missing_ports:
         raise SystemExit(f"missing ports for: {', '.join(missing_ports)}")
 

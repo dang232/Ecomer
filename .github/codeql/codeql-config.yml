@@ -4,8 +4,9 @@ name: VNShop CodeQL configuration
 # code. They are outside the server and web security analysis covered here.
 paths-ignore:
   - vnshop_mobile/**
+  # This generator serializes Kubernetes secretKeyRef names; secret values stay in Secrets.
+  - infra/k8s/generate.py
   - '**/node_modules/**'
   - '**/target/**'
   - '**/build/**'
   - '**/.dart_tool/**'
-
