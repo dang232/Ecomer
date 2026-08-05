@@ -1,7 +1,7 @@
 FROM node:24-alpine AS builder
 WORKDIR /workspace
 COPY package*.json ./
-RUN --mount=type=cache,target=/root/.npm npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci --legacy-peer-deps
 COPY tsconfig*.json nest-cli.json ./
 COPY src ./src
 RUN npm run build
@@ -11,7 +11,7 @@ RUN apk upgrade --no-cache && apk add --no-cache curl && addgroup -S vnshop && a
 WORKDIR /app
 COPY --from=builder /workspace/dist ./dist
 COPY --from=builder /workspace/package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force \
+RUN npm ci --omit=dev --ignore-scripts --legacy-peer-deps && npm cache clean --force \
     && rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 RUN chown -R vnshop:vnshop /app
 USER vnshop
