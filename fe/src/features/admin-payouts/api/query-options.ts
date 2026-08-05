@@ -21,6 +21,7 @@ export const adminPayoutsQueryOptions = (params: {
     queryFn: () =>
       adminAllPayouts({
         status: params.status || undefined,
+        q: params.q || undefined,
         page: params.page ?? 0,
         size: params.size ?? 50,
       }),

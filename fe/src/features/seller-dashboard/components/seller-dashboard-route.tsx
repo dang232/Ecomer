@@ -1,42 +1,44 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Package, ShoppingBag, Star, TrendingUp, Wallet } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { useSearchParams } from "react-router";
 
+import { SellerDashboard, toSellerDashboardView } from "@/features/seller";
 import { ApiError } from "@/shared/api";
 import { sellerPendingOrders } from "@/shared/api/endpoints/orders";
+import { listSellerReturns } from "@/shared/api/endpoints/returns";
 import { sellerRevenue } from "@/shared/api/endpoints/seller-analytics";
+import { myPayouts, myWallet } from "@/shared/api/endpoints/seller-finance";
 import { getSeller } from "@/shared/api/endpoints/sellers";
 import { sellerProfile } from "@/shared/api/endpoints/users";
-import { formatPrice } from "@/shared/lib";
+import { Skeleton } from "@/shared/ui";
 
-import { toRevenueChartData } from "../model/dashboard-view";
+const DAY_VALUES = [7, 30, 90] as const;
+const DEFAULT_DAYS = 30;
 
-interface KpiCardProps {
-  icon: typeof Wallet;
-  label: string;
-  value: string;
+function parseDays(raw: string | null): number {
+  const candidate = Number(raw);
+  return DAY_VALUES.includes(candidate as (typeof DAY_VALUES)[number]) ? candidate : DEFAULT_DAYS;
 }
 
-function KpiCard({ icon: Icon, label, value }: KpiCardProps) {
+function DashboardLoading() {
   return (
-    <div className="bg-card border border-border rounded-[var(--radius-lg)] p-5 flex flex-col">
-      <div className="w-10 h-10 bg-primary-light rounded-[var(--radius-md)] flex items-center justify-center shrink-0">
-        <Icon size={20} className="text-primary" aria-hidden="true" />
+    <div className="mx-auto w-full max-w-[1440px] space-y-6 py-2" role="status" aria-busy="true">
+      <div className="space-y-3 border-b border-border pb-5">
+        <Skeleton className="h-4 w-20" />
+        <Skeleton className="h-9 w-64" />
+        <Skeleton className="h-4 w-96 max-w-full" />
       </div>
-      <p className="text-2xl font-bold text-foreground mt-3">{value}</p>
-      <p className="text-sm text-text-secondary mt-1">{label}</p>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+        {DAY_VALUES.slice(0, 5).map((value) => (
+          <Skeleton key={value} className="h-32" />
+        ))}
+      </div>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(19rem,1fr)]">
+        <Skeleton className="h-[380px]" />
+        <Skeleton className="h-[380px]" />
+      </div>
     </div>
   );
 }
@@ -44,29 +46,16 @@ function KpiCard({ icon: Icon, label, value }: KpiCardProps) {
 export function SellerDashboardRoute() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const days = parseDays(searchParams.get("days"));
 
-  // Seller profile for product count + rating
   const profileQuery = useQuery({
     queryKey: ["seller", "profile"],
     queryFn: sellerProfile,
     retry: false,
   });
-
-  const sellerId = profileQuery.data?.id;
-  const revenueQuery = useQuery({
-    queryKey: ["seller", "revenue", { days: 30 }],
-    queryFn: () => sellerRevenue({ days: 30 }),
-    enabled: profileQuery.isSuccess,
-    staleTime: 60_000,
-    retry: false,
-  });
-  const chartData = useMemo(() => toRevenueChartData(revenueQuery.data ?? []), [revenueQuery.data]);
-  const hasRevenue = chartData.length > 0;
-
-  const retryRevenue = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: ["seller", "revenue", { days: 30 }] }),
-    [queryClient],
-  );
+  const profile = profileQuery.data;
+  const sellerId = profile?.id;
 
   const publicStatsQuery = useQuery({
     queryKey: ["seller", "public-stats", sellerId],
@@ -78,188 +67,132 @@ export function SellerDashboardRoute() {
     retry: false,
   });
 
-  // Pending orders count
+  const revenueQuery = useQuery({
+    queryKey: ["seller", "revenue", { days }],
+    queryFn: () => sellerRevenue({ days }),
+    enabled: Boolean(sellerId),
+    staleTime: 60_000,
+    retry: false,
+  });
+
   const pendingQuery = useQuery({
     queryKey: ["seller", "pending-orders"],
     queryFn: () => sellerPendingOrders(),
+    enabled: Boolean(sellerId),
     refetchInterval: 60_000,
     retry: false,
   });
 
-  // Wallet balance
-  const walletQuery = useQuery({
-    queryKey: ["seller", "wallet"],
-    queryFn: async () => {
-      // WalletPage will do the full wallet + payouts query; we just need balance for KPI
-      const { myWallet } = await import("@/shared/api/endpoints/seller-finance");
-      return myWallet();
-    },
+  const returnsQuery = useQuery({
+    queryKey: ["seller", "returns"],
+    queryFn: listSellerReturns,
+    enabled: Boolean(sellerId),
+    refetchInterval: 60_000,
     retry: false,
   });
 
-  const statsLoading = profileQuery.isLoading || publicStatsQuery.isLoading;
-  const walletBalance = walletQuery.data?.balance ?? null;
-  const revenueLoading = revenueQuery.isLoading;
-  const revenueError = revenueQuery.error;
+  const walletQuery = useQuery({
+    queryKey: ["seller", "wallet"],
+    queryFn: myWallet,
+    enabled: Boolean(sellerId),
+    retry: false,
+  });
 
-  return (
-    <div className="space-y-6">
-      <header className="space-y-1">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-          {t("seller.dashboard.eyebrow")}
-        </p>
-        <h1 className="text-2xl font-bold text-foreground">{t("seller.dashboard.title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("seller.dashboard.subtitle")}</p>
-      </header>
+  const payoutsQuery = useQuery({
+    queryKey: ["seller", "payouts"],
+    queryFn: myPayouts,
+    enabled: Boolean(sellerId),
+    retry: false,
+  });
 
-      {/* KPI row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard
-          icon={Wallet}
-          label={t("seller.dashboard.kpi.balance")}
-          value={walletBalance !== null ? formatPrice(walletBalance) : "—"}
-        />
-        <KpiCard
-          icon={ShoppingBag}
-          label={t("seller.dashboard.kpi.pending")}
-          value={String(pendingQuery.data?.length ?? 0)}
-        />
-        <KpiCard
-          icon={Package}
-          label={t("seller.dashboard.kpi.products")}
-          value={statsLoading ? "..." : String(publicStatsQuery.data?.totalProducts ?? 0)}
-        />
-        <KpiCard
-          icon={Star}
-          label={t("seller.dashboard.kpi.rating")}
-          value={
-            statsLoading
-              ? "..."
-              : publicStatsQuery.data?.ratingAvg == null
-                ? t("seller.dashboard.kpi.noRating")
-                : publicStatsQuery.data.ratingAvg.toFixed(1)
-          }
-        />
-      </div>
+  const dashboardView = useMemo(() => {
+    if (!profile) return null;
+    return toSellerDashboardView({
+      profile,
+      publicStats: publicStatsQuery.data ?? null,
+      pendingOrders: pendingQuery.data ?? [],
+      pendingReturns: returnsQuery.data ?? [],
+      wallet: walletQuery.data,
+      payouts: payoutsQuery.data ?? [],
+      revenue: revenueQuery.data ?? [],
+    });
+  }, [
+    pendingQuery.data,
+    payoutsQuery.data,
+    profile,
+    publicStatsQuery.data,
+    returnsQuery.data,
+    revenueQuery.data,
+    walletQuery.data,
+  ]);
 
-      {/* Revenue chart */}
-      <div className="bg-card border border-border rounded-[var(--radius-lg)] p-5">
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2">
-            <TrendingUp size={18} className="text-primary" aria-hidden="true" />
-            <h3 className="font-bold text-foreground">{t("seller.dashboard.revenue30dTitle")}</h3>
-          </div>
-          <span className="text-[11px] text-muted-foreground">
-            {t("seller.dashboard.revenue30dHint")}
-          </span>
-        </div>
-        {revenueError instanceof ApiError ? (
-          <div className="rounded-[var(--radius-md)] bg-error-light border border-error/20 px-4 py-3 text-sm text-error">
-            <p>{t("seller.dashboard.revenue30dError", { message: revenueError.message })}</p>
+  const retryRevenue = useCallback(() => {
+    void revenueQuery.refetch();
+  }, [revenueQuery]);
+
+  const retryOperational = useCallback(() => {
+    void Promise.all([pendingQuery.refetch(), returnsQuery.refetch(), payoutsQuery.refetch()]);
+  }, [pendingQuery, payoutsQuery, returnsQuery]);
+
+  const retryProfile = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ["seller", "profile"] });
+  }, [queryClient]);
+
+  const handleDaysChange = (nextDays: number) => {
+    setSearchParams(
+      (previous) => {
+        const next = new URLSearchParams(previous);
+        if (nextDays === DEFAULT_DAYS) next.delete("days");
+        else next.set("days", String(nextDays));
+        return next;
+      },
+      { replace: true },
+    );
+  };
+
+  if (profileQuery.isLoading) return <DashboardLoading />;
+
+  if (!profile || profileQuery.error) {
+    const message = profileQuery.error instanceof ApiError ? profileQuery.error.message : "";
+    return (
+      <div className="mx-auto w-full max-w-[720px] py-8" role="alert">
+        <div className="flex items-start gap-3 border-l-4 border-error bg-error-light px-4 py-4 text-sm text-error">
+          <RefreshCw size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
+          <div>
+            <p className="font-semibold">{t("seller.dashboard.profileError")}</p>
+            {message ? <p className="mt-1 text-xs">{message}</p> : null}
             <button
               type="button"
-              onClick={retryRevenue}
-              className="mt-2 text-xs font-medium underline underline-offset-2 hover:text-error/80 transition-colors"
+              onClick={retryProfile}
+              className="mt-3 inline-flex min-h-[var(--target-web)] items-center gap-1.5 font-semibold underline underline-offset-2"
             >
-              {t("seller.dashboard.revenue30dRetry", { defaultValue: "Thử lại" })}
+              <RefreshCw size={14} aria-hidden="true" />
+              {t("seller.dashboard.revenueRetry")}
             </button>
           </div>
-        ) : revenueLoading ? (
-          <p className="text-sm text-muted-foreground py-12 text-center">
-            {t("seller.dashboard.revenue30dLoading")}
-          </p>
-        ) : hasRevenue ? (
-          <div data-testid="seller-revenue-chart">
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis
-                  dataKey="day"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
-                  tickFormatter={(v: number) => `${(v / 1_000_000).toFixed(0)}tr`}
-                />
-                <Tooltip
-                  formatter={(v: number) => formatPrice(v)}
-                  contentStyle={{
-                    borderRadius: "var(--radius-lg)",
-                    border: "1px solid var(--border)",
-                    boxShadow: "var(--shadow-lg)",
-                    background: "var(--card)",
-                    color: "var(--foreground)",
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="var(--primary)"
-                  strokeWidth={2.5}
-                  fill="url(#revenueGrad)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground py-12 text-center">
-            {t("seller.dashboard.revenue30dEmpty")}
-          </p>
-        )}
+        </div>
       </div>
+    );
+  }
 
-      {/* Orders chart */}
-      <div className="bg-card border border-border rounded-[var(--radius-lg)] p-5">
-        <h3 className="font-bold text-foreground mb-4">{t("seller.dashboard.orders30dTitle")}</h3>
-        {revenueLoading ? (
-          <p className="text-sm text-muted-foreground py-10 text-center">
-            {t("seller.dashboard.orders30dLoading")}
-          </p>
-        ) : hasRevenue ? (
-          <div data-testid="seller-orders-chart">
-            <ResponsiveContainer width="100%" height={160}>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis
-                  dataKey="day"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: "var(--radius-lg)",
-                    border: "1px solid var(--border)",
-                    boxShadow: "var(--shadow-lg)",
-                    background: "var(--card)",
-                    color: "var(--foreground)",
-                  }}
-                />
-                <Bar dataKey="orders" fill="var(--accent)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground py-10 text-center">
-            {t("seller.dashboard.orders30dEmpty")}
-          </p>
-        )}
-      </div>
-    </div>
+  if (!dashboardView) return null;
+
+  const operationalLoading =
+    pendingQuery.isLoading || returnsQuery.isLoading || payoutsQuery.isLoading;
+  const operationalError = pendingQuery.isError || returnsQuery.isError || payoutsQuery.isError;
+
+  return (
+    <SellerDashboard
+      view={dashboardView}
+      profile={profile}
+      days={days}
+      onDaysChange={handleDaysChange}
+      revenueLoading={revenueQuery.isLoading}
+      revenueError={revenueQuery.error}
+      onRetryRevenue={retryRevenue}
+      operationalLoading={operationalLoading}
+      operationalError={operationalError}
+      onRetryOperational={retryOperational}
+    />
   );
 }

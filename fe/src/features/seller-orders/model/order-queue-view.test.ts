@@ -37,6 +37,12 @@ describe("toSellerOrderRow", () => {
     expect(row.itemSummary).toBe("Apple x2, Banana x1");
   });
 
+  it("preserves a missing server date as unavailable metadata", () => {
+    const orderWithoutDate = { ...baseOrder, createdAt: undefined };
+
+    expect(toSellerOrderRow(orderWithoutDate).createdAt).toBeUndefined();
+  });
+
   it("maps all FulfillmentStatus values without crashing", () => {
     const statuses = [
       "PENDING_ACCEPTANCE",

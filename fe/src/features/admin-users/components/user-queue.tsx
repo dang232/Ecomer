@@ -76,7 +76,7 @@ export function AdminUserQueue({
         onClose={() => onSelect?.(null)}
         title={selectedUser?.name ?? t("admin.users.drawer.title")}
       >
-        {selectedUser ? <UserDetailDrawer userId={selectedUser.keycloakId} /> : null}
+        {selected ? <UserDetailDrawer userId={selected} /> : null}
       </AdminRecordDrawer>
 
       <div className="space-y-5">

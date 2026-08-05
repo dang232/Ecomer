@@ -1,18 +1,46 @@
 /**
  * Integration test for ProductList.
  *
- * Note: The seller product catalog list endpoint (`useProducts` backed by
- * `/products`) returns ACTIVE catalog products only.
- * Deep-linked editing is supported for an ACTIVE row or a session-recovered
- * draft, NOT for an arbitrary unpublished product ID.
+ * Seller management reads include the authenticated seller's drafts and
+ * published products. Deep-linked editing is owner-scoped by the API.
  */
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ProductListRow } from "../model/product-list-view";
 
-import { ProductList } from "./product-list";
+vi.mock("../api/query-options", () => ({
+  productListOptions: () => ({
+    queryKey: ["seller-products-test"],
+    queryFn: () =>
+      Promise.resolve({
+        content: [{ id: "p-1", name: "Test Product", price: 990000, stock: 10, sold: 5 }],
+        totalPages: 3,
+        last: false,
+      }),
+  }),
+}));
+
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: Record<string, string | number>) => {
+      if (key === "seller.products.pageIndicator") {
+        return `Page ${String(options?.current ?? "{{current}}")} of ${String(options?.total ?? "{{total}}")}`;
+      }
+      return key;
+    },
+    i18n: { language: "en" },
+  }),
+}));
+
+vi.mock("./product-editor-drawer", () => ({
+  ProductEditorDrawer: ({ open, product }: { open: boolean; product: { id: string } | null }) =>
+    open ? <div data-testid="product-editor-drawer">{product ? "edit" : "create"}</div> : null,
+}));
+
+import { ProductList, SellerProductsListRoute } from "./product-list";
 import type { SellerProductsRouteState } from "./product-list";
 
 const makeRow = (overrides: Partial<ProductListRow> = {}): ProductListRow => ({
@@ -39,6 +67,19 @@ const renderList = (
       <ProductList rows={rows} routeState={routeState} onRouteChange={onRouteChange} />
     </MemoryRouter>,
   );
+
+function renderRoute() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={["/seller/products"]}>
+        <SellerProductsListRoute sellerId="seller-1" />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
 
 describe("ProductList", () => {
   it("renders the table with product rows", () => {
@@ -100,6 +141,24 @@ describe("ProductList", () => {
     expect(onRouteChange).toHaveBeenCalledWith(
       expect.objectContaining({ mode: "create", selected: null }),
     );
+  });
+
+  it("opens the editor when create mode is selected from the route", async () => {
+    renderRoute();
+
+    const addBtn = await screen.findByRole("button", {
+      name: /seller\.products\.addNew|Add product/i,
+    });
+    fireEvent.click(addBtn);
+
+    expect(screen.getByTestId("product-editor-drawer")).toHaveTextContent("create");
+  });
+
+  it("passes the server page count to the pagination translation", async () => {
+    renderRoute();
+
+    expect(await screen.findByText("Page 1 of 3")).toBeVisible();
+    expect(screen.queryByText("Page 1 of {{total}}")).not.toBeInTheDocument();
   });
 
   it("renders empty state when no rows", () => {

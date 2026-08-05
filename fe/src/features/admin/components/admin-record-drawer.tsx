@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { Drawer } from "@/shared/ui/drawer";
 
 export interface AdminRecordDrawerProps {
-  selectedId: string | null;
+  selectedId: string | null | undefined;
   onClose: () => void;
   children: ReactNode;
   title: string;
@@ -26,7 +26,7 @@ export function AdminRecordDrawer({
 }: AdminRecordDrawerProps) {
   return (
     <Drawer
-      open={selectedId !== null}
+      open={selectedId != null}
       title={title}
       description={description}
       footer={footer}

@@ -79,10 +79,10 @@ export const requestReturn = (body: {
 export const listReturns = () => api.get("/returns", z.array(returnResponseSchema));
 
 /**
- * List returns for sellers (pending approvals)
- * Note: Backend may need to implement /seller/returns endpoint
+ * List returns for the authenticated seller, joined through the seller's
+ * owned sub-orders. The gateway routes this through order-service.
  */
-export const listSellerReturns = () => api.get("/seller/returns", z.array(returnResponseSchema));
+export const listSellerReturns = () => api.get("/returns/seller", z.array(returnResponseSchema));
 
 /**
  * Get a single return by ID

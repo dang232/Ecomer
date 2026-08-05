@@ -91,11 +91,11 @@ export function ReviewInbox({ view, routeState, onRouteChange }: ReviewInboxProp
             ) : null}
             {review.images.length > 0 ? (
               <div className="mt-3 flex gap-2">
-                {review.images.map((url) => (
+                {review.images.map((url, index) => (
                   <img
                     key={url}
                     src={url}
-                    alt={t("seller.reviews.imageAlt")}
+                    alt={t("seller.reviews.imageAlt", { count: index + 1 })}
                     className="w-16 h-16 object-cover rounded-lg"
                   />
                 ))}

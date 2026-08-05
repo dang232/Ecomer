@@ -8,6 +8,9 @@ import { ReviewInbox } from "./review-inbox";
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) => {
+      if (key === "seller.reviews.imageAlt" && typeof options?.count === "number") {
+        return `Review image ${options.count}`;
+      }
       if (options) return key;
       return key;
     },
@@ -80,5 +83,24 @@ describe("ReviewInbox", () => {
       />,
     );
     expect(screen.queryByRole("button", { name: /reply/i })).not.toBeInTheDocument();
+  });
+
+  it("resolves the image count in review image alt text", () => {
+    const view: SellerReviewInboxView = {
+      reviews: [{ ...baseReview, images: ["/review-1.jpg", "/review-2.jpg"] }],
+      totalCount: 1,
+      pageCount: 1,
+    };
+
+    render(
+      <ReviewInbox
+        view={view}
+        routeState={{ q: "", page: 0, selected: null }}
+        onRouteChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("img", { name: "Review image 1" })).toBeVisible();
+    expect(screen.getByRole("img", { name: "Review image 2" })).toBeVisible();
   });
 });

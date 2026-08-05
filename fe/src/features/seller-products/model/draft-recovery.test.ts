@@ -6,6 +6,7 @@ import {
   getDraftRecovery,
   saveDraftRecovery,
 } from "./draft-recovery";
+import type { SellerProductForm } from "./product-form";
 
 const sampleProductId = "prod-123";
 const sampleFormValues = {
@@ -15,8 +16,10 @@ const sampleFormValues = {
   brand: "TestBrand",
   tags: ["test"],
   images: [],
-  variants: [{ sku: "SKU-1", name: "Variant 1", priceAmount: 990000, stockQuantity: 5 }],
-};
+  offerMode: "single",
+  offer: { sku: "SKU-1", priceAmount: 990000, stockQuantity: 5 },
+  variants: [],
+} satisfies SellerProductForm;
 
 // ── sessionStorage mock ─────────────────────────────────────────────────────────
 
@@ -40,9 +43,8 @@ describe("saveDraftRecovery", () => {
     saveDraftRecovery(sampleProductId, sampleFormValues);
     const raw = storage.get(draftRecoveryKey);
     expect(raw).not.toBeNull();
-    const parsed = JSON.parse(raw!) as { productId: string; formValues: { name: string } };
-    expect(parsed.productId).toBe(sampleProductId);
-    expect(parsed.formValues.name).toBe("Draft Product");
+    expect(raw).toContain(`"productId":"${sampleProductId}"`);
+    expect(raw).toContain('"name":"Draft Product"');
   });
 });
 
@@ -74,6 +76,31 @@ describe("getDraftRecovery", () => {
     const record = { _version: "999.0.0", productId: "x", formValues: {} };
     storage.set(draftRecoveryKey, JSON.stringify(record));
     expect(getDraftRecovery()).toBeNull();
+  });
+
+  it("migrates a version 1 backend-shaped draft into a single offer", () => {
+    storage.set(
+      draftRecoveryKey,
+      JSON.stringify({
+        _version: "1",
+        productId: sampleProductId,
+        formValues: {
+          name: "Draft Product",
+          categoryId: "electronics",
+          images: [],
+          variants: [{ sku: "SKU-1", name: "Standard", priceAmount: 990000, stockQuantity: 5 }],
+        },
+      }),
+    );
+
+    const recovered = getDraftRecovery();
+    expect(recovered?.productId).toBe(sampleProductId);
+    expect(recovered?.formValues.offerMode).toBe("single");
+    expect(recovered?.formValues.offer).toEqual({
+      sku: "SKU-1",
+      priceAmount: 990000,
+      stockQuantity: 5,
+    });
   });
 });
 

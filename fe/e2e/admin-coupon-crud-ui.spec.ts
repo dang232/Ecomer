@@ -22,9 +22,10 @@ async function gotoCouponsTab(page: Page): Promise<void> {
   await expect(page.getByText(/Admin Dashboard|Tổng quan|Admin Console/i).first()).toBeVisible({
     timeout: 20_000,
   });
-  const tab = page.getByRole("button", { name: /^(Coupons|Coupon)$/i }).first();
-  await expect(tab).toBeVisible({ timeout: 10_000 });
-  await tab.click();
+  const link = page.getByRole("link", { name: /^(Coupons|Coupon)$/i }).first();
+  await expect(link).toBeVisible({ timeout: 10_000 });
+  await expect(link).toHaveAttribute("href", "/admin/coupons");
+  await link.click();
   await expect(page.getByText(/Coupon management|Quản lý coupon/i).first()).toBeVisible({
     timeout: 15_000,
   });

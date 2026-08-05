@@ -35,7 +35,7 @@ export interface AdminQueueFrameProps<T> {
   onStatusChange: (status: string) => void;
   onSortChange?: (sort: string) => void;
   // selection
-  selectedId: string | null;
+  selectedId: string | null | undefined;
   onSelect: (id: string | null) => void;
   // table
   rows: readonly T[];
@@ -147,7 +147,7 @@ export function AdminQueueFrame<T>({
         title={drawerTitle}
         description={drawerDescription}
       >
-        {selectedId !== null ? children : null}
+        {selectedId != null ? children : null}
       </AdminRecordDrawer>
     </PageContainer>
   );

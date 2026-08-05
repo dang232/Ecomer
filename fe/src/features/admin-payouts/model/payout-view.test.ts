@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { AdminPayout } from "@/shared/contracts/api";
+import { adminPayoutSchema, type AdminPayout } from "@/shared/contracts/api";
 import { sellerIdSchema } from "@/shared/contracts/api/branded-ids";
 
 import { payoutActionsFor, toPayoutView } from "./payout-view";
@@ -55,6 +55,23 @@ describe("toPayoutView", () => {
   it("normalizes null sellerName to null", () => {
     const view = toPayoutView(payoutFixture({ sellerName: undefined }));
     expect(view.sellerName).toBeNull();
+  });
+
+  it("keeps sellerId available when a parsed payout has sellerName null", () => {
+    const parsed = adminPayoutSchema.parse({
+      payoutId: "p-1",
+      sellerId: "2fa79e15-2e29-4b94-903e-15cc20fe36dc",
+      sellerName: null,
+      amount: 150000,
+      status: "PENDING",
+      createdAt: "2026-07-22T10:00:00Z",
+    });
+
+    expect(toPayoutView(parsed)).toMatchObject({
+      sellerId: "2fa79e15-2e29-4b94-903e-15cc20fe36dc",
+      sellerName: null,
+      status: "PENDING",
+    });
   });
 });
 

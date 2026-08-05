@@ -1,4 +1,5 @@
 import type { PendingSubOrder } from "@/shared/api/endpoints/orders";
+import type { Return as SellerReturn } from "@/shared/api/endpoints/returns";
 import type { SellerRevenuePoint } from "@/shared/api/endpoints/seller-analytics";
 import type { Payout, Wallet } from "@/shared/contracts/api";
 import type { PublicSeller, SellerProfile } from "@/shared/contracts/api/seller";
@@ -19,7 +20,7 @@ export interface DashboardRevenuePoint {
   orders: number;
 }
 
-export type UrgentTaskKind = "order" | "inventory" | "payout";
+export type UrgentTaskKind = "order" | "return" | "payout";
 
 export interface UrgentTask {
   id: string;
@@ -45,6 +46,7 @@ export interface DashboardInputs {
   profile: SellerProfileView | SellerProfile;
   publicStats: PublicSeller | null;
   pendingOrders: readonly PendingSubOrder[];
+  pendingReturns?: readonly SellerReturn[];
   wallet: Wallet | null | undefined;
   payouts: readonly Payout[];
   revenue: readonly SellerRevenuePoint[];
@@ -95,6 +97,16 @@ export function toSellerDashboardView(inputs: DashboardInputs): SellerDashboardV
         kind: "order",
         label: order.id,
         href: "/seller/orders",
+      });
+    }
+  }
+  for (const returnRequest of inputs.pendingReturns ?? []) {
+    if (returnRequest.status === "REQUESTED") {
+      tasks.push({
+        id: `return:${returnRequest.id}`,
+        kind: "return",
+        label: returnRequest.id,
+        href: "/seller/returns",
       });
     }
   }

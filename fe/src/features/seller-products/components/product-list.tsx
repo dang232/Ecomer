@@ -4,12 +4,11 @@
  * URL-owned state: ?q=<text>&page=<one-based>&selected=<product-id>&mode=create|edit
  * Debounce only the query REQUEST; commit search to URL on submit.
  *
- * Note: The seller product catalog endpoint returns ACTIVE products only.
- * Deep-linked editing is supported for an ACTIVE row or a session-recovered draft,
- * NOT for an arbitrary unpublished product ID.
+ * Management rows come from the authenticated seller endpoint, so drafts and
+ * published products share one owner-scoped list and detail flow.
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Edit3, Plus, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -20,6 +19,8 @@ import { DataTable, ImageWithFallback, type DataTableColumn } from "@/shared/ui"
 import { productListOptions } from "../api/query-options";
 import type { ProductListRow } from "../model/product-list-view";
 import { toProductListRow } from "../model/product-list-view";
+
+import { ProductEditorDrawer } from "./product-editor-drawer";
 
 export interface SellerProductsRouteState {
   q: string;
@@ -174,8 +175,9 @@ interface SellerProductsListRouteProps {
   sellerId?: string;
 }
 
-export function SellerProductsListRoute({ sellerId }: SellerProductsListRouteProps) {
+export function SellerProductsListRoute(_props: SellerProductsListRouteProps) {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const q = searchParams.get("q") ?? "";
@@ -197,17 +199,27 @@ export function SellerProductsListRoute({ sellerId }: SellerProductsListRoutePro
 
   const routeState: SellerProductsRouteState = { q, page, selected, mode };
 
-  const { data: products = [], isLoading } = useQuery(
+  const { data: productPage, isLoading } = useQuery(
     productListOptions({
-      sellerId,
       q: debouncedQ || undefined,
       page: Math.max(0, page - 1),
       size: PAGE_SIZE,
     }),
   );
 
+  const products = productPage?.content ?? [];
   const rows: readonly ProductListRow[] = products.map(toProductListRow);
-  const hasMore = products.length === PAGE_SIZE;
+  const totalPages =
+    productPage?.totalPages ??
+    (productPage?.totalElements != null
+      ? Math.max(1, Math.ceil(productPage.totalElements / (productPage.size ?? PAGE_SIZE)))
+      : undefined);
+  const hasMore =
+    productPage?.last !== undefined ? !productPage.last : products.length === PAGE_SIZE;
+  const pageIndicator =
+    totalPages != null
+      ? t("seller.products.pageIndicator", { current: page, total: totalPages })
+      : t("seller.products.pageIndicatorCurrent", { current: page });
 
   const handleRouteChange = (next: SellerProductsRouteState) => {
     const params = new URLSearchParams(searchParams);
@@ -241,6 +253,14 @@ export function SellerProductsListRoute({ sellerId }: SellerProductsListRoutePro
     );
   };
 
+  const handleEditorClose = () => {
+    handleRouteChange({ ...routeState, selected: null, mode: null });
+  };
+
+  const handleEditorSave = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["seller", "products"] });
+  };
+
   return (
     <div className="space-y-5">
       <form onSubmit={handleSearchSubmit} className="flex">
@@ -261,6 +281,13 @@ export function SellerProductsListRoute({ sellerId }: SellerProductsListRoutePro
       ) : null}
 
       <ProductList rows={rows} routeState={routeState} onRouteChange={handleRouteChange} />
+
+      <ProductEditorDrawer
+        open={mode !== null}
+        product={mode === "edit" && selected ? { id: selected } : null}
+        onClose={handleEditorClose}
+        onSave={handleEditorSave}
+      />
 
       {rows.length > 0 ? (
         <nav
@@ -284,9 +311,7 @@ export function SellerProductsListRoute({ sellerId }: SellerProductsListRoutePro
           >
             {t("seller.products.prev")}
           </button>
-          <span className="text-xs text-muted-foreground">
-            {t("seller.products.pageIndicator", { current: page })}
-          </span>
+          <span className="text-xs text-muted-foreground">{pageIndicator}</span>
           <button
             type="button"
             onClick={() =>

@@ -15,6 +15,12 @@ export function OrderDetailDrawer({ row, onClose }: OrderDetailDrawerProps) {
 
   if (!row) return null;
 
+  const parsedDate = row.createdAt ? new Date(row.createdAt) : null;
+  const dateLabel =
+    parsedDate && !Number.isNaN(parsedDate.getTime())
+      ? parsedDate.toLocaleString()
+      : t("seller.orders.detailDrawer.dateUnavailable");
+
   return (
     <div className="fixed inset-y-0 right-0 z-50 flex">
       {/* Backdrop */}
@@ -52,9 +58,7 @@ export function OrderDetailDrawer({ row, onClose }: OrderDetailDrawerProps) {
           {/* Status */}
           <div className="flex items-center gap-3">
             <StatusPill status={row.status} />
-            <span className="text-xs text-muted-foreground">
-              {new Date(row.createdAt).toLocaleString()}
-            </span>
+            <span className="text-xs text-muted-foreground">{dateLabel}</span>
           </div>
 
           {/* Items summary */}

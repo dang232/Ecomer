@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import {
   User,
   MapPin,
@@ -13,7 +13,7 @@ import {
   Save,
   Store,
 } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -25,6 +25,7 @@ import {
   addAddress,
   setDefaultAddress,
   removeAddress,
+  sellerProfile,
 } from "@/shared/api/endpoints/users";
 import type { Address, UserProfile } from "@/shared/contracts/api";
 import { addressKey } from "@/shared/lib";
@@ -51,7 +52,7 @@ function formatAddressLine(a: Address): string {
 export function ProfilePage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { authenticated, ready, profile: kcProfile, logout } = useAuth();
+  const { authenticated, ready, profile: kcProfile, roles, refresh, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<ProfileTab>("info");
   const { t } = useTranslation();
 
@@ -59,6 +60,31 @@ export function ProfilePage() {
 
   const profile = profileQuery.data;
   const addresses: Address[] = profile?.addresses ?? [];
+  const sellerApplicationQuery = useQuery({
+    queryKey: ["seller", "profile"],
+    queryFn: sellerProfile,
+    enabled: ready && authenticated,
+    retry: false,
+  });
+  const hasSellerRole = roles.includes("SELLER");
+  const sellerRoleRefreshAttemptedRef = useRef(false);
+  const sellerActionLabel = hasSellerRole
+    ? t("profile.sellerHub")
+    : sellerApplicationQuery.data
+      ? t("profile.sellerApplication")
+      : t("profile.becomeSeller");
+
+  useEffect(() => {
+    if (
+      !sellerApplicationQuery.data?.approved ||
+      hasSellerRole ||
+      sellerRoleRefreshAttemptedRef.current
+    ) {
+      return;
+    }
+    sellerRoleRefreshAttemptedRef.current = true;
+    void refresh().catch(() => undefined);
+  }, [hasSellerRole, refresh, sellerApplicationQuery.data?.approved]);
 
   // Avatar upload — hidden file input + camera button. The hook handles
   // sha256, presigned PUT, and activate; we just translate result to toast.
@@ -87,7 +113,7 @@ export function ProfilePage() {
     if (profile) {
       return {
         name: profile.name ?? "",
-        email: profile.email ?? "",
+        email: profile.email?.trim() || "",
         phone: profile.phone ?? "",
       };
     }
@@ -211,7 +237,7 @@ export function ProfilePage() {
     [kcProfile?.firstName, kcProfile?.lastName].filter(Boolean).join(" ").trim() ||
     kcProfile?.username ||
     t("profile.displayNameFallback");
-  const displayEmail = profile?.email ?? kcProfile?.email ?? "";
+  const displayEmail = profile?.email?.trim() || "";
 
   const NAV_ITEMS: { id: ProfileTab; labelKey: string; icon: typeof User }[] = [
     { id: "info", labelKey: "profile.tabs.info", icon: User },
@@ -297,11 +323,11 @@ export function ProfilePage() {
 
           {/* Become a Seller */}
           <button
-            onClick={() => navigate("/seller/register")}
+            onClick={() => navigate(hasSellerRole ? "/seller" : "/seller/register")}
             className="flex items-center gap-2.5 px-3 py-2.5 mt-0.5 rounded-[var(--radius-md)] text-[13px] font-medium cursor-pointer transition-colors w-full text-left text-text-secondary hover:bg-background hover:text-foreground"
           >
             <Store size={16} />
-            {t("profile.becomeSeller")}
+            {sellerActionLabel}
           </button>
 
           {/* Logout */}
@@ -324,33 +350,14 @@ export function ProfilePage() {
             <div>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-bold text-foreground">{t("profile.info.title")}</h2>
-                {editing ? (
-                  <div className="flex gap-3">
-                    <button
-                      onClick={cancelEditing}
-                      className="px-4 py-2 rounded-[var(--radius-md)] text-sm font-medium border border-border text-muted-foreground"
-                    >
-                      {t("profile.info.cancel")}
-                    </button>
-                    <button
-                      onClick={() => updateProfileMutation.mutate()}
-                      disabled={updateProfileMutation.isPending}
-                      className="flex items-center gap-2 px-4 py-2 rounded-[var(--radius-md)] text-sm font-medium bg-primary text-white disabled:opacity-50"
-                    >
-                      <Save size={14} />
-                      {updateProfileMutation.isPending
-                        ? t("profile.info.saving")
-                        : t("profile.info.save")}
-                    </button>
-                  </div>
-                ) : (
+                {!editing ? (
                   <button
                     onClick={beginEditing}
                     className="flex items-center gap-2 px-4 py-2 rounded-[var(--radius-md)] text-sm font-medium border border-border text-text-secondary hover:bg-background"
                   >
                     <Pencil size={14} /> {t("profile.info.edit")}
                   </button>
-                )}
+                ) : null}
               </div>
 
               <div className="grid grid-cols-2 gap-4 mt-3">
@@ -396,11 +403,6 @@ export function ProfilePage() {
                         )}
                       </div>
                     )}
-                    {field.key === "email" ? (
-                      <p className="text-[11px] text-muted-foreground mt-1">
-                        {t("profile.info.emailHint")}
-                      </p>
-                    ) : null}
                   </div>
                 ))}
                 <div className="col-span-2 flex gap-3 justify-end mt-3">

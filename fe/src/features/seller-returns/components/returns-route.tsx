@@ -73,6 +73,13 @@ export function ReturnsRoute() {
     [returnsQuery.data],
   );
 
+  const tabLabels: Record<ReturnTab, string> = {
+    requested: t("return.status.requested"),
+    approved: t("return.status.approved"),
+    completed: t("return.status.completed"),
+    rejected: t("return.status.rejected"),
+  };
+
   const filtered = useMemo(() => {
     return allReturns.filter((r) => {
       switch (tab) {
@@ -121,7 +128,7 @@ export function ReturnsRoute() {
                 : "bg-transparent text-text-secondary border-border hover:bg-background",
             ].join(" ")}
           >
-            {t(`seller.orders.tabs.${id}`)}
+            {tabLabels[id]}
           </button>
         ))}
       </div>

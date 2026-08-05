@@ -19,7 +19,7 @@ const STATUS_ACTIONS: Record<FulfillmentStatus, readonly SellerOrderAction[]> = 
 export interface SellerOrderRow {
   id: string;
   orderId: string;
-  createdAt: string;
+  createdAt?: string;
   status: FulfillmentStatus;
   itemCount: number;
   itemSummary: string;
@@ -57,7 +57,7 @@ export function toSellerOrderRow(subOrder: api.PendingSubOrder): SellerOrderRow 
   const row: SellerOrderRow = {
     id: subOrder.id,
     orderId: subOrder.orderId,
-    createdAt: subOrder.createdAt ?? "",
+    createdAt: subOrder.createdAt,
     status,
     itemCount,
     itemSummary,

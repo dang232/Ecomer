@@ -19,27 +19,26 @@ import { test } from "./_fixtures";
 const _apiURL = process.env.VITE_E2E_API_URL ?? "http://localhost:8080";
 
 test.describe("seller persona — modernization evidence", () => {
-  test("dashboard renders four KPI cards and 30-day chart sections", async ({
+  test("dashboard renders the operational KPI strip and performance sections", async ({
     page,
     loginSeller,
   }) => {
     await loginSeller();
     await page.goto("/seller");
-    await expect(
-      page.getByRole("heading", { name: /^(Dashboard|Tổng quan)$/i }).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId("seller-dashboard")).toBeVisible({ timeout: 20_000 });
     for (const matcher of [
+      /Revenue \(30 days\)|Doanh thu \(30 ngày\)/i,
+      /Orders \(30 days\)|Đơn hàng \(30 ngày\)/i,
       /Wallet balance|Số dư ví/i,
-      /Pending orders|Đơn cần xử lý/i,
       /Products|Sản phẩm/i,
       /Average rating|Điểm đánh giá/i,
     ]) {
       await expect(page.getByText(matcher).first()).toBeVisible({ timeout: 10_000 });
     }
-    await expect(page.getByText(/Revenue \(30 days\)|Doanh thu 30 ngày/i).first()).toBeVisible({
+    await expect(page.getByText(/Revenue .*30 days|Doanh thu .*30 ngày/i).first()).toBeVisible({
       timeout: 15_000,
     });
-    await expect(page.getByText(/Orders \(30 days\)|Số đơn 30 ngày/i).first()).toBeVisible({
+    await expect(page.getByText(/Orders \(30 days\)|Đơn hàng \(30 ngày\)/i).first()).toBeVisible({
       timeout: 15_000,
     });
     await expectNoGlobalError(page);
@@ -51,9 +50,7 @@ test.describe("seller persona — modernization evidence", () => {
   }) => {
     await loginSeller();
     await page.goto("/seller");
-    await expect(
-      page.getByRole("heading", { name: /^(Dashboard|Tổng quan)$/i }).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId("seller-dashboard")).toBeVisible({ timeout: 20_000 });
     const productsLink = page.getByRole("link", { name: /^(Products|Sản phẩm)$/i }).first();
     await productsLink.click();
     await expect(page.getByText(/Product management|Quản lý sản phẩm/i).first()).toBeVisible({
@@ -74,10 +71,8 @@ test.describe("seller persona — modernization evidence", () => {
   }) => {
     await loginSeller();
     await page.goto("/seller");
-    await expect(
-      page.getByRole("heading", { name: /^(Dashboard|Tổng quan)$/i }).first(),
-    ).toBeVisible({ timeout: 20_000 });
-    const ordersLink = page.getByRole("link", { name: /^(Orders|Đơn hàng)$/i }).first();
+    await expect(page.getByTestId("seller-dashboard")).toBeVisible({ timeout: 20_000 });
+    const ordersLink = page.getByRole("link", { name: /^(Orders|Đơn hàng)/i }).first();
     await ordersLink.click();
     await expect(
       page.getByRole("heading", { name: /Orders|Order management/i }).first(),
@@ -91,9 +86,7 @@ test.describe("seller persona — modernization evidence", () => {
   }) => {
     await loginSeller();
     await page.goto("/seller");
-    await expect(
-      page.getByRole("heading", { name: /^(Dashboard|Tổng quan)$/i }).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId("seller-dashboard")).toBeVisible({ timeout: 20_000 });
     const walletLink = page.getByRole("link", { name: /^(Wallet|Ví tiền)$/i }).first();
     await walletLink.click();
     await expect(page.getByText(/Wallet & Payouts|Ví & Thanh toán/i).first()).toBeVisible({
@@ -117,9 +110,7 @@ test.describe("seller persona — modernization evidence", () => {
   }) => {
     await loginSeller();
     await page.goto("/seller");
-    await expect(
-      page.getByRole("heading", { name: /^(Dashboard|Tổng quan)$/i }).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId("seller-dashboard")).toBeVisible({ timeout: 20_000 });
     const reviewsLink = page.getByRole("link", { name: /^(Reviews|Đánh giá)$/i }).first();
     await reviewsLink.click();
     await expect(
@@ -138,9 +129,7 @@ test.describe("seller persona — modernization evidence", () => {
   }) => {
     await loginSeller();
     await page.goto("/seller");
-    await expect(
-      page.getByRole("heading", { name: /^(Dashboard|Tổng quan)$/i }).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId("seller-dashboard")).toBeVisible({ timeout: 20_000 });
     const settingsLink = page.getByRole("link", { name: /^(Settings|Cài đặt)$/i }).first();
     await settingsLink.click();
     await expect(page.getByRole("heading", { name: /Settings|Cài đặt/i }).first()).toBeVisible({

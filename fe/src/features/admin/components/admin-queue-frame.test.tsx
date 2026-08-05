@@ -41,4 +41,10 @@ describe("AdminQueueFrame", () => {
     expect(screen.getByRole("searchbox")).toBeVisible();
     expect(screen.getByRole("button", { name: /search/i })).toBeVisible();
   });
+
+  it("does not open an empty drawer when selection is missing", () => {
+    renderFrame({ selectedId: undefined });
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
 });

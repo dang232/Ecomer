@@ -54,6 +54,20 @@ vi.mock("@/features/videos", () => ({
   useProductVideos: useProductVideosMock,
 }));
 
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: Record<string, unknown>) => {
+      if (key === "video.seller.sectionTitle") {
+        return `Videos (${String(options?.count)}/${String(options?.max)})`;
+      }
+      if (key === "seller.products.editor.videoCreateHint") {
+        return "Save the product first, then add videos from the edit screen.";
+      }
+      return key;
+    },
+  }),
+}));
+
 vi.mock("../api/query-options", () => ({
   sellerProductCategoriesOptions: () => ({
     queryKey: ["seller-products-test-categories"],
@@ -204,9 +218,13 @@ describe("ProductEditorDrawer", () => {
     expect(useProductVideosMock).toHaveBeenCalledWith("draft-video-1");
   });
 
-  it("does not mount video upload before a new product is persisted", () => {
+  it("shows the three-slot video state without mounting upload before a new product is persisted", () => {
     renderDrawer(true, null, vi.fn(), vi.fn());
 
+    expect(screen.getByRole("group", { name: "Videos (0/3)" })).toBeInTheDocument();
+    expect(
+      screen.getByText("Save the product first, then add videos from the edit screen."),
+    ).toBeInTheDocument();
     expect(screen.queryByTestId("video-upload-dropzone")).not.toBeInTheDocument();
     expect(useVideoUploadMock).not.toHaveBeenCalled();
   });

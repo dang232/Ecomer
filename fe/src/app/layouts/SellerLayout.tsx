@@ -11,8 +11,8 @@ import { ConsoleLayoutFooter } from "./ConsoleLayoutFooter";
 export function SellerLayout() {
   const { t } = useTranslation();
   const pendingQuery = useQuery({
-    queryKey: ["seller", "pending-orders", "shell"],
-    queryFn: () => sellerPendingOrders({}),
+    queryKey: ["seller", "pending-orders"],
+    queryFn: () => sellerPendingOrders(),
     refetchInterval: 60_000,
     retry: false,
   });
@@ -26,9 +26,11 @@ export function SellerLayout() {
         <main
           id="main-content"
           aria-label={t("seller.nav.mainLabel", { defaultValue: "Seller workspace" })}
-          className="min-w-0 flex-1 animate-fade-in"
+          className="min-w-0 flex-1 bg-background pb-20 pt-14 animate-fade-in lg:pb-0 lg:pt-0"
         >
-          <Outlet />
+          <div className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 lg:px-8">
+            <Outlet />
+          </div>
         </main>
       </div>
       <ConsoleLayoutFooter />

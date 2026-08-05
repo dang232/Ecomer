@@ -10,45 +10,60 @@ import { queryOptions } from "@tanstack/react-query";
 
 import type { Product } from "@/features/catalog";
 import { fromServer } from "@/features/catalog";
+import { categoryTree } from "@/shared/api/endpoints/categories";
 import {
-  productList,
+  sellerProductById,
   sellerProductCreate,
   sellerProductDelete as sellerProductDeleteEndpoint,
+  sellerProductList,
   sellerProductPublish,
   sellerProductUpdate,
 } from "@/shared/api/endpoints/products";
+import type { Category } from "@/shared/contracts";
+import type { Page } from "@/shared/contracts/api";
 
 // ── Query key families ─────────────────────────────────────────────────────────
 
 export const sellerProductKeys = {
   all: ["seller", "products"] as const,
-  list: (params: { q?: string; page?: number; size?: number; sellerId?: string }) =>
-    [...sellerProductKeys.all, "list", params] as const,
+  list: (params: {
+    q?: string;
+    page?: number;
+    size?: number;
+    categoryId?: string;
+    status?: string;
+  }) => [...sellerProductKeys.all, "list", params] as const,
   detail: (id: string) => [...sellerProductKeys.all, "detail", id] as const,
 };
 
+export const sellerProductCategoriesOptions = () =>
+  queryOptions<Category[]>({
+    queryKey: ["seller", "product-categories"] as const,
+    queryFn: () => categoryTree(),
+  });
+
 export interface ProductListQueryParams {
-  sellerId?: string;
   page?: number;
   size?: number;
   categoryId?: string;
   q?: string;
+  status?: string;
 }
 
 // ── List options ───────────────────────────────────────────────────────────────
 
 export const productListOptions = (params: ProductListQueryParams = {}, enabled = true) =>
-  queryOptions<Product[]>({
-    queryKey: ["catalog", "products", "list", params] as const,
+  queryOptions<Page<Product>>({
+    queryKey: sellerProductKeys.list(params),
     queryFn: async () => {
-      const page = await productList({
-        size: params.size ?? 50,
+      const page = await sellerProductList({
+        size: params.size ?? 24,
         page: params.page,
-        sellerId: params.sellerId,
         categoryId: params.categoryId,
         q: params.q,
+        status: params.status,
       });
-      return page.content.map(fromServer);
+      return { ...page, content: page.content.map(fromServer) };
     },
     enabled,
   });
@@ -59,8 +74,7 @@ export const sellerProductDetailOptions = (id: string) =>
   queryOptions<Product>({
     queryKey: sellerProductKeys.detail(id),
     queryFn: async () => {
-      const { productById } = await import("@/shared/api/endpoints/products");
-      return fromServer(await productById(id));
+      return fromServer(await sellerProductById(id));
     },
     enabled: !!id,
   });

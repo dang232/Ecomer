@@ -255,7 +255,7 @@ export const adminPayoutSchema = z
     payoutId: z.string().optional(),
     createdAt: z.string().optional(),
     sellerId: sellerIdSchema,
-    sellerName: z.string().optional(),
+    sellerName: z.string().nullable().optional(),
     amount: z.number(),
     status: z.string(),
     currency: z.string().optional(),

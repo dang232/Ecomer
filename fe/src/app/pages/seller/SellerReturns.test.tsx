@@ -135,7 +135,7 @@ describe("SellerReturns", () => {
 
     // Default tab is "pending"; APPROVED items are hidden there. Switch tabs.
     const approvedTab = await screen.findByRole("tab", {
-      name: /seller\.orders\.tabs\.approved/i,
+      name: /return\.status\.approved/i,
     });
     fireEvent.click(approvedTab);
 

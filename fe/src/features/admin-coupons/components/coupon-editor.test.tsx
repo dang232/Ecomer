@@ -1,6 +1,64 @@
-import { describe, expect, it } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { describe, expect, it, vi } from "vitest";
 
 import { couponFormSchema } from "../model/coupon-form";
+
+import { CouponEditor } from "./coupon-editor";
+
+const { adminCreateCouponMock } = vi.hoisted(() => ({
+  adminCreateCouponMock: vi.fn(),
+}));
+
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const dict: Record<string, string> = {
+        "admin.coupons.dialog.title": "Create new coupon",
+        "admin.coupons.dialog.codeLabel": "Coupon code",
+        "admin.coupons.dialog.codePlaceholder": "Enter code",
+        "admin.coupons.dialog.typeLabel": "Discount type",
+        "admin.coupons.dialog.typePercent": "Percent (%)",
+        "admin.coupons.dialog.typeFixed": "Fixed amount (₫)",
+        "admin.coupons.dialog.valueLabelPercent": "Discount percent",
+        "admin.coupons.dialog.valueLabelFixed": "Discount amount",
+        "admin.coupons.dialog.minOrderLabel": "Minimum order",
+        "admin.coupons.dialog.minOrderPlaceholder": "Optional",
+        "admin.coupons.dialog.maxDiscountLabel": "Maximum discount",
+        "admin.coupons.dialog.maxDiscountPlaceholder": "Optional cap",
+        "admin.coupons.dialog.maxUsesLabel": "Max uses",
+        "admin.coupons.dialog.perUserLimitLabel": "Per user limit (optional)",
+        "admin.coupons.dialog.validUntilLabel": "Valid until",
+        "admin.coupons.dialog.submit": "Create coupon",
+        "admin.coupons.dialog.submitting": "Creating...",
+        "admin.coupons.dialog.cancel": "Cancel",
+        "admin.coupons.dialog.missingCode": "Please enter a coupon code",
+      };
+      return dict[key] ?? key;
+    },
+  }),
+}));
+
+vi.mock("@/shared/api/endpoints/admin", () => ({
+  adminCreateCoupon: adminCreateCouponMock,
+}));
+
+vi.mock("sonner", () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
+const makeQueryClient = () =>
+  new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+
+function TestWrapper({ children }: { children: ReactNode }) {
+  return <QueryClientProvider client={makeQueryClient()}>{children}</QueryClientProvider>;
+}
 
 describe("couponFormSchema refinements", () => {
   it("accepts valid PERCENT <= 100", () => {
@@ -72,5 +130,20 @@ describe("couponFormSchema refinements", () => {
     });
     expect(result.success).toBe(true);
     if (result.success) expect(result.data.code).toBe("SALE20");
+  });
+});
+
+describe("CouponEditor", () => {
+  it("shows localized missing-code feedback when the admin submits an empty form", () => {
+    render(
+      <TestWrapper>
+        <CouponEditor open onClose={vi.fn()} />
+      </TestWrapper>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Create coupon" }));
+
+    expect(screen.getByText("Please enter a coupon code")).toBeInTheDocument();
+    expect(adminCreateCouponMock).not.toHaveBeenCalled();
   });
 });

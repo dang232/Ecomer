@@ -32,18 +32,16 @@ test.describe("dashboard charts", () => {
     });
   });
 
-  test("seller revenue area and orders column charts render live data", async ({ page }) => {
+  test("seller performance chart renders revenue and order series from live data", async ({
+    page,
+  }) => {
     await loginAsPersona(page, "seller");
     await page.goto("/seller");
 
-    await expect(page.getByTestId("seller-revenue-chart")).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByTestId("seller-orders-chart")).toBeVisible({ timeout: 30_000 });
-    await expect(
-      page.getByTestId("seller-revenue-chart").locator(".recharts-area-area"),
-    ).toHaveCount(1);
-    await expect(
-      page.getByTestId("seller-orders-chart").locator(".recharts-bar-rectangle"),
-    ).not.toHaveCount(0);
+    const performanceChart = page.getByTestId("seller-performance-chart");
+    await expect(performanceChart).toBeVisible({ timeout: 30_000 });
+    await expect(performanceChart.locator(".recharts-area-area")).toHaveCount(1);
+    await expect(performanceChart.locator(".recharts-bar-rectangle")).not.toHaveCount(0);
     await expectNoGlobalError(page);
     await page.screenshot({
       path: "e2e/evidence/full-audit/dashboard-charts-seller.png",

@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { ApiError } from "@/shared/api";
 import { avatarActivate, avatarUpload } from "@/shared/api/endpoints/users";
+import { Sha256Error, sha256FileHex } from "@/shared/lib/sha256";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 const ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "webp"] as const;
@@ -25,14 +26,6 @@ function preflight(file: File): void {
   if (!ALLOWED_EXTENSIONS.includes(ext as (typeof ALLOWED_EXTENSIONS)[number])) {
     throw new Error("avatar:wrong-extension");
   }
-}
-
-async function sha256OfFile(file: File): Promise<string> {
-  const buffer = await file.arrayBuffer();
-  const digest = await crypto.subtle.digest("SHA-256", buffer);
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
 }
 
 interface AvatarUploadOptions {
@@ -59,7 +52,7 @@ export function useAvatarUpload(options: AvatarUploadOptions = {}) {
   return useMutation({
     mutationFn: async (file: File) => {
       preflight(file);
-      const sha256Hex = await sha256OfFile(file);
+      const sha256Hex = await sha256FileHex(file);
       const init = await avatarUpload({
         filename: file.name,
         contentType: file.type,
@@ -108,6 +101,9 @@ export const __testables__ = {
  *  Lets ApiError messages from the BE pass through unchanged. */
 export function avatarUploadErrorMessage(error: unknown, t: (key: string) => string): string {
   if (error instanceof ApiError) {
+    return error.message;
+  }
+  if (error instanceof Sha256Error) {
     return error.message;
   }
   if (error instanceof Error) {

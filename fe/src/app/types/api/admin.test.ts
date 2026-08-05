@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { dashboardRevenueResponseSchema } from "../../lib/api/endpoints/admin";
 
 import {
+  adminPayoutSchema,
   dashboardRevenuePointSchema,
   dashboardReportSchema,
   dashboardSummarySchema,
@@ -142,5 +143,26 @@ describe("admin seller destination contract", () => {
 
     expect(seller.last4).toBe("****1234");
     expect(seller).not.toHaveProperty("bankAccount");
+  });
+});
+
+describe("admin payout contract", () => {
+  it("accepts a live payout row when sellerName is null", () => {
+    const payout = adminPayoutSchema.parse({
+      payoutId: "payout-1",
+      sellerId: "2fa79e15-2e29-4b94-903e-15cc20fe36dc",
+      sellerName: null,
+      amount: 250000,
+      status: "PENDING",
+      createdAt: "2026-07-29T10:00:00Z",
+    });
+
+    expect(payout.status).toBe("PENDING");
+    expect(payout).toMatchObject({
+      id: "payout-1",
+      sellerId: "2fa79e15-2e29-4b94-903e-15cc20fe36dc",
+      sellerName: null,
+      requestedAt: "2026-07-29T10:00:00Z",
+    });
   });
 });

@@ -12,6 +12,8 @@ const myProfileMock = vi.fn<UnknownCall>();
 const setDefaultAddressMock = vi.fn<(addressKey: string) => unknown>();
 const removeAddressMock = vi.fn<UnknownCall>();
 const addAddressMock = vi.fn<UnknownCall>();
+const sellerProfileMock = vi.fn<UnknownCall>();
+const refreshMock = vi.fn<() => Promise<void>>();
 
 vi.mock("../hooks/auth-context", () => ({
   useAuth: () => useAuthMock(),
@@ -22,6 +24,7 @@ vi.mock("@/shared/api/endpoints/users", () => ({
   setDefaultAddress: (addressKey: string) => setDefaultAddressMock(addressKey),
   removeAddress: (...args: unknown[]) => removeAddressMock(...args),
   addAddress: (...args: unknown[]) => addAddressMock(...args),
+  sellerProfile: (...args: unknown[]) => sellerProfileMock(...args),
   updateProfile: vi.fn(),
   avatarUpload: vi.fn(),
   avatarActivate: vi.fn(),
@@ -110,12 +113,18 @@ beforeEach(() => {
     ready: true,
     authenticated: true,
     profile: { id: "kc-1", email: "test@example.com", username: "testuser" },
+    roles: ["BUYER"],
     logout: vi.fn(),
+    refresh: () => refreshMock(),
   });
   myProfileMock.mockReset();
   setDefaultAddressMock.mockReset();
   removeAddressMock.mockReset();
   addAddressMock.mockReset();
+  sellerProfileMock.mockReset();
+  sellerProfileMock.mockRejectedValue(new Error("seller application not found"));
+  refreshMock.mockReset();
+  refreshMock.mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -176,5 +185,65 @@ describe("ProfilePage — address mutations (spec U-9)", () => {
     await waitFor(() =>
       expect(screen.getAllByText("profile.addresses.isDefaultBadge")).toHaveLength(1),
     );
+  });
+});
+
+describe("ProfilePage — account information", () => {
+  it("renders the account email from the user profile and keeps one edit action row", async () => {
+    useAuthMock.mockReturnValue({
+      ready: true,
+      authenticated: true,
+      profile: { id: "kc-1", email: "registered@example.com", username: "testuser" },
+      roles: ["BUYER"],
+      logout: vi.fn(),
+      refresh: () => refreshMock(),
+    });
+
+    const { Wrapper } = makeWrapper({ ...PROFILE, email: "account@example.com" });
+    render(<ProfilePage />, { wrapper: Wrapper });
+
+    expect(screen.getAllByText("account@example.com")).toHaveLength(2);
+    fireEvent.click(await screen.findByRole("button", { name: /profile\.info\.edit/i }));
+
+    expect(screen.getAllByRole("button", { name: /profile\.info\.cancel/i })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: /profile\.info\.save/i })).toHaveLength(1);
+    expect(screen.queryByText("profile.info.emailHint")).not.toBeInTheDocument();
+  });
+
+  it("shows the existing seller application instead of another registration action", async () => {
+    sellerProfileMock.mockReset();
+    sellerProfileMock.mockResolvedValue({
+      id: "kc-1",
+      shopName: "Existing Shop",
+      bankName: "Bank",
+      approved: false,
+      tier: "STANDARD",
+      vacationMode: false,
+      destination: null,
+    });
+
+    const { Wrapper } = makeWrapper(PROFILE);
+    render(<ProfilePage />, { wrapper: Wrapper });
+
+    expect(await screen.findByText("profile.sellerApplication")).toBeInTheDocument();
+    expect(screen.queryByText("profile.becomeSeller")).not.toBeInTheDocument();
+  });
+
+  it("refreshes access when the existing seller application is approved", async () => {
+    sellerProfileMock.mockReset();
+    sellerProfileMock.mockResolvedValue({
+      id: "kc-1",
+      shopName: "Existing Shop",
+      bankName: "Bank",
+      approved: true,
+      tier: "STANDARD",
+      vacationMode: false,
+      destination: null,
+    });
+
+    const { Wrapper } = makeWrapper(PROFILE);
+    render(<ProfilePage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(refreshMock).toHaveBeenCalledTimes(1));
   });
 });

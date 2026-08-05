@@ -41,6 +41,10 @@ export function CouponEditor({ open, onClose, initialValues }: CouponEditorProps
       new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
   );
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const codeError =
+    fieldErrors.code && code.trim().length === 0
+      ? t("admin.coupons.dialog.missingCode")
+      : fieldErrors.code;
 
   const create = useMutation({
     mutationFn: (body: CouponWriteBody) => adminCreateCoupon(body),
@@ -120,9 +124,7 @@ export function CouponEditor({ open, onClose, initialValues }: CouponEditorProps
             placeholder={t("admin.coupons.dialog.codePlaceholder")}
             className="w-full px-3 py-2.5 border border-border rounded-xl text-sm font-mono uppercase tracking-wider outline-none focus:border-primary"
           />
-          {fieldErrors.code ? (
-            <p className="mt-1 text-xs text-red-500">{fieldErrors.code}</p>
-          ) : null}
+          {codeError ? <p className="mt-1 text-xs text-red-500">{codeError}</p> : null}
         </div>
 
         {/* Type */}

@@ -26,6 +26,7 @@ import { MarketplaceKpis } from "./marketplace-kpis";
 import { OperationalExceptions } from "./operational-exceptions";
 import { RevenueChart } from "./revenue-chart";
 import { TopSellerTable } from "./top-seller-table";
+import { TopProductsChart } from "./top-products-chart";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -217,9 +218,10 @@ export function AdminDashboard() {
       <MarketplaceKpis values={view.kpis} />
       <RevenueChart points={view.revenue} />
       <div className="grid gap-6 xl:grid-cols-2">
+        <TopProductsChart products={view.topProducts} />
         <TopSellerTable rows={view.topSellers} />
-        <OperationalExceptions items={view.exceptions} />
       </div>
+      <OperationalExceptions items={view.exceptions} />
       <div className="flex justify-end">
         <ExportButton asOf={asOf} />
       </div>

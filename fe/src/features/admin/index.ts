@@ -8,4 +8,8 @@ export type {
 } from "./model/queue-capabilities";
 export { AdminQueueFrame } from "./components/admin-queue-frame";
 export { AdminRecordDrawer } from "./components/admin-record-drawer";
+export {
+  readAdminQueueRouteState,
+  writeAdminQueueRouteState,
+} from "./model/admin-queue-route-state";
 export { AdminNav } from "./components/admin-nav";

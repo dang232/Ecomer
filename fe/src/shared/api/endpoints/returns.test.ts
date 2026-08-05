@@ -203,13 +203,13 @@ describe("returns API", () => {
   });
 
   describe("listSellerReturns", () => {
-    it("gets /seller/returns", async () => {
+    it("gets the authenticated seller return queue", async () => {
       const mockReturns = [{ id: "ret-1", status: "REQUESTED" }];
       apiGetMock.mockResolvedValue(mockReturns);
 
       const result = await listSellerReturns();
 
-      expect(apiGetMock).toHaveBeenCalledWith("/seller/returns", expect.anything());
+      expect(apiGetMock).toHaveBeenCalledWith("/returns/seller", expect.anything());
       expect(result).toEqual(mockReturns);
     });
   });

@@ -11,6 +11,8 @@ export interface DrawerProps {
   onOpenChange: (open: boolean) => void;
   children: ReactNode;
   footer?: ReactNode;
+  /** Use a visible Cancel action instead of a duplicate close icon when supplied. */
+  showCloseButton?: boolean;
 }
 
 const focusableSelector = [
@@ -22,7 +24,15 @@ const focusableSelector = [
   "[tabindex]:not([tabindex='-1'])",
 ].join(",");
 
-export function Drawer({ open, title, description, onOpenChange, children, footer }: DrawerProps) {
+export function Drawer({
+  open,
+  title,
+  description,
+  onOpenChange,
+  children,
+  footer,
+  showCloseButton = true,
+}: DrawerProps) {
   const titleId = useId();
   const descriptionId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -102,9 +112,11 @@ export function Drawer({ open, title, description, onOpenChange, children, foote
           {children}
         </div>
         <footer className="flex min-h-[var(--target-web)] flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-4 sm:px-6">
-          <IconButton label="Close drawer" onClick={() => onOpenChange(false)}>
-            <X />
-          </IconButton>
+          {showCloseButton ? (
+            <IconButton label="Close drawer" onClick={() => onOpenChange(false)}>
+              <X />
+            </IconButton>
+          ) : null}
           {footer ? <div className="flex flex-wrap justify-end gap-3">{footer}</div> : null}
         </footer>
       </div>

@@ -17,22 +17,20 @@ import { expectNoGlobalError } from "./_helpers";
  */
 
 test.describe("seller dashboard UI", () => {
-  test("Dashboard renders the four KPI cards (Balance, Pending, Views, Rating)", async ({
+  test("Dashboard renders the performance KPI strip (Revenue, Orders, Products, Rating)", async ({
     page,
   }) => {
     await loginAsPersona(page, "seller");
     await page.goto("/seller");
 
-    // Default tab is dashboard. Wait for the dashboard heading.
-    await expect(
-      page.getByRole("heading", { name: /^(Dashboard|Tổng quan)$/i }).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId("seller-dashboard")).toBeVisible({ timeout: 20_000 });
 
     // KPI labels — match VI or EN.
     const kpiMatchers = [
+      /Revenue \(30 days\)|Doanh thu \(30 ngày\)/i,
+      /Orders \(30 days\)|Đơn hàng \(30 ngày\)/i,
       /Wallet balance|Số dư ví/i,
-      /Pending orders|Đơn cần xử lý/i,
-      /Shop views|Lượt xem shop/i,
+      /Products|Sản phẩm/i,
       /Average rating|Điểm đánh giá/i,
     ];
     for (const matcher of kpiMatchers) {
@@ -50,18 +48,16 @@ test.describe("seller dashboard UI", () => {
     await loginAsPersona(page, "seller");
     await page.goto("/seller");
 
-    await expect(
-      page.getByRole("heading", { name: /^(Dashboard|Tổng quan)$/i }).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId("seller-dashboard")).toBeVisible({ timeout: 20_000 });
 
     // The Revenue (30 days) section header is unconditional. Body is one
     // of: chart, empty-state copy, loading text, or error banner. Any of
     // those is a valid signal that the schema parsed without crashing.
-    await expect(page.getByText(/Revenue \(30 days\)|Doanh thu 30 ngày/i).first()).toBeVisible({
+    await expect(page.getByText(/Revenue .*30 days|Doanh thu .*30 ngày/i).first()).toBeVisible({
       timeout: 15_000,
     });
 
-    await expect(page.getByText(/Orders \(30 days\)|Số đơn 30 ngày/i).first()).toBeVisible({
+    await expect(page.getByText(/Orders \(30 days\)|Đơn hàng \(30 ngày\)/i).first()).toBeVisible({
       timeout: 15_000,
     });
 

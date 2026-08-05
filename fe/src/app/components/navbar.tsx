@@ -124,6 +124,7 @@ export function Navbar() {
     const normalized = query.trim();
     void navigate(normalized ? `/search?q=${encodeURIComponent(normalized)}` : "/search");
   };
+  const themeActionLabel = isDark ? t("nav.switchToLightMode") : t("nav.switchToDarkMode");
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-card">
@@ -152,6 +153,34 @@ export function Navbar() {
           <div className="hidden lg:block">
             <LanguageSwitcher />
           </div>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            aria-label={themeActionLabel}
+            aria-pressed={isDark}
+            title={themeActionLabel}
+            className="hidden min-h-[var(--target-web)] min-w-[var(--target-web)] items-center justify-center rounded-[var(--radius-control)] text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:inline-flex"
+          >
+            {isDark ? (
+              <Sun className="h-5 w-5" aria-hidden="true" />
+            ) : (
+              <Moon className="h-5 w-5" aria-hidden="true" />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            aria-label={themeActionLabel}
+            aria-pressed={isDark}
+            title={themeActionLabel}
+            className="inline-flex min-h-[var(--target-web)] min-w-[var(--target-web)] items-center justify-center rounded-[var(--radius-control)] text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
+          >
+            {isDark ? (
+              <Sun className="h-5 w-5" aria-hidden="true" />
+            ) : (
+              <Moon className="h-5 w-5" aria-hidden="true" />
+            )}
+          </button>
           <div className="hidden md:block">
             <NotificationBell />
           </div>
@@ -168,6 +197,7 @@ export function Navbar() {
             {isLoggedIn ? (
               <button
                 type="button"
+                data-account-menu-trigger
                 aria-label={t("storefront.accountMenu")}
                 aria-expanded={menuOpen}
                 aria-haspopup="menu"
@@ -222,7 +252,7 @@ export function Navbar() {
                   ) : (
                     <Moon className="h-4 w-4" aria-hidden="true" />
                   )}
-                  {isDark ? t("nav.lightMode") : t("nav.darkMode")}
+                  {themeActionLabel}
                 </button>
                 <button
                   type="button"

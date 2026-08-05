@@ -7,12 +7,11 @@ vi.mock("@/shared/api/client", () => ({
 }));
 
 import { api } from "@/shared/api/client";
-
 import { adminCompletePayout, adminFailPayout } from "@/shared/api/endpoints/admin";
 
 describe("admin payout compatibility actions", () => {
   it("sends manual payment reason and evidence to the complete compatibility path", async () => {
-    vi.mocked(api.post).mockResolvedValue({} as never);
+    vi.mocked(api.post).mockResolvedValue({});
     const body = {
       reason: "Manual transfer verified",
       evidence: {
@@ -32,7 +31,7 @@ describe("admin payout compatibility actions", () => {
   });
 
   it("sends failure reason and optional evidence to the fail compatibility path", async () => {
-    vi.mocked(api.post).mockResolvedValue({} as never);
+    vi.mocked(api.post).mockResolvedValue({});
     const body = {
       reason: "Provider rejected the transfer",
       evidence: { evidenceHash: "sha256:def456" },

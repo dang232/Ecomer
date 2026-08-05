@@ -2,25 +2,11 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { test, expect, type Page, type TestInfo } from "@playwright/test";
+import { expect, test, type Page, type TestInfo } from "@playwright/test";
 
 export { expectNoGlobalError } from "./_helpers";
 import { credentialForPersona, type Persona } from "./modernization/_credentials";
 export type { Persona } from "./modernization/_credentials";
-
-/**
- * Evidence helper for the persona-workday Playwright suite. Wraps
- * test.step() with a numbered screenshot + a markdown row, and writes
- * a self-contained REPORT.md per persona at the end of the run.
- *
- * Layout produced (matches docs/superpowers/specs/2026-05-23-persona-workday-playwright-design.md):
- *
- *   fe/e2e/evidence/<persona>/
- *   ├── screenshots/NN-slug.png   (committed)
- *   ├── trace.zip                 (committed)
- *   ├── video.webm                (gitignored)
- *   └── REPORT.md                 (committed, regenerated each run)
- */
 
 interface StepRow {
   index: number;
@@ -30,17 +16,89 @@ interface StepRow {
   errorMessage?: string;
 }
 
-const counters: Record<Persona, number> = { buyer: 0, seller: 0, admin: 0 };
-const reports: Record<Persona, StepRow[]> = { buyer: [], seller: [], admin: [] };
-
-const evidenceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "evidence");
-
-function evidenceDir(persona: Persona): string {
-  return path.join(evidenceRoot, persona);
+export interface EvidencePathOptions {
+  rootDir?: string;
+  runId?: string;
 }
 
-function shotDir(persona: Persona): string {
-  return path.join(evidenceDir(persona), "screenshots");
+export interface EvidencePaths {
+  rootDir: string;
+  runId?: string;
+  runRootDir: string;
+  personaDir: string;
+  screenshotsDir: string;
+  traceFile: string;
+  reportFile: string;
+  videoFile: string;
+}
+
+interface EvidenceState {
+  counter: number;
+  report: StepRow[];
+  pendingOutputDirs: string[];
+}
+
+const evidenceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "evidence");
+const runRootSegment = "runs";
+const invalidRunIdCharacters = /[<>:"/\\|?*]/g;
+const controlCharacters = new RegExp(`[${String.fromCharCode(0)}-${String.fromCharCode(31)}]`, "g");
+const evidenceStates = new Map<string, EvidenceState>();
+const loginHeadingPattern = /Sign in to VNShop|\u0110\u0103ng nh\u1eadp VNShop/i;
+const loginButtonPattern = /^(Sign in|\u0110\u0103ng nh\u1eadp)$/i;
+const logoutPattern = /^(Log out|\u0110\u0103ng xu\u1ea5t)$/i;
+const loggedOutLinkPattern = /^(Log in|\u0110\u0103ng nh\u1eadp)$/i;
+
+function normalizeRunId(runId: string | undefined): string | undefined {
+  if (!runId) {
+    return undefined;
+  }
+
+  const normalized = runId
+    .trim()
+    .replace(invalidRunIdCharacters, "-")
+    .replace(controlCharacters, "-")
+    .replace(/\s+/g, "-")
+    .replace(/^[.-]+/, "")
+    .replace(/[.\s-]+$/g, "");
+
+  return normalized || undefined;
+}
+
+export function resolveEvidencePaths(
+  persona: Persona,
+  options: EvidencePathOptions = {},
+): EvidencePaths {
+  const rootDir = options.rootDir ?? evidenceRoot;
+  const runId = normalizeRunId(options.runId ?? process.env.WORKDAY_EVIDENCE_RUN_ID);
+  const runRootDir = runId ? path.join(rootDir, runRootSegment, runId) : rootDir;
+  const personaDir = path.join(runRootDir, persona);
+
+  return {
+    rootDir,
+    runId,
+    runRootDir,
+    personaDir,
+    screenshotsDir: path.join(personaDir, "screenshots"),
+    traceFile: path.join(personaDir, "trace.zip"),
+    reportFile: path.join(personaDir, "REPORT.md"),
+    videoFile: path.join(personaDir, "video.webm"),
+  };
+}
+
+function evidenceStateFor(
+  persona: Persona,
+  options: EvidencePathOptions = {},
+): { paths: EvidencePaths; state: EvidenceState } {
+  const paths = resolveEvidencePaths(persona, options);
+  const key = paths.personaDir;
+
+  let state = evidenceStates.get(key);
+  if (!state) {
+    state = { counter: 0, report: [], pendingOutputDirs: [] };
+    evidenceStates.set(key, state);
+  }
+
+  return { paths, state };
 }
 
 function slugify(title: string): string {
@@ -53,36 +111,34 @@ function slugify(title: string): string {
   );
 }
 
-export async function resetPersona(persona: Persona): Promise<void> {
-  counters[persona] = 0;
-  reports[persona] = [];
-  // Wipe and recreate the screenshots folder so stale shots from prior runs
-  // don't pollute the report.
-  await fs.rm(shotDir(persona), { recursive: true, force: true });
-  await fs.mkdir(shotDir(persona), { recursive: true });
-  await fs.mkdir(evidenceDir(persona), { recursive: true });
+export async function resetPersona(
+  persona: Persona,
+  options: EvidencePathOptions = {},
+): Promise<void> {
+  const { paths, state } = evidenceStateFor(persona, options);
+  state.counter = 0;
+  state.report = [];
+  state.pendingOutputDirs = [];
+
+  await fs.rm(paths.screenshotsDir, { recursive: true, force: true });
+  await fs.mkdir(paths.screenshotsDir, { recursive: true });
+  await fs.mkdir(paths.personaDir, { recursive: true });
 }
 
-/**
- * Wraps Playwright's test.step():
- *   - Increments the persona's step counter
- *   - Runs the body
- *   - Takes a screenshot (numbered + slugged)
- *   - Pushes a row into the report (PASS or FAIL)
- *   - Rethrows on failure so the test fails normally
- */
 export async function step(
   page: Page,
   persona: Persona,
   title: string,
   fn: () => Promise<void>,
+  options: EvidencePathOptions = {},
 ): Promise<void> {
-  counters[persona] += 1;
-  const index = counters[persona];
-  const slug = slugify(title);
+  const { paths, state } = evidenceStateFor(persona, options);
+  state.counter += 1;
+
+  const index = state.counter;
   const indexStr = index.toString().padStart(2, "0");
-  const filename = `${indexStr}-${slug}.png`;
-  const screenshotPath = path.join(shotDir(persona), filename);
+  const filename = `${indexStr}-${slugify(title)}.png`;
+  const screenshotPath = path.join(paths.screenshotsDir, filename);
 
   await test.step(`[${persona}/${indexStr}] ${title}`, async () => {
     let failure: Error | undefined;
@@ -91,102 +147,101 @@ export async function step(
     } catch (err) {
       failure = err instanceof Error ? err : new Error(String(err));
     }
-    // Always try to capture a shot — even on failure — so the evidence
-    // reflects the moment things went wrong.
+
     try {
       await page.screenshot({ path: screenshotPath, fullPage: true });
     } catch {
-      // Page may already be closed if the failure was catastrophic; the
-      // missing screenshot is logged in the row's status.
+      // Preserve the original failure if the page is already gone.
     }
-    reports[persona].push({
+
+    state.report.push({
       index,
       title,
       slug: filename,
       status: failure ? "FAIL" : "PASS",
       errorMessage: failure?.message,
     });
-    if (failure) throw failure;
+
+    if (failure) {
+      throw failure;
+    }
   });
 }
 
-/**
- * Manual tracing: start in beforeAll, stop+write in afterAll. This is
- * deliberately NOT delegated to `trace: "on"` in test.use — Playwright
- * finalizes that trace during BrowserContext close, which races with
- * afterAll's copyFile. Driving tracing ourselves lets us write directly
- * to fe/e2e/evidence/<persona>/trace.zip with no race.
- */
-export async function startTrace(persona: Persona, page: Page): Promise<void> {
-  await fs.mkdir(evidenceDir(persona), { recursive: true });
+export async function startTrace(
+  persona: Persona,
+  page: Page,
+  options: EvidencePathOptions = {},
+): Promise<void> {
+  const { paths } = evidenceStateFor(persona, options);
+  await fs.mkdir(paths.personaDir, { recursive: true });
+
   try {
     await page.context().tracing.start({
-      // Drop the per-action screenshot stream — we already produce one
-      // numbered screenshot per step via step(), and the duplicated stream
-      // pushes trace.zip into the 10MB+ range. snapshots + sources still
-      // give the trace viewer a usable dom timeline.
       screenshots: false,
       snapshots: true,
       sources: true,
       title: `workday-${persona}`,
     });
   } catch {
-    // start() throws if a trace is already running (e.g. trace: "on" in
-    // test.use). The pre-existing trace will land via Playwright's
-    // attachment mechanism — we just won't have a manual one here.
+    // Playwright may already be tracing for this context.
   }
 }
 
-export async function stopTrace(persona: Persona, page: Page): Promise<void> {
-  const dest = path.join(evidenceDir(persona), "trace.zip");
+export async function stopTrace(
+  persona: Persona,
+  page: Page,
+  options: EvidencePathOptions = {},
+): Promise<void> {
+  const { paths } = evidenceStateFor(persona, options);
+
   try {
-    await page.context().tracing.stop({ path: dest });
+    await page.context().tracing.stop({ path: paths.traceFile });
   } catch {
-    // No active trace — fall through to copyArtifacts which will sweep
-    // the Playwright-managed trace from outputDir if one exists.
+    // No active trace to stop.
   }
 }
 
-/**
- * Copy the per-test video.webm out of Playwright's outputDir into
- * fe/e2e/evidence/<persona>/. video.webm is finalized before afterAll
- * resolves, so a plain copyFile here is sufficient.
- */
-const pendingOutputDirs: Record<Persona, string[]> = {
-  buyer: [],
-  seller: [],
-  admin: [],
-};
-
-export function rememberOutputDir(persona: Persona, testInfo: TestInfo): void {
-  pendingOutputDirs[persona].push(testInfo.outputDir);
+export function rememberOutputDir(
+  persona: Persona,
+  testInfo: TestInfo,
+  options: EvidencePathOptions = {},
+): void {
+  const { state } = evidenceStateFor(persona, options);
+  state.pendingOutputDirs.push(testInfo.outputDir);
 }
 
-export async function copyArtifacts(persona: Persona): Promise<void> {
-  const dest = evidenceDir(persona);
-  await fs.mkdir(dest, { recursive: true });
+export async function copyArtifacts(
+  persona: Persona,
+  options: EvidencePathOptions = {},
+): Promise<void> {
+  const { paths, state } = evidenceStateFor(persona, options);
+  await fs.mkdir(paths.personaDir, { recursive: true });
 
-  for (const outputDir of pendingOutputDirs[persona]) {
+  for (const outputDir of state.pendingOutputDirs) {
     const src = path.join(outputDir, "video.webm");
     try {
-      await fs.copyFile(src, path.join(dest, "video.webm"));
+      await fs.copyFile(src, paths.videoFile);
     } catch {
-      // No video — possibly disabled or never finalized; skip.
+      // Video may be disabled or absent for this run.
     }
   }
 }
 
-export async function finalizeReport(persona: Persona): Promise<void> {
-  const dest = evidenceDir(persona);
-  await fs.mkdir(dest, { recursive: true });
+export async function finalizeReport(
+  persona: Persona,
+  options: EvidencePathOptions = {},
+): Promise<void> {
+  const { paths, state } = evidenceStateFor(persona, options);
+  await fs.mkdir(paths.personaDir, { recursive: true });
 
-  const rows = reports[persona];
-  const passed = rows.filter((r) => r.status === "PASS").length;
+  const rows = state.report;
+  const passed = rows.filter((row) => row.status === "PASS").length;
   const failed = rows.length - passed;
   const verdict = failed === 0 ? "PASS" : "FAIL";
 
   const lines: string[] = [];
-  lines.push(`# Workday — ${persona[0].toUpperCase()}${persona.slice(1)}`);
+  lines.push(`# Workday - ${persona[0].toUpperCase()}${persona.slice(1)}`);
   lines.push("");
   lines.push(`**Verdict:** ${verdict}`);
   lines.push(`**Steps:** ${passed} / ${rows.length} passed`);
@@ -194,46 +249,39 @@ export async function finalizeReport(persona: Persona): Promise<void> {
   lines.push("");
   lines.push("## Steps");
   lines.push("");
-  for (const r of rows) {
-    const indexStr = r.index.toString().padStart(2, "0");
-    lines.push(`### ${indexStr}. ${r.title} — ${r.status}`);
+
+  for (const row of rows) {
+    const indexStr = row.index.toString().padStart(2, "0");
+    lines.push(`### ${indexStr}. ${row.title} - ${row.status}`);
     lines.push("");
-    lines.push(`![${r.title}](screenshots/${r.slug})`);
+    lines.push(`![${row.title}](screenshots/${row.slug})`);
     lines.push("");
-    if (r.errorMessage) {
+    if (row.errorMessage) {
       lines.push("```");
-      lines.push(r.errorMessage);
+      lines.push(row.errorMessage);
       lines.push("```");
       lines.push("");
     }
   }
+
   lines.push("## Artifacts");
   lines.push("");
-  lines.push("- `trace.zip` — open with `npx playwright show-trace trace.zip`");
-  lines.push("- `video.webm` — full session recording (gitignored)");
-  lines.push("- `screenshots/` — one `NN-slug.png` per step, regenerated each run");
+  lines.push("- `trace.zip` - open with `npx playwright show-trace trace.zip`");
+  lines.push("- `video.webm` - full session recording (gitignored)");
+  lines.push("- `screenshots/` - one `NN-slug.png` per step, regenerated each run");
 
-  await fs.writeFile(path.join(dest, "REPORT.md"), `${lines.join("\n")}\n`, "utf8");
+  await fs.writeFile(paths.reportFile, `${lines.join("\n")}\n`, "utf8");
 }
 
-/**
- * Cross-language matcher for the global error fallback. Use after every
- * navigation in a workday step.
- */
-
-/**
- * Drive the /login form for a seeded persona. The central credential store
- * resolves credentials so rotation is automatically respected.
- */
 export async function loginAsSeededUser(page: Page, persona: Persona): Promise<void> {
   const { username, password } = credentialForPersona(persona);
   await page.goto("/login");
-  await expect(page.getByText(/Sign in to VNShop|Đăng nhập VNShop/i).first()).toBeVisible({
+  await expect(page.getByText(loginHeadingPattern).first()).toBeVisible({
     timeout: 20_000,
   });
   await page.locator("#username").fill(username);
   await page.locator("#password").fill(password);
-  await page.getByRole("button", { name: /^(Sign in|Đăng nhập)$/i }).click();
+  await page.getByRole("button", { name: loginButtonPattern }).click();
   await expect
     .poll(() => new URL(page.url()).pathname, {
       timeout: 30_000,
@@ -243,23 +291,37 @@ export async function loginAsSeededUser(page: Page, persona: Persona): Promise<v
 }
 
 /**
- * Open the header user-menu and click logout. Anchors on accessible names
- * so we don't depend on icon implementation details.
+ * Open the user menu and click logout. Prefer the storefront's accessible
+ * account/user-menu trigger, then fall back to the console's generic
+ * aria-haspopup trigger. After opening, support either a plain button or
+ * a menuitem logout control.
  */
 export async function logoutViaUserMenu(page: Page): Promise<void> {
-  const menuTrigger = page.getByRole("button", { name: /account menu|user menu/i }).first();
+  const stableTrigger = page.locator("[data-account-menu-trigger]").first();
+  const namedTrigger = page.getByRole("button", { name: /account menu|user menu/i }).first();
+  const fallbackTrigger = page
+    .locator('button[aria-haspopup="true"], button[aria-haspopup="menu"]')
+    .first();
+  const menuTrigger = (await stableTrigger.isVisible().catch(() => false))
+    ? stableTrigger
+    : (await namedTrigger.isVisible().catch(() => false))
+      ? namedTrigger
+      : fallbackTrigger;
+
   await expect(menuTrigger).toBeVisible({ timeout: 10_000 });
   await menuTrigger.click();
-  const logoutButton = page.getByRole("button", { name: /^(Log out|Đăng xuất)$/i }).first();
-  if (await logoutButton.isVisible().catch(() => false)) {
-    await logoutButton.click();
+
+  const openMenu = page.locator('[role="menu"]:visible').last();
+  const menuLogout = openMenu.getByRole("menuitem", { name: logoutPattern }).first();
+  if (await menuLogout.isVisible().catch(() => false)) {
+    await menuLogout.click();
   } else {
-    await page
-      .getByRole("menuitem", { name: /^(Log out|Đăng xuất)$/i })
-      .first()
-      .click();
+    const pageLogout = page.getByRole("button", { name: logoutPattern }).first();
+    await expect(pageLogout).toBeVisible({ timeout: 10_000 });
+    await pageLogout.click();
   }
-  await expect(page.getByRole("link", { name: /^(Log in|Đăng nhập)$/i }).first()).toBeVisible({
+
+  await expect(page.getByRole("link", { name: loggedOutLinkPattern }).first()).toBeVisible({
     timeout: 15_000,
   });
 }

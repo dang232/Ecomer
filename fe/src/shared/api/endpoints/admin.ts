@@ -129,12 +129,14 @@ export const adminFailPayout = (id: string, body: PayoutActionBody) =>
  * that's still mounted at the same paths.
  */
 
-export const adminAllPayouts = (params: {
-  status?: string;
-  page?: number;
-  size?: number;
-  q?: string;
-} = {}) =>
+export const adminAllPayouts = (
+  params: {
+    status?: string;
+    page?: number;
+    size?: number;
+    q?: string;
+  } = {},
+) =>
   api.get("/admin/finance/payouts", adminPageSchema(adminPayoutSchema), {
     status: params.status || undefined,
     page: params.page ?? 0,
@@ -143,43 +145,31 @@ export const adminAllPayouts = (params: {
   });
 
 export const adminApprovePayout = (id: string, reason: string) =>
-  api.postWithQuery(
-    `/admin/finance/payouts/${encodeURIComponent(id)}/approve`,
-    adminPayoutSchema,
-    { reason },
-  );
+  api.postWithQuery(`/admin/finance/payouts/${encodeURIComponent(id)}/approve`, adminPayoutSchema, {
+    reason,
+  });
 
 export const adminRejectPayout = (id: string, reason: string) =>
-  api.postWithQuery(
-    `/admin/finance/payouts/${encodeURIComponent(id)}/reject`,
-    adminPayoutSchema,
-    { reason },
-  );
+  api.postWithQuery(`/admin/finance/payouts/${encodeURIComponent(id)}/reject`, adminPayoutSchema, {
+    reason,
+  });
 
 export const adminSubmitPayout = (id: string, providerReference: string, attemptId: string) =>
-  api.postWithQuery(
-    `/admin/finance/payouts/${encodeURIComponent(id)}/submit`,
-    adminPayoutSchema,
-    { providerReference, attemptId },
-  );
+  api.postWithQuery(`/admin/finance/payouts/${encodeURIComponent(id)}/submit`, adminPayoutSchema, {
+    providerReference,
+    attemptId,
+  });
 
 export const adminUnknownPayout = (id: string, reason: string) =>
-  api.postWithQuery(
-    `/admin/finance/payouts/${encodeURIComponent(id)}/unknown`,
-    adminPayoutSchema,
-    { reason },
-  );
+  api.postWithQuery(`/admin/finance/payouts/${encodeURIComponent(id)}/unknown`, adminPayoutSchema, {
+    reason,
+  });
 
-export const adminPaidPayout = (
-  id: string,
-  providerReference: string,
-  evidence: string,
-) =>
-  api.postWithQuery(
-    `/admin/finance/payouts/${encodeURIComponent(id)}/paid`,
-    adminPayoutSchema,
-    { providerReference, evidence },
-  );
+export const adminPaidPayout = (id: string, providerReference: string, evidence: string) =>
+  api.postWithQuery(`/admin/finance/payouts/${encodeURIComponent(id)}/paid`, adminPayoutSchema, {
+    providerReference,
+    evidence,
+  });
 
 export const adminCompleteLegacyPayout = (id: string, body: PayoutActionBody) =>
   api.post(`/admin/finance/payouts/${encodeURIComponent(id)}/complete`, adminPayoutSchema, body);

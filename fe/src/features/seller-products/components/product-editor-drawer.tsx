@@ -422,7 +422,19 @@ export function ProductEditorDrawer({ open, product, onClose, onSave }: ProductE
               />
               {persistedProductId ? (
                 <ProductVideoFields productId={persistedProductId} disabled={isBusy} />
-              ) : null}
+              ) : (
+                <fieldset className="space-y-1 border-t border-border pt-4">
+                  <legend className="sr-only">
+                    {t("video.seller.sectionTitle", { count: 0, max: 3 })}
+                  </legend>
+                  <p className="text-sm font-semibold text-foreground" aria-hidden="true">
+                    {t("video.seller.sectionTitle", { count: 0, max: 3 })}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("seller.products.editor.videoCreateHint")}
+                  </p>
+                </fieldset>
+              )}
             </section>
 
             <section aria-labelledby="variants-heading">

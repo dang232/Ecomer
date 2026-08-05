@@ -3,19 +3,61 @@
  * Used inside the drawer form via React Hook Form.
  */
 
-import type { UseFormRegister, FieldErrors } from "react-hook-form";
+import { useMemo } from "react";
+import {
+  Controller,
+  useWatch,
+  type Control,
+  type FieldErrors,
+  type UseFormRegister,
+} from "react-hook-form";
 import { useTranslation } from "react-i18next";
+
+import type { Category } from "@/shared/contracts";
 
 import type { SellerProductForm } from "../model/product-form";
 
 interface ProductBasicFieldsProps {
   register: UseFormRegister<SellerProductForm>;
+  control: Control<SellerProductForm>;
   errors: FieldErrors<SellerProductForm>;
+  categories: Category[];
+  categoriesLoading?: boolean;
+  categoriesError?: boolean;
   disabled?: boolean;
 }
 
-export function ProductBasicFields({ register, errors, disabled }: ProductBasicFieldsProps) {
+interface CategoryOption {
+  id: string;
+  label: string;
+}
+
+function flattenCategoryOptions(categories: Category[], depth = 0): CategoryOption[] {
+  return categories.flatMap((category) => {
+    const label = category.label?.trim() || category.name?.trim() || category.id;
+    const prefix = depth > 0 ? `${"  ".repeat(depth)}- ` : "";
+    return [
+      { id: category.id, label: `${prefix}${label}` },
+      ...flattenCategoryOptions((category.children ?? []) as Category[], depth + 1),
+    ];
+  });
+}
+
+export function ProductBasicFields({
+  register,
+  control,
+  errors,
+  categories,
+  categoriesLoading = false,
+  categoriesError = false,
+  disabled,
+}: ProductBasicFieldsProps) {
   const { t } = useTranslation();
+  const selectedCategoryId = useWatch({ control, name: "categoryId" });
+  const categoryOptions = useMemo(() => flattenCategoryOptions(categories), [categories]);
+  const hasSelectedCategory = categoryOptions.some(
+    (category) => category.id === selectedCategoryId,
+  );
 
   return (
     <fieldset className="space-y-4" disabled={disabled}>
@@ -71,7 +113,7 @@ export function ProductBasicFields({ register, errors, disabled }: ProductBasicF
       </div>
 
       {/* Category + Brand */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <label
             htmlFor="product-category"
@@ -79,19 +121,43 @@ export function ProductBasicFields({ register, errors, disabled }: ProductBasicF
           >
             {t("seller.products.editor.basic.categoryLabel")} *
           </label>
-          <input
+          <select
             id="product-category"
-            type="text"
-            autoComplete="off"
+            {...(categoriesLoading ? { "aria-busy": true } : {})}
             {...register("categoryId")}
+            disabled={disabled || categoriesLoading}
             className="w-full px-4 py-2.5 border rounded-[var(--radius-md)] text-sm outline-none focus:border-primary bg-card disabled:opacity-50"
-            placeholder="electronics"
             aria-invalid={!!errors.categoryId}
-            aria-describedby={errors.categoryId ? "product-category-error" : undefined}
-          />
+            aria-describedby={
+              errors.categoryId
+                ? "product-category-error"
+                : categoriesError
+                  ? "product-category-load-error"
+                  : undefined
+            }
+          >
+            <option value="">
+              {categoriesLoading
+                ? t("seller.products.editor.basic.categoryLoading")
+                : t("seller.products.editor.basic.categoryPlaceholder")}
+            </option>
+            {!hasSelectedCategory && selectedCategoryId ? (
+              <option value={selectedCategoryId}>{selectedCategoryId}</option>
+            ) : null}
+            {categoryOptions.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.label}
+              </option>
+            ))}
+          </select>
           {errors.categoryId ? (
             <p id="product-category-error" className="mt-1 text-xs text-error" role="alert">
               {errors.categoryId.message}
+            </p>
+          ) : null}
+          {categoriesError ? (
+            <p id="product-category-load-error" className="mt-1 text-xs text-muted-foreground">
+              {t("seller.products.editor.basic.categoryLoadError")}
             </p>
           ) : null}
         </div>
@@ -128,15 +194,32 @@ export function ProductBasicFields({ register, errors, disabled }: ProductBasicF
         >
           {t("seller.products.editor.basic.tagsLabel")}
         </label>
-        <input
-          id="product-tags"
-          type="text"
-          autoComplete="off"
-          {...register("tags")}
-          className="w-full px-4 py-2.5 border rounded-[var(--radius-md)] text-sm outline-none focus:border-primary bg-card disabled:opacity-50"
-          placeholder={t("seller.products.editor.basic.tagsPlaceholder")}
-          aria-invalid={!!errors.tags}
-          aria-describedby={errors.tags ? "product-tags-error" : undefined}
+        <Controller
+          name="tags"
+          control={control}
+          render={({ field }) => (
+            <input
+              id="product-tags"
+              type="text"
+              autoComplete="off"
+              ref={field.ref}
+              name={field.name}
+              value={Array.isArray(field.value) ? field.value.join(", ") : ""}
+              onBlur={field.onBlur}
+              onChange={(event) =>
+                field.onChange(
+                  event.target.value
+                    .split(",")
+                    .map((tag) => tag.trim())
+                    .filter(Boolean),
+                )
+              }
+              className="w-full px-4 py-2.5 border rounded-[var(--radius-md)] text-sm outline-none focus:border-primary bg-card disabled:opacity-50"
+              placeholder={t("seller.products.editor.basic.tagsPlaceholder")}
+              aria-invalid={!!errors.tags}
+              aria-describedby={errors.tags ? "product-tags-error" : undefined}
+            />
+          )}
         />
         <p className="mt-1 text-[11px] text-muted-foreground">
           {t("seller.products.editor.basic.tagsHint")}
