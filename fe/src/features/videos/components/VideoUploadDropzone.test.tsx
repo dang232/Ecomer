@@ -22,6 +22,7 @@ vi.mock("react-i18next", () => ({
 const idleState: VideoUploadState = {
   phase: "idle",
   progress: 0,
+  entityId: null,
   videoId: null,
   error: null,
   estimatedDuration: null,
@@ -31,6 +32,7 @@ const idleState: VideoUploadState = {
 const uploadingState: VideoUploadState = {
   phase: "uploading",
   progress: 42,
+  entityId: "product-42",
   videoId: "vid-123",
   error: null,
   estimatedDuration: null,
@@ -40,6 +42,7 @@ const uploadingState: VideoUploadState = {
 const errorState: VideoUploadState = {
   phase: "error",
   progress: 0,
+  entityId: "product-42",
   videoId: null,
   error: "video:wrong-type",
   estimatedDuration: null,
@@ -49,6 +52,7 @@ const errorState: VideoUploadState = {
 const completeState: VideoUploadState = {
   phase: "complete",
   progress: 100,
+  entityId: "product-42",
   videoId: "vid-123",
   error: null,
   estimatedDuration: null,

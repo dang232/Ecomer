@@ -11,6 +11,7 @@ public class ObjectStorageProperties {
     private boolean enabled;
     private Profile profile = Profile.MINIO;
     private String bucket;
+    private String reviewBucket = "vnshop-reviews";
     private String region = "auto";
     private String endpoint;
     private String publicEndpoint;

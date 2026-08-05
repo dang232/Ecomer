@@ -84,7 +84,7 @@ class VideoControllerTest {
 
     @Test
     void createUpload_returns201WithLocationAndTusHeader() {
-        when(service.createUploadSession(eq(UPLOADER), eq(VideoOwnerType.PRODUCT), eq(PRODUCT_ID), eq("idem-1"), eq(1024L)))
+        when(service.createUploadSession(eq(UPLOADER), eq(VideoOwnerType.PRODUCT), eq(PRODUCT_ID), eq("idem-1"), eq(1024L), eq("mp4")))
                 .thenReturn(uploadingVideo());
 
         ResponseEntity<Void> response = controller.createUpload(1024L, validMetadata(), "1.0.0");
@@ -97,12 +97,12 @@ class VideoControllerTest {
 
     @Test
     void createUpload_parsesOwnerTypeAndOwnerIdFromMetadata() {
-        when(service.createUploadSession(any(), any(), any(), any(), any(Long.class)))
+        when(service.createUploadSession(any(), any(), any(), any(), any(Long.class), any()))
                 .thenReturn(uploadingVideo());
 
         controller.createUpload(512L, validMetadata(), "1.0.0");
 
-        verify(service).createUploadSession(eq(UPLOADER), eq(VideoOwnerType.PRODUCT), eq(PRODUCT_ID), eq("idem-1"), eq(512L));
+        verify(service).createUploadSession(eq(UPLOADER), eq(VideoOwnerType.PRODUCT), eq(PRODUCT_ID), eq("idem-1"), eq(512L), eq("mp4"));
     }
 
     // -------------------------------------------------------------------------
@@ -187,6 +187,7 @@ class VideoControllerTest {
         assertThat(metadata.ownerType()).isEqualTo(VideoOwnerType.PRODUCT);
         assertThat(metadata.ownerId()).isEqualTo(PRODUCT_ID.toString());
         assertThat(metadata.idempotencyKey()).isEqualTo("idem-1");
+        assertThat(metadata.extension()).isEqualTo("mp4");
     }
 
     @Test

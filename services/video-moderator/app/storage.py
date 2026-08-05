@@ -44,21 +44,27 @@ class StorageClient:
     # ------------------------------------------------------------------
 
     def promote_to_public(self, object_key: str) -> None:
-        """Copy *object_key* from staging to the public bucket, then delete the staging copy."""
-        copy_source = {"Bucket": self._staging_bucket, "Key": object_key}
-        logger.info(
-            "Promoting s3://%s/%s → s3://%s/%s",
-            self._staging_bucket,
-            object_key,
-            self._public_bucket,
-            object_key,
-        )
-        self._s3.copy_object(
-            CopySource=copy_source,
-            Bucket=self._public_bucket,
-            Key=object_key,
-        )
-        self._s3.delete_object(Bucket=self._staging_bucket, Key=object_key)
+        """Copy *object_key* from staging to public storage."""
+        self.promote_many_to_public([object_key])
+
+    def promote_many_to_public(self, object_keys: list[str]) -> None:
+        """Copy every asset before deleting any source to keep paired media recoverable."""
+        keys = list(dict.fromkeys(object_keys))
+        for object_key in keys:
+            logger.info(
+                "Promoting s3://%s/%s → s3://%s/%s",
+                self._staging_bucket,
+                object_key,
+                self._public_bucket,
+                object_key,
+            )
+            self._s3.copy_object(
+                CopySource={"Bucket": self._staging_bucket, "Key": object_key},
+                Bucket=self._public_bucket,
+                Key=object_key,
+            )
+        for object_key in keys:
+            self._s3.delete_object(Bucket=self._staging_bucket, Key=object_key)
 
     # ------------------------------------------------------------------
     # Bucket existence check (used at startup)

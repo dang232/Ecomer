@@ -36,6 +36,7 @@ class FfmpegCommandBuilderTest {
         assertThat(cmd).containsSequence("-crf", "23");
         assertThat(cmd).containsSequence("-c:a", "aac");
         assertThat(cmd).containsSequence("-b:a", "128k");
+        assertThat(cmd).containsSequence("-map", "0:a:0?");
         assertThat(cmd).containsSequence("-map_metadata", "-1");
         assertThat(cmd).containsSequence("-movflags", "+faststart");
         assertThat(cmd).containsSequence("-fs", "2147483648");
@@ -65,20 +66,23 @@ class FfmpegCommandBuilderTest {
         assertThat(cmd).containsSequence("-i", src.toAbsolutePath().toString());
         assertThat(cmd).containsSequence("-frames:v", "1");
         assertThat(cmd).containsSequence("-q:v", "2");
+        assertThat(cmd).containsSequence("-threads", "1");
+        assertThat(cmd).containsSequence("-pix_fmt", "yuvj420p");
         assertThat(cmd).contains(poster.toAbsolutePath().toString());
     }
 
     @ParameterizedTest(name = "duration={0}s -> seek={1}s")
     @CsvSource({
-            "0,   1.0",
-            "-5,  1.0",
-            "5,   1.0",   // 5 * 0.1 = 0.5 -> clamp to 1.0
+            "0,   0.0",
+            "-5,  0.0",
+            "1,   0.1",
+            "5,   0.5",
             "10,  1.0",   // 10 * 0.1 = 1.0 -> exactly 1.0
             "20,  2.0",   // 20 * 0.1 = 2.0
             "100, 10.0",  // 100 * 0.1 = 10.0
             "600, 60.0",  // 600 * 0.1 = 60.0
     })
-    void posterSeekSeconds_clampsToMinimumOneSecond(double duration, double expectedSeek) {
+    void posterSeekSeconds_usesAFrameWithinTheVideoDuration(double duration, double expectedSeek) {
         assertThat(builder.posterSeekSeconds(duration)).isEqualTo(expectedSeek);
     }
 }

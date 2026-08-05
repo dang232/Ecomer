@@ -75,6 +75,8 @@ springdoc:
 vnshop:
   object-storage:
     video:
+      input-bucket: ${S3_BUCKET_VIDEO_INPUT:vnshop-video-uploads-tmp}
+      staging-bucket: ${S3_BUCKET_VIDEO_STAGING:vnshop-videos-staging}
       public-bucket: ${S3_BUCKET_PUBLIC}
 
 management:

@@ -33,9 +33,22 @@ def _kafka_contract(document: str) -> None:
         "$ACL --add --allow-principal User:svc-video-moderator "
         "--operation Write --topic video.moderation.dlt"
     ) in document
+    assert (
+        "$ACL --add --allow-principal User:svc-video-moderator "
+        "--operation Read --group moderator-worker"
+    ) in document
 
 
 class VideoModeratorInfrastructureContractTest(unittest.TestCase):
+    def test_compose_workers_restart_after_a_failure(self) -> None:
+        compose = COMPOSE.read_text(encoding="utf-8")
+        moderator = _service_block(compose, "video-moderator", "jaeger")
+        transcoder = _service_block(compose, "video-transcoder", "video-moderator")
+
+        restart_pattern = re.compile(r"^\s+restart:\s+unless-stopped\s*$", re.MULTILINE)
+        self.assertRegex(moderator, restart_pattern)
+        self.assertRegex(transcoder, restart_pattern)
+
     def test_compose_tmpfs_is_owned_by_the_moderator_uid(self) -> None:
         compose = COMPOSE.read_text(encoding="utf-8")
         block = _service_block(compose, "video-moderator", "jaeger")

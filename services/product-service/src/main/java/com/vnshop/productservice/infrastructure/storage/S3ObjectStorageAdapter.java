@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -35,6 +36,7 @@ public class S3ObjectStorageAdapter implements ObjectStoragePort {
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
     private final ObjectStorageProperties properties;
+    private final VideoStorageProperties videoStorageProperties;
 
     @Override
     public void putObject(String key, InputStream content, ObjectMetadata metadata) {
@@ -53,8 +55,9 @@ public class S3ObjectStorageAdapter implements ObjectStoragePort {
 
     @Override
     public URI getSignedDownloadUrl(String key, ObjectStorageClass storageClass) {
+        BucketKey object = parse(key, storageClass);
         GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
-                .getObjectRequest(GetObjectRequest.builder().bucket(properties.getBucket()).key(key).build())
+                .getObjectRequest(GetObjectRequest.builder().bucket(object.bucket()).key(object.key()).build())
                 .signatureDuration(storageClass.downloadTtl())
                 .build();
         return URI.create(s3Presigner.presignGetObject(presignRequest).url().toString());
@@ -62,22 +65,24 @@ public class S3ObjectStorageAdapter implements ObjectStoragePort {
 
     @Override
     public URI publicUrl(String key) {
+        BucketKey object = parse(key, null);
         String base = properties.resolvePublicEndpoint().replaceAll("/$", "");
         if (properties.isPathStyleAccess()) {
-            return URI.create(base + "/" + properties.getBucket() + "/" + key);
+            return URI.create(base + "/" + object.bucket() + "/" + object.key());
         }
-        return URI.create(base + "/" + key);
+        return URI.create(base + "/" + object.key());
     }
 
     @Override
     public void deleteObject(String key) {
-        s3Client.deleteObject(DeleteObjectRequest.builder().bucket(properties.getBucket()).key(key).build());
+        BucketKey object = parse(key, null);
+        s3Client.deleteObject(DeleteObjectRequest.builder().bucket(object.bucket()).key(object.key()).build());
     }
 
     @Override
     public void copyObject(String sourceKey, String destinationKey) {
-        BucketKey src = BucketKey.parse(sourceKey, properties.getBucket());
-        BucketKey dst = BucketKey.parse(destinationKey, properties.getBucket());
+        BucketKey src = parse(sourceKey, null);
+        BucketKey dst = parse(destinationKey, null);
         s3Client.copyObject(CopyObjectRequest.builder()
                 .sourceBucket(src.bucket())
                 .sourceKey(src.key())
@@ -89,8 +94,9 @@ public class S3ObjectStorageAdapter implements ObjectStoragePort {
     @Override
     public Optional<ObjectMetadata> headObject(String key) {
         try {
+            BucketKey object = parse(key, null);
             HeadObjectResponse response = s3Client.headObject(
-                    HeadObjectRequest.builder().bucket(properties.getBucket()).key(key).build());
+                    HeadObjectRequest.builder().bucket(object.bucket()).key(object.key()).build());
             Map<String, String> metadata = response.metadata();
             return Optional.of(ObjectMetadata.builder()
                     .key(key)
@@ -109,9 +115,10 @@ public class S3ObjectStorageAdapter implements ObjectStoragePort {
     }
 
     private PutObjectRequest.Builder putObjectRequest(String key, ObjectMetadata metadata) {
+        BucketKey object = parse(key, metadata.getStorageClass());
         return PutObjectRequest.builder()
-                .bucket(properties.getBucket())
-                .key(key)
+                .bucket(object.bucket())
+                .key(object.key())
                 .contentType(metadata.getContentType())
                 .contentLength(metadata.getContentLength())
                 .metadata(toS3Metadata(metadata));
@@ -135,11 +142,24 @@ public class S3ObjectStorageAdapter implements ObjectStoragePort {
         return value == null ? null : Integer.valueOf(value);
     }
 
+    private BucketKey parse(String raw, ObjectStorageClass storageClass) {
+        return BucketKey.parse(raw, properties.getBucket(), properties.getReviewBucket(), storageClass, Set.of(
+                properties.getBucket(),
+                properties.getReviewBucket(),
+                videoStorageProperties.inputBucket(),
+                videoStorageProperties.stagingBucket(),
+                videoStorageProperties.publicBucket()));
+    }
+
     private record BucketKey(String bucket, String key) {
-        static BucketKey parse(String raw, String defaultBucket) {
+        static BucketKey parse(String raw, String defaultBucket, String reviewBucket,
+                ObjectStorageClass storageClass, Set<String> knownBuckets) {
             int slash = raw.indexOf("/");
-            if (slash > 0) {
+            if (slash > 0 && knownBuckets.contains(raw.substring(0, slash))) {
                 return new BucketKey(raw.substring(0, slash), raw.substring(slash + 1));
+            }
+            if (storageClass == ObjectStorageClass.REVIEW_IMAGE || raw.startsWith("reviews/")) {
+                return new BucketKey(reviewBucket, raw);
             }
             return new BucketKey(defaultBucket, raw);
         }

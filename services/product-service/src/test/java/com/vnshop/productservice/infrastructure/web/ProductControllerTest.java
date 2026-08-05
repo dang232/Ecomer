@@ -70,6 +70,38 @@ class ProductControllerTest {
         assertThat(endpointExists).isTrue();
     }
 
+    @Test
+    void exposesSellerOwnedManagementReadEndpoints() {
+        boolean listEndpointExists = Arrays.stream(ProductController.class.getDeclaredMethods())
+                .filter(method -> method.isAnnotationPresent(org.springframework.web.bind.annotation.GetMapping.class))
+                .flatMap(method -> Arrays.stream(
+                        method.getAnnotation(org.springframework.web.bind.annotation.GetMapping.class).value()))
+                .anyMatch("/sellers/me/products"::equals);
+        boolean detailEndpointExists = Arrays.stream(ProductController.class.getDeclaredMethods())
+                .filter(method -> method.isAnnotationPresent(org.springframework.web.bind.annotation.GetMapping.class))
+                .flatMap(method -> Arrays.stream(
+                        method.getAnnotation(org.springframework.web.bind.annotation.GetMapping.class).value()))
+                .anyMatch("/sellers/me/products/{id}"::equals);
+
+        assertThat(listEndpointExists).isTrue();
+        assertThat(detailEndpointExists).isTrue();
+    }
+
+    @Test
+    void sellerManagementReadEndpointsRequireSellerRole() {
+        List<String> expressions = Arrays.stream(ProductController.class.getDeclaredMethods())
+                .filter(method -> method.isAnnotationPresent(org.springframework.web.bind.annotation.GetMapping.class))
+                .filter(method -> Arrays.stream(
+                        method.getAnnotation(org.springframework.web.bind.annotation.GetMapping.class).value())
+                        .anyMatch(path -> path.startsWith("/sellers/me/products")))
+                .map(method -> method.getAnnotation(org.springframework.security.access.prepost.PreAuthorize.class))
+                .filter(java.util.Objects::nonNull)
+                .map(org.springframework.security.access.prepost.PreAuthorize::value)
+                .toList();
+
+        assertThat(expressions).containsExactly("hasRole('SELLER')", "hasRole('SELLER')");
+    }
+
     private static Category category(String id, String parentId, String name, String label, Category... children) {
         return new Category(id, parentId, name, label, 10, true).withChildren(List.of(children));
     }

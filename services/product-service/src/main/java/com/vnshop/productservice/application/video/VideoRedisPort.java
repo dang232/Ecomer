@@ -50,6 +50,18 @@ public interface VideoRedisPort {
 
     // Idempotency
 
-    void setIdempotencyKey(String idempotencyKey, String videoId, Duration ttl);
+    /** Atomically reserves a scoped operation key until the creator completes or the TTL expires. */
+    boolean claimIdempotencyKey(String idempotencyKey, String videoId, Duration ttl);
+
+    /** Atomically publishes the completed result and removes the creator reservation. */
+    boolean completeIdempotencyKey(String idempotencyKey, String videoId, Duration ttl);
+
+    /** Releases a reservation only when it is still owned by the supplied video id. */
+    void releaseIdempotencyReservation(String idempotencyKey, String videoId);
+
+    /** Deletes the completed mapping associated with a cancelled video. */
+    void releaseIdempotencyKeyForVideo(String videoId);
+
     String getIdempotencyKey(String idempotencyKey);
+    boolean hasIdempotencyReservation(String idempotencyKey);
 }

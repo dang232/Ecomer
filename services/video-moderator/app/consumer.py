@@ -147,17 +147,19 @@ class ModerationConsumer:
 
     def _process_message(self, payload: dict) -> None:
         video_id: str = payload["videoId"]
-        object_key: str = payload["objectKey"]
+        transcoded_key: str = payload["transcodedKey"]
+        poster_key: str = payload["posterKey"]
+        duration_seconds: int | float = payload["durationSeconds"]
 
-        logger.info("Processing moderation for videoId=%s key=%s", video_id, object_key)
+        logger.info("Processing moderation for videoId=%s key=%s", video_id, transcoded_key)
 
         # 1. Download from staging bucket
         local_path = os.path.join(
             self._settings.tmp_dir,
-            f"{uuid.uuid4().hex}_{os.path.basename(object_key)}",
+            f"{uuid.uuid4().hex}_{os.path.basename(transcoded_key)}",
         )
         try:
-            self._storage.download(object_key, local_path)
+            self._storage.download(transcoded_key, local_path)
 
             # 2–4. Extract frames + run NudeNet inference
             nsfw_score = self._moderator.analyze_video(local_path)
@@ -175,35 +177,53 @@ class ModerationConsumer:
         )
 
         if verdict == _VERDICT_AUTO_APPROVED:
-            self._storage.promote_to_public(object_key)
+            self._storage.promote_many_to_public([transcoded_key, poster_key])
             self._producer.send_moderation_completed(
                 video_id=video_id,
-                object_key=object_key,
+                object_key=transcoded_key,
                 nsfw_score=nsfw_score,
                 verdict=verdict,
                 public_bucket=self._settings.storage_bucket_public,
             )
+            status = "PUBLISHED"
+            media_bucket = self._settings.storage_bucket_public
+            published = True
+            rejection_reason = None
         elif verdict == _VERDICT_PENDING_REVIEW:
             # Leave in staging; admin will approve/reject via the queue API.
             self._producer.send_pending_review(
                 video_id=video_id,
-                object_key=object_key,
+                object_key=transcoded_key,
                 nsfw_score=nsfw_score,
             )
+            status = "PENDING_REVIEW"
+            media_bucket = self._settings.storage_bucket_staging
+            published = False
+            rejection_reason = None
         else:  # AUTO_REJECTED
             # Keep in staging for 7 days (lifecycle rule on the bucket).
+            rejection_reason = "NSFW score exceeded AUTO_REJECTED threshold"
             self._producer.send_video_rejected(
                 video_id=video_id,
-                object_key=object_key,
+                object_key=transcoded_key,
                 nsfw_score=nsfw_score,
-                reason="NSFW score exceeded AUTO_REJECTED threshold",
+                reason=rejection_reason,
             )
+            status = "REJECTED"
+            media_bucket = self._settings.storage_bucket_staging
+            published = False
 
         # 6. Update DB
         update_video_moderation(
             video_id=video_id,
             nsfw_score=nsfw_score,
             verdict=verdict,
+            status=status,
+            transcoded_object_key=f"{media_bucket}/{transcoded_key}",
+            poster_object_key=f"{media_bucket}/{poster_key}",
+            duration_seconds=duration_seconds,
+            published=published,
+            rejection_reason=rejection_reason,
         )
 
     def _classify(self, score: float) -> str:

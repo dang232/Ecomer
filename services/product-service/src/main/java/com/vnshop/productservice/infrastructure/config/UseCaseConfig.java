@@ -238,7 +238,9 @@ public class UseCaseConfig {
     VideoUploadService videoUploadService(VideoJpaRepository videoJpaRepository,
             LocalStagingStore localStagingStore,
             VideoEventPublisherPort videoEventPublisherPort,
-            VideoRedisPort videoRedis) {
-        return new VideoUploadService(videoJpaRepository, localStagingStore, videoEventPublisherPort, videoRedis);
+            VideoRedisPort videoRedis,
+            VideoStorageProperties properties) {
+        return new VideoUploadService(videoJpaRepository, localStagingStore, videoEventPublisherPort, videoRedis,
+                properties);
     }
 }

@@ -1,5 +1,6 @@
 package com.vnshop.productservice.infrastructure.event;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -12,6 +13,7 @@ import com.vnshop.productservice.domain.video.VideoEvent;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.kafka.core.KafkaTemplate;
 
 import java.util.Map;
@@ -19,7 +21,7 @@ import java.util.Map;
 @SuppressWarnings("unchecked")
 class VideoEventPublisherTest {
 
-    private final KafkaTemplate<String, VideoEvent> kafkaTemplate = mock(KafkaTemplate.class);
+    private final KafkaTemplate kafkaTemplate = mock(KafkaTemplate.class);
     private final MeterRegistry meterRegistry = new SimpleMeterRegistry();
     private final VideoEventPublisher publisher = new VideoEventPublisher(kafkaTemplate, meterRegistry);
 
@@ -34,6 +36,26 @@ class VideoEventPublisherTest {
         publisher.publish(event);
 
         verify(kafkaTemplate).send(eq("video-events"), eq("vid-1"), eq(event));
+    }
+
+    @Test
+    void publish_routesCompletedUploadsToTheTranscoderTopic() {
+        VideoEvent event = new VideoEvent(
+                "vid-upload-1",
+                VideoEvent.EventType.VIDEO_UPLOAD_COMPLETED,
+                null,
+                Map.of("ownerType", "PRODUCT", "rawKey", "uploads/vid-upload-1.mp4"));
+
+        publisher.publish(event);
+
+        ArgumentCaptor<Object> payload = ArgumentCaptor.forClass(Object.class);
+        verify(kafkaTemplate).send(eq("video.upload.completed"), eq("vid-upload-1"), payload.capture());
+        assertThat(payload.getValue())
+                .isInstanceOf(Map.class)
+                .asInstanceOf(org.assertj.core.api.InstanceOfAssertFactories.MAP)
+                .containsEntry("videoId", "vid-upload-1")
+                .containsEntry("ownerType", "PRODUCT")
+                .containsEntry("rawKey", "uploads/vid-upload-1.mp4");
     }
 
     @Test

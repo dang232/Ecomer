@@ -11,6 +11,8 @@ public class Video {
     private final String reviewId;
     private final String stagingKey;
     private final String publicKey;
+    private final String processedKey;
+    private final String posterKey;
     private final VideoStatus status;
     private final String rejectionReason;
     private final String moderatedBy;
@@ -22,12 +24,22 @@ public class Video {
             String stagingKey, String publicKey, VideoStatus status,
             String rejectionReason, String moderatedBy, Instant moderatedAt,
             Instant publishedAt, Instant createdAt) {
+        this(videoId, ownerId, productId, reviewId, stagingKey, publicKey, null, null, status,
+                rejectionReason, moderatedBy, moderatedAt, publishedAt, createdAt);
+    }
+
+    public Video(UUID videoId, String ownerId, String productId, String reviewId,
+            String stagingKey, String publicKey, String processedKey, String posterKey,
+            VideoStatus status, String rejectionReason, String moderatedBy, Instant moderatedAt,
+            Instant publishedAt, Instant createdAt) {
         this.videoId = Objects.requireNonNull(videoId, "videoId is required");
         this.ownerId = Objects.requireNonNull(ownerId, "ownerId is required");
         this.productId = productId;
         this.reviewId = reviewId;
         this.stagingKey = stagingKey;
         this.publicKey = publicKey;
+        this.processedKey = processedKey;
+        this.posterKey = posterKey;
         this.status = Objects.requireNonNull(status, "status is required");
         this.rejectionReason = rejectionReason;
         this.moderatedBy = moderatedBy;
@@ -37,22 +49,27 @@ public class Video {
     }
 
     public Video withStatus(VideoStatus nextStatus) {
-        return new Video(videoId, ownerId, productId, reviewId, stagingKey, publicKey,
+        return new Video(videoId, ownerId, productId, reviewId, stagingKey, publicKey, processedKey, posterKey,
                 nextStatus, rejectionReason, moderatedBy, moderatedAt, publishedAt, createdAt);
     }
 
     public Video withApproval(String adminId, String resolvedPublicKey) {
+        return withApproval(adminId, resolvedPublicKey, posterKey);
+    }
+
+    public Video withApproval(String adminId, String resolvedPublicKey, String resolvedPosterKey) {
         return new Video(videoId, ownerId, productId, reviewId, stagingKey, resolvedPublicKey,
+                resolvedPublicKey, resolvedPosterKey,
                 VideoStatus.PUBLISHED, null, adminId, Instant.now(), Instant.now(), createdAt);
     }
 
     public Video withRejection(String adminId, String reason) {
-        return new Video(videoId, ownerId, productId, reviewId, stagingKey, null,
+        return new Video(videoId, ownerId, productId, reviewId, stagingKey, null, processedKey, posterKey,
                 VideoStatus.REJECTED, reason, adminId, Instant.now(), null, createdAt);
     }
 
     public Video withAppeal() {
-        return new Video(videoId, ownerId, productId, reviewId, stagingKey, publicKey,
+        return new Video(videoId, ownerId, productId, reviewId, stagingKey, publicKey, processedKey, posterKey,
                 VideoStatus.APPEAL_PENDING, rejectionReason, moderatedBy, moderatedAt, publishedAt, createdAt);
     }
 
@@ -62,6 +79,8 @@ public class Video {
     public String reviewId() { return reviewId; }
     public String stagingKey() { return stagingKey; }
     public String publicKey() { return publicKey; }
+    public String processedKey() { return processedKey; }
+    public String posterKey() { return posterKey; }
     public VideoStatus status() { return status; }
     public String rejectionReason() { return rejectionReason; }
     public String moderatedBy() { return moderatedBy; }

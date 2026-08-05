@@ -80,7 +80,7 @@ public class LocalStagingStoreImpl implements LocalStagingStore {
                     ObjectMetadata.builder()
                             .key(targetKey)
                             .storageClass(ObjectStorageClass.VIDEO_STAGING)
-                            .contentType("application/octet-stream")
+                            .contentType(contentTypeFor(targetKey))
                             .contentLength(size)
                             .quarantineState(ObjectQuarantineState.PENDING_VALIDATION)
                             .createdAt(Instant.now())
@@ -118,5 +118,13 @@ public class LocalStagingStoreImpl implements LocalStagingStore {
     public long currentSize(UUID videoId) throws IOException {
         Path path = localPath(videoId);
         return Files.exists(path) ? Files.size(path) : 0L;
+    }
+
+    private static String contentTypeFor(String key) {
+        String lowercaseKey = key.toLowerCase(java.util.Locale.ROOT);
+        if (lowercaseKey.endsWith(".mov")) return "video/quicktime";
+        if (lowercaseKey.endsWith(".webm")) return "video/webm";
+        if (lowercaseKey.endsWith(".mkv")) return "video/x-matroska";
+        return "video/mp4";
     }
 }

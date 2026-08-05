@@ -7,6 +7,7 @@ import com.vnshop.productservice.domain.video.VideoStatus;
 import com.vnshop.productservice.domain.video.VideoStatusHistory;
 import com.vnshop.productservice.domain.video.port.out.VideoEventPublisherPort;
 import com.vnshop.productservice.infrastructure.persistence.video.VideoJpaRepository;
+import com.vnshop.productservice.infrastructure.storage.VideoStorageProperties;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +54,9 @@ public class VideoUploadService {
     static final int  MAX_CONCURRENT_SESSIONS = 2;
 
     private static final Duration IDEMPOTENCY_TTL = Duration.ofHours(24);
+    private static final Duration IDEMPOTENCY_RESERVATION_TTL = Duration.ofSeconds(30);
+    private static final Duration IDEMPOTENCY_WAIT_TIMEOUT = Duration.ofSeconds(5);
+    private static final Duration IDEMPOTENCY_POLL_INTERVAL = Duration.ofMillis(10);
     private static final Duration UPLOAD_STATE_TTL = Duration.ofHours(2);
     private static final Duration CONCURRENT_SESSION_TTL = Duration.ofHours(1);
 
@@ -60,6 +64,7 @@ public class VideoUploadService {
     private final LocalStagingStore localStagingStore;
     private final VideoEventPublisherPort videoEventPublisherPort;
     private final VideoRedisPort videoRedis;
+    private final VideoStorageProperties videoStorageProperties;
 
     // -------------------------------------------------------------------------
     // POST — tus Creation
@@ -67,25 +72,36 @@ public class VideoUploadService {
 
     public Video createUploadSession(String uploaderId, VideoOwnerType ownerType, UUID ownerId,
             String idempotencyKey, long contentLength) {
+        return createUploadSession(uploaderId, ownerType, ownerId, idempotencyKey, contentLength, "mp4");
+    }
+
+    public Video createUploadSession(String uploaderId, VideoOwnerType ownerType, UUID ownerId,
+            String idempotencyKey, long contentLength, String extension) {
+        String scopedIdempotencyKey = scopedIdempotencyKey(uploaderId, ownerType, ownerId, idempotencyKey);
         // Spec MED-5: idempotency-key dedup — duplicate POSTs within 24h return existing upload URL.
-        if (idempotencyKey != null && !idempotencyKey.isBlank()) {
-            String existingVideoId = videoRedis.getIdempotencyKey(idempotencyKey);
-            if (existingVideoId != null) {
-                Video existing = videoJpaRepository.findById(UUID.fromString(existingVideoId))
-                        .orElseThrow(() -> new IllegalStateException(
-                                "Idempotency record points to missing video " + existingVideoId));
-                LOGGER.info("Idempotency hit: returning existing video {} for key={}", existingVideoId, idempotencyKey);
-                return existing;
+        UUID videoId = UUID.randomUUID();
+        boolean idempotencyClaimed = false;
+        if (hasIdempotencyKey(idempotencyKey)) {
+            while (!idempotencyClaimed) {
+                Video existing = findExistingIdempotentVideo(scopedIdempotencyKey);
+                if (existing != null) {
+                    return existing;
+                }
+                idempotencyClaimed = videoRedis.claimIdempotencyKey(
+                        scopedIdempotencyKey, videoId.toString(), IDEMPOTENCY_RESERVATION_TTL);
+                if (!idempotencyClaimed) {
+                    videoId = UUID.randomUUID();
+                }
             }
         }
 
-        enforceRateLimit(uploaderId);
+        try {
+            enforceRateLimit(uploaderId);
         enforceConcurrentSessionLimit(uploaderId);
         enforceFileSizeLimit(contentLength, ownerType);
         enforceQuotas(uploaderId, ownerType, ownerId);
 
-        UUID videoId = UUID.randomUUID();
-        String stagingKey = "videos/staging/" + videoId;
+        String stagingKey = videoStorageProperties.inputBucket() + "/uploads/" + videoId + "." + extension;
 
         Video video = new Video(
                 videoId,
@@ -102,23 +118,72 @@ public class VideoUploadService {
         videoJpaRepository.saveHistory(
                 VideoStatusHistory.record(videoId, null, VideoStatus.UPLOADING, uploaderId, "upload created"));
 
-        if (idempotencyKey != null && !idempotencyKey.isBlank()) {
-            videoRedis.setIdempotencyKey(idempotencyKey, videoId.toString(), IDEMPOTENCY_TTL);
-        }
-
         videoRedis.incrementConcurrentSessions(uploaderId);
         videoRedis.setConcurrentSessionsTtl(uploaderId, CONCURRENT_SESSION_TTL);
 
         videoRedis.setOffset(videoId, 0L, UPLOAD_STATE_TTL);
         videoRedis.setTotalSize(videoId, contentLength, UPLOAD_STATE_TTL);
 
+        if (idempotencyClaimed && !videoRedis.completeIdempotencyKey(
+                scopedIdempotencyKey, videoId.toString(), IDEMPOTENCY_TTL)) {
+            throw new VideoValidationException(
+                    "idempotency_claim_lost", "Could not publish the upload idempotency result");
+        }
+
         LOGGER.info("Created upload session videoId={} uploader={} stagingKey={}", videoId, uploaderId, stagingKey);
         return saved;
+        } catch (RuntimeException ex) {
+            if (idempotencyClaimed) {
+                videoRedis.releaseIdempotencyReservation(scopedIdempotencyKey, videoId.toString());
+            }
+            throw ex;
+        }
     }
 
     // -------------------------------------------------------------------------
     // PATCH — chunk upload
     // -------------------------------------------------------------------------
+
+    private static String scopedIdempotencyKey(
+            String uploaderId, VideoOwnerType ownerType, UUID ownerId, String idempotencyKey) {
+        return uploaderId + ":" + ownerType.name() + ":" + ownerId + ":" + idempotencyKey;
+    }
+
+    private static boolean hasIdempotencyKey(String idempotencyKey) {
+        return idempotencyKey != null && !idempotencyKey.isBlank();
+    }
+
+    private Video findExistingIdempotentVideo(String scopedIdempotencyKey) {
+        long deadline = System.nanoTime() + IDEMPOTENCY_WAIT_TIMEOUT.toNanos();
+        while (true) {
+            String existingVideoId = videoRedis.getIdempotencyKey(scopedIdempotencyKey);
+            if (existingVideoId != null) {
+                Video existing = videoJpaRepository.findById(UUID.fromString(existingVideoId)).orElse(null);
+                if (existing != null) {
+                    LOGGER.info("Idempotency hit: returning existing video {} for key={}",
+                            existingVideoId, scopedIdempotencyKey);
+                    return existing;
+                }
+                videoRedis.releaseIdempotencyKeyForVideo(existingVideoId);
+                continue;
+            }
+
+            if (!videoRedis.hasIdempotencyReservation(scopedIdempotencyKey)) {
+                return null;
+            }
+            if (System.nanoTime() >= deadline) {
+                throw new VideoValidationException(
+                        "idempotency_in_progress", "Another upload is still being created for this operation");
+            }
+            try {
+                Thread.sleep(IDEMPOTENCY_POLL_INTERVAL.toMillis());
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+                throw new VideoValidationException(
+                        "idempotency_interrupted", "Upload creation was interrupted while waiting for a retry");
+            }
+        }
+    }
 
     public Video appendChunk(UUID videoId, String uploaderId, long chunkOffset,
             long chunkLength, byte[] chunkData) {
@@ -173,6 +238,9 @@ public class VideoUploadService {
         videoJpaRepository.saveHistory(
                 VideoStatusHistory.record(videoId, VideoStatus.UPLOADING, VideoStatus.UPLOADED, uploaderId, null));
 
+        long fileSizeBytes = videoRedis.getTotalSize(videoId);
+        videoJpaRepository.recordRawUpload(videoId, contentTypeFor(video.stagingKey()), fileSizeBytes,
+                computedSha256Hex);
         videoRedis.decrementConcurrentSessions(uploaderId);
         videoRedis.deleteOffset(videoId);
         videoRedis.deleteTotalSize(videoId);
@@ -181,7 +249,8 @@ public class VideoUploadService {
                 videoId.toString(),
                 VideoEvent.EventType.VIDEO_UPLOAD_COMPLETED,
                 null,
-                Map.of("stagingKey", video.stagingKey(), "sha256Hex", computedSha256Hex,
+                Map.of("rawKey", keyWithoutBucket(video.stagingKey()), "extension", extensionFor(video.stagingKey()),
+                        "sha256", computedSha256Hex, "fileSizeBytes", fileSizeBytes,
                         "ownerId", video.ownerId(),
                         // M18 fix: include ownerType + productId/reviewId in the payload
                         // so the transcoder can route staging keys per spec section 5.
@@ -193,6 +262,25 @@ public class VideoUploadService {
         return saved;
     }
 
+    private static String keyWithoutBucket(String bucketPrefixedKey) {
+        int separator = bucketPrefixedKey.indexOf('/');
+        return separator >= 0 ? bucketPrefixedKey.substring(separator + 1) : bucketPrefixedKey;
+    }
+
+    private static String extensionFor(String bucketPrefixedKey) {
+        int separator = bucketPrefixedKey.lastIndexOf('.');
+        return separator >= 0 ? bucketPrefixedKey.substring(separator + 1) : "mp4";
+    }
+
+    private static String contentTypeFor(String bucketPrefixedKey) {
+        return switch (extensionFor(bucketPrefixedKey)) {
+            case "mov" -> "video/quicktime";
+            case "webm" -> "video/webm";
+            case "mkv" -> "video/x-matroska";
+            default -> "video/mp4";
+        };
+    }
+
     // -------------------------------------------------------------------------
     // HEAD — offset query
     // -------------------------------------------------------------------------
@@ -200,6 +288,10 @@ public class VideoUploadService {
     public long getUploadOffset(UUID videoId, String uploaderId) {
         findAndAuthorise(videoId, uploaderId);
         return videoRedis.getOffset(videoId);
+    }
+
+    public Video getVideoStatus(UUID videoId, String uploaderId) {
+        return findAndAuthorise(videoId, uploaderId);
     }
 
     // -------------------------------------------------------------------------
@@ -218,6 +310,8 @@ public class VideoUploadService {
 
         videoRedis.decrementConcurrentSessions(uploaderId);
         videoRedis.deleteOffset(videoId);
+        videoRedis.deleteTotalSize(videoId);
+        videoRedis.releaseIdempotencyKeyForVideo(videoId.toString());
 
         LOGGER.info("Cancelled upload videoId={} uploader={}", videoId, uploaderId);
     }

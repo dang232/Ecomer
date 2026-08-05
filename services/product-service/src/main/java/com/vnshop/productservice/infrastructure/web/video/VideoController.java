@@ -69,7 +69,8 @@ public class VideoController {
                 metadata.ownerType(),
                 UUID.fromString(metadata.ownerId()),
                 metadata.idempotencyKey(),
-                uploadLength);
+                uploadLength,
+                metadata.extension());
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_TUS_RESUMABLE, TUS_RESUMABLE);
@@ -114,6 +115,13 @@ public class VideoController {
         headers.set(HEADER_UPLOAD_OFFSET, String.valueOf(offset));
         headers.setCacheControl("no-store");
         return ResponseEntity.status(HttpStatus.OK).headers(headers).build();
+    }
+
+    @org.springframework.web.bind.annotation.GetMapping("/{videoId}/status")
+    public ApiResponse<VideoStatusResponse> status(@PathVariable UUID videoId) {
+        String uploaderId = JwtPrincipalUtil.currentUserId();
+        return ApiResponse.ok(VideoStatusResponse.fromDomain(
+                videoUploadService.getVideoStatus(videoId, uploaderId)));
     }
 
     // -------------------------------------------------------------------------

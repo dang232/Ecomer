@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.vnshop.productservice.domain.port.out.ObjectStoragePort;
+import com.vnshop.productservice.infrastructure.web.ApiResponse;
 import com.vnshop.productservice.infrastructure.persistence.video.VideoJpaEntity;
 import com.vnshop.productservice.infrastructure.persistence.video.VideoJpaSpringDataRepository;
 
@@ -18,13 +20,15 @@ import com.vnshop.productservice.infrastructure.persistence.video.VideoJpaSpring
 public class VideoListController {
 
     private final VideoJpaSpringDataRepository videoRepo;
+    private final ObjectStoragePort objectStoragePort;
 
-    public VideoListController(VideoJpaSpringDataRepository videoRepo) {
+    public VideoListController(VideoJpaSpringDataRepository videoRepo, ObjectStoragePort objectStoragePort) {
         this.videoRepo = videoRepo;
+        this.objectStoragePort = objectStoragePort;
     }
 
     @GetMapping("/videos")
-    public ResponseEntity<Map<String, Object>> listVideos(
+    public ResponseEntity<ApiResponse<Map<String, Object>>> listVideos(
             @RequestParam String entityId,
             @RequestParam String context) {
 
@@ -39,12 +43,16 @@ public class VideoListController {
                 "entityId", e.getOwnerId().toString(),
                 "context", e.getOwnerType(),
                 "status", e.getStatus(),
-                "playbackUrl", e.getTranscodedObjectKey() != null ? e.getTranscodedObjectKey() : "",
-                "thumbnailUrl", e.getPosterObjectKey() != null ? e.getPosterObjectKey() : "",
+                "playbackUrl", publicUrl(e.getTranscodedObjectKey()),
+                "thumbnailUrl", publicUrl(e.getPosterObjectKey()),
                 "uploadedAt", e.getCreatedAt() != null ? e.getCreatedAt().toString() : "",
                 "publishedAt", e.getPublishedAt() != null ? e.getPublishedAt().toString() : ""
         )).toList();
 
-        return ResponseEntity.ok(Map.of("videos", videos));
+        return ResponseEntity.ok(ApiResponse.ok(Map.of("videos", videos)));
+    }
+
+    private String publicUrl(String objectKey) {
+        return objectKey == null || objectKey.isBlank() ? "" : objectStoragePort.publicUrl(objectKey).toString();
     }
 }

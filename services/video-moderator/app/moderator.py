@@ -53,7 +53,11 @@ def _extract_frames(video_path: str, output_dir: str, interval_seconds: int) -> 
         "ffmpeg",
         "-y",
         "-i", video_path,
-        "-vf", f"fps={fps}",
+        # Wolfi's FFmpeg build requires a single-threaded, full-range JPEG
+        # encoder invocation in the restricted moderator container.
+        "-vf", f"fps={fps},format=yuvj420p",
+        "-threads", "1",
+        "-strict", "-2",
         "-q:v", "2",
         pattern,
     ]
@@ -63,6 +67,31 @@ def _extract_frames(video_path: str, output_dir: str, interval_seconds: int) -> 
         raise RuntimeError(f"ffmpeg frame extraction failed: {result.stderr}")
 
     frames = sorted(Path(output_dir).glob("frame_*.jpg"))
+    if not frames:
+        # The fps filter waits for the next interval and can emit no frame for
+        # a clip shorter than the configured interval. Always moderate at
+        # least the first frame of a valid video.
+        fallback_pattern = os.path.join(output_dir, "frame_0001.jpg")
+        fallback_cmd = [
+            "ffmpeg",
+            "-y",
+            "-i", video_path,
+            "-frames:v", "1",
+            "-threads", "1",
+            "-pix_fmt", "yuvj420p",
+            "-strict", "-2",
+            "-q:v", "2",
+            fallback_pattern,
+        ]
+        fallback = subprocess.run(
+            fallback_cmd,
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+        if fallback.returncode != 0:
+            raise RuntimeError(f"ffmpeg first-frame extraction failed: {fallback.stderr}")
+        frames = sorted(Path(output_dir).glob("frame_*.jpg"))
     logger.info("Extracted %d frames from %s", len(frames), video_path)
     return [str(f) for f in frames]
 

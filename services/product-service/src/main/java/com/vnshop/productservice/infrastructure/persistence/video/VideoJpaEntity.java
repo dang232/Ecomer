@@ -85,7 +85,8 @@ public class VideoJpaEntity extends BaseJpaEntity {
         entity.uploaderId = video.ownerId();
         entity.status = video.status().name();
         entity.rawObjectKey = video.stagingKey();
-        entity.transcodedObjectKey = video.publicKey();
+        entity.transcodedObjectKey = video.processedKey() != null ? video.processedKey() : video.publicKey();
+        entity.posterObjectKey = video.posterKey();
         entity.rejectionReason = video.rejectionReason();
         entity.moderatedBy = video.moderatedBy();
         entity.moderatedAt = video.moderatedAt();
@@ -102,7 +103,9 @@ public class VideoJpaEntity extends BaseJpaEntity {
                 productId,
                 reviewId,
                 rawObjectKey,
+                "PUBLISHED".equals(status) ? transcodedObjectKey : null,
                 transcodedObjectKey,
+                posterObjectKey,
                 VideoStatus.valueOf(status),
                 rejectionReason,
                 moderatedBy,

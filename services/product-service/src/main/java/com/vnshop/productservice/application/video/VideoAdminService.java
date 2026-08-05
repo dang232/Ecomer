@@ -48,11 +48,12 @@ public class VideoAdminService {
     /** Returns a short-lived presigned URL for the admin to preview the staged video. */
     public URI getPreviewUrl(UUID videoId) {
         Video video = findOrThrow(videoId);
-        if (video.stagingKey() == null) {
+        String previewKey = mediaSourceKey(video);
+        if (previewKey == null) {
             throw new VideoNotFoundException("Video " + videoId + " has no staging file");
         }
         return objectStoragePort.getSignedDownloadUrl(
-                video.stagingKey(),
+                previewKey,
                 com.vnshop.productservice.domain.storage.ObjectStorageClass.VIDEO_STAGING);
     }
 
@@ -130,13 +131,23 @@ public class VideoAdminService {
      */
     private Video doApprove(Video video, String adminId) {
         UUID videoId = video.videoId();
-        String publicKey = publicBucket + "/" + videoId.toString();
+        String sourceVideoKey = mediaSourceKey(video);
+        if (sourceVideoKey == null) {
+            throw new VideoNotFoundException("Video " + videoId + " has no processed staging file");
+        }
+        String publicKey = publicKeyFor(sourceVideoKey);
+        String sourcePosterKey = video.posterKey();
+        String publicPosterKey = sourcePosterKey == null ? null : publicKeyFor(sourcePosterKey);
 
         // Copy staging → public bucket then remove from staging
-        objectStoragePort.copyObject(video.stagingKey(), publicKey);
-        objectStoragePort.deleteObject(video.stagingKey());
+        objectStoragePort.copyObject(sourceVideoKey, publicKey);
+        objectStoragePort.deleteObject(sourceVideoKey);
+        if (sourcePosterKey != null) {
+            objectStoragePort.copyObject(sourcePosterKey, publicPosterKey);
+            objectStoragePort.deleteObject(sourcePosterKey);
+        }
 
-        Video approved = video.withApproval(adminId, publicKey);
+        Video approved = video.withApproval(adminId, publicKey, publicPosterKey);
         Video saved = videoRepositoryPort.save(approved);
 
         videoRepositoryPort.saveHistory(
@@ -149,6 +160,16 @@ public class VideoAdminService {
                 Map.of("publicKey", publicKey, "ownerId", video.ownerId())));
 
         return saved;
+    }
+
+    private String mediaSourceKey(Video video) {
+        return video.processedKey() != null ? video.processedKey() : video.stagingKey();
+    }
+
+    private String publicKeyFor(String bucketPrefixedKey) {
+        int separator = bucketPrefixedKey.indexOf('/');
+        String objectKey = separator >= 0 ? bucketPrefixedKey.substring(separator + 1) : bucketPrefixedKey;
+        return publicBucket + "/" + objectKey;
     }
 
     /** Final rejection of a video appeal. */
