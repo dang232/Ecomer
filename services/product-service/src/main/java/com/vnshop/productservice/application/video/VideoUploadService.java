@@ -186,9 +186,14 @@ public class VideoUploadService {
     }
 
     public Video appendChunk(UUID videoId, String uploaderId, long chunkOffset,
-            long chunkLength, byte[] chunkData) {
+            int chunkLength, byte[] chunkData) {
         Video video = findAndAuthorise(videoId, uploaderId);
         requireStatus(video, VideoStatus.UPLOADING);
+
+        if (chunkData == null || chunkLength != chunkData.length) {
+            throw new VideoValidationException(
+                    "invalid_chunk_length", "Declared chunk length must match payload length");
+        }
 
         if (isFirstChunk(chunkOffset)) {
             validateMagicBytes(chunkData);
@@ -196,7 +201,7 @@ public class VideoUploadService {
 
         long newOffset;
         try {
-            newOffset = localStagingStore.writeChunk(videoId, chunkOffset, chunkData, (int) chunkLength);
+            newOffset = localStagingStore.writeChunk(videoId, chunkOffset, chunkData, chunkLength);
         } catch (IOException ex) {
             throw new VideoValidationException("staging_write_failed",
                     "Could not write chunk to local staging: " + ex.getMessage());

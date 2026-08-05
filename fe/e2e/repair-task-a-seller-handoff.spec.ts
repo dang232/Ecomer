@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { expect, test, type APIRequestContext, type BrowserContext } from "@playwright/test";
 
 import { credentialForPersona } from "./modernization/_credentials";
@@ -97,7 +98,7 @@ test.describe.serial("Repair Task A applicant seller handoff", () => {
     let buyerBrowser: BrowserContext | undefined;
 
     try {
-      const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const unique = randomUUID();
       const email = `repair-task-a-${unique}@vnshop.local`;
       const shopName = `Repair Task A Shop ${unique}`;
 

@@ -946,6 +946,8 @@ def write_generated_files() -> None:
     if missing_ports:
         raise SystemExit(f"missing ports for: {', '.join(missing_ports)}")
 
+    # codeql[py/clear-text-storage-of-sensitive-data]
+    # Generated manifests contain secretKeyRef metadata only; Kubernetes provides the values.
     (ROOT / "base/workloads.yaml").write_text(
         "\n".join(workload_documents(item) for item in deployables), encoding="utf-8"
     )

@@ -1,10 +1,11 @@
+import { randomInt } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 
 const API_ORIGIN = process.env.VITE_API_URL ?? "http://localhost:8080";
 const PASSWORD = "VnshopPass9";
 
 function identifiers(prefix: string) {
-  const suffix = `${Date.now()}${Math.floor(Math.random() * 1_000)}`.slice(-8);
+  const suffix = randomInt(10_000_000, 100_000_000).toString();
   return {
     email: `${prefix}-${suffix}@vnshop.local`,
     phone: `+849${suffix}`,

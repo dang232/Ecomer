@@ -36,7 +36,7 @@ test("promotion uses a unique dispatch identity and gates the locked frontend im
   assert.match(promote, /run-name:[^\n]*inputs\.staging_revision/);
   assert.doesNotMatch(promote, /run-name:[^\n]*inputs\.dispatch_token/);
   assert.match(promote, /timeout-minutes:\s*90/);
-  assert.match(promote, /permissions:\s*\n(?:\s+[^\n]*\n)*?\s+packages:\s+read/);
+  assert.match(promote, /permissions:\r?\n(?:[ \t]+[^\r\n]*\r?\n)*[ \t]+packages:[ \t]+read/);
   assert.match(promote, /uses:\s*docker\/login-action@[\w]+[\s\S]*?registry:\s*ghcr\.io/);
   assert.match(promote, /username:\s*\$\{\{ github\.actor \}\}/);
   assert.match(promote, /password:\s*\$\{\{ secrets\.GITHUB_TOKEN \}\}/);

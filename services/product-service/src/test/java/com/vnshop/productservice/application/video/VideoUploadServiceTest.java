@@ -174,6 +174,16 @@ class VideoUploadServiceTest {
     }
 
     @Test
+    void appendChunk_rejectsDeclaredLengthDifferentFromPayload() {
+        Video video = service.createUploadSession(UPLOADER, VideoOwnerType.PRODUCT, PRODUCT_ID, "idem-length", 1024);
+
+        assertThatThrownBy(() -> service.appendChunk(
+                        video.videoId(), UPLOADER, 0, VALID_MP4_HEADER.length - 1, VALID_MP4_HEADER))
+                .isInstanceOf(VideoValidationException.class)
+                .hasMessageContaining("chunk length");
+    }
+
+    @Test
     void appendChunk_finalisesUploadWhenOffsetReachesTotalSize() {
         // 100-byte video: first chunk (50 bytes MP4 header) doesn't finalise, second chunk (50 bytes) does.
         Video video = service.createUploadSession(UPLOADER, VideoOwnerType.PRODUCT, PRODUCT_ID, "idem-final", 100);
