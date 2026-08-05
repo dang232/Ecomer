@@ -1,7 +1,9 @@
 package com.vnshop.userservice.infrastructure.web;
 
+import com.vnshop.userservice.application.PhoneAlreadyRegisteredException;
 import com.vnshop.userservice.application.RegisterBuyerCommand;
 import com.vnshop.userservice.application.RegisterBuyerUseCase;
+import com.vnshop.userservice.application.RegistrationIdentityCompensationException;
 import com.vnshop.userservice.domain.FullName;
 import com.vnshop.userservice.domain.PhoneNumber;
 import com.vnshop.userservice.infrastructure.keycloak.KeycloakAdminClient;
@@ -42,6 +44,11 @@ public class AuthController {
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<RegisterResponse> register(@Valid @RequestBody RegisterRequest request) {
+        PhoneNumber phone = PhoneNumber.parseOrNull(request.phone());
+        // Reject a known collision before creating a Keycloak identity. This is
+        // a user-friendly preflight; RegisterBuyerUseCase checks again for races.
+        registerBuyerUseCase.assertPhoneAvailable(phone);
+
         String userId = keycloakAdmin.createUser(
                 request.email(),
                 request.password(),
@@ -54,20 +61,25 @@ public class AuthController {
             // an empty roles claim for the user, which is fine for the buyer
             // happy path. Login + profile work without it.
         }
-        // Always materialise the buyer profile so subsequent calls (address add,
-        // profile view) don't 400 with "buyer profile not found". FullName and
-        // PhoneNumber.parseOrNull do the type-level validation; the shape of
-        // `phone` is also enforced upstream by the @Pattern on RegisterRequest,
-        // so non-numeric junk 400s at validation time and never reaches here.
         try {
+            // Always materialise the buyer profile so subsequent calls (address add,
+            // profile view) don't 400 with "buyer profile not found". The request
+            // phone is already parsed and validated before Keycloak creation.
             registerBuyerUseCase.register(new RegisterBuyerCommand(
                     userId,
                     request.email(),
                     FullName.of(request.firstName(), request.lastName()),
-                    PhoneNumber.parseOrNull(request.phone()),
+                    phone,
                     null));
-        } catch (IllegalArgumentException ex) {
-            log.warn("buyer profile materialisation deferred for keycloakId={}: {}", userId, ex.getMessage());
+        } catch (RuntimeException registrationFailure) {
+            try {
+                keycloakAdmin.deleteUser(userId);
+            } catch (RuntimeException identityCleanupFailure) {
+                identityCleanupFailure.addSuppressed(registrationFailure);
+                log.error("registration rollback failed for keycloakId={}", userId, identityCleanupFailure);
+                throw new RegistrationIdentityCompensationException(identityCleanupFailure);
+            }
+            throw registrationFailure;
         }
         return ApiResponse.ok(new RegisterResponse(userId, request.email()));
     }

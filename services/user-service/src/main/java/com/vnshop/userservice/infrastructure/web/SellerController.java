@@ -9,6 +9,8 @@ import com.vnshop.userservice.application.PublicSellersPage;
 import com.vnshop.userservice.application.RegisterSellerCommand;
 import com.vnshop.userservice.application.RegisterSellerUseCase;
 import com.vnshop.userservice.application.ViewSellerProfileUseCase;
+import com.vnshop.userservice.domain.SellerProfile;
+import com.vnshop.userservice.domain.port.out.KeycloakAdminPort;
 import com.vnshop.userservice.infrastructure.config.JwtPrincipalUtil;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +33,7 @@ public class SellerController {
     private final ListPublicSellersUseCase listPublicSellersUseCase;
     private final EnrollSellerPayoutDestinationUseCase enrollSellerPayoutDestinationUseCase;
     private final LookupSellerDestinationUseCase lookupSellerDestinationUseCase;
+    private final KeycloakAdminPort keycloakAdminPort;
 
     public SellerController(
             RegisterSellerUseCase registerSellerUseCase,
@@ -38,13 +41,15 @@ public class SellerController {
             GetPublicSellerUseCase getPublicSellerUseCase,
             ListPublicSellersUseCase listPublicSellersUseCase,
             EnrollSellerPayoutDestinationUseCase enrollSellerPayoutDestinationUseCase,
-            LookupSellerDestinationUseCase lookupSellerDestinationUseCase) {
+            LookupSellerDestinationUseCase lookupSellerDestinationUseCase,
+            KeycloakAdminPort keycloakAdminPort) {
         this.registerSellerUseCase = registerSellerUseCase;
         this.viewSellerProfileUseCase = viewSellerProfileUseCase;
         this.getPublicSellerUseCase = getPublicSellerUseCase;
         this.listPublicSellersUseCase = listPublicSellersUseCase;
         this.enrollSellerPayoutDestinationUseCase = enrollSellerPayoutDestinationUseCase;
         this.lookupSellerDestinationUseCase = lookupSellerDestinationUseCase;
+        this.keycloakAdminPort = keycloakAdminPort;
     }
 
     @PostMapping("/register")
@@ -61,7 +66,13 @@ public class SellerController {
     // exact-segment matches before wildcard captures, so /sellers/me always hits this method.
     @GetMapping("/me")
     public ApiResponse<SellerProfileResponse> getMySellerProfile() {
-        return ApiResponse.ok(SellerProfileResponse.fromDomain(viewSellerProfileUseCase.view(JwtPrincipalUtil.currentUserId())));
+        SellerProfile profile = viewSellerProfileUseCase.view(JwtPrincipalUtil.currentUserId());
+        if (profile.approved()) {
+            // Repair approvals created before role assignment was wired into the
+            // admin command. Keycloak role mapping is idempotent.
+            keycloakAdminPort.assignSellerRole(profile.id());
+        }
+        return ApiResponse.ok(SellerProfileResponse.fromDomain(profile));
     }
 
     @GetMapping("/{id}")

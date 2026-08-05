@@ -28,8 +28,11 @@ vi.mock("@/shared/api/endpoints/users", () => ({
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) => {
-      if (typeof opts?.defaultValue === "string") return opts.defaultValue;
       const FIXTURES: Record<string, string> = {
+        "login.termsNotice":
+          "By signing in you agree to VNShop's Terms of Service and Privacy Policy.",
+        "register.termsNotice":
+          "By creating an account you agree to VNShop's Terms of Service and Privacy Policy.",
         "register.form.phoneHelper": "Select your country and enter your number",
         "register.form.errorPhoneInvalid": "Phone must be a valid international number.",
         "register.form.errorEmailInvalid": "Enter a valid email address.",
@@ -38,10 +41,13 @@ vi.mock("react-i18next", () => ({
         "register.form.errorFirstNameRequired": "First name is required",
         "register.form.errorLastNameRequired": "Last name is required",
         "register.form.errorEmailTaken": "An account with that email already exists.",
+        "register.form.errorPhoneTaken": "An account with that phone number already exists.",
         "register.form.errorWeakPassword": "Password is too weak. Use at least 8 characters.",
         "register.form.errorGeneric": "Couldn't create account. Try again in a moment.",
       };
-      return FIXTURES[key] ?? key;
+      if (key in FIXTURES) return FIXTURES[key];
+      if (typeof opts?.defaultValue === "string") return opts.defaultValue;
+      return key;
     },
     i18n: { resolvedLanguage: "en" },
   }),
@@ -150,6 +156,21 @@ describe("RegisterPage phone field (CountryPhoneInput)", () => {
     expect(helper?.textContent).toMatch(/Select your country and enter your number/i);
   });
 
+  it("uses sign-up terms copy instead of the login notice", () => {
+    renderPage();
+
+    expect(
+      screen.getByText(
+        "By creating an account you agree to VNShop's Terms of Service and Privacy Policy.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "By signing in you agree to VNShop's Terms of Service and Privacy Policy.",
+      ),
+    ).not.toBeInTheDocument();
+  });
+
   it("strips non-digit input from the visible input", () => {
     renderPage();
     const input = screen.getByLabelText<HTMLInputElement>(/phone/i);
@@ -242,5 +263,35 @@ describe("RegisterPage phone field (CountryPhoneInput)", () => {
       expect(document.getElementById(PHONE_ERROR_ID)?.getAttribute("role")).toBe("alert");
     });
     expect(screen.queryByText(/phone: phone must be in E\.164/)).not.toBeInTheDocument();
+  });
+
+  it("surfaces a duplicate phone as a phone field error", async () => {
+    const { AuthError } = await import("@/shared/auth");
+    registerMock.mockRejectedValueOnce(new AuthError(409, "phone_taken", "Phone already used"));
+    renderPage();
+    fillRequiredFields({ phone: "912345678" });
+    fireEvent.click(screen.getByRole("button", { name: /create account/i }));
+
+    await waitFor(() => {
+      expect(document.getElementById(PHONE_ERROR_ID)?.getAttribute("role")).toBe("alert");
+    });
+    expect(
+      screen.getByText("An account with that phone number already exists."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Phone already used")).not.toBeInTheDocument();
+  });
+
+  it("surfaces a duplicate email as an email field error", async () => {
+    const { AuthError } = await import("@/shared/auth");
+    registerMock.mockRejectedValueOnce(new AuthError(409, "email_taken", "Email already used"));
+    renderPage();
+    fillRequiredFields({ phone: "912345678" });
+    fireEvent.click(screen.getByRole("button", { name: /create account/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("An account with that email already exists.")).toBeInTheDocument();
+    });
+    expect(screen.getByLabelText(/^email/i)).toHaveAttribute("aria-invalid", "true");
+    expect(screen.queryByText("Email already used")).not.toBeInTheDocument();
   });
 });

@@ -2,7 +2,6 @@ import { api } from "@/shared/api/client";
 import {
   avatarUploadResponseSchema,
   sellerProfileSchema,
-  sellerRegisterResponseSchema,
   userProfileSchema,
   type Address,
 } from "@/shared/contracts/api";
@@ -53,7 +52,7 @@ export const avatarActivate = (body: AvatarActivateBody) =>
   api.post("/users/me/avatar/activate", userProfileSchema, body);
 
 // Seller onboarding
-export const registerSeller = (body: { shopName: string; description?: string; phone: string }) =>
-  api.post("/sellers/register", sellerRegisterResponseSchema, body);
+export const registerSeller = (body: { shopName: string; bankName: string }) =>
+  api.post("/sellers/register", sellerProfileSchema, body);
 
 export const sellerProfile = () => api.get("/sellers/me", sellerProfileSchema);

@@ -146,6 +146,23 @@ describe("AuthProvider native session", () => {
     expect(result.current.authenticated).toBe(false);
   });
 
+  it("exposes a manual refresh so newly granted roles appear without logout", async () => {
+    const sellerTokenSet = { ...tokenSet, accessToken: "seller-access-token" };
+    mocks.refreshTokens.mockResolvedValueOnce(tokenSet).mockResolvedValueOnce(sellerTokenSet);
+    mocks.decodeJwt.mockImplementation((token) =>
+      token === "seller-access-token"
+        ? { ...claims, realm_access: { roles: ["BUYER", "SELLER"] } }
+        : claims,
+    );
+    const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
+    await waitFor(() => expect(result.current.ready).toBe(true));
+
+    await act(async () => result.current.refresh());
+
+    expect(result.current.roles).toEqual(["BUYER", "SELLER"]);
+    expect(mocks.setLiveTokenSet).toHaveBeenLastCalledWith(sellerTokenSet);
+  });
+
   it("does not let an in-flight refresh restore a session after logout", async () => {
     const expiringTokenSet = { ...tokenSet, accessExpiresAt: Date.now() + 30_000 };
     mocks.refreshTokens.mockResolvedValueOnce(expiringTokenSet);

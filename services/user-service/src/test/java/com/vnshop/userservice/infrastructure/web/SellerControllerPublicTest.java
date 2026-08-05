@@ -7,6 +7,7 @@ import com.vnshop.userservice.application.PublicSellersPage;
 import com.vnshop.userservice.application.RegisterSellerUseCase;
 import com.vnshop.userservice.application.ViewSellerProfileUseCase;
 import com.vnshop.userservice.domain.SellerNotFoundException;
+import com.vnshop.userservice.domain.port.out.KeycloakAdminPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,6 +31,7 @@ class SellerControllerPublicTest {
     @Mock private ListPublicSellersUseCase listPublicSellersUseCase;
     @Mock private com.vnshop.userservice.application.EnrollSellerPayoutDestinationUseCase enrollSellerPayoutDestinationUseCase;
     @Mock private com.vnshop.userservice.application.LookupSellerDestinationUseCase lookupSellerDestinationUseCase;
+    @Mock private KeycloakAdminPort keycloakAdminPort;
 
     private SellerController controller;
 
@@ -39,7 +41,8 @@ class SellerControllerPublicTest {
     void setUp() {
         controller = new SellerController(registerSellerUseCase, viewSellerProfileUseCase,
                 getPublicSellerUseCase, listPublicSellersUseCase,
-                enrollSellerPayoutDestinationUseCase, lookupSellerDestinationUseCase);
+                enrollSellerPayoutDestinationUseCase, lookupSellerDestinationUseCase,
+                keycloakAdminPort);
     }
 
     private PublicSellerView view(String id) {

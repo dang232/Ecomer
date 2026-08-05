@@ -111,4 +111,24 @@ describe("SellerDetailPage", () => {
       expect(screen.getByText("This shop has no products yet.")).toBeInTheDocument(),
     );
   });
+
+  it("renders the active variant price on public seller product cards", async () => {
+    getSellerMock.mockResolvedValue(SELLER);
+    productListMock.mockResolvedValue({
+      content: [
+        {
+          id: "product-1",
+          name: "Sony headphones",
+          variants: [{ priceAmount: 8_990_000, priceCurrency: "VND" }],
+        },
+      ],
+      totalElements: 1,
+    });
+
+    const { Wrapper } = makeWrapper();
+    render(<SellerDetailPage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getByText("Sony headphones")).toBeInTheDocument());
+    expect(screen.getByText(/8\.990\.000/)).toBeInTheDocument();
+  });
 });

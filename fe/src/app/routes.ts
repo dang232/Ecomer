@@ -4,7 +4,7 @@ import { createBrowserRouter } from "react-router";
 import { PageSkeleton, ProductDetailSkeleton } from "@/shared/ui";
 
 import { ErrorBoundary } from "./components/error-boundary";
-import { myOrdersOptions, orderDetailOptions } from "./hooks/use-orders";
+import { orderDetailOptions } from "./hooks/use-orders";
 import { productDetailOptions } from "./hooks/use-products";
 import { profileOptions } from "./hooks/use-profile";
 import { sellerDetailOptions, sellerProductsOptions } from "./hooks/use-sellers";
@@ -44,6 +44,9 @@ const OrderDetailPage = lazy(() =>
 const ProfilePage = lazy(() =>
   import("./pages/ProfilePage").then((m) => ({ default: m.ProfilePage })),
 );
+const SellerRegisterPage = lazy(() =>
+  import("./pages/SellerRegisterPage").then((m) => ({ default: m.SellerRegisterPage })),
+);
 const WishlistPage = lazy(() =>
   import("./pages/WishlistPage").then((m) => ({ default: m.WishlistPage })),
 );
@@ -58,6 +61,9 @@ const MessagesPage = lazy(() =>
 );
 const SellerDetailPage = lazy(() =>
   import("./pages/SellerDetailPage").then((m) => ({ default: m.SellerDetailPage })),
+);
+const PublicSellersPage = lazy(() =>
+  import("./pages/PublicSellersPage").then((m) => ({ default: m.PublicSellersPage })),
 );
 const PasswordResetPage = lazy(() =>
   import("./pages/PasswordResetPage").then((m) => ({ default: m.PasswordResetPage })),
@@ -109,28 +115,32 @@ const AdminDashboard = lazy(() =>
   import("@/features/admin-dashboard").then((m) => ({ default: m.AdminDashboard })),
 );
 const AdminOrderQueue = lazy(() =>
-  import("@/features/admin-orders").then((m) => ({ default: m.AdminOrderQueue })),
+  import("./routes/admin-orders-route").then((m) => ({ default: m.AdminOrderQueueRoute })),
 );
 const CouponList = lazy(() =>
   import("@/features/admin-coupons").then((m) => ({ default: m.CouponList })),
 );
 const SellerApprovalQueue = lazy(() =>
-  import("@/features/admin-sellers").then((m) => ({ default: m.SellerApprovalQueue })),
+  import("./routes/admin-sellers-route").then((m) => ({
+    default: m.AdminSellerApprovalQueueRoute,
+  })),
 );
 const ReviewModerationQueue = lazy(() =>
-  import("@/features/admin-reviews").then((m) => ({ default: m.ReviewModerationQueue })),
+  import("./routes/admin-reviews-route").then((m) => ({
+    default: m.AdminReviewModerationQueueRoute,
+  })),
 );
 const VideoModerationRoute = lazy(() =>
   import("./routes/video-moderation-route").then((m) => ({ default: m.VideoModerationRoute })),
 );
 const DisputeQueue = lazy(() =>
-  import("@/features/admin-disputes").then((m) => ({ default: m.DisputeQueue })),
+  import("./routes/admin-disputes-route").then((m) => ({ default: m.AdminDisputeQueueRoute })),
 );
 const PayoutQueue = lazy(() =>
-  import("@/features/admin-payouts").then((m) => ({ default: m.PayoutQueue })),
+  import("./routes/admin-payouts-route").then((m) => ({ default: m.AdminPayoutQueueRoute })),
 );
 const AdminUserQueue = lazy(() =>
-  import("@/features/admin-users").then((m) => ({ default: m.AdminUserQueue })),
+  import("./routes/admin-users-route").then((m) => ({ default: m.AdminUserQueueRoute })),
 );
 const SystemHealth = lazy(() =>
   import("@/features/admin-health").then((m) => ({ default: m.SystemHealth })),
@@ -187,10 +197,6 @@ export const router = createBrowserRouter([
       {
         path: "orders",
         element: guardedWithBoundary(createElement(OrdersPage)),
-        loader: () => {
-          void queryClient.prefetchQuery(myOrdersOptions());
-          return null;
-        },
       },
       {
         path: "orders/:id",
@@ -216,6 +222,10 @@ export const router = createBrowserRouter([
           return null;
         },
       },
+      {
+        path: "seller/register",
+        element: guardedWithBoundary(createElement(SellerRegisterPage)),
+      },
       { path: "wishlist", element: guardedWithBoundary(createElement(WishlistPage)) },
       { path: "design-system", element: lazyRoute(createElement(DesignSystemPage)) },
       { path: "messages", element: guardedWithBoundary(createElement(MessagesPage)) },
@@ -223,6 +233,10 @@ export const router = createBrowserRouter([
       {
         path: "notifications/preferences",
         element: guarded(createElement(NotificationPreferencesPage)),
+      },
+      {
+        path: "sellers",
+        element: suspenseWithBoundary(createElement(PublicSellersPage)),
       },
       {
         path: "sellers/:id",

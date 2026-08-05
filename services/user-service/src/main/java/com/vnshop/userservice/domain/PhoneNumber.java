@@ -29,7 +29,7 @@ public record PhoneNumber(String value) {
      * Vietnam-only shape; the FE is responsible for country-aware validation
      * (e.g. Vietnam requires 9-10 digits, US requires 10, etc.).
      */
-    public static final String PATTERN_STR = "\\+[1-9]\\d{4,18}";
+    public static final String PATTERN_STR = "\\+[1-9]\\d{4,14}";
 
     private static final Pattern E164_PATTERN = Pattern.compile("^" + PATTERN_STR + "$");
 

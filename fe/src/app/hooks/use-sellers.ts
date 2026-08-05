@@ -1,8 +1,9 @@
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, queryOptions, useQuery } from "@tanstack/react-query";
 
+import { fromServer, type Product } from "@/features/catalog";
 import { productList } from "@/shared/api/endpoints/products";
 import { getSeller, listSellers } from "@/shared/api/endpoints/sellers";
-import type { PublicSeller, ProductSummary, Page } from "@/shared/contracts/api";
+import type { Page, PublicSeller, PublicSellersPage } from "@/shared/contracts/api";
 
 export const sellerDetailOptions = (id: string | undefined) =>
   queryOptions<PublicSeller>({
@@ -16,9 +17,12 @@ export const sellerDetailOptions = (id: string | undefined) =>
   });
 
 export const sellerProductsOptions = (sellerId: string | undefined) =>
-  queryOptions<Page<ProductSummary>>({
+  queryOptions<Page<Product>>({
     queryKey: ["catalog", "products", { sellerId }] as const,
-    queryFn: () => productList({ sellerId }),
+    queryFn: async () => {
+      const page = await productList({ sellerId });
+      return { ...page, content: page.content.map(fromServer) };
+    },
     enabled: !!sellerId,
     retry: false,
   });
@@ -31,10 +35,22 @@ export const sellerShowcaseOptions = () =>
     retry: false,
   });
 
+export const publicSellersOptions = (page: number) =>
+  queryOptions<PublicSellersPage>({
+    queryKey: ["sellers", "public", { page }] as const,
+    queryFn: () => listSellers({ page, size: 12 }),
+    placeholderData: keepPreviousData,
+    retry: false,
+  });
+
 export function useSellerDetail(id: string | undefined) {
   return useQuery(sellerDetailOptions(id));
 }
 
 export function useSellerShowcase() {
   return useQuery(sellerShowcaseOptions());
+}
+
+export function usePublicSellers(page: number) {
+  return useQuery(publicSellersOptions(page));
 }

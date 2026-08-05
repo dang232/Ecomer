@@ -14,6 +14,13 @@ public class RegisterSellerUseCase {
     }
 
     public SellerProfile register(RegisterSellerCommand command) {
+        var existing = userRepositoryPort.findSellerById(command.keycloakId());
+        if (existing.isPresent()) {
+            // Seller identity is the Keycloak subject. Repeated submissions must
+            // return the existing application instead of replacing its shop.
+            return existing.get();
+        }
+
         SellerProfile sellerProfile = new SellerProfile(
                 command.keycloakId(),
                 command.shopName(),

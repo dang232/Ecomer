@@ -148,6 +148,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [applyTokenSet],
   );
 
+  const refresh = useCallback(async () => {
+    try {
+      await refreshSession();
+    } catch (error) {
+      if (!logoutInProgressRef.current) applyTokenSet(null);
+      throw error;
+    }
+  }, [applyTokenSet, refreshSession]);
+
   const beginOAuthLogin = useCallback((provider: "google" | "facebook", next?: string) => {
     const returnPath = safeReturnPath(next ?? window.location.pathname + window.location.search);
     const query = new URLSearchParams({ next: returnPath });
@@ -196,11 +205,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subject: claims?.sub,
       login,
       loginWithPassword,
+      refresh,
       beginOAuthLogin,
       register,
       logout,
     };
-  }, [beginOAuthLogin, login, loginWithPassword, logout, ready, register, tokenSet]);
+  }, [beginOAuthLogin, login, loginWithPassword, logout, ready, refresh, register, tokenSet]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

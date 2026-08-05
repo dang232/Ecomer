@@ -2,6 +2,32 @@ import { z } from "zod";
 
 import { pageSchema, type Page } from "./shared";
 
+const maskedPayoutDestinationSchema = z
+  .object({
+    destinationId: z.string(),
+    bankName: z.string(),
+    last4: z.string(),
+    verificationState: z.enum(["UNVERIFIED", "PENDING", "VERIFIED", "REJECTED", "LEGACY_MIGRATED"]),
+  })
+  .nullable();
+
+export const sellerProfileSchema = z
+  .object({
+    id: z.string(),
+    shopName: z.string(),
+    bankName: z.string().nullable(),
+    approved: z.boolean(),
+    tier: z.string(),
+    vacationMode: z.boolean(),
+    destination: maskedPayoutDestinationSchema,
+  })
+  .passthrough()
+  .transform((raw) => {
+    const { bankAccount: _stripped, ...safe } = raw;
+    return safe;
+  });
+export type SellerProfile = z.infer<typeof sellerProfileSchema>;
+
 export const publicSellerSchema = z
   .object({
     id: z.string(),

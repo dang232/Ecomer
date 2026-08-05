@@ -11,6 +11,29 @@ describe("application routes", () => {
     expect(orderDetailRoute).toBeDefined();
   });
 
+  it("does not prefetch the buyer order list before the auth provider is ready", () => {
+    const root = router.routes.find((route) => route.path === "/");
+    const orderRoute = root?.children?.find((route) => route.path === "orders");
+
+    expect(orderRoute?.loader).toBeUndefined();
+  });
+
+  it("registers seller onboarding under the authenticated storefront", () => {
+    const root = router.routes.find((route) => route.path === "/");
+    const sellerRegistrationRoute = root?.children?.find(
+      (route) => route.path === "seller/register",
+    );
+
+    expect(sellerRegistrationRoute).toBeDefined();
+  });
+
+  it("registers a public seller index before seller detail navigation", () => {
+    const root = router.routes.find((route) => route.path === "/");
+    const sellerIndexRoute = root?.children?.find((route) => route.path === "sellers");
+
+    expect(sellerIndexRoute).toBeDefined();
+  });
+
   it("declares explicit seller and admin child routes", () => {
     const seller = router.routes.find((route) => route.path === "/seller");
     const admin = router.routes.find((route) => route.path === "/admin");

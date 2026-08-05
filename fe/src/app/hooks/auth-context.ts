@@ -21,6 +21,7 @@ export interface AuthState {
   subject: string | undefined;
   login: (redirectTo?: string) => void;
   loginWithPassword: (username: string, password: string) => Promise<void>;
+  refresh: () => Promise<void>;
   beginOAuthLogin: (provider: "google" | "facebook", next?: string) => void;
   register: (input: RegisterInput) => Promise<void>;
   logout: (redirectTo?: string) => void;

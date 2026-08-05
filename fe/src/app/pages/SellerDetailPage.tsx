@@ -3,13 +3,13 @@ import { Star, Package } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams, useNavigate } from "react-router";
 
-import type { ProductSummary } from "@/shared/contracts/api";
+import type { Product } from "@/features/catalog";
 import { formatPrice } from "@/shared/lib";
 import { ImageWithFallback } from "@/shared/ui";
 
 import { sellerDetailOptions, sellerProductsOptions } from "../hooks/use-sellers";
 
-function SellerProductCard({ product }: { product: ProductSummary }) {
+function SellerProductCard({ product }: { product: Product }) {
   const navigate = useNavigate();
 
   const image =

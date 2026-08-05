@@ -1,9 +1,5 @@
-import {
-  avatarUploadResponseSchema,
-  sellerRegisterResponseSchema,
-  userProfileSchema,
-  type Address,
-} from "../../../types/api";
+import { avatarUploadResponseSchema, userProfileSchema, type Address } from "../../../types/api";
+import { sellerProfileSchema } from "../../../types/api/seller";
 import { findAddressIndexByKey } from "../../address-key";
 import { api } from "../client";
 
@@ -52,7 +48,7 @@ export const avatarActivate = (body: AvatarActivateBody) =>
   api.post("/users/me/avatar/activate", userProfileSchema, body);
 
 // Seller onboarding
-export const registerSeller = (body: { shopName: string; description?: string; phone: string }) =>
-  api.post("/sellers/register", sellerRegisterResponseSchema, body);
+export const registerSeller = (body: { shopName: string; bankName: string }) =>
+  api.post("/sellers/register", sellerProfileSchema, body);
 
-export const sellerProfile = () => api.get("/sellers/me", userProfileSchema);
+export const sellerProfile = () => api.get("/sellers/me", sellerProfileSchema);

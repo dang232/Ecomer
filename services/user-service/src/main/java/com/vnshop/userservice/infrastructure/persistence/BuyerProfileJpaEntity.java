@@ -35,6 +35,13 @@ public class BuyerProfileJpaEntity extends BaseJpaEntity {
 
     private String phone;
 
+    /**
+     * Canonical phone ownership claim. Legacy duplicate phone values remain
+     * readable with a null claim; all new and changed numbers receive a claim.
+     */
+    @Column(name = "phone_claim")
+    private String phoneClaim;
+
     private String avatarUrl;
 
     @Column(nullable = false)

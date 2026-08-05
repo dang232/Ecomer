@@ -2,13 +2,9 @@ import { z } from "zod";
 
 import { addressSchema } from "./shared";
 
-// BE returns BuyerProfileResponse(keycloakId, email, name, phone, avatarUrl, addresses)
-// — no `id`, no `email`, and phone may be null. Email lives only in Keycloak so
-// pages that need it pull from useAuth().profile.email, not from this endpoint.
-//
-// This schema accepts the BE shape AND the legacy FE-expected shape (id/email/
-// avatar) so existing consumers keep working. The transform aliases
-// keycloakId -> id and avatarUrl -> avatar.
+// BE returns BuyerProfileResponse(keycloakId, email, name, phone, avatarUrl, addresses).
+// Email is persisted by user-service at registration time. The compatibility
+// transform below still accepts older payloads that omit the field.
 export const userProfileSchema = z
   .object({
     id: z.string().optional(),
@@ -44,6 +40,3 @@ export const avatarUploadResponseSchema = z
   })
   .passthrough();
 export type AvatarUploadInit = z.infer<typeof avatarUploadResponseSchema>;
-
-/** Response shape for `POST /sellers/register`. */
-export const sellerRegisterResponseSchema = z.object({ status: z.string() }).passthrough();
