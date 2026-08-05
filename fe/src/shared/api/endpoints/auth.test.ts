@@ -90,10 +90,18 @@ describe("registerUser", () => {
       }),
     );
 
-    const err = await registerUser(sampleInput).catch((e) => e);
+    let err: unknown;
+    try {
+      await registerUser(sampleInput);
+    } catch (error: unknown) {
+      err = error;
+    }
     expect(err).toBeInstanceOf(ApiError);
-    expect((err as ApiError).errorCode).toBe("EMAIL_TAKEN");
-    expect((err as ApiError).message).toBe("Email already registered");
+    if (!(err instanceof ApiError)) {
+      throw new Error("Expected registerUser to reject with ApiError");
+    }
+    expect(err.errorCode).toBe("EMAIL_TAKEN");
+    expect(err.message).toBe("Email already registered");
   });
 });
 
@@ -117,6 +125,6 @@ describe("requestPasswordReset", () => {
     const init = fetchSpy.mock.calls[0][1];
     expect(init?.credentials).toBe("include");
     expect(init?.headers).toMatchObject({ "Content-Type": "application/json" });
-    expect(JSON.parse(String(init?.body))).toEqual({ email: "u@example.com" });
+    expect(init?.body).toBe(JSON.stringify({ email: "u@example.com" }));
   });
 });

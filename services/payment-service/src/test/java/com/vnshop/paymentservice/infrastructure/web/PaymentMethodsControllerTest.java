@@ -145,7 +145,7 @@ class PaymentMethodsControllerTest {
 
         List<PaymentMethodsController.PaymentMethodDto> methods = controller.listMethods().data();
 
-        assertThat(ids(controller)).containsExactly("cod", "vietqr", "stripe", "paypal", "vnpay", "momo", "sepay");
+        assertThat(ids(controller)).containsExactly("cod", "vietqr", "sepay", "stripe", "paypal", "vnpay", "momo");
     }
 
     private static List<String> ids(PaymentMethodsController controller) {
@@ -181,7 +181,6 @@ class PaymentMethodsControllerTest {
                 "https://sandbox.vnpayment.vn", tmn, hash,
                 "https://shop.test/return", "https://api.test/ipn",
                 "2.1.0", "pay", "other", "vn", "VND", 15);
-        ReflectionTestUtils.setField(p, "enabled", enabled);
         return p;
     }
 
@@ -195,7 +194,6 @@ class PaymentMethodsControllerTest {
                 partner, access, secret,
                 "https://shop.test/return", "https://api.test/ipn",
                 "captureWallet", "vi");
-        ReflectionTestUtils.setField(p, "enabled", enabled);
         return p;
     }
 

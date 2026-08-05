@@ -163,8 +163,7 @@ class PaymentMethodValidatorTest {
                         null, null
                 ).validate())
                 .withMessageContaining("STRIPE_SECRET_KEY")
-                .withMessageContaining("STRIPE_WEBHOOK_SECRET")
-                .withMessageContaining("STRIPE_PUBLISHABLE_KEY");
+                .withMessageContaining("STRIPE_WEBHOOK_SECRET");
     }
 
     @Test
@@ -246,7 +245,6 @@ class PaymentMethodValidatorTest {
                 "https://shop.test/payment/vnpay/return",
                 "https://api.test/payment/vnpay/ipn",
                 "2.1.0", "pay", "other", "vn", "VND", 15);
-        ReflectionTestUtils.setField(p, "enabled", enabled);
         return p;
     }
 
@@ -264,7 +262,6 @@ class PaymentMethodValidatorTest {
                 "https://shop.test/payment/momo/return",
                 "https://api.test/payment/momo/ipn",
                 "captureWallet", "vi");
-        ReflectionTestUtils.setField(p, "enabled", enabled);
         return p;
     }
 

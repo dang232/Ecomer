@@ -1,4 +1,5 @@
 name: VNShop Promote Production
+run-name: "promote ${{ inputs.staging_revision }}"
 
 on:
   workflow_dispatch:
@@ -25,9 +26,9 @@ jobs:
     name: Verify staging and open production PR
     runs-on: ubuntu-latest
     timeout-minutes: 90
-    run-name: "promote ${{ inputs.staging_revision }} via ${{ inputs.dispatch_token }}"
     permissions:
       contents: write
+      packages: read
       pull-requests: write
     env:
       GH_TOKEN: ${{ secrets.RELEASE_BOT_TOKEN }}
@@ -167,12 +168,19 @@ jobs:
             grafana/k6@sha256:1f40432b1cbe7234e977f96c362c9bc550a2d2b583d014dd8669fe40d3e9e755 \
             run --summary-export=/evidence/staging-k6-summary.json /scripts/k6-release.js
 
-      - name: Upload performance evidence
+      - name: Prepare performance evidence
         if: always()
         run: |
           set -euo pipefail
           mkdir -p performance/current
-          cp "$RUNNER_TEMP/staging-k6-summary.json" performance/current/
+          if [[ -f "$RUNNER_TEMP/staging-k6-summary.json" ]]; then
+            cp "$RUNNER_TEMP/staging-k6-summary.json" performance/current/
+          else
+            echo "No staging k6 summary was produced; continuing without performance evidence."
+          fi
+
+      - name: Upload performance evidence
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: staging-performance-${{ inputs.staging_revision }}

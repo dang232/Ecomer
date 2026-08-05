@@ -33,7 +33,8 @@ test("promotion uses a unique dispatch identity and gates the locked frontend im
     promote,
     /dispatch_token:\s*\n\s+description:[^\n]*\n\s+required:\s*true/,
   );
-  assert.match(promote, /run-name:[^\n]*inputs\.staging_revision[^\n]*inputs\.dispatch_token/);
+  assert.match(promote, /run-name:[^\n]*inputs\.staging_revision/);
+  assert.doesNotMatch(promote, /run-name:[^\n]*inputs\.dispatch_token/);
   assert.match(promote, /timeout-minutes:\s*90/);
   assert.match(promote, /permissions:\s*\n(?:\s+[^\n]*\n)*?\s+packages:\s+read/);
   assert.match(promote, /uses:\s*docker\/login-action@[\w]+[\s\S]*?registry:\s*ghcr\.io/);
@@ -63,5 +64,5 @@ test("production reconciliation names manual and automatic verification runs", a
   );
   assert.match(verifyProduction, /run-name:[^\n]*production_revision/);
   assert.match(verifyProduction, /run-name:[^\n]*automatic/);
-  assert.match(verifyProduction, /run-name:[^\n]*dispatch_token/);
+  assert.doesNotMatch(verifyProduction, /run-name:[^\n]*dispatch_token/);
 });

@@ -1,4 +1,5 @@
 name: VNShop Verify Production
+run-name: "verify production ${{ github.event_name == 'workflow_dispatch' && inputs.production_revision || github.event.workflow_run.head_sha }} ${{ github.event_name == 'workflow_dispatch' && 'manual' || 'automatic' }}"
 
 on:
   workflow_run:
@@ -29,7 +30,6 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    run-name: "${{ github.event_name == 'workflow_dispatch' && inputs.production_revision || github.event.workflow_run.head_sha }} ${{ github.event_name == 'workflow_dispatch' && 'manual' || 'automatic' }}${{ inputs.dispatch_token && format(' {0}', inputs.dispatch_token) || '' }}"
     env:
       PRODUCTION_REVISION: ${{ github.event.workflow_run.head_sha || inputs.production_revision }}
     steps:

@@ -62,7 +62,8 @@ class ProviderInitializationServiceTest {
     @Test
     void doesNotBotherFxServiceForNonFxMethods() {
         UUID paymentId = UUID.randomUUID();
-        InMemoryPayments payments = new InMemoryPayments(payment(paymentId));
+        Payment nonFxPayment = payment(paymentId, PaymentMethod.COD);
+        InMemoryPayments payments = new InMemoryPayments(nonFxPayment);
         CapturingFxRate fxRates = new CapturingFxRate();
         ProviderInitializationService service = new ProviderInitializationService(
                 payments, fxRates, immediateTransactions());
@@ -70,7 +71,7 @@ class ProviderInitializationServiceTest {
         Payment result = service.freezeExternalAmount(paymentId);
 
         assertThat(fxRates.calls).isEqualTo(0);
-        assertThat(result).isEqualTo(payment(paymentId));
+        assertThat(result).isEqualTo(nonFxPayment);
     }
 
     @Test
@@ -125,8 +126,12 @@ class ProviderInitializationServiceTest {
     }
 
     private static Payment payment(UUID paymentId) {
+        return payment(paymentId, PaymentMethod.STRIPE);
+    }
+
+    private static Payment payment(UUID paymentId, PaymentMethod method) {
         return new Payment(paymentId, "ORDER-1", "BUYER-1", new BigDecimal("100000"),
-                PaymentMethod.STRIPE, PaymentStatus.PENDING, null,
+                method, PaymentStatus.PENDING, null,
                 Instant.parse("2026-07-30T10:00:00Z"));
     }
 

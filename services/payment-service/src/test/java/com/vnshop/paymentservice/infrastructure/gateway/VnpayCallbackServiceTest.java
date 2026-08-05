@@ -178,7 +178,9 @@ class VnpayCallbackServiceTest {
 
         @Override
         public Optional<Payment> findById(UUID paymentId) {
-            return payment.paymentId().equals(paymentId) ? Optional.of(payment) : Optional.empty();
+            return payment != null && payment.paymentId().equals(paymentId)
+                    ? Optional.of(payment)
+                    : Optional.empty();
         }
 
         @Override
