@@ -187,6 +187,11 @@ class PaymentRefundedListenerTest {
         }
 
         @Override
+        public List<Return> findBySellerId(String sellerId) {
+            return List.of();
+        }
+
+        @Override
         public Optional<Return> findBySubOrderId(Long subOrderId) {
             return Optional.empty();
         }

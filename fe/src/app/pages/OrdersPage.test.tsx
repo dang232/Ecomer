@@ -20,7 +20,7 @@ vi.mock("motion/react", () => ({
 const cancelOrderMock = vi.fn();
 
 // vi.hoisted ensures ordersData is shared between mock factory and tests
-const { ordersData } = vi.hoisted<{ ordersData: Page<Order> }>(() => ({
+const { ordersData, authState, useSuspenseQueryMock } = vi.hoisted(() => ({
   ordersData: {
     content: [],
     totalElements: 0,
@@ -28,11 +28,13 @@ const { ordersData } = vi.hoisted<{ ordersData: Page<Order> }>(() => ({
     totalPages: 1,
     first: true,
     last: true,
-  },
+  } as Page<Order>,
+  authState: { ready: true, authenticated: true, login: vi.fn() },
+  useSuspenseQueryMock: vi.fn(() => ({ data: ordersData })),
 }));
 
 vi.mock("../hooks/auth-context", () => ({
-  useAuth: () => ({ ready: true, authenticated: true, login: vi.fn() }),
+  useAuth: () => authState,
 }));
 
 vi.mock("../hooks/use-orders", () => ({
@@ -79,7 +81,7 @@ vi.mock("@tanstack/react-query", () => {
     useQuery: vi.fn(() => ({ data: undefined })),
     useMutation: vi.fn(() => ({ mutate: vi.fn(), mutateAsync: vi.fn() })),
     useQueryClient: vi.fn(() => ({ invalidateQueries: vi.fn() })),
-    useSuspenseQuery: vi.fn(() => ({ data: ordersData })),
+    useSuspenseQuery: useSuspenseQueryMock,
     QueryClient: vi.fn(),
     QueryClientProvider: ({ children }: { children: ReactNode }) => children,
   };
@@ -121,6 +123,24 @@ describe("OrdersPage — P0-9 cancel confirm dialog", () => {
     cancelOrderMock.mockReset();
     ordersData.content = [];
     ordersData.totalElements = 0;
+    authState.ready = true;
+    authState.authenticated = true;
+    useSuspenseQueryMock.mockClear();
+  });
+
+  it("does not start the order query while authentication is still bootstrapping", () => {
+    authState.ready = false;
+    authState.authenticated = false;
+
+    const Wrapper = makeWrapper();
+    render(
+      <MemoryRouter>
+        <OrdersPage />
+      </MemoryRouter>,
+      { wrapper: Wrapper },
+    );
+
+    expect(useSuspenseQueryMock).not.toHaveBeenCalled();
   });
 
   it("opens the confirm dialog when the cancel button is clicked", async () => {

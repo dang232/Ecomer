@@ -91,4 +91,25 @@ describe("toOrderView", () => {
       }),
     ]);
   });
+
+  it("maps decoded tax into the buyer financial breakdown and preserves reconciliation", () => {
+    const detail = orderDetailSchema.parse({
+      ...detailBase,
+      itemsTotal: { amount: 129000, currency: "VND" },
+      shippingTotal: { amount: 0, currency: "VND" },
+      discount: { amount: 0, currency: "VND" },
+      taxTotal: { amount: 13000, currency: "VND" },
+      finalAmount: { amount: 142000, currency: "VND" },
+    });
+
+    const view = toOrderView({ detail, summary: undefined });
+
+    expect(view.financial.taxVnd).toBe(13000);
+    expect(
+      view.financial.subtotalVnd +
+        view.financial.shippingVnd -
+        view.financial.discountVnd +
+        view.financial.taxVnd,
+    ).toBe(view.financial.totalVnd);
+  });
 });

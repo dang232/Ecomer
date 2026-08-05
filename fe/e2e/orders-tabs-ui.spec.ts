@@ -106,7 +106,9 @@ test.describe("orders tab filter UI", () => {
 
     await loginViaOidc(page, buyer.email, PASSWORD);
     await page.goto("/orders");
-    await expect(page.getByText(/Order ID|Mã đơn/i).first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("heading", { name: /My Orders|Đơn hàng của tôi/i })).toBeVisible({
+      timeout: 20_000,
+    });
 
     // Default "All" tab — order is visible.
     await expect(page.locator("div", { hasText: idShort }).first()).toBeVisible({
@@ -128,7 +130,9 @@ test.describe("orders tab filter UI", () => {
 
     await loginViaOidc(page, buyer.email, PASSWORD);
     await page.goto("/orders");
-    await expect(page.getByText(/Order ID|Mã đơn/i).first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("heading", { name: /My Orders|Đơn hàng của tôi/i })).toBeVisible({
+      timeout: 20_000,
+    });
 
     // Click "Delivered" — buyer's only order is pending, so this filter
     // hides it. The empty-state copy renders OR the tab body is empty.

@@ -148,7 +148,6 @@ public class CreateOrderUseCase {
             Order savedOrder = orderRepository.save(order);
             allocateOrderFinancialsUseCase.allocate(savedOrder);
             orderEventPublisherPort.publishOrderCreated(savedOrder);
-            cartRepositoryPort.clearCart(buyerId);
             metricsPort.recordOrderCreated();
             metricsPort.stopTimer(timerSample);
             sagaOrchestrator.complete(sagaId);

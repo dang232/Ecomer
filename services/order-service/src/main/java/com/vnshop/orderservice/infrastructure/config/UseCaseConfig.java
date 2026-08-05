@@ -161,8 +161,10 @@ public class UseCaseConfig {
     CalculateCheckoutUseCase calculateCheckoutUseCase(
             CartRepositoryPort cartRepositoryPort,
             ProductCatalogPort productCatalogPort,
-            com.vnshop.orderservice.domain.port.out.CouponValidationPort couponValidationPort) {
-        return new CalculateCheckoutUseCase(cartRepositoryPort, productCatalogPort, couponValidationPort);
+            com.vnshop.orderservice.domain.port.out.CouponValidationPort couponValidationPort,
+            TaxCalculationService taxCalculationService) {
+        return new CalculateCheckoutUseCase(
+                cartRepositoryPort, productCatalogPort, couponValidationPort, taxCalculationService);
     }
 
     @Bean

@@ -94,6 +94,11 @@ public final class TestFakes {
         }
 
         @Override
+        public List<Return> findBySellerId(String sellerId) {
+            return List.of();
+        }
+
+        @Override
         public Optional<Return> findBySubOrderId(Long subOrderId) {
             return returns.values().stream()
                     .filter(orderReturn -> subOrderId.equals(orderReturn.subOrderId()))

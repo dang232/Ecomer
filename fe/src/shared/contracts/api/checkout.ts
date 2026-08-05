@@ -20,9 +20,11 @@ export const calculateCheckoutSchema = z
     subtotal: z.number().optional(),
     shippingFee: z.number().optional(),
     total: z.number().optional(),
+    tax: z.number().optional(),
     // Live BE names — both shapes accepted simultaneously
     itemsTotal: z.number().optional(),
     shippingEstimate: z.number().optional(),
+    taxTotal: z.number().optional(),
     finalAmount: z.number().optional(),
     discount: z.number().default(0),
     sellerBreakdown: z.array(sellerBreakdownSchema).optional(),
@@ -31,6 +33,7 @@ export const calculateCheckoutSchema = z
   .transform((raw) => ({
     subtotal: raw.subtotal ?? raw.itemsTotal ?? 0,
     shippingFee: raw.shippingFee ?? raw.shippingEstimate ?? 0,
+    tax: raw.tax ?? raw.taxTotal ?? 0,
     discount: raw.discount,
     total: raw.total ?? raw.finalAmount ?? 0,
     sellerBreakdown: raw.sellerBreakdown,

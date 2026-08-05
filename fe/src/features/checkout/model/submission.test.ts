@@ -10,6 +10,7 @@ const created: CheckoutSubmissionState = {
   paymentKey: "payment-key",
   orderId: "order-1",
   total: 125000,
+  purchasedItems: [],
 };
 
 describe("checkoutSubmissionReducer", () => {

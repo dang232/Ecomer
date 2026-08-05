@@ -146,6 +146,9 @@ class CheckoutOrderUseCaseTest {
         // exactly what the catalog said.
         assertThat(item.unitPrice().amount()).isEqualByComparingTo(new BigDecimal("199000"));
         assertThat(item.unitPrice().currency()).isEqualTo("VND");
+        assertThat(order.shippingTotal().amount()).isEqualByComparingTo("0");
+        assertThat(order.taxTotal().amount()).isEqualByComparingTo("40000");
+        assertThat(order.finalAmount().amount()).isEqualByComparingTo("438000");
     }
 
     @Test
@@ -187,6 +190,23 @@ class CheckoutOrderUseCaseTest {
                 PaymentMethod.VIETQR));
 
         assertThat(order.paymentMethod()).isEqualTo("VIETQR");
+    }
+
+    @Test
+    void keepsCartContentsUntilPaymentProviderInitializationSucceeds() {
+        catalog.add(new CatalogProduct(
+                "p1", "seller-A", "Product",
+                List.of(new CatalogProduct.Variant("sku-1", new Money(new BigDecimal("100000"), "VND"))),
+                ""));
+
+        newUseCase().checkout(new CheckoutOrderCommand(
+                "buyer-1",
+                new Address("street", "ward", "district", "city"),
+                List.of(new CheckoutLineItem("p1", "sku-1", 1)),
+                "idem-cart-retention",
+                PaymentMethod.STRIPE));
+
+        assertThat(cart.clearCalled).isFalse();
     }
 
     @Test
@@ -311,8 +331,10 @@ class CheckoutOrderUseCaseTest {
 
 
     private static final class FakeCartRepository implements CartRepositoryPort {
+        private boolean clearCalled;
+
         @Override public com.vnshop.orderservice.domain.checkout.CartSnapshot findByCartId(String cartId) { return new com.vnshop.orderservice.domain.checkout.CartSnapshot(cartId, List.of()); }
-        @Override public void clearCart(String userId) {}
+        @Override public void clearCart(String userId) { clearCalled = true; }
     }
 
     private static final class NoopMetrics implements MetricsPort {

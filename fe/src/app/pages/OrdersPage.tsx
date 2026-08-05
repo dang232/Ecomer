@@ -16,6 +16,36 @@ type OrderTab = "all" | "pending" | "confirmed" | "shipping" | "delivered" | "ca
 
 export function OrdersPage() {
   const { ready, authenticated, login } = useAuth();
+  const { t } = useTranslation();
+
+  if (!ready) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-24 text-center text-sm text-muted-foreground">
+        {t("orders.initSession")}
+      </div>
+    );
+  }
+
+  if (!authenticated) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-24 text-center">
+        <Package size={64} className="mx-auto mb-6 text-muted-foreground/30" />
+        <h2 className="text-xl font-bold text-foreground">{t("orders.loginPromptTitle")}</h2>
+        <button
+          type="button"
+          onClick={() => login("/orders")}
+          className="mt-4 rounded-[var(--radius-md)] bg-primary px-6 py-3 font-semibold text-white"
+        >
+          {t("auth.login")}
+        </button>
+      </div>
+    );
+  }
+
+  return <AuthenticatedOrdersContent />;
+}
+
+function AuthenticatedOrdersContent() {
   const { addItemAsync } = useCart();
   const cancelOrder = useCancelOrder();
   const { t } = useTranslation();
@@ -71,30 +101,6 @@ export function OrdersPage() {
     },
     [addItemAsync, t],
   );
-
-  if (!ready) {
-    return (
-      <div className="mx-auto max-w-3xl px-4 py-24 text-center text-sm text-muted-foreground">
-        {t("orders.initSession")}
-      </div>
-    );
-  }
-
-  if (!authenticated) {
-    return (
-      <div className="mx-auto max-w-3xl px-4 py-24 text-center">
-        <Package size={64} className="mx-auto mb-6 text-muted-foreground/30" />
-        <h2 className="text-xl font-bold text-foreground">{t("orders.loginPromptTitle")}</h2>
-        <button
-          type="button"
-          onClick={() => login("/orders")}
-          className="mt-4 rounded-[var(--radius-md)] bg-primary px-6 py-3 font-semibold text-white"
-        >
-          {t("auth.login")}
-        </button>
-      </div>
-    );
-  }
 
   return (
     <PageContainer className="pb-8">

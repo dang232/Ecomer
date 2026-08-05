@@ -23,12 +23,14 @@ export function CartPage() {
     isLoading,
     updateItem,
     removeItem,
+    clear,
     showMergeDialog,
     isMerging,
     executeMerge,
     keepSeparate,
     guestItemCount,
     serverItemCount,
+    totalAmount,
   } = useCart();
   const [coupon, setCoupon] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
@@ -62,7 +64,7 @@ export function CartPage() {
     if (!code || couponMutation.isPending) return;
     couponMutation.mutate({
       code,
-      orderAmount: items.reduce((s, i) => s + i.price * i.quantity, 0),
+      orderAmount: totalAmount,
     });
   };
 
@@ -118,6 +120,12 @@ export function CartPage() {
       },
     );
 
+  const onClear = () =>
+    clear({
+      onError: (err) =>
+        toast.error(err instanceof ApiError ? err.message : t("cart.errors.cantClear")),
+    });
+
   if (!ready) {
     return (
       <div className="max-w-[1200px] mx-auto px-[var(--content-padding)] py-24 text-center text-sm text-muted-foreground">
@@ -134,15 +142,13 @@ export function CartPage() {
     );
   }
 
-  const shippingFeeVnd =
-    items.reduce((s, i) => s + i.price * i.quantity, 0) >= FREE_SHIPPING_THRESHOLD
-      ? 0
-      : FLAT_SHIPPING_FEE;
+  const shippingFeeVnd = totalAmount >= FREE_SHIPPING_THRESHOLD ? 0 : FLAT_SHIPPING_FEE;
 
   return (
     <>
       <CartPageView
         view={toCartView(items)}
+        subtotalVnd={totalAmount}
         shippingFeeVnd={shippingFeeVnd}
         couponDiscountVnd={couponDiscount}
         coupon={coupon}
@@ -152,6 +158,7 @@ export function CartPage() {
         authenticated={authenticated}
         onQuantityChange={onQuantityChange}
         onRemove={onRemove}
+        onClear={onClear}
         onCouponChange={setCoupon}
         onApplyCoupon={handleApplyCoupon}
         onRemoveCoupon={handleRemoveCoupon}

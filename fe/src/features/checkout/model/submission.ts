@@ -1,5 +1,7 @@
 import type { CheckoutProvider } from "@/shared/contracts/api";
 
+import type { PurchasedCartItem } from "./cart-cleanup";
+
 export type AttemptIdentity = {
   orderKey: string;
   cartFingerprint: string;
@@ -10,6 +12,7 @@ export type CreatedOrder = AttemptIdentity & {
   paymentKey: string;
   orderId: string;
   total: number;
+  purchasedItems: PurchasedCartItem[];
 };
 
 export type ProviderState =
@@ -115,6 +118,7 @@ export function createdOrder(
     paymentKey: state.paymentKey,
     orderId: state.orderId,
     total: state.total,
+    purchasedItems: state.purchasedItems,
   };
 }
 

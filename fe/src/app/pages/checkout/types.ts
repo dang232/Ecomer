@@ -44,15 +44,8 @@ export function makeFallbackShipping(t: TFunction): ShippingOption[] {
       id: "STANDARD",
       name: t("checkout.shipping.standardName"),
       desc: t("checkout.shipping.fallbackStandard.desc"),
-      fee: 30000,
+      fee: 0,
       eta: t("checkout.shipping.fallbackStandard.eta"),
-    },
-    {
-      id: "EXPRESS",
-      name: t("checkout.shipping.expressName"),
-      desc: t("checkout.shipping.fallbackEconomy.desc"),
-      fee: 45000,
-      eta: t("checkout.shipping.fallbackEconomy.eta"),
     },
   ];
 }

@@ -160,6 +160,16 @@ export function OrderDetail({ order, onCancel, onBuyAgain }: OrderDetailProps) {
                 -{formatPrice(order.financial.discountVnd)}
               </dd>
             </div>
+            {order.financial.taxVnd > 0 ? (
+              <div className="flex items-center justify-between gap-4">
+                <dt className="text-muted-foreground">
+                  {t("orders.detail.tax", { defaultValue: "Tax" })}
+                </dt>
+                <dd className="font-medium text-foreground">
+                  {formatPrice(order.financial.taxVnd)}
+                </dd>
+              </div>
+            ) : null}
             <div className="flex items-center justify-between gap-4 border-t border-border pt-3">
               <dt className="font-semibold text-foreground">{t("orders.detail.total")}</dt>
               <dd className="text-lg font-bold text-foreground">

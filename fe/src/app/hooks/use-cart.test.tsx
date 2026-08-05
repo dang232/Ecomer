@@ -2,6 +2,7 @@ import { renderHook, waitFor, act } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
+import type { PurchasedCartItem } from "@/features/checkout";
 import { makeWrapper } from "@/shared/test/render-with-query-client";
 
 import { readJsonText } from "../../shared/api/read-json";
@@ -483,6 +484,60 @@ describe("useCart", () => {
 
       resolveInitialCart(cartEnvelope(initialCart));
       await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2));
+    });
+
+    it("removes only purchased quantities while preserving concurrent cart additions", async () => {
+      const initialCart = {
+        items: [
+          { productId: "purchased", variantId: "blue", quantity: 1, price: 100 },
+          { productId: "exact", quantity: 2, price: 50 },
+        ],
+        itemCount: 3,
+        totalAmount: 200,
+      };
+      const latestCart = {
+        items: [
+          { productId: "purchased", variantId: "blue", quantity: 3, price: 100 },
+          { productId: "exact", quantity: 2, price: 50 },
+          { productId: "added-after-checkout", quantity: 1, price: 25 },
+        ],
+        itemCount: 6,
+        totalAmount: 375,
+      };
+
+      useAuthMock.mockReturnValue({ ready: true, authenticated: true });
+      fetchSpy
+        .mockResolvedValueOnce(cartEnvelope(initialCart))
+        .mockResolvedValueOnce(cartEnvelope(latestCart))
+        .mockResolvedValueOnce(cartEnvelope(latestCart))
+        .mockResolvedValueOnce(cartEnvelope(latestCart));
+
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
+
+      await waitFor(() => expect(result.current.isReady).toBe(true));
+
+      const purchased: PurchasedCartItem[] = [
+        { productId: "purchased", variantId: "blue", quantity: 1 },
+        { productId: "exact", quantity: 2 },
+      ];
+      await act(async () => {
+        await result.current.removePurchasedItems(purchased);
+      });
+
+      const putCall = fetchSpy.mock.calls.find(([, request]) => request?.method === "PUT");
+      expect(putCall?.[0]).toContain("/cart/items/purchased%3Ablue");
+      const putBody = putCall?.[1]?.body;
+      if (typeof putBody !== "string") throw new Error("Expected a JSON cart update body");
+      expect(JSON.parse(putBody)).toEqual({ quantity: 2 });
+      const deleteCall = fetchSpy.mock.calls.find(([, request]) => request?.method === "DELETE");
+      expect(deleteCall?.[0]).toContain("/cart/items/exact");
+      expect(
+        fetchSpy.mock.calls.some(
+          ([, request]) =>
+            typeof request?.body === "string" && request.body.includes("added-after-checkout"),
+        ),
+      ).toBe(false);
     });
   });
 });

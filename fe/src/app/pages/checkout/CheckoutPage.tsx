@@ -10,9 +10,7 @@ import { z } from "zod";
 import { ApiError } from "@/shared/api";
 import {
   calculateCheckout,
-  fetchShippingRates,
   paymentMethods as fetchPaymentMethods,
-  shippingOptions as fetchShippingOptions,
 } from "@/shared/api/endpoints/checkout";
 import { listActiveCoupons, validateCouponCode } from "@/shared/api/endpoints/coupons";
 import { findOrderByIdempotencyKey, placeOrder } from "@/shared/api/endpoints/orders";
@@ -29,8 +27,10 @@ import { checkoutProviderSchema, type Address } from "@/shared/contracts/api";
 
 import {
   CheckoutPageView,
+  cleanupThenRedirect,
   createCheckoutRecoveryStore,
   createCheckoutSubmissionController,
+  shouldClearCartAfterSubmission,
   type CheckoutRecoveryStore,
   type CheckoutSubmissionController,
   type CheckoutSubmissionResult,
@@ -47,7 +47,7 @@ import { CheckoutShippingStep } from "./CheckoutShippingStep";
 import { CheckoutStepper } from "./CheckoutStepper";
 import { CheckoutSuccess } from "./CheckoutSuccess";
 import { CheckoutSummary } from "./CheckoutSummary";
-import { makeFallbackShipping, toPaymentOptions, type PaymentOption, type Step } from "./types";
+import { toPaymentOptions, type PaymentOption, type Step } from "./types";
 
 const checkoutProgressSchema = z.object({
   step: z.enum(["address", "shipping", "payment", "review", "success"]).optional(),
@@ -75,7 +75,7 @@ function readCheckoutProgress(): CheckoutProgress | null {
 export function CheckoutPage() {
   const navigate = useNavigate();
   const { ready, authenticated, login, profile } = useAuth();
-  const { items: cartItems, totalAmount, isLoading: cartLoading, refetch: refetchCart } = useCart();
+  const { items: cartItems, totalAmount, isLoading: cartLoading, removePurchasedItems } = useCart();
   const { t } = useTranslation();
   const [initialProgress] = useState(readCheckoutProgress);
   const recoveryStoreRef = useRef<CheckoutRecoveryStore | null>(null);
@@ -142,9 +142,9 @@ export function CheckoutPage() {
   // to the first available option at render time, so we never need an effect to
   // mirror server-provided defaults into local state.
   const [shippingChoice, setShippingChoice] = useState<string>(
-    () => initialProgress?.shippingChoice ?? "",
+    () => initialProgress?.shippingChoice ?? "STANDARD",
   );
-  const selectedShippingId = shippingChoice || "";
+  const selectedShippingId = shippingChoice === "STANDARD" ? shippingChoice : "STANDARD";
   const [selectedPaymentId, setSelectedPaymentId] = useState<PaymentOption["id"]>(
     () => initialProgress?.selectedPaymentId ?? "VNPAY",
   );
@@ -216,92 +216,21 @@ export function CheckoutPage() {
   }, [submission]);
 
   const selectedAddress = addresses[selectedAddressIndex];
-  const shippingAddress =
-    selectedAddress?.street && selectedAddress.district && selectedAddress.city
-      ? {
-          street: selectedAddress.street,
-          ward: selectedAddress.ward ?? undefined,
-          district: selectedAddress.district,
-          city: selectedAddress.city,
-        }
-      : undefined;
-
-  const shippingQuery = useQuery({
-    queryKey: [
-      "checkout",
-      "shipping-options",
-      shippingAddress?.street,
-      shippingAddress?.ward,
-      shippingAddress?.district,
-      shippingAddress?.city,
-    ],
-    queryFn: () => {
-      if (!shippingAddress) {
-        throw new Error("A delivery address is required before loading shipping options");
-      }
-      return fetchShippingOptions({ address: shippingAddress });
-    },
-    enabled: cartItems.length > 0 && Boolean(shippingAddress),
-    retry: false,
-  });
-
-  const ratesQuery = useQuery({
-    queryKey: [
-      "checkout",
-      "shipping-rates",
-      selectedAddress?.street,
-      selectedAddress?.district,
-      selectedAddress?.city,
-      totalAmount,
-    ],
-    queryFn: () =>
-      fetchShippingRates({
-        street: selectedAddress.street,
-        ward: selectedAddress.ward ?? undefined,
-        district: selectedAddress.district ?? "",
-        province: selectedAddress.city,
-        orderTotalVnd: totalAmount,
-      }),
-    enabled: !!selectedAddress && cartItems.length > 0,
-    retry: false,
-  });
-
   const shippingOptions = useMemo(() => {
-    const ratesData = ratesQuery.data?.options;
-    if (ratesData && ratesData.length > 0) {
-      return ratesData.map(
-        (r: { serviceCode: string; feeVnd: number; estimatedDeliveryTime: string }) => ({
-          id: r.serviceCode,
-          name:
-            r.serviceCode === "STANDARD"
-              ? t("checkout.shipping.standardName")
-              : r.serviceCode === "EXPRESS"
-                ? t("checkout.shipping.expressName")
-                : r.serviceCode,
-          desc: r.estimatedDeliveryTime,
-          fee: r.feeVnd,
-          eta: r.estimatedDeliveryTime,
-        }),
-      );
-    }
-    const checkoutData = shippingQuery.data;
-    if (checkoutData && checkoutData.length > 0) {
-      return checkoutData.map((s, i) => ({
-        id: s.code ?? `option-${i}`,
-        name: s.name ?? t("checkout.shipping.fallbackName", { n: i + 1 }),
-        desc:
-          typeof s.estimatedDays === "number"
-            ? t("checkout.shipping.deliverInDays", { n: s.estimatedDays })
-            : t("checkout.shipping.etaStandard"),
-        fee: s.fee ?? 0,
-        eta:
-          typeof s.estimatedDays === "number"
-            ? t("checkout.shipping.etaDays", { n: s.estimatedDays })
-            : t("checkout.shipping.etaStandard"),
-      }));
-    }
-    return makeFallbackShipping(t);
-  }, [ratesQuery.data, shippingQuery.data, t]);
+    // The current POST /orders contract does not accept a shipping fee or
+    // method, and new SubOrders persist ShippingInfo.EMPTY. Keep checkout's
+    // visible choice on that same zero-fee STANDARD contract until carrier
+    // rates become part of the authoritative order command.
+    return [
+      {
+        id: "STANDARD",
+        name: t("checkout.shipping.standardName"),
+        desc: t("checkout.shipping.fallbackStandard.desc"),
+        fee: 0,
+        eta: t("checkout.shipping.fallbackStandard.eta"),
+      },
+    ];
+  }, [t]);
 
   // Lazily fetch the public coupon catalogue when the user opens the picker.
   // No `enabled` gate would mean every checkout view paid the call even if
@@ -336,16 +265,14 @@ export function CheckoutPage() {
   });
 
   const shipping = shippingOptions.find((m) => m.id === selectedShippingId) ?? shippingOptions[0];
-  // Shipping fee is computed client-side from the selected option. The BE
-  // /checkout/calculate endpoint does not currently accept shipping choices, so
-  // its `shippingFee` reflects a single default. Using the client-selected fee
-  // keeps the total in sync when the user toggles shipping options. We still
-  // pull `subtotal` and `discount` from the BE so server-authoritative coupon
-  // pricing wins.
+  // The placed-order contract currently persists zero sub-order shipping and
+  // adds server-calculated VAT. Use the preview breakdown as the source of
+  // truth so the amount shown here is the amount the order service places.
   const subtotal = calcQuery.data?.subtotal ?? totalAmount;
-  const shippingFee = shipping?.fee ?? 0;
+  const shippingFee = calcQuery.data?.shippingFee ?? 0;
   const discount = calcQuery.data?.discount ?? 0;
-  const finalTotal = Math.max(0, subtotal - discount) + shippingFee;
+  const tax = calcQuery.data?.tax ?? 0;
+  const finalTotal = calcQuery.data?.total ?? Math.max(0, subtotal + shippingFee - discount + tax);
 
   const stepOrder: Step[] = ["address", "shipping", "payment", "review", "success"];
   const stepIdx = stepOrder.indexOf(step);
@@ -472,7 +399,6 @@ export function CheckoutPage() {
           },
           paymentMethod: selectedPaymentId,
           notes: note || undefined,
-          shippingChoices: shipping ? [{ sellerId: "_", code: shipping.id }] : undefined,
           couponCode: appliedCoupon ?? undefined,
         },
       });
@@ -486,8 +412,8 @@ export function CheckoutPage() {
     if (result.orderId) {
       setPlacedOrderId(result.orderId);
       if ("total" in result.state) setPlacedOrderTotal(result.state.total);
-      void refetchCart();
     }
+    const purchasedItems = "purchasedItems" in result.state ? result.state.purchasedItems : [];
 
     if (result.redirectUrl) {
       const persisted = recoveryStore.read();
@@ -506,10 +432,15 @@ export function CheckoutPage() {
         toast.error(t("checkout.payment.initFailedShort"));
         return;
       }
-      window.location.assign(result.redirectUrl);
+      await cleanupThenRedirect(result.redirectUrl, purchasedItems, removePurchasedItems, (url) =>
+        window.location.assign(url),
+      );
       return;
     }
 
+    if (shouldClearCartAfterSubmission(result)) {
+      await removePurchasedItems(purchasedItems);
+    }
     if (result.state.status === "completed") setStep("success");
     if (result.state.status === "failed") toast.error(result.state.message);
   };
@@ -577,11 +508,21 @@ export function CheckoutPage() {
                 persisted.orderId === result.state.orderId &&
                 persisted.paymentId === result.state.paymentId
               ) {
-                window.location.assign(result.redirectUrl);
+                await cleanupThenRedirect(
+                  result.redirectUrl,
+                  "purchasedItems" in result.state ? result.state.purchasedItems : [],
+                  removePurchasedItems,
+                  (url) => window.location.assign(url),
+                );
                 return;
               }
               toast.error(t("checkout.payment.initFailedShort"));
               return;
+            }
+            if (shouldClearCartAfterSubmission(result)) {
+              await removePurchasedItems(
+                "purchasedItems" in result.state ? result.state.purchasedItems : [],
+              );
             }
             if (result.state.status === "completed") setStep("success");
           } catch {
@@ -591,7 +532,7 @@ export function CheckoutPage() {
         onViewOrder={(orderId) => {
           void navigate(orderId ? `/orders/${orderId}` : "/orders");
         }}
-        onContinueRedirect={(url) => {
+        onContinueRedirect={async (url) => {
           const persisted = recoveryStore.read();
           if (
             submission.status !== "pending" ||
@@ -608,9 +549,21 @@ export function CheckoutPage() {
             toast.error(t("checkout.payment.initFailedShort"));
             return;
           }
-          window.location.assign(url);
+          await cleanupThenRedirect(
+            url,
+            submission.purchasedItems,
+            removePurchasedItems,
+            (redirectUrl) => window.location.assign(redirectUrl),
+          );
         }}
-        onPaymentCompleted={() => {
+        onPaymentCompleted={async () => {
+          const purchasedItems =
+            "purchasedItems" in submission
+              ? submission.purchasedItems
+              : recovery && "purchasedItems" in recovery
+                ? recovery.purchasedItems
+                : [];
+          await removePurchasedItems(purchasedItems);
           recoveryStore.clear();
           void navigate(activeOrderId ? `/orders/${activeOrderId}` : "/orders");
         }}
@@ -662,7 +615,7 @@ export function CheckoutPage() {
                 setShippingChoice={setShippingChoice}
                 note={note}
                 setNote={setNote}
-                isLoadingRates={ratesQuery.isLoading}
+                isLoadingRates={false}
                 subtotal={subtotal}
               />
             ) : null}
@@ -698,6 +651,7 @@ export function CheckoutPage() {
           cartItems={cartItems}
           subtotal={subtotal}
           shippingFee={shippingFee}
+          tax={tax}
           discount={discount}
           finalTotal={finalTotal}
           step={step}

@@ -12,6 +12,7 @@ interface Props {
   cartItems: { productId: string; name?: string | null; price: number; quantity: number }[];
   subtotal: number;
   shippingFee: number;
+  tax: number;
   discount: number;
   finalTotal: number;
   step: Step;
@@ -41,6 +42,7 @@ export function CheckoutSummary({
   cartItems,
   subtotal,
   shippingFee,
+  tax,
   discount,
   finalTotal,
   step,
@@ -257,6 +259,12 @@ export function CheckoutSummary({
               {shippingFee === 0 ? t("checkout.summary.free") : formatPrice(shippingFee)}
             </span>
           </div>
+          {tax > 0 ? (
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">{t("checkout.summary.tax")}</span>
+              <span className="text-foreground">{formatPrice(tax)}</span>
+            </div>
+          ) : null}
           {discount > 0 ? (
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">{t("checkout.summary.discount")}</span>

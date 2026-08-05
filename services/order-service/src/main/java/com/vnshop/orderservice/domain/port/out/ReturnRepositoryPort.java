@@ -13,5 +13,7 @@ public interface ReturnRepositoryPort {
 
     List<Return> findByBuyerId(String buyerId);
 
+    List<Return> findBySellerId(String sellerId);
+
     Optional<Return> findBySubOrderId(Long subOrderId);
 }

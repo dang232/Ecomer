@@ -2,6 +2,7 @@ import type { PlaceOrderInput } from "@/shared/api/endpoints/orders";
 import type { CheckoutProvider, PaymentStatus } from "@/shared/contracts/api";
 
 import type { CheckoutRecoveryRecord, CheckoutRecoveryStore } from "./recovery";
+import type { PurchasedCartItem } from "./cart-cleanup";
 import {
   attemptIdentity,
   checkoutSubmissionReducer,
@@ -32,6 +33,8 @@ type PayPalPayment = {
   clientId: string;
   paypalOrderId: string;
 };
+
+export type { PurchasedCartItem };
 
 export interface CheckoutSubmissionDependencies {
   placeOrder(order: PlaceOrderInput, idempotencyKey: string): Promise<OrderResult>;
@@ -67,6 +70,10 @@ export interface CheckoutSubmissionController {
   updateCartFingerprint(fingerprint: string): void;
   submit(input: CheckoutSubmissionInput): Promise<CheckoutSubmissionResult>;
   resume(): Promise<CheckoutSubmissionResult>;
+}
+
+export function shouldClearCartAfterSubmission(result: CheckoutSubmissionResult): boolean {
+  return result.state.status === "pending" || result.state.status === "completed";
 }
 
 export function createCheckoutSubmissionController(
@@ -181,6 +188,7 @@ export function createCheckoutSubmissionController(
         order: attempt.order,
         reconciliationAttempts: index + 1,
         reconciliationDeadline: dependencies.now() + delay * (maxAttempts - index),
+        purchasedItems: purchasedItemsFromOrder(attempt.order),
       });
       const found = await dependencies.findOrderByIdempotencyKey(attempt.orderKey);
       if (found.kind === "found") {
@@ -189,6 +197,7 @@ export function createCheckoutSubmissionController(
           paymentKey: dependencies.newKey(),
           orderId: found.order.id,
           total: found.order.total,
+          purchasedItems: purchasedItemsFromOrder(attempt.order),
         };
         transition({ type: "order-created", order });
         dependencies.recovery.write(createdRecovery(order));
@@ -228,6 +237,7 @@ export function createCheckoutSubmissionController(
       order: attempt.order,
       reconciliationAttempts: 0,
       reconciliationDeadline: dependencies.now(),
+      purchasedItems: purchasedItemsFromOrder(attempt.order),
     });
     try {
       const placed = await dependencies.placeOrder(attempt.order, attempt.orderKey);
@@ -236,6 +246,7 @@ export function createCheckoutSubmissionController(
         paymentKey: dependencies.newKey(),
         orderId: placed.id,
         total: placed.total,
+        purchasedItems: purchasedItemsFromOrder(attempt.order),
       };
       transition({ type: "order-created", order });
       dependencies.recovery.write(createdRecovery(order));
@@ -268,6 +279,7 @@ export function createCheckoutSubmissionController(
           paymentKey: recovery.paymentKey,
           orderId: recovery.orderId,
           total: recovery.total,
+          purchasedItems: recovery.purchasedItems,
         };
         replaceState({ status: "order-created", ...order });
         return initializePayment(order);
@@ -335,6 +347,7 @@ export function createCheckoutSubmissionController(
       paymentKey: order.paymentKey,
       orderId: order.orderId,
       total: order.total,
+      purchasedItems: order.purchasedItems,
     };
   }
 
@@ -348,6 +361,7 @@ export function createCheckoutSubmissionController(
       orderId: payment.orderId,
       paymentId: payment.paymentId,
       total: payment.total,
+      purchasedItems: payment.purchasedItems,
     };
     switch (payment.providerState.kind) {
       case "cod":
@@ -415,7 +429,16 @@ function recoveryOrder(
     paymentKey: recovery.paymentKey,
     orderId: recovery.orderId,
     total: recovery.total,
+    purchasedItems: recovery.purchasedItems,
   };
+}
+
+function purchasedItemsFromOrder(order: PlaceOrderInput): PurchasedCartItem[] {
+  return order.items.map((item) => ({
+    productId: item.productId,
+    variantId: item.variantSku,
+    quantity: item.quantity,
+  }));
 }
 
 function stateResult(state: CheckoutSubmissionState): CheckoutSubmissionResult {

@@ -3,6 +3,14 @@ import { z } from "zod";
 import type { PlaceOrderInput } from "@/shared/api/endpoints/orders";
 import { checkoutProviderSchema } from "@/shared/contracts/api";
 
+import type { PurchasedCartItem } from "./cart-cleanup";
+
+const purchasedCartItemSchema = z.object({
+  productId: z.string().min(1),
+  variantId: z.string().optional(),
+  quantity: z.number().int().positive(),
+});
+
 const recoveryOrderSchema = z.object({
   items: z.array(
     z.object({
@@ -19,7 +27,6 @@ const recoveryOrderSchema = z.object({
   }),
   paymentMethod: checkoutProviderSchema.optional(),
   couponCode: z.string().optional(),
-  shippingChoices: z.array(z.object({ sellerId: z.string(), code: z.string() })).optional(),
   notes: z.string().optional(),
 });
 
@@ -28,6 +35,7 @@ const baseSchema = z.object({
   orderKey: z.string().uuid(),
   cartFingerprint: z.string(),
   provider: checkoutProviderSchema,
+  purchasedItems: z.array(purchasedCartItemSchema).default([]),
 });
 
 export const checkoutRecoverySchema = z.discriminatedUnion("phase", [
@@ -118,4 +126,5 @@ export function createCheckoutRecoveryStore(
 }
 
 export type RecoveryOrderInput = z.infer<typeof recoveryOrderSchema>;
+export type { PurchasedCartItem };
 export type { PlaceOrderInput };

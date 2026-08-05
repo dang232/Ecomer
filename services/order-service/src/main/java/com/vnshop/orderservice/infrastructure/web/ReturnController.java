@@ -59,6 +59,20 @@ public class ReturnController {
                 .map(ReturnResponse::fromDomain).toList());
     }
 
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/{returnId}")
+    public ApiResponse<ReturnResponse> get(@PathVariable UUID returnId) {
+        return ApiResponse.ok(ReturnResponse.fromDomain(
+                listReturnsUseCase.findByIdForBuyer(returnId, JwtPrincipalUtil.currentUserId())));
+    }
+
+    @PreAuthorize("hasRole('SELLER')")
+    @GetMapping("/seller")
+    public ApiResponse<List<ReturnResponse>> listForSeller() {
+        return ApiResponse.ok(listReturnsUseCase.listBySellerId(JwtPrincipalUtil.currentSellerId()).stream()
+                .map(ReturnResponse::fromDomain).toList());
+    }
+
     @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
     @PostMapping("/{returnId}/approve")
     public ApiResponse<ReturnResponse> approve(@PathVariable UUID returnId) {

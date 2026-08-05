@@ -38,7 +38,7 @@ export function CartSummary({
   onCheckout,
 }: CartSummaryProps) {
   const { t } = useTranslation();
-  const totalVnd = Math.max(0, subtotalVnd - couponDiscountVnd) + shippingFeeVnd;
+  const totalVnd = subtotalVnd;
 
   return (
     <section
@@ -68,7 +68,7 @@ export function CartSummary({
           </div>
         ) : null}
         <div className="flex justify-between gap-3 border-t border-border pt-3 text-base font-bold">
-          <dt>{t("cart.totalLabel")}</dt>
+          <dt>{t("cart.merchandiseTotal")}</dt>
           <dd className="text-primary">{formatPrice(totalVnd)}</dd>
         </div>
       </dl>

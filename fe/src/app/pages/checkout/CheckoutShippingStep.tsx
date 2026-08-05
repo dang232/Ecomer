@@ -1,7 +1,6 @@
 import { Clock, Loader2, Package, Truck, Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { FREE_SHIPPING_THRESHOLD } from "@/shared/contracts";
 import { formatPrice } from "@/shared/lib";
 
 import type { ShippingOption } from "./types";
@@ -33,27 +32,17 @@ export function CheckoutShippingStep({
   note,
   setNote,
   isLoadingRates = false,
-  subtotal = 0,
 }: Props) {
   const { t } = useTranslation();
-  const freeShipping = subtotal > FREE_SHIPPING_THRESHOLD;
 
   return (
     <div>
       <h2 className="font-bold text-foreground text-lg mb-4">{t("checkout.shipping.header")}</h2>
 
-      {freeShipping ? (
-        <div className="mb-4 px-4 py-3 rounded-[var(--radius-lg)] text-sm font-medium flex items-center gap-2 bg-primary-light text-primary">
-          <Truck size={16} />
-          {t("checkout.shipping.freeShippingBanner")}
-        </div>
-      ) : (
-        <p className="mb-4 text-xs text-muted-foreground">
-          {t("checkout.shipping.remainingForFreeShipping", {
-            amount: formatPrice(Math.max(FREE_SHIPPING_THRESHOLD - subtotal, 0)),
-          })}
-        </p>
-      )}
+      <div className="mb-4 px-4 py-3 rounded-[var(--radius-lg)] text-sm font-medium flex items-center gap-2 bg-primary-light text-primary">
+        <Truck size={16} />
+        {t("checkout.shipping.freeShippingBanner")}
+      </div>
 
       {isLoadingRates ? (
         <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">

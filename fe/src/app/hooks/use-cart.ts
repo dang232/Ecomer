@@ -4,6 +4,11 @@ import { z } from "zod";
 
 import { fromServer, findVariant } from "@/features/catalog";
 import {
+  calculateCartCleanupOperations,
+  cartLineKey,
+  type PurchasedCartItem,
+} from "@/features/checkout";
+import {
   addCartItem,
   clearCart as clearCartApi,
   getCart,
@@ -238,6 +243,50 @@ export function useCart() {
 
   // Guest-mode mutations: localStorage-backed, no server round-trip.
   const isGuest = ready && !authenticated;
+
+  const removePurchasedItems = useCallback(
+    async (purchasedItems: readonly PurchasedCartItem[]): Promise<void> => {
+      if (purchasedItems.length === 0) return;
+
+      if (isGuest) {
+        setGuestItems((current) => {
+          const operations = calculateCartCleanupOperations(current, purchasedItems);
+          const next = current.map((item) => {
+            const operation = operations.find(
+              (candidate) =>
+                cartLineKey(candidate.productId, candidate.variantId) ===
+                cartLineKey(item.productId, item.variantId),
+            );
+            return operation?.kind === "update" ? { ...item, quantity: operation.quantity } : item;
+          });
+          const removedKeys = new Set(
+            operations
+              .filter((operation) => operation.kind === "remove")
+              .map((operation) => cartLineKey(operation.productId, operation.variantId)),
+          );
+          const kept = next.filter(
+            (item) => !removedKeys.has(cartLineKey(item.productId, item.variantId)),
+          );
+          writeGuestCart(kept);
+          return kept;
+        });
+        return;
+      }
+
+      if (!ready || !authenticated) return;
+      const latest = await query.refetch();
+      const operations = calculateCartCleanupOperations(latest.data?.items ?? [], purchasedItems);
+      for (const operation of operations) {
+        const itemKey = cartLineKey(operation.productId, operation.variantId);
+        if (operation.kind === "remove") {
+          await removeItem.mutateAsync(itemKey);
+        } else {
+          await updateItem.mutateAsync({ productId: itemKey, quantity: operation.quantity });
+        }
+      }
+    },
+    [authenticated, isGuest, ready, query, removeItem, updateItem],
+  );
 
   const guestAdd = (productId: string, quantity: number, variantId?: string) => {
     const parsedProductId = productIdSchema.parse(productId);
@@ -510,6 +559,7 @@ export function useCart() {
       if (!query.isSuccess) return;
       return clear.mutate(undefined, options);
     },
+    removePurchasedItems,
     refetch: query.refetch,
   };
 }

@@ -11,6 +11,7 @@ import { SellerCartGroup } from "./seller-cart-group";
 
 interface CartPageViewProps {
   view: CartView;
+  subtotalVnd?: number;
   pendingLineKey?: string | null;
   shippingFeeVnd: number;
   couponDiscountVnd: number;
@@ -22,6 +23,7 @@ interface CartPageViewProps {
   supplementary?: ReactNode;
   onQuantityChange: (line: CartLineView, quantity: number) => void;
   onRemove: (line: CartLineView) => void;
+  onClear: () => void;
   onCouponChange: (value: string) => void;
   onApplyCoupon: () => void;
   onRemoveCoupon: () => void;
@@ -32,6 +34,7 @@ interface CartPageViewProps {
 
 export function CartPageView({
   view,
+  subtotalVnd,
   pendingLineKey,
   shippingFeeVnd,
   couponDiscountVnd,
@@ -43,6 +46,7 @@ export function CartPageView({
   supplementary,
   onQuantityChange,
   onRemove,
+  onClear,
   onCouponChange,
   onApplyCoupon,
   onRemoveCoupon,
@@ -52,6 +56,7 @@ export function CartPageView({
 }: CartPageViewProps) {
   const { t } = useTranslation();
   const [lineToRemove, setLineToRemove] = useState<CartLineView | null>(null);
+  const [clearRequested, setClearRequested] = useState(false);
 
   if (view.groups.length === 0) {
     return (
@@ -73,6 +78,12 @@ export function CartPageView({
       <PageHeader
         title={t("cart.title")}
         description={t("cart.itemCount", { count: view.itemCount })}
+        actions={
+          <Button type="button" variant="outline" size="sm" onClick={() => setClearRequested(true)}>
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
+            {t("cart.clear")}
+          </Button>
+        }
         className="mb-6"
       />
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
@@ -98,7 +109,7 @@ export function CartPageView({
         <aside className="self-start lg:sticky lg:top-32">
           <CartSummary
             itemCount={view.itemCount}
-            subtotalVnd={view.subtotalVnd}
+            subtotalVnd={subtotalVnd ?? view.subtotalVnd}
             shippingFeeVnd={shippingFeeVnd}
             couponDiscountVnd={couponDiscountVnd}
             coupon={coupon}
@@ -121,6 +132,20 @@ export function CartPageView({
         title={t("cart.removeConfirmTitle")}
         description={t("cart.removeConfirmDescription", { name: lineToRemove?.name ?? "" })}
         confirmLabel={t("cart.removeItem")}
+        cancelLabel={t("common.cancel")}
+        variant="danger"
+        icon={<Trash2 className="h-5 w-5" />}
+      />
+      <ConfirmDialog
+        open={clearRequested}
+        onClose={() => setClearRequested(false)}
+        onConfirm={() => {
+          setClearRequested(false);
+          onClear();
+        }}
+        title={t("cart.clearConfirmTitle")}
+        description={t("cart.clearConfirmDescription")}
+        confirmLabel={t("cart.clearConfirm")}
         cancelLabel={t("common.cancel")}
         variant="danger"
         icon={<Trash2 className="h-5 w-5" />}

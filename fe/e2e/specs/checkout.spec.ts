@@ -125,7 +125,7 @@ test.describe("Checkout Flow", () => {
     await page.goto("/cart");
 
     // Cart should show the product
-    await expect(page.getByRole("button", { name: /View|Xem/ }).first()).toBeVisible({
+    await expect(page.getByRole("link", { name: /View|Xem/ }).first()).toBeVisible({
       timeout: 15_000,
     });
 
@@ -286,7 +286,7 @@ test.describe("Checkout Flow", () => {
     await authenticatePage(page, buyer);
     await page.goto("/cart");
 
-    await expect(page.getByRole("button", { name: /View|Xem/ }).first()).toBeVisible({
+    await expect(page.getByRole("link", { name: /View|Xem/ }).first()).toBeVisible({
       timeout: 15_000,
     });
 
@@ -308,16 +308,20 @@ test.describe("Checkout Flow", () => {
     await authenticatePage(page, buyer);
     await page.goto("/cart");
 
-    await expect(page.getByRole("button", { name: /View|Xem/ }).first()).toBeVisible({
+    await expect(page.getByRole("link", { name: /View|Xem/ }).first()).toBeVisible({
       timeout: 15_000,
     });
 
     // Remove item
-    const removeBtn = page.getByRole("button", { name: /Remove .* from cart|Xóa/i }).first();
+    const removeBtn = page.getByRole("button", { name: /^Remove$|^Xo/i }).first();
     await removeBtn.click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: /^Remove$|^Xo/i })
+      .click();
 
     // Cart should now be empty or item should be gone
-    await expect(page.getByRole("button", { name: /View|Xem/ }).first()).toHaveCount(0, {
+    await expect(page.getByRole("link", { name: /View|Xem/ }).first()).toHaveCount(0, {
       timeout: 10_000,
     });
 

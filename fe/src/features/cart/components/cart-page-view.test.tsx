@@ -47,6 +47,7 @@ const props = {
   authenticated: true,
   onQuantityChange: vi.fn(),
   onRemove: vi.fn(),
+  onClear: vi.fn(),
   onCouponChange: vi.fn(),
   onApplyCoupon: vi.fn(),
   onRemoveCoupon: vi.fn(),
@@ -77,5 +78,18 @@ describe("CartPageView", () => {
     expect(props.onRemove).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Remove" }));
     expect(props.onRemove).toHaveBeenCalledWith(expect.objectContaining({ key: "p-1:blue" }));
+  });
+
+  it("requires confirmation before it clears the whole cart", () => {
+    render(
+      <MemoryRouter>
+        <CartPageView {...props} />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "cart.clear" }));
+    expect(props.onClear).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "cart.clearConfirm" }));
+    expect(props.onClear).toHaveBeenCalledTimes(1);
   });
 });

@@ -31,7 +31,6 @@ export interface PlaceOrderInput {
   };
   paymentMethod?: PaymentMethod;
   couponCode?: string;
-  shippingChoices?: { sellerId: string; code: string }[];
   notes?: string;
 }
 

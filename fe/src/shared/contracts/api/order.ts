@@ -66,7 +66,8 @@ export const subOrderSchema = z
 export type SubOrder = z.infer<typeof subOrderSchema>;
 
 // BE OrderResponse(id, orderNumber, buyerId, shippingAddress, subOrders[],
-// itemsTotal: Money, shippingTotal: Money, discount: Money, finalAmount: Money,
+// itemsTotal: Money, shippingTotal: Money, discount: Money, taxTotal: Money,
+// finalAmount: Money,
 // paymentMethod, paymentStatus, idempotencyKey)
 // — note: NO order-level status. FE used to require `status: string`, which made
 // every parse fail. We now derive a display status from the sub-orders so the
@@ -104,6 +105,8 @@ const orderInputSchema = z
     shippingFee: moneyToNumber.optional(),
     shippingTotal: moneyToNumber.optional(),
     discount: moneyToNumber.optional(),
+    tax: moneyToNumber.optional(),
+    taxTotal: moneyToNumber.optional(),
     total: moneyToNumber.optional(),
     finalAmount: moneyToNumber.optional(),
     totalAmount: moneyToNumber.optional(),
@@ -135,6 +138,7 @@ function normalizeOrder(raw: z.infer<typeof orderInputSchema>) {
     subtotal: raw.subtotal ?? raw.itemsTotal ?? 0,
     shippingFee: raw.shippingFee ?? raw.shippingTotal ?? 0,
     discount: raw.discount ?? 0,
+    tax: raw.tax ?? raw.taxTotal ?? 0,
     total: raw.total ?? raw.finalAmount ?? raw.totalAmount ?? 0,
     itemCount: raw.itemCount,
     address: raw.address ?? raw.shippingAddress,

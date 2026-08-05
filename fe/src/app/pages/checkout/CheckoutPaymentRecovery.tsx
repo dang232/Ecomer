@@ -11,8 +11,8 @@ interface Props {
   submission: CheckoutSubmissionState;
   onResume: () => Promise<void>;
   onViewOrder: (orderId?: string) => void;
-  onContinueRedirect: (url: string) => void;
-  onPaymentCompleted: () => void;
+  onContinueRedirect: (url: string) => void | Promise<void>;
+  onPaymentCompleted: () => void | Promise<void>;
 }
 
 export function CheckoutPaymentRecovery({

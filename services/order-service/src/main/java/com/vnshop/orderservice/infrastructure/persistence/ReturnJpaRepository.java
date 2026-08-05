@@ -32,6 +32,11 @@ public class ReturnJpaRepository implements ReturnRepositoryPort {
  }
 
  @Override
+ public List<Return> findBySellerId(String sellerId) {
+ return springDataRepository.findBySellerId(sellerId).stream().map(ReturnJpaEntity::toDomain).toList();
+ }
+
+ @Override
  public Optional<Return> findBySubOrderId(Long subOrderId) {
  return springDataRepository.findBySubOrderId(subOrderId).map(ReturnJpaEntity::toDomain);
  }

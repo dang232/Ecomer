@@ -109,6 +109,38 @@ class OrderControllerTest {
     }
 
     @Test
+    void getByIdempotencyKeyIncludesTaxTotalWhenOrderHasTax() throws Exception {
+        Money price = new Money(new BigDecimal("129000"), "VND");
+        Money tax = new Money(new BigDecimal("13000"), "VND");
+        OrderItem item = new OrderItem("product-2", "sku-2", "seller-2", "Phone Case", 1, price, null);
+        SubOrder subOrder = new SubOrder(2L, "seller-2", List.of(item), FulfillmentStatus.PENDING_ACCEPTANCE,
+                Money.ZERO, "STANDARD", null, null);
+        Order order = new Order(
+                UUID.randomUUID(),
+                "VNS-TEST-TAX",
+                "buyer-tax",
+                new Address("2 Main Street", "Ward", "District", "HCMC"),
+                List.of(subOrder),
+                price,
+                Money.ZERO,
+                Money.ZERO,
+                tax,
+                "COD",
+                PaymentStatus.PENDING,
+                "checkout-tax-key");
+        when(useCase.findForBuyer("checkout-tax-key", "buyer-tax")).thenReturn(order);
+
+        authenticateAs("buyer-tax");
+
+        mvc.perform(get("/orders/by-idempotency-key/{key}", "checkout-tax-key"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.itemsTotal.amount").value(129000))
+                .andExpect(jsonPath("$.data.taxTotal.amount").value(13000))
+                .andExpect(jsonPath("$.data.finalAmount.amount").value(142000));
+    }
+
+    @Test
     void getByIdempotencyKeyReturns404ForUnknownKey() throws Exception {
         when(useCase.findForBuyer("unknown-key", "buyer-2"))
                 .thenThrow(new OrderByIdempotencyKeyNotFoundException());

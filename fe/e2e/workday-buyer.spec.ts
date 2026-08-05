@@ -114,7 +114,12 @@ test.describe.serial("Workday — buyer (guest → register → shop → order)"
       });
 
       await step(page, "buyer", "Toggle dark mode on", async () => {
-        const dark = page.getByRole("button", { name: /switch to dark mode/i }).first();
+        await page.evaluate(() => {
+          localStorage.setItem("vnshop:theme", "light");
+          document.documentElement.classList.remove("dark");
+        });
+        await page.reload();
+        const dark = page.locator('header button[aria-pressed="false"]').first();
         await expect(dark).toBeVisible({ timeout: 10_000 });
         await dark.click();
         await expect
@@ -204,7 +209,7 @@ test.describe.serial("Workday — buyer (guest → register → shop → order)"
           totalBefore,
           `expected a non-zero VND total but read 0 — see screenshot for the cart state`,
         ).toBeGreaterThan(0);
-        const plus = page.getByRole("button", { name: /increase quantity/i }).first();
+        const plus = page.getByRole("button", { name: /increase quantity|Tăng số lượng/i }).first();
         await expect(plus).toBeVisible({ timeout: 10_000 });
         await plus.click();
         await expect
@@ -221,7 +226,7 @@ test.describe.serial("Workday — buyer (guest → register → shop → order)"
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible({
           timeout: 20_000,
         });
-        const heart = page.getByRole("button", { name: /wishlist/i }).first();
+        const heart = page.getByRole("button", { name: /wishlist|Yêu thích/i }).first();
         await expect(heart).toBeVisible({ timeout: 10_000 });
         await heart.click();
         await expect(
@@ -337,13 +342,10 @@ test.describe.serial("Workday — buyer (guest → register → shop → order)"
           }
 
           await page.goto("/orders");
-          // Match the rendered "Mã đơn:" / "Order ID:" prefix OR the not-authed
-          // login-prompt copy. Either confirms the page mounted past Suspense.
-          await expect(
-            page
-              .getByText(/Mã đơn|Order ID|Đăng nhập để xem đơn hàng|Log in to view your orders/i)
-              .first(),
-          ).toBeVisible({ timeout: 20_000 });
+          if (!orderId) throw new Error("place-order response did not include an order id");
+          await expect(page.getByRole("heading", { name: orderId })).toBeVisible({
+            timeout: 20_000,
+          });
         },
       );
 

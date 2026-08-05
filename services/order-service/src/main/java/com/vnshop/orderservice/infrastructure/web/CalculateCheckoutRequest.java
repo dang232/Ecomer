@@ -14,8 +14,9 @@ import java.util.List;
  * {@link com.vnshop.orderservice.domain.port.out.ProductCatalogPort}.
  *
  * <p>shippingAddress is intentionally absent — the current breakdown does
- * not vary by destination (single fixed shipping fee). When destination-
- * dependent shipping comes online, this record can grow it back in.
+ * persists zero checkout shipping on {@code ShippingInfo.EMPTY}. When
+ * destination-dependent carrier rates become part of the authoritative order
+ * command, this record can grow it back in.
  */
 public record CalculateCheckoutRequest(
         @Valid @NotEmpty List<OrderItemRequest> items,

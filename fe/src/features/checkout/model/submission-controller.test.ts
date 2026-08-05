@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createCheckoutRecoveryStore } from "./recovery";
 import {
   createCheckoutSubmissionController,
+  shouldClearCartAfterSubmission,
   type CheckoutSubmissionDependencies,
   type CheckoutSubmissionInput,
 } from "./submission-controller";
@@ -125,6 +126,7 @@ describe("checkout submission controller", () => {
       cartFingerprint: "cart-a",
       orderId: "order-1",
       total: 125000,
+      purchasedItems: [],
     });
     const controller = createCheckoutSubmissionController(deps, "cart-a");
 
@@ -135,5 +137,41 @@ describe("checkout submission controller", () => {
       { orderId: "order-1" },
       "00000000-0000-4000-8000-000000000002",
     );
+  });
+
+  it("retains the server final amount when Stripe response validation fails", async () => {
+    const stripeCreate = vi.fn().mockResolvedValue({
+      payment: {
+        paymentId: "payment-1",
+        orderId: "order-1",
+        amount: 125000,
+        method: "STRIPE",
+        status: "PENDING",
+        transactionRef: null,
+        redirectUrl: null,
+      },
+      publishableKey: "pk_test",
+      clientSecret: "",
+      intentId: "intent-1",
+    });
+    const controller = createCheckoutSubmissionController(dependencies({ stripeCreate }), "cart-a");
+
+    const result = await controller.submit({ ...input, provider: "STRIPE" });
+
+    expect(result.orderId).toBe("order-1");
+    expect(result.state.status).toBe("failed");
+    expect("total" in result.state && result.state.total).toBe(125000);
+  });
+
+  it.each([
+    ["pending", true],
+    ["completed", true],
+    ["failed", false],
+  ] as const)("clears the cart only after a %s submission", (status, expected) => {
+    expect(
+      shouldClearCartAfterSubmission({
+        state: { status } as never,
+      }),
+    ).toBe(expected);
   });
 });

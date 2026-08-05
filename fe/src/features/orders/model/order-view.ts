@@ -38,6 +38,7 @@ export interface OrderView {
     subtotalVnd: number;
     shippingVnd: number;
     discountVnd: number;
+    taxVnd: number;
     totalVnd: number;
   };
   timeline: readonly OrderTimelineEntry[];
@@ -119,6 +120,7 @@ export function toOrderView({ detail, summary }: ToOrderViewInput): OrderView {
       subtotalVnd: detail.subtotal,
       shippingVnd: detail.shippingFee ?? 0,
       discountVnd: detail.discount ?? 0,
+      taxVnd: detail.tax ?? 0,
       totalVnd: detail.total,
     },
     timeline: toTimeline(detail.status, placedAt),

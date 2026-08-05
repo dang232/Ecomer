@@ -81,8 +81,9 @@ public interface OrderJpaSpringDataRepository extends JpaRepository<OrderJpaEnti
         WHERE sub.sellerId = :sellerId
           AND sub.fulfillmentStatus IN :statuses
           AND (
-              :term = ''
-              OR lower(str(o.id)) LIKE :likeTerm
+      :term = ''
+      OR lower(str(sub.id)) LIKE :likeTerm
+      OR lower(str(o.id)) LIKE :likeTerm
               OR lower(o.orderNumber) LIKE :likeTerm
               OR EXISTS (
                   SELECT item.id FROM OrderItemJpaEntity item
