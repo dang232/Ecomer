@@ -28,6 +28,7 @@ interface SearchPageMocks {
   v2CatalogRefetch: ReturnType<typeof vi.fn>;
   v2ProductsEnabled: boolean;
   v2SearchParams: Record<string, unknown> | undefined;
+  renderVietnameseSearchHeading: boolean;
 }
 
 const mocks = vi.hoisted<SearchPageMocks>(() => ({
@@ -51,6 +52,7 @@ const mocks = vi.hoisted<SearchPageMocks>(() => ({
   v2CatalogRefetch: vi.fn(),
   v2ProductsEnabled: false,
   v2SearchParams: undefined,
+  renderVietnameseSearchHeading: false,
 }));
 
 vi.mock("motion/react", () => ({
@@ -65,6 +67,9 @@ vi.mock("motion/react", () => ({
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) => {
+      if (key === "search.resultsForQuery" && mocks.renderVietnameseSearchHeading) {
+        return `Kết quả cho "${String(options?.query)}"`;
+      }
       if (typeof options?.defaultValue === "string") return options.defaultValue;
       return key;
     },
@@ -173,9 +178,20 @@ beforeEach(() => {
   mocks.v2CatalogRefetch.mockReset();
   mocks.v2ProductsEnabled = false;
   mocks.v2SearchParams = undefined;
+  mocks.renderVietnameseSearchHeading = false;
 });
 
 describe("SearchPage", () => {
+  it("renders the Vietnamese search heading with the query interpolation value", () => {
+    mocks.renderVietnameseSearchHeading = true;
+
+    renderPage("/search?q=zzxjourneycheck");
+
+    expect(
+      screen.getByRole("heading", { name: 'Kết quả cho "zzxjourneycheck"' }),
+    ).toBeInTheDocument();
+  });
+
   it("opens the shared filter controls in a mobile dialog", () => {
     renderPage();
 

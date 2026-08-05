@@ -87,13 +87,27 @@ export const questionSchema = z
     answeredAt: z.string().nullable().optional(),
     createdAt: z.string().optional(),
   })
-  .passthrough();
+  .strict();
 export type Question = z.infer<typeof questionSchema>;
 
 /** Pre-signed PUT URL returned by the review image upload endpoint. */
 export const reviewImageUploadUrlSchema = z
-  .object({ uploadUrl: z.string(), key: z.string().optional() })
+  .object({
+    objectKey: z.string(),
+    uploadUrl: z.string(),
+    uploadHeaders: z.record(z.string(), z.string()).default({}),
+    checksumSha256: z.string(),
+    quarantineState: z.string(),
+    expiresInSeconds: z.number(),
+  })
   .passthrough();
 
 /** Final CDN URL after activating a previously uploaded review image. */
-export const reviewImageActivateSchema = z.object({ url: z.string() }).passthrough();
+export const reviewImageActivateSchema = z
+  .object({
+    objectKey: z.string(),
+    quarantineState: z.string(),
+    checksumSha256: z.string(),
+    url: z.string(),
+  })
+  .passthrough();

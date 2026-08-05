@@ -1,10 +1,25 @@
-import { ChevronLeft, ChevronRight, ZoomIn } from "lucide-react";
-import { useState } from "react";
+import { ChevronLeft, ChevronRight, X, ZoomIn } from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 import { useTranslation } from "react-i18next";
 
-import { ImageWithFallback } from "@/shared/ui";
+import { IconButton, ImageWithFallback } from "@/shared/ui";
 
 import type { ProductDetailView } from "../model/product-view";
+
+const focusableSelector = [
+  "button:not([disabled])",
+  "[href]",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])",
+].join(",");
 
 export interface ProductGalleryProps {
   media: ProductDetailView["media"];
@@ -16,12 +31,35 @@ export function ProductGallery({ media, badge }: ProductGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [showLightbox, setShowLightbox] = useState(false);
   const active = media[activeIndex] ?? media[0];
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const zoomTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const closeLightbox = useCallback(() => setShowLightbox(false), []);
+
+  useEffect(() => {
+    if (!showLightbox) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeLightbox();
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [closeLightbox, showLightbox]);
+
+  useEffect(() => {
+    if (!showLightbox) return;
+
+    const trigger = zoomTriggerRef.current;
+    closeButtonRef.current?.focus();
+
+    return () => trigger?.focus();
+  }, [showLightbox]);
 
   if (!active) {
     return (
       <div
         className="aspect-square border border-border bg-muted"
-        aria-label={t("product.gallery", { defaultValue: "Product gallery" })}
+        aria-label={t("product.gallery", { defaultValue: "Product media gallery" })}
       />
     );
   }
@@ -30,12 +68,35 @@ export function ProductGallery({ media, badge }: ProductGalleryProps) {
     setActiveIndex((current) => (current + direction + media.length) % media.length);
   };
 
+  const handleLightboxKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "Tab" || !dialogRef.current) return;
+
+    const focusable = Array.from(
+      dialogRef.current.querySelectorAll<HTMLElement>(focusableSelector),
+    );
+    if (focusable.length === 0) {
+      event.preventDefault();
+      dialogRef.current.focus();
+      return;
+    }
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
   return (
     <div className="space-y-3 lg:sticky lg:top-24 lg:self-start">
       <div
         className="relative aspect-square overflow-hidden rounded-[var(--radius-card)] border border-border bg-muted"
         role="region"
-        aria-label={t("product.gallery", { defaultValue: "Product gallery" })}
+        aria-label={t("product.gallery", { defaultValue: "Product media gallery" })}
       >
         <ImageWithFallback
           src={active.url}
@@ -49,7 +110,10 @@ export function ProductGallery({ media, badge }: ProductGalleryProps) {
         ) : null}
         <button
           type="button"
-          onClick={() => setShowLightbox(true)}
+          onClick={(event) => {
+            zoomTriggerRef.current = event.currentTarget;
+            setShowLightbox(true);
+          }}
           aria-label={t("product.openZoom", { defaultValue: "Open zoomed view" })}
           className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-card/90 text-foreground shadow-[var(--shadow-low)] hover:bg-card"
         >
@@ -79,7 +143,7 @@ export function ProductGallery({ media, badge }: ProductGalleryProps) {
       {media.length > 1 ? (
         <div
           className="flex gap-2 overflow-x-auto pb-1"
-          aria-label={t("product.gallery", { defaultValue: "Product gallery" })}
+          aria-label={t("product.gallery", { defaultValue: "Product media gallery" })}
         >
           {media.map((item, index) => (
             <button
@@ -102,16 +166,25 @@ export function ProductGallery({ media, badge }: ProductGalleryProps) {
       ) : null}
       {showLightbox ? (
         <div
+          ref={dialogRef}
           role="dialog"
           aria-modal="true"
           aria-label={t("product.zoomedImage", { defaultValue: "Zoomed product image" })}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-6"
           tabIndex={-1}
-          onClick={() => setShowLightbox(false)}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") setShowLightbox(false);
+          onKeyDown={handleLightboxKeyDown}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeLightbox();
           }}
         >
+          <IconButton
+            ref={closeButtonRef}
+            label={t("product.closeZoom", { defaultValue: "Close zoomed view" })}
+            onClick={closeLightbox}
+            className="absolute right-4 top-4 z-10 rounded-full bg-card/90 text-foreground shadow-[var(--shadow-low)] hover:bg-card"
+          >
+            <X />
+          </IconButton>
           <ImageWithFallback
             src={active.url}
             alt={active.alt}

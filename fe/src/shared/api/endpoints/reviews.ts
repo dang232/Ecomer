@@ -26,7 +26,18 @@ export const createReview = (body: CreateReviewInput) => api.post("/reviews", re
 export const voteReviewHelpful = (id: string) =>
   api.put(`/reviews/${encodeURIComponent(id)}/helpful`, reviewSchema);
 
-export const reviewImageUploadUrl = (reviewId: string, body: { contentType: string }) =>
+export const reviewImageUploadUrl = (
+  reviewId: string,
+  body: {
+    fileName: string;
+    declaredContentType: string;
+    detectedContentType: string;
+    contentLength: number;
+    sha256Hex: string;
+    imageWidth: number;
+    imageHeight: number;
+  },
+) =>
   api.post(
     `/reviews/${encodeURIComponent(reviewId)}/images/upload-url`,
     reviewImageUploadUrlSchema,
@@ -40,7 +51,17 @@ export const sellerReviews = (params: { q?: string; page?: number; size?: number
     size: params.size ?? 20,
   });
 
-export const reviewImageActivate = (reviewId: string, body: { key: string }) =>
+export const reviewImageActivate = (
+  reviewId: string,
+  body: {
+    objectKey: string;
+    detectedContentType: string;
+    contentLength: number;
+    sha256Hex: string;
+    imageWidth: number;
+    imageHeight: number;
+  },
+) =>
   api.post(
     `/reviews/${encodeURIComponent(reviewId)}/images/activate`,
     reviewImageActivateSchema,

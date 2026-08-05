@@ -4,6 +4,7 @@ import {
   clearSearchFilters,
   readSearchRouteState,
   updateSearchRouteState,
+  type SearchRouteState,
 } from "./search-route-state";
 
 describe("search route state", () => {
@@ -50,6 +51,21 @@ describe("search route state", () => {
     expect(next.get("q")).toBe("phone");
     expect(next.get("officialOnly")).toBe("true");
     expect(next.has("page")).toBe(false);
+  });
+
+  it("resets pagination when the query, filter, or sort changes", () => {
+    const route = new URLSearchParams("q=phone&cat=audio&sort=newest&page=8");
+    const updates: Partial<SearchRouteState>[] = [
+      { q: "headphones" },
+      { cat: "electronics" },
+      { sort: "price-low" },
+    ];
+
+    for (const update of updates) {
+      const next = updateSearchRouteState(route, update);
+
+      expect(next.has("page")).toBe(false);
+    }
   });
 
   it("can update pagination without resetting itself", () => {

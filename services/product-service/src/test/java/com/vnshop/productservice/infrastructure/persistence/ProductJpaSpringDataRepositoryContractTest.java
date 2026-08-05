@@ -19,6 +19,22 @@ class ProductJpaSpringDataRepositoryContractTest {
     }
 
     @Test
+    void sellerManagementQueryScopesSellerAndExcludesDeletedProducts() throws NoSuchMethodException {
+        Method method = ProductJpaSpringDataRepository.class.getMethod(
+                "findSellerProducts", String.class, String.class, String.class, String.class,
+                org.springframework.data.domain.Pageable.class);
+
+        assertThat(method.getAnnotation(Query.class).value())
+                .contains("product.sellerId = :sellerId")
+                .contains("product.status <> 'DELETED'")
+                .contains(":q is null")
+                .contains("cast(:q as string)")
+                .contains(":categoryId is null")
+                .contains(":status is null")
+                .contains("order by product.createdAt desc, product.id desc");
+    }
+
+    @Test
     void cursorAnchorsHaveExplicitTypesWhenTheFirstPageHasNoCursor() throws NoSuchMethodException {
         assertThat(queryFor("findCatalogAfterNewest"))
                 .contains("cast(:anchorCreatedAt as Instant)");

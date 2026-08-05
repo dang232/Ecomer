@@ -1,6 +1,7 @@
 package com.vnshop.productservice.application;
 
 import com.vnshop.productservice.domain.Product;
+import com.vnshop.productservice.domain.ProductStatus;
 import com.vnshop.productservice.domain.port.out.ProductRepositoryPort;
 import com.vnshop.productservice.domain.review.ProductReviewSummary;
 import com.vnshop.productservice.domain.review.port.out.ProductRatingReadPort;
@@ -56,6 +57,21 @@ public class GetProductUseCase {
 
     public List<ProductResponse> findBySeller(String sellerId) {
         return toResponses(productRepositoryPort.findBySellerId(sellerId));
+    }
+
+    public Page<ProductResponse> findSellerProducts(
+            String sellerId, String q, String categoryId, ProductStatus status, Pageable pageable) {
+        Page<Product> page = productRepositoryPort.findSellerProducts(sellerId, q, categoryId, status, pageable);
+        Map<String, ProductReviewSummary> summaries = summariesFor(page.getContent());
+        return page.map(product -> ProductResponse.fromDomain(product, summaryFor(product, summaries)));
+    }
+
+    public ProductResponse findSellerProductById(UUID productId, String sellerId) {
+        return productRepositoryPort.findByIdAndSellerId(productId, sellerId)
+                .filter(product -> product.status() != ProductStatus.DELETED)
+                .filter(product -> Objects.equals(product.sellerId(), sellerId))
+                .map(this::toResponse)
+                .orElseThrow(() -> new IllegalArgumentException("product not found"));
     }
 
     public List<ProductResponse> findByCategory(String categoryId) {

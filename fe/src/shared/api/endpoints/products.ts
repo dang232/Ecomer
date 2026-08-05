@@ -79,6 +79,38 @@ export const productListV2 = (params: ProductListV2Params = {}, signal?: AbortSi
 export const productById = (id: string) =>
   api.get(`/products/${encodeURIComponent(id)}`, productDetailSchema, undefined, { auth: false });
 
+export interface SellerProductListParams {
+  page?: number;
+  size?: number;
+  categoryId?: string;
+  q?: string;
+  status?: string;
+}
+
+/** Authenticated seller-management page. The server scopes ownership from the JWT. */
+export const sellerProductList = (params: SellerProductListParams = {}) =>
+  api.get(
+    "/sellers/me/products",
+    pageSchema(productSummarySchema),
+    {
+      page: params.page,
+      size: params.size ?? 24,
+      categoryId: params.categoryId,
+      q: params.q,
+      status: params.status,
+    },
+    { auth: true },
+  );
+
+/** Authenticated seller-management detail. The server scopes ownership from the JWT. */
+export const sellerProductById = (id: string) =>
+  api.get(
+    `/sellers/me/products/${encodeURIComponent(id)}`,
+    productDetailSchema,
+    undefined,
+    { auth: true },
+  );
+
 /** Body for create / update on the seller product endpoints. */
 export interface SellerVariant {
   sku: string;
@@ -120,7 +152,15 @@ export const sellerProductDelete = (id: string) =>
 
 export const sellerProductImageUploadUrl = (
   productId: string,
-  body: { contentType: string; size?: number },
+  body: {
+    fileName: string;
+    declaredContentType: string;
+    detectedContentType: string;
+    contentLength: number;
+    sha256Hex: string;
+    imageWidth: number;
+    imageHeight: number;
+  },
 ) =>
   api.post(
     `/sellers/me/products/${encodeURIComponent(productId)}/images/upload-url`,
@@ -128,7 +168,17 @@ export const sellerProductImageUploadUrl = (
     body,
   );
 
-export const sellerProductImageActivate = (productId: string, body: { key: string }) =>
+export const sellerProductImageActivate = (
+  productId: string,
+  body: {
+    objectKey: string;
+    detectedContentType: string;
+    contentLength: number;
+    sha256Hex: string;
+    imageWidth: number;
+    imageHeight: number;
+  },
+) =>
   api.post(
     `/sellers/me/products/${encodeURIComponent(productId)}/images/activate`,
     productImageActivateSchema,

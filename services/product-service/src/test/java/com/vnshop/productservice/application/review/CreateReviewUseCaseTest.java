@@ -1,13 +1,16 @@
 package com.vnshop.productservice.application.review;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 import com.vnshop.productservice.domain.port.out.ContentSanitizerPort;
 import com.vnshop.productservice.domain.review.Review;
+import com.vnshop.productservice.domain.review.ReviewEligibilityException;
 import com.vnshop.productservice.domain.review.ReviewModerationDecision;
 import com.vnshop.productservice.domain.review.ReviewModerationRequest;
 import com.vnshop.productservice.domain.review.ReviewStatus;
@@ -46,18 +49,18 @@ class CreateReviewUseCaseTest {
     }
 
     @Test
-    void leavesReviewUnverifiedWhenBuyerHasNoDeliveredPurchase() {
+    void rejectsReviewWhenBuyerHasNoDeliveredPurchase() {
         when(purchaseVerification.hasDeliveredPurchase("buyer-1", "product-1", "order-1"))
                 .thenReturn(false);
-        when(contentSanitizer.sanitize("great product")).thenReturn("great product");
-        when(reviewModeration.assess(any(ReviewModerationRequest.class)))
-                .thenReturn(ReviewModerationDecision.REVIEW);
-        when(reviewRepository.save(any(Review.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Review review = useCase.create(new CreateReviewCommand(
-                "product-1", "buyer-1", "order-1", 5, "great product", java.util.List.of()));
+        assertThatThrownBy(() -> useCase.create(new CreateReviewCommand(
+                "product-1", "buyer-1", "order-1", 5, "great product", java.util.List.of())))
+                .isInstanceOf(ReviewEligibilityException.class)
+                .hasMessage("You can only review products you have purchased and received");
 
-        assertThat(review.verifiedPurchase()).isFalse();
+        verify(contentSanitizer, never()).sanitize(any());
+        verify(reviewModeration, never()).assess(any(ReviewModerationRequest.class));
+        verify(reviewRepository, never()).save(any(Review.class));
     }
 
     @Test
@@ -81,7 +84,7 @@ class CreateReviewUseCaseTest {
 
     @Test
     void persistsARejectedStatusWhenAProviderReturnsAHighConfidenceRejection() {
-        when(purchaseVerification.hasDeliveredPurchase("buyer-1", "product-1", null)).thenReturn(false);
+        when(purchaseVerification.hasDeliveredPurchase("buyer-1", "product-1", null)).thenReturn(true);
         when(contentSanitizer.sanitize("unsafe text")).thenReturn("unsafe text");
         when(reviewModeration.assess(any(ReviewModerationRequest.class)))
                 .thenReturn(ReviewModerationDecision.REJECT);

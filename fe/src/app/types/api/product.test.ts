@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { productSummarySchema } from "./product";
+import { productDetailSchema, productSummarySchema } from "./product";
 
 describe("productSummarySchema", () => {
   it("accepts null rating projections for products without approved reviews", () => {
@@ -23,5 +23,32 @@ describe("productSummarySchema", () => {
     });
 
     expect(result.imageUrl).toBeNull();
+  });
+
+  it("accepts null variant image URLs from product-service", () => {
+    const result = productSummarySchema.parse({
+      id: "2ff65816-fa6d-4bb2-beaf-47d5fffa0445",
+      name: "Seller draft",
+      variants: [{ sku: "SKU-1", name: "Standard", imageUrl: null }],
+    });
+
+    expect(result.variants?.[0]?.imageUrl).toBeNull();
+  });
+
+  it("accepts a newly-created draft with nullable optional product fields", () => {
+    const result = productDetailSchema.parse({
+      id: "2ff65816-fa6d-4bb2-beaf-47d5fffa0445",
+      sellerId: "seller-1",
+      name: "Seller draft",
+      description: null,
+      categoryId: "electronics",
+      brand: null,
+      rating: null,
+      variants: [{ sku: "SKU-1", name: "Standard", imageUrl: null }],
+      images: [],
+    });
+
+    expect(result.description).toBeNull();
+    expect(result.brand).toBeNull();
   });
 });

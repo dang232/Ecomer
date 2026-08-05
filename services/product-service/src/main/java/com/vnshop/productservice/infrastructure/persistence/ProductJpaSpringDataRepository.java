@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import java.util.Optional;
 
 public interface ProductJpaSpringDataRepository extends JpaRepository<ProductJpaEntity, UUID> {
     @Query("""
@@ -81,6 +82,25 @@ public interface ProductJpaSpringDataRepository extends JpaRepository<ProductJpa
             @Param("anchorProductId") UUID anchorProductId, org.springframework.data.domain.Pageable pageable);
 
     List<ProductJpaEntity> findBySellerId(String sellerId);
+
+    /** Seller management query: owner-scoped, pageable, and never exposes soft-deleted rows. */
+    @Query("""
+            select product from ProductJpaEntity product
+            where product.sellerId = :sellerId
+              and product.status <> 'DELETED'
+              and (:q is null or lower(product.name) like lower(concat('%', cast(:q as string), '%')))
+              and (:categoryId is null or product.categoryId = :categoryId)
+              and (:status is null or product.status = :status)
+            order by product.createdAt desc, product.id desc
+            """)
+    Page<ProductJpaEntity> findSellerProducts(
+            @Param("sellerId") String sellerId,
+            @Param("q") String q,
+            @Param("categoryId") String categoryId,
+            @Param("status") String status,
+            Pageable pageable);
+
+    Optional<ProductJpaEntity> findByIdAndSellerIdAndStatusNot(UUID id, String sellerId, String status);
 
     List<ProductJpaEntity> findByCategoryId(String categoryId);
 

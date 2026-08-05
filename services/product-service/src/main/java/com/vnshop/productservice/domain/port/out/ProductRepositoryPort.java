@@ -2,16 +2,20 @@ package com.vnshop.productservice.domain.port.out;
 
 import com.vnshop.productservice.domain.Product;
 import com.vnshop.productservice.domain.CatalogProduct;
+import com.vnshop.productservice.domain.ProductStatus;
 import com.vnshop.productservice.application.CatalogCursor;
 import com.vnshop.productservice.application.CatalogCursorSort;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.Objects;
 
 public interface ProductRepositoryPort {
     Product save(Product product);
@@ -23,6 +27,39 @@ public interface ProductRepositoryPort {
     }
 
     List<Product> findBySellerId(String sellerId);
+
+    /**
+     * Seller management read. Implementations must scope by the authenticated
+     * seller and keep deleted products out of the management view.
+     *
+     * <p>The default is deliberately retained for lightweight repository fakes;
+     * the JPA adapter overrides it with a database-paged query.</p>
+     */
+    default Page<Product> findSellerProducts(
+            String sellerId, String q, String categoryId, ProductStatus status, Pageable pageable) {
+        List<Product> matching = findBySellerId(sellerId).stream()
+                .filter(product -> !Objects.equals(product.status(), ProductStatus.DELETED))
+                .filter(product -> q == null || q.isBlank()
+                        || product.name().toLowerCase(Locale.ROOT)
+                                .contains(q.toLowerCase(Locale.ROOT)))
+                .filter(product -> categoryId == null || categoryId.isBlank()
+                        || Objects.equals(product.categoryId(), categoryId))
+                .filter(product -> status == null || product.status() == status)
+                .toList();
+        if (pageable == null || pageable.isUnpaged()) {
+            return new PageImpl<>(matching);
+        }
+        int start = (int) Math.min(pageable.getOffset(), matching.size());
+        int end = Math.min(start + pageable.getPageSize(), matching.size());
+        return new PageImpl<>(matching.subList(start, end), pageable, matching.size());
+    }
+
+    /** Owner-scoped management detail; deleted rows must be treated as absent. */
+    default Optional<Product> findByIdAndSellerId(UUID productId, String sellerId) {
+        return findById(productId)
+                .filter(product -> !Objects.equals(product.status(), ProductStatus.DELETED))
+                .filter(product -> Objects.equals(product.sellerId(), sellerId));
+    }
 
     List<Product> findByCategory(String categoryId);
 

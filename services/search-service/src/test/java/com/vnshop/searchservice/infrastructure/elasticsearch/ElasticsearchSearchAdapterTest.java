@@ -13,6 +13,7 @@ import com.vnshop.searchservice.domain.ProductReadModel;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -74,6 +75,23 @@ class ElasticsearchSearchAdapterTest {
         assertThat(result).isSameAs(fallbackPage);
         verify(fallbackRepository).searchPaged(
                 null, "electronics", null, null, null, null, null, null, pageable);
+    }
+
+    @Test
+    void tagFacetsAggregateTheKeywordFieldInsteadOfAnalyzedText() {
+        SearchHits<ProductDocument> hits = mock(SearchHits.class);
+        when(hits.getAggregations()).thenReturn(null);
+        when(elasticsearchOperations.search(any(NativeQuery.class), eq(ProductDocument.class)))
+                .thenReturn(hits);
+        when(fallbackRepository.tagFacetsFor(
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(List.of());
+
+        adapter.tagFacetsFor(null, null, null, null, null, null, List.of(), null, null, null);
+
+        ArgumentCaptor<NativeQuery> queryCaptor = ArgumentCaptor.forClass(NativeQuery.class);
+        verify(elasticsearchOperations).search(queryCaptor.capture(), eq(ProductDocument.class));
+        assertThat(queryCaptor.getValue().getAggregations()).containsKey("tags.keyword");
     }
 
     private static ProductReadModel product() {

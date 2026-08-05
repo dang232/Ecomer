@@ -55,9 +55,9 @@ export function useSearchV2(params: CursorSearchParams, enabled = true) {
   const nextCursor = lastPage?.data.hasMore ? (lastPage.data.nextCursor ?? undefined) : undefined;
 
   useEffect(() => {
-    if (!enabled || !nextCursor) return;
+    if (!enabled || query.isPlaceholderData || !nextCursor) return;
     void client.prefetchQuery(searchV2PageOptions(stableParams, nextCursor));
-  }, [client, enabled, nextCursor, stableParams]);
+  }, [client, enabled, nextCursor, query.isPlaceholderData, stableParams]);
 
   return query;
 }

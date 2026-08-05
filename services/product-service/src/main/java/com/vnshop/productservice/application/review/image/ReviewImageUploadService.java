@@ -14,6 +14,8 @@ import com.vnshop.productservice.domain.storage.ObjectValidationResult;
 import java.net.URI;
 import java.time.Instant;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -49,6 +51,7 @@ public class ReviewImageUploadService {
         return new ReviewImageUploadResponse(
                 pending.getKey(),
                 uploadUrl,
+                uploadHeaders(pending),
                 pending.getSha256Hex(),
                 pending.getQuarantineState().name(),
                 ObjectStorageClass.REVIEW_IMAGE.uploadTtl().toSeconds());
@@ -65,13 +68,23 @@ public class ReviewImageUploadService {
         }
         ObjectMetadata metadata = objectMetadataRepositoryPort.findByKey(objectKey)
                 .orElseThrow(() -> new IllegalArgumentException("object metadata not found"));
+        ObjectMetadata storedObject = objectStoragePort.headObject(objectKey)
+                .orElseThrow(() -> new IllegalArgumentException("uploaded review image object not found"));
+        if (!Objects.equals(storedObject.getContentType(), metadata.getContentType())
+                || storedObject.getContentLength() != metadata.getContentLength()
+                || !Objects.equals(storedObject.getSha256Hex(), metadata.getSha256Hex())
+                || !Objects.equals(storedObject.getImageWidth(), metadata.getImageWidth())
+                || !Objects.equals(storedObject.getImageHeight(), metadata.getImageHeight())) {
+            throw new IllegalArgumentException("uploaded review image metadata does not match upload declaration");
+        }
+        if (storedObject.getContentLength() != request.contentLength()
+                || !Objects.equals(storedObject.getSha256Hex(), request.sha256Hex())
+                || !Objects.equals(storedObject.getImageWidth(), request.imageWidth())
+                || !Objects.equals(storedObject.getImageHeight(), request.imageHeight())) {
+            throw new IllegalArgumentException("uploaded review image metadata does not match activation request");
+        }
         ObjectValidationResult result = objectValidationService.validate(ObjectValidationRequest.builder()
-                .metadata(metadata.toBuilder()
-                        .contentLength(request.contentLength())
-                        .sha256Hex(request.sha256Hex())
-                        .imageWidth(request.imageWidth())
-                        .imageHeight(request.imageHeight())
-                        .build())
+                .metadata(storedObject)
                 .expectedSha256Hex(metadata.getSha256Hex())
                 .detectedContentType(request.detectedContentType())
                 // Pt19 audit: avScanClean is no longer accepted on the wire —
@@ -89,10 +102,23 @@ public class ReviewImageUploadService {
         if (!result.active()) {
             throw new ReviewImageValidationException(result.getFailures());
         }
+        URI publicUrl = objectStoragePort.publicUrl(activated.getKey());
+        reviewRepositoryPort.save(review.withImage(publicUrl.toString()));
         return new ReviewImageActivationResponse(
                 activated.getKey(),
                 activated.getQuarantineState().name(),
-                activated.getSha256Hex());
+                activated.getSha256Hex(),
+                publicUrl);
+    }
+
+    private Map<String, String> uploadHeaders(ObjectMetadata metadata) {
+        return Map.of(
+                "Content-Type", metadata.getContentType(),
+                "x-amz-meta-storage-class", metadata.getStorageClass().name(),
+                "x-amz-meta-sha256", metadata.getSha256Hex(),
+                "x-amz-meta-quarantine-state", metadata.getQuarantineState().name(),
+                "x-amz-meta-image-width", metadata.getImageWidth().toString(),
+                "x-amz-meta-image-height", metadata.getImageHeight().toString());
     }
 
     private ObjectValidationResult validate(ReviewImageUploadRequest request, ObjectMetadata metadata) {

@@ -112,7 +112,15 @@ export const sellerProductPublish = (id: string) =>
 
 export const sellerProductImageUploadUrl = (
   productId: string,
-  body: { contentType: string; size?: number },
+  body: {
+    fileName: string;
+    declaredContentType: string;
+    detectedContentType: string;
+    contentLength: number;
+    sha256Hex: string;
+    imageWidth: number;
+    imageHeight: number;
+  },
 ) =>
   api.post(
     `/sellers/me/products/${encodeURIComponent(productId)}/images/upload-url`,
@@ -120,7 +128,17 @@ export const sellerProductImageUploadUrl = (
     body,
   );
 
-export const sellerProductImageActivate = (productId: string, body: { key: string }) =>
+export const sellerProductImageActivate = (
+  productId: string,
+  body: {
+    objectKey: string;
+    detectedContentType: string;
+    contentLength: number;
+    sha256Hex: string;
+    imageWidth: number;
+    imageHeight: number;
+  },
+) =>
   api.post(
     `/sellers/me/products/${encodeURIComponent(productId)}/images/activate`,
     productImageActivateSchema,

@@ -23,7 +23,7 @@ const productVariantSchema = z
     name: z.string().optional(),
     priceAmount: z.number().optional(),
     priceCurrency: z.string().optional(),
-    imageUrl: z.string().optional(),
+    imageUrl: z.string().nullable().optional(),
     stockQuantity: z.number().optional(),
   })
   .passthrough();
@@ -38,9 +38,9 @@ export const productSummarySchema = z
     imageUrl: z.string().nullable().optional(),
     images: z.array(imageEntrySchema).optional(),
     variants: z.array(productVariantSchema).optional(),
-    category: z.string().optional(),
-    categoryId: z.string().optional(),
-    brand: z.string().optional(),
+    category: z.string().nullable().optional(),
+    categoryId: z.string().nullable().optional(),
+    brand: z.string().nullable().optional(),
     sellerId: sellerIdSchema.optional(),
     sellerName: z.string().optional(),
     rating: z.number().nullable().optional(),
@@ -56,7 +56,7 @@ export const productSummarySchema = z
 
 export const productDetailSchema = productSummarySchema
   .extend({
-    description: z.string().optional(),
+    description: z.string().nullable().optional(),
     colors: z.array(z.string()).optional(),
     sizes: z.array(z.string()).optional(),
     tags: z.array(z.string()).optional(),
@@ -68,7 +68,11 @@ export type ProductDetail = z.infer<typeof productDetailSchema>;
 
 /** Pre-signed PUT URL returned by the seller product image upload endpoint. */
 export const productImageUploadUrlSchema = z
-  .object({ uploadUrl: z.string(), key: z.string().optional() })
+  .object({
+    uploadUrl: z.string(),
+    objectKey: z.string(),
+    uploadHeaders: z.record(z.string(), z.string()).default({}),
+  })
   .passthrough();
 
 /** Final CDN URL after activating a previously uploaded product image. */

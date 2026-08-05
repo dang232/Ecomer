@@ -1,4 +1,10 @@
 package com.vnshop.productservice.application.review.image;
 
-public record ReviewImageActivationResponse(String objectKey, String quarantineState, String checksumSha256) {
+import java.net.URI;
+
+public record ReviewImageActivationResponse(
+        String objectKey,
+        String quarantineState,
+        String checksumSha256,
+        URI url) {
 }

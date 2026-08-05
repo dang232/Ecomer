@@ -34,9 +34,9 @@ test("buyer can select a rating, submit a comment, and see live review totals", 
   await page.goto(`/product/${product.id}`);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 20_000 });
 
-  const reviewsTab = page.getByRole("tab", { name: /^Reviews \(\d+\)$/ }).first();
+  const reviewsTab = page.getByRole("tab", { name: "Reviews", exact: true }).first();
   await reviewsTab.click();
-  await expect(reviewsTab).toHaveText(`Reviews (${liveReviews.length})`);
+  await expect(reviewsTab).toHaveText("Reviews");
   await expect(page.getByTestId("review-summary")).toContainText(String(liveReviews.length));
 
   const stars = page.getByRole("radio", { name: /^\d stars$/ });

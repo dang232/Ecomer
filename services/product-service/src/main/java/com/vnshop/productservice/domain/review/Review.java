@@ -68,6 +68,17 @@ public class Review {
                 helpfulVotes, helpfulVoterIds, status, reason, createdAt);
     }
 
+    public Review withImage(String imageUrl) {
+        Objects.requireNonNull(imageUrl, "imageUrl is required");
+        if (images.contains(imageUrl)) {
+            return this;
+        }
+        List<String> nextImages = new java.util.ArrayList<>(images);
+        nextImages.add(imageUrl);
+        return new Review(reviewId, productId, buyerId, orderId, rating, text, nextImages,
+                verifiedPurchase, helpfulVotes, helpfulVoterIds, status, rejectionReason, createdAt);
+    }
+
     /**
      * Records a helpful vote from the given user. If the user already voted,
      * returns this instance unchanged (idempotent).

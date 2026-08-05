@@ -181,10 +181,12 @@ function ProductPageContent({ productId }: { productId: string }) {
               authenticated={authenticated}
               draft={questionDraft}
               isLoading={questionsQuery.isLoading}
+              isError={questionsQuery.isError}
               isPending={submitQuestion.isPending}
               questions={questionsQuery.data ?? []}
               onDraftChange={setQuestionDraft}
               onLogin={() => login(`/product/${productId}?section=questions`)}
+              onRetry={() => void questionsQuery.refetch()}
               onSubmit={() => submitQuestion.mutate(questionDraft.trim())}
             />
           ) : null}
@@ -274,19 +276,23 @@ function ProductQuestions({
   authenticated,
   draft,
   isLoading,
+  isError,
   isPending,
   questions,
   onDraftChange,
   onLogin,
+  onRetry,
   onSubmit,
 }: {
   authenticated: boolean;
   draft: string;
   isLoading: boolean;
+  isError: boolean;
   isPending: boolean;
   questions: readonly { id: string; question: string; answer?: string | null }[];
   onDraftChange: (value: string) => void;
   onLogin: () => void;
+  onRetry: () => void;
   onSubmit: () => void;
 }) {
   const { t } = useTranslation();
@@ -325,17 +331,33 @@ function ProductQuestions({
       {isLoading ? (
         <p className="text-sm text-muted-foreground">{t("product.qa.loading")}</p>
       ) : null}
-      {!isLoading && questions.length === 0 ? (
+      {isError ? (
+        <div className="py-8 text-center">
+          <p className="text-sm text-muted-foreground">
+            {t("product.qa.loadErr", { defaultValue: "Unable to load questions." })}
+          </p>
+          <button
+            type="button"
+            onClick={onRetry}
+            className="mt-3 text-sm font-semibold text-primary hover:underline"
+          >
+            {t("common.retry", { defaultValue: "Retry" })}
+          </button>
+        </div>
+      ) : null}
+      {!isLoading && !isError && questions.length === 0 ? (
         <p className="py-8 text-center text-sm text-muted-foreground">{t("product.qa.empty")}</p>
       ) : null}
-      {questions.map((question) => (
-        <article key={question.id} className="border border-border bg-card p-5">
-          <p className="text-sm font-semibold text-foreground">{question.question}</p>
-          {question.answer ? (
-            <p className="mt-3 text-sm text-muted-foreground">{question.answer}</p>
-          ) : null}
-        </article>
-      ))}
+      {!isLoading && !isError
+        ? questions.map((question) => (
+            <article key={question.id} className="border border-border bg-card p-5">
+              <p className="text-sm font-semibold text-foreground">{question.question}</p>
+              {question.answer ? (
+                <p className="mt-3 text-sm text-muted-foreground">{question.answer}</p>
+              ) : null}
+            </article>
+          ))
+        : null}
     </div>
   );
 }
