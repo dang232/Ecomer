@@ -158,6 +158,10 @@ test.describe("cart page UI — buyer flow", () => {
     const removeBtn = page.getByRole("button", { name: /remove.*from cart/i }).first();
     await expect(removeBtn).toBeVisible({ timeout: 10_000 });
     await removeBtn.click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: /^Remove$/i })
+      .click();
 
     await expect(page.getByText(/Your cart is empty|Giỏ hàng trống/i)).toBeVisible({
       timeout: 15_000,
