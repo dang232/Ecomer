@@ -29,7 +29,7 @@
 	<properties>
 		<java.version>25</java.version>
 		<jackson.version>2.21.4</jackson.version>
-		<jackson.annotations.version>2.21</jackson.annotations.version>
+		<jackson.annotations.version>2.22</jackson.annotations.version>
 		<postgresql.version>42.7.12</postgresql.version>
 		<tomcat.version>11.0.22</tomcat.version>
 	</properties>
