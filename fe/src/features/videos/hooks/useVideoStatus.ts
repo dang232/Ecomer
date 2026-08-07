@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { videoStatus } from "@/shared/api/endpoints/videos";
 import type { VideoStatus, VideoStatusResponse } from "@/shared/contracts/api/video";
@@ -78,15 +78,26 @@ export function useVideoStatus(
   // Track how long we've been in a non-terminal state. Resets each time we
   // move to a new non-terminal status (e.g. UPLOADING → TRANSCODING).
   const [pollStartedAt, setPollStartedAt] = useState<number | null>(null);
+  const previousStatusRef = useRef<VideoStatus | undefined>(undefined);
+  const previousVideoIdRef = useRef<string | null>(null);
   const status = query.data?.status;
 
   useEffect(() => {
-    if (enabled && !isTerminal(status) && pollStartedAt === null) {
+    const videoChanged = previousVideoIdRef.current !== videoId;
+    const statusChanged =
+      previousStatusRef.current !== undefined && previousStatusRef.current !== status;
+    previousVideoIdRef.current = videoId;
+    previousStatusRef.current = status;
+    if (
+      enabled &&
+      !isTerminal(status) &&
+      (pollStartedAt === null || statusChanged || videoChanged)
+    ) {
       setPollStartedAt(Date.now());
     } else if (isTerminal(status) && pollStartedAt !== null) {
       setPollStartedAt(null);
     }
-  }, [enabled, status, pollStartedAt]);
+  }, [enabled, status, videoId, pollStartedAt]);
 
   const isStuck =
     !!pollStartedAt &&

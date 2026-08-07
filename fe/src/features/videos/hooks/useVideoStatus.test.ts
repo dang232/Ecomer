@@ -200,4 +200,25 @@ describe("useVideoStatus", () => {
     expect(result.current.isStuck).toBe(false);
     expect(result.current.status).toBe("FAILED");
   });
+
+  it("resets the stuck timer when the pipeline advances to another non-terminal state", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const startTime = Date.now();
+    videoStatusMock
+      .mockResolvedValueOnce(makeStatusResponse("MODERATING"))
+      .mockResolvedValueOnce(makeStatusResponse("TRANSCODING"));
+
+    const { Wrapper } = makeWrapper();
+    const { result, rerender } = renderHook(({ videoId }) => useVideoStatus(videoId), {
+      initialProps: { videoId: "vid-1" },
+      wrapper: Wrapper,
+    });
+
+    await waitFor(() => expect(result.current.status).toBe("MODERATING"));
+    vi.setSystemTime(startTime + 16 * 60 * 1000);
+    rerender({ videoId: "vid-2" });
+
+    await waitFor(() => expect(result.current.status).toBe("TRANSCODING"));
+    expect(result.current.isStuck).toBe(false);
+  });
 });
