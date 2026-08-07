@@ -78,7 +78,7 @@ export const cursorPageSchema = <T extends z.ZodType>(item: T) =>
   z
     .object({
       items: z.array(item),
-      nextCursor: z.string().nullable().optional(),
+      nextCursor: z.string().nullable(),
       hasMore: z.boolean(),
       pageSize: z.number().int().min(1).max(100).optional(),
       sort: cursorSortSchema.optional(),
@@ -89,7 +89,7 @@ export const cursorPageSchema = <T extends z.ZodType>(item: T) =>
 
 export interface CursorPage<T> {
   items: T[];
-  nextCursor?: string | null;
+  nextCursor: string | null;
   hasMore: boolean;
   pageSize?: number;
   sort?: CursorSort;

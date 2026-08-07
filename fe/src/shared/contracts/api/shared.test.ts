@@ -45,6 +45,15 @@ describe("shared pagination contracts", () => {
         sort: { field: "createdAt", direction: "desc" },
       }),
     ).toThrow();
+
+    expect(() =>
+      schema.parse({
+        items: [],
+        hasMore: false,
+        pageSize: 25,
+        sort: { field: "createdAt", direction: "desc" },
+      }),
+    ).toThrow();
   });
 
   it.each([
