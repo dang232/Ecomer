@@ -51,6 +51,7 @@
   },
   "cart": {
     "title": "Giỏ hàng",
+    "metaDescription": "Xem lại giỏ hàng VNShop trước khi thanh toán.",
     "merge": {
       "title": "Gộp Giỏ Hàng",
       "description": "Bạn có {{guestCount}} sản phẩm trong giỏ hàng khách và {{serverCount}} sản phẩm trong giỏ hàng đã lưu",
@@ -251,6 +252,7 @@
     "frequentlyBoughtTogether": "Khách hàng thường mua cùng",
     "youMayAlsoLike": "Sản phẩm tương tự",
     "notFoundTitle": "Không tìm thấy sản phẩm",
+    "backToHome": "Về trang chủ",
     "back": "Quay lại",
     "breadcrumbHome": "Trang chủ",
     "badge": {
@@ -334,6 +336,10 @@
       "imageAlt": "Hình ảnh đánh giá {{count}}",
       "sectionTitle": "Đánh giá của khách hàng",
       "sectionSubtitle": "Điểm số và nhận xét từ những người đã mua sản phẩm này.",
+      "pagination": "Các trang đánh giá",
+      "previousPage": "Trang trước",
+      "nextPage": "Trang sau",
+      "pageOf": "Trang {{page}} / {{pageCount}}",
       "errorTitle": "Không thể tải đánh giá",
       "errorSubtitle": "Kiểm tra kết nối và thử lại.",
       "retry": "Thử lại",
@@ -602,7 +608,9 @@
       "errorInvalidState": "Phiên đăng nhập đã hết hạn hoặc đã được sử dụng. Vui lòng thử lại.",
       "errorExchange": "Không thể hoàn tất đăng nhập mạng xã hội. Vui lòng thử lại.",
       "errorGeneric": "Đăng nhập mạng xã hội thất bại. Vui lòng thử lại.",
-      "errorUnavailable": "Nhà cung cấp đăng nhập này hiện không khả dụng."
+      "errorUnavailable": "Nhà cung cấp đăng nhập này hiện không khả dụng.",
+      "unavailableLabel": "Không thể đăng nhập {{provider}}",
+      "unavailableShort": "Không khả dụng"
     },
     "form": {
       "username": "Email hoặc tên đăng nhập",
@@ -1414,6 +1422,7 @@
         "saveOk": "Đã lưu sản phẩm",
         "updateOk": "Đã cập nhật sản phẩm",
         "saveErr": "Không thể lưu sản phẩm",
+        "validationErr": "Vui lòng kiểm tra các trường được đánh dấu trước khi lưu",
         "savePartialErr": "Bản nháp đã được lưu nhưng không thể tải ảnh lên. Hãy kiểm tra ảnh rồi lưu lại.",
         "updateErr": "Không thể cập nhật sản phẩm",
         "publishOk": "Đã xuất bản sản phẩm",

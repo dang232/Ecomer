@@ -51,6 +51,7 @@
   },
   "cart": {
     "title": "Cart",
+    "metaDescription": "Review your VNShop cart before checkout.",
     "merge": {
       "title": "Merge Your Carts",
       "description": "You have {{guestCount}} items in guest cart and {{serverCount}} items in saved cart",
@@ -251,6 +252,7 @@
     "frequentlyBoughtTogether": "Frequently bought together",
     "youMayAlsoLike": "Similar products",
     "notFoundTitle": "Product not found",
+    "backToHome": "Back to home",
     "back": "Go back",
     "breadcrumbHome": "Home",
     "badge": {
@@ -334,6 +336,10 @@
       "imageAlt": "Review image {{count}}",
       "sectionTitle": "Customer reviews",
       "sectionSubtitle": "Ratings and feedback from shoppers who bought this product.",
+      "pagination": "Review pages",
+      "previousPage": "Previous page",
+      "nextPage": "Next page",
+      "pageOf": "Page {{page}} of {{pageCount}}",
       "errorTitle": "Reviews could not be loaded",
       "errorSubtitle": "Check your connection and try again.",
       "retry": "Try again",
@@ -602,7 +608,9 @@
       "errorInvalidState": "This social login session expired or was already used. Please try again.",
       "errorExchange": "We couldn't complete social login. Please try again.",
       "errorGeneric": "Social login failed. Please try again.",
-      "errorUnavailable": "This social login provider is currently unavailable."
+      "errorUnavailable": "This social login provider is currently unavailable.",
+      "unavailableLabel": "{{provider}} sign-in unavailable",
+      "unavailableShort": "Unavailable"
     },
     "form": {
       "username": "Email or username",
@@ -614,7 +622,7 @@
       "remember": "Keep me signed in",
       "submit": "Sign in",
       "submitting": "Signing in...",
-      "errorInvalidCredentials": "Wrong email/username or password.",
+      "errorInvalidCredentials": "Invalid user credentials. Check your email/username and password.",
       "errorGeneric": "Couldn't sign in. Try again in a moment.",
       "noAccount": "Don't have an account?",
       "signUp": "Create one",
@@ -1413,6 +1421,7 @@
         "saveOk": "Product saved",
         "updateOk": "Product updated",
         "saveErr": "Couldn't save product",
+        "validationErr": "Check the highlighted fields before saving",
         "savePartialErr": "Your draft was saved, but the image could not upload. Check the image and save again.",
         "updateErr": "Couldn't update product",
         "publishOk": "Product published",
