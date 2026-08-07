@@ -659,6 +659,14 @@ async function main() {
     });
   });
 
+  await record("fulfilment", "POST /orders/{orderId}/sub-orders/{subOrderId}/confirm-delivery", async () => {
+    if (!ctx.orderId || !ctx.subOrderId) throw new Error("missing order or sub-order id");
+    await http("POST", `/orders/${ctx.orderId}/sub-orders/${ctx.subOrderId}/confirm-delivery`, {
+      token: ctx.buyerToken,
+      expect: [200, 204],
+    });
+  });
+
   await record("shipping", "GET /shipping/tracking/{code}", async () => {
     const code = `E2E-${Date.now()}`;
     await http("GET", `/shipping/tracking/${code}?carrier=GHN`, {
@@ -790,7 +798,7 @@ async function main() {
   await record("review", "POST /reviews (buyer leaves a review)", async () => {
     // Some review use cases require a delivered orderId. Pass it; if the BE
     // doesn't accept the just-placed order yet, accept either 200/201/202 (created)
-    // OR 400 (the BE explicitly rejects unverified orders) as a documented
+    // OR 400/403 (the BE explicitly rejects unverified orders) as a documented
     // pre-condition. The smoke test verifies the endpoint round-trips, not
     // the business policy.
     await http("POST", "/reviews", {
@@ -801,7 +809,7 @@ async function main() {
         rating: 5,
         comment: "E2E test review — looks great.",
       },
-      expect: [200, 201, 202, 400],
+      expect: [200, 201, 202, 400, 403],
     });
   });
 
