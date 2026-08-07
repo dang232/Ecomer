@@ -270,3 +270,4 @@ app.*.symbols
 /.codex
 /.playwright-cli
 /.ua
+/.omo
