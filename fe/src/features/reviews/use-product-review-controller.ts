@@ -7,7 +7,7 @@ import {
   productReviewsQueryKey,
   useProductReviews,
 } from "@/features/reviews/api/use-product-reviews";
-import { summarizeReviews, type ReviewSummary } from "@/features/reviews/model/review-summary";
+import type { ReviewSummary } from "@/features/reviews/model/review-summary";
 import { ApiError } from "@/shared/api";
 import { createReview, voteReviewHelpful } from "@/shared/api/endpoints/reviews";
 import type { Review } from "@/shared/contracts/api";
@@ -45,18 +45,28 @@ export interface ProductReviewController {
   submission: ReviewSubmissionState | null;
   voteHelpful: (reviewId: string) => void;
   votingReviewId: string | null;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  totalElements: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+  setPage: (page: number) => void;
 }
 
 const INITIAL_DRAFT: ReviewDraft = { rating: 5, comment: "" };
+const PAGE_SIZE = 20;
 
 export function useProductReviewController(productId: string): ProductReviewController {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const reviewsQuery = useProductReviews(productId);
+  const [page, setPage] = useState(0);
+  const reviewsQuery = useProductReviews(productId, page, PAGE_SIZE);
   const [draft, setDraft] = useState<ReviewDraft>(INITIAL_DRAFT);
   const [submission, setSubmission] = useState<ReviewSubmissionState | null>(null);
 
   useEffect(() => {
+    setPage(0);
     setDraft(INITIAL_DRAFT);
     setSubmission(null);
   }, [productId]);
@@ -107,19 +117,48 @@ export function useProductReviewController(productId: string): ProductReviewCont
   });
 
   const reviews = useMemo(() => {
-    const published = reviewsQuery.data ?? [];
-    return submission ? mergePublishedReview(published, submission.review) : published;
-  }, [reviewsQuery.data, submission]);
+    const published = reviewsQuery.data?.content ?? [];
+    return page === 0 && submission
+      ? mergePublishedReview(published, submission.review)
+      : published;
+  }, [page, reviewsQuery.data, submission]);
 
   const hasReviewData = reviewsQuery.data !== undefined || submission?.outcome === "published";
-  const summary = useMemo(
-    () => (hasReviewData ? summarizeReviews(reviews) : undefined),
-    [hasReviewData, reviews],
-  );
+  const summary = useMemo(() => {
+    const source = reviewsQuery.data?.summary;
+    if (!hasReviewData || !source) return undefined;
+    const distribution = {
+      1: source.distribution["1"] ?? 0,
+      2: source.distribution["2"] ?? 0,
+      3: source.distribution["3"] ?? 0,
+      4: source.distribution["4"] ?? 0,
+      5: source.distribution["5"] ?? 0,
+    };
+    if (
+      page === 0 &&
+      submission &&
+      reviewPublicationOutcome(submission.review.status) === "published"
+    ) {
+      const rating = Math.min(5, Math.max(1, Math.round(submission.review.rating))) as
+        1 | 2 | 3 | 4 | 5;
+      distribution[rating] += 1;
+      const count = source.count + 1;
+      const total = Object.entries(distribution).reduce(
+        (sum, [value, amount]) => sum + Number(value) * amount,
+        0,
+      );
+      return { average: Math.round((total / count) * 10) / 10, count, distribution };
+    }
+    return {
+      average: source.average ?? 0,
+      count: source.count,
+      distribution,
+    };
+  }, [hasReviewData, page, reviewsQuery.data?.summary, submission]);
   const status = resolveAsyncStatus({
     isLoading: reviewsQuery.isLoading,
     hasError: reviewsQuery.isError,
-    isEmpty: hasReviewData && reviews.length === 0,
+    isEmpty: hasReviewData && reviews.length === 0 && !reviewsQuery.isPlaceholderData,
     hasData: reviews.length > 0,
   });
   const canSubmit = draft.rating >= 1 && draft.rating <= 5 && draft.comment.trim().length > 0;
@@ -148,5 +187,12 @@ export function useProductReviewController(productId: string): ProductReviewCont
     submission,
     voteHelpful: (reviewId) => helpfulMutation.mutate(reviewId),
     votingReviewId: helpfulMutation.isPending ? (helpfulMutation.variables ?? null) : null,
+    page,
+    pageSize: PAGE_SIZE,
+    totalPages: reviewsQuery.data?.totalPages ?? 0,
+    totalElements: reviewsQuery.data?.totalElements ?? 0,
+    hasPreviousPage: page > 0,
+    hasNextPage: page + 1 < (reviewsQuery.data?.totalPages ?? 0),
+    setPage,
   };
 }

@@ -60,7 +60,14 @@ describe("useProductReviewController", () => {
   it("adds an approved submission to the visible list and live summary immediately", async () => {
     const existing = review({ reviewId: "existing", rating: 3 });
     const published = review({ reviewId: "published", rating: 5, text: "Excellent" });
-    mocks.reviewsByProduct.mockResolvedValue([existing]);
+    mocks.reviewsByProduct.mockResolvedValue({
+      content: [existing],
+      page: 0,
+      size: 20,
+      totalElements: 1,
+      totalPages: 1,
+      summary: { average: 3, count: 1, distribution: { "3": 1 } },
+    });
     mocks.createReview.mockResolvedValue(published);
     const { Wrapper } = makeWrapper();
     const { result } = renderHook(() => useProductReviewController(PRODUCT_ID), {
@@ -86,7 +93,14 @@ describe("useProductReviewController", () => {
   });
 
   it("keeps a pending submission out of the public review list", async () => {
-    mocks.reviewsByProduct.mockResolvedValue([]);
+    mocks.reviewsByProduct.mockResolvedValue({
+      content: [],
+      page: 0,
+      size: 20,
+      totalElements: 0,
+      totalPages: 0,
+      summary: { average: null, count: 0, distribution: {} },
+    });
     mocks.createReview.mockResolvedValue(review({ reviewId: "pending", status: "PENDING" }));
     const { Wrapper } = makeWrapper();
     const { result } = renderHook(() => useProductReviewController(PRODUCT_ID), {

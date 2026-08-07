@@ -1,15 +1,18 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { reviewsByProduct } from "@/shared/api/endpoints/reviews";
-import type { Review } from "@/shared/contracts/api";
+import type { ReviewPage } from "@/shared/contracts/api";
 
-export const productReviewsQueryKey = (productId: string) =>
-  ["catalog", "reviews", "product", productId] as const;
+export const productReviewsQueryKey = (productId: string, page?: number, size?: number) =>
+  page === undefined
+    ? (["catalog", "reviews", "product", productId] as const)
+    : (["catalog", "reviews", "product", productId, { page, size: size ?? 20 }] as const);
 
-export function useProductReviews(productId: string) {
-  return useQuery<Review[]>({
-    queryKey: productReviewsQueryKey(productId),
-    queryFn: () => reviewsByProduct(productId),
+export function useProductReviews(productId: string, page: number, size = 20) {
+  return useQuery<ReviewPage>({
+    queryKey: productReviewsQueryKey(productId, page, size),
+    queryFn: () => reviewsByProduct(productId, { page, size }),
     enabled: !!productId,
+    placeholderData: keepPreviousData,
   });
 }

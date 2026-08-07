@@ -66,6 +66,15 @@ export const reviewPageSchema = z
     size: z.number().default(20),
     totalElements: z.number().default(0),
     totalPages: z.number().default(0),
+    first: z.boolean().optional(),
+    last: z.boolean().optional(),
+    summary: z
+      .object({
+        average: z.number().nullable().optional(),
+        count: z.number().default(0),
+        distribution: z.record(z.string(), z.number()).default({}),
+      })
+      .optional(),
   })
   .passthrough()
   .transform((raw) => ({
@@ -74,6 +83,9 @@ export const reviewPageSchema = z
     size: raw.size,
     totalElements: raw.totalElements,
     totalPages: raw.totalPages,
+    first: raw.first,
+    last: raw.last,
+    summary: raw.summary,
   }));
 export type ReviewPage = z.infer<typeof reviewPageSchema>;
 

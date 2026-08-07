@@ -7,6 +7,7 @@ import type { Review } from "@/shared/contracts/api";
 import { AsyncState } from "../../../shared/ui/async-state";
 import { Button } from "../../../shared/ui/button";
 import { TextAreaField } from "../../../shared/ui/field";
+import { Pagination } from "../../../shared/ui/pagination";
 import { Skeleton } from "../../../shared/ui/skeleton";
 import { StatusIndicator } from "../../../shared/ui/status-indicator";
 import { Surface } from "../../../shared/ui/surface";
@@ -370,6 +371,25 @@ export function ProductReviewsSection({
             />
           ))}
         </div>
+        {controller.totalPages > 1 ? (
+          <Pagination
+            page={controller.page + 1}
+            pageCount={controller.totalPages}
+            disabled={controller.status === "loading"}
+            onPageChange={(nextPage) => controller.setPage(nextPage - 1)}
+            labels={{
+              navigation: t("product.reviews.pagination", { defaultValue: "Review pages" }),
+              previous: t("product.reviews.previousPage", { defaultValue: "Previous page" }),
+              next: t("product.reviews.nextPage", { defaultValue: "Next page" }),
+              page: (page, pageCount) =>
+                t("product.reviews.pageOf", {
+                  page,
+                  pageCount,
+                  defaultValue: "Page {{page}} of {{pageCount}}",
+                }),
+            }}
+          />
+        ) : null}
       </AsyncState>
     </section>
   );

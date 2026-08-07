@@ -59,6 +59,13 @@ function controller(overrides: Partial<ProductReviewController> = {}): ProductRe
     submission: null,
     voteHelpful: vi.fn(),
     votingReviewId: null,
+    page: 0,
+    pageSize: 20,
+    totalPages: 1,
+    totalElements: 1,
+    hasPreviousPage: false,
+    hasNextPage: false,
+    setPage: vi.fn(),
     ...overrides,
   };
 }

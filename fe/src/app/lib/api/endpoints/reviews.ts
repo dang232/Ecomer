@@ -1,5 +1,3 @@
-import { z } from "zod";
-
 import {
   reviewImageActivateSchema,
   reviewImageUploadUrlSchema,
@@ -8,10 +6,16 @@ import {
 } from "../../../types/api";
 import { api } from "../client";
 
-export const reviewsByProduct = (productId: string) =>
-  api.get(`/reviews/product/${encodeURIComponent(productId)}`, z.array(reviewSchema), undefined, {
-    auth: false,
-  });
+export const reviewsByProduct = (
+  productId: string,
+  params: { page?: number; size?: number } = {},
+) =>
+  api.get(
+    `/reviews/product/${encodeURIComponent(productId)}`,
+    reviewPageSchema,
+    { page: params.page ?? 0, size: params.size ?? 20 },
+    { auth: false },
+  );
 
 export interface CreateReviewInput {
   productId: string;
