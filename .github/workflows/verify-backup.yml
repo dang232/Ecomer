@@ -140,7 +140,7 @@ jobs:
           kubectl -n "$RESTORE_NAMESPACE" exec postgres -- sh -ec \
             'gzip -dc /tmp/postgresql.sql.gz | PGPASSWORD="$POSTGRES_PASSWORD" psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
           postgres_tables="$(kubectl -n "$RESTORE_NAMESPACE" exec postgres -- sh -ec \
-            'PGPASSWORD="$POSTGRES_PASSWORD" psql -At -U "$POSTGRES_USER" -d vnshop -c "select count(*) from information_schema.tables where table_schema not in ('"'"'pg_catalog'"'"','"'"'information_schema'"'"');"')"
+            'PGPASSWORD="$POSTGRES_PASSWORD" psql -At -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "select count(*) from information_schema.tables where table_schema not in ('"'"'pg_catalog'"'"','"'"'information_schema'"'"');"')"
           (( postgres_tables > 0 ))
 
           kubectl -n "$RESTORE_NAMESPACE" cp "$RUNNER_TEMP/restore/timescaledb.sql.gz" timescaledb:/tmp/timescaledb.sql.gz

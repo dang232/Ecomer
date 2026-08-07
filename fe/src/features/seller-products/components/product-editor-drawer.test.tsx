@@ -184,9 +184,7 @@ describe("ProductEditorDrawer", () => {
     fireEvent.click(screen.getByRole("button", { name: /seller\.products\.editor\.saveDraft/i }));
 
     await waitFor(() => {
-      expect(screen.getByRole("alert")).toHaveTextContent(
-        "seller.products.editor.validationErr",
-      );
+      expect(screen.getByRole("alert")).toHaveTextContent("seller.products.editor.validationErr");
     });
   });
 

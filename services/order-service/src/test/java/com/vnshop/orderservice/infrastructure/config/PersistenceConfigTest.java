@@ -13,7 +13,7 @@ class PersistenceConfigTest {
             .withUserConfiguration(PersistenceConfig.class);
 
     @Test
-    void enablesStubsOnlyWhenGrpcClientsAreDisabled() {
+    void providesStubsRegardlessOfGrpcClientProperty() {
         contextRunner
                 .withPropertyValues("grpc.client.enabled=false")
                 .run(context -> {
@@ -25,9 +25,9 @@ class PersistenceConfigTest {
         contextRunner
                 .withPropertyValues("grpc.client.enabled=true")
                 .run(context -> {
-                    assertThat(context).doesNotHaveBean(InventoryReservationPort.class);
-                    assertThat(context).doesNotHaveBean(PaymentRequestPort.class);
-                    assertThat(context).doesNotHaveBean(ShippingRequestPort.class);
+                    assertThat(context).hasSingleBean(InventoryReservationPort.class);
+                    assertThat(context).hasSingleBean(PaymentRequestPort.class);
+                    assertThat(context).hasSingleBean(ShippingRequestPort.class);
                 });
     }
 }

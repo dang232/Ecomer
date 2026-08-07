@@ -5,7 +5,7 @@ on:
     branches: [main, "release/**"]
     paths:
       - "vnshop_mobile/**"
-      - "design-tokens/**"
+      - "design-system/**"
       - "scripts/generate-design-tokens.mjs"
       - "scripts/generate-design-tokens.test.mjs"
       - ".github/workflows/flutter.yml"

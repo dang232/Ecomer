@@ -190,7 +190,7 @@ jobs:
           retention-days: 90
 
       - name: Login to GHCR
-        uses: docker/login-action@0a2efd3f8f6b0e6a8c8e8e8e8e8e8e8e8e8e8e8e # v3.3.0
+        uses: docker/login-action@abd2ef45e78c5afb21d64d4ca52ee8550d9572c7 # v4.5.1
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -214,7 +214,7 @@ jobs:
           jq -n \
             --arg image "$frontend_image" \
             --arg digest "$frontend_digest" \
-            --argjson capturedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg capturedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             '{image:$image,digest:$digest,capturedAt:$capturedAt}' \
             > frontend-image-evidence.json
 
@@ -227,11 +227,13 @@ jobs:
           source_commit="$(jq -r '.sourceCommit' infra/release/locks/staging.json)"
           gh attestation verify "oci://$FRONTEND_IMAGE" \
             --bundle-from-oci \
-            --signer-repo vnshop/cd-signer \
-            --expected-source-commit "$source_commit"
+            --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/cd.yml" \
+            --source-digest "$source_commit" \
+            --deny-self-hosted-runners
           jq -n \
             --arg sourceCommit "$source_commit" \
-            --argjson capturedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg capturedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             '{sourceCommit:$sourceCommit,verifiedAt:$capturedAt}' \
             > attestation-evidence.json
 
