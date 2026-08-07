@@ -47,6 +47,12 @@ function ProductPageContent({ productId }: { productId: string }) {
   const { items: recentlyViewed, addToRecentlyViewed } = useRecentlyViewed();
   const fbtQuery = useFrequentlyBoughtTogether(productId);
   const ymalQuery = useYouMayAlsoLike(productId);
+  const {
+    videos: productVideos,
+    isLoading: productVideosLoading,
+    isError: productVideosError,
+    refetch: refetchProductVideos,
+  } = useProductVideos(productId);
   const [selectedColor, setSelectedColor] = useState(product.colors?.[0] ?? "");
   const [selectedSize, setSelectedSize] = useState(product.sizes?.[0] ?? "");
   const [quantity, setQuantity] = useState(1);
@@ -94,6 +100,21 @@ function ProductPageContent({ productId }: { productId: string }) {
       }),
     [product, reviewController.summary?.average, selectedVariantSku, seller],
   );
+  const galleryView = useMemo(() => {
+    if (detailView.media.length > 0 || productVideos.length === 0) return detailView;
+    return {
+      ...detailView,
+      media: productVideos
+        .filter((video) => Boolean(video.playbackUrl))
+        .map((video, index) => ({
+          id: video.id,
+          url: video.playbackUrl ?? "",
+          alt: `${product.name} video ${index + 1}`,
+          type: "video" as const,
+          poster: video.thumbnailUrl,
+        })),
+    };
+  }, [detailView, product.name, productVideos]);
 
   const questionsQuery = useQuery({
     queryKey: ["questions", "product", productId],
@@ -110,13 +131,6 @@ function ProductPageContent({ productId }: { productId: string }) {
     onError: (error) =>
       toast.error(error instanceof ApiError ? error.message : t("product.qa.submitErr")),
   });
-  const {
-    videos: productVideos,
-    isLoading: productVideosLoading,
-    isError: productVideosError,
-    refetch: refetchProductVideos,
-  } = useProductVideos(productId);
-
   const updateRoute = (updates: Partial<typeof route>) => {
     setSearchParams((previous) => updateProductRouteState(previous, updates), { replace: true });
   };
@@ -141,8 +155,17 @@ function ProductPageContent({ productId }: { productId: string }) {
 
   return (
     <>
+      <div className="mx-auto w-full max-w-[1440px] px-4 pt-6 sm:px-6 lg:px-8">
+        <button
+          type="button"
+          onClick={() => void navigate("/")}
+          className="min-h-[var(--target-web)] rounded-[var(--radius-control)] px-3 py-2 text-sm font-semibold text-primary hover:bg-muted"
+        >
+          {t("product.backToHome", { defaultValue: "Back to home" })}
+        </button>
+      </div>
       <ProductDetail
-        view={detailView}
+        view={galleryView}
         route={route}
         badge={product.badge}
         colors={product.colors}
