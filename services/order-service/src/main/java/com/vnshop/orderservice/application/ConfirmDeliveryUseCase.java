@@ -47,8 +47,14 @@ public class ConfirmDeliveryUseCase {
         if (!order.buyerId().equals(buyerId)) {
             throw new OrderAccessDeniedException("not authorized to confirm delivery for this order");
         }
-        if (order.paymentStatus() != com.vnshop.orderservice.domain.PaymentStatus.COMPLETED) {
+        boolean codCollectionAtDelivery = "COD".equalsIgnoreCase(order.paymentMethod())
+                && order.paymentStatus() == com.vnshop.orderservice.domain.PaymentStatus.PENDING;
+        if (order.paymentStatus() != com.vnshop.orderservice.domain.PaymentStatus.COMPLETED
+                && !codCollectionAtDelivery) {
             throw new IllegalStateException("delivery confirmation requires completed payment");
+        }
+        if (codCollectionAtDelivery) {
+            order.markPaymentCompleted();
         }
 
         SubOrder subOrder = order.subOrders().stream()

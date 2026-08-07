@@ -51,13 +51,13 @@ class ConfirmDeliveryUseCaseTest {
     }
 
     @Test
-    void refusesToReleaseAnUnpaidOrder() {
+    void refusesToReleaseAnUnpaidNonCodOrder() {
         UUID orderId = UUID.randomUUID();
         SubOrder subOrder = new SubOrder(17L, "seller-42", List.of(new OrderItem("product-1", "sku", "seller-42",
                 "Product", 1, new Money(new BigDecimal("100000")), null)), FulfillmentStatus.SHIPPED,
                 Money.ZERO, "STANDARD", "GHN", "tracking");
         Order order = new Order(orderId, "VNS-20260724-0002", "buyer-1", new Address("street", null, "district", "city"),
-                List.of(subOrder), new Money(new BigDecimal("100000")), Money.ZERO, Money.ZERO, "COD",
+                List.of(subOrder), new Money(new BigDecimal("100000")), Money.ZERO, Money.ZERO, "VIETQR",
                 PaymentStatus.PENDING, "checkout-key");
         OrderRepositoryPort orders = mock(OrderRepositoryPort.class);
         when(orders.findById(orderId)).thenReturn(Optional.of(order));
@@ -70,6 +70,27 @@ class ConfirmDeliveryUseCaseTest {
                 .hasMessageContaining("completed payment");
         org.mockito.Mockito.verify(orders, org.mockito.Mockito.never()).save(order);
         assertThat(subOrder.fulfillmentStatus()).isEqualTo(FulfillmentStatus.SHIPPED);
+    }
+
+    @Test
+    void collectsCodPaymentWhenBuyerConfirmsDelivery() {
+        UUID orderId = UUID.randomUUID();
+        SubOrder subOrder = new SubOrder(17L, "seller-42", List.of(new OrderItem("product-1", "sku", "seller-42",
+                "Product", 1, new Money(new BigDecimal("100000")), null)), FulfillmentStatus.SHIPPED,
+                Money.ZERO, "STANDARD", "GHN", "tracking");
+        Order order = new Order(orderId, "VNS-20260724-0003", "buyer-1", new Address("street", null, "district", "city"),
+                List.of(subOrder), new Money(new BigDecimal("100000")), Money.ZERO, Money.ZERO, "COD",
+                PaymentStatus.PENDING, "checkout-key");
+        OrderRepositoryPort orders = mock(OrderRepositoryPort.class);
+        OrderEventPublisherPort events = mock(OrderEventPublisherPort.class);
+        when(orders.findById(orderId)).thenReturn(Optional.of(order));
+        when(orders.save(order)).thenReturn(order);
+
+        new ConfirmDeliveryUseCase(orders, events).confirm(orderId, 17L, "buyer-1");
+
+        assertThat(order.paymentStatus()).isEqualTo(PaymentStatus.COMPLETED);
+        assertThat(subOrder.fulfillmentStatus()).isEqualTo(FulfillmentStatus.DELIVERED);
+        verify(events).publishOrderDelivered(order, subOrder);
     }
 
     @Test
