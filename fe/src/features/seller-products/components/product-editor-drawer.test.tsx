@@ -178,6 +178,18 @@ describe("ProductEditorDrawer", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows validation feedback instead of silently ignoring an invalid draft save", async () => {
+    renderDrawer(true, null, vi.fn(), vi.fn());
+
+    fireEvent.click(screen.getByRole("button", { name: /seller\.products\.editor\.saveDraft/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "seller.products.editor.validationErr",
+      );
+    });
+  });
+
   it("calls onClose when Cancel is clicked (form is not dirty)", () => {
     const onClose = vi.fn();
     renderDrawer(true, null, onClose, vi.fn());
@@ -227,5 +239,15 @@ describe("ProductEditorDrawer", () => {
     ).toBeInTheDocument();
     expect(screen.queryByTestId("video-upload-dropzone")).not.toBeInTheDocument();
     expect(useVideoUploadMock).not.toHaveBeenCalled();
+  });
+
+  it("lets a new product stage a video before the product ID exists", () => {
+    renderDrawer(true, null, vi.fn(), vi.fn());
+    const input = screen.getByLabelText("Videos (0/3)");
+    const file = new File(["video"], "demo.mp4", { type: "video/mp4" });
+
+    fireEvent.change(input, { target: { files: [file] } });
+
+    expect(screen.getByText("demo.mp4")).toBeInTheDocument();
   });
 });

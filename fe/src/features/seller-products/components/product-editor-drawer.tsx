@@ -5,10 +5,10 @@
  * collection and are uploaded only after a product ID exists.
  */
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { toNestErrors } from "@hookform/resolvers";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type FieldError, type FieldErrors, type Resolver } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -47,6 +47,18 @@ export interface ProductEditorDrawerProps {
   /** Called after a successful save. Callers should invalidate list queries. */
   onSave: (values: SellerProductForm) => Promise<void>;
 }
+
+const sellerProductResolver: Resolver<SellerProductForm> = async (values, _, options) => {
+  const result = await sellerProductFormSchema.safeParseAsync(values);
+  if (result.success) return { values: result.data, errors: {} };
+
+  const flatErrors = result.error.issues.reduce<Record<string, FieldError>>((errors, issue) => {
+    const path = issue.path.join(".");
+    if (!errors[path]) errors[path] = { type: issue.code, message: issue.message };
+    return errors;
+  }, {});
+  return { values: {}, errors: toNestErrors(flatErrors, options) };
+};
 
 interface SaveInput {
   values: SellerProductForm;
@@ -106,6 +118,8 @@ export function ProductEditorDrawer({ open, product, onClose, onSave }: ProductE
     formValues: SellerProductForm;
   } | null>(null);
   const [pendingImages, setPendingImages] = useState<PendingProductImage[]>([]);
+  const [pendingVideo, setPendingVideo] = useState<File | null>(null);
+  const [validationFeedback, setValidationFeedback] = useState(false);
   const pendingImagesRef = useRef<PendingProductImage[]>([]);
 
   const updatePendingImages = useCallback((nextImages: PendingProductImage[]) => {
@@ -132,7 +146,7 @@ export function ProductEditorDrawer({ open, product, onClose, onSave }: ProductE
   );
 
   const form = useForm<SellerProductForm>({
-    resolver: zodResolver(sellerProductFormSchema),
+    resolver: sellerProductResolver,
     defaultValues: emptySellerProductForm(),
     mode: "onTouched",
   });
@@ -142,6 +156,7 @@ export function ProductEditorDrawer({ open, product, onClose, onSave }: ProductE
   useEffect(() => {
     if (!open) return;
     clearPendingImages();
+    setPendingVideo(null);
     if (isEdit) {
       setRecoveredDraft(null);
       return;
@@ -160,6 +175,7 @@ export function ProductEditorDrawer({ open, product, onClose, onSave }: ProductE
   useEffect(() => {
     if (!open || !isEdit || !productDetailQuery.data) return;
     clearPendingImages();
+    setPendingVideo(null);
     setRecoveredDraft(null);
     reset(fromSellerProduct(productDetailQuery.data));
   }, [clearPendingImages, isEdit, open, productDetailQuery.data, reset]);
@@ -296,6 +312,13 @@ export function ProductEditorDrawer({ open, product, onClose, onSave }: ProductE
     createMutation.mutate({ values, body, pendingImages: images });
   };
 
+  const handleInvalidSave = (errors: FieldErrors<SellerProductForm>) => {
+    setValidationFeedback(true);
+    const firstInvalidField = Object.keys(errors)[0] as keyof SellerProductForm | undefined;
+    if (firstInvalidField) void form.setFocus(firstInvalidField);
+    toast.error(t("seller.products.editor.validationErr"));
+  };
+
   const isBusy =
     createMutation.isPending ||
     updateMutation.isPending ||
@@ -333,6 +356,8 @@ export function ProductEditorDrawer({ open, product, onClose, onSave }: ProductE
 
   const handleContinueEditing = () => setRecoveredDraft(null);
 
+  const handleVideoFileSelected = (file: File) => setPendingVideo(file);
+
   const savePending = isExistingProduct ? updateMutation.isPending : createMutation.isPending;
   const saveLabel = recoveredDraft
     ? t("seller.products.editor.updateDraft")
@@ -341,12 +366,17 @@ export function ProductEditorDrawer({ open, product, onClose, onSave }: ProductE
       : t("seller.products.editor.saveDraft");
   const footer = (
     <>
+      {validationFeedback ? (
+        <p role="alert" className="w-full text-sm text-destructive">
+          {t("seller.products.editor.validationErr")}
+        </p>
+      ) : null}
       <Button variant="outline" onClick={handleClose} disabled={isBusy}>
         {t("seller.products.editor.cancel")}
       </Button>
       <Button
         variant="primary"
-        onClick={form.handleSubmit(handleSave)}
+        onClick={form.handleSubmit(handleSave, handleInvalidSave)}
         disabled={isBusy || editorLoading || editorError}
         pending={savePending}
         pendingLabel={t("seller.products.editor.saving")}
@@ -421,19 +451,18 @@ export function ProductEditorDrawer({ open, product, onClose, onSave }: ProductE
                 disabled={isBusy}
               />
               {persistedProductId ? (
-                <ProductVideoFields productId={persistedProductId} disabled={isBusy} />
+                <ProductVideoFields
+                  productId={persistedProductId}
+                  disabled={isBusy}
+                  initialFile={pendingVideo}
+                  onInitialFileConsumed={() => setPendingVideo(null)}
+                />
               ) : (
-                <fieldset className="space-y-1 border-t border-border pt-4">
-                  <legend className="sr-only">
-                    {t("video.seller.sectionTitle", { count: 0, max: 3 })}
-                  </legend>
-                  <p className="text-sm font-semibold text-foreground" aria-hidden="true">
-                    {t("video.seller.sectionTitle", { count: 0, max: 3 })}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {t("seller.products.editor.videoCreateHint")}
-                  </p>
-                </fieldset>
+                <ProductVideoCreateField
+                  disabled={isBusy}
+                  onFileSelected={handleVideoFileSelected}
+                  selectedFile={pendingVideo}
+                />
               )}
             </section>
 
@@ -481,5 +510,47 @@ export function ProductEditorDrawer({ open, product, onClose, onSave }: ProductE
         variant="danger"
       />
     </>
+  );
+}
+
+function ProductVideoCreateField({
+  disabled,
+  onFileSelected,
+  selectedFile,
+}: {
+  disabled: boolean;
+  onFileSelected: (file: File) => void;
+  selectedFile: File | null;
+}) {
+  const { t } = useTranslation();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <fieldset className="space-y-2 border-t border-border pt-4" disabled={disabled}>
+      <legend className="sr-only">{t("video.seller.sectionTitle", { count: 0, max: 3 })}</legend>
+      <p className="text-sm font-semibold text-foreground">
+        {t("video.seller.sectionTitle", { count: 0, max: 3 })}
+      </p>
+      <p className="text-xs text-muted-foreground">{t("seller.products.editor.videoCreateHint")}</p>
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        className="rounded-[var(--radius-md)] border border-dashed border-border px-3 py-2 text-sm font-medium text-muted-foreground hover:border-primary hover:text-primary"
+      >
+        {selectedFile ? selectedFile.name : t("video.upload.dropzone.title")}
+      </button>
+      <input
+        ref={inputRef}
+        aria-label={t("video.seller.sectionTitle", { count: 0, max: 3 })}
+        type="file"
+        accept="video/mp4,video/quicktime,video/webm,video/x-matroska"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) onFileSelected(file);
+          event.target.value = "";
+        }}
+      />
+    </fieldset>
   );
 }
