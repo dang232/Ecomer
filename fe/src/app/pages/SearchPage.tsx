@@ -493,8 +493,7 @@ export function SearchPage() {
 
   return (
     <div className="max-w-[1400px] mx-auto py-6 px-[var(--content-padding)]">
-      {/* Page heading for screen readers */}
-      <h1 className="sr-only">
+      <h1 className="mb-5 text-2xl font-bold text-foreground sm:text-3xl">
         {query
           ? t("search.resultsForQuery", { query, defaultValue: `Search results for "${query}"` })
           : t("search.allProducts", { defaultValue: "All Products" })}
