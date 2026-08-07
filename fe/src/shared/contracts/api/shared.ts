@@ -68,7 +68,7 @@ export type CursorErrorCode = z.infer<typeof cursorErrorCodeSchema>;
 
 export const cursorErrorSchema = z
   .object({
-    code: cursorErrorCodeSchema,
+    errorCode: cursorErrorCodeSchema,
     message: z.string().optional(),
   })
   .passthrough();

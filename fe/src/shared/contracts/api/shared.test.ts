@@ -47,15 +47,20 @@ describe("shared pagination contracts", () => {
     ).toThrow();
   });
 
-  it("represents stable cursor failure codes", () => {
-    expect(cursorErrorSchema.parse({ code: "cursor_invalid", message: "Cursor expired" })).toEqual({
-      code: "cursor_invalid",
-      message: "Cursor expired",
-    });
-    expect(cursorErrorSchema.parse({ code: "cursor_scope_mismatch" })).toEqual({
-      code: "cursor_scope_mismatch",
-    });
-  });
+  it.each([
+    "cursor_invalid",
+    "cursor_scope_mismatch",
+    "invalid_page_size",
+    "invalid_sort",
+  ] as const)(
+    "represents the stable cursor failure code %s in the API envelope field",
+    (errorCode) => {
+      expect(cursorErrorSchema.parse({ errorCode, message: "Request rejected" })).toEqual({
+        errorCode,
+        message: "Request rejected",
+      });
+    },
+  );
 
   it("continues to parse legacy offset pages", () => {
     expect(
