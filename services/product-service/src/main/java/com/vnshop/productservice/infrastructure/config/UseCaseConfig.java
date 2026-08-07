@@ -239,8 +239,10 @@ public class UseCaseConfig {
             LocalStagingStore localStagingStore,
             VideoEventPublisherPort videoEventPublisherPort,
             VideoRedisPort videoRedis,
-            VideoStorageProperties properties) {
+            VideoStorageProperties properties,
+            ProductRepositoryPort productRepositoryPort,
+            ReviewRepositoryPort reviewRepositoryPort) {
         return new VideoUploadService(videoJpaRepository, localStagingStore, videoEventPublisherPort, videoRedis,
-                properties);
+                properties, productRepositoryPort, reviewRepositoryPort);
     }
 }

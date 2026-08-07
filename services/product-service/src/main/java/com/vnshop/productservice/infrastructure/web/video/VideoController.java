@@ -1,6 +1,7 @@
 package com.vnshop.productservice.infrastructure.web.video;
 
 import com.vnshop.productservice.application.video.VideoUploadService;
+import com.vnshop.productservice.application.video.VideoValidationException;
 import com.vnshop.productservice.domain.video.Video;
 import com.vnshop.productservice.infrastructure.config.JwtPrincipalUtil;
 import com.vnshop.productservice.infrastructure.web.ApiResponse;
@@ -48,6 +49,7 @@ public class VideoController {
     static final String HEADER_UPLOAD_LENGTH  = "Upload-Length";
     static final String HEADER_UPLOAD_METADATA = "Upload-Metadata";
     static final String HEADER_CONTENT_TYPE_TUS = "application/offset+octet-stream";
+    static final int MAX_CHUNK_BYTES = 5 * 1024 * 1024;
 
     private final VideoUploadService videoUploadService;
 
@@ -86,15 +88,20 @@ public class VideoController {
     public ResponseEntity<Void> uploadChunk(
             @PathVariable UUID id,
             @RequestHeader(HEADER_UPLOAD_OFFSET) long uploadOffset,
-            HttpServletRequest request) throws IOException {
+        HttpServletRequest request) throws IOException {
 
         String uploaderId = JwtPrincipalUtil.currentUserId();
-        byte[] chunkData = request.getInputStream().readAllBytes();
+        if (request.getContentLengthLong() > MAX_CHUNK_BYTES) {
+            throw new VideoValidationException("chunk_too_large", "Upload chunk exceeds the 5 MiB limit");
+        }
+        byte[] chunkData = request.getInputStream().readNBytes(MAX_CHUNK_BYTES + 1);
+        if (chunkData.length > MAX_CHUNK_BYTES) {
+            throw new VideoValidationException("chunk_too_large", "Upload chunk exceeds the 5 MiB limit");
+        }
 
         // H4 fix: appendChunk now owns final-chunk detection via the service's stored totalSize.
-        videoUploadService.appendChunk(id, uploaderId, uploadOffset, chunkData.length, chunkData);
+        long newOffset = videoUploadService.appendChunk(id, uploaderId, uploadOffset, chunkData.length, chunkData);
 
-        long newOffset = uploadOffset + chunkData.length;
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_TUS_RESUMABLE, TUS_RESUMABLE);
         headers.set(HEADER_UPLOAD_OFFSET, String.valueOf(newOffset));

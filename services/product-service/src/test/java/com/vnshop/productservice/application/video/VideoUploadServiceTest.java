@@ -2,8 +2,12 @@ package com.vnshop.productservice.application.video;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.vnshop.productservice.domain.port.out.ObjectStoragePort;
+import com.vnshop.productservice.domain.port.out.ProductRepositoryPort;
+import com.vnshop.productservice.domain.review.port.out.ReviewRepositoryPort;
 import com.vnshop.productservice.domain.storage.ObjectMetadata;
 import com.vnshop.productservice.domain.storage.ObjectStorageClass;
 import com.vnshop.productservice.domain.video.Video;
@@ -83,6 +87,45 @@ class VideoUploadServiceTest {
         assertThat(video.stagingKey()).endsWith(".mp4");
         assertThat(videoRepository.saved).hasSize(1);
         assertThat(videoRepository.history).hasSize(1);
+    }
+
+    @Test
+    void createUploadSession_rejectsProductOwnedByAnotherSeller() {
+        ProductRepositoryPort products = mock(ProductRepositoryPort.class);
+        when(products.findById(PRODUCT_ID)).thenReturn(Optional.of(new com.vnshop.productservice.domain.Product(
+                PRODUCT_ID, OTHER_UPLOADER, "Product", "Description", "electronics", "Brand", List.of(), List.of())));
+        service = new VideoUploadService(videoRepository, localStaging, eventPublisher, videoRedis,
+                new VideoStorageProperties("vnshop-video-uploads-tmp", "vnshop-videos-staging", "vnshop-videos"),
+                products, null);
+
+        assertThatThrownBy(() -> service.createUploadSession(
+                UPLOADER, VideoOwnerType.PRODUCT, PRODUCT_ID, "idem-owned", 1024))
+                .isInstanceOf(VideoNotFoundException.class);
+        assertThat(videoRepository.saved).isEmpty();
+    }
+
+    @Test
+    void markTranscodeFailed_transitionsActiveVideoAndRecordsReason() {
+        Video video = service.createUploadSession(UPLOADER, VideoOwnerType.PRODUCT, PRODUCT_ID, "idem-failed", 1024);
+
+        videoRepository.saved.put(video.videoId(), video.withStatus(VideoStatus.TRANSCODING));
+        service.markTranscodeFailed(video.videoId(), "ffmpeg exited with code 1");
+
+        assertThat(videoRepository.saved.get(video.videoId()).status()).isEqualTo(VideoStatus.FAILED);
+        assertThat(videoRepository.history).anyMatch(history ->
+                history.toStatus() == VideoStatus.FAILED
+                        && "transcoder".equals(history.changedBy())
+                        && "ffmpeg exited with code 1".equals(history.reason()));
+    }
+
+    @Test
+    void markTranscodeFailed_ignoresTerminalVideo() {
+        Video video = publishedVideo();
+
+        service.markTranscodeFailed(video.videoId(), "late failure");
+
+        assertThat(videoRepository.saved.get(video.videoId()).status()).isEqualTo(VideoStatus.PUBLISHED);
+        assertThat(videoRepository.history).isEmpty();
     }
 
     @Test
@@ -181,6 +224,53 @@ class VideoUploadServiceTest {
                         video.videoId(), UPLOADER, 0, VALID_MP4_HEADER.length - 1, VALID_MP4_HEADER))
                 .isInstanceOf(VideoValidationException.class)
                 .hasMessageContaining("chunk length");
+    }
+
+    @Test
+    void appendChunk_rejectsStaleOffsetBeforeWritingAnotherChunk() {
+        Video video = service.createUploadSession(UPLOADER, VideoOwnerType.PRODUCT, PRODUCT_ID, "idem-offset", 1024);
+        service.appendChunk(video.videoId(), UPLOADER, 0, VALID_MP4_HEADER.length, VALID_MP4_HEADER);
+
+        assertThatThrownBy(() -> service.appendChunk(
+                        video.videoId(), UPLOADER, 0, VALID_MP4_HEADER.length, VALID_MP4_HEADER))
+                .isInstanceOf(VideoValidationException.class)
+                .hasMessageContaining("offset");
+
+        assertThat(localStaging.writeCount.get(video.videoId())).isEqualTo(1);
+    }
+
+    @Test
+    void appendChunk_serializesConcurrentChunksAtTheSameOffset() throws Exception {
+        Video video = service.createUploadSession(UPLOADER, VideoOwnerType.PRODUCT, PRODUCT_ID, "idem-race", 1024);
+        byte[] chunk = new byte[VALID_MP4_HEADER.length];
+        System.arraycopy(VALID_MP4_HEADER, 0, chunk, 0, VALID_MP4_HEADER.length);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        try {
+            Future<Long> first = executor.submit(() -> service.appendChunk(
+                    video.videoId(), UPLOADER, 0, chunk.length, chunk));
+            Future<Long> second = executor.submit(() -> service.appendChunk(
+                    video.videoId(), UPLOADER, 0, chunk.length, chunk));
+
+            int successes = 0;
+            int staleOffsetFailures = 0;
+            for (Future<Long> result : List.of(first, second)) {
+                try {
+                    assertThat(result.get(5, TimeUnit.SECONDS)).isEqualTo((long) chunk.length);
+                    successes++;
+                } catch (java.util.concurrent.ExecutionException ex) {
+                    assertThat(ex.getCause())
+                            .isInstanceOf(VideoValidationException.class)
+                            .hasMessageContaining("offset");
+                    staleOffsetFailures++;
+                }
+            }
+            assertThat(successes).isEqualTo(1);
+            assertThat(staleOffsetFailures).isEqualTo(1);
+            assertThat(localStaging.writeCount.get(video.videoId())).isEqualTo(1);
+        } finally {
+            executor.shutdownNow();
+        }
     }
 
     @Test

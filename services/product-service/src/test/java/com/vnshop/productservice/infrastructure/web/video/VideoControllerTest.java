@@ -18,6 +18,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -118,6 +119,18 @@ class VideoControllerTest {
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         assertThat(response.getHeaders().getFirst("Upload-Offset")).isEqualTo("256");
         assertThat(response.getHeaders().getFirst("Tus-Resumable")).isEqualTo("1.0.0");
+    }
+
+    @Test
+    void uploadChunk_returnsServerAuthoritativeOffset() throws Exception {
+        when(service.appendChunk(eq(VIDEO_ID), eq(UPLOADER), eq(0L), eq(12), any()))
+                .thenReturn(7L);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setContent(new byte[12]);
+
+        ResponseEntity<Void> response = controller.uploadChunk(VIDEO_ID, 0L, request);
+
+        assertThat(response.getHeaders().getFirst("Upload-Offset")).isEqualTo("7");
     }
 
     // -------------------------------------------------------------------------

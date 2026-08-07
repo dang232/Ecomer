@@ -5,10 +5,13 @@ import com.vnshop.productservice.domain.video.VideoEvent;
 import com.vnshop.productservice.domain.video.VideoOwnerType;
 import com.vnshop.productservice.domain.video.VideoStatus;
 import com.vnshop.productservice.domain.video.VideoStatusHistory;
+import com.vnshop.productservice.domain.Product;
+import com.vnshop.productservice.domain.port.out.ProductRepositoryPort;
+import com.vnshop.productservice.domain.review.Review;
+import com.vnshop.productservice.domain.review.port.out.ReviewRepositoryPort;
 import com.vnshop.productservice.domain.video.port.out.VideoEventPublisherPort;
 import com.vnshop.productservice.infrastructure.persistence.video.VideoJpaRepository;
 import com.vnshop.productservice.infrastructure.storage.VideoStorageProperties;
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +38,6 @@ import java.util.UUID;
  * <p>The stuck-video reaper has been extracted to {@link VideoReaper} (H3).
  * Redis state has been extracted to {@link VideoRedisPort} (H5).
  */
-@RequiredArgsConstructor
 public class VideoUploadService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(VideoUploadService.class);
@@ -65,6 +67,33 @@ public class VideoUploadService {
     private final VideoEventPublisherPort videoEventPublisherPort;
     private final VideoRedisPort videoRedis;
     private final VideoStorageProperties videoStorageProperties;
+    private final ProductRepositoryPort productRepository;
+    private final ReviewRepositoryPort reviewRepository;
+    private final Object[] uploadLocks = new Object[64];
+
+    {
+        Arrays.setAll(uploadLocks, ignored -> new Object());
+    }
+
+    public VideoUploadService(VideoJpaRepository videoJpaRepository, LocalStagingStore localStagingStore,
+            VideoEventPublisherPort videoEventPublisherPort, VideoRedisPort videoRedis,
+            VideoStorageProperties videoStorageProperties) {
+        this(videoJpaRepository, localStagingStore, videoEventPublisherPort, videoRedis,
+                videoStorageProperties, null, null);
+    }
+
+    public VideoUploadService(VideoJpaRepository videoJpaRepository, LocalStagingStore localStagingStore,
+            VideoEventPublisherPort videoEventPublisherPort, VideoRedisPort videoRedis,
+            VideoStorageProperties videoStorageProperties, ProductRepositoryPort productRepository,
+            ReviewRepositoryPort reviewRepository) {
+        this.videoJpaRepository = videoJpaRepository;
+        this.localStagingStore = localStagingStore;
+        this.videoEventPublisherPort = videoEventPublisherPort;
+        this.videoRedis = videoRedis;
+        this.videoStorageProperties = videoStorageProperties;
+        this.productRepository = productRepository;
+        this.reviewRepository = reviewRepository;
+    }
 
     // -------------------------------------------------------------------------
     // POST — tus Creation
@@ -77,6 +106,7 @@ public class VideoUploadService {
 
     public Video createUploadSession(String uploaderId, VideoOwnerType ownerType, UUID ownerId,
             String idempotencyKey, long contentLength, String extension) {
+        authorizeTarget(uploaderId, ownerType, ownerId);
         String scopedIdempotencyKey = scopedIdempotencyKey(uploaderId, ownerType, ownerId, idempotencyKey);
         // Spec MED-5: idempotency-key dedup — duplicate POSTs within 24h return existing upload URL.
         UUID videoId = UUID.randomUUID();
@@ -185,39 +215,53 @@ public class VideoUploadService {
         }
     }
 
-    public Video appendChunk(UUID videoId, String uploaderId, long chunkOffset,
+    public long appendChunk(UUID videoId, String uploaderId, long chunkOffset,
             int chunkLength, byte[] chunkData) {
-        Video video = findAndAuthorise(videoId, uploaderId);
-        requireStatus(video, VideoStatus.UPLOADING);
+        synchronized (uploadLocks[Math.floorMod(videoId.hashCode(), uploadLocks.length)]) {
+            Video video = findAndAuthorise(videoId, uploaderId);
+            requireStatus(video, VideoStatus.UPLOADING);
 
-        if (chunkData == null || chunkLength != chunkData.length) {
-            throw new VideoValidationException(
-                    "invalid_chunk_length", "Declared chunk length must match payload length");
+            if (chunkData == null || chunkLength != chunkData.length) {
+                throw new VideoValidationException(
+                        "invalid_chunk_length", "Declared chunk length must match payload length");
+            }
+
+            long currentOffset = videoRedis.getOffset(videoId);
+            if (chunkOffset != currentOffset) {
+                throw new VideoValidationException(
+                        "invalid_upload_offset",
+                        "Upload offset must equal the server offset " + currentOffset);
+            }
+
+            long declaredTotal = videoRedis.getTotalSize(videoId);
+            if (chunkLength > declaredTotal - chunkOffset) {
+                throw new VideoValidationException(
+                        "chunk_exceeds_upload_length", "Chunk exceeds the declared upload length");
+            }
+
+            if (isFirstChunk(chunkOffset)) {
+                validateMagicBytes(chunkData);
+            }
+
+            long newOffset;
+            try {
+                newOffset = localStagingStore.writeChunk(videoId, chunkOffset, chunkData, chunkLength);
+            } catch (IOException ex) {
+                throw new VideoValidationException("staging_write_failed",
+                        "Could not write chunk to local staging: " + ex.getMessage());
+            }
+
+            videoRedis.setOffset(videoId, newOffset, UPLOAD_STATE_TTL);
+
+            // H4 fix: detect final chunk inside the service using the declared total size
+            // so a client crash between PATCH and the next PATCH is fine — the reaper
+            // catches truly stuck sessions.
+            if (declaredTotal > 0 && newOffset == declaredTotal) {
+                finaliseUpload(videoId, uploaderId);
+            }
+
+            return newOffset;
         }
-
-        if (isFirstChunk(chunkOffset)) {
-            validateMagicBytes(chunkData);
-        }
-
-        long newOffset;
-        try {
-            newOffset = localStagingStore.writeChunk(videoId, chunkOffset, chunkData, chunkLength);
-        } catch (IOException ex) {
-            throw new VideoValidationException("staging_write_failed",
-                    "Could not write chunk to local staging: " + ex.getMessage());
-        }
-
-        videoRedis.setOffset(videoId, newOffset, UPLOAD_STATE_TTL);
-
-        // H4 fix: detect final chunk inside the service using the declared total size
-        // so a client crash between PATCH and the next PATCH is fine — the reaper
-        // catches truly stuck sessions.
-        long declaredTotal = videoRedis.getTotalSize(videoId);
-        if (declaredTotal > 0 && newOffset >= declaredTotal) {
-            finaliseUpload(videoId, uploaderId);
-        }
-
-        return video;
     }
 
     private static final long FIRST_CHUNK_OFFSET = 0L;
@@ -297,6 +341,19 @@ public class VideoUploadService {
 
     public Video getVideoStatus(UUID videoId, String uploaderId) {
         return findAndAuthorise(videoId, uploaderId);
+    }
+
+    public void markTranscodeFailed(UUID videoId, String reason) {
+        Video video = videoJpaRepository.findById(videoId).orElse(null);
+        if (video == null || video.status() == VideoStatus.FAILED
+                || video.status() == VideoStatus.PUBLISHED
+                || video.status() == VideoStatus.REJECTED
+                || video.status() == VideoStatus.DELETED) {
+            return;
+        }
+        videoJpaRepository.save(video.withStatus(VideoStatus.FAILED));
+        videoJpaRepository.saveHistory(VideoStatusHistory.record(
+                videoId, video.status(), VideoStatus.FAILED, "transcoder", reason));
     }
 
     // -------------------------------------------------------------------------
@@ -388,6 +445,21 @@ public class VideoUploadService {
             throw new VideoNotFoundException("Video not found: " + videoId);
         }
         return video;
+    }
+
+    private void authorizeTarget(String uploaderId, VideoOwnerType ownerType, UUID ownerId) {
+        if (ownerType == VideoOwnerType.PRODUCT && productRepository != null) {
+            Product product = productRepository.findById(ownerId).orElse(null);
+            if (product == null || !uploaderId.equals(product.sellerId())) {
+                throw new VideoNotFoundException("Video target not found: " + ownerId);
+            }
+        }
+        if (ownerType == VideoOwnerType.REVIEW && reviewRepository != null) {
+            Review review = reviewRepository.findReviewById(ownerId).orElse(null);
+            if (review == null || !uploaderId.equals(review.buyerId())) {
+                throw new VideoNotFoundException("Video target not found: " + ownerId);
+            }
+        }
     }
 
     private void requireStatus(Video video, VideoStatus expected) {
