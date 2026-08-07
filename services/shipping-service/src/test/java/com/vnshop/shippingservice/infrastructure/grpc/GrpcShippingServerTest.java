@@ -25,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -76,6 +77,23 @@ class GrpcShippingServerTest {
         assertEquals("Ho Chi Minh", sent.toAddress().province());
         assertEquals("prod-1:red x2", sent.itemDescription());
         assertEquals(null, sent.parcel());
+        assertEquals(0L, sent.codAmountVnd());
+    }
+
+    @Test
+    void requestShippingMapsOptionalCodAmountToCarrierLabel() {
+        ShippingRequest request = validRequest().toBuilder()
+                .setSubOrders(0, validRequest().getSubOrders(0).toBuilder()
+                        .setCodAmount(com.vnshop.proto.common.Money.newBuilder()
+                                .setAmount("219000").setCurrency("VND").build())
+                        .setDeclaredValue(com.vnshop.proto.common.Money.newBuilder()
+                                .setAmount("199000").setCurrency("VND").build())
+                        .build())
+                .build();
+
+        stub.requestShipping(request);
+
+        assertEquals(219000L, gateway.lastRequest.codAmountVnd());
     }
 
     @Test
