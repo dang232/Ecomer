@@ -3,6 +3,8 @@ package com.vnshop.productservice.infrastructure.persistence.review;
 import com.vnshop.productservice.domain.review.ReviewStatus;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 
 import java.lang.reflect.Method;
 import java.time.Instant;
@@ -39,6 +41,30 @@ class ReviewJpaRepositoryTest {
 
         verify(springData).findByProductIdAndStatus("product-1", ReviewStatus.APPROVED);
         verify(springData, never()).findByProductId("product-1");
+    }
+
+    @Test
+    void publicReviewPagesUseApprovedStatusAndStableNewestFirstOrder() {
+        ReviewJpaSpringDataRepository springData = mock(ReviewJpaSpringDataRepository.class);
+        QuestionJpaSpringDataRepository questions = mock(QuestionJpaSpringDataRepository.class);
+        PageRequest pageable = PageRequest.of(1, 20);
+        when(springData.findByProductIdAndStatusOrderByCreatedAtDescReviewIdDesc(
+                "product-1", ReviewStatus.APPROVED, pageable)).thenReturn(Page.empty(pageable));
+
+        assertThat(new ReviewJpaRepository(springData, questions)
+                .findApprovedByProductId("product-1", pageable)).isEmpty();
+
+        verify(springData).findByProductIdAndStatusOrderByCreatedAtDescReviewIdDesc(
+                "product-1", ReviewStatus.APPROVED, pageable);
+    }
+
+    @Test
+    void publicReviewQueryHasDeterministicOrdering() throws NoSuchMethodException {
+        Method method = ReviewJpaSpringDataRepository.class.getMethod(
+                "findByProductIdAndStatusOrderByCreatedAtDescReviewIdDesc",
+                String.class, ReviewStatus.class, org.springframework.data.domain.Pageable.class);
+
+        assertThat(method.getName()).contains("OrderByCreatedAtDescReviewIdDesc");
     }
 
     @Test

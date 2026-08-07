@@ -21,6 +21,12 @@ public interface ReviewRepositoryPort extends ProductRatingReadPort {
 
     List<Review> findByProductId(String productId);
 
+    Page<Review> findApprovedByProductId(String productId, Pageable pageable);
+
+    default Map<Integer, Long> getProductReviewDistribution(String productId) {
+        return Map.of();
+    }
+
     /** Returns products whose approved reviews need a rating projection. */
     default List<String> findProductIdsWithApprovedReviews() {
         return List.of();

@@ -186,6 +186,10 @@ class ReviewImageUploadServiceTest {
         }
 
         @Override public List<Review> findByProductId(String productId) { return List.of(); }
+        @Override public org.springframework.data.domain.Page<Review> findApprovedByProductId(
+                String productId, org.springframework.data.domain.Pageable pageable) {
+            return org.springframework.data.domain.Page.empty(pageable);
+        }
         @Override public List<Review> findByBuyerId(String buyerId) { return List.of(); }
         @Override public List<Review> findByStatus(ReviewStatus status) { return List.of(); }
         @Override public boolean existsByProductIdAndBuyerId(String productId, String buyerId) { return false; }

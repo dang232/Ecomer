@@ -48,6 +48,28 @@ public class ReviewJpaRepository implements ReviewRepositoryPort {
     }
 
     @Override
+    public Page<Review> findApprovedByProductId(String productId, Pageable pageable) {
+        return reviewRepository
+                .findByProductIdAndStatusOrderByCreatedAtDescReviewIdDesc(productId, ReviewStatus.APPROVED, pageable)
+                .map(ReviewJpaEntity::toDomain);
+    }
+
+    @Override
+    public Map<Integer, Long> getProductReviewDistribution(String productId) {
+        Map<Integer, Long> distribution = new java.util.LinkedHashMap<>();
+        for (int rating = 1; rating <= 5; rating++) {
+            distribution.put(rating, 0L);
+        }
+        for (Object[] row : reviewRepository.findProductReviewDistribution(productId)) {
+            if (row == null || row.length < 2 || row[0] == null || row[1] == null) {
+                continue;
+            }
+            distribution.put(((Number) row[0]).intValue(), ((Number) row[1]).longValue());
+        }
+        return Map.copyOf(distribution);
+    }
+
+    @Override
     public ProductReviewSummary getProductReviewSummary(String productId) {
         List<Object[]> rows = reviewRepository.findProductReviewStats(productId);
         if (rows.isEmpty()) {

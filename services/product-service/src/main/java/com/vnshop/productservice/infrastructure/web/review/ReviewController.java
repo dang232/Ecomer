@@ -25,7 +25,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -48,8 +47,10 @@ public class ReviewController {
     }
 
     @GetMapping("/product/{productId}")
-    public ApiResponse<List<ReviewResponse>> byProduct(@PathVariable String productId) {
-        return ApiResponse.ok(getProductReviewsUseCase.get(productId).stream().map(ReviewResponse::fromEnriched).toList());
+    public ApiResponse<ProductReviewPageResponse> byProduct(
+            @PathVariable String productId,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ApiResponse.ok(ProductReviewPageResponse.from(getProductReviewsUseCase.get(productId, pageable)));
     }
 
     @GetMapping("/seller/{sellerId}/summary")
@@ -94,4 +95,3 @@ public class ReviewController {
         return ApiResponse.ok(ReviewResponse.fromDomain(voteHelpfulUseCase.vote(id, voterId)));
     }
 }
-

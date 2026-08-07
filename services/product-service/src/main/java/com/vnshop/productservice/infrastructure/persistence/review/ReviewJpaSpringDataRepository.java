@@ -17,6 +17,19 @@ public interface ReviewJpaSpringDataRepository extends JpaRepository<ReviewJpaEn
 
     List<ReviewJpaEntity> findByProductIdAndStatus(String productId, ReviewStatus status);
 
+    Page<ReviewJpaEntity> findByProductIdAndStatusOrderByCreatedAtDescReviewIdDesc(
+            String productId, ReviewStatus status, Pageable pageable);
+
+    @Query(value = """
+            SELECT r.rating, COUNT(r.review_id)
+            FROM product_svc.reviews r
+            WHERE r.product_id = :productId
+              AND r.status = 'APPROVED'
+            GROUP BY r.rating
+            ORDER BY r.rating
+            """, nativeQuery = true)
+    List<Object[]> findProductReviewDistribution(@Param("productId") String productId);
+
     @Query(value = """
             SELECT AVG(r.rating), COUNT(r.review_id)
             FROM product_svc.reviews r
