@@ -105,6 +105,9 @@ $ACL --add --allow-principal User:svc-product --operation Write --topic video.up
 # product-service: consumes delivered-order evidence for verified reviews
 $ACL --add --allow-principal User:svc-product --operation Read --topic order.delivered
 $ACL --add --allow-principal User:svc-product --operation Read --group product-service-review-purchases
+# product-service: consumes transcode failures to persist FAILED video status
+$ACL --add --allow-principal User:svc-product --operation Read --topic video.transcode.failed
+$ACL --add --allow-principal User:svc-product --operation Read --group product-service-video-transcode-failures
 
 # shipping-service (svc-shipping): produces shipping.cancelled and shipping.status.updated
 $ACL --add --allow-principal User:svc-shipping --operation Write --topic shipping.cancelled
