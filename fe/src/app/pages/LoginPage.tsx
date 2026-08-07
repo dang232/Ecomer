@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useNavigate, useSearchParams } from "react-router";
 
+import { usePageMeta } from "../../utils/meta-tags";
 import { useAuth } from "../hooks/auth-context";
 import { useAppConfig } from "../hooks/use-app-config";
 import { resolvePostLoginRedirect, sanitizeRedirect } from "../lib/auth/sanitize-redirect";
@@ -26,6 +27,11 @@ export function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  usePageMeta({
+    title: t("login.title", { defaultValue: "Sign in to VNShop" }),
+    description: t("login.subtitle", { defaultValue: "Continue with your VNShop identity." }),
+  });
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (submitting) return;
@@ -42,7 +48,7 @@ export function LoginPage() {
         setError(
           errorCode === "invalid_credentials"
             ? t("login.form.errorInvalidCredentials", {
-                defaultValue: "Wrong email/username or password.",
+                defaultValue: "Invalid user credentials. Check your email/username and password.",
               })
             : t("login.form.errorGeneric", {
                 defaultValue: "Couldn't sign in. Try again in a moment.",
@@ -161,17 +167,32 @@ export function LoginPage() {
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          {(["google", "facebook"] as const).map((provider) => (
-            <button
-              key={provider}
-              type="button"
-              onClick={() => socialLogin(provider)}
-              disabled={!config.auth.oauthProviders.includes(provider)}
-              className="rounded-[var(--radius-lg)] border border-border px-3 py-2.5 text-sm font-semibold capitalize transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {provider}
-            </button>
-          ))}
+          {(["google", "facebook"] as const).map((provider) =>
+            config.auth.oauthProviders.includes(provider) ? (
+              <button
+                key={provider}
+                type="button"
+                onClick={() => socialLogin(provider)}
+                className="rounded-[var(--radius-lg)] border border-border px-3 py-2.5 text-sm font-semibold capitalize transition-colors hover:bg-muted"
+              >
+                {provider}
+              </button>
+            ) : (
+              <div
+                key={provider}
+                className="rounded-[var(--radius-lg)] border border-border bg-muted px-3 py-2.5 text-center text-sm font-semibold capitalize text-muted-foreground"
+                aria-label={t("login.oauth.unavailableLabel", {
+                  provider,
+                  defaultValue: `${provider} sign-in unavailable`,
+                })}
+              >
+                {provider}
+                <span className="mt-0.5 block text-xs font-normal">
+                  {t("login.oauth.unavailableShort", { defaultValue: "Unavailable" })}
+                </span>
+              </div>
+            ),
+          )}
         </div>
 
         <div className="mt-6 flex items-center justify-between text-sm">

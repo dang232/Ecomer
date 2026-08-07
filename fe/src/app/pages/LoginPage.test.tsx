@@ -13,11 +13,13 @@ const i18nMock = vi.hoisted(
     language: "en",
     translations: {
       en: {
-        "login.form.errorInvalidCredentials": "Wrong email/username or password.",
+        "login.form.errorInvalidCredentials":
+          "Invalid user credentials. Check your email/username and password.",
         "login.form.errorGeneric": "Couldn't sign in. Try again in a moment.",
       },
       vi: {
-        "login.form.errorInvalidCredentials": "Sai email/tên đăng nhập hoặc mật khẩu.",
+        "login.form.errorInvalidCredentials":
+          "Thông tin đăng nhập không hợp lệ. Vui lòng kiểm tra email/tên đăng nhập và mật khẩu.",
         "login.form.errorGeneric": "Không thể đăng nhập. Vui lòng thử lại.",
       },
     },
@@ -66,8 +68,12 @@ describe("LoginPage native auth", () => {
   });
 
   it.each([
-    ["English", "en", "Wrong email/username or password."],
-    ["Vietnamese", "vi", "Sai email/tên đăng nhập hoặc mật khẩu."],
+    ["English", "en", "Invalid user credentials. Check your email/username and password."],
+    [
+      "Vietnamese",
+      "vi",
+      "Thông tin đăng nhập không hợp lệ. Vui lòng kiểm tra email/tên đăng nhập và mật khẩu.",
+    ],
   ] as const)(
     "renders the localized invalid-credentials message in %s",
     async (_languageName, language, localizedMessage) => {
@@ -134,7 +140,7 @@ describe("LoginPage native auth", () => {
     fireEvent.click(screen.getByRole("button", { name: "google" }));
 
     expect(beginOAuthLogin).toHaveBeenCalledWith("google", "/");
-    expect(screen.getByRole("button", { name: "facebook" })).toBeDisabled();
+    expect(screen.getByLabelText("facebook sign-in unavailable")).toHaveTextContent("Unavailable");
   });
 
   it("redirects an authenticated admin using the existing role contract", () => {

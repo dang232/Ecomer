@@ -62,7 +62,7 @@ const authEnvelopeSchema = z
   .object({
     success: z.boolean(),
     message: z.string().optional(),
-    data: authSessionSchema.optional(),
+    data: authSessionSchema.nullable().optional(),
     errorCode: z.string().nullable().optional(),
   })
   .passthrough()
