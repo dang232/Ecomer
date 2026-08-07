@@ -11,6 +11,14 @@ const tusMockInstances: {
   options: Record<string, unknown>;
 }[] = [];
 
+const { videoCancelMock } = vi.hoisted(() => ({
+  videoCancelMock: vi.fn(),
+}));
+
+vi.mock("@/shared/api/endpoints/videos", () => ({
+  videoCancel: videoCancelMock,
+}));
+
 vi.mock("tus-js-client", () => {
   class Upload {
     options: Record<string, unknown>;
@@ -367,8 +375,8 @@ describe("useVideoUpload", () => {
       await receiveCreationLocation(tusMockInstances[0], "/videos/upload/video-cancelled");
     });
 
-    act(() => {
-      result.current.cancel();
+    await act(async () => {
+      await result.current.cancel();
     });
 
     await act(async () => {
@@ -428,12 +436,16 @@ describe("useVideoUpload", () => {
       await result.current.upload(makeFile());
     });
     await waitFor(() => expect(tusMockInstances).toHaveLength(1));
+    await act(async () => {
+      await receiveCreationLocation(tusMockInstances[0], "/videos/upload/video-cancel");
+    });
 
-    act(() => {
-      result.current.cancel();
+    await act(async () => {
+      await result.current.cancel();
     });
 
     expect(tusMockInstances[0].abort).toHaveBeenCalledWith(true);
+    expect(videoCancelMock).toHaveBeenCalledWith("video-cancel");
     expect(result.current.state).toMatchObject({
       phase: "idle",
       entityId: null,

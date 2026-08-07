@@ -4,6 +4,7 @@ import * as tus from "tus-js-client";
 import { z } from "zod";
 
 import { csrfAuthHeader, getAccessToken } from "@/shared/auth/native-auth";
+import { videoCancel } from "@/shared/api/endpoints/videos";
 import { apiUrl } from "@/shared/config/runtime-endpoints";
 import type { VideoContext } from "@/shared/contracts/api/video";
 import { sha256FileHex } from "@/shared/lib/sha256";
@@ -182,12 +183,14 @@ export function useVideoUpload(options: VideoUploadOptions) {
   const idempotencyKeyRef = useRef("");
   const resumeKeyRef = useRef("");
   const lastFileRef = useRef<File | null>(null);
+  const activeVideoIdRef = useRef<string | null>(null);
   const runVersionRef = useRef(0);
 
   const clearActiveUpload = useCallback((clearResume = true) => {
     runVersionRef.current += 1;
     uploadRef.current?.abort(true).catch(() => undefined);
     uploadRef.current = null;
+    activeVideoIdRef.current = null;
     if (clearResume && resumeKeyRef.current) {
       clearResumeEntry(resumeKeyRef.current);
     }
@@ -201,10 +204,25 @@ export function useVideoUpload(options: VideoUploadOptions) {
     setState(INITIAL_STATE);
   }, [clearActiveUpload]);
 
-  const cancel = useCallback(() => {
+  const cancel = useCallback(async () => {
+    runVersionRef.current += 1;
+    const cancelVersion = runVersionRef.current;
+    const videoId = activeVideoIdRef.current ?? state.videoId;
+    uploadRef.current?.abort(true).catch(() => undefined);
+    if (videoId) {
+      try {
+        await videoCancel(videoId);
+      } catch (error) {
+        if (runVersionRef.current !== cancelVersion) return;
+        const message = error instanceof Error ? error.message : "video:cancel-failed";
+        setState((current) => ({ ...current, phase: "error", error: message }));
+        return;
+      }
+    }
+    if (runVersionRef.current !== cancelVersion) return;
     clearActiveUpload();
     setState(INITIAL_STATE);
-  }, [clearActiveUpload]);
+  }, [clearActiveUpload, state.videoId]);
 
   useEffect(() => {
     clearActiveUpload();
@@ -271,6 +289,7 @@ export function useVideoUpload(options: VideoUploadOptions) {
           if (parsed.videoId === cached.videoId) {
             videoId = parsed.videoId;
             uploadUrl = parsed.uploadUrl;
+            activeVideoIdRef.current = videoId;
           } else {
             clearResumeEntry(resumeKey);
           }
@@ -312,6 +331,7 @@ export function useVideoUpload(options: VideoUploadOptions) {
           const parsed = parseUploadLocation(location, request.getURL());
           videoId = parsed.videoId;
           uploadUrl = parsed.uploadUrl;
+          activeVideoIdRef.current = videoId;
           setResumeEntry(resumeKey, {
             videoId,
             uploadUrl,
@@ -338,6 +358,7 @@ export function useVideoUpload(options: VideoUploadOptions) {
 
           clearResumeEntry(resumeKey);
           uploadRef.current = null;
+          activeVideoIdRef.current = null;
           setState((current) => ({
             ...current,
             phase: "complete",
