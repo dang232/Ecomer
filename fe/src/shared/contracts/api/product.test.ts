@@ -51,4 +51,14 @@ describe("productSummarySchema", () => {
     expect(result.description).toBeNull();
     expect(result.brand).toBeNull();
   });
+
+  it("accepts nullable image alt text returned by seller product updates", () => {
+    const result = productDetailSchema.parse({
+      id: "2ff65816-fa6d-4bb2-beaf-47d5fffa0445",
+      name: "Seller draft",
+      images: [{ url: "http://localhost:9000/product.png", alt: null, sortOrder: 1 }],
+    });
+
+    expect(result.images?.[0]).toMatchObject({ alt: null, sortOrder: 1 });
+  });
 });

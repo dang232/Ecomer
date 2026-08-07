@@ -10,7 +10,7 @@ const imageEntrySchema = z.union([
   z
     .object({
       url: z.string(),
-      alt: z.string().optional(),
+      alt: z.string().nullable().optional(),
       sortOrder: z.number().optional(),
     })
     .passthrough(),
