@@ -119,7 +119,7 @@ export function DesignSystemPage() {
 
   return (
     <PageContainer density="compact" className="space-y-10">
-      <PageHeader title="Commerce UI" description="Shared buyer, seller, and admin controls." />
+      <PageHeader title="Design System" description="Shared buyer, seller, and admin controls." />
 
       <section aria-labelledby="actions-heading" className="space-y-4">
         <h2 id="actions-heading" className="text-lg font-bold text-foreground">
