@@ -74,7 +74,7 @@ describe("CartPageView", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Remove Blue headphones" }));
+    fireEvent.click(screen.getByRole("button", { name: "Remove Blue headphones from cart" }));
     expect(props.onRemove).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Remove" }));
     expect(props.onRemove).toHaveBeenCalledWith(expect.objectContaining({ key: "p-1:blue" }));

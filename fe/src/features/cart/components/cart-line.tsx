@@ -76,7 +76,7 @@ export function CartLine({
           </IconButton>
         </div>
         <IconButton
-          label={t("cart.removeItem", { name: line.name })}
+          label={t("cart.removeItem", { name: line.name }) + " from cart"}
           variant="ghost"
           disabled={pending}
           onClick={() => onRemoveRequest(line)}

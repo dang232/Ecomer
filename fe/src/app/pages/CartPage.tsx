@@ -9,6 +9,7 @@ import { ApiError } from "@/shared/api";
 import { validateCouponCode } from "@/shared/api/endpoints/coupons";
 import { FREE_SHIPPING_THRESHOLD, FLAT_SHIPPING_FEE } from "@/shared/contracts";
 
+import { usePageMeta } from "../../utils/meta-tags";
 import { GuestCartMergeDialog } from "../components/GuestCartMergeDialog";
 import { RecentlyViewedGrid } from "../components/RecentlyViewedGrid";
 import { useAuth } from "../hooks/auth-context";
@@ -38,6 +39,13 @@ export function CartPage() {
   const [couponError, setCouponError] = useState("");
   const { t } = useTranslation();
   const { items: recentlyViewed } = useRecentlyViewed();
+
+  usePageMeta({
+    title: t("cart.title", { defaultValue: "Your cart" }),
+    description: t("cart.metaDescription", {
+      defaultValue: "Review your VNShop cart before checkout.",
+    }),
+  });
 
   const couponMutation = useMutation({
     mutationFn: validateCouponCode,
