@@ -6,6 +6,7 @@ import { Controller, useFieldArray, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
 import { Button, SegmentedControl } from "@/shared/ui";
+import { formatGroupedNumber, parseGroupedNumber } from "@/shared/lib/format";
 
 import type { SellerProductForm, SellerProductOfferMode } from "../model/product-form";
 
@@ -257,17 +258,12 @@ function CurrencyField({
         control={control}
         render={({ field }) => (
           <input
-            {...field}
             id={inputId}
-            type="number"
-            min={1}
-            step={1}
+            type="text"
             inputMode="numeric"
-            value={field.value > 0 ? field.value : ""}
+            value={formatGroupedNumber(field.value)}
             placeholder={t("seller.products.editor.variants.pricePlaceholder")}
-            onChange={(event) =>
-              field.onChange(event.target.value === "" ? 0 : Number(event.target.value))
-            }
+            onChange={(event) => field.onChange(parseGroupedNumber(event.target.value))}
             className={inputClass(Boolean(error))}
             aria-invalid={Boolean(error)}
           />

@@ -44,4 +44,13 @@ describe("ProductVariantFields", () => {
     fireEvent.click(screen.getByRole("button", { name: "seller.products.editor.variants.add" }));
     expect(screen.getAllByLabelText("seller.products.editor.variants.name *")).toHaveLength(2);
   });
+
+  it("groups the seller price input while keeping the form value numeric", () => {
+    render(<Harness />);
+    const price = screen.getByLabelText("seller.products.editor.variants.price *");
+
+    fireEvent.change(price, { target: { value: "9000" } });
+
+    expect(price).toHaveValue("9,000");
+  });
 });

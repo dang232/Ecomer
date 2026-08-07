@@ -9,6 +9,19 @@ export function formatPrice(price: number): string {
   return VND_FORMATTER.format(price);
 }
 
+const GROUPED_INTEGER_FORMATTER = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 0,
+});
+
+export function formatGroupedNumber(value: number): string {
+  return value > 0 && Number.isFinite(value) ? GROUPED_INTEGER_FORMATTER.format(value) : "";
+}
+
+export function parseGroupedNumber(value: string): number {
+  const normalized = value.replace(/[^0-9]/g, "");
+  return normalized === "" ? 0 : Number(normalized);
+}
+
 const DATE_FORMATTER = new Intl.DateTimeFormat("vi-VN", {
   day: "2-digit",
   month: "2-digit",
