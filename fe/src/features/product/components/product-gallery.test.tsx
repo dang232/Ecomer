@@ -149,4 +149,27 @@ describe("ProductGallery", () => {
 
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
+
+  it("shows a pointer-position magnifier while hovering the main image", () => {
+    render(<ProductGallery media={media} />);
+    const region = screen.getByRole("region", { name: "Product media gallery" });
+
+    vi.spyOn(region, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      width: 400,
+      height: 400,
+      top: 0,
+      right: 400,
+      bottom: 400,
+      left: 0,
+      toJSON: () => ({}),
+    });
+    fireEvent.pointerMove(region, { clientX: 100, clientY: 200, pointerType: "mouse" });
+
+    expect(screen.getByTestId("product-image-magnifier")).toBeVisible();
+    expect(screen.getByTestId("product-image-magnifier")).toHaveStyle({
+      backgroundPosition: "25% 50%",
+    });
+  });
 });

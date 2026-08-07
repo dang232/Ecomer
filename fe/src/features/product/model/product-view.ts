@@ -36,7 +36,13 @@ export type ProductSellerInput =
 export interface ProductDetailView {
   id: string;
   title: string;
-  media: readonly { id: string; url: string; alt: string }[];
+  media: readonly {
+    id: string;
+    url: string;
+    alt: string;
+    type?: "image" | "video";
+    poster?: string | null;
+  }[];
   priceVnd: number;
   originalPriceVnd?: number;
   rating?: number;

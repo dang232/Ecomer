@@ -30,6 +30,7 @@ export function ProductGallery({ media, badge }: ProductGalleryProps) {
   const { t } = useTranslation();
   const [activeIndex, setActiveIndex] = useState(0);
   const [showLightbox, setShowLightbox] = useState(false);
+  const [magnifierPosition, setMagnifierPosition] = useState<{ x: number; y: number } | null>(null);
   const active = media[activeIndex] ?? media[0];
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -94,15 +95,50 @@ export function ProductGallery({ media, badge }: ProductGalleryProps) {
   return (
     <div className="space-y-3 lg:sticky lg:top-24 lg:self-start">
       <div
+        onPointerMove={(event) => {
+          if (event.pointerType !== "mouse") return;
+          const rect = event.currentTarget.getBoundingClientRect();
+          setMagnifierPosition({
+            x: Math.max(0, Math.min(100, ((event.clientX - rect.left) / rect.width) * 100)),
+            y: Math.max(0, Math.min(100, ((event.clientY - rect.top) / rect.height) * 100)),
+          });
+        }}
+        onPointerLeave={() => setMagnifierPosition(null)}
         className="relative aspect-square overflow-hidden rounded-[var(--radius-card)] border border-border bg-muted"
         role="region"
         aria-label={t("product.gallery", { defaultValue: "Product media gallery" })}
       >
-        <ImageWithFallback
-          src={active.url}
-          alt={active.alt}
-          className="h-full w-full object-contain"
-        />
+        {active.type === "video" ? (
+          <video
+            src={active.url}
+            poster={active.poster ?? undefined}
+            controls
+            playsInline
+            preload="metadata"
+            aria-label={active.alt}
+            className="h-full w-full object-contain"
+          >
+            <track kind="captions" src="data:text/vtt,WEBVTT" />
+          </video>
+        ) : (
+          <ImageWithFallback
+            src={active.url}
+            alt={active.alt}
+            className="h-full w-full object-contain"
+          />
+        )}
+        {magnifierPosition && active.type !== "video" ? (
+          <div
+            data-testid="product-image-magnifier"
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 hidden bg-no-repeat md:block"
+            style={{
+              backgroundImage: `url(${active.url})`,
+              backgroundPosition: `${magnifierPosition.x}% ${magnifierPosition.y}%`,
+              backgroundSize: "200%",
+            }}
+          />
+        ) : null}
         {badge ? (
           <span className="absolute left-3 top-3 rounded-[var(--radius-sm)] bg-error px-2 py-1 text-xs font-semibold text-white">
             {badge}
@@ -159,7 +195,19 @@ export function ProductGallery({ media, badge }: ProductGalleryProps) {
                 index === activeIndex ? "border-primary" : "border-border hover:border-border-hover"
               }`}
             >
-              <ImageWithFallback src={item.url} alt="" className="h-full w-full object-cover" />
+              {item.type === "video" ? (
+                <video
+                  src={item.url}
+                  poster={item.poster ?? undefined}
+                  muted
+                  playsInline
+                  preload="metadata"
+                  aria-hidden="true"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <ImageWithFallback src={item.url} alt="" className="h-full w-full object-cover" />
+              )}
             </button>
           ))}
         </div>
@@ -185,12 +233,27 @@ export function ProductGallery({ media, badge }: ProductGalleryProps) {
           >
             <X />
           </IconButton>
-          <ImageWithFallback
-            src={active.url}
-            alt={active.alt}
-            className="max-h-full max-w-full object-contain"
-            onClick={(event) => event.stopPropagation()}
-          />
+          {active.type === "video" ? (
+            <video
+              src={active.url}
+              poster={active.poster ?? undefined}
+              controls
+              autoPlay
+              playsInline
+              aria-label={active.alt}
+              className="max-h-full max-w-full object-contain"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <track kind="captions" src="data:text/vtt,WEBVTT" />
+            </video>
+          ) : (
+            <ImageWithFallback
+              src={active.url}
+              alt={active.alt}
+              className="max-h-full max-w-full object-contain"
+              onClick={(event) => event.stopPropagation()}
+            />
+          )}
         </div>
       ) : null}
     </div>
