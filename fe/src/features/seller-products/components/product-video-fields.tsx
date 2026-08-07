@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -17,6 +17,8 @@ const MAX_PRODUCT_VIDEOS = 3;
 interface ProductVideoFieldsProps {
   productId: string;
   disabled?: boolean;
+  initialFile?: File | null;
+  onInitialFileConsumed?: () => void;
 }
 
 interface CompletedVideoLatch {
@@ -24,11 +26,17 @@ interface CompletedVideoLatch {
   videoId: string;
 }
 
-export function ProductVideoFields({ productId, disabled = false }: ProductVideoFieldsProps) {
+export function ProductVideoFields({
+  productId,
+  disabled = false,
+  initialFile = null,
+  onInitialFileConsumed,
+}: ProductVideoFieldsProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [completedVideo, setCompletedVideo] = useState<CompletedVideoLatch | null>(null);
   const [removingVideoId, setRemovingVideoId] = useState<string | null>(null);
+  const initialFileRef = useRef<File | null>(null);
   const { state, upload, cancel, reset, retry } = useVideoUpload({
     entityId: productId,
     context: "PRODUCT",
@@ -45,6 +53,13 @@ export function ProductVideoFields({ productId, disabled = false }: ProductVideo
     MAX_PRODUCT_VIDEOS,
     persistedVideos.length + (trackedVideoId && !trackedVideoIsPersisted ? 1 : 0),
   );
+
+  useEffect(() => {
+    if (!initialFile || initialFileRef.current === initialFile) return;
+    initialFileRef.current = initialFile;
+    onInitialFileConsumed?.();
+    void upload(initialFile);
+  }, [initialFile, onInitialFileConsumed, upload]);
 
   const removeVideo = async (videoId: string) => {
     if (!window.confirm(t("video.seller.deleteConfirm"))) return;

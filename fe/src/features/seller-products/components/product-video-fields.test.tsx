@@ -187,6 +187,18 @@ describe("ProductVideoFields", () => {
     expect(screen.getByTestId("video-status")).toHaveAttribute("data-video-id", "uploaded-video-1");
   });
 
+  it("starts the upload for a video staged during product creation", async () => {
+    render(
+      <ProductVideoFields
+        productId="product-42"
+        initialFile={new File(["video"], "demo.mp4", { type: "video/mp4" })}
+        onInitialFileConsumed={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => expect(uploadMock).toHaveBeenCalledWith(expect.any(File)));
+  });
+
   it("wires file selection to upload and active cancellation to cancel", () => {
     render(<ProductVideoFields productId="product-42" />);
 
