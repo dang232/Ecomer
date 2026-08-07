@@ -71,7 +71,7 @@ describe('KafkaEventConsumer', () => {
       expect.objectContaining({
         userId: 'seller-1',
         type: NotificationType.PRODUCT_APPROVED,
-        deepLink: '/seller/products/P-1',
+        deepLink: '/seller/products?selected=P-1&mode=edit',
         threadId: 'product:P-1',
       }),
     );
@@ -287,7 +287,7 @@ describe('KafkaEventConsumer', () => {
 
     expect(mockSendNotification.execute).toHaveBeenCalledWith(
       expect.objectContaining({
-        deepLink: '/auth/reset-password',
+        deepLink: '/password-reset',
       }),
     );
   });
