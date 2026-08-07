@@ -24,7 +24,7 @@ export function MobilePurchaseBar({
 
   const content = (
     <div
-      className={`fixed inset-x-0 bottom-[calc(3.75rem+env(safe-area-inset-bottom))] z-30 grid gap-2 border-t border-border bg-card p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden ${
+      className={`fixed inset-x-0 bottom-[3.75rem] z-30 grid gap-2 border-t border-border bg-card p-2 md:hidden ${
         canMessage ? "grid-cols-[auto_1fr_1fr]" : "grid-cols-2"
       }`}
     >
