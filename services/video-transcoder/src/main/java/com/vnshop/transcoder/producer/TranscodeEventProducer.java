@@ -6,6 +6,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.concurrent.CompletableFuture;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -16,31 +18,35 @@ public class TranscodeEventProducer {
 
     private final KafkaTemplate<String, TranscodeResult> kafkaTemplate;
 
-    public void emitCompleted(TranscodeResult result) {
+    public CompletableFuture<Void> emitCompleted(TranscodeResult result) {
         String key = result.videoId().toString();
-        kafkaTemplate.send(TOPIC_COMPLETED, key, result)
-                .whenComplete((r, ex) -> {
+        return kafkaTemplate.send(TOPIC_COMPLETED, key, result).whenComplete((r, ex) -> {
                     if (ex != null) {
                         log.error("Failed to emit {} for videoId={}", TOPIC_COMPLETED, key, ex);
                     } else {
+                        Object offset = r == null || r.getRecordMetadata() == null
+                                ? "unknown"
+                                : r.getRecordMetadata().offset();
                         log.info("Emitted {} videoId={} offset={}",
                                 TOPIC_COMPLETED, key,
-                                r.getRecordMetadata().offset());
+                                offset);
                     }
-                });
+                }).thenApply(ignored -> null);
     }
 
-    public void emitFailed(TranscodeResult result) {
+    public CompletableFuture<Void> emitFailed(TranscodeResult result) {
         String key = result.videoId().toString();
-        kafkaTemplate.send(TOPIC_FAILED, key, result)
-                .whenComplete((r, ex) -> {
+        return kafkaTemplate.send(TOPIC_FAILED, key, result).whenComplete((r, ex) -> {
                     if (ex != null) {
                         log.error("Failed to emit {} for videoId={}", TOPIC_FAILED, key, ex);
                     } else {
+                        Object offset = r == null || r.getRecordMetadata() == null
+                                ? "unknown"
+                                : r.getRecordMetadata().offset();
                         log.info("Emitted {} videoId={} offset={}",
                                 TOPIC_FAILED, key,
-                                r.getRecordMetadata().offset());
+                                offset);
                     }
-                });
+                }).thenApply(ignored -> null);
     }
 }

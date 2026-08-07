@@ -13,6 +13,7 @@ import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Consumes {@code video.upload.completed} events and drives the full
@@ -42,12 +43,9 @@ public class TranscodeEventConsumer {
         log.info("Received video.upload.completed videoId={} productId={}",
                 job.videoId(), job.productId());
 
+        TranscodeResult result;
         try {
-            TranscodeResult result = transcodeService.transcode(job);
-            transcodeEventProducer.emitCompleted(result);
-            ack.acknowledge();
-            log.info("Transcode succeeded videoId={}", job.videoId());
-
+            result = transcodeService.transcode(job);
         } catch (TranscodeException e) {
             // @Retryable exhausted — emit failure event, ack to avoid requeue
             log.error("Transcode failed after retries videoId={}: {}", job.videoId(), e.getMessage(), e);
@@ -59,13 +57,26 @@ public class TranscodeEventConsumer {
                     .errorMessage(e.getMessage())
                     .completedAt(Instant.now())
                     .build();
-            transcodeEventProducer.emitFailed(failed);
+            awaitEvent(transcodeEventProducer.emitFailed(failed));
             ack.acknowledge();
+            return;
+        }
 
-        } catch (Exception e) {
-            // Unexpected error — do not ack; let Kafka retry or route to DLT
-            log.error("Unexpected error processing videoId={}", job.videoId(), e);
-            // Not acknowledging will cause redelivery up to max.poll.interval.ms
+        // A completed transcode with failed publication must be retried as a
+        // publication failure, not emitted as a contradictory transcode failure.
+        awaitEvent(transcodeEventProducer.emitCompleted(result));
+        ack.acknowledge();
+        log.info("Transcode succeeded videoId={}", job.videoId());
+    }
+
+    private static void awaitEvent(java.util.concurrent.CompletableFuture<Void> event) {
+        try {
+            event.get(30, TimeUnit.SECONDS);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new TranscodeException("Kafka event publication interrupted", ex);
+        } catch (java.util.concurrent.ExecutionException | java.util.concurrent.TimeoutException ex) {
+            throw new TranscodeException("Kafka event publication failed", ex);
         }
     }
 }

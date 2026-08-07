@@ -79,3 +79,12 @@ spring:
     properties:
       security.protocol: PLAINTEXT
       sasl.jaas.config: ""
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+  kafka:
+    properties:
+      security.protocol: SASL_PLAINTEXT
