@@ -77,9 +77,17 @@ class OrderServiceIntegrationTest {
                 assertThat(tables.next()).isTrue();
                 assertThat(auditLog.next()).isTrue();
                 assertThat(invoiceCreatedAt.next()).isTrue();
-                assertThat(invoiceUpdatedAt.next()).isTrue();
-            }
-        }
+                 assertThat(invoiceUpdatedAt.next()).isTrue();
+             }
+             try (var migration = conn.prepareStatement(
+                     "SELECT version, success FROM order_svc.flyway_schema_history WHERE version = '33'")) {
+                 try (var rows = migration.executeQuery()) {
+                     assertThat(rows.next()).isTrue();
+                     assertThat(rows.getString("version")).isEqualTo("33");
+                     assertThat(rows.getBoolean("success")).isTrue();
+                 }
+             }
+         }
     }
 
     @Test
@@ -108,9 +116,18 @@ class OrderServiceIntegrationTest {
                     + "WHERE status = 'OPEN' AND (created_at < CURRENT_TIMESTAMP OR "
                     + "(created_at = CURRENT_TIMESTAMP AND dispute_id < 'ffffffff-ffff-ffff-ffff-ffffffffffff')) "
                     + "ORDER BY created_at DESC, dispute_id DESC LIMIT 51");
+            String defaultCombinedSearchPlan = explainPlan(statement, "EXPLAIN (ANALYZE, BUFFERS) SELECT order_id FROM order_svc.order_summary "
+                    + "WHERE status = 'PENDING' AND (lower(coalesce(order_id, '')) LIKE 'phone%' "
+                    + "OR lower(coalesce(order_number, '')) LIKE 'phone%' "
+                    + "OR lower(coalesce(buyer_id, '')) LIKE 'phone%' "
+                    + "OR lower(coalesce(seller_id, '')) LIKE 'phone%') "
+                    + "AND (created_at < CURRENT_TIMESTAMP OR "
+                    + "(created_at = CURRENT_TIMESTAMP AND order_id < 'ffffffff-ffff-ffff-ffff-ffffffffffff')) "
+                    + "ORDER BY created_at DESC, order_id DESC LIMIT 51");
             // The default plans are captured as production-shaped evidence, but tiny fixtures can legitimately choose Seq Scan.
             assertThat(defaultOrderPlan).contains("Limit");
             assertThat(defaultDisputePlan).contains("Limit");
+            assertThat(defaultCombinedSearchPlan).contains("Limit");
 
             // Disable sequential scans only to make the index-plan contract deterministic; this is not a production setting.
             statement.execute("SET enable_seqscan = off");
@@ -138,20 +155,34 @@ class OrderServiceIntegrationTest {
     @Test
     @Transactional
     void productionCursorQueriesEmitIndexedPredicatesAndOrdering() throws Exception {
-        CursorSqlCapture.clear();
         Instant anchor = Instant.parse("2026-08-08T00:00:00Z");
+        CursorSqlCapture.clear();
+        orderSummaryQueryPortAdapter.findAllCursor("phone", "PENDING", null, null, 51);
+        assertCursorSql(CursorSqlCapture.statements(), "order first", "order by ospje1_0.created_at desc,ospje1_0.order_id desc",
+                "fetch first ? rows only", "status=?");
+
+        CursorSqlCapture.clear();
         orderSummaryQueryPortAdapter.findAllCursor("phone", "PENDING", anchor, "order-0002", 51);
+        assertCursorSql(CursorSqlCapture.statements(), "order anchored", "order_id<?", "created_at<?", "status=?");
+
+        CursorSqlCapture.clear();
         disputeJpaSpringDataRepository.findCursorFirst(DisputeStatus.OPEN, "wrong", "wrong%",
                 org.springframework.data.domain.PageRequest.of(0, 51));
+        assertCursorSql(CursorSqlCapture.statements(), "dispute first", "order by dje1_0.created_at desc,dje1_0.dispute_id desc",
+                "fetch first ? rows only", "status=?", "lower(coalesce(cast(", "dispute_id as varchar),''))");
+
+        CursorSqlCapture.clear();
         disputeJpaSpringDataRepository.findCursorAfter(DisputeStatus.OPEN, "wrong", "wrong%", anchor,
                 UUID.fromString("00000000-0000-0000-0000-000000000002"),
-                org.springframework.data.domain.PageRequest.of(8, 51));
+                org.springframework.data.domain.PageRequest.of(0, 51));
+        assertCursorSql(CursorSqlCapture.statements(), "dispute anchored", "dispute_id<?", "created_at<?",
+                "order by dje1_0.created_at desc,dje1_0.dispute_id desc", "fetch first ? rows only");
+    }
 
-        String sql = String.join("\n", CursorSqlCapture.statements()).toLowerCase();
-        assertThat(sql).contains("order_id<?", "order by ospje1_0.created_at desc,ospje1_0.order_id desc", "fetch first ? rows only")
-                .contains("created_at<?").contains("status=?")
-                .contains("dispute_id<?", "order by dje1_0.created_at desc,dje1_0.dispute_id desc")
-                .contains("lower(coalesce(cast(").contains("dispute_id as varchar),''))");
+    private static void assertCursorSql(List<String> statements, String method, String... requiredFragments) {
+        String sql = String.join("\n", statements).toLowerCase();
+        assertThat(sql).as(method).doesNotContain("count(", " offset ");
+        assertThat(sql).as(method).contains(requiredFragments);
     }
 
     private static void assertPlanUsesIndex(Statement statement, String explain, String indexName) throws SQLException {

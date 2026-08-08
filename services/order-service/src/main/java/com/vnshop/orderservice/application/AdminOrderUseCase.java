@@ -88,15 +88,21 @@ public class AdminOrderUseCase {
         if (rows.isEmpty()) {
             return rows;
         }
-        var buyerIds = rows.stream().limit(limitPlusOne)
+        int pageLimit = Math.max(1, limitPlusOne - 1);
+        List<OrderSummaryProjection> pageRows = rows.size() > pageLimit
+                ? rows.subList(0, pageLimit) : rows;
+        var buyerIds = pageRows.stream()
                 .map(OrderSummaryProjection::buyerId).filter(Objects::nonNull).filter(id -> !id.isBlank())
                 .collect(java.util.stream.Collectors.toSet());
-        var sellerIds = rows.stream().limit(limitPlusOne)
+        var sellerIds = pageRows.stream()
                 .map(OrderSummaryProjection::sellerId).filter(Objects::nonNull).filter(id -> !id.isBlank())
                 .collect(java.util.stream.Collectors.toSet());
         UserDirectoryPort.DirectorySnapshot names = userDirectoryPort.lookup(buyerIds, sellerIds);
-        return rows.stream().map(summary -> summary.withDisplayNames(
+        List<OrderSummaryProjection> enrichedPage = pageRows.stream().map(summary -> summary.withDisplayNames(
                 names.buyerNames().get(summary.buyerId()), names.sellerNames().get(summary.sellerId()))).toList();
+        return rows.size() > pageLimit
+                ? java.util.stream.Stream.concat(enrichedPage.stream(), rows.stream().skip(pageLimit)).toList()
+                : enrichedPage;
     }
 
     /**

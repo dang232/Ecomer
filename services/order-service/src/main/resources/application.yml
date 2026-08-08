@@ -24,6 +24,9 @@ spring:
     enabled: true
     schemas: order_svc
     default-schema: order_svc
+    postgresql:
+      transactional:
+        lock: false
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     properties:
