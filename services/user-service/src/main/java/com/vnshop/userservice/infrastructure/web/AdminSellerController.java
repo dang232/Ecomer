@@ -26,7 +26,7 @@ public class AdminSellerController {
     private static final int DEFAULT_LIMIT = 50;
     private static final int MAX_LIMIT = 100;
     private static final String RESOURCE = "admin-sellers";
-    private static final String SORT = "createdAt:desc,id:desc";
+    private static final String SORT = "createdAt:desc,keycloakId:desc";
     private final ListPendingSellersUseCase listPendingSellersUseCase;
     private final ApproveSellerUseCase approveSellerUseCase;
     private final RejectSellerUseCase rejectSellerUseCase;
@@ -63,7 +63,7 @@ public class AdminSellerController {
             AdminCursorCodec.Cursor decoded = cursorCodec.decode(token, RESOURCE, filterHash, SORT);
             try {
                 anchor = new AdminSellerCursor(java.time.Instant.parse(decoded.sortKey()),
-                        decoded.uniqueId().toLowerCase(java.util.Locale.ROOT));
+                        decoded.uniqueId());
             } catch (RuntimeException exception) {
                 throw AdminCursorCodec.InvalidCursorException.invalidAnchor();
             }
@@ -72,9 +72,9 @@ public class AdminSellerController {
         boolean hasMore = rows.size() > limit;
         List<SellerProfile> items = hasMore ? rows.subList(0, limit) : rows;
         String next = hasMore ? cursorCodec.encode(new AdminCursorCodec.Cursor(RESOURCE, filterHash, SORT,
-                items.getLast().createdAt().toString(), items.getLast().id().toLowerCase(java.util.Locale.ROOT), null, null)) : null;
+                items.getLast().createdAt().toString(), items.getLast().id(), null, null)) : null;
         return ApiResponse.ok(new AdminCursorPage<>(items.stream().map(SellerProfileResponse::fromDomain).toList(), next,
-                hasMore, limit, new AdminCursorPage.Sort("createdAt", "desc"), null));
+                hasMore, limit, new AdminCursorPage.Sort("createdAt,keycloakId", "desc"), null));
     }
 
     @PostMapping("/{id}/approve")

@@ -26,7 +26,7 @@ public class AdminUserController {
     private static final int DEFAULT_LIMIT = 50;
     private static final int MAX_LIMIT = 100;
     private static final String RESOURCE = "admin-users";
-    private static final String SORT = "name:asc,id:asc";
+    private static final String SORT = "name:asc,keycloakId:asc";
 
     private final AdminUserUseCase adminUserUseCase;
     private final AdminCursorCodec cursorCodec;
@@ -63,7 +63,7 @@ public class AdminUserController {
             AdminCursorCodec.Cursor decoded = cursorCodec.decode(token, RESOURCE, filterHash, SORT);
             try {
                 anchor = new AdminBuyerCursor("\u0000".equals(decoded.sortKey()) ? "" : decoded.sortKey(),
-                        decoded.uniqueId().toLowerCase(java.util.Locale.ROOT));
+                        decoded.uniqueId());
             } catch (RuntimeException exception) {
                 throw AdminCursorCodec.InvalidCursorException.invalidAnchor();
             }
@@ -74,7 +74,7 @@ public class AdminUserController {
         String next = hasMore ? cursorCodec.encode(new AdminCursorCodec.Cursor(RESOURCE, filterHash, SORT,
                 nameKey(items.getLast()), items.getLast().keycloakId(), null, null)) : null;
         return ApiResponse.ok(new AdminCursorPage<>(items.stream().map(BuyerProfileResponse::fromDomain).toList(), next,
-                hasMore, limit, new AdminCursorPage.Sort("name", "asc"), null));
+                hasMore, limit, new AdminCursorPage.Sort("name,keycloakId", "asc"), null));
     }
 
     private static String nameKey(BuyerProfile profile) {
