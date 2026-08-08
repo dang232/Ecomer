@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.net.URI;
 import java.util.UUID;
@@ -34,6 +35,7 @@ public class AdminVideoController {
     private final VideoAdminService videoAdminService;
     private final AdminCursorCodec cursorCodec;
 
+    @Autowired
     public AdminVideoController(VideoAdminService videoAdminService, AdminCursorCodec cursorCodec) {
         this.videoAdminService = videoAdminService;
         this.cursorCodec = cursorCodec;
