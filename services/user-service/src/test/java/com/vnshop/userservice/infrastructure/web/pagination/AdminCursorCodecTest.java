@@ -13,15 +13,15 @@ class AdminCursorCodecTest {
     private static final Instant NOW = Instant.parse("2026-08-08T00:00:00Z");
     private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
     private static final AdminCursorCodec.Cursor CURSOR = new AdminCursorCodec.Cursor(
-            "users", "filter-hash", "createdAt:desc,id:desc", "2026-08-07T23:59:00Z", "user-42", NOW, null);
+        "admin-users", "filter-hash", "name:asc,id:asc", "alice", "user-42", NOW, null);
 
     private AdminCursorCodec codec() { return new AdminCursorCodec("test-secret", Duration.ofMinutes(5), CLOCK); }
 
     @Test void roundTrip_preservesScopedPayload() {
         String token = codec().encode(CURSOR);
-        assertThat(codec().decode(token, "users", "filter-hash", "createdAt:desc,id:desc"))
+        assertThat(codec().decode(token, "admin-users", "filter-hash", "name:asc,id:asc"))
                 .isEqualTo(CURSOR.withExpiresAt(NOW.plusSeconds(300)));
-        assertThat(token).doesNotContain("users").matches("[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+");
+        assertThat(token).doesNotContain("admin-users").matches("[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+");
     }
 
     @Test void omittedAsOf_roundTripsAsNull() {
@@ -43,9 +43,9 @@ class AdminCursorCodecTest {
     }
     @Test void scopeMismatches_areTyped() {
         String token = codec().encode(CURSOR);
-        assertReason(token, "orders", "filter-hash", "createdAt:desc,id:desc", AdminCursorCodec.RejectionReason.RESOURCE_MISMATCH);
-        assertReason(token, "users", "other-filter", "createdAt:desc,id:desc", AdminCursorCodec.RejectionReason.FILTER_MISMATCH);
-        assertReason(token, "users", "filter-hash", "name:asc,id:asc", AdminCursorCodec.RejectionReason.SORT_MISMATCH);
+        assertReason(token, "orders", "filter-hash", "name:asc,id:asc", AdminCursorCodec.RejectionReason.RESOURCE_MISMATCH);
+        assertReason(token, "admin-users", "other-filter", "name:asc,id:asc", AdminCursorCodec.RejectionReason.FILTER_MISMATCH);
+        assertReason(token, "admin-users", "filter-hash", "createdAt:desc,id:desc", AdminCursorCodec.RejectionReason.SORT_MISMATCH);
     }
     @Test void malformedPayload_isRejected() { assertReason("not-a-token", "users", "filter-hash", "createdAt:desc,id:desc", AdminCursorCodec.RejectionReason.MALFORMED); }
     @Test void oversizedToken_isRejected() { assertReason("x".repeat(4097), "users", "filter-hash", "createdAt:desc,id:desc", AdminCursorCodec.RejectionReason.MALFORMED); }

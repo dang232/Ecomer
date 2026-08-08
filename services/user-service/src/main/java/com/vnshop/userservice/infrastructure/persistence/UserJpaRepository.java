@@ -5,6 +5,8 @@ import com.vnshop.userservice.domain.BuyerProfile;
 import com.vnshop.userservice.domain.PhoneNumber;
 import com.vnshop.userservice.domain.SellerProfile;
 import com.vnshop.userservice.domain.port.out.UserRepositoryPort;
+import com.vnshop.userservice.domain.port.out.AdminBuyerCursor;
+import com.vnshop.userservice.domain.port.out.AdminSellerCursor;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import java.util.List;
@@ -16,6 +18,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * EntityManager is constructor-injected with {@link Lazy} so the bean can be
@@ -28,10 +31,14 @@ public class UserJpaRepository implements UserRepositoryPort {
     private static final String PHONE_CLAIM_UNIQUE_INDEX = "uq_buyer_profiles_phone_claim";
 
     private final EntityManager entityManager;
+    private final UserAdminCursorJpaRepository cursorRepository;
 
-    public UserJpaRepository(@Lazy EntityManager entityManager) {
-        this.entityManager = entityManager;
+    @Autowired
+    public UserJpaRepository(@Lazy EntityManager entityManager, UserAdminCursorJpaRepository cursorRepository) {
+        this.entityManager = entityManager; this.cursorRepository = cursorRepository;
     }
+
+    public UserJpaRepository(@Lazy EntityManager entityManager) { this(entityManager, new UserAdminCursorJpaRepository(entityManager)); }
 
     @Override
     @Transactional
@@ -220,6 +227,10 @@ public class UserJpaRepository implements UserRepositoryPort {
                 .toList();
         return new PageImpl<>(content, pageable, total);
     }
+
+    @Override public List<BuyerProfile> searchBuyersCursor(String query, AdminBuyerCursor cursor, int limit) { return cursorRepository.searchBuyers(query, cursor, limit); }
+
+    @Override public List<SellerProfile> findPendingSellersCursor(String query, AdminSellerCursor cursor, int limit) { return cursorRepository.findPendingSellers(query, cursor, limit); }
 
     @Override
     @Transactional

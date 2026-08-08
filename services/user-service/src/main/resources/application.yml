@@ -27,6 +27,9 @@ spring:
     enabled: true
     schemas: user_svc
     default-schema: user_svc
+    postgresql:
+      transactional:
+        lock: false
   jpa:
     hibernate:
       ddl-auto: validate
@@ -80,6 +83,10 @@ vnshop:
     read-timeout-ms: ${PRODUCT_SERVICE_READ_TIMEOUT_MS:2500}
     cache-ttl-seconds: ${PRODUCT_SERVICE_CACHE_TTL_SECONDS:300}
     cache-max-entries: ${PRODUCT_SERVICE_CACHE_MAX_ENTRIES:10000}
+  admin:
+    cursor:
+      secret: ${ADMIN_CURSOR_SECRET}
+      ttl: ${ADMIN_CURSOR_TTL:PT15M}
 
 # Resilience around outbound calls to product-service. The breaker latches open
 # after sustained failures so a slow product-service can't stall the SellerShowcase

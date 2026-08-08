@@ -3,10 +3,12 @@ package com.vnshop.userservice.application;
 import com.vnshop.userservice.domain.BuyerProfile;
 import com.vnshop.userservice.domain.port.out.KeycloakAdminPort;
 import com.vnshop.userservice.domain.port.out.UserRepositoryPort;
+import com.vnshop.userservice.domain.port.out.AdminBuyerCursor;
 
 import java.util.Objects;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import java.util.List;
 
 public class AdminUserUseCase {
 
@@ -20,6 +22,10 @@ public class AdminUserUseCase {
 
     public Page<BuyerProfile> searchUsers(String query, Pageable pageable) {
         return userRepository.searchBuyers(query, pageable);
+    }
+
+    public List<BuyerProfile> searchUsersCursor(String query, AdminBuyerCursor cursor, int limit) {
+        return userRepository.searchBuyersCursor(query, cursor, limit);
     }
 
     public BuyerProfile banUser(String keycloakId) {
