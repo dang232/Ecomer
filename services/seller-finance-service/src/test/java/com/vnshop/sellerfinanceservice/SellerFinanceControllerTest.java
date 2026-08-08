@@ -2,6 +2,7 @@ package com.vnshop.sellerfinanceservice;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -33,7 +34,8 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
-        "spring.autoconfigure.exclude=org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration,org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration,org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration,org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration"
+        "spring.autoconfigure.exclude=org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration,org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration,org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration,org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration",
+        "vnshop.admin-cursor.secret=test-secret"
 })
 class SellerFinanceControllerTest {
 
@@ -244,6 +246,43 @@ class SellerFinanceControllerTest {
         assertThat(body.get("data").get("content").get(0).get("payoutId").asText())
                 .isEqualTo(payoutId.toString());
         assertThat(body.get("data").get("totalElements").asInt()).isEqualTo(1);
+    }
+
+    @Test
+    void adminPayoutCursorTraversesBoundedPagesInCreatedAtAndIdOrder() throws Exception {
+        Instant createdAt = Instant.parse("2026-05-14T00:00:00Z");
+        UUID newestId = UUID.fromString("ffffffff-ffff-ffff-ffff-ffffffffffff");
+        UUID olderId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        Payout newest = new Payout(newestId, SELLER_ID, new BigDecimal("200.00"), PayoutStatus.PAID, createdAt);
+        Payout older = new Payout(olderId, SELLER_ID, new BigDecimal("125.50"), PayoutStatus.PAID, createdAt);
+        when(payoutRepositoryPort.findAdminCursor(any(), any(), any(), any(), anyInt()))
+                .thenReturn(List.of(newest, older), List.of(older));
+
+        HttpResponse<String> firstResponse = httpClient.send(
+                authorizedRequest("/admin/finance/payouts?status=ALL&q=%20Alice%20&limit=1").GET().build(),
+                HttpResponse.BodyHandlers.ofString());
+        JsonNode firstBody = objectMapper.readTree(firstResponse.body());
+        JsonNode firstPage = firstBody.get("data");
+
+        assertThat(firstResponse.statusCode()).isEqualTo(200);
+        assertThat(firstPage.get("items")).hasSize(1);
+        assertThat(firstPage.get("items").get(0).get("payoutId").asText()).isEqualTo(newestId.toString());
+        assertThat(firstPage.get("hasMore").asBoolean()).isTrue();
+        assertThat(firstPage.get("nextCursor").asText()).isNotBlank();
+        assertThat(firstPage.get("pageSize").asInt()).isEqualTo(1);
+
+        String cursor = firstPage.get("nextCursor").asText();
+        HttpResponse<String> secondResponse = httpClient.send(
+                authorizedRequest("/admin/finance/payouts?status=ALL&q=Alice&limit=1&cursor=" + cursor)
+                        .GET().build(),
+                HttpResponse.BodyHandlers.ofString());
+        JsonNode secondPage = objectMapper.readTree(secondResponse.body()).get("data");
+
+        assertThat(secondResponse.statusCode()).isEqualTo(200);
+        assertThat(secondPage.get("items")).hasSize(1);
+        assertThat(secondPage.get("items").get(0).get("payoutId").asText()).isEqualTo(olderId.toString());
+        assertThat(secondPage.get("hasMore").asBoolean()).isFalse();
+        assertThat(secondPage.get("nextCursor").isNull()).isTrue();
     }
 
     private HttpRequest.Builder authorizedRequest(String path) {

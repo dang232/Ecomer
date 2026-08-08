@@ -20,6 +20,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -287,6 +288,24 @@ class PayoutUseCasesTest {
         @Override
         public List<Payout> findByStatus(PayoutStatus status) {
             return values.values().stream().filter(payout -> payout.status() == status).toList();
+        }
+
+        @Override
+        public List<Payout> findAdminCursor(String query, PayoutStatus status, Instant beforeCreatedAt,
+                UUID beforePayoutId, int limit) {
+            return values.values().stream()
+                    .filter(payout -> status == null || payout.status() == status)
+                    .filter(payout -> query == null || query.isBlank()
+                            || payout.sellerId().toLowerCase().contains(query.trim().toLowerCase())
+                            || payout.payoutId().toString().contains(query.trim().toLowerCase()))
+                    .filter(payout -> beforeCreatedAt == null
+                            || payout.createdAt().isBefore(beforeCreatedAt)
+                            || (payout.createdAt().equals(beforeCreatedAt)
+                                    && payout.payoutId().compareTo(beforePayoutId) < 0))
+                    .sorted(Comparator.comparing(Payout::createdAt).reversed()
+                            .thenComparing(Payout::payoutId, Comparator.reverseOrder()))
+                    .limit(limit)
+                    .toList();
         }
 
         @Override
