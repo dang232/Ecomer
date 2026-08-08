@@ -6,8 +6,10 @@ import com.vnshop.sellerfinanceservice.domain.port.out.PayoutRepositoryPort;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.PageRequest;
 
 @Repository
 public class PayoutJpaRepository implements PayoutRepositoryPort {
@@ -35,6 +37,15 @@ public class PayoutJpaRepository implements PayoutRepositoryPort {
     @Override
     public List<Payout> findByStatus(PayoutStatus status) {
         return repository.findByStatus(status).stream().map(PayoutJpaEntity::toDomain).toList();
+    }
+
+    @Override
+    public List<Payout> findAdminCursor(
+            String query, PayoutStatus status, Instant beforeCreatedAt, UUID beforePayoutId, int limit) {
+        String normalized = query == null ? "" : query.trim().toLowerCase(java.util.Locale.ROOT);
+        return repository.findAdminCursor(normalized, "%" + normalized + "%", status,
+                        beforeCreatedAt, beforePayoutId, PageRequest.of(0, limit))
+                .stream().map(PayoutJpaEntity::toDomain).toList();
     }
 
     @Override
