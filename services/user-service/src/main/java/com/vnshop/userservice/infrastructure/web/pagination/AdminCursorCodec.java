@@ -43,9 +43,6 @@ public final class AdminCursorCodec {
         } catch (InvalidCursorException e) { throw e; } catch (Exception e) { throw reject(RejectionReason.MALFORMED); }
     }
 
-    String tokenForTesting(String json) {
-        return sign(json);
-    }
     private String sign(String json) { byte[] p = json.getBytes(StandardCharsets.UTF_8); return Base64.getUrlEncoder().withoutPadding().encodeToString(p) + "." + Base64.getUrlEncoder().withoutPadding().encodeToString(hmac(p)); }
     private byte[] hmac(byte[] p) { try { Mac m = Mac.getInstance(ALGORITHM); m.init(new SecretKeySpec(secret, ALGORITHM)); return m.doFinal(p); } catch (Exception e) { throw new IllegalStateException("could not sign cursor", e); } }
     private static byte[] decode(String v) { return Base64.getUrlDecoder().decode(v); }

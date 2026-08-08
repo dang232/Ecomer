@@ -99,10 +99,6 @@ public final class AdminCursorCodec {
         }
     }
 
-    String tokenForTesting(String json) {
-        return token(json);
-    }
-
     private String token(String json) {
         byte[] payload = json.getBytes(StandardCharsets.UTF_8);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(payload)

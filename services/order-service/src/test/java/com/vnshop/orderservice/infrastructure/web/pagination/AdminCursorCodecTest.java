@@ -8,6 +8,10 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Map;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import org.junit.jupiter.api.Test;
 
 class AdminCursorCodecTest {
@@ -31,7 +35,7 @@ class AdminCursorCodecTest {
 
     @Test
     void omittedAsOf_roundTripsAsNull() {
-        String token = codec.tokenForTesting(payload("").replace(",\"expiresAt\"", ",\"asOfMissing\":true,\"expiresAt\""));
+        String token = signed(payload("").replace(",\"expiresAt\"", ",\"asOfMissing\":true,\"expiresAt\""));
 
         assertThat(codec.decode(token, "orders", "filter-hash", "createdAt:desc,id:desc").asOf()).isNull();
     }
@@ -46,7 +50,7 @@ class AdminCursorCodecTest {
 
     @Test
     void expiry_isRejected() {
-        String token = codec.tokenForTesting(payloadWithExpiry("2026-08-07T23:59:00Z"));
+        String token = signed(payloadWithExpiry("2026-08-07T23:59:00Z"));
 
         assertReason(token, "orders", "filter-hash", "createdAt:desc,id:desc", AdminCursorCodec.RejectionReason.EXPIRED);
     }
@@ -68,8 +72,8 @@ class AdminCursorCodecTest {
 
     @Test
     void signedUnsupportedVersions_areRejected() {
-        assertReason(codec.tokenForTesting(payloadWithVersion(0)), "orders", "filter-hash", "createdAt:desc,id:desc", AdminCursorCodec.RejectionReason.UNSUPPORTED_VERSION);
-        assertReason(codec.tokenForTesting(payloadWithVersion(2)), "orders", "filter-hash", "createdAt:desc,id:desc", AdminCursorCodec.RejectionReason.UNSUPPORTED_VERSION);
+        assertReason(signed(payloadWithVersion(0)), "orders", "filter-hash", "createdAt:desc,id:desc", AdminCursorCodec.RejectionReason.UNSUPPORTED_VERSION);
+        assertReason(signed(payloadWithVersion(2)), "orders", "filter-hash", "createdAt:desc,id:desc", AdminCursorCodec.RejectionReason.UNSUPPORTED_VERSION);
     }
 
     @Test
@@ -82,13 +86,13 @@ class AdminCursorCodecTest {
                 "expiresAt", "\"expiresAt\":1");
         fields.forEach((field, replacement) -> {
             String json = payloadWithout(field, replacement);
-            assertReason(codec.tokenForTesting(json), "orders", "filter-hash", "createdAt:desc,id:desc", AdminCursorCodec.RejectionReason.MISSING_FIELD);
+            assertReason(signed(json), "orders", "filter-hash", "createdAt:desc,id:desc", AdminCursorCodec.RejectionReason.MISSING_FIELD);
         });
     }
 
     @Test
     void wireFormatVector_roundTripsAcrossCodecContract() {
-        String token = codec.tokenForTesting(payload(""));
+        String token = signed(payload(""));
 
         AdminCursorCodec.Cursor decoded = codec.decode(token, "orders", "filter-hash", "createdAt:desc,id:desc");
 
@@ -117,6 +121,18 @@ class AdminCursorCodecTest {
 
     private static String payloadWithVersion(int version) {
         return payload("").replace("\"v\":1", "\"v\":" + version);
+    }
+
+    private static String signed(String json) {
+        try {
+            byte[] payload = json.getBytes(StandardCharsets.UTF_8);
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(SECRET.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(payload) + "."
+                    + Base64.getUrlEncoder().withoutPadding().encodeToString(mac.doFinal(payload));
+        } catch (Exception exception) {
+            throw new IllegalStateException(exception);
+        }
     }
 
     private static String payloadWithout(String field, String replacement) {
