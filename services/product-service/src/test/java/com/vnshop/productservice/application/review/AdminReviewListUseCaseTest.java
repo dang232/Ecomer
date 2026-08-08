@@ -3,6 +3,9 @@ package com.vnshop.productservice.application.review;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
+import static org.mockito.ArgumentMatchers.any;
 
 import com.vnshop.productservice.domain.port.out.ProductRepositoryPort;
 import com.vnshop.productservice.domain.review.Review;
@@ -17,6 +20,33 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class AdminReviewListUseCaseTest {
+    @Test
+    void cursorPageEnrichesOnlyVisibleRowsAndReportsLookahead() {
+        Review visible = review("visible", "2026-07-22T00:00:00Z");
+        Review lookahead = review("lookahead", "2026-07-21T00:00:00Z");
+        ReviewRepositoryPort reviews = mock(ReviewRepositoryPort.class);
+        BuyerProfileLookupPort buyers = mock(BuyerProfileLookupPort.class);
+        ProductRepositoryPort products = mock(ProductRepositoryPort.class);
+        when(reviews.findByStatusCursor(ReviewStatus.PENDING, "", null, 2)).thenReturn(List.of(visible, lookahead));
+        when(buyers.lookup(List.of("buyer-visible"))).thenReturn(Map.of());
+        when(products.findNamesByIds(Set.of("product-visible"))).thenReturn(Map.of());
+
+        AdminReviewCursorPage result = new AdminReviewListUseCase(reviews, buyers, products)
+                .pendingCursor("", null, 1);
+
+        assertThat(result.items()).singleElement().extracting(EnrichedReview::review).isEqualTo(visible);
+        assertThat(result.hasMore()).isTrue();
+        verify(buyers).lookup(List.of("buyer-visible"));
+        verify(products).findNamesByIds(Set.of("product-visible"));
+        verify(buyers, never()).lookup(List.of("buyer-lookahead"));
+    }
+
+    private static Review review(String id, String createdAt) {
+        return new Review(UUID.nameUUIDFromBytes(id.getBytes()), "product-" + id,
+                "buyer-" + id, null, 4, id, List.of(), false, 0, Set.of(), ReviewStatus.PENDING,
+                Instant.parse(createdAt));
+    }
+
     @Test
     void pendingReviewsContainBuyerAndProductProjections() {
         Review review = new Review(
