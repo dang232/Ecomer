@@ -56,17 +56,20 @@ class ListOpenDisputesUseCaseTest {
         DisputeRepositoryPort disputes = mock(DisputeRepositoryPort.class);
         ReturnRepositoryPort returns = mock(ReturnRepositoryPort.class);
         OrderSummaryQueryPort orders = mock(OrderSummaryQueryPort.class);
-        UUID returnId = UUID.randomUUID();
-        Dispute first = new Dispute(UUID.randomUUID(), returnId.toString(), "wrong item", null);
-        Dispute second = new Dispute(UUID.randomUUID(), returnId.toString(), "wrong color", null);
+        UUID firstReturnId = UUID.randomUUID();
+        UUID secondReturnId = UUID.randomUUID();
+        UUID lookaheadReturnId = UUID.randomUUID();
+        Dispute first = new Dispute(UUID.randomUUID(), firstReturnId.toString(), "wrong item", null);
+        Dispute second = new Dispute(UUID.randomUUID(), secondReturnId.toString(), "wrong color", null);
+        Dispute lookahead = new Dispute(UUID.randomUUID(), lookaheadReturnId.toString(), "third", null);
         Instant firstCreatedAt = Instant.parse("2026-08-08T00:00:00Z");
         Instant secondCreatedAt = firstCreatedAt.minusSeconds(1);
         when(disputes.findCursor(eq("OPEN"), eq("wrong"), eq(null), eq(null), eq(3)))
                 .thenReturn(List.of(new DisputeRepositoryPort.DisputeCursorItem(first, firstCreatedAt),
                         new DisputeRepositoryPort.DisputeCursorItem(second, secondCreatedAt),
-                        new DisputeRepositoryPort.DisputeCursorItem(
-                                new Dispute(UUID.randomUUID(), returnId.toString(), "third", null), secondCreatedAt.minusSeconds(1))));
-        when(returns.findById(returnId)).thenReturn(Optional.empty());
+                        new DisputeRepositoryPort.DisputeCursorItem(lookahead, secondCreatedAt.minusSeconds(1))));
+        when(returns.findById(firstReturnId)).thenReturn(Optional.empty());
+        when(returns.findById(secondReturnId)).thenReturn(Optional.empty());
 
         ListOpenDisputesUseCase useCase = new ListOpenDisputesUseCase(disputes, returns, orders,
                 (buyerIds, sellerIds) -> UserDirectoryPort.DirectorySnapshot.empty());
@@ -81,5 +84,6 @@ class ListOpenDisputesUseCaseTest {
         assertThat(result.lastCreatedAt()).isEqualTo(secondCreatedAt);
         assertThat(result.lastDisputeId()).isEqualTo(second.disputeId());
         verify(disputes).findCursor("OPEN", "wrong", null, null, 3);
+        verify(returns, org.mockito.Mockito.never()).findById(lookaheadReturnId);
     }
 }

@@ -18,6 +18,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -38,6 +39,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @ActiveProfiles("test")
 @Import(TestcontainersConfig.class)
 class OrderServiceIntegrationTest {
+
+    @AfterEach
+    void clearCapturedSql() {
+        CursorSqlCapture.clear();
+    }
 
     @Autowired
     private DataSource dataSource;
@@ -94,8 +100,19 @@ class OrderServiceIntegrationTest {
                     "idx_disputes_admin_dispute_id_prefix", "idx_disputes_admin_return_id_prefix",
                     "idx_disputes_admin_buyer_reason_prefix", "idx_disputes_admin_seller_response_prefix");
 
-            // Small integration fixtures may make PostgreSQL prefer a sequential scan; disable it only
-            // so representative index-plan contracts remain deterministic, not as a production setting.
+            String defaultOrderPlan = explainPlan(statement, "EXPLAIN (ANALYZE, BUFFERS) SELECT order_id FROM order_svc.order_summary "
+                    + "WHERE status = 'PENDING' AND (created_at < CURRENT_TIMESTAMP OR "
+                    + "(created_at = CURRENT_TIMESTAMP AND order_id < 'ffffffff-ffff-ffff-ffff-ffffffffffff')) "
+                    + "ORDER BY created_at DESC, order_id DESC LIMIT 51");
+            String defaultDisputePlan = explainPlan(statement, "EXPLAIN (ANALYZE, BUFFERS) SELECT dispute_id FROM order_svc.disputes "
+                    + "WHERE status = 'OPEN' AND (created_at < CURRENT_TIMESTAMP OR "
+                    + "(created_at = CURRENT_TIMESTAMP AND dispute_id < 'ffffffff-ffff-ffff-ffff-ffffffffffff')) "
+                    + "ORDER BY created_at DESC, dispute_id DESC LIMIT 51");
+            // The default plans are captured as production-shaped evidence, but tiny fixtures can legitimately choose Seq Scan.
+            assertThat(defaultOrderPlan).contains("Limit");
+            assertThat(defaultDisputePlan).contains("Limit");
+
+            // Disable sequential scans only to make the index-plan contract deterministic; this is not a production setting.
             statement.execute("SET enable_seqscan = off");
             assertPlanUsesIndex(statement, "EXPLAIN (ANALYZE, BUFFERS) SELECT order_id FROM order_svc.order_summary "
                     + "WHERE status = 'PENDING' AND (created_at < CURRENT_TIMESTAMP OR "
@@ -138,13 +155,16 @@ class OrderServiceIntegrationTest {
     }
 
     private static void assertPlanUsesIndex(Statement statement, String explain, String indexName) throws SQLException {
-        String plan;
+        String plan = explainPlan(statement, explain);
+        assertThat(plan).contains(indexName).doesNotContain("Seq Scan");
+    }
+
+    private static String explainPlan(Statement statement, String explain) throws SQLException {
         try (var rows = statement.executeQuery(explain)) {
             StringBuilder text = new StringBuilder();
             while (rows.next()) text.append(rows.getString(1)).append('\n');
-            plan = text.toString();
+            return text.toString();
         }
-        assertThat(plan).contains(indexName).doesNotContain("Seq Scan");
     }
 
     @Test
