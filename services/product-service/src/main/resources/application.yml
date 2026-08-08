@@ -54,6 +54,9 @@ spring:
     enabled: true
     schemas: product_svc
     default-schema: product_svc
+    postgresql:
+      transactional:
+        lock: false
   jpa:
     hibernate:
       ddl-auto: validate
