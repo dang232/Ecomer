@@ -73,6 +73,10 @@ class ListOpenDisputesUseCaseTest {
         DisputeCursorResult result = useCase.listOpenEnrichedCursor("wrong", null, null, 2);
 
         assertThat(result.items()).hasSize(2);
+        assertThat(result.items().get(0).dispute().disputeId()).isEqualTo(first.disputeId());
+        assertThat(result.items().get(1).dispute().disputeId()).isEqualTo(second.disputeId());
+        assertThat(result.items()).extracting(item -> item.dispute().disputeId())
+                .doesNotHaveDuplicates().containsExactly(first.disputeId(), second.disputeId());
         assertThat(result.hasMore()).isTrue();
         assertThat(result.lastCreatedAt()).isEqualTo(secondCreatedAt);
         assertThat(result.lastDisputeId()).isEqualTo(second.disputeId());

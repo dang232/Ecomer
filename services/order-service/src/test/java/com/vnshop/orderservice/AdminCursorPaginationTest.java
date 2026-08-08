@@ -27,6 +27,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.UUID;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import javax.crypto.Mac;
@@ -112,6 +113,19 @@ class AdminCursorPaginationTest {
     }
 
     @Test
+    void expiredOrderCursorReturnsCursorInvalidWithoutCallingEitherPath() throws Exception {
+        AdminOrderUseCase useCase = mock(AdminOrderUseCase.class);
+        String token = signed("{\"v\":1,\"resource\":\"admin-orders\",\"filterHash\":\""
+                + sha256("\u0000") + "\",\"sort\":\"createdAt:desc,id:desc\",\"sortKey\":\"2026-08-07T23:59:00Z\","
+                + "\"uniqueId\":\"order-1\",\"expiresAt\":\"2026-08-07T23:00:00Z\"}");
+        mvc(useCase, new AdminCursorCodec("test-secret", Duration.ofHours(1), CLOCK), mock(AdminRefundUseCase.class))
+                .perform(get("/admin/orders").param("limit", "2").param("cursor", token))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("cursor_invalid"));
+        verify(useCase, never()).listAllOrders(any(), any(), any(PageRequest.class));
+        verify(useCase, never()).listAllOrdersCursor(any(), any(), any(), any(), any(Integer.class));
+    }
+
+    @Test
     void equalOrderTimestampsAreReturnedOnceAcrossCursorTraversal() throws Exception {
         AdminOrderUseCase useCase = mock(AdminOrderUseCase.class);
         OrderSummaryProjection first = order("order-2", NOW.minusSeconds(1));
@@ -119,16 +133,19 @@ class AdminCursorPaginationTest {
         when(useCase.listAllOrdersCursor(any(), any(), eq(null), eq(null), eq(2)))
                 .thenReturn(List.of(first, second));
         when(useCase.listAllOrdersCursor(any(), any(), eq(NOW.minusSeconds(1)), eq("order-2"), eq(2)))
-                .thenReturn(List.of(order("order-0", NOW.minusSeconds(2))));
+                .thenReturn(List.of(second));
 
         MockMvc mvc = mvc(useCase, new AdminCursorCodec("test-secret", Duration.ofHours(1), CLOCK), mock(AdminRefundUseCase.class));
         String next = mvc.perform(get("/admin/orders").param("limit", "1"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].orderId").value("order-2"))
                 .andExpect(jsonPath("$.data.hasMore").value(true))
                 .andReturn().getResponse().getContentAsString();
         String token = new com.fasterxml.jackson.databind.ObjectMapper().readTree(next).at("/data/nextCursor").asText();
         mvc.perform(get("/admin/orders").param("limit", "1").param("cursor", token))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.data.items.length()").value(1));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].orderId").value("order-1"))
+                .andExpect(jsonPath("$.data.items[0].orderId").value(org.hamcrest.Matchers.not("order-2")));
     }
 
     @Test
@@ -149,6 +166,53 @@ class AdminCursorPaginationTest {
                 .andExpect(jsonPath("$.code").value("cursor_invalid"));
         verify(useCase, never()).listOpenEnriched(any());
         verify(useCase, never()).listOpenEnrichedCursor(any(), any(), any(), any(Integer.class));
+    }
+
+    @Test
+    void expiredDisputeCursorReturnsCursorInvalidWithoutCallingEitherPath() throws Exception {
+        ListOpenDisputesUseCase useCase = mock(ListOpenDisputesUseCase.class);
+        String token = signed("{\"v\":1,\"resource\":\"admin-disputes-open\",\"filterHash\":\""
+                + sha256("") + "\",\"sort\":\"createdAt:desc,disputeId:desc\",\"sortKey\":\"2026-08-07T23:59:00Z\","
+                + "\"uniqueId\":\"00000000-0000-0000-0000-000000000001\",\"expiresAt\":\"2026-08-07T23:00:00Z\"}");
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(new AdminDisputeController(mock(DisputeUseCase.class), useCase,
+                        new AdminCursorCodec("test-secret", Duration.ofHours(1), CLOCK)))
+                .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver()).setControllerAdvice(new ApiExceptionHandler()).build();
+        mvc.perform(get("/admin/disputes/open").param("limit", "2").param("cursor", token))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("cursor_invalid"));
+        verify(useCase, never()).listOpenEnriched(any());
+        verify(useCase, never()).listOpenEnrichedCursor(any(), any(), any(), any(Integer.class));
+    }
+
+    @Test
+    void disputeCursorTraversalReturnsExactRowsWithoutDuplicateOrOmission() throws Exception {
+        ListOpenDisputesUseCase useCase = mock(ListOpenDisputesUseCase.class);
+        UUID firstId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        UUID secondId = UUID.fromString("00000000-0000-0000-0000-000000000002");
+        Dispute firstDispute = new Dispute(firstId, "return-1", "wrong item", null);
+        Dispute secondDispute = new Dispute(secondId, "return-2", "wrong color", null);
+        EnrichedDispute first = new EnrichedDispute(firstDispute, "order-1", "ORD-1", "buyer-1", null,
+                "seller-1", null, NOW.minusSeconds(1));
+        EnrichedDispute second = new EnrichedDispute(secondDispute, "order-2", "ORD-2", "buyer-2", null,
+                "seller-2", null, NOW.minusSeconds(1));
+        when(useCase.listOpenEnrichedCursor(eq(null), eq(null), eq(null), eq(2)))
+                .thenReturn(new com.vnshop.orderservice.application.DisputeCursorResult(List.of(first), true,
+                        NOW.minusSeconds(1), firstId));
+        when(useCase.listOpenEnrichedCursor(eq(null), eq(NOW.minusSeconds(1)), eq(firstId), eq(2)))
+                .thenReturn(new com.vnshop.orderservice.application.DisputeCursorResult(List.of(second), false,
+                        NOW.minusSeconds(1), secondId));
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(new AdminDisputeController(mock(DisputeUseCase.class), useCase,
+                        new AdminCursorCodec("test-secret", Duration.ofHours(1), CLOCK)))
+                .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver()).setControllerAdvice(new ApiExceptionHandler()).build();
+
+        String firstPage = mvc.perform(get("/admin/disputes/open").param("limit", "2"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].disputeId").value(firstId.toString()))
+                .andExpect(jsonPath("$.data.hasMore").value(true)).andReturn().getResponse().getContentAsString();
+        String token = new com.fasterxml.jackson.databind.ObjectMapper().readTree(firstPage).at("/data/nextCursor").asText();
+        mvc.perform(get("/admin/disputes/open").param("limit", "2").param("cursor", token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].disputeId").value(secondId.toString()))
+                .andExpect(jsonPath("$.data.items[0].disputeId").value(org.hamcrest.Matchers.not(firstId.toString())));
     }
 
     @Test

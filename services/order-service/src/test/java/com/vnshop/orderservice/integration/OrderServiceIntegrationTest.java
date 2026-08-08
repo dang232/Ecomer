@@ -73,8 +73,13 @@ class OrderServiceIntegrationTest {
             }
             assertThat(names).contains("idx_orders_admin_cursor_status_created_id",
                     "idx_orders_admin_cursor_created_id", "idx_disputes_admin_cursor_status_created_id",
-                    "idx_order_summary_admin_order_number_prefix", "idx_disputes_admin_buyer_reason_prefix");
+                    "idx_order_summary_admin_order_id_prefix", "idx_order_summary_admin_order_number_prefix",
+                    "idx_order_summary_admin_buyer_id_prefix", "idx_order_summary_admin_seller_id_prefix",
+                    "idx_disputes_admin_dispute_id_prefix", "idx_disputes_admin_return_id_prefix",
+                    "idx_disputes_admin_buyer_reason_prefix", "idx_disputes_admin_seller_response_prefix");
 
+            // Small integration fixtures may make PostgreSQL prefer a sequential scan; disable it only
+            // so representative index-plan contracts remain deterministic, not as a production setting.
             statement.execute("SET enable_seqscan = off");
             assertPlanUsesIndex(statement, "EXPLAIN (ANALYZE, BUFFERS) SELECT order_id FROM order_svc.order_summary "
                     + "WHERE status = 'PENDING' AND (created_at < CURRENT_TIMESTAMP OR "
@@ -85,6 +90,23 @@ class OrderServiceIntegrationTest {
                     + "WHERE lower(coalesce(order_number, '')) LIKE 'prefix%' "
                     + "ORDER BY created_at DESC, order_id DESC LIMIT 51",
                     "idx_order_summary_admin_order_number_prefix");
+            assertPlanUsesIndex(statement, "EXPLAIN (ANALYZE, BUFFERS) SELECT dispute_id FROM order_svc.disputes "
+                    + "WHERE status = 'OPEN' AND (created_at < CURRENT_TIMESTAMP OR "
+                    + "(created_at = CURRENT_TIMESTAMP AND dispute_id < 'ffffffff-ffff-ffff-ffff-ffffffffffff')) "
+                    + "ORDER BY created_at DESC, dispute_id DESC LIMIT 51",
+                    "idx_disputes_admin_cursor_status_created_id");
+            assertPlanUsesIndex(statement, "EXPLAIN (ANALYZE, BUFFERS) SELECT dispute_id FROM order_svc.disputes "
+                    + "WHERE lower(coalesce(dispute_id::text, '')) LIKE 'prefix%' LIMIT 51",
+                    "idx_disputes_admin_dispute_id_prefix");
+            assertPlanUsesIndex(statement, "EXPLAIN (ANALYZE, BUFFERS) SELECT dispute_id FROM order_svc.disputes "
+                    + "WHERE lower(coalesce(return_id::text, '')) LIKE 'prefix%' LIMIT 51",
+                    "idx_disputes_admin_return_id_prefix");
+            assertPlanUsesIndex(statement, "EXPLAIN (ANALYZE, BUFFERS) SELECT dispute_id FROM order_svc.disputes "
+                    + "WHERE lower(coalesce(buyer_reason, '')) LIKE 'prefix%' LIMIT 51",
+                    "idx_disputes_admin_buyer_reason_prefix");
+            assertPlanUsesIndex(statement, "EXPLAIN (ANALYZE, BUFFERS) SELECT dispute_id FROM order_svc.disputes "
+                    + "WHERE lower(coalesce(seller_response, '')) LIKE 'prefix%' LIMIT 51",
+                    "idx_disputes_admin_seller_response_prefix");
         }
     }
 
