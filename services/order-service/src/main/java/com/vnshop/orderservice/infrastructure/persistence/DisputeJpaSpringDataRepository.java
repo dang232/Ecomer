@@ -13,8 +13,8 @@ public interface DisputeJpaSpringDataRepository extends JpaRepository<DisputeJpa
  List<DisputeJpaEntity> findByStatus(DisputeStatus status);
 
  @Query("select d from DisputeJpaEntity d where d.status = :status and "
-          + "(:term = '' or lower(str(d.disputeId)) like :prefixTerm "
-          + "or lower(str(d.returnId)) like :prefixTerm or lower(d.buyerReason) like :prefixTerm "
+          + "(:term = '' or lower(coalesce(str(d.disputeId), '')) like :prefixTerm "
+          + "or lower(coalesce(str(d.returnId), '')) like :prefixTerm or lower(coalesce(d.buyerReason, '')) like :prefixTerm "
           + "or lower(d.sellerResponse) like :prefixTerm) order by d.createdAt desc")
   List<DisputeJpaEntity> findByStatusAndQuery(@Param("status") DisputeStatus status,
           @Param("term") String term, @Param("prefixTerm") String prefixTerm);
@@ -22,8 +22,8 @@ public interface DisputeJpaSpringDataRepository extends JpaRepository<DisputeJpa
   Optional<DisputeJpaEntity> findByReturnId(UUID returnId);
 
   @Query("select d from DisputeJpaEntity d where d.status = :status and "
-          + "(:term = '' or lower(str(d.disputeId)) like :prefixTerm "
-          + "or lower(str(d.returnId)) like :prefixTerm or lower(d.buyerReason) like :prefixTerm "
+          + "(:term = '' or lower(coalesce(str(d.disputeId), '')) like :prefixTerm "
+          + "or lower(coalesce(str(d.returnId), '')) like :prefixTerm or lower(coalesce(d.buyerReason, '')) like :prefixTerm "
           + "or lower(coalesce(d.sellerResponse, '')) like :prefixTerm) "
           + "and (:createdAtBefore is null or d.createdAt < :createdAtBefore "
           + "or (d.createdAt = :createdAtBefore and d.disputeId < :disputeIdBefore)) "

@@ -101,7 +101,8 @@ public class ListOpenDisputesUseCase {
     private List<EnrichedDispute> enrich(List<Dispute> disputes) {
         if (disputes.isEmpty()) return List.of();
         Map<UUID, com.vnshop.orderservice.domain.Return> returns = disputes.stream().map(Dispute::returnId)
-                .map(this::parseUuid).flatMap(java.util.Optional::stream).map(returnRepositoryPort::findById)
+                .map(this::parseUuid).flatMap(java.util.Optional::stream).distinct()
+                .map(returnRepositoryPort::findById)
                 .flatMap(java.util.Optional::stream).collect(Collectors.toMap(com.vnshop.orderservice.domain.Return::returnId,
                         value -> value, (left, right) -> left));
         Map<String, OrderSummaryProjection> orders = returns.values().stream().map(com.vnshop.orderservice.domain.Return::orderId)

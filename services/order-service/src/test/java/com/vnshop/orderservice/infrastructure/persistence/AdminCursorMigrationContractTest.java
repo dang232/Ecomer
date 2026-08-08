@@ -15,9 +15,9 @@ class AdminCursorMigrationContractTest {
         assertThat(sql).contains("idx_orders_admin_cursor_status_created_id")
                 .contains("idx_orders_admin_cursor_created_id")
                 .contains("idx_disputes_admin_cursor_status_created_id")
-                .contains("lower(order_number)")
-                .contains("lower(buyer_reason)")
-                .contains("lower(dispute_id::text)")
+                .contains("lower(coalesce(order_number, ''))) text_pattern_ops")
+                .contains("lower(coalesce(buyer_reason, ''))) text_pattern_ops")
+                .contains("lower(coalesce(dispute_id::text, ''))) text_pattern_ops")
                 .doesNotContain("pg_trgm");
     }
 }

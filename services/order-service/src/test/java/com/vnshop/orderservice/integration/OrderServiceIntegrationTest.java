@@ -65,6 +65,40 @@ class OrderServiceIntegrationTest {
     }
 
     @Test
+    void adminCursorIndexesExistAndRepresentativeQueriesUseThem() throws Exception {
+        try (Connection conn = dataSource.getConnection(); Statement statement = conn.createStatement()) {
+            var names = new java.util.HashSet<String>();
+            try (var rows = statement.executeQuery("SELECT indexname FROM pg_indexes WHERE schemaname = 'order_svc'")) {
+                while (rows.next()) names.add(rows.getString(1));
+            }
+            assertThat(names).contains("idx_orders_admin_cursor_status_created_id",
+                    "idx_orders_admin_cursor_created_id", "idx_disputes_admin_cursor_status_created_id",
+                    "idx_order_summary_admin_order_number_prefix", "idx_disputes_admin_buyer_reason_prefix");
+
+            statement.execute("SET enable_seqscan = off");
+            assertPlanUsesIndex(statement, "EXPLAIN (ANALYZE, BUFFERS) SELECT order_id FROM order_svc.order_summary "
+                    + "WHERE status = 'PENDING' AND (created_at < CURRENT_TIMESTAMP OR "
+                    + "(created_at = CURRENT_TIMESTAMP AND order_id < 'ffffffff-ffff-ffff-ffff-ffffffffffff')) "
+                    + "ORDER BY created_at DESC, order_id DESC LIMIT 51",
+                    "idx_orders_admin_cursor_status_created_id");
+            assertPlanUsesIndex(statement, "EXPLAIN (ANALYZE, BUFFERS) SELECT order_id FROM order_svc.order_summary "
+                    + "WHERE lower(coalesce(order_number, '')) LIKE 'prefix%' "
+                    + "ORDER BY created_at DESC, order_id DESC LIMIT 51",
+                    "idx_order_summary_admin_order_number_prefix");
+        }
+    }
+
+    private static void assertPlanUsesIndex(Statement statement, String explain, String indexName) throws SQLException {
+        String plan;
+        try (var rows = statement.executeQuery(explain)) {
+            StringBuilder text = new StringBuilder();
+            while (rows.next()) text.append(rows.getString(1)).append('\n');
+            plan = text.toString();
+        }
+        assertThat(plan).contains(indexName).doesNotContain("Seq Scan");
+    }
+
+    @Test
     void loadsOrderItemsWhenFindingAnOrderBySubOrderId() {
         Order saved = orderRepository.save(new Order(
                 UUID.randomUUID(),
