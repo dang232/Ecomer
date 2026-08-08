@@ -6,12 +6,14 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Clock;
+import java.time.DateTimeException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Objects;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.io.IOException;
 
 public final class AdminCursorCodec {
     private static final String ALGORITHM = "HmacSHA256";
@@ -48,7 +50,11 @@ public final class AdminCursorCodec {
             node.put("asOf", cursor.asOf().toString());
         }
         node.put("expiresAt", clock.instant().plus(ttl).toString());
-        return token(node.toString());
+        String token = token(node.toString());
+        if (token.length() > MAX_TOKEN_LENGTH) {
+            throw new CursorEncodingException("encoded cursor exceeds maximum length");
+        }
+        return token;
     }
 
     public Cursor decode(String token, String resource, String filterHash, String sort) {
@@ -94,7 +100,7 @@ public final class AdminCursorCodec {
             return new Cursor(tokenResource, tokenFilterHash, tokenSort, sortKey, uniqueId, asOf, expiresAt);
         } catch (InvalidCursorException exception) {
             throw exception;
-        } catch (Exception exception) {
+        } catch (IllegalArgumentException | IOException | DateTimeException exception) {
             throw reject(RejectionReason.MALFORMED);
         }
     }
@@ -169,6 +175,12 @@ public final class AdminCursorCodec {
 
         public RejectionReason reason() {
             return reason;
+        }
+    }
+
+    public static final class CursorEncodingException extends IllegalArgumentException {
+        public CursorEncodingException(String message) {
+            super(message);
         }
     }
 }

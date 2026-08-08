@@ -49,6 +49,7 @@ class AdminCursorCodecTest {
     }
     @Test void malformedPayload_isRejected() { assertReason("not-a-token", "users", "filter-hash", "createdAt:desc,id:desc", AdminCursorCodec.RejectionReason.MALFORMED); }
     @Test void oversizedToken_isRejected() { assertReason("x".repeat(4097), "users", "filter-hash", "createdAt:desc,id:desc", AdminCursorCodec.RejectionReason.MALFORMED); }
+    @Test void encode_rejectsOversizedToken() { AdminCursorCodec.Cursor oversized = new AdminCursorCodec.Cursor("users", "filter-hash", "createdAt:desc,id:desc", "k", "x".repeat(5000), NOW, null); assertThatThrownBy(() -> codec().encode(oversized)).isInstanceOf(AdminCursorCodec.CursorEncodingException.class); }
     @Test void missingRequiredField_isRejected() {
         String token = signed("{\"v\":1,\"resource\":\"users\",\"filterHash\":\"filter-hash\",\"sort\":\"createdAt:desc,id:desc\",\"expiresAt\":\"2026-08-08T00:05:00Z\"}");
         assertThatThrownBy(() -> codec().decode(token, "users", "filter-hash", "createdAt:desc,id:desc"))

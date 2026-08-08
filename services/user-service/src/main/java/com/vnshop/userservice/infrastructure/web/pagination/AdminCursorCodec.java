@@ -3,9 +3,11 @@ package com.vnshop.userservice.infrastructure.web.pagination;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Clock;
+import java.time.DateTimeException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
@@ -29,7 +31,7 @@ public final class AdminCursorCodec {
     public String encode(Cursor cursor) {
         Objects.requireNonNull(cursor, "cursor is required"); ObjectNode n = mapper.createObjectNode();
         n.put("v", VERSION); n.put("resource", required(cursor.resource(), "resource")); n.put("filterHash", required(cursor.filterHash(), "filterHash")); n.put("sort", required(cursor.sort(), "sort")); n.put("sortKey", required(cursor.sortKey(), "sortKey")); n.put("uniqueId", required(cursor.uniqueId(), "uniqueId"));
-        if (cursor.asOf() != null) n.put("asOf", cursor.asOf().toString()); n.put("expiresAt", clock.instant().plus(ttl).toString()); return sign(n.toString());
+        if (cursor.asOf() != null) n.put("asOf", cursor.asOf().toString()); n.put("expiresAt", clock.instant().plus(ttl).toString()); String token = sign(n.toString()); if (token.length() > MAX_TOKEN_LENGTH) throw new CursorEncodingException("encoded cursor exceeds maximum length"); return token;
     }
     public Cursor decode(String token, String resource, String filterHash, String sort) {
         try {
@@ -40,7 +42,7 @@ public final class AdminCursorCodec {
             String r = text(n, "resource"), f = text(n, "filterHash"), s = text(n, "sort"), k = text(n, "sortKey"), id = text(n, "uniqueId"); Instant exp = Instant.parse(text(n, "expiresAt")); Instant as = n.has("asOf") ? Instant.parse(text(n, "asOf")) : null;
             if (!clock.instant().isBefore(exp)) throw reject(RejectionReason.EXPIRED); if (!Objects.equals(resource, r)) throw reject(RejectionReason.RESOURCE_MISMATCH); if (!Objects.equals(filterHash, f)) throw reject(RejectionReason.FILTER_MISMATCH); if (!Objects.equals(sort, s)) throw reject(RejectionReason.SORT_MISMATCH);
             return new Cursor(r, f, s, k, id, as, exp);
-        } catch (InvalidCursorException e) { throw e; } catch (Exception e) { throw reject(RejectionReason.MALFORMED); }
+        } catch (InvalidCursorException e) { throw e; } catch (IllegalArgumentException | IOException | DateTimeException e) { throw reject(RejectionReason.MALFORMED); }
     }
 
     private String sign(String json) { byte[] p = json.getBytes(StandardCharsets.UTF_8); return Base64.getUrlEncoder().withoutPadding().encodeToString(p) + "." + Base64.getUrlEncoder().withoutPadding().encodeToString(hmac(p)); }
@@ -52,4 +54,5 @@ public final class AdminCursorCodec {
     public record Cursor(String resource, String filterHash, String sort, String sortKey, String uniqueId, Instant asOf, Instant expiresAt) { public Cursor withExpiresAt(Instant v) { return new Cursor(resource, filterHash, sort, sortKey, uniqueId, asOf, v); } }
     public enum RejectionReason { MALFORMED, TAMPERED, EXPIRED, RESOURCE_MISMATCH, FILTER_MISMATCH, SORT_MISMATCH, MISSING_FIELD, UNSUPPORTED_VERSION }
     public static final class InvalidCursorException extends IllegalArgumentException { private final RejectionReason reason; public InvalidCursorException(RejectionReason r) { super(r.name().toLowerCase()); reason = r; } public RejectionReason reason() { return reason; } }
+    public static final class CursorEncodingException extends IllegalArgumentException { public CursorEncodingException(String message) { super(message); } }
 }

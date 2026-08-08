@@ -71,6 +71,15 @@ class AdminCursorCodecTest {
     }
 
     @Test
+    void encode_rejectsOversizedToken() {
+        AdminCursorCodec.Cursor oversized = new AdminCursorCodec.Cursor(
+                "orders", "filter-hash", "createdAt:desc,id:desc", "k", "x".repeat(5000), NOW, null);
+
+        assertThatThrownBy(() -> codec.encode(oversized))
+                .isInstanceOf(AdminCursorCodec.CursorEncodingException.class);
+    }
+
+    @Test
     void signedUnsupportedVersions_areRejected() {
         assertReason(signed(payloadWithVersion(0)), "orders", "filter-hash", "createdAt:desc,id:desc", AdminCursorCodec.RejectionReason.UNSUPPORTED_VERSION);
         assertReason(signed(payloadWithVersion(2)), "orders", "filter-hash", "createdAt:desc,id:desc", AdminCursorCodec.RejectionReason.UNSUPPORTED_VERSION);
