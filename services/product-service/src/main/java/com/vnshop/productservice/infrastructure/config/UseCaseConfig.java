@@ -47,6 +47,9 @@ import com.vnshop.productservice.infrastructure.persistence.video.VideoJpaReposi
 import com.vnshop.productservice.infrastructure.sanitization.HtmlSanitizer;
 import com.vnshop.productservice.infrastructure.storage.VideoStorageProperties;
 import java.util.Set;
+import java.time.Clock;
+import java.time.Duration;
+import com.vnshop.productservice.infrastructure.web.pagination.AdminCursorCodec;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -58,6 +61,12 @@ public class UseCaseConfig {
     @Bean
     ProductTagNormalizer productTagNormalizer(ProductTagProperties properties) {
         return new ProductTagNormalizer(properties.toPolicy());
+    }
+
+    @Bean
+    AdminCursorCodec adminCursorCodec(ProductCursorProperties properties,
+            @org.springframework.beans.factory.annotation.Value("${product.cursor.admin-ttl:PT15M}") String ttl) {
+        return new AdminCursorCodec(properties.secret(), Duration.parse(ttl), Clock.systemUTC());
     }
 
     @Bean

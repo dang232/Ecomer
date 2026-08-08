@@ -121,6 +121,7 @@ review:
 product:
   cursor:
     secret: ${VNSHOP_PRODUCT_CURSOR_SECRET}
+    admin-ttl: ${VNSHOP_PRODUCT_ADMIN_CURSOR_TTL:PT15M}
   tags:
     max-per-product: ${PRODUCT_TAGS_MAX_PER_PRODUCT:20}
     max-length: ${PRODUCT_TAGS_MAX_LENGTH:64}
