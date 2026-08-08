@@ -36,15 +36,11 @@ public class AdminDisputeController {
         this.cursorCodec = cursorCodec;
     }
 
-    public AdminDisputeController(DisputeUseCase disputeUseCase, ListOpenDisputesUseCase listOpenDisputesUseCase) {
-        this(disputeUseCase, listOpenDisputesUseCase,
-                new AdminCursorCodec("dev-only-change-me", java.time.Duration.ofHours(1), java.time.Clock.systemUTC()));
-    }
-
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/open")
     public ApiResponse<?> open(@RequestParam(required = false) String q,
             @RequestParam(required = false) Integer limit, @RequestParam(required = false) String cursor) {
+        // Legacy array compatibility is intentionally limited to requests without cursor-mode parameters.
         if (limit != null || cursor != null) return cursorPage(q, limit, cursor);
         return ApiResponse.ok(listOpenDisputesUseCase.listOpenEnriched(q).stream()
                 .map(DisputeResponse::fromEnriched)
@@ -58,7 +54,12 @@ public class AdminDisputeController {
         Instant before = null; UUID beforeId = null;
         if (token != null) {
             var decoded = cursorCodec.decode(token, "admin-disputes-open", filterHash, "createdAt:desc,disputeId:desc");
-            before = Instant.parse(decoded.sortKey()); beforeId = UUID.fromString(decoded.uniqueId());
+            try {
+                before = Instant.parse(decoded.sortKey());
+                beforeId = UUID.fromString(decoded.uniqueId());
+            } catch (RuntimeException exception) {
+                throw AdminCursorCodec.InvalidCursorException.invalidAnchor();
+            }
         }
         DisputeCursorResult result = listOpenDisputesUseCase.listOpenEnrichedCursor(query, before, beforeId, pageSize);
         String next = result.hasMore() ? cursorCodec.encode(new AdminCursorCodec.Cursor("admin-disputes-open", filterHash,

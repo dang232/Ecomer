@@ -13,23 +13,23 @@ public interface DisputeJpaSpringDataRepository extends JpaRepository<DisputeJpa
  List<DisputeJpaEntity> findByStatus(DisputeStatus status);
 
  @Query("select d from DisputeJpaEntity d where d.status = :status and "
-         + "(:term = '' or lower(str(d.disputeId)) like :likeTerm "
-         + "or lower(str(d.returnId)) like :likeTerm or lower(d.buyerReason) like :likeTerm "
-         + "or lower(d.sellerResponse) like :likeTerm) order by d.createdAt desc")
- List<DisputeJpaEntity> findByStatusAndQuery(@Param("status") DisputeStatus status,
-         @Param("term") String term, @Param("likeTerm") String likeTerm);
+          + "(:term = '' or lower(str(d.disputeId)) like :prefixTerm "
+          + "or lower(str(d.returnId)) like :prefixTerm or lower(d.buyerReason) like :prefixTerm "
+          + "or lower(d.sellerResponse) like :prefixTerm) order by d.createdAt desc")
+  List<DisputeJpaEntity> findByStatusAndQuery(@Param("status") DisputeStatus status,
+          @Param("term") String term, @Param("prefixTerm") String prefixTerm);
 
   Optional<DisputeJpaEntity> findByReturnId(UUID returnId);
 
   @Query("select d from DisputeJpaEntity d where d.status = :status and "
-          + "(:term = '' or lower(str(d.disputeId)) like :likeTerm "
-          + "or lower(str(d.returnId)) like :likeTerm or lower(d.buyerReason) like :likeTerm "
-          + "or lower(coalesce(d.sellerResponse, '')) like :likeTerm) "
+          + "(:term = '' or lower(str(d.disputeId)) like :prefixTerm "
+          + "or lower(str(d.returnId)) like :prefixTerm or lower(d.buyerReason) like :prefixTerm "
+          + "or lower(coalesce(d.sellerResponse, '')) like :prefixTerm) "
           + "and (:createdAtBefore is null or d.createdAt < :createdAtBefore "
           + "or (d.createdAt = :createdAtBefore and d.disputeId < :disputeIdBefore)) "
           + "order by d.createdAt desc, d.disputeId desc")
   List<DisputeJpaEntity> findCursor(@Param("status") DisputeStatus status,
-          @Param("term") String term, @Param("likeTerm") String likeTerm,
+          @Param("term") String term, @Param("prefixTerm") String prefixTerm,
           @Param("createdAtBefore") Instant createdAtBefore,
           @Param("disputeIdBefore") UUID disputeIdBefore,
           org.springframework.data.domain.Pageable pageable);

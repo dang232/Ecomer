@@ -43,11 +43,6 @@ public class AdminOrderController {
         this.cursorCodec = cursorCodec;
     }
 
-    public AdminOrderController(AdminOrderUseCase adminOrderUseCase, AdminRefundUseCase adminRefundUseCase) {
-        this(adminOrderUseCase, adminRefundUseCase,
-                new AdminCursorCodec("dev-only-change-me", java.time.Duration.ofHours(1), java.time.Clock.systemUTC()));
-    }
-
     @GetMapping
     public ApiResponse<?> listOrders(
             @RequestParam(required = false) String q,
@@ -56,6 +51,7 @@ public class AdminOrderController {
             @RequestParam(required = false) String cursor,
             @PageableDefault(size = 50, sort = "createdAt") Pageable pageable
     ) {
+        // Legacy Page<T> remains available only when neither cursor nor limit is supplied.
         if (limit != null || cursor != null) return cursorPage(q, status, limit, cursor);
         return ApiResponse.ok(adminOrderUseCase.listAllOrders(q, status, pageable));
     }
@@ -69,8 +65,12 @@ public class AdminOrderController {
         String idBefore = null;
         if (token != null) {
             var decoded = cursorCodec.decode(token, "admin-orders", filterHash, "createdAt:desc,id:desc");
-            before = Instant.parse(decoded.sortKey());
-            idBefore = decoded.uniqueId();
+            try {
+                before = Instant.parse(decoded.sortKey());
+                idBefore = decoded.uniqueId();
+            } catch (RuntimeException exception) {
+                throw AdminCursorCodec.InvalidCursorException.invalidAnchor();
+            }
         }
         List<OrderSummaryProjection> rows = adminOrderUseCase.listAllOrdersCursor(query, status, before, idBefore, limit + 1);
         boolean hasMore = rows.size() > limit;

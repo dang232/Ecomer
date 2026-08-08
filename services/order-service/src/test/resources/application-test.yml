@@ -7,6 +7,9 @@ spring:
       auto-offset-reset: earliest
 
 vnshop:
+  admin-cursor:
+    secret: test-secret
+    ttl: PT1H
   datasource:
     read-replica:
       enabled: false

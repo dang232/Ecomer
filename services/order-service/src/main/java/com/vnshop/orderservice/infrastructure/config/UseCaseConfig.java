@@ -68,9 +68,12 @@ import org.springframework.context.annotation.Configuration;
 public class UseCaseConfig {
     @Bean
     AdminCursorCodec adminCursorCodec(
-            @Value("${vnshop.admin-cursor.secret:dev-only-change-me}") String secret,
+            @Value("${vnshop.admin-cursor.secret}") String secret,
             @Value("${vnshop.admin-cursor.ttl:PT1H}") Duration ttl,
             Clock clock) {
+        if (secret == null || secret.isBlank() || secret.equals("dev-only-change-me")) {
+            throw new IllegalStateException("ADMIN_CURSOR_SECRET must be configured with a non-placeholder value");
+        }
         return new AdminCursorCodec(secret, ttl, clock);
     }
     @Bean

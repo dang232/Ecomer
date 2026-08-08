@@ -75,7 +75,7 @@ vnshop:
       PREFERRED: "0.05"
       MALL: "0.03"
   admin-cursor:
-    secret: ${ADMIN_CURSOR_SECRET:dev-only-change-me}
+    secret: ${ADMIN_CURSOR_SECRET}
     ttl: ${ADMIN_CURSOR_TTL:PT1H}
 
 seller-finance:

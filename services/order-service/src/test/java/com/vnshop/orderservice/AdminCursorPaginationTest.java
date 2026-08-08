@@ -27,6 +27,10 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -79,6 +83,92 @@ class AdminCursorPaginationTest {
     }
 
     @Test
+    void signedInvalidOrderAnchorReturnsCursorInvalidWithoutLegacyFallback() throws Exception {
+        AdminOrderUseCase useCase = mock(AdminOrderUseCase.class);
+        String token = signed("{\"v\":1,\"resource\":\"admin-orders\",\"filterHash\":\""
+                + sha256("\u0000") + "\",\"sort\":\"createdAt:desc,id:desc\",\"sortKey\":\"bad\","
+                + "\"uniqueId\":\"order-1\",\"expiresAt\":\"2026-08-08T01:00:00Z\"}");
+
+        mvc(useCase, new AdminCursorCodec("test-secret", Duration.ofHours(1), CLOCK), mock(AdminRefundUseCase.class))
+                .perform(get("/admin/orders").param("limit", "2").param("cursor", token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("cursor_invalid"));
+
+        verify(useCase, never()).listAllOrders(any(), any(), any(PageRequest.class));
+        verify(useCase, never()).listAllOrdersCursor(any(), any(), any(), any(), any(Integer.class));
+    }
+
+    @Test
+    void exactOrderPageHasNoNextCursor() throws Exception {
+        AdminOrderUseCase useCase = mock(AdminOrderUseCase.class);
+        when(useCase.listAllOrdersCursor(any(), any(), any(), any(), eq(3)))
+                .thenReturn(List.of(order("order-1", NOW.minusSeconds(1)), order("order-2", NOW.minusSeconds(2))));
+
+        mvc(useCase, new AdminCursorCodec("test-secret", Duration.ofHours(1), CLOCK), mock(AdminRefundUseCase.class))
+                .perform(get("/admin/orders").param("limit", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.hasMore").value(false))
+                .andExpect(jsonPath("$.data.nextCursor").doesNotExist());
+    }
+
+    @Test
+    void equalOrderTimestampsAreReturnedOnceAcrossCursorTraversal() throws Exception {
+        AdminOrderUseCase useCase = mock(AdminOrderUseCase.class);
+        OrderSummaryProjection first = order("order-2", NOW.minusSeconds(1));
+        OrderSummaryProjection second = order("order-1", NOW.minusSeconds(1));
+        when(useCase.listAllOrdersCursor(any(), any(), eq(null), eq(null), eq(2)))
+                .thenReturn(List.of(first, second));
+        when(useCase.listAllOrdersCursor(any(), any(), eq(NOW.minusSeconds(1)), eq("order-2"), eq(2)))
+                .thenReturn(List.of(order("order-0", NOW.minusSeconds(2))));
+
+        MockMvc mvc = mvc(useCase, new AdminCursorCodec("test-secret", Duration.ofHours(1), CLOCK), mock(AdminRefundUseCase.class));
+        String next = mvc.perform(get("/admin/orders").param("limit", "1"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.hasMore").value(true))
+                .andReturn().getResponse().getContentAsString();
+        String token = new com.fasterxml.jackson.databind.ObjectMapper().readTree(next).at("/data/nextCursor").asText();
+        mvc.perform(get("/admin/orders").param("limit", "1").param("cursor", token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.items.length()").value(1));
+    }
+
+    @Test
+    void invalidDisputeCursorDoesNotInvokeLegacyArrayPath() throws Exception {
+        ListOpenDisputesUseCase useCase = mock(ListOpenDisputesUseCase.class);
+        String token = signed("{\"v\":1,\"resource\":\"admin-disputes-open\",\"filterHash\":\""
+                + sha256("") + "\",\"sort\":\"createdAt:desc,disputeId:desc\",\"sortKey\":\"bad\","
+                + "\"uniqueId\":\"bad-id\",\"expiresAt\":\"2026-08-08T01:00:00Z\"}");
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(new AdminDisputeController(
+                        mock(DisputeUseCase.class), useCase,
+                        new AdminCursorCodec("test-secret", Duration.ofHours(1), CLOCK)))
+                .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
+                .setControllerAdvice(new ApiExceptionHandler())
+                .build();
+
+        mvc.perform(get("/admin/disputes/open").param("limit", "2").param("cursor", token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("cursor_invalid"));
+        verify(useCase, never()).listOpenEnriched(any());
+        verify(useCase, never()).listOpenEnrichedCursor(any(), any(), any(), any(Integer.class));
+    }
+
+    @Test
+    void disputeWithoutCursorOrLimitUsesLegacyArrayCompatibilityPath() throws Exception {
+        ListOpenDisputesUseCase useCase = mock(ListOpenDisputesUseCase.class);
+        when(useCase.listOpenEnriched("wrong")).thenReturn(List.of());
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(new AdminDisputeController(
+                        mock(DisputeUseCase.class), useCase,
+                        new AdminCursorCodec("test-secret", Duration.ofHours(1), CLOCK)))
+                .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
+                .setControllerAdvice(new ApiExceptionHandler())
+                .build();
+
+        mvc.perform(get("/admin/disputes/open").param("q", "wrong"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").isArray());
+        verify(useCase).listOpenEnriched("wrong");
+    }
+
+    @Test
     void disputesUseLimitPlusOneAndBoundedEnrichment() throws Exception {
         ListOpenDisputesUseCase useCase = mock(ListOpenDisputesUseCase.class);
         Dispute dispute = new Dispute(java.util.UUID.randomUUID(), java.util.UUID.randomUUID().toString(), "wrong item", null);
@@ -112,5 +202,21 @@ class AdminCursorPaginationTest {
     private static OrderSummaryProjection order(String id, Instant createdAt) {
         return new OrderSummaryProjection(id, "ORD-" + id, "buyer-1", "seller-1", "PENDING",
                 BigDecimal.TEN, 1, createdAt, createdAt);
+    }
+
+    private static String sha256(String value) {
+        try { return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                .digest(value.getBytes(StandardCharsets.UTF_8))); }
+        catch (java.security.NoSuchAlgorithmException exception) { throw new IllegalStateException(exception); }
+    }
+
+    private static String signed(String payload) {
+        try {
+            byte[] bytes = payload.getBytes(StandardCharsets.UTF_8);
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec("test-secret".getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes) + "."
+                    + Base64.getUrlEncoder().withoutPadding().encodeToString(mac.doFinal(bytes));
+        } catch (Exception exception) { throw new IllegalStateException(exception); }
     }
 }

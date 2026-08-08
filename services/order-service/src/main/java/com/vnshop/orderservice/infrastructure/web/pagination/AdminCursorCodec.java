@@ -176,6 +176,10 @@ public final class AdminCursorCodec {
         public RejectionReason reason() {
             return reason;
         }
+
+        public static InvalidCursorException invalidAnchor() {
+            return new InvalidCursorException(RejectionReason.MALFORMED);
+        }
     }
 
     public static final class CursorEncodingException extends IllegalArgumentException {

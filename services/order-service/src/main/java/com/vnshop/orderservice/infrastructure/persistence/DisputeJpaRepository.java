@@ -38,7 +38,7 @@ public class DisputeJpaRepository implements DisputeRepositoryPort {
  @Override
  public List<Dispute> findByStatus(String status, String query) {
  String normalized = query == null ? "" : query.trim().toLowerCase();
- return springDataRepository.findByStatusAndQuery(DisputeStatus.valueOf(status), normalized, "%" + normalized + "%")
+  return springDataRepository.findByStatusAndQuery(DisputeStatus.valueOf(status), normalized, "%" + normalized + "%")
          .stream().map(DisputeJpaEntity::toDomain).toList();
  }
 
@@ -57,7 +57,7 @@ public class DisputeJpaRepository implements DisputeRepositoryPort {
   public List<DisputeCursorItem> findCursor(String status, String query, Instant createdAtBefore,
           UUID disputeIdBefore, int limitPlusOne) {
   String normalized = query == null ? "" : query.trim().toLowerCase();
-  return springDataRepository.findCursor(DisputeStatus.valueOf(status), normalized, "%" + normalized + "%",
+  return springDataRepository.findCursor(DisputeStatus.valueOf(status), normalized, normalized + "%",
           createdAtBefore, disputeIdBefore, PageRequest.of(0, limitPlusOne)).stream()
           .map(entity -> new DisputeCursorItem(entity.toDomain(), entity.getCreatedAt()))
           .toList();

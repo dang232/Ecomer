@@ -71,16 +71,16 @@ public class OrderSummaryQueryPortAdapter implements OrderSummaryQueryPort {
     public Page<OrderSummaryProjection> findAll(String query, String status, Pageable pageable) {
         String normalizedQuery = query == null ? "" : query.trim().toLowerCase();
         boolean hasStatus = status != null && !status.isBlank();
-        String where = "WHERE (:term = '' OR lower(coalesce(o.orderId, '')) LIKE :likeTerm "
-                + "OR lower(coalesce(o.orderNumber, '')) LIKE :likeTerm "
-                + "OR lower(coalesce(o.buyerId, '')) LIKE :likeTerm "
-                + "OR lower(coalesce(o.sellerId, '')) LIKE :likeTerm)"
+        String where = "WHERE (:term = '' OR lower(coalesce(o.orderId, '')) LIKE :prefixTerm "
+                + "OR lower(coalesce(o.orderNumber, '')) LIKE :prefixTerm "
+                + "OR lower(coalesce(o.buyerId, '')) LIKE :prefixTerm "
+                + "OR lower(coalesce(o.sellerId, '')) LIKE :prefixTerm)"
                 + (hasStatus ? " AND o.status = :status" : "");
 
         TypedQuery<Long> countQuery = entityManager.createQuery(
                 "SELECT COUNT(o) FROM OrderSummaryProjectionJpaEntity o " + where, Long.class)
                 .setParameter("term", normalizedQuery)
-                .setParameter("likeTerm", "%" + normalizedQuery + "%");
+                .setParameter("prefixTerm", normalizedQuery + "%");
         if (hasStatus) countQuery.setParameter("status", status);
         long total = countQuery.getSingleResult();
 
@@ -90,7 +90,7 @@ public class OrderSummaryQueryPortAdapter implements OrderSummaryQueryPort {
                 "SELECT o FROM OrderSummaryProjectionJpaEntity o " + where + " ORDER BY o.createdAt DESC",
                 OrderSummaryProjectionJpaEntity.class)
                 .setParameter("term", normalizedQuery)
-                .setParameter("likeTerm", "%" + normalizedQuery + "%")
+                .setParameter("prefixTerm", normalizedQuery + "%")
                 .setFirstResult((int) bounded.getOffset())
                 .setMaxResults(bounded.getPageSize());
         if (hasStatus) dataQuery.setParameter("status", status);
@@ -107,17 +107,17 @@ public class OrderSummaryQueryPortAdapter implements OrderSummaryQueryPort {
         String normalizedQuery = query == null ? "" : query.trim().toLowerCase();
         boolean hasStatus = status != null && !status.isBlank();
         boolean hasCursor = createdAtBefore != null && orderIdBefore != null;
-        String where = "WHERE (:term = '' OR lower(coalesce(o.orderId, '')) LIKE :likeTerm "
-                + "OR lower(coalesce(o.orderNumber, '')) LIKE :likeTerm "
-                + "OR lower(coalesce(o.buyerId, '')) LIKE :likeTerm "
-                + "OR lower(coalesce(o.sellerId, '')) LIKE :likeTerm)"
+        String where = "WHERE (:term = '' OR lower(coalesce(o.orderId, '')) LIKE :prefixTerm "
+                + "OR lower(coalesce(o.orderNumber, '')) LIKE :prefixTerm "
+                + "OR lower(coalesce(o.buyerId, '')) LIKE :prefixTerm "
+                + "OR lower(coalesce(o.sellerId, '')) LIKE :prefixTerm)"
                 + (hasStatus ? " AND o.status = :status" : "")
                 + (hasCursor ? " AND (o.createdAt < :createdAtBefore OR (o.createdAt = :createdAtBefore AND o.orderId < :orderIdBefore))" : "");
         TypedQuery<OrderSummaryProjectionJpaEntity> dataQuery = entityManager.createQuery(
                 "SELECT o FROM OrderSummaryProjectionJpaEntity o " + where
                         + " ORDER BY o.createdAt DESC, o.orderId DESC", OrderSummaryProjectionJpaEntity.class)
                 .setParameter("term", normalizedQuery)
-                .setParameter("likeTerm", "%" + normalizedQuery + "%")
+                .setParameter("prefixTerm", normalizedQuery + "%")
                 .setMaxResults(limitPlusOne);
         if (hasStatus) dataQuery.setParameter("status", status);
         if (hasCursor) {
