@@ -37,6 +37,10 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Configuration
 public class UseCaseConfig {
     @Bean
+    Clock clock() {
+        return Clock.systemUTC();
+    }
+    @Bean
     CommissionCalculator commissionCalculator(CommissionRateConfig rateConfig) {
         return new CommissionCalculator(rateConfig);
     }
@@ -166,8 +170,4 @@ public class UseCaseConfig {
                 clock, properties.settlementRelease().batchSize());
     }
 
-    @Bean
-    Clock clock() {
-        return Clock.systemUTC();
-    }
 }
