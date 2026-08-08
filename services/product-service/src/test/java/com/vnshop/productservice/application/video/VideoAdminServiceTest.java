@@ -6,7 +6,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
 import com.vnshop.productservice.domain.port.out.ObjectStoragePort;
 import com.vnshop.productservice.domain.video.Video;
@@ -26,6 +28,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import com.vnshop.productservice.domain.video.port.out.VideoCursorAnchor;
 
 class VideoAdminServiceTest {
 
@@ -59,6 +62,21 @@ class VideoAdminServiceTest {
 
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().get(0).status()).isEqualTo(VideoStatus.PENDING_REVIEW);
+    }
+
+    @Test
+    void cursorQueueFetchesBoundedPendingRowsWithAscendingAnchor() {
+        Video second = new Video(UUID.randomUUID(), "owner-1", "product-1", null, "key", null,
+                VideoStatus.PENDING_REVIEW, null, null, null, null, Instant.parse("2026-07-22T00:00:00Z"));
+        VideoRepositoryPort cursorRepo = videoRepositoryPort;
+        when(cursorRepo.findByStatusCursor(eq(VideoStatus.PENDING_REVIEW), any(), eq(3)))
+                .thenReturn(List.of(pendingVideo, second));
+
+        List<Video> result = service.getCursorQueue(VideoStatus.PENDING_REVIEW,
+                new VideoCursorAnchor(Instant.parse("2026-07-21T00:00:00Z"), UUID.randomUUID()), 2);
+
+        assertThat(result).containsExactly(pendingVideo, second);
+        verify(cursorRepo).findByStatusCursor(eq(VideoStatus.PENDING_REVIEW), any(), eq(3));
     }
 
     @Test

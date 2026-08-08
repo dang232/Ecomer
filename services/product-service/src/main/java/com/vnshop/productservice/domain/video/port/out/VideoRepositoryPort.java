@@ -17,6 +17,10 @@ public interface VideoRepositoryPort {
 
     Page<Video> findByStatus(VideoStatus status, Pageable pageable);
 
+    default List<Video> findByStatusCursor(VideoStatus status, VideoCursorAnchor anchor, int limit) {
+        throw new UnsupportedOperationException("video cursor listing is not available for this repository");
+    }
+
     Video save(Video video);
 
     void saveHistory(VideoStatusHistory history);

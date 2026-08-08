@@ -13,6 +13,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import com.vnshop.productservice.domain.video.port.out.VideoCursorAnchor;
+import org.springframework.data.domain.PageRequest;
 
 @Repository
 @RequiredArgsConstructor
@@ -29,6 +31,15 @@ public class VideoJpaRepository implements VideoRepositoryPort {
     @Override
     public Page<Video> findByStatus(VideoStatus status, Pageable pageable) {
         return videoRepo.findByStatus(status.name(), pageable).map(VideoJpaEntity::toDomain);
+    }
+
+    @Override
+    public List<Video> findByStatusCursor(VideoStatus status, VideoCursorAnchor anchor, int limit) {
+        PageRequest page = PageRequest.of(0, limit);
+        List<VideoJpaEntity> entities = anchor == null
+                ? videoRepo.findCursorFirst(status.name(), page)
+                : videoRepo.findCursorAfter(status.name(), anchor.createdAt(), anchor.videoId(), page);
+        return entities.stream().map(VideoJpaEntity::toDomain).toList();
     }
 
     @Override
