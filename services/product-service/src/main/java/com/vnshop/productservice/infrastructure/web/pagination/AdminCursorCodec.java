@@ -33,7 +33,7 @@ public final class AdminCursorCodec {
     private static String text(JsonNode node, String field) { JsonNode value = node.get(field); if (value == null || !value.isTextual() || value.asText().isBlank()) throw reject(RejectionReason.MISSING_FIELD); return value.asText(); }
     private static InvalidCursorException reject(RejectionReason reason) { return new InvalidCursorException(reason); }
     public record Cursor(String resource, String filterHash, String sort, String sortKey, String uniqueId, Instant asOf, Instant expiresAt) { public Cursor withExpiresAt(Instant value) { return new Cursor(resource, filterHash, sort, sortKey, uniqueId, asOf, value); } }
-    public enum RejectionReason { MALFORMED, TAMPERED, EXPIRED, RESOURCE_MISMATCH, FILTER_MISMATCH, SORT_MISMATCH, MISSING_FIELD, UNSUPPORTED_VERSION }
-    public static final class InvalidCursorException extends IllegalArgumentException { private final RejectionReason reason; public InvalidCursorException(RejectionReason reason) { super(reason.name().toLowerCase()); this.reason = reason; } public RejectionReason reason() { return reason; } }
+    public enum RejectionReason { MALFORMED, TAMPERED, EXPIRED, RESOURCE_MISMATCH, FILTER_MISMATCH, SORT_MISMATCH, MISSING_FIELD, UNSUPPORTED_VERSION, INVALID_ANCHOR }
+    public static final class InvalidCursorException extends IllegalArgumentException { private final RejectionReason reason; public InvalidCursorException(RejectionReason reason) { super(reason.name().toLowerCase()); this.reason = reason; } public RejectionReason reason() { return reason; } public static InvalidCursorException invalidAnchor() { return new InvalidCursorException(RejectionReason.INVALID_ANCHOR); } }
     public static final class CursorEncodingException extends IllegalArgumentException { public CursorEncodingException(String message) { super(message); } }
 }
