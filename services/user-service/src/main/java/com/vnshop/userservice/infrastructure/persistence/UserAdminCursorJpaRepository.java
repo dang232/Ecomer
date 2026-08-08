@@ -27,9 +27,9 @@ public class UserAdminCursorJpaRepository {
                 + "or lower(coalesce(b.name, '')) like :prefix "
                 + "or lower(coalesce(b.phone, '')) like :prefix) "
                 + "and (:hasAnchor = false or lower(coalesce(b.name, '')) > :anchor "
-                + "or (lower(coalesce(b.name, '')) = :anchor and lower(coalesce(b.keycloakId, '')) > :anchorId))";
+                + "or (lower(coalesce(b.name, '')) = :anchor and b.keycloakId > :anchorId))";
         return entityManager.createQuery("select b from BuyerProfileJpaEntity b " + predicate
-                        + " order by lower(coalesce(b.name, '')) asc, lower(coalesce(b.keycloakId, '')) asc",
+                        + " order by lower(coalesce(b.name, '')) asc, b.keycloakId asc",
                         BuyerProfileJpaEntity.class)
                 .setParameter("prefix", prefix)
                 .setParameter("hasAnchor", cursor != null)
@@ -41,20 +41,21 @@ public class UserAdminCursorJpaRepository {
 
     public List<SellerProfile> findPendingSellers(String query, AdminSellerCursor cursor, int limit) {
         String prefix = normalize(query) + "%";
-        String anchorId = cursor == null ? "" : cursor.keycloakId();
-        String predicate = "where seller.approved = false and (lower(coalesce(seller.keycloakId, '')) like :prefix "
+        String baseQuery = "select seller from SellerProfileJpaEntity seller where seller.approved = false "
+                + "and (lower(coalesce(seller.keycloakId, '')) like :prefix "
                 + "or lower(coalesce(seller.shopName, '')) like :prefix "
-                + "or lower(coalesce(seller.bankName, '')) like :prefix) "
-                + "and (:hasAnchor = false or seller.createdAt < :anchorTime "
-                + "or (seller.createdAt = :anchorTime and lower(coalesce(seller.keycloakId, '')) < :anchorId))";
-        return entityManager.createQuery("select seller from SellerProfileJpaEntity seller " + predicate
-                        + " order by seller.createdAt desc, lower(coalesce(seller.keycloakId, '')) desc",
-                        SellerProfileJpaEntity.class)
-                .setParameter("prefix", prefix)
-                .setParameter("hasAnchor", cursor != null)
-                .setParameter("anchorTime", cursor == null ? java.time.Instant.MAX : cursor.createdAt())
-                .setParameter("anchorId", anchorId)
-                .setMaxResults(limit)
+                + "or lower(coalesce(seller.bankName, '')) like :prefix)";
+        String anchorPredicate = " and (seller.createdAt < :anchorTime "
+                + "or (seller.createdAt = :anchorTime and seller.keycloakId < :anchorId))";
+        String queryText = baseQuery + (cursor == null ? "" : anchorPredicate)
+                + " order by seller.createdAt desc, seller.keycloakId desc";
+        var queryObject = entityManager.createQuery(queryText, SellerProfileJpaEntity.class)
+                .setParameter("prefix", prefix);
+        if (cursor != null) {
+            queryObject.setParameter("anchorTime", cursor.createdAt());
+            queryObject.setParameter("anchorId", cursor.keycloakId());
+        }
+        return queryObject.setMaxResults(limit)
                 .getResultList().stream().map(SellerProfileJpaEntity::toDomain).toList();
     }
 
