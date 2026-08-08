@@ -23,6 +23,11 @@ class AdminCursorCodecTest {
                 .isEqualTo(CURSOR.withExpiresAt(NOW.plusSeconds(300)));
         assertThat(token).doesNotContain("users").matches("[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+");
     }
+
+    @Test void omittedAsOf_roundTripsAsNull() {
+        String token = codec().tokenForTesting("{\"v\":1,\"resource\":\"users\",\"filterHash\":\"filter-hash\",\"sort\":\"createdAt:desc,id:desc\",\"sortKey\":\"k\",\"uniqueId\":\"user-42\",\"expiresAt\":\"2026-08-08T00:05:00Z\"}");
+        assertThat(codec().decode(token, "users", "filter-hash", "createdAt:desc,id:desc").asOf()).isNull();
+    }
     @Test void tampering_isRejectedWithTypedReason() {
         String token = codec().encode(CURSOR);
         String tampered = token.substring(0, token.length() - 1) + (token.endsWith("A") ? "B" : "A");
@@ -43,12 +48,26 @@ class AdminCursorCodecTest {
         assertReason(token, "users", "filter-hash", "name:asc,id:asc", AdminCursorCodec.RejectionReason.SORT_MISMATCH);
     }
     @Test void malformedPayload_isRejected() { assertReason("not-a-token", "users", "filter-hash", "createdAt:desc,id:desc", AdminCursorCodec.RejectionReason.MALFORMED); }
+    @Test void oversizedToken_isRejected() { assertReason("x".repeat(4097), "users", "filter-hash", "createdAt:desc,id:desc", AdminCursorCodec.RejectionReason.MALFORMED); }
     @Test void missingRequiredField_isRejected() {
         String token = codec().tokenForTesting("{\"v\":1,\"resource\":\"users\",\"filterHash\":\"filter-hash\",\"sort\":\"createdAt:desc,id:desc\",\"expiresAt\":\"2026-08-08T00:05:00Z\"}");
         assertThatThrownBy(() -> codec().decode(token, "users", "filter-hash", "createdAt:desc,id:desc"))
                 .isInstanceOf(AdminCursorCodec.InvalidCursorException.class)
                 .extracting(e -> ((AdminCursorCodec.InvalidCursorException) e).reason()).isEqualTo(AdminCursorCodec.RejectionReason.MISSING_FIELD);
     }
+    @Test void unsupportedVersions_areRejected() {
+        assertReason(codec().tokenForTesting("{\"v\":0,\"resource\":\"users\",\"filterHash\":\"filter-hash\",\"sort\":\"createdAt:desc,id:desc\",\"sortKey\":\"k\",\"uniqueId\":\"user-42\",\"expiresAt\":\"2026-08-08T00:05:00Z\"}"), "users", "filter-hash", "createdAt:desc,id:desc", AdminCursorCodec.RejectionReason.UNSUPPORTED_VERSION);
+        assertReason(codec().tokenForTesting("{\"v\":2,\"resource\":\"users\",\"filterHash\":\"filter-hash\",\"sort\":\"createdAt:desc,id:desc\",\"sortKey\":\"k\",\"uniqueId\":\"user-42\",\"expiresAt\":\"2026-08-08T00:05:00Z\"}"), "users", "filter-hash", "createdAt:desc,id:desc", AdminCursorCodec.RejectionReason.UNSUPPORTED_VERSION);
+    }
+
+    @Test void requiredFields_wrongOrBlank_areRejected() {
+        assertReason(codec().tokenForTesting("{\"v\":1,\"resource\":\"\",\"filterHash\":\"filter-hash\",\"sort\":\"createdAt:desc,id:desc\",\"sortKey\":\"k\",\"uniqueId\":\"user-42\",\"expiresAt\":\"2026-08-08T00:05:00Z\"}"), "users", "filter-hash", "createdAt:desc,id:desc", AdminCursorCodec.RejectionReason.MISSING_FIELD);
+        assertReason(codec().tokenForTesting("{\"v\":1,\"resource\":\"users\",\"filterHash\":1,\"sort\":\"createdAt:desc,id:desc\",\"sortKey\":\"k\",\"uniqueId\":\"user-42\",\"expiresAt\":\"2026-08-08T00:05:00Z\"}"), "users", "filter-hash", "createdAt:desc,id:desc", AdminCursorCodec.RejectionReason.MISSING_FIELD);
+        assertReason(codec().tokenForTesting("{\"v\":1,\"resource\":\"users\",\"filterHash\":\"filter-hash\",\"sort\":null,\"sortKey\":\"k\",\"uniqueId\":\"user-42\",\"expiresAt\":\"2026-08-08T00:05:00Z\"}"), "users", "filter-hash", "createdAt:desc,id:desc", AdminCursorCodec.RejectionReason.MISSING_FIELD);
+        assertReason(codec().tokenForTesting("{\"v\":1,\"resource\":\"users\",\"filterHash\":\"filter-hash\",\"sort\":\"createdAt:desc,id:desc\",\"sortKey\":\"k\",\"uniqueId\":\"\",\"expiresAt\":\"2026-08-08T00:05:00Z\"}"), "users", "filter-hash", "createdAt:desc,id:desc", AdminCursorCodec.RejectionReason.MISSING_FIELD);
+        assertReason(codec().tokenForTesting("{\"v\":1,\"resource\":\"users\",\"filterHash\":\"filter-hash\",\"sort\":\"createdAt:desc,id:desc\",\"sortKey\":\"k\",\"uniqueId\":\"user-42\",\"expiresAt\":1}"), "users", "filter-hash", "createdAt:desc,id:desc", AdminCursorCodec.RejectionReason.MISSING_FIELD);
+    }
+
     private void assertReason(String token, String resource, String filterHash, String sort, AdminCursorCodec.RejectionReason reason) {
         assertThatThrownBy(() -> codec().decode(token, resource, filterHash, sort))
                 .isInstanceOf(AdminCursorCodec.InvalidCursorException.class)
