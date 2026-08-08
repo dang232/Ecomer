@@ -4,6 +4,7 @@ import com.vnshop.productservice.domain.review.ReviewStatus;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import java.time.Instant;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -77,6 +78,43 @@ public interface ReviewJpaSpringDataRepository extends JpaRepository<ReviewJpaEn
             ORDER BY r.created_at DESC, r.review_id DESC
             """, nativeQuery = true)
     List<ReviewJpaEntity> findByStatusAndQuery(@Param("status") String status, @Param("query") String query);
+
+    @Query(value = """
+            SELECT r.*
+            FROM product_svc.reviews r
+            LEFT JOIN product_svc.products p ON CAST(p.id AS VARCHAR) = r.product_id
+            WHERE r.status = :status
+              AND (:query = ''
+                   OR lower(CAST(r.review_id AS text)) LIKE CONCAT(lower(:query), '%')
+                   OR lower(r.product_id) LIKE CONCAT(lower(:query), '%')
+                   OR lower(r.buyer_id) LIKE CONCAT(lower(:query), '%')
+                   OR lower(COALESCE(r.order_id, '')) LIKE CONCAT(lower(:query), '%')
+                   OR lower(COALESCE(r.text, '')) LIKE CONCAT(lower(:query), '%')
+                   OR lower(COALESCE(p.name, '')) LIKE CONCAT(lower(:query), '%'))
+            ORDER BY r.created_at DESC, r.review_id DESC
+            """, nativeQuery = true)
+    List<ReviewJpaEntity> findPendingCursorFirst(@Param("status") String status,
+            @Param("query") String query, org.springframework.data.domain.Pageable pageable);
+
+    @Query(value = """
+            SELECT r.*
+            FROM product_svc.reviews r
+            LEFT JOIN product_svc.products p ON CAST(p.id AS VARCHAR) = r.product_id
+            WHERE r.status = :status
+              AND (:query = ''
+                   OR lower(CAST(r.review_id AS text)) LIKE CONCAT(lower(:query), '%')
+                   OR lower(r.product_id) LIKE CONCAT(lower(:query), '%')
+                   OR lower(r.buyer_id) LIKE CONCAT(lower(:query), '%')
+                   OR lower(COALESCE(r.order_id, '')) LIKE CONCAT(lower(:query), '%')
+                   OR lower(COALESCE(r.text, '')) LIKE CONCAT(lower(:query), '%')
+                   OR lower(COALESCE(p.name, '')) LIKE CONCAT(lower(:query), '%'))
+              AND (r.created_at < :anchorCreatedAt
+                   OR (r.created_at = :anchorCreatedAt AND r.review_id < :anchorReviewId))
+            ORDER BY r.created_at DESC, r.review_id DESC
+            """, nativeQuery = true)
+    List<ReviewJpaEntity> findPendingCursorAfter(@Param("status") String status,
+            @Param("query") String query, @Param("anchorCreatedAt") Instant anchorCreatedAt,
+            @Param("anchorReviewId") UUID anchorReviewId, org.springframework.data.domain.Pageable pageable);
 
     @Query(value = """
             SELECT r.*
