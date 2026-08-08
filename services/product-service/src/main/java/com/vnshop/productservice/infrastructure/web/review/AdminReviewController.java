@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.beans.factory.annotation.Autowired;
 import jakarta.validation.Valid;
 
 import java.util.List;
@@ -31,6 +32,7 @@ public class AdminReviewController {
     private final AdminReviewListUseCase adminReviewListUseCase;
     private final AdminCursorCodec cursorCodec;
 
+    @Autowired
     public AdminReviewController(ModerateReviewUseCase moderateReviewUseCase,
             AdminReviewListUseCase adminReviewListUseCase, AdminCursorCodec cursorCodec) {
         this.moderateReviewUseCase = moderateReviewUseCase;
