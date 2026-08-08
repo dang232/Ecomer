@@ -17,7 +17,7 @@ class AdminCursorMigrationContractTest {
                 .contains("idx_disputes_admin_cursor_status_created_id")
                 .contains("lower(coalesce(order_number, ''))) text_pattern_ops")
                 .contains("lower(coalesce(buyer_reason, ''))) text_pattern_ops")
-                .contains("lower(coalesce(dispute_id::text, ''))) text_pattern_ops")
+                 .contains("lower(coalesce(dispute_id::varchar, ''))) text_pattern_ops")
                 .doesNotContain("pg_trgm");
     }
 }

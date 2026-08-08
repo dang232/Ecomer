@@ -25,12 +25,21 @@ public interface DisputeJpaSpringDataRepository extends JpaRepository<DisputeJpa
           + "(:term = '' or lower(coalesce(str(d.disputeId), '')) like :prefixTerm "
           + "or lower(coalesce(str(d.returnId), '')) like :prefixTerm or lower(coalesce(d.buyerReason, '')) like :prefixTerm "
           + "or lower(coalesce(d.sellerResponse, '')) like :prefixTerm) "
-          + "and (:createdAtBefore is null or d.createdAt < :createdAtBefore "
+           + "and (d.createdAt < :createdAtBefore "
           + "or (d.createdAt = :createdAtBefore and d.disputeId < :disputeIdBefore)) "
           + "order by d.createdAt desc, d.disputeId desc")
-  List<DisputeJpaEntity> findCursor(@Param("status") DisputeStatus status,
+   List<DisputeJpaEntity> findCursorAfter(@Param("status") DisputeStatus status,
           @Param("term") String term, @Param("prefixTerm") String prefixTerm,
           @Param("createdAtBefore") Instant createdAtBefore,
           @Param("disputeIdBefore") UUID disputeIdBefore,
-          org.springframework.data.domain.Pageable pageable);
+           org.springframework.data.domain.Pageable pageable);
+
+   @Query("select d from DisputeJpaEntity d where d.status = :status and "
+           + "(:term = '' or lower(coalesce(str(d.disputeId), '')) like :prefixTerm "
+           + "or lower(coalesce(str(d.returnId), '')) like :prefixTerm or lower(coalesce(d.buyerReason, '')) like :prefixTerm "
+           + "or lower(coalesce(d.sellerResponse, '')) like :prefixTerm) "
+           + "order by d.createdAt desc, d.disputeId desc")
+   List<DisputeJpaEntity> findCursorFirst(@Param("status") DisputeStatus status,
+           @Param("term") String term, @Param("prefixTerm") String prefixTerm,
+           org.springframework.data.domain.Pageable pageable);
 }

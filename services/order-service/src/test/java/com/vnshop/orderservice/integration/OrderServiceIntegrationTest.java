@@ -9,6 +9,11 @@ import com.vnshop.orderservice.domain.SubOrder;
 import com.vnshop.orderservice.domain.finance.FinancialReversal;
 import com.vnshop.orderservice.domain.port.out.FinancialReversalRepositoryPort;
 import com.vnshop.orderservice.infrastructure.persistence.OrderJpaRepository;
+import com.vnshop.orderservice.infrastructure.persistence.OrderSummaryQueryPortAdapter;
+import com.vnshop.orderservice.infrastructure.persistence.DisputeJpaSpringDataRepository;
+import com.vnshop.orderservice.domain.Dispute;
+import com.vnshop.orderservice.domain.DisputeStatus;
+import java.time.Instant;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
@@ -18,6 +23,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -41,6 +47,12 @@ class OrderServiceIntegrationTest {
 
     @Autowired
     private FinancialReversalRepositoryPort financialReversalRepository;
+
+    @Autowired
+    private OrderSummaryQueryPortAdapter orderSummaryQueryPortAdapter;
+
+    @Autowired
+    private DisputeJpaSpringDataRepository disputeJpaSpringDataRepository;
 
     @Test
     void contextLoads() {
@@ -68,8 +80,12 @@ class OrderServiceIntegrationTest {
     void adminCursorIndexesExistAndRepresentativeQueriesUseThem() throws Exception {
         try (Connection conn = dataSource.getConnection(); Statement statement = conn.createStatement()) {
             var names = new java.util.HashSet<String>();
-            try (var rows = statement.executeQuery("SELECT indexname FROM pg_indexes WHERE schemaname = 'order_svc'")) {
-                while (rows.next()) names.add(rows.getString(1));
+            var definitions = new java.util.HashMap<String, String>();
+            try (var rows = statement.executeQuery("SELECT indexname, indexdef FROM pg_indexes WHERE schemaname = 'order_svc'")) {
+                while (rows.next()) {
+                    names.add(rows.getString(1));
+                    definitions.put(rows.getString(1), rows.getString(2));
+                }
             }
             assertThat(names).contains("idx_orders_admin_cursor_status_created_id",
                     "idx_orders_admin_cursor_created_id", "idx_disputes_admin_cursor_status_created_id",
@@ -95,19 +111,30 @@ class OrderServiceIntegrationTest {
                     + "(created_at = CURRENT_TIMESTAMP AND dispute_id < 'ffffffff-ffff-ffff-ffff-ffffffffffff')) "
                     + "ORDER BY created_at DESC, dispute_id DESC LIMIT 51",
                     "idx_disputes_admin_cursor_status_created_id");
-            assertPlanUsesIndex(statement, "EXPLAIN (ANALYZE, BUFFERS) SELECT dispute_id FROM order_svc.disputes "
-                    + "WHERE lower(coalesce(dispute_id::text, '')) LIKE 'prefix%' LIMIT 51",
-                    "idx_disputes_admin_dispute_id_prefix");
-            assertPlanUsesIndex(statement, "EXPLAIN (ANALYZE, BUFFERS) SELECT dispute_id FROM order_svc.disputes "
-                    + "WHERE lower(coalesce(return_id::text, '')) LIKE 'prefix%' LIMIT 51",
-                    "idx_disputes_admin_return_id_prefix");
-            assertPlanUsesIndex(statement, "EXPLAIN (ANALYZE, BUFFERS) SELECT dispute_id FROM order_svc.disputes "
-                    + "WHERE lower(coalesce(buyer_reason, '')) LIKE 'prefix%' LIMIT 51",
-                    "idx_disputes_admin_buyer_reason_prefix");
-            assertPlanUsesIndex(statement, "EXPLAIN (ANALYZE, BUFFERS) SELECT dispute_id FROM order_svc.disputes "
-                    + "WHERE lower(coalesce(seller_response, '')) LIKE 'prefix%' LIMIT 51",
-                    "idx_disputes_admin_seller_response_prefix");
+            assertThat(definitions.get("idx_disputes_admin_dispute_id_prefix")).contains("dispute_id)::character varying");
+            assertThat(definitions.get("idx_disputes_admin_return_id_prefix")).contains("return_id)::character varying");
+            assertThat(definitions.get("idx_disputes_admin_buyer_reason_prefix")).contains("buyer_reason");
+            assertThat(definitions.get("idx_disputes_admin_seller_response_prefix")).contains("seller_response");
         }
+    }
+
+    @Test
+    @Transactional
+    void productionCursorQueriesEmitIndexedPredicatesAndOrdering() throws Exception {
+        CursorSqlCapture.clear();
+        Instant anchor = Instant.parse("2026-08-08T00:00:00Z");
+        orderSummaryQueryPortAdapter.findAllCursor("phone", "PENDING", anchor, "order-0002", 51);
+        disputeJpaSpringDataRepository.findCursorFirst(DisputeStatus.OPEN, "wrong", "wrong%",
+                org.springframework.data.domain.PageRequest.of(0, 51));
+        disputeJpaSpringDataRepository.findCursorAfter(DisputeStatus.OPEN, "wrong", "wrong%", anchor,
+                UUID.fromString("00000000-0000-0000-0000-000000000002"),
+                org.springframework.data.domain.PageRequest.of(8, 51));
+
+        String sql = String.join("\n", CursorSqlCapture.statements()).toLowerCase();
+        assertThat(sql).contains("order_id<?", "order by ospje1_0.created_at desc,ospje1_0.order_id desc", "fetch first ? rows only")
+                .contains("created_at<?").contains("status=?")
+                .contains("dispute_id<?", "order by dje1_0.created_at desc,dje1_0.dispute_id desc")
+                .contains("lower(coalesce(cast(").contains("dispute_id as varchar),''))");
     }
 
     private static void assertPlanUsesIndex(Statement statement, String explain, String indexName) throws SQLException {

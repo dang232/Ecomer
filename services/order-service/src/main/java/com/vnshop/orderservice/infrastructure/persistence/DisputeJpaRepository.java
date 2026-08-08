@@ -57,8 +57,12 @@ public class DisputeJpaRepository implements DisputeRepositoryPort {
   public List<DisputeCursorItem> findCursor(String status, String query, Instant createdAtBefore,
           UUID disputeIdBefore, int limitPlusOne) {
   String normalized = query == null ? "" : query.trim().toLowerCase();
-  return springDataRepository.findCursor(DisputeStatus.valueOf(status), normalized, normalized + "%",
-          createdAtBefore, disputeIdBefore, PageRequest.of(0, limitPlusOne)).stream()
+   var rows = createdAtBefore == null && disputeIdBefore == null
+           ? springDataRepository.findCursorFirst(DisputeStatus.valueOf(status), normalized, normalized + "%",
+                   PageRequest.of(0, limitPlusOne))
+           : springDataRepository.findCursorAfter(DisputeStatus.valueOf(status), normalized, normalized + "%",
+                   createdAtBefore, disputeIdBefore, PageRequest.of(0, limitPlusOne));
+   return rows.stream()
           .map(entity -> new DisputeCursorItem(entity.toDomain(), entity.getCreatedAt()))
           .toList();
   }

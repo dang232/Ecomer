@@ -18,9 +18,9 @@ CREATE INDEX IF NOT EXISTS idx_order_summary_admin_seller_id_prefix
     ON order_svc.order_summary ((lower(coalesce(seller_id, ''))) text_pattern_ops);
 
 CREATE INDEX IF NOT EXISTS idx_disputes_admin_dispute_id_prefix
-    ON order_svc.disputes ((lower(coalesce(dispute_id::text, ''))) text_pattern_ops);
+     ON order_svc.disputes ((lower(coalesce(dispute_id::varchar, ''))) text_pattern_ops);
 CREATE INDEX IF NOT EXISTS idx_disputes_admin_return_id_prefix
-    ON order_svc.disputes ((lower(coalesce(return_id::text, ''))) text_pattern_ops);
+     ON order_svc.disputes ((lower(coalesce(return_id::varchar, ''))) text_pattern_ops);
 CREATE INDEX IF NOT EXISTS idx_disputes_admin_buyer_reason_prefix
     ON order_svc.disputes ((lower(coalesce(buyer_reason, ''))) text_pattern_ops);
 CREATE INDEX IF NOT EXISTS idx_disputes_admin_seller_response_prefix
