@@ -54,6 +54,9 @@ import com.vnshop.orderservice.domain.port.out.SellerFinanceAdjustmentPublisherP
 import com.vnshop.orderservice.domain.port.out.FinancialReversalRepositoryPort;
 import com.vnshop.orderservice.domain.port.out.SettlementHoldPublisherPort;
 import java.time.Clock;
+import java.time.Duration;
+import org.springframework.beans.factory.annotation.Value;
+import com.vnshop.orderservice.infrastructure.web.pagination.AdminCursorCodec;
 import com.vnshop.orderservice.application.coupon.CouponManagementService;
 import com.vnshop.orderservice.application.coupon.CouponRedemptionService;
 import com.vnshop.orderservice.domain.coupon.CouponRepository;
@@ -63,6 +66,13 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class UseCaseConfig {
+    @Bean
+    AdminCursorCodec adminCursorCodec(
+            @Value("${vnshop.admin-cursor.secret:dev-only-change-me}") String secret,
+            @Value("${vnshop.admin-cursor.ttl:PT1H}") Duration ttl,
+            Clock clock) {
+        return new AdminCursorCodec(secret, ttl, clock);
+    }
     @Bean
     AdminOrderUseCase adminOrderUseCase(
             OrderRepositoryPort orderRepositoryPort,

@@ -8,6 +8,9 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.time.Instant;
+import org.springframework.data.domain.PageRequest;
+import com.vnshop.orderservice.domain.port.out.DisputeRepositoryPort.DisputeCursorItem;
 
 @Repository
 public class DisputeJpaRepository implements DisputeRepositoryPort {
@@ -40,13 +43,23 @@ public class DisputeJpaRepository implements DisputeRepositoryPort {
  }
 
  @Override
- public Optional<Dispute> findByReturnId(String returnId) {
+  public Optional<Dispute> findByReturnId(String returnId) {
  UUID returnUuid;
  try {
  returnUuid = UUID.fromString(returnId);
  } catch (IllegalArgumentException ex) {
  return Optional.empty();
  }
- return springDataRepository.findByReturnId(returnUuid).map(DisputeJpaEntity::toDomain);
- }
+  return springDataRepository.findByReturnId(returnUuid).map(DisputeJpaEntity::toDomain);
+  }
+
+  @Override
+  public List<DisputeCursorItem> findCursor(String status, String query, Instant createdAtBefore,
+          UUID disputeIdBefore, int limitPlusOne) {
+  String normalized = query == null ? "" : query.trim().toLowerCase();
+  return springDataRepository.findCursor(DisputeStatus.valueOf(status), normalized, "%" + normalized + "%",
+          createdAtBefore, disputeIdBefore, PageRequest.of(0, limitPlusOne)).stream()
+          .map(entity -> new DisputeCursorItem(entity.toDomain(), entity.getCreatedAt()))
+          .toList();
+  }
 }

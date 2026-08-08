@@ -101,6 +101,32 @@ public class OrderSummaryQueryPortAdapter implements OrderSummaryQueryPort {
         return new PageImpl<>(content, bounded, total);
     }
 
+    @Override
+    public List<OrderSummaryProjection> findAllCursor(String query, String status, Instant createdAtBefore,
+            String orderIdBefore, int limitPlusOne) {
+        String normalizedQuery = query == null ? "" : query.trim().toLowerCase();
+        boolean hasStatus = status != null && !status.isBlank();
+        boolean hasCursor = createdAtBefore != null && orderIdBefore != null;
+        String where = "WHERE (:term = '' OR lower(coalesce(o.orderId, '')) LIKE :likeTerm "
+                + "OR lower(coalesce(o.orderNumber, '')) LIKE :likeTerm "
+                + "OR lower(coalesce(o.buyerId, '')) LIKE :likeTerm "
+                + "OR lower(coalesce(o.sellerId, '')) LIKE :likeTerm)"
+                + (hasStatus ? " AND o.status = :status" : "")
+                + (hasCursor ? " AND (o.createdAt < :createdAtBefore OR (o.createdAt = :createdAtBefore AND o.orderId < :orderIdBefore))" : "");
+        TypedQuery<OrderSummaryProjectionJpaEntity> dataQuery = entityManager.createQuery(
+                "SELECT o FROM OrderSummaryProjectionJpaEntity o " + where
+                        + " ORDER BY o.createdAt DESC, o.orderId DESC", OrderSummaryProjectionJpaEntity.class)
+                .setParameter("term", normalizedQuery)
+                .setParameter("likeTerm", "%" + normalizedQuery + "%")
+                .setMaxResults(limitPlusOne);
+        if (hasStatus) dataQuery.setParameter("status", status);
+        if (hasCursor) {
+            dataQuery.setParameter("createdAtBefore", createdAtBefore);
+            dataQuery.setParameter("orderIdBefore", orderIdBefore);
+        }
+        return dataQuery.getResultStream().map(OrderSummaryProjectionJpaEntity::toDomain).toList();
+    }
+
     private static Instant toInstant(Object value) {
         if (value instanceof Instant instant) return instant;
         if (value instanceof Timestamp timestamp) return timestamp.toInstant();

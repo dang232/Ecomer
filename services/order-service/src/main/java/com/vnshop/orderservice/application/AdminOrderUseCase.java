@@ -14,6 +14,7 @@ import com.vnshop.orderservice.domain.port.out.UserDirectoryPort;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.time.Instant;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -78,6 +79,24 @@ public class AdminOrderUseCase {
         return page.map(summary -> summary.withDisplayNames(
                 names.buyerNames().get(summary.buyerId()),
                 names.sellerNames().get(summary.sellerId())));
+    }
+
+    public List<OrderSummaryProjection> listAllOrdersCursor(String query, String status, Instant createdAtBefore,
+            String orderIdBefore, int limitPlusOne) {
+        List<OrderSummaryProjection> rows = orderSummaryQueryPort.findAllCursor(
+                query, status, createdAtBefore, orderIdBefore, limitPlusOne);
+        if (rows.isEmpty()) {
+            return rows;
+        }
+        var buyerIds = rows.stream().limit(limitPlusOne)
+                .map(OrderSummaryProjection::buyerId).filter(Objects::nonNull).filter(id -> !id.isBlank())
+                .collect(java.util.stream.Collectors.toSet());
+        var sellerIds = rows.stream().limit(limitPlusOne)
+                .map(OrderSummaryProjection::sellerId).filter(Objects::nonNull).filter(id -> !id.isBlank())
+                .collect(java.util.stream.Collectors.toSet());
+        UserDirectoryPort.DirectorySnapshot names = userDirectoryPort.lookup(buyerIds, sellerIds);
+        return rows.stream().map(summary -> summary.withDisplayNames(
+                names.buyerNames().get(summary.buyerId()), names.sellerNames().get(summary.sellerId()))).toList();
     }
 
     /**
