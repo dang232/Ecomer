@@ -3,43 +3,40 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { AdminRecordDrawer } from "@/features/admin";
-import { ApiError } from "@/shared/api";
-import { adminListUsers, adminBanUser, adminUnbanUser } from "@/shared/api/endpoints/admin";
+import { AdminRecordDrawer, useAdminCursorPagination } from "@/features/admin";
+import { ApiError, isCursorResetError } from "@/shared/api";
+import { adminBanUser, adminUnbanUser } from "@/shared/api/endpoints/admin";
 import type { AdminUser } from "@/shared/contracts/api";
+import { CursorPagination } from "@/shared/ui";
+
+import { adminUsersCursorQueryOptions } from "../api/query-options";
 
 import { UserDetailDrawer } from "./user-detail-drawer";
 
 interface UserQueueProps {
   q?: string;
-  page?: number;
   selected?: string;
   onSearch?: (q: string) => void;
-  onPageChange?: (page: number) => void;
   onSelect?: (id: string | null) => void;
 }
 
-export function AdminUserQueue({
-  q,
-  page = 1,
-  selected,
-  onSearch,
-  onPageChange,
-  onSelect,
-}: UserQueueProps) {
+export function AdminUserQueue({ q, selected, onSearch, onSelect }: UserQueueProps) {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [search, setSearch] = useState(q ?? "");
+  const cursorPagination = useAdminCursorPagination({ scopeKey: q ?? "" });
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["admin", "users", { q, page }],
-    queryFn: () => adminListUsers({ q, page: (page ?? 1) - 1 }),
-    retry: false,
+  const { data, isLoading, isError, isFetching, error } = useQuery({
+    ...adminUsersCursorQueryOptions({
+      q: q || undefined,
+      cursor: cursorPagination.cursor,
+      limit: cursorPagination.pageSize,
+    }),
+    placeholderData: (previous) => previous,
   });
 
-  const users: AdminUser[] = data?.content ?? [];
-  const total = data?.totalElements ?? 0;
-  const pageSize = data?.size ?? 50;
+  const users: AdminUser[] = data?.items ?? [];
+  const cursorError = isCursorResetError(error);
 
   const ban = useMutation({
     mutationFn: (id: string) => adminBanUser(id),
@@ -120,7 +117,13 @@ export function AdminUserQueue({
             </div>
           ) : isError ? (
             <div className="px-5 py-8 text-center text-sm text-red-500">
-              {t("admin.users.loadErr")}
+              {cursorError ? (
+                <button type="button" onClick={cursorPagination.reset}>
+                  Reset cursor
+                </button>
+              ) : (
+                t("admin.users.loadErr")
+              )}
             </div>
           ) : users.length === 0 ? (
             <div className="px-5 py-8 text-center text-sm text-muted-foreground">
@@ -197,29 +200,25 @@ export function AdminUserQueue({
             </table>
           )}
 
-          {total > pageSize ? (
-            <div className="flex items-center justify-between px-5 py-3 border-t border-border">
-              <p className="text-sm text-muted-foreground">
-                {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} of {total}
-              </p>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => onPageChange?.(page - 1)}
-                  disabled={page <= 1}
-                  className="rounded-lg border border-border px-3 py-1.5 text-sm disabled:opacity-40"
-                >
-                  {t("common.prev")}
-                </button>
-                <button
-                  onClick={() => onPageChange?.(page + 1)}
-                  disabled={page * pageSize >= total}
-                  className="rounded-lg border border-border px-3 py-1.5 text-sm disabled:opacity-40"
-                >
-                  {t("common.next")}
-                </button>
-              </div>
+          {cursorError ? (
+            <div className="border-t border-border px-5 py-3 text-sm text-error">
+              <button type="button" onClick={cursorPagination.reset}>
+                Reset cursor
+              </button>
             </div>
           ) : null}
+          <CursorPagination
+            itemCount={users.length}
+            pageIndex={cursorPagination.pageIndex}
+            pageSize={cursorPagination.pageSize}
+            hasPrevious={cursorPagination.hasPrevious}
+            hasMore={data?.hasMore ?? false}
+            isFetching={isFetching}
+            onPrevious={cursorPagination.goBack}
+            onNext={() => cursorPagination.advance(data?.nextCursor ?? null)}
+            onRefresh={() => void qc.invalidateQueries({ queryKey: ["admin", "users", "cursor"] })}
+            onPageSizeChange={cursorPagination.setPageSize}
+          />
         </div>
       </div>
     </>
