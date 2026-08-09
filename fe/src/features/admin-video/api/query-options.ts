@@ -1,6 +1,11 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import { adminVideoAppealsQueue, adminVideoModerationQueue } from "@/shared/api/endpoints/admin";
+import {
+  adminVideoAppealsQueue,
+  adminVideoAppealsQueueCursor,
+  adminVideoModerationQueue,
+  adminVideoModerationQueueCursor,
+} from "@/shared/api/endpoints/admin";
 
 import { moderationUiPageToBackend } from "../model/video-queue-view";
 
@@ -26,5 +31,37 @@ export const adminVideoAppealsQueryOptions = (params: { page: number; size?: num
         size: params.size ?? 20,
       });
     },
+    retry: false,
+  });
+
+export const adminVideoModerationCursorQueryOptions = (
+  params: {
+    cursor?: string;
+    limit?: number;
+  } = {},
+) =>
+  queryOptions({
+    queryKey: ["admin", "video", "moderation", "cursor", params.cursor ?? null, params.limit ?? 20],
+    queryFn: () =>
+      adminVideoModerationQueueCursor({
+        cursor: params.cursor,
+        limit: params.limit ?? 20,
+      }),
+    retry: false,
+  });
+
+export const adminVideoAppealsCursorQueryOptions = (
+  params: {
+    cursor?: string;
+    limit?: number;
+  } = {},
+) =>
+  queryOptions({
+    queryKey: ["admin", "video", "appeals", "cursor", params.cursor ?? null, params.limit ?? 20],
+    queryFn: () =>
+      adminVideoAppealsQueueCursor({
+        cursor: params.cursor,
+        limit: params.limit ?? 20,
+      }),
     retry: false,
   });

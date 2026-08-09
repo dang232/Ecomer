@@ -3,14 +3,16 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 
+import { useAdminCursorPagination } from "@/features/admin";
+import { isCursorResetError } from "@/shared/api";
 import { adminApproveAppeal, adminRejectAppeal } from "@/shared/api/endpoints/admin";
+import { CursorPagination } from "@/shared/ui/cursor-pagination";
 import { DataTable, type DataTableColumn } from "@/shared/ui/data-table";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { PageContainer } from "@/shared/ui/page-container";
 import { PageHeader } from "@/shared/ui/page-header";
-import { Pagination } from "@/shared/ui/pagination";
 
-import { adminVideoAppealsQueryOptions } from "../api/query-options";
+import { adminVideoAppealsCursorQueryOptions } from "../api/query-options";
 import { toVideoAppealView, type VideoAppealView } from "../model/video-queue-view";
 
 import { VideoDecisionDialog } from "./video-decision-dialog";
@@ -26,10 +28,16 @@ export function VideoAppealsQueue() {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const page = Number.parseInt(searchParams.get("page") ?? "1", 10) || 1;
   const selected = searchParams.get("selected");
+  const cursorPagination = useAdminCursorPagination({ scopeKey: "appeals" });
 
-  const { data, isLoading, isError } = useQuery(adminVideoAppealsQueryOptions({ page }));
+  const { data, isLoading, isError, isFetching, error } = useQuery({
+    ...adminVideoAppealsCursorQueryOptions({
+      cursor: cursorPagination.cursor,
+      limit: cursorPagination.pageSize,
+    }),
+    placeholderData: (previous) => previous,
+  });
 
   const [rejectTarget, setRejectTarget] = useState<{
     videoId: string;
@@ -68,7 +76,8 @@ export function VideoAppealsQueue() {
     },
   });
 
-  const items = (data?.content ?? []).map(toVideoAppealView);
+  const items = (data?.items ?? []).map(toVideoAppealView);
+  const cursorError = isCursorResetError(error);
   // Convert appeal view → moderation view shape so the existing preview
   // drawer can consume it without duplicating the player surface.
   const selectedVideo = (() => {
@@ -105,17 +114,6 @@ export function VideoAppealsQueue() {
     },
   ];
 
-  const handlePageChange = (next: number) => {
-    setSearchParams(
-      (prev) => {
-        const url = new URLSearchParams(prev);
-        url.set("page", String(next));
-        return url;
-      },
-      { replace: true },
-    );
-  };
-
   const handleSelect = (id: string | null) => {
     setSearchParams(
       (prev) => {
@@ -138,7 +136,13 @@ export function VideoAppealsQueue() {
         </div>
       ) : isError ? (
         <div className="rounded-xl border border-border bg-card px-5 py-8 text-center text-sm text-red-600 dark:text-red-400">
-          {t("admin.queue.loadErr")}
+          {cursorError ? (
+            <button type="button" onClick={cursorPagination.reset}>
+              Reset cursor
+            </button>
+          ) : (
+            t("admin.queue.loadErr")
+          )}
         </div>
       ) : items.length === 0 ? (
         <EmptyState title={t("admin.queue.empty")} description="" icon={null} />
@@ -153,10 +157,21 @@ export function VideoAppealsQueue() {
             caption={t("admin.videoAppeals.title") ?? "Video Appeals"}
             empty={null}
           />
-          <Pagination
-            page={page}
-            pageCount={data?.totalPages ?? 0}
-            onPageChange={handlePageChange}
+          <CursorPagination
+            itemCount={items.length}
+            pageIndex={cursorPagination.pageIndex}
+            pageSize={cursorPagination.pageSize}
+            hasPrevious={cursorPagination.hasPrevious}
+            hasMore={data?.hasMore ?? false}
+            isFetching={isFetching}
+            onPrevious={cursorPagination.goBack}
+            onNext={() => cursorPagination.advance(data?.nextCursor ?? null)}
+            onRefresh={() =>
+              void queryClient.invalidateQueries({
+                queryKey: ["admin", "video", "appeals", "cursor"],
+              })
+            }
+            onPageSizeChange={cursorPagination.setPageSize}
           />
         </>
       )}

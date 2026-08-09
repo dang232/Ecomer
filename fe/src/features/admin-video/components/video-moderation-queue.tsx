@@ -3,14 +3,16 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 
+import { useAdminCursorPagination } from "@/features/admin";
+import { isCursorResetError } from "@/shared/api";
 import { adminApproveVideo, adminRejectVideo } from "@/shared/api/endpoints/admin";
+import { CursorPagination } from "@/shared/ui/cursor-pagination";
 import { DataTable, type DataTableColumn } from "@/shared/ui/data-table";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { PageContainer } from "@/shared/ui/page-container";
 import { PageHeader } from "@/shared/ui/page-header";
-import { Pagination } from "@/shared/ui/pagination";
 
-import { adminVideoModerationQueryOptions } from "../api/query-options";
+import { adminVideoModerationCursorQueryOptions } from "../api/query-options";
 import { toVideoModerationView, type VideoModerationView } from "../model/video-queue-view";
 
 import { VideoDecisionDialog } from "./video-decision-dialog";
@@ -27,10 +29,16 @@ export function VideoModerationQueue() {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const page = Number.parseInt(searchParams.get("page") ?? "1", 10) || 1;
   const selected = searchParams.get("selected");
+  const cursorPagination = useAdminCursorPagination({ scopeKey: "moderation" });
 
-  const { data, isLoading, isError } = useQuery(adminVideoModerationQueryOptions({ page }));
+  const { data, isLoading, isError, isFetching, error } = useQuery({
+    ...adminVideoModerationCursorQueryOptions({
+      cursor: cursorPagination.cursor,
+      limit: cursorPagination.pageSize,
+    }),
+    placeholderData: (previous) => previous,
+  });
 
   const [rejectTarget, setRejectTarget] = useState<{
     videoId: string;
@@ -69,7 +77,8 @@ export function VideoModerationQueue() {
     },
   });
 
-  const items = (data?.content ?? []).map(toVideoModerationView);
+  const items = (data?.items ?? []).map(toVideoModerationView);
+  const cursorError = isCursorResetError(error);
   const selectedVideo = items.find((v) => v.videoId === selected) ?? null;
 
   const columns: DataTableColumn<VideoModerationView>[] = [
@@ -95,17 +104,6 @@ export function VideoModerationQueue() {
     { id: "status", header: "Status", cell: (row) => row.status },
   ];
 
-  const handlePageChange = (next: number) => {
-    setSearchParams(
-      (prev) => {
-        const url = new URLSearchParams(prev);
-        url.set("page", String(next));
-        return url;
-      },
-      { replace: true },
-    );
-  };
-
   const handleSelect = (id: string | null) => {
     setSearchParams(
       (prev) => {
@@ -128,7 +126,13 @@ export function VideoModerationQueue() {
         </div>
       ) : isError ? (
         <div className="rounded-xl border border-border bg-card px-5 py-8 text-center text-sm text-red-600 dark:text-red-400">
-          {t("admin.queue.loadErr")}
+          {cursorError ? (
+            <button type="button" onClick={cursorPagination.reset}>
+              Reset cursor
+            </button>
+          ) : (
+            t("admin.queue.loadErr")
+          )}
         </div>
       ) : items.length === 0 ? (
         <EmptyState title={t("admin.queue.empty")} description="" icon={null} />
@@ -143,10 +147,21 @@ export function VideoModerationQueue() {
             caption={t("admin.videoModeration.title") ?? "Video Moderation"}
             empty={null}
           />
-          <Pagination
-            page={page}
-            pageCount={data?.totalPages ?? 0}
-            onPageChange={handlePageChange}
+          <CursorPagination
+            itemCount={items.length}
+            pageIndex={cursorPagination.pageIndex}
+            pageSize={cursorPagination.pageSize}
+            hasPrevious={cursorPagination.hasPrevious}
+            hasMore={data?.hasMore ?? false}
+            isFetching={isFetching}
+            onPrevious={cursorPagination.goBack}
+            onNext={() => cursorPagination.advance(data?.nextCursor ?? null)}
+            onRefresh={() =>
+              void queryClient.invalidateQueries({
+                queryKey: ["admin", "video", "moderation", "cursor"],
+              })
+            }
+            onPageSizeChange={cursorPagination.setPageSize}
           />
         </>
       )}
