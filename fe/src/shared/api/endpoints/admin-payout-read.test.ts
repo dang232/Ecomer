@@ -11,7 +11,6 @@ vi.mock("@/shared/auth", () => ({
 import { adminAllPayouts, adminAllPayoutsCursor } from "@/shared/api/endpoints/admin";
 
 const fetchSpy = vi.fn<typeof fetch>();
-vi.stubGlobal("fetch", fetchSpy);
 
 function successEnvelope(data: unknown): Response {
   return new Response(
@@ -27,7 +26,10 @@ function successEnvelope(data: unknown): Response {
 }
 
 describe("adminAllPayouts", () => {
-  beforeEach(() => fetchSpy.mockReset());
+  beforeEach(() => {
+    fetchSpy.mockReset();
+    vi.stubGlobal("fetch", fetchSpy);
+  });
   afterEach(() => {
     vi.clearAllMocks();
     vi.unstubAllGlobals();
