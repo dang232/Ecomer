@@ -1,4 +1,7 @@
 spring:
+  flyway:
+    postgresql:
+      transactional-lock: false
   jpa:
     hibernate:
       ddl-auto: validate
