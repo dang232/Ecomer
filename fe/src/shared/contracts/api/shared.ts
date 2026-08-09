@@ -82,7 +82,7 @@ export const cursorPageSchema = <T extends z.ZodType>(item: T) =>
       hasMore: z.boolean(),
       pageSize: z.number().int().min(1).max(100).optional(),
       sort: cursorSortSchema.optional(),
-      snapshot: cursorSnapshotSchema.optional(),
+      snapshot: cursorSnapshotSchema.nullable().optional(),
       facets: z.unknown().optional(),
     })
     .passthrough();
@@ -93,7 +93,7 @@ export interface CursorPage<T> {
   hasMore: boolean;
   pageSize?: number;
   sort?: CursorSort;
-  snapshot?: CursorSnapshot;
+  snapshot?: CursorSnapshot | null;
   facets?: unknown;
 }
 

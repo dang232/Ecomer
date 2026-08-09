@@ -148,6 +148,19 @@ describe("admin cursor pagination contract", () => {
     });
   });
 
+  it("accepts a cursor page without a snapshot", () => {
+    expect(
+      adminCursorPageSchema(z.object({ id: z.string() })).parse({
+        items: [],
+        nextCursor: null,
+        hasMore: false,
+        pageSize: 50,
+        sort: { field: "createdAt", direction: "desc" },
+        snapshot: null,
+      }),
+    ).toMatchObject({ items: [], nextCursor: null, hasMore: false, snapshot: null });
+  });
+
   it("keeps the legacy admin offset schema available", () => {
     expect(
       adminPageSchema(z.object({ id: z.string() })).parse({

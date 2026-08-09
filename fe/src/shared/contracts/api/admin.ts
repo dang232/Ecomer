@@ -62,7 +62,7 @@ export function adminCursorPageSchema<T extends z.ZodType>(itemSchema: T) {
     .extend({
       pageSize: z.number().int().min(1).max(100),
       sort: cursorSortSchema,
-      snapshot: cursorSnapshotSchema.optional(),
+      snapshot: cursorSnapshotSchema.nullable().optional(),
     })
     .passthrough();
 }

@@ -24,6 +24,17 @@ describe("shared pagination contracts", () => {
     });
   });
 
+  it("accepts a cursor page with a null snapshot", () => {
+    expect(
+      cursorPageSchema(z.object({ id: z.string() })).parse({
+        items: [],
+        nextCursor: null,
+        hasMore: false,
+        snapshot: null,
+      }),
+    ).toMatchObject({ items: [], nextCursor: null, hasMore: false, snapshot: null });
+  });
+
   it("accepts null nextCursor and rejects a missing hasMore", () => {
     const schema = cursorPageSchema(z.string());
 
