@@ -28,6 +28,9 @@ public class ApiExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiResponse<Void> badRequest(IllegalArgumentException exception) {
+        if ("invalid_page_size".equals(exception.getMessage())) {
+            return ApiResponse.error("invalid_page_size", "invalid_page_size");
+        }
         return ApiResponse.error(exception.getMessage(), "bad_request");
     }
 
