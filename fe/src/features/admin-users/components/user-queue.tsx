@@ -106,7 +106,7 @@ export function AdminUserQueue({ q, selected, onSearch, onSelect }: UserQueuePro
                   if (e.key === "Enter") handleSearch(search);
                 }}
                 placeholder={t("admin.users.searchPlaceholder") ?? "Search users..."}
-                className="w-full pl-9 pr-4 py-2 border border-border rounded-lg text-sm outline-none focus:border-primary"
+                className="w-full rounded-lg border border-border py-2 pl-9 pr-4 text-sm outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               />
             </div>
           </div>
@@ -130,74 +130,80 @@ export function AdminUserQueue({ q, selected, onSearch, onSelect }: UserQueuePro
               {t("admin.users.empty")}
             </div>
           ) : (
-            <table className="w-full">
-              <thead className="bg-muted">
-                <tr>
-                  {[
-                    t("admin.users.th.name") ?? "Name",
-                    t("admin.users.th.email") ?? "Email",
-                    t("admin.users.th.status") ?? "Status",
-                    "",
-                  ].map((h) => (
-                    <th
-                      key={h}
-                      className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {users.map((user) => (
-                  <tr key={user.keycloakId} className="hover:bg-muted">
-                    <td className="px-4 py-3 text-sm font-semibold">{user.name}</td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">{user.email}</td>
-                    <td className="px-4 py-3">
-                      <span
-                        className="rounded-full px-2.5 py-1 text-xs font-semibold"
-                        style={{
-                          background: user.banned ? "var(--error-light)" : "var(--success-light)",
-                          color: user.banned ? "var(--error)" : "var(--success)",
-                        }}
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[36rem] border-collapse">
+                <thead className="bg-muted">
+                  <tr>
+                    {[
+                      t("admin.users.th.name") ?? "Name",
+                      t("admin.users.th.email") ?? "Email",
+                      t("admin.users.th.status") ?? "Status",
+                      "",
+                    ].map((h) => (
+                      <th
+                        key={h}
+                        scope="col"
+                        className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground"
                       >
-                        {user.banned
-                          ? (t("admin.users.banned") ?? "Banned")
-                          : (t("admin.users.active") ?? "Active")}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => onSelect?.(user.keycloakId)}
-                          disabled={isMutating}
-                          className="rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-muted disabled:opacity-50"
-                        >
-                          {t("admin.users.view")}
-                        </button>
-                        {user.banned ? (
-                          <button
-                            onClick={() => unban.mutate(user.keycloakId)}
-                            disabled={isMutating}
-                            className="rounded-lg border border-green-200 px-2.5 py-1 text-xs font-semibold text-green-600 hover:bg-green-50 disabled:opacity-50"
-                          >
-                            {t("admin.users.unban")}
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => ban.mutate(user.keycloakId)}
-                            disabled={isMutating}
-                            className="rounded-lg border border-red-200 px-2.5 py-1 text-xs font-semibold text-red-500 hover:bg-red-50 disabled:opacity-50"
-                          >
-                            {t("admin.users.ban")}
-                          </button>
-                        )}
-                      </div>
-                    </td>
+                        {h}
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {users.map((user) => (
+                    <tr key={user.keycloakId} className="hover:bg-muted">
+                      <td className="px-4 py-3 text-sm font-semibold">{user.name}</td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground">{user.email}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className="rounded-full px-2.5 py-1 text-xs font-semibold"
+                          style={{
+                            background: user.banned ? "var(--error-light)" : "var(--success-light)",
+                            color: user.banned ? "var(--error)" : "var(--success)",
+                          }}
+                        >
+                          {user.banned
+                            ? (t("admin.users.banned") ?? "Banned")
+                            : (t("admin.users.active") ?? "Active")}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => onSelect?.(user.keycloakId)}
+                            disabled={isMutating}
+                            className="rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
+                          >
+                            {t("admin.users.view")}
+                          </button>
+                          {user.banned ? (
+                            <button
+                              type="button"
+                              onClick={() => unban.mutate(user.keycloakId)}
+                              disabled={isMutating}
+                              className="rounded-lg border border-green-200 px-2.5 py-1 text-xs font-semibold text-green-600 hover:bg-green-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
+                            >
+                              {t("admin.users.unban")}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => ban.mutate(user.keycloakId)}
+                              disabled={isMutating}
+                              className="rounded-lg border border-red-200 px-2.5 py-1 text-xs font-semibold text-red-500 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
+                            >
+                              {t("admin.users.ban")}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
 
           {cursorError ? (
