@@ -8,6 +8,9 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.time.Instant;
+import org.springframework.data.domain.PageRequest;
+import com.vnshop.orderservice.domain.port.out.DisputeRepositoryPort.DisputeCursorItem;
 
 @Repository
 public class DisputeJpaRepository implements DisputeRepositoryPort {
@@ -35,18 +38,32 @@ public class DisputeJpaRepository implements DisputeRepositoryPort {
  @Override
  public List<Dispute> findByStatus(String status, String query) {
  String normalized = query == null ? "" : query.trim().toLowerCase();
- return springDataRepository.findByStatusAndQuery(DisputeStatus.valueOf(status), normalized, "%" + normalized + "%")
+   return springDataRepository.findByStatusAndQuery(DisputeStatus.valueOf(status), normalized, normalized + "%")
          .stream().map(DisputeJpaEntity::toDomain).toList();
  }
 
  @Override
- public Optional<Dispute> findByReturnId(String returnId) {
+  public Optional<Dispute> findByReturnId(String returnId) {
  UUID returnUuid;
  try {
  returnUuid = UUID.fromString(returnId);
  } catch (IllegalArgumentException ex) {
  return Optional.empty();
  }
- return springDataRepository.findByReturnId(returnUuid).map(DisputeJpaEntity::toDomain);
- }
+  return springDataRepository.findByReturnId(returnUuid).map(DisputeJpaEntity::toDomain);
+  }
+
+  @Override
+  public List<DisputeCursorItem> findCursor(String status, String query, Instant createdAtBefore,
+          UUID disputeIdBefore, int limitPlusOne) {
+  String normalized = query == null ? "" : query.trim().toLowerCase();
+   var rows = createdAtBefore == null && disputeIdBefore == null
+           ? springDataRepository.findCursorFirst(DisputeStatus.valueOf(status), normalized, normalized + "%",
+                   PageRequest.of(0, limitPlusOne))
+           : springDataRepository.findCursorAfter(DisputeStatus.valueOf(status), normalized, normalized + "%",
+                   createdAtBefore, disputeIdBefore, PageRequest.of(0, limitPlusOne));
+   return rows.stream()
+          .map(entity -> new DisputeCursorItem(entity.toDomain(), entity.getCreatedAt()))
+          .toList();
+  }
 }

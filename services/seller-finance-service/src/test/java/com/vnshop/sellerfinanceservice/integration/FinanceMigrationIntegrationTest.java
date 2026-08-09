@@ -11,7 +11,7 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-@SpringBootTest
+@SpringBootTest(properties = "vnshop.admin-cursor.secret=test-secret")
 @Testcontainers
 @Import(TestcontainersConfig.class)
 class FinanceMigrationIntegrationTest {
@@ -26,12 +26,12 @@ class FinanceMigrationIntegrationTest {
     private JwtDecoder jwtDecoder;
 
     @Test
-    void appliesFlywayMigrationsThroughVersionEleven() {
+    void appliesFlywayMigrationsThroughVersionTwelve() {
         String version = jdbcTemplate.queryForObject(
             "select version from seller_finance_svc.flyway_schema_history where success order by installed_rank desc limit 1",
             String.class
         );
 
-        assertThat(version).isEqualTo("11");
+        assertThat(version).isEqualTo("12");
     }
 }

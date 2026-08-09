@@ -1,12 +1,22 @@
 spring:
+  flyway:
+    postgresql:
+      transactional-lock: false
   jpa:
     hibernate:
       ddl-auto: validate
+    properties:
+      hibernate:
+        session_factory:
+          statement_inspector: com.vnshop.orderservice.integration.CursorSqlCapture
   kafka:
     consumer:
       auto-offset-reset: earliest
 
 vnshop:
+  admin-cursor:
+    secret: test-secret
+    ttl: PT1H
   datasource:
     read-replica:
       enabled: false

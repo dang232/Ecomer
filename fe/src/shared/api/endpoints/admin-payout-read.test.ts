@@ -8,10 +8,9 @@ vi.mock("@/shared/auth", () => ({
   setLiveTokenSet: vi.fn(),
 }));
 
-import { adminAllPayouts } from "@/shared/api/endpoints/admin";
+import { adminAllPayouts, adminAllPayoutsCursor } from "@/shared/api/endpoints/admin";
 
 const fetchSpy = vi.fn<typeof fetch>();
-vi.stubGlobal("fetch", fetchSpy);
 
 function successEnvelope(data: unknown): Response {
   return new Response(
@@ -27,7 +26,10 @@ function successEnvelope(data: unknown): Response {
 }
 
 describe("adminAllPayouts", () => {
-  beforeEach(() => fetchSpy.mockReset());
+  beforeEach(() => {
+    fetchSpy.mockReset();
+    vi.stubGlobal("fetch", fetchSpy);
+  });
   afterEach(() => {
     vi.clearAllMocks();
     vi.unstubAllGlobals();
@@ -73,5 +75,34 @@ describe("adminAllPayouts", () => {
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(fetchSpy.mock.calls[0]?.[0]).toContain("/admin/finance/payouts?page=0&size=50");
+  });
+
+  it("parses cursor payloads and sends bounded cursor parameters", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      successEnvelope({
+        items: [],
+        nextCursor: "opaque-next",
+        hasMore: true,
+        pageSize: 25,
+        sort: { field: "createdAt,payoutId", direction: "desc" },
+      }),
+    );
+
+    const page = await adminAllPayoutsCursor({
+      status: "PENDING",
+      q: "alice",
+      limit: 25,
+      cursor: "opaque-current",
+    });
+
+    expect(page).toMatchObject({
+      items: [],
+      nextCursor: "opaque-next",
+      hasMore: true,
+      pageSize: 25,
+    });
+    expect(fetchSpy.mock.calls[0]?.[0]).toContain(
+      "/admin/finance/payouts?status=PENDING&q=alice&limit=25&cursor=opaque-current",
+    );
   });
 });

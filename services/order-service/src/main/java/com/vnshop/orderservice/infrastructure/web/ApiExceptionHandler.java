@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import com.vnshop.orderservice.infrastructure.web.pagination.AdminCursorCodec.InvalidCursorException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -84,7 +85,20 @@ public class ApiExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiResponse<Void> badRequest(IllegalArgumentException exception) {
+        if ("invalid_page_size".equals(exception.getMessage())) {
+            return ApiResponse.error("invalid_page_size", "invalid_page_size");
+        }
         return ApiResponse.error(exception.getMessage(), "BAD_REQUEST");
+    }
+
+    @ExceptionHandler(InvalidCursorException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiResponse<Void> invalidCursor(InvalidCursorException exception) {
+        String code = switch (exception.reason()) {
+            case RESOURCE_MISMATCH, FILTER_MISMATCH, SORT_MISMATCH -> "cursor_scope_mismatch";
+            default -> "cursor_invalid";
+        };
+        return ApiResponse.error(code, code);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

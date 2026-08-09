@@ -27,6 +27,9 @@ spring:
     enabled: true
     schemas: seller_finance_svc
     default-schema: seller_finance_svc
+    postgresql:
+      transactional:
+        lock: false
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     properties:
@@ -108,6 +111,9 @@ kafka:
       group-id: seller-finance-service-refund
 
 vnshop:
+  admin-cursor:
+    secret: ${VNSHOP_SELLER_FINANCE_ADMIN_CURSOR_SECRET}
+    ttl: ${VNSHOP_SELLER_FINANCE_ADMIN_CURSOR_TTL:PT15M}
   user-service:
     base-url: ${USER_SERVICE_URL}
     connect-timeout-ms: ${USER_SERVICE_CONNECT_TIMEOUT_MS}

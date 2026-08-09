@@ -90,6 +90,41 @@ class AdminOrderUseCaseTest {
         assertThat(result.orderNumber()).isEqualTo("ORD-1001");
     }
 
+    @Test
+    void cursorOrderLookaheadIsNotSentToDirectoryLookup() {
+        OrderSummaryQueryPort queryPort = mock(OrderSummaryQueryPort.class);
+        OrderSummaryProjection first = cursorOrder("order-1", "buyer-1", "seller-1");
+        OrderSummaryProjection second = cursorOrder("order-2", "buyer-2", "seller-2");
+        OrderSummaryProjection lookahead = cursorOrder("order-3", "buyer-lookahead", "seller-lookahead");
+        when(queryPort.findAllCursor("phone", "PENDING", null, null, 3))
+                .thenReturn(List.of(first, second, lookahead));
+        List<String> requestedBuyers = new ArrayList<>();
+        List<String> requestedSellers = new ArrayList<>();
+        UserDirectoryPort directory = (buyerIds, sellerIds) -> {
+            requestedBuyers.addAll(buyerIds);
+            requestedSellers.addAll(sellerIds);
+            return UserDirectoryPort.DirectorySnapshot.empty();
+        };
+        AdminOrderUseCase enrichedUseCase = new AdminOrderUseCase(
+                repository, queryPort, inventory, events, coupons, directory);
+
+        List<OrderSummaryProjection> result = enrichedUseCase
+                .listAllOrdersCursor("phone", "PENDING", null, null, 3);
+
+        assertThat(result).hasSize(3);
+        assertThat(requestedBuyers).containsExactlyInAnyOrder("buyer-1", "buyer-2")
+                .doesNotContain("buyer-lookahead");
+        assertThat(requestedSellers).containsExactlyInAnyOrder("seller-1", "seller-2")
+                .doesNotContain("seller-lookahead");
+        assertThat(result.getLast().buyerName()).isNull();
+        assertThat(result.getLast().sellerName()).isNull();
+    }
+
+    private static OrderSummaryProjection cursorOrder(String orderId, String buyerId, String sellerId) {
+        return new OrderSummaryProjection(orderId, "ORD-" + orderId, buyerId, sellerId, "PENDING",
+                BigDecimal.TEN, 1, java.time.Instant.now(), java.time.Instant.now());
+    }
+
     private static Order orderWithPendingSubOrder(UUID orderId) {
         OrderItem item = new OrderItem(
                 "product-1", "P-1", "seller-1", "Phone", 1, TEN_THOUSAND, null);

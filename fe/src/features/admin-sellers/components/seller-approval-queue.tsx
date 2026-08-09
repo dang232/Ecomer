@@ -3,13 +3,17 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { ADMIN_QUEUE_CAPABILITIES, AdminQueueFrame } from "@/features/admin";
-import { ApiError } from "@/shared/api";
+import {
+  ADMIN_QUEUE_CAPABILITIES,
+  AdminQueueFrame,
+  useAdminCursorPagination,
+} from "@/features/admin";
+import { ApiError, isCursorResetError } from "@/shared/api";
 import { adminApproveSeller, adminRejectSeller } from "@/shared/api/endpoints/admin";
 import { formatRelativeTime } from "@/shared/lib";
 import type { DataTableColumn } from "@/shared/ui/data-table";
 
-import { adminSellersQueryOptions } from "../api/query-options";
+import { adminSellersCursorQueryOptions } from "../api/query-options";
 import type { SellerView } from "../model/seller-view";
 import { toSellerView } from "../model/seller-view";
 
@@ -26,14 +30,28 @@ interface SellerApprovalQueueProps {
 export function SellerApprovalQueue({ q, selected, onSearch, onSelect }: SellerApprovalQueueProps) {
   const { t } = useTranslation();
   const qc = useQueryClient();
+  const cursorPagination = useAdminCursorPagination({ scopeKey: q });
   const [dialog, setDialog] = useState<{
     variant: "approve" | "reject";
     sellerId: string;
     shopName?: string | null;
   } | null>(null);
 
-  const { data: sellersRaw, isLoading, isError } = useQuery(adminSellersQueryOptions({ q }));
-  const sellers: SellerView[] = (sellersRaw ?? []).map(toSellerView);
+  const {
+    data: sellersRaw,
+    isLoading,
+    isError,
+    isFetching,
+    error,
+  } = useQuery({
+    ...adminSellersCursorQueryOptions({
+      q,
+      cursor: cursorPagination.cursor,
+      limit: cursorPagination.pageSize,
+    }),
+  });
+  const sellers: SellerView[] = (sellersRaw?.items ?? []).map(toSellerView);
+  const cursorError = isCursorResetError(error);
 
   const approve = useMutation({
     mutationFn: (id: string) => adminApproveSeller(id),
@@ -129,6 +147,20 @@ export function SellerApprovalQueue({ q, selected, onSearch, onSelect }: SellerA
         isLoading={isLoading}
         isError={isError}
         onPageChange={() => undefined}
+        cursorPagination={{
+          itemCount: sellers.length,
+          pageIndex: cursorPagination.pageIndex,
+          pageSize: cursorPagination.pageSize,
+          hasPrevious: cursorPagination.hasPrevious,
+          hasMore: sellersRaw?.hasMore ?? false,
+          isFetching,
+          onPrevious: cursorPagination.goBack,
+          onNext: () => cursorPagination.advance(sellersRaw?.nextCursor ?? null),
+          onRefresh: () => void qc.invalidateQueries({ queryKey: ["admin", "sellers", "cursor"] }),
+          onPageSizeChange: cursorPagination.setPageSize,
+        }}
+        cursorError={cursorError}
+        onResetCursor={cursorPagination.reset}
         drawerTitle={selectedSeller?.shopName ?? ""}
         drawerDescription={selectedSeller?.status}
       >

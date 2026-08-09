@@ -40,6 +40,10 @@ public interface ReviewRepositoryPort extends ProductRatingReadPort {
         return findByStatus(status);
     }
 
+    default List<Review> findByStatusCursor(ReviewStatus status, String query, ReviewCursorAnchor anchor, int limit) {
+        throw new UnsupportedOperationException("review cursor listing is not available for this repository");
+    }
+
     default Page<Review> findApprovedBySellerId(String sellerId, String query, Pageable pageable) {
         throw new UnsupportedOperationException("seller review listing is not available for this repository");
     }

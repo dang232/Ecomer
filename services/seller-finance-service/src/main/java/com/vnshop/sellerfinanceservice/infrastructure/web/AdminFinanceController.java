@@ -3,6 +3,11 @@ package com.vnshop.sellerfinanceservice.infrastructure.web;
 import com.vnshop.sellerfinanceservice.application.ProcessPayoutUseCase;
 import com.vnshop.sellerfinanceservice.application.AdminPayoutReadUseCase;
 import com.vnshop.sellerfinanceservice.infrastructure.config.JwtPrincipalUtil;
+import com.vnshop.sellerfinanceservice.domain.PayoutStatus;
+import com.vnshop.sellerfinanceservice.infrastructure.web.pagination.AdminCursorCodec;
+import com.vnshop.sellerfinanceservice.infrastructure.web.pagination.AdminCursorFilterHash;
+import java.time.Instant;
+import java.util.UUID;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,11 +24,13 @@ import java.util.List;
 public class AdminFinanceController {
     private final ProcessPayoutUseCase processPayoutUseCase;
     private final AdminPayoutReadUseCase adminPayoutReadUseCase;
+    private final AdminCursorCodec cursorCodec;
 
     public AdminFinanceController(ProcessPayoutUseCase processPayoutUseCase,
-            AdminPayoutReadUseCase adminPayoutReadUseCase) {
+            AdminPayoutReadUseCase adminPayoutReadUseCase, AdminCursorCodec cursorCodec) {
         this.processPayoutUseCase = processPayoutUseCase;
         this.adminPayoutReadUseCase = adminPayoutReadUseCase;
+        this.cursorCodec = cursorCodec;
     }
 
     @GetMapping("/payouts/pending")
@@ -41,12 +48,64 @@ public class AdminFinanceController {
     }
 
     @GetMapping("/payouts")
-    public ApiResponse<Page<PayoutResponse>> allPayouts(
+    public ApiResponse<?> allPayouts(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String q,
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) String cursor,
             Pageable pageable) {
+        if (limit != null || cursor != null) {
+            return cursorPage(q, status, limit, cursor);
+        }
         return ApiResponse.ok(adminPayoutReadUseCase.all(q, status, pageable)
                 .map(this::toResponse));
+    }
+
+    private ApiResponse<AdminCursorPage<PayoutResponse>> cursorPage(
+            String query, String status, Integer requestedLimit, String token) {
+        int pageSize = requestedLimit == null ? 50 : requestedLimit;
+        if (pageSize < 1 || pageSize > 100) {
+            throw new IllegalArgumentException("invalid_page_size");
+        }
+        String normalizedStatus = status == null ? "" : status.trim().toUpperCase(java.util.Locale.ROOT);
+        PayoutStatus requestedStatus = parseStatus(normalizedStatus);
+        String resource = "admin-payouts";
+        String sort = "createdAt:desc,payoutId:desc";
+        String filterHash = AdminCursorFilterHash.forPayouts(query, normalizedStatus);
+        Instant beforeCreatedAt = null;
+        UUID beforePayoutId = null;
+        if (token != null) {
+            AdminCursorCodec.Cursor decoded = cursorCodec.decode(token, resource, filterHash, sort);
+            try {
+                beforeCreatedAt = Instant.parse(decoded.sortKey());
+                beforePayoutId = UUID.fromString(decoded.uniqueId());
+            } catch (RuntimeException exception) {
+                throw new AdminCursorCodec.InvalidCursorException(
+                        AdminCursorCodec.RejectionReason.MISSING_FIELD);
+            }
+        }
+        AdminPayoutReadUseCase.CursorPage result = adminPayoutReadUseCase.cursor(
+                query, requestedStatus, beforeCreatedAt, beforePayoutId, pageSize);
+        String next = null;
+        if (result.hasMore()) {
+            PayoutResponse last = toResponse(result.items().getLast());
+            next = cursorCodec.encode(new AdminCursorCodec.Cursor(
+                    resource, filterHash, sort, last.createdAt().toString(), last.payoutId(), null, null));
+        }
+        return ApiResponse.ok(new AdminCursorPage<>(result.items().stream().map(this::toResponse).toList(),
+                next, result.hasMore(), pageSize,
+                new AdminCursorPage.Sort("createdAt,payoutId", "desc"), null));
+    }
+
+    private static PayoutStatus parseStatus(String status) {
+        if (status.isBlank() || "ALL".equals(status)) {
+            return null;
+        }
+        try {
+            return PayoutStatus.valueOf(status);
+        } catch (IllegalArgumentException exception) {
+            throw new IllegalArgumentException("status is invalid: " + status, exception);
+        }
     }
 
     @PostMapping("/payouts/{payoutId}/complete")

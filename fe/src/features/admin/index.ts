@@ -8,6 +8,11 @@ export type {
 } from "./model/queue-capabilities";
 export { AdminQueueFrame } from "./components/admin-queue-frame";
 export { AdminRecordDrawer } from "./components/admin-record-drawer";
+export { useAdminCursorPagination } from "./hooks/use-admin-cursor-pagination";
+export type {
+  AdminCursorPaginationOptions,
+  AdminCursorPaginationState,
+} from "./hooks/use-admin-cursor-pagination";
 export {
   readAdminQueueRouteState,
   writeAdminQueueRouteState,

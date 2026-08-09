@@ -16,6 +16,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import com.vnshop.productservice.domain.review.port.out.ReviewCursorAnchor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -127,6 +129,17 @@ public class ReviewJpaRepository implements ReviewRepositoryPort {
         return reviewRepository.findByStatusAndQuery(status.name(), normalizedQuery).stream()
                 .map(ReviewJpaEntity::toDomain)
                 .toList();
+    }
+
+    @Override
+    public List<Review> findByStatusCursor(ReviewStatus status, String query, ReviewCursorAnchor anchor, int limit) {
+        String normalizedQuery = query == null ? "" : query.trim().toLowerCase(java.util.Locale.ROOT);
+        PageRequest page = PageRequest.of(0, limit);
+        List<ReviewJpaEntity> entities = anchor == null
+                ? reviewRepository.findPendingCursorFirst(status.name(), normalizedQuery, page)
+                : reviewRepository.findPendingCursorAfter(status.name(), normalizedQuery,
+                        anchor.createdAt(), anchor.reviewId(), page);
+        return entities.stream().map(ReviewJpaEntity::toDomain).toList();
     }
 
     @Override

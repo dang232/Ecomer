@@ -14,6 +14,7 @@ import com.vnshop.orderservice.domain.port.out.UserDirectoryPort;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.time.Instant;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -78,6 +79,30 @@ public class AdminOrderUseCase {
         return page.map(summary -> summary.withDisplayNames(
                 names.buyerNames().get(summary.buyerId()),
                 names.sellerNames().get(summary.sellerId())));
+    }
+
+    public List<OrderSummaryProjection> listAllOrdersCursor(String query, String status, Instant createdAtBefore,
+            String orderIdBefore, int limitPlusOne) {
+        List<OrderSummaryProjection> rows = orderSummaryQueryPort.findAllCursor(
+                query, status, createdAtBefore, orderIdBefore, limitPlusOne);
+        if (rows.isEmpty()) {
+            return rows;
+        }
+        int pageLimit = Math.max(1, limitPlusOne - 1);
+        List<OrderSummaryProjection> pageRows = rows.size() > pageLimit
+                ? rows.subList(0, pageLimit) : rows;
+        var buyerIds = pageRows.stream()
+                .map(OrderSummaryProjection::buyerId).filter(Objects::nonNull).filter(id -> !id.isBlank())
+                .collect(java.util.stream.Collectors.toSet());
+        var sellerIds = pageRows.stream()
+                .map(OrderSummaryProjection::sellerId).filter(Objects::nonNull).filter(id -> !id.isBlank())
+                .collect(java.util.stream.Collectors.toSet());
+        UserDirectoryPort.DirectorySnapshot names = userDirectoryPort.lookup(buyerIds, sellerIds);
+        List<OrderSummaryProjection> enrichedPage = pageRows.stream().map(summary -> summary.withDisplayNames(
+                names.buyerNames().get(summary.buyerId()), names.sellerNames().get(summary.sellerId()))).toList();
+        return rows.size() > pageLimit
+                ? java.util.stream.Stream.concat(enrichedPage.stream(), rows.stream().skip(pageLimit)).toList()
+                : enrichedPage;
     }
 
     /**

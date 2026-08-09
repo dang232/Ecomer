@@ -89,7 +89,7 @@ export const ADMIN_QUEUE_CAPABILITIES = {
     search: true,
     status: false,
     sort: [] as readonly string[],
-    pagination: "none" as const,
+    pagination: "server" as const,
     selection: "single" as const,
     actions: {
       approve: { inputs: {} },
@@ -100,7 +100,7 @@ export const ADMIN_QUEUE_CAPABILITIES = {
     search: true,
     status: false,
     sort: [] as readonly string[],
-    pagination: "none" as const,
+    pagination: "server" as const,
     selection: "single" as const,
     actions: {
       approve: { inputs: {} },
@@ -111,7 +111,7 @@ export const ADMIN_QUEUE_CAPABILITIES = {
     search: true,
     status: false,
     sort: [] as readonly string[],
-    pagination: "none" as const,
+    pagination: "server" as const,
     selection: "single" as const,
     actions: {
       resolve: { inputs: { adminResolution: "required" } },
@@ -121,7 +121,7 @@ export const ADMIN_QUEUE_CAPABILITIES = {
     search: true,
     status: true,
     sort: [] as readonly string[],
-    pagination: "none" as const,
+    pagination: "server" as const,
     selection: "single" as const,
     actions: {
       approve: { inputs: { reason: "required" } },

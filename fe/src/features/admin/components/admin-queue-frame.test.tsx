@@ -47,4 +47,30 @@ describe("AdminQueueFrame", () => {
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
+
+  it("keeps cursor controls visible for an empty page", () => {
+    renderFrame({
+      cursorPagination: {
+        itemCount: 0,
+        pageIndex: 1,
+        pageSize: 50,
+        hasPrevious: true,
+        hasMore: false,
+        onPrevious: () => undefined,
+        onNext: () => undefined,
+        onRefresh: () => undefined,
+        onPageSizeChange: () => undefined,
+      },
+    });
+
+    expect(screen.getByRole("navigation", { name: "Cursor pagination" })).toBeVisible();
+    expect(screen.getByText("No records")).toBeVisible();
+  });
+
+  it("does not label ordinary load errors as expired cursors", () => {
+    renderFrame({ isError: true, cursorError: false });
+
+    expect(screen.getByText("admin.queue.loadErr")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Reset cursor" })).not.toBeInTheDocument();
+  });
 });

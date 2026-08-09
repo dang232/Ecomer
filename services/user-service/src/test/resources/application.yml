@@ -27,6 +27,10 @@ keycloak:
 vnshop:
   internal:
     allowed-client-id: test-internal-client
+  admin:
+    cursor:
+      secret: test-admin-cursor-secret
+      ttl: PT15M
   auth:
     callback-base-url: http://localhost:8080/auth/oauth/callback
     frontend-base-url: http://localhost:3000

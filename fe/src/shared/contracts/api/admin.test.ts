@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import { dashboardRevenueResponseSchema } from "@/shared/api/endpoints/admin";
 import {
   adminPayoutSchema,
+  adminCursorPageSchema,
+  adminPageSchema,
   dashboardRevenuePointSchema,
   dashboardReportSchema,
   dashboardSummarySchema,
@@ -123,6 +126,51 @@ describe("admin dashboard response contracts", () => {
         topSellers: [],
       }),
     ).toMatchObject({ asOf: "2026-07-23T12:00:00.000Z", summary: { realizedRevenue: 1150000 } });
+  });
+});
+
+describe("admin cursor pagination contract", () => {
+  it("accepts the admin list response shape", () => {
+    expect(
+      adminCursorPageSchema(z.object({ id: z.string() })).parse({
+        items: [{ id: "user-1" }],
+        nextCursor: null,
+        hasMore: false,
+        pageSize: 50,
+        sort: { field: "createdAt", direction: "desc" },
+        snapshot: { asOf: "2026-08-08T00:00:00Z" },
+      }),
+    ).toMatchObject({
+      items: [{ id: "user-1" }],
+      nextCursor: null,
+      hasMore: false,
+      pageSize: 50,
+    });
+  });
+
+  it("accepts a cursor page without a snapshot", () => {
+    expect(
+      adminCursorPageSchema(z.object({ id: z.string() })).parse({
+        items: [],
+        nextCursor: null,
+        hasMore: false,
+        pageSize: 50,
+        sort: { field: "createdAt", direction: "desc" },
+        snapshot: null,
+      }),
+    ).toMatchObject({ items: [], nextCursor: null, hasMore: false, snapshot: null });
+  });
+
+  it("keeps the legacy admin offset schema available", () => {
+    expect(
+      adminPageSchema(z.object({ id: z.string() })).parse({
+        content: [{ id: "user-1" }],
+        number: 0,
+        size: 50,
+        totalElements: 1,
+        totalPages: 1,
+      }),
+    ).toMatchObject({ content: [{ id: "user-1" }], page: 0, totalPages: 1 });
   });
 });
 

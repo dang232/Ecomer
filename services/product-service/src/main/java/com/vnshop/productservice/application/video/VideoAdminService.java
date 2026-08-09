@@ -6,6 +6,7 @@ import com.vnshop.productservice.domain.video.VideoStatus;
 import com.vnshop.productservice.domain.video.VideoStatusHistory;
 import com.vnshop.productservice.domain.video.port.out.VideoEventPublisherPort;
 import com.vnshop.productservice.domain.video.port.out.VideoRepositoryPort;
+import com.vnshop.productservice.domain.video.port.out.VideoCursorAnchor;
 import com.vnshop.productservice.domain.port.out.ObjectStoragePort;
 
 import org.springframework.data.domain.Page;
@@ -13,6 +14,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.net.URI;
 import java.util.Map;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -105,6 +107,10 @@ public class VideoAdminService {
     /** Returns paginated videos with status APPEAL_PENDING. */
     public Page<Video> getAppealsQueue(Pageable pageable) {
         return videoRepositoryPort.findByStatus(VideoStatus.APPEAL_PENDING, pageable);
+    }
+
+    public List<Video> getCursorQueue(VideoStatus status, VideoCursorAnchor anchor, int limit) {
+        return videoRepositoryPort.findByStatusCursor(status, anchor, limit + 1);
     }
 
     /**

@@ -10,6 +10,8 @@ import org.springframework.data.domain.Pageable;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.time.Instant;
+import java.util.UUID;
 
 /** Builds the admin payout read model without leaking remote lookups into web adapters. */
 public class AdminPayoutReadUseCase {
@@ -73,6 +75,15 @@ public class AdminPayoutReadUseCase {
         return new PageImpl<>(rows.subList(fromIndex, toIndex), pageable, rows.size());
     }
 
+    public CursorPage cursor(String query, PayoutStatus status, Instant beforeCreatedAt,
+            UUID beforePayoutId, int limit) {
+        List<Payout> rows = payoutRepositoryPort.findAdminCursor(
+                query, status, beforeCreatedAt, beforePayoutId, limit + 1);
+        boolean hasMore = rows.size() > limit;
+        List<Payout> visible = hasMore ? rows.subList(0, limit) : rows;
+        return new CursorPage(enrich(visible), hasMore);
+    }
+
     public EnrichedPayout enrich(Payout payout) {
         Map<String, String> names = sellerDirectoryPort.lookup(List.of(payout.sellerId()));
         return new EnrichedPayout(payout, names == null ? null : names.get(payout.sellerId()));
@@ -90,5 +101,8 @@ public class AdminPayoutReadUseCase {
     }
 
     public record EnrichedPayout(Payout payout, String sellerName) {
+    }
+
+    public record CursorPage(List<EnrichedPayout> items, boolean hasMore) {
     }
 }

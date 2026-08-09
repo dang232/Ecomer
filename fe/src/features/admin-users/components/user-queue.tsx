@@ -3,43 +3,39 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { AdminRecordDrawer } from "@/features/admin";
-import { ApiError } from "@/shared/api";
-import { adminListUsers, adminBanUser, adminUnbanUser } from "@/shared/api/endpoints/admin";
+import { AdminRecordDrawer, useAdminCursorPagination } from "@/features/admin";
+import { ApiError, isCursorResetError } from "@/shared/api";
+import { adminBanUser, adminUnbanUser } from "@/shared/api/endpoints/admin";
 import type { AdminUser } from "@/shared/contracts/api";
+import { CursorPagination } from "@/shared/ui";
+
+import { adminUsersCursorQueryOptions } from "../api/query-options";
 
 import { UserDetailDrawer } from "./user-detail-drawer";
 
 interface UserQueueProps {
   q?: string;
-  page?: number;
   selected?: string;
   onSearch?: (q: string) => void;
-  onPageChange?: (page: number) => void;
   onSelect?: (id: string | null) => void;
 }
 
-export function AdminUserQueue({
-  q,
-  page = 1,
-  selected,
-  onSearch,
-  onPageChange,
-  onSelect,
-}: UserQueueProps) {
+export function AdminUserQueue({ q, selected, onSearch, onSelect }: UserQueueProps) {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [search, setSearch] = useState(q ?? "");
+  const cursorPagination = useAdminCursorPagination({ scopeKey: q ?? "" });
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["admin", "users", { q, page }],
-    queryFn: () => adminListUsers({ q, page: (page ?? 1) - 1 }),
-    retry: false,
+  const { data, isLoading, isError, isFetching, error } = useQuery({
+    ...adminUsersCursorQueryOptions({
+      q: q || undefined,
+      cursor: cursorPagination.cursor,
+      limit: cursorPagination.pageSize,
+    }),
   });
 
-  const users: AdminUser[] = data?.content ?? [];
-  const total = data?.totalElements ?? 0;
-  const pageSize = data?.size ?? 50;
+  const users: AdminUser[] = data?.items ?? [];
+  const cursorError = isCursorResetError(error);
 
   const ban = useMutation({
     mutationFn: (id: string) => adminBanUser(id),
@@ -109,7 +105,7 @@ export function AdminUserQueue({
                   if (e.key === "Enter") handleSearch(search);
                 }}
                 placeholder={t("admin.users.searchPlaceholder") ?? "Search users..."}
-                className="w-full pl-9 pr-4 py-2 border border-border rounded-lg text-sm outline-none focus:border-primary"
+                className="w-full rounded-lg border border-border py-2 pl-9 pr-4 text-sm outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               />
             </div>
           </div>
@@ -120,106 +116,114 @@ export function AdminUserQueue({
             </div>
           ) : isError ? (
             <div className="px-5 py-8 text-center text-sm text-red-500">
-              {t("admin.users.loadErr")}
+              {cursorError ? (
+                <button type="button" onClick={cursorPagination.reset}>
+                  Reset cursor
+                </button>
+              ) : (
+                t("admin.users.loadErr")
+              )}
             </div>
           ) : users.length === 0 ? (
             <div className="px-5 py-8 text-center text-sm text-muted-foreground">
               {t("admin.users.empty")}
             </div>
           ) : (
-            <table className="w-full">
-              <thead className="bg-muted">
-                <tr>
-                  {[
-                    t("admin.users.th.name") ?? "Name",
-                    t("admin.users.th.email") ?? "Email",
-                    t("admin.users.th.status") ?? "Status",
-                    "",
-                  ].map((h) => (
-                    <th
-                      key={h}
-                      className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {users.map((user) => (
-                  <tr key={user.keycloakId} className="hover:bg-muted">
-                    <td className="px-4 py-3 text-sm font-semibold">{user.name}</td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">{user.email}</td>
-                    <td className="px-4 py-3">
-                      <span
-                        className="rounded-full px-2.5 py-1 text-xs font-semibold"
-                        style={{
-                          background: user.banned ? "var(--error-light)" : "var(--success-light)",
-                          color: user.banned ? "var(--error)" : "var(--success)",
-                        }}
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[36rem] border-collapse">
+                <thead className="bg-muted">
+                  <tr>
+                    {[
+                      t("admin.users.th.name") ?? "Name",
+                      t("admin.users.th.email") ?? "Email",
+                      t("admin.users.th.status") ?? "Status",
+                      "",
+                    ].map((h) => (
+                      <th
+                        key={h}
+                        scope="col"
+                        className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground"
                       >
-                        {user.banned
-                          ? (t("admin.users.banned") ?? "Banned")
-                          : (t("admin.users.active") ?? "Active")}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => onSelect?.(user.keycloakId)}
-                          disabled={isMutating}
-                          className="rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-muted disabled:opacity-50"
-                        >
-                          {t("admin.users.view")}
-                        </button>
-                        {user.banned ? (
-                          <button
-                            onClick={() => unban.mutate(user.keycloakId)}
-                            disabled={isMutating}
-                            className="rounded-lg border border-green-200 px-2.5 py-1 text-xs font-semibold text-green-600 hover:bg-green-50 disabled:opacity-50"
-                          >
-                            {t("admin.users.unban")}
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => ban.mutate(user.keycloakId)}
-                            disabled={isMutating}
-                            className="rounded-lg border border-red-200 px-2.5 py-1 text-xs font-semibold text-red-500 hover:bg-red-50 disabled:opacity-50"
-                          >
-                            {t("admin.users.ban")}
-                          </button>
-                        )}
-                      </div>
-                    </td>
+                        {h}
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {users.map((user) => (
+                    <tr key={user.keycloakId} className="hover:bg-muted">
+                      <td className="px-4 py-3 text-sm font-semibold">{user.name}</td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground">{user.email}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className="rounded-full px-2.5 py-1 text-xs font-semibold"
+                          style={{
+                            background: user.banned ? "var(--error-light)" : "var(--success-light)",
+                            color: user.banned ? "var(--error)" : "var(--success)",
+                          }}
+                        >
+                          {user.banned
+                            ? (t("admin.users.banned") ?? "Banned")
+                            : (t("admin.users.active") ?? "Active")}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => onSelect?.(user.keycloakId)}
+                            disabled={isMutating}
+                            className="rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
+                          >
+                            {t("admin.users.view")}
+                          </button>
+                          {user.banned ? (
+                            <button
+                              type="button"
+                              onClick={() => unban.mutate(user.keycloakId)}
+                              disabled={isMutating}
+                              className="rounded-lg border border-green-200 px-2.5 py-1 text-xs font-semibold text-green-600 hover:bg-green-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
+                            >
+                              {t("admin.users.unban")}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => ban.mutate(user.keycloakId)}
+                              disabled={isMutating}
+                              className="rounded-lg border border-red-200 px-2.5 py-1 text-xs font-semibold text-red-500 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
+                            >
+                              {t("admin.users.ban")}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
 
-          {total > pageSize ? (
-            <div className="flex items-center justify-between px-5 py-3 border-t border-border">
-              <p className="text-sm text-muted-foreground">
-                {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} of {total}
-              </p>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => onPageChange?.(page - 1)}
-                  disabled={page <= 1}
-                  className="rounded-lg border border-border px-3 py-1.5 text-sm disabled:opacity-40"
-                >
-                  {t("common.prev")}
-                </button>
-                <button
-                  onClick={() => onPageChange?.(page + 1)}
-                  disabled={page * pageSize >= total}
-                  className="rounded-lg border border-border px-3 py-1.5 text-sm disabled:opacity-40"
-                >
-                  {t("common.next")}
-                </button>
-              </div>
+          {cursorError ? (
+            <div className="border-t border-border px-5 py-3 text-sm text-error">
+              <button type="button" onClick={cursorPagination.reset}>
+                Reset cursor
+              </button>
             </div>
           ) : null}
+          <CursorPagination
+            itemCount={users.length}
+            pageIndex={cursorPagination.pageIndex}
+            pageSize={cursorPagination.pageSize}
+            hasPrevious={cursorPagination.hasPrevious}
+            hasMore={data?.hasMore ?? false}
+            isFetching={isFetching}
+            onPrevious={cursorPagination.goBack}
+            onNext={() => cursorPagination.advance(data?.nextCursor ?? null)}
+            onRefresh={() => void qc.invalidateQueries({ queryKey: ["admin", "users", "cursor"] })}
+            onPageSizeChange={cursorPagination.setPageSize}
+          />
         </div>
       </div>
     </>

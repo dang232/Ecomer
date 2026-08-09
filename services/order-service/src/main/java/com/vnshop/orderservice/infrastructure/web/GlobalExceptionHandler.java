@@ -44,6 +44,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> badRequest(IllegalArgumentException ex) {
+        if ("invalid_page_size".equals(ex.getMessage())) {
+            return ResponseEntity.badRequest()
+                .body(ErrorResponse.of("invalid_page_size", "invalid_page_size", traceId()));
+        }
         return ResponseEntity.badRequest()
             .body(ErrorResponse.of("BAD_REQUEST", ex.getMessage(), traceId()));
     }

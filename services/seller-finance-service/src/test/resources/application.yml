@@ -7,6 +7,8 @@ spring:
     enabled: true
     schemas: seller_finance_svc
     default-schema: seller_finance_svc
+    postgresql:
+      transactional-lock: false
   # KafkaHealthConfig requires a bootstrap-servers placeholder; integration tests
   # do not actually connect to Kafka but the AdminClient bean must construct.
   # TestcontainersConfig provides a real Kafka broker via @ServiceConnection.

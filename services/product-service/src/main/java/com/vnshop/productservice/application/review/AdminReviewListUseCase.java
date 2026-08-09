@@ -4,6 +4,7 @@ import com.vnshop.productservice.domain.port.out.ProductRepositoryPort;
 import com.vnshop.productservice.domain.review.Review;
 import com.vnshop.productservice.domain.review.port.out.BuyerProfileLookupPort;
 import com.vnshop.productservice.domain.review.port.out.ReviewRepositoryPort;
+import com.vnshop.productservice.domain.review.port.out.ReviewCursorAnchor;
 
 import java.util.List;
 import java.util.Map;
@@ -42,5 +43,23 @@ public class AdminReviewListUseCase {
                     buyer == null ? null : buyer.avatarUrl(),
                     products.get(review.productId()));
         }).toList();
+    }
+
+    public AdminReviewCursorPage pendingCursor(String query, ReviewCursorAnchor anchor, int limit) {
+        List<Review> rows = reviewRepositoryPort.findByStatusCursor(
+                com.vnshop.productservice.domain.review.ReviewStatus.PENDING, query, anchor, limit + 1);
+        boolean hasMore = rows.size() > limit;
+        List<Review> visible = hasMore ? rows.subList(0, limit) : rows;
+        if (visible.isEmpty()) return new AdminReviewCursorPage(List.of(), false);
+        Map<String, BuyerProfileLookupPort.BuyerPublicProfile> buyers = buyerProfileLookupPort.lookup(
+                visible.stream().map(Review::buyerId).distinct().toList());
+        Map<String, String> products = productRepositoryPort.findNamesByIds(
+                visible.stream().map(Review::productId).collect(java.util.stream.Collectors.toSet()));
+        List<EnrichedReview> enriched = visible.stream().map(review -> {
+            BuyerProfileLookupPort.BuyerPublicProfile buyer = buyers.get(review.buyerId());
+            return new EnrichedReview(review, buyer == null ? null : buyer.displayName(),
+                    buyer == null ? null : buyer.avatarUrl(), products.get(review.productId()));
+        }).toList();
+        return new AdminReviewCursorPage(enriched, hasMore);
     }
 }

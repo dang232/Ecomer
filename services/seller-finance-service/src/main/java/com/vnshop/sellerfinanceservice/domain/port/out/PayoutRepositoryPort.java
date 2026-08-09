@@ -5,6 +5,7 @@ import com.vnshop.sellerfinanceservice.domain.PayoutStatus;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.Instant;
 import java.util.UUID;
 
 public interface PayoutRepositoryPort {
@@ -20,6 +21,9 @@ public interface PayoutRepositoryPort {
     }
 
     List<Payout> findByStatus(PayoutStatus status);
+
+    List<Payout> findAdminCursor(
+            String query, PayoutStatus status, Instant beforeCreatedAt, UUID beforePayoutId, int limit);
 
     default List<Payout> findByStatus(PayoutStatus status, String query) {
         return findByStatus(status);

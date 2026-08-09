@@ -4,12 +4,16 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { ADMIN_QUEUE_CAPABILITIES, AdminQueueFrame } from "@/features/admin";
-import { ApiError } from "@/shared/api";
+import {
+  ADMIN_QUEUE_CAPABILITIES,
+  AdminQueueFrame,
+  useAdminCursorPagination,
+} from "@/features/admin";
+import { ApiError, isCursorResetError } from "@/shared/api";
 import { adminApproveReview, adminRejectReview } from "@/shared/api/endpoints/admin";
 import type { DataTableColumn } from "@/shared/ui/data-table";
 
-import { adminReviewsQueryOptions } from "../api/query-options";
+import { adminReviewsCursorQueryOptions } from "../api/query-options";
 import type { ReviewView } from "../model/review-view";
 import { toReviewView } from "../model/review-view";
 
@@ -32,10 +36,24 @@ export function ReviewModerationQueue({
 }: ReviewModerationQueueProps) {
   const { t } = useTranslation();
   const qc = useQueryClient();
+  const cursorPagination = useAdminCursorPagination({ scopeKey: q });
   const [rejectFor, setRejectFor] = useState<string | null>(null);
 
-  const { data: reviewsRaw, isLoading, isError } = useQuery(adminReviewsQueryOptions({ q }));
-  const reviews: ReviewView[] = (reviewsRaw ?? []).map(toReviewView);
+  const {
+    data: reviewsRaw,
+    isLoading,
+    isError,
+    isFetching,
+    error,
+  } = useQuery({
+    ...adminReviewsCursorQueryOptions({
+      q,
+      cursor: cursorPagination.cursor,
+      limit: cursorPagination.pageSize,
+    }),
+  });
+  const reviews: ReviewView[] = (reviewsRaw?.items ?? []).map(toReviewView);
+  const cursorError = isCursorResetError(error);
 
   const approve = useMutation({
     mutationFn: (id: string) => adminApproveReview(id),
@@ -147,6 +165,20 @@ export function ReviewModerationQueue({
         isLoading={isLoading}
         isError={isError}
         onPageChange={() => undefined}
+        cursorPagination={{
+          itemCount: reviews.length,
+          pageIndex: cursorPagination.pageIndex,
+          pageSize: cursorPagination.pageSize,
+          hasPrevious: cursorPagination.hasPrevious,
+          hasMore: reviewsRaw?.hasMore ?? false,
+          isFetching,
+          onPrevious: cursorPagination.goBack,
+          onNext: () => cursorPagination.advance(reviewsRaw?.nextCursor ?? null),
+          onRefresh: () => void qc.invalidateQueries({ queryKey: ["admin", "reviews", "cursor"] }),
+          onPageSizeChange: cursorPagination.setPageSize,
+        }}
+        cursorError={cursorError}
+        onResetCursor={cursorPagination.reset}
         drawerTitle={selectedReview?.productName ?? selectedReview?.id ?? ""}
         drawerDescription={selectedReview?.userName ?? undefined}
       >

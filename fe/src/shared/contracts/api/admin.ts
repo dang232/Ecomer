@@ -1,6 +1,11 @@
 import { z } from "zod";
 
 import { productIdSchema, sellerIdSchema } from "@/shared/contracts/api/branded-ids";
+import {
+  cursorPageSchema,
+  cursorSnapshotSchema,
+  cursorSortSchema,
+} from "@/shared/contracts/api/shared";
 
 // BE user-service BuyerProfileResponse(keycloakId, email, name, phone, avatarUrl, banned).
 // Used by admin user management panel.
@@ -51,6 +56,18 @@ export type AdminPage<T> = {
   totalElements: number;
   totalPages: number;
 };
+
+export function adminCursorPageSchema<T extends z.ZodType>(itemSchema: T) {
+  return cursorPageSchema(itemSchema)
+    .extend({
+      pageSize: z.number().int().min(1).max(100),
+      sort: cursorSortSchema,
+      snapshot: cursorSnapshotSchema.nullable().optional(),
+    })
+    .passthrough();
+}
+
+export type AdminCursorPage<T> = z.infer<ReturnType<typeof adminCursorPageSchema<z.ZodType<T>>>>;
 
 // BE order-service OrderSummaryProjection(orderId, orderNumber, buyerId,
 // sellerId, status, totalAmount, itemCount, createdAt, updatedAt). Used by

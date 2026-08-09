@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.util.Optional;
 import java.util.List;
+import java.time.Instant;
 
 /**
  * Port for querying order summary projections from the read model.
@@ -17,4 +18,7 @@ public interface OrderSummaryQueryPort {
     Optional<OrderSummaryProjection> findByOrderId(String orderId);
 
     Page<OrderSummaryProjection> findAll(String query, String status, Pageable pageable);
+
+    List<OrderSummaryProjection> findAllCursor(String query, String status, Instant createdAtBefore,
+            String orderIdBefore, int limitPlusOne);
 }

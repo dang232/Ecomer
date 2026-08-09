@@ -45,3 +45,10 @@ export class ApiError extends Error {
     this.retryAfterMs = retryAfterMs;
   }
 }
+
+export function isCursorResetError(error: unknown): error is ApiError {
+  return (
+    error instanceof ApiError &&
+    (error.errorCode === "cursor_invalid" || error.errorCode === "cursor_scope_mismatch")
+  );
+}

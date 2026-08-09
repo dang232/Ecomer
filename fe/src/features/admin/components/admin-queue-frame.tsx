@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { CursorPagination, type CursorPaginationProps } from "@/shared/ui/cursor-pagination";
 import { DataTable, type DataTableColumn } from "@/shared/ui/data-table";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { PageContainer } from "@/shared/ui/page-container";
@@ -10,6 +11,7 @@ import { TableToolbar } from "@/shared/ui/table-toolbar";
 
 import type { QueueCapabilities } from "../model/queue-capabilities";
 
+import { SearchField, SortMenu, StatusFilter } from "./admin-queue-toolbar";
 import { AdminRecordDrawer } from "./admin-record-drawer";
 
 export interface PaginationState {
@@ -45,6 +47,9 @@ export interface AdminQueueFrameProps<T> {
   // pagination — only rendered when capabilities.pagination === "server"
   pagination?: PaginationState;
   onPageChange: (page: number) => void;
+  cursorPagination?: CursorPaginationProps;
+  cursorError?: boolean;
+  onResetCursor?: () => void;
   // drawer content
   drawerTitle: string;
   drawerDescription?: string;
@@ -82,6 +87,9 @@ export function AdminQueueFrame<T>({
   isError,
   pagination,
   onPageChange,
+  cursorPagination,
+  cursorError = false,
+  onResetCursor,
   drawerTitle,
   drawerDescription,
   children,
@@ -89,6 +97,15 @@ export function AdminQueueFrame<T>({
   const { t } = useTranslation();
 
   const handleDrawerClose = () => onSelect(null);
+  const paginationFooter = cursorPagination ? (
+    <CursorPagination {...cursorPagination} />
+  ) : capabilities.pagination === "server" && pagination ? (
+    <Pagination
+      page={pagination.page}
+      pageCount={pagination.totalPages}
+      onPageChange={onPageChange}
+    />
+  ) : null;
 
   return (
     <PageContainer density="compact">
@@ -116,10 +133,22 @@ export function AdminQueueFrame<T>({
         </div>
       ) : isError ? (
         <div className="rounded-xl border border-border bg-card px-5 py-8 text-center text-sm text-red-600 dark:text-red-400">
-          {t("admin.queue.loadErr")}
+          <p>{cursorError ? "This cursor expired or is invalid." : t("admin.queue.loadErr")}</p>
+          {cursorError && onResetCursor ? (
+            <button
+              type="button"
+              onClick={onResetCursor}
+              className="mt-3 min-h-[var(--target-web)] rounded-[var(--radius-control)] border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              Reset cursor
+            </button>
+          ) : null}
         </div>
       ) : rows.length === 0 ? (
-        <EmptyState title={t("admin.queue.empty")} description="" icon={null} />
+        <>
+          <EmptyState title={t("admin.queue.empty")} description="" icon={null} />
+          {paginationFooter}
+        </>
       ) : (
         <>
           <DataTable
@@ -131,13 +160,7 @@ export function AdminQueueFrame<T>({
             caption={title}
             empty={null}
           />
-          {capabilities.pagination === "server" && pagination ? (
-            <Pagination
-              page={pagination.page}
-              pageCount={pagination.totalPages}
-              onPageChange={onPageChange}
-            />
-          ) : null}
+          {paginationFooter}
         </>
       )}
 
@@ -150,100 +173,5 @@ export function AdminQueueFrame<T>({
         {selectedId != null ? children : null}
       </AdminRecordDrawer>
     </PageContainer>
-  );
-}
-
-// ─── Internal toolbar sub-components ────────────────────────────────────────────
-
-interface SearchFieldProps {
-  value: string;
-  onSubmit: (q: string) => void;
-  placeholder?: string;
-}
-
-function SearchField({ value, onSubmit, placeholder }: SearchFieldProps) {
-  return (
-    <form
-      className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2"
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSubmit((e.currentTarget.elements.namedItem("q") as HTMLInputElement)?.value ?? "");
-      }}
-    >
-      <input
-        type="search"
-        aria-label={placeholder ?? "Search"}
-        name="q"
-        defaultValue={value}
-        placeholder={placeholder}
-        className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-      />
-      <button
-        type="submit"
-        aria-label={placeholder ?? "Search"}
-        className="text-muted-foreground hover:text-foreground"
-      >
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <circle cx="11" cy="11" r="8" />
-          <path d="m21 21-4.35-4.35" />
-        </svg>
-      </button>
-    </form>
-  );
-}
-
-interface StatusFilterProps {
-  value: string;
-  onChange: (status: string) => void;
-}
-
-function StatusFilter({ value, onChange }: StatusFilterProps) {
-  return (
-    <select
-      aria-label="Filter by status"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-    >
-      <option value="">All</option>
-      <option value="PENDING_ACCEPTANCE">Pending</option>
-      <option value="ACCEPTED">Accepted</option>
-      <option value="PACKED">Packed</option>
-      <option value="SHIPPED">Shipped</option>
-      <option value="CANCELLED">Cancelled</option>
-    </select>
-  );
-}
-
-interface SortMenuProps {
-  options: readonly string[];
-  value: string;
-  onChange: (sort: string) => void;
-}
-
-function SortMenu({ options, value, onChange }: SortMenuProps) {
-  return (
-    <select
-      aria-label="Sort"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-    >
-      {options.map((opt) => (
-        <option key={opt} value={opt}>
-          {opt}
-        </option>
-      ))}
-    </select>
   );
 }

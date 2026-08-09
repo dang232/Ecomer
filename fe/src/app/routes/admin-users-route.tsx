@@ -8,10 +8,8 @@ export function AdminUserQueueRoute() {
   return (
     <AdminUserQueue
       q={state.q}
-      page={state.page}
       selected={state.selected ?? undefined}
       onSearch={(q) => update({ q, page: 1 })}
-      onPageChange={(page) => update({ page })}
       onSelect={(selected) => update({ selected })}
     />
   );

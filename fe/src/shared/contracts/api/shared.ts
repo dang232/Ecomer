@@ -45,20 +45,55 @@ export interface Page<T> {
   last?: boolean;
 }
 
+export const cursorSortSchema = z.object({
+  field: z.string(),
+  direction: z.enum(["asc", "desc"]),
+});
+export type CursorSort = z.infer<typeof cursorSortSchema>;
+
+export const cursorSnapshotSchema = z
+  .object({
+    asOf: z.string(),
+  })
+  .passthrough();
+export type CursorSnapshot = z.infer<typeof cursorSnapshotSchema>;
+
+export const cursorErrorCodeSchema = z.enum([
+  "cursor_invalid",
+  "cursor_scope_mismatch",
+  "invalid_page_size",
+  "invalid_sort",
+]);
+export type CursorErrorCode = z.infer<typeof cursorErrorCodeSchema>;
+
+export const cursorErrorSchema = z
+  .object({
+    errorCode: cursorErrorCodeSchema,
+    message: z.string().optional(),
+  })
+  .passthrough();
+export type CursorError = z.infer<typeof cursorErrorSchema>;
+
 export const cursorPageSchema = <T extends z.ZodType>(item: T) =>
   z
     .object({
       items: z.array(item),
-      nextCursor: z.string().nullable().optional(),
+      nextCursor: z.string().nullable(),
       hasMore: z.boolean(),
+      pageSize: z.number().int().min(1).max(100).optional(),
+      sort: cursorSortSchema.optional(),
+      snapshot: cursorSnapshotSchema.nullable().optional(),
       facets: z.unknown().optional(),
     })
     .passthrough();
 
 export interface CursorPage<T> {
   items: T[];
-  nextCursor?: string | null;
+  nextCursor: string | null;
   hasMore: boolean;
+  pageSize?: number;
+  sort?: CursorSort;
+  snapshot?: CursorSnapshot | null;
   facets?: unknown;
 }
 

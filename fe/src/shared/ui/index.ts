@@ -22,6 +22,8 @@ export { EmptyState } from "./empty-state";
 export type { EmptyStateProps } from "./empty-state";
 export { IconButton } from "./icon-button";
 export type { IconButtonProps } from "./icon-button";
+export { CursorPagination } from "./cursor-pagination";
+export type { CursorPaginationProps } from "./cursor-pagination";
 export { ImageWithFallback } from "./image-with-fallback";
 export { InlineAlert } from "./inline-alert";
 export type { InlineAlertProps, InlineAlertTone } from "./inline-alert";

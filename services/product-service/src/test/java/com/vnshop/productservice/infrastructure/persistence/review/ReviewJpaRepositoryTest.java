@@ -81,6 +81,15 @@ class ReviewJpaRepositoryTest {
     }
 
     @Test
+    void adminCursorQueryUsesKeysetWithoutCountOrOffset() throws NoSuchMethodException {
+        String query = queryFor("findPendingCursorAfter");
+        assertThat(query).contains("r.created_at < :anchorCreatedAt")
+                .contains("r.review_id < :anchorReviewId")
+                .contains("ORDER BY r.created_at DESC, r.review_id DESC")
+                .doesNotContain("COUNT(").doesNotContain("OFFSET");
+    }
+
+    @Test
     void sellerAggregatesFilterOutUnapprovedReviews() throws NoSuchMethodException {
         assertThat(queryFor("findSellerReviewStats")).contains("r.status = 'APPROVED'");
         assertThat(queryFor("findSellerReviewStatsBatch")).contains("r.status = 'APPROVED'");

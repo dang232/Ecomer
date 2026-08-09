@@ -29,9 +29,22 @@ import com.vnshop.userservice.domain.port.out.WishlistRepositoryPort;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.vnshop.userservice.infrastructure.web.pagination.AdminCursorCodec;
+import java.time.Clock;
+import java.time.Duration;
 
 @Configuration
 public class UseCaseConfig {
+    @Bean
+    AdminCursorCodec adminCursorCodec(
+            @Value("${vnshop.admin.cursor.secret}") String secret,
+            @Value("${vnshop.admin.cursor.ttl}") Duration ttl) {
+        if (secret == null || secret.isBlank() || "dev-only-change-me".equals(secret)) {
+            throw new IllegalStateException("ADMIN_CURSOR_SECRET must be configured");
+        }
+        return new AdminCursorCodec(secret, ttl, Clock.systemUTC());
+    }
     @Bean("internalServiceAuthorization")
     InternalServiceAuthorization internalServiceAuthorization(
             @Value("${vnshop.internal.allowed-client-id}") String allowedClientId) {

@@ -24,6 +24,9 @@ spring:
     enabled: true
     schemas: order_svc
     default-schema: order_svc
+    postgresql:
+      transactional:
+        lock: false
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     properties:
@@ -74,6 +77,9 @@ vnshop:
       VERIFIED: "0.08"
       PREFERRED: "0.05"
       MALL: "0.03"
+  admin-cursor:
+    secret: ${ADMIN_CURSOR_SECRET}
+    ttl: ${ADMIN_CURSOR_TTL:PT1H}
 
 seller-finance:
   event-mode: ${SELLER_FINANCE_EVENT_MODE:OFF}

@@ -6,6 +6,7 @@ import com.vnshop.userservice.domain.SellerProfile;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.Instant;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -27,6 +28,8 @@ public interface UserRepositoryPort {
     /** Admin directory search across persisted identity and display fields. */
     Page<BuyerProfile> searchBuyers(String query, Pageable pageable);
 
+    List<BuyerProfile> searchBuyersCursor(String query, AdminBuyerCursor cursor, int limit);
+
     SellerProfile saveSeller(SellerProfile sellerProfile);
 
     Optional<SellerProfile> findSellerById(String sellerId);
@@ -39,6 +42,8 @@ public interface UserRepositoryPort {
     default List<SellerProfile> findPendingSellers(String query) {
         return findPendingSellers();
     }
+
+    List<SellerProfile> findPendingSellersCursor(String query, AdminSellerCursor cursor, int limit);
 
     SellerProfile updateSeller(SellerProfile sellerProfile);
 

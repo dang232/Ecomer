@@ -6,6 +6,7 @@ import com.vnshop.userservice.application.RefreshTokenRejectedException;
 import com.vnshop.userservice.application.RegistrationIdentityCompensationException;
 import com.vnshop.userservice.domain.SellerNotFoundException;
 import com.vnshop.userservice.infrastructure.keycloak.KeycloakAdminException;
+import com.vnshop.userservice.infrastructure.web.pagination.AdminCursorCodec.InvalidCursorException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,7 +27,20 @@ public class ApiExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiResponse<Void> badRequest(IllegalArgumentException exception) {
+        if ("invalid_page_size".equals(exception.getMessage())) {
+            return ApiResponse.error("invalid_page_size", "invalid_page_size");
+        }
         return ApiResponse.error(exception.getMessage(), "bad_request");
+    }
+
+    @ExceptionHandler(InvalidCursorException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiResponse<Void> invalidCursor(InvalidCursorException exception) {
+        String code = switch (exception.reason()) {
+            case RESOURCE_MISMATCH, FILTER_MISMATCH, SORT_MISMATCH -> "cursor_scope_mismatch";
+            default -> "cursor_invalid";
+        };
+        return ApiResponse.error(code, code);
     }
 
     @ExceptionHandler(PhoneAlreadyRegisteredException.class)
