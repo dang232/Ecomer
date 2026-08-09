@@ -32,7 +32,6 @@ export function AdminUserQueue({ q, selected, onSearch, onSelect }: UserQueuePro
       cursor: cursorPagination.cursor,
       limit: cursorPagination.pageSize,
     }),
-    placeholderData: (previous) => previous,
   });
 
   const users: AdminUser[] = data?.items ?? [];

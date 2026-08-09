@@ -75,7 +75,6 @@ export function AdminOrderQueue({
       cursor: cursorPagination.cursor,
       limit: cursorPagination.pageSize,
     }),
-    placeholderData: (previous) => previous,
   });
 
   const orders = (pageData?.items ?? []).map(toOrderView);

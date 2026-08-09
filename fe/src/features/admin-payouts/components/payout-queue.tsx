@@ -75,7 +75,6 @@ export function PayoutQueue({
       cursor: cursorPagination.cursor,
       limit: cursorPagination.pageSize,
     }),
-    placeholderData: (previous) => previous,
   });
   const rows: PayoutView[] = (data?.items ?? []).map(toPayoutView);
   const cursorError = isCursorResetError(error);

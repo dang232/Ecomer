@@ -43,7 +43,6 @@ export function DisputeQueue({ q, selected, onSearch, onSelect }: DisputeQueuePr
       cursor: cursorPagination.cursor,
       limit: cursorPagination.pageSize,
     }),
-    placeholderData: (previous) => previous,
   });
   const disputes: DisputeView[] = (disputesRaw?.items ?? []).map(toDisputeView);
   const cursorError = isCursorResetError(error);

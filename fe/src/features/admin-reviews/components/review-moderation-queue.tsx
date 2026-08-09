@@ -51,7 +51,6 @@ export function ReviewModerationQueue({
       cursor: cursorPagination.cursor,
       limit: cursorPagination.pageSize,
     }),
-    placeholderData: (previous) => previous,
   });
   const reviews: ReviewView[] = (reviewsRaw?.items ?? []).map(toReviewView);
   const cursorError = isCursorResetError(error);

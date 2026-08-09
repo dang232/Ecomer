@@ -49,7 +49,6 @@ export function SellerApprovalQueue({ q, selected, onSearch, onSelect }: SellerA
       cursor: cursorPagination.cursor,
       limit: cursorPagination.pageSize,
     }),
-    placeholderData: (previous) => previous,
   });
   const sellers: SellerView[] = (sellersRaw?.items ?? []).map(toSellerView);
   const cursorError = isCursorResetError(error);
