@@ -4,8 +4,12 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { ADMIN_QUEUE_CAPABILITIES, AdminQueueFrame } from "@/features/admin";
-import { ApiError } from "@/shared/api";
+import {
+  ADMIN_QUEUE_CAPABILITIES,
+  AdminQueueFrame,
+  useAdminCursorPagination,
+} from "@/features/admin";
+import { ApiError, isCursorResetError } from "@/shared/api";
 import {
   adminApprovePayout,
   adminCompleteLegacyPayout,
@@ -19,7 +23,7 @@ import type { PayoutStatus } from "@/shared/contracts/api";
 import { formatPrice } from "@/shared/lib";
 import type { DataTableColumn } from "@/shared/ui/data-table";
 
-import { adminPayoutsQueryOptions } from "../api/query-options";
+import { adminPayoutsCursorQueryOptions } from "../api/query-options";
 import {
   payoutActionsFor,
   toPayoutView,
@@ -55,21 +59,26 @@ export function PayoutQueue({
 }: PayoutQueueProps) {
   const { t } = useTranslation();
   const qc = useQueryClient();
+  const cursorPagination = useAdminCursorPagination({
+    scopeKey: `${q}\u0000${status}`,
+  });
 
   const [dialog, setDialog] = useState<{
     variant: PayoutDecisionVariant;
     payout: PayoutView;
   } | null>(null);
 
-  const { data, isLoading, isError } = useQuery(
-    adminPayoutsQueryOptions({
+  const { data, isLoading, isError, isFetching, error } = useQuery({
+    ...adminPayoutsCursorQueryOptions({
       status: status || undefined,
       q: q || undefined,
-      page: 0,
-      size: 50,
+      cursor: cursorPagination.cursor,
+      limit: cursorPagination.pageSize,
     }),
-  );
-  const rows: PayoutView[] = (data?.content ?? []).map(toPayoutView);
+    placeholderData: (previous) => previous,
+  });
+  const rows: PayoutView[] = (data?.items ?? []).map(toPayoutView);
+  const cursorError = isCursorResetError(error);
   const selectedRow = selected ? (rows.find((r) => r.id === selected) ?? null) : null;
 
   const invalidate = () => {
@@ -158,6 +167,20 @@ export function PayoutQueue({
         isError={isError}
         pagination={undefined}
         onPageChange={() => undefined}
+        cursorPagination={{
+          itemCount: rows.length,
+          pageIndex: cursorPagination.pageIndex,
+          pageSize: cursorPagination.pageSize,
+          hasPrevious: cursorPagination.hasPrevious,
+          hasMore: data?.hasMore ?? false,
+          isFetching,
+          onPrevious: cursorPagination.goBack,
+          onNext: () => cursorPagination.advance(data?.nextCursor ?? null),
+          onRefresh: () => void qc.invalidateQueries({ queryKey: ["admin", "payouts", "cursor"] }),
+          onPageSizeChange: cursorPagination.setPageSize,
+        }}
+        cursorError={cursorError}
+        onResetCursor={cursorPagination.reset}
         drawerTitle={selectedRow?.id ?? ""}
         drawerDescription={
           selectedRow
