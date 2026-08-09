@@ -91,7 +91,7 @@ class AdminCursorPaginationTest {
 
         usersMvc(useCase).perform(get("/admin/users").param("limit", "101"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errorCode").value("bad_request"));
+                .andExpect(jsonPath("$.errorCode").value("invalid_page_size"));
 
         verify(useCase, never()).searchUsersCursor(any(), any(), any(Integer.class));
     }
