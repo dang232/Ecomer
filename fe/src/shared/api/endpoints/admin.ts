@@ -3,11 +3,13 @@ import { z } from "zod";
 import { api } from "@/shared/api/client";
 import type { COUPON_TYPES } from "@/shared/contracts";
 import {
+  adminCursorPageSchema,
   adminOrderSummarySchema,
   adminPageSchema,
   adminPayoutSchema,
   adminUserSchema,
   adminVideoAppealItemSchema,
+  adminVideoModerationQueueItemSchema,
   adminVideoModerationQueuePageSchema,
   adminVideoModerationResponseSchema,
   adminVideoPreviewSchema,
@@ -25,6 +27,23 @@ import {
 
 export type { DashboardSummary };
 
+export type AdminCursorParams = {
+  limit?: number;
+  cursor?: string;
+};
+
+export type AdminFilteredCursorParams = AdminCursorParams & {
+  q?: string;
+};
+
+export type AdminOrderCursorParams = AdminFilteredCursorParams & {
+  status?: string;
+};
+
+export type AdminPayoutCursorParams = AdminFilteredCursorParams & {
+  status?: string;
+};
+
 // User management
 export const adminSearchUsers = (params: { q?: string; page?: number; size?: number } = {}) =>
   api.get("/admin/users", adminPageSchema(adminUserSchema), {
@@ -34,6 +53,14 @@ export const adminSearchUsers = (params: { q?: string; page?: number; size?: num
   });
 
 export const adminListUsers = adminSearchUsers;
+
+export const adminSearchUsersCursor = (params: AdminFilteredCursorParams = {}) =>
+  api.get("/admin/users", adminCursorPageSchema(adminUserSchema), {
+    q: params.q,
+    limit: params.limit ?? 50,
+    cursor: params.cursor,
+  });
+
 export const adminBanUser = (id: string) =>
   api.post(`/admin/users/${encodeURIComponent(id)}/ban`, adminUserSchema);
 export const adminUnbanUser = (id: string) =>
@@ -48,6 +75,15 @@ export const adminUserOrders = (buyerId: string) =>
 export const adminListOrders = (
   params: { q?: string; status?: string; page?: number; size?: number } = {},
 ) => api.get("/admin/orders", adminPageSchema(adminOrderSummarySchema), params);
+
+export const adminListOrdersCursor = (params: AdminOrderCursorParams = {}) =>
+  api.get("/admin/orders", adminCursorPageSchema(adminOrderSummarySchema), {
+    q: params.q,
+    status: params.status,
+    limit: params.limit ?? 50,
+    cursor: params.cursor,
+  });
+
 export const adminCancelOrder = (id: string) =>
   api.post(`/admin/orders/${encodeURIComponent(id)}/cancel`, z.unknown());
 export const adminRefundOrder = (id: string, reason: string) =>
@@ -61,6 +97,14 @@ export const adminChangeOrderStatus = (id: string, status: string) =>
 
 export const adminListSellers = (params: { q?: string } = {}) =>
   api.get("/admin/sellers", z.array(sellerSummarySchema), params);
+
+export const adminListSellersCursor = (params: AdminFilteredCursorParams = {}) =>
+  api.get("/admin/sellers", adminCursorPageSchema(sellerSummarySchema), {
+    q: params.q,
+    limit: params.limit ?? 50,
+    cursor: params.cursor,
+  });
+
 export const adminApproveSeller = (id: string) =>
   api.post(`/admin/sellers/${encodeURIComponent(id)}/approve`, sellerSummarySchema);
 export const adminRejectSeller = (id: string, body: { reason: string }) =>
@@ -68,6 +112,14 @@ export const adminRejectSeller = (id: string, body: { reason: string }) =>
 
 export const adminPendingReviews = (params: { q?: string } = {}) =>
   api.get("/admin/reviews/pending", z.array(reviewSchema), params);
+
+export const adminPendingReviewsCursor = (params: AdminFilteredCursorParams = {}) =>
+  api.get("/admin/reviews/pending", adminCursorPageSchema(reviewSchema), {
+    q: params.q,
+    limit: params.limit ?? 50,
+    cursor: params.cursor,
+  });
+
 export const adminApproveReview = (id: string) =>
   api.put(`/admin/reviews/${encodeURIComponent(id)}/approve`, reviewSchema);
 export const adminRejectReview = (id: string, body: { reason: string }) =>
@@ -100,6 +152,14 @@ export const adminDeactivateCoupon = (id: string) =>
 
 export const adminOpenDisputes = (params: { q?: string } = {}) =>
   api.get("/admin/disputes/open", z.array(disputeSchema), params);
+
+export const adminOpenDisputesCursor = (params: AdminFilteredCursorParams = {}) =>
+  api.get("/admin/disputes/open", adminCursorPageSchema(disputeSchema), {
+    q: params.q,
+    limit: params.limit ?? 50,
+    cursor: params.cursor,
+  });
+
 export const adminResolveDispute = (id: string, body: { adminResolution: string }) =>
   api.post(`/admin/disputes/${encodeURIComponent(id)}/resolve`, disputeSchema, body);
 
@@ -142,6 +202,14 @@ export const adminAllPayouts = (
     page: params.page ?? 0,
     size: params.size ?? 50,
     q: params.q || undefined,
+  });
+
+export const adminAllPayoutsCursor = (params: AdminPayoutCursorParams = {}) =>
+  api.get("/admin/finance/payouts", adminCursorPageSchema(adminPayoutSchema), {
+    status: params.status || undefined,
+    q: params.q || undefined,
+    limit: params.limit ?? 50,
+    cursor: params.cursor,
   });
 
 export const adminApprovePayout = (id: string, reason: string) =>
@@ -234,6 +302,17 @@ export type AdminVideoModerationQueueParams = Record<
 export const adminVideoModerationQueue = (params: AdminVideoModerationQueueParams = {}) =>
   api.get("/admin/videos/moderation-queue", adminVideoModerationQueuePageSchema, params);
 
+export const adminVideoModerationQueueCursor = (params: AdminFilteredCursorParams = {}) =>
+  api.get(
+    "/admin/videos/moderation-queue",
+    adminCursorPageSchema(adminVideoModerationQueueItemSchema),
+    {
+      q: params.q,
+      limit: params.limit ?? 20,
+      cursor: params.cursor,
+    },
+  );
+
 /** GET /admin/videos/{videoId}/preview — presigned staging URL for admin preview. */
 export const adminVideoPreview = (videoId: string) =>
   api.get(`/admin/videos/${encodeURIComponent(videoId)}/preview`, adminVideoPreviewSchema);
@@ -258,6 +337,12 @@ export const adminVideoAppealsQueue = (params: { page?: number; size?: number } 
   api.get("/admin/videos/appeal-queue", adminPageSchema(adminVideoAppealItemSchema), {
     page: params.page ?? 0,
     size: params.size ?? 20,
+  });
+
+export const adminVideoAppealsQueueCursor = (params: AdminCursorParams = {}) =>
+  api.get("/admin/videos/appeal-queue", adminCursorPageSchema(adminVideoAppealItemSchema), {
+    limit: params.limit ?? 20,
+    cursor: params.cursor,
   });
 
 /** POST /admin/videos/{videoId}/appeal/approve — re-publish after appeal. */
