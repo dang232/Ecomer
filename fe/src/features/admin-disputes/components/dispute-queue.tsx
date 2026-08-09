@@ -3,11 +3,16 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { ADMIN_QUEUE_CAPABILITIES, AdminQueueFrame } from "@/features/admin";
-import { ApiError } from "@/shared/api";
-import { adminOpenDisputes, adminResolveDispute } from "@/shared/api/endpoints/admin";
+import {
+  ADMIN_QUEUE_CAPABILITIES,
+  AdminQueueFrame,
+  useAdminCursorPagination,
+} from "@/features/admin";
+import { ApiError, isCursorResetError } from "@/shared/api";
+import { adminResolveDispute } from "@/shared/api/endpoints/admin";
 import type { DataTableColumn } from "@/shared/ui/data-table";
 
+import { adminDisputesCursorQueryOptions } from "../api/query-options";
 import { toDisputeView } from "../model/dispute-view";
 import type { DisputeView } from "../model/dispute-view";
 
@@ -23,18 +28,25 @@ interface DisputeQueueProps {
 export function DisputeQueue({ q, selected, onSearch, onSelect }: DisputeQueueProps) {
   const { t } = useTranslation();
   const qc = useQueryClient();
+  const cursorPagination = useAdminCursorPagination({ scopeKey: q });
   const [resolveFor, setResolveFor] = useState<string | null>(null);
 
   const {
     data: disputesRaw,
     isLoading,
     isError,
+    isFetching,
+    error,
   } = useQuery({
-    queryKey: ["admin", "disputes", q],
-    queryFn: () => adminOpenDisputes({ q: q || undefined }),
-    retry: false,
+    ...adminDisputesCursorQueryOptions({
+      q,
+      cursor: cursorPagination.cursor,
+      limit: cursorPagination.pageSize,
+    }),
+    placeholderData: (previous) => previous,
   });
-  const disputes: DisputeView[] = (disputesRaw ?? []).map(toDisputeView);
+  const disputes: DisputeView[] = (disputesRaw?.items ?? []).map(toDisputeView);
+  const cursorError = isCursorResetError(error);
 
   const resolve = useMutation({
     mutationFn: ({ id, adminResolution }: { id: string; adminResolution: string }) =>
@@ -115,6 +127,20 @@ export function DisputeQueue({ q, selected, onSearch, onSelect }: DisputeQueuePr
         isLoading={isLoading}
         isError={isError}
         onPageChange={() => undefined}
+        cursorPagination={{
+          itemCount: disputes.length,
+          pageIndex: cursorPagination.pageIndex,
+          pageSize: cursorPagination.pageSize,
+          hasPrevious: cursorPagination.hasPrevious,
+          hasMore: disputesRaw?.hasMore ?? false,
+          isFetching,
+          onPrevious: cursorPagination.goBack,
+          onNext: () => cursorPagination.advance(disputesRaw?.nextCursor ?? null),
+          onRefresh: () => void qc.invalidateQueries({ queryKey: ["admin", "disputes", "cursor"] }),
+          onPageSizeChange: cursorPagination.setPageSize,
+        }}
+        cursorError={cursorError}
+        onResetCursor={cursorPagination.reset}
         drawerTitle={selectedDispute ? `Dispute ${selectedDispute.id}` : ""}
         drawerDescription={selectedDispute?.orderNumber ?? undefined}
       >
