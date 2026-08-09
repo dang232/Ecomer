@@ -37,7 +37,6 @@ export function VideoModerationQueue() {
       cursor: cursorPagination.cursor,
       limit: cursorPagination.pageSize,
     }),
-    placeholderData: (previous) => previous,
   });
 
   const [rejectTarget, setRejectTarget] = useState<{
@@ -135,7 +134,25 @@ export function VideoModerationQueue() {
           )}
         </div>
       ) : items.length === 0 ? (
-        <EmptyState title={t("admin.queue.empty")} description="" icon={null} />
+        <>
+          <EmptyState title={t("admin.queue.empty")} description="" icon={null} />
+          <CursorPagination
+            itemCount={0}
+            pageIndex={cursorPagination.pageIndex}
+            pageSize={cursorPagination.pageSize}
+            hasPrevious={cursorPagination.hasPrevious}
+            hasMore={data?.hasMore ?? false}
+            isFetching={isFetching}
+            onPrevious={cursorPagination.goBack}
+            onNext={() => cursorPagination.advance(data?.nextCursor ?? null)}
+            onRefresh={() =>
+              void queryClient.invalidateQueries({
+                queryKey: ["admin", "video", "moderation", "cursor"],
+              })
+            }
+            onPageSizeChange={cursorPagination.setPageSize}
+          />
+        </>
       ) : (
         <>
           <DataTable
