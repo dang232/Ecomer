@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { ApiError, apiResponseSchema } from "@/shared/api/envelope";
+import { ApiError, apiResponseSchema, isCursorResetError } from "@/shared/api/envelope";
 
 describe("apiResponseSchema", () => {
   const schema = apiResponseSchema(z.object({ id: z.string() }));
@@ -69,5 +69,14 @@ describe("ApiError", () => {
     const err = new ApiError(500, null, "boom");
     expect(err.errorCode).toBeNull();
     expect(err.correlationId).toBeUndefined();
+  });
+
+  it("recognizes only cursor errors that require resetting pagination", () => {
+    expect(isCursorResetError(new ApiError(400, "cursor_invalid", "expired"))).toBe(true);
+    expect(isCursorResetError(new ApiError(400, "cursor_scope_mismatch", "wrong scope"))).toBe(
+      true,
+    );
+    expect(isCursorResetError(new ApiError(500, "UPSTREAM", "unavailable"))).toBe(false);
+    expect(isCursorResetError(new Error("unavailable"))).toBe(false);
   });
 });
