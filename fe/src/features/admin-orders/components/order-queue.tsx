@@ -4,8 +4,12 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { ADMIN_QUEUE_CAPABILITIES, AdminQueueFrame } from "@/features/admin";
-import { ApiError } from "@/shared/api";
+import {
+  ADMIN_QUEUE_CAPABILITIES,
+  AdminQueueFrame,
+  useAdminCursorPagination,
+} from "@/features/admin";
+import { ApiError, isCursorResetError } from "@/shared/api";
 import {
   adminCancelOrder,
   adminRefundOrder,
@@ -13,7 +17,7 @@ import {
 } from "@/shared/api/endpoints/admin";
 import type { DataTableColumn } from "@/shared/ui/data-table";
 
-import { adminOrdersQueryOptions } from "../api/query-options";
+import { adminOrdersCursorQueryOptions } from "../api/query-options";
 import type { OrderView } from "../model/order-view";
 import { toOrderView } from "../model/order-view";
 
@@ -22,11 +26,9 @@ import { OrderDecisionDialog } from "./order-decision-dialog";
 interface OrderQueueProps {
   q: string;
   status: string;
-  page: number;
   selected: string | null;
   onSearch: (q: string) => void;
   onStatusChange: (status: string) => void;
-  onPageChange: (page: number) => void;
   onSelect: (id: string | null) => void;
 }
 
@@ -39,17 +41,18 @@ type DialogSetter = (
 export function AdminOrderQueue({
   q,
   status,
-  page,
   selected,
   onSearch,
   onStatusChange,
-  onPageChange,
   onSelect,
 }: OrderQueueProps) {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const defaultRefundReason = t("admin.orders.refundDefaultReason", {
     defaultValue: "Admin approved refund",
+  });
+  const cursorPagination = useAdminCursorPagination({
+    scopeKey: `${q}\u0000${status}`,
   });
 
   // URL-owned state
@@ -63,9 +66,19 @@ export function AdminOrderQueue({
     data: pageData,
     isLoading,
     isError,
-  } = useQuery(adminOrdersQueryOptions({ q, status, page, size: 50 }));
+    isFetching,
+    error,
+  } = useQuery({
+    ...adminOrdersCursorQueryOptions({
+      q,
+      status,
+      cursor: cursorPagination.cursor,
+      limit: cursorPagination.pageSize,
+    }),
+    placeholderData: (previous) => previous,
+  });
 
-  const orders = (pageData?.content ?? []).map(toOrderView);
+  const orders = (pageData?.items ?? []).map(toOrderView);
 
   const cancel = useMutation({
     mutationFn: (id: string) => adminCancelOrder(id),
@@ -125,16 +138,22 @@ export function AdminOrderQueue({
         columns={columns}
         isLoading={isLoading}
         isError={isError}
-        pagination={
-          pageData
-            ? {
-                page: page,
-                totalPages: pageData.totalPages,
-                totalElements: pageData.totalElements,
-              }
-            : undefined
-        }
-        onPageChange={onPageChange}
+        pagination={undefined}
+        onPageChange={() => undefined}
+        cursorPagination={{
+          itemCount: orders.length,
+          pageIndex: cursorPagination.pageIndex,
+          pageSize: cursorPagination.pageSize,
+          hasPrevious: cursorPagination.hasPrevious,
+          hasMore: pageData?.hasMore ?? false,
+          isFetching,
+          onPrevious: cursorPagination.goBack,
+          onNext: () => cursorPagination.advance(pageData?.nextCursor ?? null),
+          onRefresh: () => void qc.invalidateQueries({ queryKey: ["admin", "orders", "cursor"] }),
+          onPageSizeChange: cursorPagination.setPageSize,
+        }}
+        cursorError={isCursorResetError(error)}
+        onResetCursor={cursorPagination.reset}
         drawerTitle={selectedOrder ? (selectedOrder.orderNumber ?? selectedOrder.id) : ""}
         drawerDescription={selectedOrder?.buyerName ?? undefined}
       >
