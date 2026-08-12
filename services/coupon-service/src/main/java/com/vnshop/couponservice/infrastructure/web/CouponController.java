@@ -10,6 +10,7 @@ import com.vnshop.couponservice.application.ValidateCouponUseCase;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -90,12 +91,11 @@ public class CouponController {
     public ApiResponse<ApplyCouponResponse> applyCoupon(
             @RequestBody ApplyCouponRequest request,
             HttpServletRequest httpRequest) {
-        // The api-gateway forwards x-user-id from the JWT — use it when the
-        // body omits userId (the FE never has to know how to send it; the
-        // body field stays for direct /coupons callers).
-        String userId = request.userId();
+        // The gateway strips client-supplied x-user-id and injects the JWT
+        // subject. Never trust the legacy body field for authorization.
+        String userId = httpRequest.getHeader("x-user-id");
         if (userId == null || userId.isBlank()) {
-            userId = httpRequest.getHeader("x-user-id");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "x-user-id header is required");
         }
         return ApiResponse.ok(ApplyCouponResponse.from(
                 applyCouponUseCase.apply(request.code(), request.effectiveOrderAmount(), userId)));

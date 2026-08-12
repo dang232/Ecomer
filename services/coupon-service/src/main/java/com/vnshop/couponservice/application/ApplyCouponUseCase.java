@@ -6,6 +6,7 @@ import com.vnshop.couponservice.domain.port.out.CouponUsagePort;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Objects;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Apply a coupon to an order. Pre-flight checks (active / expiry / minimum
@@ -27,6 +28,7 @@ public class ApplyCouponUseCase {
         this.usagePort = Objects.requireNonNull(usagePort, "usagePort");
     }
 
+    @Transactional
     public ApplyCouponResult apply(String code, BigDecimal orderAmount, String userId) {
         Objects.requireNonNull(orderAmount, "orderAmount");
         Objects.requireNonNull(userId, "userId");
