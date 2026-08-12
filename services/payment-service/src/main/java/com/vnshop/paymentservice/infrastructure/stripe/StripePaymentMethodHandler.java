@@ -26,6 +26,6 @@ public class StripePaymentMethodHandler implements PaymentMethodHandler {
 
     @Override
     public PaymentGatewayPort.GatewayPaymentResult processPayment(Payment payment) {
-        return new PaymentGatewayPort.GatewayPaymentResult(PaymentStatus.PENDING, "STRIPE-" + payment.paymentId());
+        return new PaymentGatewayPort.GatewayPaymentResult(PaymentStatus.PENDING, null);
     }
 }
