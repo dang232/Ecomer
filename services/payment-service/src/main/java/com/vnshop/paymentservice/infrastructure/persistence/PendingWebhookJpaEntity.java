@@ -43,6 +43,9 @@ public class PendingWebhookJpaEntity {
     @Column(name = "status", nullable = false, length = 16)
     private String status = "PENDING";
 
+    @Column(name = "lease_token", columnDefinition = "uuid")
+    private UUID leaseToken;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -81,10 +84,12 @@ public class PendingWebhookJpaEntity {
     public int getMaxAttempts() { return maxAttempts; }
     public Instant getNextRetryAt() { return nextRetryAt; }
     public String getStatus() { return status; }
+    public UUID getLeaseToken() { return leaseToken; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
 
     public void setAttempts(int attempts) { this.attempts = attempts; }
     public void setNextRetryAt(Instant nextRetryAt) { this.nextRetryAt = nextRetryAt; }
     public void setStatus(String status) { this.status = status; }
+    public void setLeaseToken(UUID leaseToken) { this.leaseToken = leaseToken; }
 }
