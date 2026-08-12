@@ -11,6 +11,7 @@ public record ConfigServiceProperties(
         @NotBlank String url,
         @NotBlank String serviceName,
         boolean enabled,
-        @Min(1) long timeoutMs
+        @Min(1) long timeoutMs,
+        String token
 ) {
 }

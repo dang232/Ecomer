@@ -57,6 +57,7 @@ public class ConfigServiceClient implements ApplicationRunner {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .timeout(Duration.ofMillis(properties.timeoutMs()))
+                    .header("x-config-service-token", properties.token() == null ? "" : properties.token())
                     .GET()
                     .build();
 
