@@ -43,6 +43,9 @@ public class ConfigServiceClient implements ApplicationRunner {
     @Value("${config-service.timeout-ms:3000}")
     private long timeoutMs;
 
+    @Value("${config-service.token:}")
+    private String token;
+
     public ConfigServiceClient(ConfigurableEnvironment environment, ObjectMapper objectMapper) {
         this.environment = environment;
         this.objectMapper = objectMapper;
@@ -66,6 +69,7 @@ public class ConfigServiceClient implements ApplicationRunner {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .timeout(Duration.ofMillis(timeoutMs))
+                    .header("x-config-service-token", token)
                     .GET()
                     .build();
 
