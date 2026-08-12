@@ -14,9 +14,10 @@ export class GatewayAuthGuard implements CanActivate {
     if (isPublic) return true;
 
     const request = context.switchToHttp().getRequest();
-    const userId = request.headers['x-user-id'];
-    if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
-      throw new UnauthorizedException('Missing x-user-id header — request must pass through gateway');
+    const internalToken = process.env.CONFIG_SERVICE_INTERNAL_TOKEN;
+    const presentedToken = request.headers['x-config-service-token'];
+    if (!internalToken || presentedToken !== internalToken) {
+      throw new UnauthorizedException('Invalid configuration service token');
     }
     return true;
   }

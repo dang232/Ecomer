@@ -2,11 +2,6 @@ import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator.js';
 
-/**
- * Checks the x-user-roles header injected by the api-gateway's
- * UserIdHeaderFilter (extracts realm_access.roles from the JWT and
- * forwards them as a comma-separated x-user-roles header).
- */
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
@@ -19,12 +14,9 @@ export class RolesGuard implements CanActivate {
     if (!requiredRoles || requiredRoles.length === 0) return true;
 
     const request = context.switchToHttp().getRequest();
-    const rolesHeader = request.headers['x-user-roles'];
-    if (!rolesHeader) throw new ForbiddenException('Missing roles');
-
-    const userRoles = typeof rolesHeader === 'string' ? rolesHeader.split(',') : [];
-    const hasRole = requiredRoles.some((role) => userRoles.includes(role));
-    if (!hasRole) throw new ForbiddenException('Insufficient role');
-    return true;
+    const internalToken = process.env.CONFIG_SERVICE_INTERNAL_TOKEN;
+    const presentedToken = request.headers['x-config-service-token'];
+    if (internalToken && presentedToken === internalToken) return true;
+    throw new ForbiddenException('Invalid configuration service token');
   }
 }
