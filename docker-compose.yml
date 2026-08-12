@@ -984,8 +984,6 @@ services:
     # profiles removed for full deployment
     build: ./services/configuration-service
     container_name: vnshop-configuration-service
-    ports:
-      - "8097:8097"
     environment:
       SERVER_PORT: 8097
       WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
@@ -1006,6 +1004,7 @@ services:
       SUPPORT_PHONE: "1900-0000"
       SUPPORT_EMAIL: support@vnshop.vn
       CONFIG_FILE_PATH: /app/config/services.yml
+      CONFIG_SERVICE_INTERNAL_TOKEN: ${CONFIG_SERVICE_INTERNAL_TOKEN:?CONFIG_SERVICE_INTERNAL_TOKEN must be set}
     volumes:
       - ./services/configuration-service/config:/app/config:ro
     healthcheck:
@@ -1291,6 +1290,7 @@ services:
       KAFKA_SASL_PASSWORD: ${KAFKA_SVC_ORDER_PASSWORD:-kafka-order}
       KAFKA_SSL_TRUSTSTORE_PASSWORD: ${KAFKA_SSL_TRUSTSTORE_PASSWORD:?KAFKA_SSL_TRUSTSTORE_PASSWORD must be set}
       ADMIN_CURSOR_SECRET: ${ADMIN_CURSOR_SECRET:?ADMIN_CURSOR_SECRET must be set}
+      CONFIG_SERVICE_INTERNAL_TOKEN: ${CONFIG_SERVICE_INTERNAL_TOKEN:?CONFIG_SERVICE_INTERNAL_TOKEN must be set}
       GRPC_CLIENT_INVENTORY_HOST: inventory-service
       GRPC_CLIENT_INVENTORY_PORT: 9093
       GRPC_CLIENT_PAYMENT_HOST: payment-service
@@ -1369,6 +1369,7 @@ services:
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      CONFIG_SERVICE_INTERNAL_TOKEN: ${CONFIG_SERVICE_INTERNAL_TOKEN:?CONFIG_SERVICE_INTERNAL_TOKEN must be set}
       # PayPal v2 Checkout REST credentials (sandbox creds at developer.paypal.com).
       PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID:-}
       PAYPAL_CLIENT_SECRET: ${PAYPAL_CLIENT_SECRET:-}
@@ -1447,6 +1448,7 @@ services:
       GHTK_TOKEN: ${GHTK_TOKEN:-}
       GHTK_WEBHOOK_TOKEN: ${GHTK_WEBHOOK_TOKEN:-}
       GHTK_PARTNER_CODE: ${GHTK_PARTNER_CODE:-}
+      CONFIG_SERVICE_INTERNAL_TOKEN: ${CONFIG_SERVICE_INTERNAL_TOKEN:?CONFIG_SERVICE_INTERNAL_TOKEN must be set}
     volumes:
       - ./infra/kafka/certs/kafka.truststore.jks:/etc/kafka/secrets/kafka.truststore.jks:ro
     deploy:
@@ -1614,6 +1616,7 @@ services:
       INVOICE_SELLER_ADDRESS: ${INVOICE_SELLER_ADDRESS:?INVOICE_SELLER_ADDRESS must be set}
       INVOICE_SELLER_PHONE: ${INVOICE_SELLER_PHONE:-}
       INVOICE_SELLER_EMAIL: ${INVOICE_SELLER_EMAIL:?INVOICE_SELLER_EMAIL must be set}
+      CONFIG_SERVICE_INTERNAL_TOKEN: ${CONFIG_SERVICE_INTERNAL_TOKEN:?CONFIG_SERVICE_INTERNAL_TOKEN must be set}
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
       OTEL_TRACES_SAMPLER: parentbased_traceidratio
       OTEL_TRACES_SAMPLER_ARG: "1.0"

@@ -14,6 +14,8 @@ Required key groups:
   scoped MinIO access/secret keys for product, user, and both video workers.
 - Recovery: off-cluster S3 bucket, prefix, region, access key, and secret key.
 - Operations: `alert-webhook-url` for the durable paging/receipt endpoint.
+- Configuration: `config-service-internal-token`, shared by configuration-service
+  and every Java service that fetches protected configuration.
 - Optional payment providers: `payment-vietqr-account-no`,
   `payment-vietqr-account-name`, `payment-vnpay-tmn-code`,
   `payment-vnpay-hash-secret`, `payment-momo-partner-code`,
