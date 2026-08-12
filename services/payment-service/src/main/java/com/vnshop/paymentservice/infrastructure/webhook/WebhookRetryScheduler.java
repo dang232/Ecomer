@@ -3,7 +3,7 @@ package com.vnshop.paymentservice.infrastructure.webhook;
 import com.vnshop.paymentservice.infrastructure.persistence.PendingWebhookJpaEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -27,13 +27,13 @@ public class WebhookRetryScheduler {
     private static final int BATCH_SIZE = 50;
 
     private final WebhookIdempotencyService idempotencyService;
-    private final ApplicationEventPublisher eventPublisher;
+    private final ObjectProvider<PendingWebhookRetryProcessor> processorProvider;
 
     public WebhookRetryScheduler(
             WebhookIdempotencyService idempotencyService,
-            ApplicationEventPublisher eventPublisher) {
+            ObjectProvider<PendingWebhookRetryProcessor> processorProvider) {
         this.idempotencyService = Objects.requireNonNull(idempotencyService, "idempotencyService is required");
-        this.eventPublisher = Objects.requireNonNull(eventPublisher, "eventPublisher is required");
+        this.processorProvider = Objects.requireNonNull(processorProvider, "processorProvider is required");
     }
 
     @Scheduled(fixedDelay = 30_000)
@@ -47,15 +47,20 @@ public class WebhookRetryScheduler {
         log.info("webhook-retry-scheduler-batch size={}", batch.size());
 
         for (PendingWebhookJpaEntity entity : batch) {
+            if (!idempotencyService.claimForRetry(entity)) {
+                continue;
+            }
             try {
-                eventPublisher.publishEvent(new PendingWebhookRetryEvent(
+                PendingWebhookRetryProcessor processor = processorProvider.getIfAvailable();
+                if (processor == null) {
+                    throw new IllegalStateException("No pending webhook retry processor is configured");
+                }
+                processor.process(new PendingWebhookRetryEvent(
                         entity.getId(),
                         entity.getWebhookId(),
                         entity.getProvider(),
                         entity.getEventType(),
                         entity.getPayload()));
-                // Spring ApplicationEventPublisher is synchronous by default — the
-                // listener has completed (or thrown) before publishEvent returns.
                 idempotencyService.recordRetryOutcome(entity, true);
             } catch (Exception ex) {
                 log.warn("webhook-retry-failed id={} provider={} webhookId={} attempt={} error={}",

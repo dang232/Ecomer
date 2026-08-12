@@ -17,7 +17,7 @@ public class PaymentCallbackLogJpaRepository implements PaymentCallbackLogStore 
 
     @Override
     public Optional<PaymentCallbackAttempt> findProcessed(String provider, String eventId, String payloadHash, String signatureHash) {
-        List<String> terminalStatuses = List.of("PROCESSED", "FAILED");
+        List<String> terminalStatuses = List.of("PROCESSED", "FAILED", "IGNORED");
         Optional<PaymentCallbackLogJpaEntity> eventMatch = eventId == null || eventId.isBlank()
                 ? Optional.empty()
                 : springDataRepository.findFirstByProviderAndEventIdAndSignatureHashAndProcessingStatusIn(provider, eventId, signatureHash, terminalStatuses);
