@@ -1,6 +1,8 @@
 package com.vnshop.couponservice.infrastructure.persistence;
 
+import com.vnshop.couponservice.application.CouponDomainException;
 import com.vnshop.couponservice.domain.port.out.CouponUsagePort;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -19,6 +21,25 @@ public class CouponUsageAdapter implements CouponUsagePort {
 
     @Override
     public void recordUsage(Long couponId, String userId) {
-        repository.save(new CouponUsageJpaEntity(couponId, userId));
+        try {
+            repository.saveAndFlush(new CouponUsageJpaEntity(couponId, userId));
+        } catch (DataIntegrityViolationException exception) {
+            if (isCouponUserUniquenessViolation(exception)) {
+                throw new CouponDomainException("Coupon already used by this user", exception);
+            }
+            throw exception;
+        }
+    }
+
+    private static boolean isCouponUserUniquenessViolation(DataIntegrityViolationException exception) {
+        Throwable cause = exception;
+        while (cause != null) {
+            String message = cause.getMessage();
+            if (message != null && message.contains("uq_coupon_user")) {
+                return true;
+            }
+            cause = cause.getCause();
+        }
+        return false;
     }
 }
