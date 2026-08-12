@@ -41,7 +41,7 @@ class PaymentMigrationIntegrationTest {
             String.class
         );
 
-        assertThat(version).isEqualTo("20");
+        assertThat(version).isEqualTo("22");
 
         Integer matchingColumns = jdbcTemplate.queryForObject(
             "select count(*) from information_schema.columns "
@@ -60,6 +60,16 @@ class PaymentMigrationIntegrationTest {
         );
 
         assertThat(callbackEventTable).isEqualTo(1);
+
+        Integer pendingWebhookIdentityIndex = jdbcTemplate.queryForObject(
+            "select count(*) from pg_indexes "
+                + "where schemaname = 'payment_svc' "
+                + "and tablename = 'pending_webhooks' "
+                + "and indexname = 'uq_pending_webhooks_webhook_provider'",
+            Integer.class
+        );
+
+        assertThat(pendingWebhookIdentityIndex).isEqualTo(1);
     }
 
     @Test
