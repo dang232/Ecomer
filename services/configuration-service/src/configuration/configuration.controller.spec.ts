@@ -1,6 +1,7 @@
 import { ConfigurationController } from './configuration.controller.js';
 import { ConfigurationService } from './configuration.service.js';
 import { HealthController } from './health.controller.js';
+import { ROLES_KEY } from '../common/decorators/roles.decorator.js';
 
 describe('ConfigurationController health contract', () => {
   const originalEnv = process.env;
@@ -26,5 +27,12 @@ describe('ConfigurationController health contract', () => {
     expect(controller.getPublicConfig().schemaVersion).toBe('1.0');
     expect(healthController.getHealth()).toEqual({ status: 'ok' });
     expect(healthController.getReady()).toEqual({ status: 'ready' });
+  });
+
+  it('marks internal configuration reads as administrator-only', () => {
+    for (const method of ['getAllServiceConfigs', 'getServiceConfig', 'getGlobalConfig'] as const) {
+      expect(Reflect.getMetadata(ROLES_KEY, ConfigurationController.prototype[method]))
+        .toEqual(['ADMIN']);
+    }
   });
 });

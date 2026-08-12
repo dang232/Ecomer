@@ -22,18 +22,21 @@ export class ConfigurationController {
     return this.configurationService.getPublicConfig();
   }
 
+  @Roles('ADMIN')
   @Get('config/services')
   @ApiExcludeEndpoint()
   getAllServiceConfigs(): Record<string, Record<string, unknown>> {
     return this.configurationService.getAllServiceConfigs();
   }
 
+  @Roles('ADMIN')
   @Get('config/services/:serviceName')
   @ApiExcludeEndpoint()
   getServiceConfig(@Param('serviceName') serviceName: string): Record<string, unknown> {
     return this.configurationService.getServiceConfig(serviceName);
   }
 
+  @Roles('ADMIN')
   @Get('config/global')
   @ApiExcludeEndpoint()
   getGlobalConfig(): Record<string, unknown> {
