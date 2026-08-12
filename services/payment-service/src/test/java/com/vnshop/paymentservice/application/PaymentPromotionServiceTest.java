@@ -22,6 +22,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class PaymentPromotionServiceTest {
 
@@ -29,7 +30,7 @@ class PaymentPromotionServiceTest {
     void promotesPendingPaymentEmitsLedgerAndOutboxRow() {
         UUID paymentId = UUID.randomUUID();
         InMemoryPayments payments = new InMemoryPayments();
-        payments.save(pending(paymentId));
+        payments.save(pending(paymentId).withResult(PaymentStatus.PENDING, "pi_expected"));
         CapturingLedger ledger = new CapturingLedger();
         CapturingOutbox outbox = new CapturingOutbox();
         PaymentPromotionService service = new PaymentPromotionService(payments, new LedgerService(ledger), outbox);
@@ -100,6 +101,40 @@ class PaymentPromotionServiceTest {
         assertThat(result.payment()).isNull();
         assertThat(ledger.savedEntries).isEmpty();
         assertThat(outbox.savedRecords).isEmpty();
+    }
+
+    @Test
+    void rejectsStripeEvidenceThatDoesNotMatchTheLockedPayment() {
+        UUID paymentId = UUID.randomUUID();
+        InMemoryPayments payments = new InMemoryPayments();
+        payments.save(new Payment(
+                paymentId,
+                "ORDER-1",
+                "BUYER-1",
+                new BigDecimal("100000.00"),
+                PaymentMethod.STRIPE,
+                PaymentStatus.PENDING,
+                null,
+                Instant.parse("2026-05-19T00:00:00Z"),
+                new BigDecimal("100.00"),
+                "USD",
+                new BigDecimal("0.001"),
+                Instant.parse("2026-05-19T00:00:00Z")));
+        PaymentPromotionService service = new PaymentPromotionService(
+                payments, new LedgerService(new CapturingLedger()), new CapturingOutbox());
+
+        assertThatThrownBy(() -> service.promote(PaymentPromotionService.PromotionCommand.fromStripeCallback(
+                 paymentId,
+                 "pi_mismatch",
+                UUID.randomUUID(),
+                "evt_mismatch",
+                "hash-mismatch",
+                 "ORDER-1",
+                 new BigDecimal("100000.00"),
+                 10_000L,
+                 "USD")))
+                 .isInstanceOf(IllegalArgumentException.class)
+                 .hasMessageContaining("provider reference");
     }
 
     private static Payment pending(UUID paymentId) {

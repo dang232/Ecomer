@@ -14,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 /**
  * Single PENDING → COMPLETED promotion path used by every adapter that confirms
@@ -60,6 +62,7 @@ public class PaymentPromotionService {
             return PromotionResult.notFound();
         }
         Payment payment = existing.get();
+        command.validate(payment);
         if (payment.status() == PaymentStatus.COMPLETED) {
             return PromotionResult.alreadyCompleted(payment);
         }
@@ -94,7 +97,8 @@ public class PaymentPromotionService {
             UUID paymentId,
             String provider,
             String providerRef,
-            OutboxAttempt outboxAttempt) {
+            OutboxAttempt outboxAttempt,
+            StripeEvidence stripeEvidence) {
         public PromotionCommand {
             Objects.requireNonNull(paymentId, "paymentId is required");
             requireNonBlank(provider, "provider");
@@ -102,13 +106,76 @@ public class PaymentPromotionService {
         }
 
         public static PromotionCommand manual(UUID paymentId, String provider, String providerRef) {
-            return new PromotionCommand(paymentId, provider, providerRef, null);
+            return new PromotionCommand(paymentId, provider, providerRef, null, null);
         }
 
         public static PromotionCommand fromCallback(UUID paymentId, String provider, String providerRef,
                                                      UUID callbackId, String eventId, String payloadHash) {
             return new PromotionCommand(paymentId, provider, providerRef,
-                    new OutboxAttempt(callbackId, eventId, payloadHash));
+                    new OutboxAttempt(callbackId, eventId, payloadHash), null);
+        }
+
+        public static PromotionCommand fromStripeCallback(
+                UUID paymentId,
+                String providerRef,
+                UUID callbackId,
+                String eventId,
+                String payloadHash,
+                String orderId,
+                BigDecimal vndAmount,
+                Long amountMinor,
+                String currency) {
+            return new PromotionCommand(
+                    paymentId,
+                    "STRIPE",
+                    providerRef,
+                    new OutboxAttempt(callbackId, eventId, payloadHash),
+                    new StripeEvidence(orderId, vndAmount, amountMinor, currency));
+        }
+
+        private void validate(Payment payment) {
+            if (stripeEvidence == null) {
+                return;
+            }
+            if (!"STRIPE".equalsIgnoreCase(provider)
+                    || payment.transactionRef() == null
+                    || !payment.transactionRef().equals(providerRef)) {
+                throw new IllegalArgumentException("Stripe provider reference does not match payment");
+            }
+            if (payment.method() != com.vnshop.paymentservice.domain.PaymentMethod.STRIPE) {
+                throw new IllegalArgumentException("Stripe evidence does not match payment method");
+            }
+            if (!payment.orderId().equals(stripeEvidence.orderId())) {
+                throw new IllegalArgumentException("Stripe evidence does not match order");
+            }
+            if (payment.amount().compareTo(stripeEvidence.vndAmount()) != 0) {
+                throw new IllegalArgumentException("Stripe evidence does not match VND amount");
+            }
+            if (!"USD".equalsIgnoreCase(stripeEvidence.currency())) {
+                throw new IllegalArgumentException("Stripe evidence currency must be USD");
+            }
+            if (payment.externalAmount() == null || payment.fxRate() == null
+                    || !"USD".equalsIgnoreCase(payment.externalCurrency())) {
+                throw new IllegalArgumentException("Stripe payment has no frozen USD amount");
+            }
+            BigDecimal expectedMinor = payment.externalAmount()
+                    .movePointRight(2)
+                    .setScale(0, RoundingMode.UNNECESSARY);
+            if (expectedMinor.compareTo(BigDecimal.valueOf(stripeEvidence.amountMinor())) != 0) {
+                throw new IllegalArgumentException("Stripe evidence does not match USD amount");
+            }
+        }
+    }
+
+    public record StripeEvidence(String orderId, BigDecimal vndAmount, Long amountMinor, String currency) {
+        public StripeEvidence {
+            requireNonBlank(orderId, "orderId");
+            Objects.requireNonNull(vndAmount, "vndAmount is required");
+            Objects.requireNonNull(amountMinor, "amountMinor is required");
+            requireNonBlank(currency, "currency");
+            if (vndAmount.signum() <= 0 || amountMinor <= 0) {
+                throw new IllegalArgumentException("Stripe amounts must be positive");
+            }
         }
     }
 
