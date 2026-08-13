@@ -390,6 +390,14 @@ def main() -> None:
             )
             if not keycloak_volume:
                 errors.append("production Keycloak must mount the GitOps realm import directory")
+            keycloak_secret_env = any(
+                entry.get("name") == "GATEWAY_OAUTH2_CLIENT_SECRET"
+                and entry.get("valueFrom", {}).get("secretKeyRef", {}).get("key") == "gateway-oauth2-client-secret"
+                for container in (keycloak or {}).get("spec", {}).get("template", {}).get("spec", {}).get("containers", [])
+                for entry in container.get("env", [])
+            )
+            if not keycloak_secret_env:
+                errors.append("production Keycloak must receive gateway-oauth2-client-secret")
 
             reconcile_jobs = [
                 doc for doc in documents

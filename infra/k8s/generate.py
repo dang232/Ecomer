@@ -487,7 +487,9 @@ spec:
         - |
           until /opt/keycloak/bin/kcadm.sh config credentials --server http://keycloak:8080 --realm master --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD"; do sleep 5; done
           client_id=$(/opt/keycloak/bin/kcadm.sh get clients -r vnshop -q clientId=vnshop-monitoring --fields id --format csv --noquotes)
-          test -n "$client_id"
+          if [ -z "$client_id" ]; then
+            client_id=$(/opt/keycloak/bin/kcadm.sh create clients -r vnshop -s clientId=vnshop-monitoring -s name='VNShop Monitoring Dashboard' -s protocol=openid-connect -s publicClient=true -s standardFlowEnabled=true -s enabled=true -i)
+          fi
           /opt/keycloak/bin/kcadm.sh update clients/$client_id -r vnshop -s redirectUris='["'"$AUTH_ORIGIN"'/monitoring/"]' -s webOrigins='["'"$AUTH_ORIGIN"'"]' -s publicClient=true -s standardFlowEnabled=true
           /opt/keycloak/bin/kcadm.sh update realms/vnshop -s enabled=true
         env:
