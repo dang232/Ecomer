@@ -134,7 +134,43 @@ class PaymentPromotionServiceTest {
                  10_000L,
                  "USD")))
                  .isInstanceOf(IllegalArgumentException.class)
-                 .hasMessageContaining("provider reference");
+                  .hasMessageContaining("provider reference");
+    }
+
+    @Test
+    void promotesLegacyStripePaymentAndMigratesItsProviderReference() {
+        UUID paymentId = UUID.randomUUID();
+        InMemoryPayments payments = new InMemoryPayments();
+        payments.save(new Payment(
+                paymentId,
+                "ORDER-1",
+                "BUYER-1",
+                new BigDecimal("100000.00"),
+                PaymentMethod.STRIPE,
+                PaymentStatus.PENDING,
+                "STRIPE-" + paymentId,
+                Instant.parse("2026-05-19T00:00:00Z"),
+                new BigDecimal("100.00"),
+                "USD",
+                new BigDecimal("0.001"),
+                Instant.parse("2026-05-19T00:00:00Z")));
+        PaymentPromotionService service = new PaymentPromotionService(
+                payments, new LedgerService(new CapturingLedger()), new CapturingOutbox());
+
+        PaymentPromotionService.PromotionResult result = service.promote(
+                PaymentPromotionService.PromotionCommand.fromStripeCallback(
+                        paymentId,
+                        "pi_real",
+                        UUID.randomUUID(),
+                        "evt_legacy",
+                        "hash-legacy",
+                        "ORDER-1",
+                        new BigDecimal("100000.00"),
+                        10_000L,
+                        "USD"));
+
+        assertThat(result.outcome()).isEqualTo(PaymentPromotionService.PromotionResult.Outcome.PROMOTED);
+        assertThat(result.payment().transactionRef()).isEqualTo("pi_real");
     }
 
     private static Payment pending(UUID paymentId) {

@@ -139,7 +139,8 @@ public class PaymentPromotionService {
             }
             if (!"STRIPE".equalsIgnoreCase(provider)
                     || payment.transactionRef() == null
-                    || !payment.transactionRef().equals(providerRef)) {
+                    || (!payment.transactionRef().equals(providerRef)
+                    && !legacyStripePlaceholder(payment))) {
                 throw new IllegalArgumentException("Stripe provider reference does not match payment");
             }
             if (payment.method() != com.vnshop.paymentservice.domain.PaymentMethod.STRIPE) {
@@ -164,6 +165,11 @@ public class PaymentPromotionService {
             if (expectedMinor.compareTo(BigDecimal.valueOf(stripeEvidence.amountMinor())) != 0) {
                 throw new IllegalArgumentException("Stripe evidence does not match USD amount");
             }
+        }
+
+        private boolean legacyStripePlaceholder(Payment payment) {
+            return ("STRIPE-" + payment.paymentId()).equals(payment.transactionRef())
+                    && providerRef.startsWith("pi_");
         }
     }
 
