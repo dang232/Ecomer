@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS order_svc.idx_coupon_usages_consumed_coupon_user;
