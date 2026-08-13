@@ -5,6 +5,7 @@ resources:
 - ../../base
 - namespace.yaml
 - ingress.yaml
+- keycloak-reconcile-job.yaml
 replicas:
 - name: vnshop-frontend
   count: 3
