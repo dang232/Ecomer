@@ -14,6 +14,7 @@ import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.RequestRateLimiterGatewayFilterFactory;
 import org.springframework.cloud.gateway.filter.factory.SpringCloudCircuitBreakerFilterFactory;
 import org.springframework.cloud.gateway.filter.factory.StripPrefixGatewayFilterFactory;
+import org.springframework.cloud.gateway.filter.factory.AddRequestHeaderGatewayFilterFactory;
 import org.springframework.cloud.gateway.handler.predicate.PathRoutePredicateFactory;
 import org.springframework.cloud.gateway.handler.predicate.PathRoutePredicateFactory.Config;
 import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
@@ -42,11 +43,12 @@ class RouteConfigTest {
         when(context.getBean(RequestRateLimiterGatewayFilterFactory.class)).thenReturn(rateFactory);
         when(context.getBean(SpringCloudCircuitBreakerFilterFactory.class)).thenReturn(circuitFactory);
         when(context.getBean(StripPrefixGatewayFilterFactory.class)).thenReturn(new StripPrefixGatewayFilterFactory());
+        when(context.getBean(AddRequestHeaderGatewayFilterFactory.class)).thenReturn(new AddRequestHeaderGatewayFilterFactory());
 
         RouteConfig config = new RouteConfig(
                 "http://product", "http://user", "http://search", "http://inventory", "http://cart",
                 "http://order", "http://payment", "http://shipping", "http://notification",
-                "http://finance", "http://recommendations", "http://messaging", "http://monitoring", "http://configuration", "http://coupon", "http://keycloak");
+                 "http://finance", "http://recommendations", "http://messaging", "http://monitoring", "http://configuration", "http://coupon", "http://keycloak", "internal-secret");
         TieredRateLimiter limiter = new TieredRateLimiter(mock(org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter.class),
                 mock(org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter.class));
         RouteLocator locator = config.gatewayRoutes(new RouteLocatorBuilder(context), limiter, limiter, limiter, limiter,
@@ -56,7 +58,7 @@ class RouteConfigTest {
 
         assertThat(routes).isNotNull().extracting(Route::getId)
                 .contains("products", "videos", "search", "flash-sale-reserve", "flash-sale-stock", "flash-sale-active",
-                        "recommendations", "monitoring", "configuration");
+                 "recommendations", "monitoring", "configuration", "configuration-reload");
         assertThat(route(routes, "keycloak-oidc").getUri()).isEqualTo(URI.create("http://keycloak:80"));
         assertThat(matches(route(routes, "keycloak-oidc"), "/realms/vnshop/protocol/openid-connect/auth")).isTrue();
         assertThat(matches(route(routes, "keycloak-oidc"), "/admin/master/console/")).isFalse();
@@ -76,6 +78,8 @@ class RouteConfigTest {
         assertThat(matches(route(routes, "configuration"), "/api/config")).isTrue();
         assertThat(matches(route(routes, "configuration"), "/api/config/public")).isTrue();
         assertThat(matches(route(routes, "configuration"), "/api/config/services")).isFalse();
+        assertThat(route(routes, "configuration-reload").getUri()).isEqualTo(URI.create("http://configuration:80"));
+        assertThat(matches(route(routes, "configuration-reload"), "/api/config/reload")).isTrue();
         assertThat(matches(route(routes, "shipping-webhooks"), "/webhooks/ghn")).isTrue();
         assertThat(matches(route(routes, "shipping-webhooks"), "/webhooks/ghtk")).isTrue();
         assertThat(matches(route(routes, "shipping-webhooks"), "/webhooks/unknown")).isFalse();

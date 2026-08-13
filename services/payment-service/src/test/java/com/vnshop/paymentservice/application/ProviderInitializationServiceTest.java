@@ -60,6 +60,32 @@ class ProviderInitializationServiceTest {
     }
 
     @Test
+    void replacesOnlyTheLegacyStripePlaceholderWithTheProviderIntent() {
+        UUID paymentId = UUID.randomUUID();
+        Payment legacy = payment(paymentId).withResult(PaymentStatus.PENDING, "STRIPE-" + paymentId);
+        InMemoryPayments payments = new InMemoryPayments(legacy);
+        ProviderInitializationService service = new ProviderInitializationService(
+                payments, (from, to) -> new BigDecimal("0.00004"), immediateTransactions());
+
+        Payment result = service.persistProviderReference(paymentId, "pi_real");
+
+        assertThat(result.transactionRef()).isEqualTo("pi_real");
+    }
+
+    @Test
+    void doesNotReplaceARealStripeIntentWithAnotherIntent() {
+        UUID paymentId = UUID.randomUUID();
+        Payment existing = payment(paymentId).withResult(PaymentStatus.PENDING, "pi_first");
+        InMemoryPayments payments = new InMemoryPayments(existing);
+        ProviderInitializationService service = new ProviderInitializationService(
+                payments, (from, to) -> new BigDecimal("0.00004"), immediateTransactions());
+
+        Payment result = service.persistProviderReference(paymentId, "pi_second");
+
+        assertThat(result.transactionRef()).isEqualTo("pi_first");
+    }
+
+    @Test
     void doesNotBotherFxServiceForNonFxMethods() {
         UUID paymentId = UUID.randomUUID();
         Payment nonFxPayment = payment(paymentId, PaymentMethod.COD);

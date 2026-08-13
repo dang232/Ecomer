@@ -7,6 +7,7 @@ import com.stripe.model.StripeObject;
 import com.vnshop.paymentservice.application.chargeback.ChargebackService;
 import com.vnshop.paymentservice.domain.Chargeback;
 import com.vnshop.paymentservice.infrastructure.stripe.StripeProperties;
+import com.vnshop.paymentservice.infrastructure.stripe.StripeChargebackAmount;
 import com.vnshop.paymentservice.infrastructure.stripe.StripeWebhookVerifier;
 import com.vnshop.paymentservice.infrastructure.webhook.WebhookIdempotencyService;
 import org.slf4j.Logger;
@@ -22,7 +23,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
-import java.math.BigDecimal;
 import java.util.Objects;
 
 /**
@@ -88,6 +88,9 @@ public class StripeChargebackWebhookController {
         String orderId = dispute.getMetadata() != null
                 ? dispute.getMetadata().getOrDefault("orderId", "UNKNOWN")
                 : "UNKNOWN";
+        String currency = dispute.getCurrency() == null
+                ? "VND"
+                : dispute.getCurrency().toUpperCase(java.util.Locale.ROOT);
         LocalDate dueDate = dispute.getEvidenceDetails() != null
                 && dispute.getEvidenceDetails().getDueBy() != null
                 ? Instant.ofEpochSecond(dispute.getEvidenceDetails().getDueBy())
@@ -102,8 +105,8 @@ public class StripeChargebackWebhookController {
                     Chargeback.ChargebackProvider.STRIPE,
                     dispute.getReason() != null ? dispute.getReason() : "unspecified",
                     dueDate,
-                    dispute.getAmount() == null ? null : BigDecimal.valueOf(dispute.getAmount()),
-                    dispute.getCurrency() == null ? "VND" : dispute.getCurrency().toUpperCase(java.util.Locale.ROOT),
+                    StripeChargebackAmount.toMajorUnits(dispute.getAmount(), currency),
+                    currency,
                     dispute.getPaymentIntent());
         } catch (Exception ex) {
             log.error("stripe-chargeback-webhook-processing-failed event={} error={}", event.getId(), ex.getMessage());

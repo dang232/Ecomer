@@ -80,10 +80,10 @@ class OrderServiceIntegrationTest {
                  assertThat(invoiceUpdatedAt.next()).isTrue();
              }
              try (var migration = conn.prepareStatement(
-                     "SELECT version, success FROM order_svc.flyway_schema_history WHERE version = '33'")) {
-                 try (var rows = migration.executeQuery()) {
-                     assertThat(rows.next()).isTrue();
-                     assertThat(rows.getString("version")).isEqualTo("33");
+                     "SELECT version, success FROM order_svc.flyway_schema_history WHERE version = '35'")) {
+                     try (var rows = migration.executeQuery()) {
+                         assertThat(rows.next()).isTrue();
+                         assertThat(rows.getString("version")).isEqualTo("35");
                      assertThat(rows.getBoolean("success")).isTrue();
                  }
              }

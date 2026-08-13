@@ -164,6 +164,7 @@ class CouponControllerTest {
                 .andExpect(status().isCreated());
 
         mockMvc.perform(post("/checkout/apply-coupon")
+                        .header("x-user-id", "test-user-1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 Map.of("code", "APPLY-OK", "orderAmount", BigDecimal.valueOf(200), "userId", "test-user-1"))))
@@ -193,6 +194,7 @@ class CouponControllerTest {
         couponRepository.save(coupon);
 
         MvcResult result = mockMvc.perform(post("/checkout/apply-coupon")
+                        .header("x-user-id", "test-user-2")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 Map.of("code", "APPLY-FULL", "orderAmount", BigDecimal.valueOf(200), "userId", "test-user-2"))))
@@ -231,6 +233,46 @@ class CouponControllerTest {
         assertThat(firstAttempt).isEqualTo(1);
         assertThat(secondAttempt).isEqualTo(0);
         assertThat(couponRepository.findByCode("RACE-1").orElseThrow().getCurrentUses()).isEqualTo(1);
+    }
+
+    @Test
+    void applyCouponUsesTrustedGatewayIdentityInsteadOfBodyUserId() throws Exception {
+        mockMvc.perform(post("/coupons")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(
+                        couponRequest("IDENTITY-SAFE", Instant.now().plusSeconds(3600), BigDecimal.ZERO, 2))))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/checkout/apply-coupon")
+                        .header("x-user-id", "trusted-user")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "code", "IDENTITY-SAFE",
+                                "orderAmount", BigDecimal.valueOf(200),
+                                "userId", "attacker-selected-user"))))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/checkout/apply-coupon")
+                        .header("x-user-id", "trusted-user")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "code", "IDENTITY-SAFE",
+                                "orderAmount", BigDecimal.valueOf(200),
+                                "userId", "different-body-user"))))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(result -> assertThat(result.getResponse().getContentAsString())
+                        .contains("already used by this user"));
+    }
+
+    @Test
+    void applyCouponRequiresGatewayIdentity() throws Exception {
+        mockMvc.perform(post("/checkout/apply-coupon")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "code", "MISSING",
+                                "orderAmount", BigDecimal.valueOf(200),
+                                "userId", "body-only-user"))))
+                .andExpect(status().isBadRequest());
     }
 
     private Map<String, Object> validCouponRequest(String code) {

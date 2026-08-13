@@ -1,0 +1,2 @@
+-- Intentionally empty. V26 already owns the equivalent lookup index, and V35
+-- removes the duplicate index for databases where an earlier V34 was applied.

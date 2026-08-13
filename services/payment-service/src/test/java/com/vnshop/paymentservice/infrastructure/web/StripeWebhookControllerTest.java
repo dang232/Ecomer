@@ -34,8 +34,12 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.eq;
 
 class StripeWebhookControllerTest {
 
@@ -43,7 +47,7 @@ class StripeWebhookControllerTest {
     void promotesPendingPaymentOnSucceededEvent() {
         UUID paymentId = UUID.fromString("00000000-0000-0000-0000-0000000000aa");
         InMemoryPayments payments = new InMemoryPayments();
-        payments.save(pending(paymentId));
+        payments.save(pending(paymentId).withResult(PaymentStatus.PENDING, "pi_abc"));
         CapturingLedger ledger = new CapturingLedger();
         CapturingOutbox outbox = new CapturingOutbox();
         CapturingLogStore logStore = new CapturingLogStore();
@@ -59,8 +63,9 @@ class StripeWebhookControllerTest {
         assertThat(payments.byId.get(paymentId).transactionRef()).isEqualTo("pi_abc");
         assertThat(ledger.savedEntries).hasSize(2);
         assertThat(outbox.savedRecords).hasSize(1);
-        assertThat(logStore.savedAttempts).hasSize(1);
-        assertThat(logStore.savedAttempts.get(0).processingStatus()).isEqualTo("PROCESSED");
+        assertThat(logStore.savedAttempts).hasSize(2);
+        assertThat(logStore.savedAttempts).extracting(PaymentCallbackAttempt::processingStatus)
+                .containsExactly("RECEIVED", "PROCESSED");
     }
 
     @Test
@@ -104,6 +109,30 @@ class StripeWebhookControllerTest {
     }
 
     @Test
+    void rejectsMismatchedStripeEvidenceWithoutQueueingRetry() {
+        UUID paymentId = UUID.fromString("00000000-0000-0000-0000-0000000000dd");
+        InMemoryPayments payments = new InMemoryPayments();
+        payments.save(pending(paymentId).withResult(PaymentStatus.PENDING, "pi_expected"));
+        CapturingLogStore logStore = new CapturingLogStore();
+        WebhookIdempotencyService idempotency = mock(WebhookIdempotencyService.class);
+        StripeWebhookController controller = new StripeWebhookController(
+                new StripeProperties(true, "sk_test", "pk_test", "whsec_x"),
+                stubVerifier(eventOf("evt_mismatch", "payment_intent.succeeded",
+                        paymentIntent(paymentId, "pi_mismatch", "ORDER-other", "100000"))),
+                new PaymentPromotionService(payments, new LedgerService(new CapturingLedger()), new CapturingOutbox()),
+                logStore,
+                idempotency);
+
+        ResponseEntity<ApiResponse<StripeWebhookController.StripeWebhookResponse>> response =
+                controller.webhook("t=1,v1=sig", "{}");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody().errorCode()).isEqualTo("BAD_PAYLOAD");
+        verify(idempotency, never()).storePendingForRetry(any(), any(), any(), any());
+        assertThat(payments.byId.get(paymentId).status()).isEqualTo(PaymentStatus.PENDING);
+    }
+
+    @Test
     void nonSucceededEventTypeIsAckedWithoutPromotion() {
         UUID paymentId = UUID.fromString("00000000-0000-0000-0000-0000000000cc");
         InMemoryPayments payments = new InMemoryPayments();
@@ -121,6 +150,27 @@ class StripeWebhookControllerTest {
         assertThat(payments.byId.get(paymentId).status()).isEqualTo(PaymentStatus.PENDING);
         assertThat(logStore.savedAttempts).hasSize(1);
         assertThat(logStore.savedAttempts.get(0).processingStatus()).isEqualTo("IGNORED");
+    }
+
+    @Test
+    void chargebackEventIsNotGloballyMarkedByGeneralStripeController() {
+        WebhookIdempotencyService idempotency = mock(WebhookIdempotencyService.class);
+        StripeWebhookController controller = new StripeWebhookController(
+                new StripeProperties(true, "sk_test", "pk_test", "whsec_x"),
+                stubVerifier(eventOf("evt_dispute", "charge.dispute.created",
+                        paymentIntent(UUID.randomUUID(), "pi_dispute"))),
+                new PaymentPromotionService(new InMemoryPayments(),
+                        new LedgerService(new CapturingLedger()), new CapturingOutbox()),
+                new CapturingLogStore(),
+                idempotency);
+
+        ResponseEntity<ApiResponse<StripeWebhookController.StripeWebhookResponse>> response =
+                controller.webhook("t=1,v1=sig", "{}");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().data().outcome()).isEqualTo("charge.dispute.created");
+        verify(idempotency, never()).isAlreadyProcessed(any(), eq("STRIPE"));
+        verify(idempotency, never()).markProcessed(any(), eq("STRIPE"), eq("charge.dispute.created"));
     }
 
     private static StripeWebhookController controller(
@@ -152,20 +202,27 @@ class StripeWebhookControllerTest {
     }
 
     private static PaymentIntent paymentIntent(UUID paymentId, String intentId) {
+        return paymentIntent(paymentId, intentId, "ORDER-" + paymentId, "100000");
+    }
+
+    private static PaymentIntent paymentIntent(UUID paymentId, String intentId, String orderId, String vndAmount) {
         PaymentIntent intent = new PaymentIntent();
         intent.setId(intentId);
         Map<String, String> meta = new HashMap<>();
         meta.put("paymentId", paymentId.toString());
-        meta.put("orderId", "ORDER-" + paymentId);
-        meta.put("vndAmount", "100000");
+        meta.put("orderId", orderId);
+        meta.put("vndAmount", vndAmount);
         intent.setMetadata(meta);
+        intent.setAmount(10_000L);
+        intent.setCurrency("usd");
         return intent;
     }
 
     private static Payment pending(UUID paymentId) {
         return new Payment(paymentId, "ORDER-" + paymentId, "BUYER-1",
                 new BigDecimal("100000"), PaymentMethod.STRIPE, PaymentStatus.PENDING, null,
-                Instant.parse("2026-05-19T00:00:00Z"));
+                Instant.parse("2026-05-19T00:00:00Z"), new BigDecimal("100.00"), "USD",
+                new BigDecimal("0.001"), Instant.parse("2026-05-19T00:00:00Z"));
     }
 
     private static final class InMemoryPayments implements PaymentRepositoryPort {

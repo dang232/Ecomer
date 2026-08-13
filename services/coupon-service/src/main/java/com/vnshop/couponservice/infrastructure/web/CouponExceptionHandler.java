@@ -23,4 +23,5 @@ public class CouponExceptionHandler {
     public ResponseEntity<String> handleDomain(CouponDomainException e) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(e.getMessage());
     }
+
 }

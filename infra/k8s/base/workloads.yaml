@@ -187,6 +187,9 @@ spec:
         env:
         - name: SERVER_PORT
           value: "8080"
+        - name: CONFIG_SERVICE_INTERNAL_TOKEN
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: config-service-internal-token}
         - name: REDIS_PASSWORD
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: platform-redis-password}
@@ -484,6 +487,9 @@ spec:
         env:
         - name: PORT
           value: "8097"
+        - name: CONFIG_SERVICE_INTERNAL_TOKEN
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: config-service-internal-token}
         envFrom:
         - configMapRef:
             name: vnshop-app-config
@@ -794,6 +800,9 @@ spec:
         env:
         - name: SERVER_PORT
           value: "8098"
+        - name: CONFIG_SERVICE_INTERNAL_TOKEN
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: config-service-internal-token}
         - name: SPRING_DATASOURCE_URL
           value: "jdbc:postgresql://postgres:5432/vnshop?currentSchema=invoice_svc"
         - name: SPRING_DATASOURCE_USERNAME
@@ -1422,6 +1431,9 @@ spec:
         env:
         - name: SERVER_PORT
           value: "8091"
+        - name: CONFIG_SERVICE_INTERNAL_TOKEN
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: config-service-internal-token}
         - name: SPRING_DATASOURCE_URL
           value: "jdbc:postgresql://postgres:5432/vnshop?currentSchema=order_svc"
         - name: SPRING_DATASOURCE_USERNAME
@@ -1585,6 +1597,9 @@ spec:
         env:
         - name: SERVER_PORT
           value: "8092"
+        - name: CONFIG_SERVICE_INTERNAL_TOKEN
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: config-service-internal-token}
         - name: SPRING_DATASOURCE_URL
           value: "jdbc:postgresql://postgres:5432/vnshop?currentSchema=payment_svc"
         - name: SPRING_DATASOURCE_USERNAME
@@ -2408,6 +2423,9 @@ spec:
         env:
         - name: SERVER_PORT
           value: "8093"
+        - name: CONFIG_SERVICE_INTERNAL_TOKEN
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: config-service-internal-token}
         - name: SPRING_DATASOURCE_URL
           value: "jdbc:postgresql://postgres:5432/vnshop?currentSchema=shipping_svc"
         - name: SPRING_DATASOURCE_USERNAME

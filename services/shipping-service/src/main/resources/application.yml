@@ -112,6 +112,7 @@ config-service:
   service-name: ${SPRING_APPLICATION_NAME:shipping-service}
   enabled: ${CONFIG_SERVICE_ENABLED:true}
   timeout-ms: ${CONFIG_SERVICE_TIMEOUT_MS:3000}
+  token: ${CONFIG_SERVICE_INTERNAL_TOKEN:}
 
 springdoc:
   api-docs:

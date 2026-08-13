@@ -9,4 +9,8 @@ public class CouponDomainException extends RuntimeException {
     public CouponDomainException(String message) {
         super(message);
     }
+
+    public CouponDomainException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }

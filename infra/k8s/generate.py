@@ -61,6 +61,17 @@ def workload_documents(item: dict) -> str:
         data_names = {entry["name"] for entry in item["data"]}
         env_entries = [f'''        - name: {server_variable}
           value: "{port}"''']
+        if service_id in {
+            "api-gateway",
+            "configuration-service",
+            "invoice-service",
+            "order-service",
+            "payment-service",
+            "shipping-service",
+        }:
+            env_entries.append('''        - name: CONFIG_SERVICE_INTERNAL_TOKEN
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: config-service-internal-token}''')
         if "postgresql" in data_names:
             schema = service_id.replace("-service", "").replace("-", "_") + "_svc"
             if runtime == "spring":

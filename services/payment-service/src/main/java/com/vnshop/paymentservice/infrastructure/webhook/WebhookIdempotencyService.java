@@ -2,9 +2,7 @@ package com.vnshop.paymentservice.infrastructure.webhook;
 
 import com.vnshop.paymentservice.infrastructure.persistence.PendingWebhookJpaEntity;
 import com.vnshop.paymentservice.infrastructure.persistence.PendingWebhookSpringDataRepository;
-import com.vnshop.paymentservice.infrastructure.persistence.ProcessedWebhookJpaEntity;
 import com.vnshop.paymentservice.infrastructure.persistence.ProcessedWebhookSpringDataRepository;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -13,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * Deduplicates inbound provider webhooks using the {@code processed_webhooks} table.
@@ -27,6 +26,7 @@ public class WebhookIdempotencyService {
 
     /** Back-off schedule in seconds: attempt 1 waits 60 s, 2 waits 300 s, 3 waits 1800 s. */
     private static final long[] BACKOFF_SECONDS = {60L, 300L, 1800L};
+    private static final long RETRY_LEASE_SECONDS = 600L;
 
     private final ProcessedWebhookSpringDataRepository processedRepo;
     private final PendingWebhookSpringDataRepository pendingRepo;
@@ -52,16 +52,12 @@ public class WebhookIdempotencyService {
      * rollback in the outer tx does not un-mark the event (the provider already
      * received 200).
      *
-     * <p>A {@link DataIntegrityViolationException} from a concurrent duplicate insert
-     * is swallowed: the event was processed, so the idempotency guarantee still holds.
+     * <p>The database performs an atomic insert-if-absent, so a concurrent duplicate
+     * is handled without relying on deferred ORM constraint exceptions.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void markProcessed(String webhookId, String provider, String eventType) {
-        try {
-            processedRepo.save(new ProcessedWebhookJpaEntity(webhookId, provider, eventType, Instant.now()));
-        } catch (DataIntegrityViolationException ignored) {
-            // Concurrent insert of the same key — already processed, nothing to do.
-        }
+        processedRepo.insertIfAbsent(webhookId, provider, eventType, Instant.now());
     }
 
     /**
@@ -69,9 +65,12 @@ public class WebhookIdempotencyService {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void storePendingForRetry(String webhookId, String provider, String eventType, String payload) {
-        PendingWebhookJpaEntity entity = new PendingWebhookJpaEntity(webhookId, provider, eventType, payload);
-        entity.setNextRetryAt(Instant.now().plusSeconds(BACKOFF_SECONDS[0]));
-        pendingRepo.save(entity);
+        pendingRepo.insertIfAbsent(
+                webhookId,
+                provider,
+                eventType,
+                payload,
+                Instant.now().plusSeconds(BACKOFF_SECONDS[0]));
     }
 
     /**
@@ -83,29 +82,39 @@ public class WebhookIdempotencyService {
         return pendingRepo.findRetryable(Instant.now(), PageRequest.of(0, batchSize));
     }
 
+    @Transactional
+    public boolean claimForRetry(PendingWebhookJpaEntity entity) {
+        Instant now = Instant.now();
+        UUID leaseToken = UUID.randomUUID();
+        boolean claimed = pendingRepo.claim(
+                entity.getId(), now, now.plusSeconds(RETRY_LEASE_SECONDS), leaseToken) > 0;
+        entity.setLeaseToken(claimed ? leaseToken : null);
+        return claimed;
+    }
+
     /**
      * Advances the retry counter and schedules the next attempt, or marks the
      * record {@code FAILED} when {@code maxAttempts} is exhausted.
      */
     @Transactional
     public void recordRetryOutcome(PendingWebhookJpaEntity entity, boolean succeeded) {
+        UUID leaseToken = entity.getLeaseToken();
+        if (leaseToken == null) {
+            return;
+        }
         if (succeeded) {
-            entity.setStatus("PROCESSED");
-            pendingRepo.save(entity);
+            pendingRepo.markProcessed(entity.getId(), leaseToken);
             return;
         }
 
         int next = entity.getAttempts() + 1;
-        entity.setAttempts(next);
-
-        if (next >= entity.getMaxAttempts()) {
-            entity.setStatus("FAILED");
-        } else {
-            long backoff = next < BACKOFF_SECONDS.length
-                    ? BACKOFF_SECONDS[next]
-                    : BACKOFF_SECONDS[BACKOFF_SECONDS.length - 1];
-            entity.setNextRetryAt(Instant.now().plusSeconds(backoff));
-        }
-        pendingRepo.save(entity);
+        boolean exhausted = next >= entity.getMaxAttempts();
+        String status = exhausted ? "FAILED" : "PENDING";
+        Instant nextRetryAt = exhausted
+                ? null
+                : Instant.now().plusSeconds(next < BACKOFF_SECONDS.length
+                        ? BACKOFF_SECONDS[next]
+                        : BACKOFF_SECONDS[BACKOFF_SECONDS.length - 1]);
+        pendingRepo.recordFailure(entity.getId(), leaseToken, next, status, nextRetryAt);
     }
 }

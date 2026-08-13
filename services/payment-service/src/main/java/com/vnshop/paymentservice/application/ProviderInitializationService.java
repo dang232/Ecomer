@@ -61,11 +61,19 @@ public class ProviderInitializationService {
         return transactions.execute(status -> {
             Payment locked = payments.findByIdForUpdate(paymentId)
                     .orElseThrow(() -> new IllegalArgumentException("payment not found"));
-            if (locked.transactionRef() != null && !locked.transactionRef().isBlank()) {
+            if (locked.transactionRef() != null
+                    && !locked.transactionRef().isBlank()
+                    && !legacyStripePlaceholder(locked, providerReference)) {
                 return locked;
             }
             return payments.save(locked.withResult(locked.status(), providerReference));
         });
+    }
+
+    private static boolean legacyStripePlaceholder(Payment payment, String providerReference) {
+        return payment.method() == PaymentMethod.STRIPE
+                && providerReference.startsWith("pi_")
+                && ("STRIPE-" + payment.paymentId()).equals(payment.transactionRef());
     }
 
     private static boolean requiresExternalCurrency(PaymentMethod method) {

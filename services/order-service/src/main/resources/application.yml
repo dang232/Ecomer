@@ -94,6 +94,7 @@ config-service:
   url: ${CONFIG_SERVICE_URL:http://configuration-service:8097}
   enabled: ${CONFIG_SERVICE_ENABLED:true}
   timeout-ms: 3000
+  token: ${CONFIG_SERVICE_INTERNAL_TOKEN:}
 
 springdoc:
   api-docs:

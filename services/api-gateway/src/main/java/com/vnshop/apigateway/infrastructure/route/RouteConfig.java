@@ -45,6 +45,7 @@ public class RouteConfig {
     private final String configurationServiceUri;
     private final String couponServiceUri;
     private final String keycloakServiceUri;
+    private final String configurationServiceToken;
 
     public RouteConfig(
         @Value("${vnshop.routes.product-service:http://product-service:8082}") String productServiceUri,
@@ -62,7 +63,8 @@ public class RouteConfig {
         @Value("${vnshop.routes.monitoring-service:http://monitoring-service-v2:8096}") String monitoringServiceUri,
         @Value("${vnshop.routes.configuration-service:http://configuration-service:8097}") String configurationServiceUri,
         @Value("${vnshop.routes.coupon-service:http://coupon-service:8088}") String couponServiceUri,
-        @Value("${vnshop.routes.keycloak:http://keycloak:8080}") String keycloakServiceUri
+        @Value("${vnshop.routes.keycloak:http://keycloak:8080}") String keycloakServiceUri,
+        @Value("${CONFIG_SERVICE_INTERNAL_TOKEN:}") String configurationServiceToken
     ) {
         this.productServiceUri = productServiceUri;
         this.userServiceUri = userServiceUri;
@@ -80,6 +82,7 @@ public class RouteConfig {
         this.configurationServiceUri = configurationServiceUri;
         this.couponServiceUri = couponServiceUri;
         this.keycloakServiceUri = keycloakServiceUri;
+        this.configurationServiceToken = configurationServiceToken;
     }
 
     @Bean
@@ -247,6 +250,9 @@ public class RouteConfig {
                 .filters(filters -> filters.stripPrefix(1))
                 .uri(notificationServiceUri))
             // Configuration service — public app config endpoint.
+            .route("configuration-reload", route -> route.path("/api/config/reload")
+                .filters(filters -> filters.addRequestHeader("x-config-service-token", configurationServiceToken))
+                .uri(configurationServiceUri))
             .route("configuration", route -> route.path("/api/config", "/api/config/public")
                 .uri(configurationServiceUri))
             // Admin sub-routes — more specific patterns must come before the
