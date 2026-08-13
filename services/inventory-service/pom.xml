@@ -33,7 +33,7 @@
 		<java.version>25</java.version>
 		<opentelemetry.javaagent.version>2.27.0</opentelemetry.javaagent.version>
 		<tomcat.version>11.0.22</tomcat.version>
-		<grpc.version>1.83.0</grpc.version>
+		<grpc.version>1.83.1</grpc.version>
 		<protobuf.version>4.35.1</protobuf.version>
 		<postgresql.version>42.7.12</postgresql.version>
 		<netty.version>4.2.16.Final</netty.version>
