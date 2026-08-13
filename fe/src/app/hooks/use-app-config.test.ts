@@ -178,6 +178,8 @@ describe("fetchConfig", () => {
     ["apiUri", "http://api.vnshop.invalid/"],
     ["apiUri", "https://localhost/"],
     ["apiUri", "https://127.0.0.1/"],
+    ["apiUri", "https://api-gateway/"],
+    ["apiUri", "https://keycloak.svc.cluster.local../"],
     ["apiUri", "https://api.vnshop.invalid:8443/"],
     ["runtimeConfigUri", "https://other.vnshop.invalid/runtime-config.json"],
     ["auth.callbackUri", "https://shop.vnshop.invalid/callback"],
