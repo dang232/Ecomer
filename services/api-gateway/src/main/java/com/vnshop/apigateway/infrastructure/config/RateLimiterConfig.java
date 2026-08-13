@@ -5,6 +5,7 @@ import org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.beans.factory.annotation.Value;
 
 /**
  * Per-route rate limiter beans wired into Spring Cloud Gateway's
@@ -37,8 +38,9 @@ public class RateLimiterConfig {
 
     @Bean
     @Primary
-    KeyResolver tieredKeyResolver() {
-        return new TieredKeyResolver();
+    KeyResolver tieredKeyResolver(
+            @Value("${vnshop.rate-limit.trusted-proxy-cidrs:}") String trustedProxyCidrs) {
+        return new TieredKeyResolver(trustedProxyCidrs);
     }
 
     // -----------------------------------------------------------------------

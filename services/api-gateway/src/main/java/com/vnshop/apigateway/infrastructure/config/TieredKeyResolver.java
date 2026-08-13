@@ -8,6 +8,10 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import java.net.InetSocketAddress;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Resolves a rate-limit key from the incoming exchange.
@@ -19,13 +23,27 @@ import java.net.InetSocketAddress;
  * a shared IP into one bucket.
  *
  * <p>Anonymous requests (no valid JWT) fall back to
- * {@code "anon:<client-ip>"}, preferring the first value of
- * {@code X-Forwarded-For} so the key is stable behind a load-balancer.
+ * {@code "anon:<client-ip>"}.  Forwarded headers are used only when explicitly
+ * enabled and the direct peer is a private address controlled by the platform.
  */
 public class TieredKeyResolver implements KeyResolver {
 
     static final String USER_PREFIX = "user:";
     static final String ANON_PREFIX = "anon:";
+
+    private final List<Cidr> trustedProxyCidrs;
+
+    public TieredKeyResolver() {
+        this("");
+    }
+
+    TieredKeyResolver(String trustedProxyCidrs) {
+        this.trustedProxyCidrs = Arrays.stream(trustedProxyCidrs.split(","))
+                .map(String::trim)
+                .filter(value -> !value.isEmpty())
+                .map(Cidr::parse)
+                .toList();
+    }
 
     @Override
     public Mono<String> resolve(ServerWebExchange exchange) {
@@ -46,9 +64,47 @@ public class TieredKeyResolver implements KeyResolver {
     }
 
     private String resolveClientIp(ServerWebExchange exchange) {
-        // Use the actual TCP connection IP — never trust X-Forwarded-For from clients
-        // as it is trivially spoofable and enables rate-limit bypass.
         InetSocketAddress remote = exchange.getRequest().getRemoteAddress();
-        return remote != null ? remote.getAddress().getHostAddress() : "unknown";
+        String remoteAddress = remote != null && remote.getAddress() != null
+                ? remote.getAddress().getHostAddress() : "unknown";
+        if (!trustedProxyCidrs.stream().anyMatch(cidr -> cidr.matches(remoteAddress))) {
+            return remoteAddress;
+        }
+        String forwarded = exchange.getRequest().getHeaders().getFirst("X-Forwarded-For");
+        if (forwarded == null || forwarded.isBlank()) return remoteAddress;
+        String clientAddress = forwarded.split(",", 2)[0].trim();
+        return clientAddress.isBlank() ? remoteAddress : clientAddress;
+    }
+
+    private record Cidr(byte[] network, int prefixLength) {
+        private static Cidr parse(String value) {
+            String[] parts = value.split("/", 2);
+            try {
+                InetAddress address = InetAddress.getByName(parts[0]);
+                int prefixLength = parts.length == 2
+                        ? Integer.parseInt(parts[1]) : address.getAddress().length * 8;
+                if (prefixLength < 0 || prefixLength > address.getAddress().length * 8) {
+                    throw new IllegalArgumentException("invalid trusted proxy CIDR: " + value);
+                }
+                return new Cidr(address.getAddress(), prefixLength);
+            } catch (UnknownHostException | NumberFormatException exception) {
+                throw new IllegalArgumentException("invalid trusted proxy CIDR: " + value, exception);
+            }
+        }
+
+        private boolean matches(String value) {
+            try {
+                byte[] candidate = InetAddress.getByName(value).getAddress();
+                if (candidate.length != network.length) return false;
+                int fullBytes = prefixLength / 8;
+                int remainingBits = prefixLength % 8;
+                if (!Arrays.equals(candidate, 0, fullBytes, network, 0, fullBytes)) return false;
+                if (remainingBits == 0) return true;
+                int mask = 0xFF << (8 - remainingBits);
+                return (candidate[fullBytes] & mask) == (network[fullBytes] & mask);
+            } catch (UnknownHostException exception) {
+                return false;
+            }
+        }
     }
 }
