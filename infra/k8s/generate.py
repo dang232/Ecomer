@@ -412,6 +412,9 @@ def overlay(env: str, namespace: str, replicas: int, max_replicas: int) -> str:
 - name: vnshop-keycloak-realm
   files:
   - {realm_filename}
+  options:
+    annotations:
+      argocd.argoproj.io/sync-wave: "-20"
 generatorOptions:
   disableNameSuffixHash: true
 ''' if env in {"staging", "prod"} else ""

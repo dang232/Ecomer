@@ -107,6 +107,9 @@ configMapGenerator:
 - name: vnshop-keycloak-realm
   files:
   - vnshop-realm-prod.json
+  options:
+    annotations:
+      argocd.argoproj.io/sync-wave: "-20"
 generatorOptions:
   disableNameSuffixHash: true
 
