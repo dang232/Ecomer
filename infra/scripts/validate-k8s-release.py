@@ -154,7 +154,7 @@ def validate_production_realm_hosts(environment: str, suffix: str, errors: list[
     if not monitoring_client:
         errors.append("production Keycloak realm must define the monitoring OIDC client")
     else:
-        expected_callback = f"https://api.{suffix}/"
+        expected_callback = f"https://api.{suffix}/monitoring/"
         if expected_callback not in monitoring_client.get("redirectUris", []):
             errors.append("monitoring OIDC client must authorize the gateway-served dashboard callback")
 
@@ -338,6 +338,24 @@ def main() -> None:
                 errors.append("ingress hosts must expose web, API, and storage TLS origins")
         validate_production_realm_hosts(args.environment, suffix, errors)
 
+        if args.environment == "staging":
+            realm_configmaps = [
+                doc for doc in documents
+                if doc.get("kind") == "ConfigMap"
+                and doc.get("metadata", {}).get("name") == "vnshop-keycloak-realm"
+            ]
+            if len(realm_configmaps) != 1:
+                errors.append("staging Keycloak realm ConfigMap is required")
+            elif "vnshop-realm.json" not in realm_configmaps[0].get("data", {}):
+                errors.append("staging Keycloak realm ConfigMap must contain vnshop-realm.json")
+            staging_reconcile = [
+                doc for doc in documents
+                if doc.get("kind") == "Job"
+                and doc.get("metadata", {}).get("name") == "vnshop-keycloak-reconcile"
+            ]
+            if len(staging_reconcile) != 1:
+                errors.append("staging Keycloak reconcile hook is required")
+
         if args.environment == "prod":
             realm_configmaps = [
                 doc for doc in documents
@@ -372,6 +390,35 @@ def main() -> None:
             )
             if not keycloak_volume:
                 errors.append("production Keycloak must mount the GitOps realm import directory")
+
+            reconcile_jobs = [
+                doc for doc in documents
+                if doc.get("kind") == "Job"
+                and doc.get("metadata", {}).get("name") == "vnshop-keycloak-reconcile"
+            ]
+            if len(reconcile_jobs) != 1:
+                errors.append("production Keycloak reconcile hook is required")
+            else:
+                annotations = reconcile_jobs[0].get("metadata", {}).get("annotations", {})
+                if annotations.get("argocd.argoproj.io/hook") != "Sync":
+                    errors.append("Keycloak reconcile hook must be an Argo Sync hook")
+                reconcile_text = "\n".join(
+                    str(value)
+                    for container in reconcile_jobs[0].get("spec", {}).get("template", {}).get("spec", {}).get("containers", [])
+                    for value in container.get("args", [])
+                )
+                reconcile_env = "\n".join(
+                    str(value)
+                    for container in reconcile_jobs[0].get("spec", {}).get("template", {}).get("spec", {}).get("containers", [])
+                    for value in container.get("env", [])
+                )
+                for invariant in ("vnshop-monitoring", "GATEWAY_OAUTH2_CLIENT_SECRET", "kcadm.sh update"):
+                    if invariant == "GATEWAY_OAUTH2_CLIENT_SECRET":
+                        if invariant not in reconcile_text and invariant not in reconcile_env:
+                            errors.append(f"Keycloak reconcile hook is missing {invariant}")
+                        continue
+                    if invariant not in reconcile_text:
+                        errors.append(f"Keycloak reconcile hook is missing {invariant}")
 
     rendered_names = {doc.get("metadata", {}).get("name") for doc in documents}
     if "vnshop-coupon" in rendered_names or "vnshop-review" in rendered_names:
