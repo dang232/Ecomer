@@ -405,6 +405,15 @@ def overlay(env: str, namespace: str, replicas: int, max_replicas: int) -> str:
         for item in CATALOG["deployables"]
     )
     ingress_resource = "- ingress.yaml\n" if env in {"staging", "prod"} else ""
+    keycloak_patch = "- path: keycloak-import-patch.yaml\n" if env == "prod" else ""
+    keycloak_generator = '''configMapGenerator:
+- name: vnshop-keycloak-realm
+  files:
+  - vnshop-realm-prod.json
+generatorOptions:
+  disableNameSuffixHash: true
+''' if env == "prod" else ""
+    keycloak_generator_block = f"{keycloak_generator}\n" if keycloak_generator else ""
     digests = load_digests(env)
     image_entries = "\n".join(
         f'''- name: {item["image"]}
@@ -422,9 +431,31 @@ resources:
 {replica_entries}
 images:
 {image_entries}
-patches:
+{keycloak_generator_block}patches:
 - path: configmap-env.yaml
-{hpa_patches}
+{keycloak_patch}{hpa_patches}
+'''
+
+
+def keycloak_import_patch() -> str:
+    return '''apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+spec:
+  template:
+    spec:
+      containers:
+      - name: keycloak
+        args: [start, --http-enabled=true, --proxy-headers=xforwarded, --import-realm]
+        volumeMounts:
+        - name: realm
+          mountPath: /opt/keycloak/data/import
+          readOnly: true
+      volumes:
+      - name: realm
+        configMap:
+          name: vnshop-keycloak-realm
 '''
 
 
@@ -966,6 +997,14 @@ def write_generated_files() -> None:
         )
         if env in {"staging", "prod"}:
             (directory / "ingress.yaml").write_text(ingress(env), encoding="utf-8")
+        if env == "prod":
+            (directory / "vnshop-realm-prod.json").write_text(
+                (REPO / "infra/keycloak/vnshop-realm-prod.json").read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+            (directory / "keycloak-import-patch.yaml").write_text(
+                keycloak_import_patch(), encoding="utf-8"
+            )
 
     print(f"generated Kubernetes manifests for {len(deployables)} deployables")
 

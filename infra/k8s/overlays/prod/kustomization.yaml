@@ -102,8 +102,16 @@ images:
 - name: ghcr.io/dang232/vnshop-video-transcoder
   newName: ghcr.io/dang232/vnshop-video-transcoder
   digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+configMapGenerator:
+- name: vnshop-keycloak-realm
+  files:
+  - vnshop-realm-prod.json
+generatorOptions:
+  disableNameSuffixHash: true
+
 patches:
 - path: configmap-env.yaml
+- path: keycloak-import-patch.yaml
 - target:
     kind: HorizontalPodAutoscaler
     name: vnshop-frontend
