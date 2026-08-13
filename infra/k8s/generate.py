@@ -469,6 +469,9 @@ def keycloak_reconcile_job() -> str:
 kind: Job
 metadata:
   name: vnshop-keycloak-reconcile
+  labels:
+    app.kubernetes.io/name: keycloak-reconcile
+    app.kubernetes.io/part-of: vnshop
   annotations:
     argocd.argoproj.io/hook: Sync
     argocd.argoproj.io/sync-wave: "-5"
@@ -477,8 +480,19 @@ spec:
   backoffLimit: 6
   activeDeadlineSeconds: 900
   template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: keycloak-reconcile
+        app.kubernetes.io/part-of: vnshop
     spec:
       restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - name: keycloak-reconcile
         image: quay.io/keycloak/keycloak@sha256:0aae0de7fca85525f727d3354df17896092de8bb26ae4c12d89c77e5df8cbce4
@@ -501,6 +515,11 @@ spec:
           valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: gateway-oauth2-client-secret}}
         envFrom:
         - configMapRef: {name: vnshop-app-config}
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: [ALL]
 '''
 
 
