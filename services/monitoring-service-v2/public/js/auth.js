@@ -6,7 +6,7 @@ const Auth = (() => {
   // ── Constants ──────────────────────────────────────────────────────────────
   const KEYCLOAK_URL = window.location.origin;
   const REALM       = 'vnshop';
-  const CLIENT_ID   = 'vnshop-web';
+  const CLIENT_ID   = 'vnshop-monitoring';
   const REDIRECT_URI = window.location.origin + '/';
 
   const AUTH_ENDPOINT  = `${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/auth`;
