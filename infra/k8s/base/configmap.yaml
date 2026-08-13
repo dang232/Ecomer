@@ -5,10 +5,12 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "-20"
 data:
-  WEB_ORIGIN: http://frontend:8080
-  API_ORIGIN: http://api-gateway:8080
-  AUTH_ORIGIN: http://keycloak:8080
-  GATEWAY_CORS_ALLOWED_ORIGINS: http://frontend:8080
+  # Browser-facing origins. Deployments must override these with the public
+  # ingress origins; never use Kubernetes service DNS names here.
+  WEB_ORIGIN: https://web.vnshop.invalid
+  API_ORIGIN: https://api.vnshop.invalid
+  AUTH_ORIGIN: https://api.vnshop.invalid
+  GATEWAY_CORS_ALLOWED_ORIGINS: https://web.vnshop.invalid
   REDIS_HOST: redis
   REDIS_PORT: "6379"
   SPRING_DATA_REDIS_HOST: redis
@@ -18,16 +20,16 @@ data:
   KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/vnshop
   KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
   KEYCLOAK_ADMIN_BASE_URL: http://keycloak:8080
-  KEYCLOAK_PUBLIC_BASE_URL: http://keycloak:8080
+  KEYCLOAK_PUBLIC_BASE_URL: https://api.vnshop.invalid
   CONFIG_SERVICE_URL: http://configuration-service:8097
   CONFIG_SERVICE_ENABLED: "true"
   PRODUCT_SERVICE_URL: http://product-service:8082
   PRODUCT_SERVICE_URI: http://product-service:8082
   USER_SERVICE_URL: http://user-service:8081
   USER_SERVICE_TIMEOUT_MS: "2000"
-  VNSHOP_FRONTEND_URL: http://frontend:8080
-  VNSHOP_PUBLIC_API_URL: http://api-gateway:8080
-  VNSHOP_AUTH_CALLBACK_BASE_URL: http://api-gateway:8080/auth/oauth/callback
+  VNSHOP_FRONTEND_URL: https://web.vnshop.invalid
+  VNSHOP_PUBLIC_API_URL: https://api.vnshop.invalid
+  VNSHOP_AUTH_CALLBACK_BASE_URL: https://api.vnshop.invalid/auth/oauth/callback
   # Public media URLs must resolve from a user's browser, not cluster-only DNS.
   # Environment overlays may replace this with the approved storage domain.
   VNSHOP_OBJECT_STORAGE_PUBLIC_ENDPOINT: https://storage.vnshop.invalid
@@ -50,7 +52,7 @@ data:
   ELASTICSEARCH_HOST: elasticsearch
   ELASTICSEARCH_PORT: "9200"
   MINIO_ENDPOINT: http://minio:9000
-  MINIO_API_CORS_ALLOW_ORIGIN: http://frontend:8080
+  MINIO_API_CORS_ALLOW_ORIGIN: https://web.vnshop.invalid
   TIMESCALE_HOST: timescaledb
   TIMESCALE_PORT: "5432"
   OPENAPI_ENABLED: "false"
