@@ -21,6 +21,8 @@ data:
   KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
   KEYCLOAK_ADMIN_BASE_URL: http://keycloak:8080
   KEYCLOAK_PUBLIC_BASE_URL: https://api.vnshop.invalid
+  KEYCLOAK_ADMIN_ROLE: ADMIN
+  CORS_ORIGINS: http://localhost:8080,http://localhost:8096
   CONFIG_SERVICE_URL: http://configuration-service:8097
   CONFIG_SERVICE_ENABLED: "true"
   PRODUCT_SERVICE_URL: http://product-service:8082

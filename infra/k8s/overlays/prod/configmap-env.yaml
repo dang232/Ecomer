@@ -11,6 +11,8 @@ data:
   AUTH_ORIGIN: https://api.vnshop.example
   KEYCLOAK_ISSUER_URI: https://api.vnshop.example/realms/vnshop
   KEYCLOAK_PUBLIC_BASE_URL: https://api.vnshop.example
+  KEYCLOAK_ADMIN_ROLE: ADMIN
+  CORS_ORIGINS: https://api.vnshop.example
   GATEWAY_CORS_ALLOWED_ORIGINS: https://web.vnshop.example
   VNSHOP_FRONTEND_URL: https://web.vnshop.example
   VNSHOP_PUBLIC_API_URL: https://api.vnshop.example
