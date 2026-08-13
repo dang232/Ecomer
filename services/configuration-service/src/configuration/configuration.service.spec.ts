@@ -101,6 +101,8 @@ describe('ConfigurationService public runtime contract', () => {
     ['AUTH_ORIGIN', 'https://user:pass@auth.vnshop.invalid'],
     ['AUTH_ORIGIN', 'https://auth.vnshop.invalid?realm=vnshop'],
     ['WEB_ORIGIN', 'https://*.vnshop.invalid'],
+    ['API_ORIGIN', 'https://api-gateway'],
+    ['AUTH_ORIGIN', 'https://keycloak.svc.cluster.local'],
   ])('fails closed for invalid %s value %s', (name, value) => {
     process.env[name] = value;
 

@@ -147,12 +147,23 @@ export class ConfigurationService {
       url.hash !== '' ||
       hostname.includes('*') ||
       (!localHttp && (hostname === 'localhost' || hostname.endsWith('.localhost'))) ||
+      (!localHttp && this.isInternalHostname(hostname)) ||
       isIP(hostname) !== 0;
 
     if (invalid) {
       throw new ServiceUnavailableException(`Invalid ${name}`);
     }
     return url;
+  }
+
+  private isInternalHostname(hostname: string): boolean {
+    return (
+      !hostname.includes('.') ||
+      hostname.endsWith('.local') ||
+      hostname.endsWith('.internal') ||
+      hostname.endsWith('.svc') ||
+      hostname.endsWith('.cluster.local')
+    );
   }
 
   private providerConfigs(): ProviderConfigDto[] {
