@@ -21,7 +21,7 @@ const validConfig = {
   payment: { providers: ["COD", "VietQR"], defaultMethod: "COD" },
   auth: {
     oauthProviders: [],
-    issuerUri: "https://auth.vnshop.invalid/realms/vnshop",
+    issuerUri: "https://api.vnshop.invalid/realms/vnshop",
     callbackUri: "https://shop.vnshop.invalid/auth/callback",
     logoutUri: "https://shop.vnshop.invalid/",
     clientId: "vnshop-web",

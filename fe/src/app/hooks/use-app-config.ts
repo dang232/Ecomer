@@ -215,7 +215,7 @@ export const MAINTENANCE_CONFIG: AppConfig = {
   payment: { providers: [], defaultMethod: "" },
   auth: {
     oauthProviders: [],
-    issuerUri: "https://auth.vnshop.invalid/realms/vnshop",
+    issuerUri: "https://api.vnshop.invalid/realms/vnshop",
     callbackUri: "https://web.vnshop.invalid/auth/callback",
     logoutUri: "https://web.vnshop.invalid/",
     clientId: "vnshop-web",
