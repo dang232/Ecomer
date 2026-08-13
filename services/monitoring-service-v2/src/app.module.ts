@@ -35,7 +35,10 @@ import { PlaygroundModule } from './playground/playground.module.js';
         synchronize: false,
       }),
     }),
-    ServeStaticModule.forRoot({ rootPath: join(__dirname, '..', 'public') }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'public'),
+      serveRoot: '/monitoring',
+    }),
     AuthModule,
     MetricsModule,
     DiscoveryModule,

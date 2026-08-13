@@ -7,7 +7,7 @@ const Auth = (() => {
   const KEYCLOAK_URL = window.location.origin;
   const REALM       = 'vnshop';
   const CLIENT_ID   = 'vnshop-monitoring';
-  const REDIRECT_URI = window.location.origin + '/';
+  const REDIRECT_URI = window.location.origin + '/monitoring/';
 
   const AUTH_ENDPOINT  = `${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/auth`;
   const TOKEN_ENDPOINT = `${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/token`;
@@ -132,7 +132,7 @@ const Auth = (() => {
     sessionStorage.removeItem(SK_CODE_VERIFIER);
 
     // Clean the URL so the code param is not visible or reused
-    window.history.replaceState({}, document.title, '/');
+    window.history.replaceState({}, document.title, '/monitoring/');
 
     return data.access_token;
   }

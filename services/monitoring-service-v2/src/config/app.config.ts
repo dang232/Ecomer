@@ -34,6 +34,6 @@ export const appConfig = registerAs("app", () => ({
     jwkSetUri:
       process.env.KEYCLOAK_JWK_SET_URI ??
       "http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs",
-    adminRole: process.env.KEYCLOAK_ADMIN_ROLE ?? "admin",
+    adminRole: process.env.KEYCLOAK_ADMIN_ROLE ?? "ADMIN",
   },
 }));
