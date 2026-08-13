@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0",
-  "generatedAt": "2026-07-31T11:54:00.000Z",
-  "expiresAt": "2026-07-31T11:59:00.000Z",
+  "generatedAt": "2026-08-13T13:00:00.000Z",
+  "expiresAt": "2026-08-13T13:05:00.000Z",
   "runtimeConfigUri": "http://localhost:5173/runtime-config.json",
   "webUri": "http://localhost:5173/",
   "apiUri": "http://localhost:8080/",
@@ -15,7 +15,7 @@
   "payment": { "providers": ["COD", "VietQR"], "defaultMethod": "COD" },
   "auth": {
     "oauthProviders": [],
-    "issuerUri": "http://localhost:8085/realms/vnshop",
+    "issuerUri": "http://localhost:8080/realms/vnshop",
     "callbackUri": "http://localhost:5173/auth/callback",
     "logoutUri": "http://localhost:5173/",
     "clientId": "vnshop-web"
@@ -40,8 +40,18 @@
   "providers": [
     { "id": "cod", "status": "enabled", "mode": "stub", "reasonCode": "PORTFOLIO_STUB" },
     { "id": "vietqr", "status": "enabled", "mode": "demo", "reasonCode": "PORTFOLIO_DEMO" },
-    { "id": "stripe", "status": "disabled", "mode": "sandbox", "reasonCode": "DISABLED_BY_CONFIGURATION" },
-    { "id": "paypal", "status": "disabled", "mode": "sandbox", "reasonCode": "DISABLED_BY_CONFIGURATION" },
+    {
+      "id": "stripe",
+      "status": "disabled",
+      "mode": "sandbox",
+      "reasonCode": "DISABLED_BY_CONFIGURATION"
+    },
+    {
+      "id": "paypal",
+      "status": "disabled",
+      "mode": "sandbox",
+      "reasonCode": "DISABLED_BY_CONFIGURATION"
+    },
     { "id": "vnpay", "status": "disabled", "mode": "disabled", "reasonCode": "DISABLED_BY_POLICY" },
     { "id": "momo", "status": "disabled", "mode": "disabled", "reasonCode": "DISABLED_BY_POLICY" },
     { "id": "sepay", "status": "disabled", "mode": "disabled", "reasonCode": "DISABLED_BY_POLICY" }

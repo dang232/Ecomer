@@ -405,6 +405,20 @@ def overlay(env: str, namespace: str, replicas: int, max_replicas: int) -> str:
         for item in CATALOG["deployables"]
     )
     ingress_resource = "- ingress.yaml\n" if env in {"staging", "prod"} else ""
+    keycloak_patch = "- path: keycloak-import-patch.yaml\n" if env in {"staging", "prod"} else ""
+    keycloak_resources = "- keycloak-reconcile-job.yaml\n" if env in {"staging", "prod"} else ""
+    realm_filename = "vnshop-realm-prod.json" if env == "prod" else "vnshop-realm.json"
+    keycloak_generator = f'''configMapGenerator:
+- name: vnshop-keycloak-realm
+  files:
+  - {realm_filename}
+  options:
+    annotations:
+      argocd.argoproj.io/sync-wave: "-20"
+generatorOptions:
+  disableNameSuffixHash: true
+''' if env in {"staging", "prod"} else ""
+    keycloak_generator_block = f"{keycloak_generator}\n" if keycloak_generator else ""
     digests = load_digests(env)
     image_entries = "\n".join(
         f'''- name: {item["image"]}
@@ -418,13 +432,119 @@ namespace: {namespace}
 resources:
 - ../../base
 - namespace.yaml
-{ingress_resource}replicas:
+{ingress_resource}{keycloak_resources}replicas:
 {replica_entries}
 images:
 {image_entries}
-patches:
+{keycloak_generator_block}patches:
 - path: configmap-env.yaml
-{hpa_patches}
+{keycloak_patch}{hpa_patches}
+'''
+
+
+def keycloak_import_patch() -> str:
+    return '''apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+spec:
+  template:
+    spec:
+      containers:
+      - name: keycloak
+        args: [start, --http-enabled=true, --proxy-headers=xforwarded, --import-realm]
+        env:
+        - name: GATEWAY_OAUTH2_CLIENT_SECRET
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: gateway-oauth2-client-secret}}
+        volumeMounts:
+        - name: realm
+          mountPath: /opt/keycloak/data/import
+          readOnly: true
+      volumes:
+      - name: realm
+        configMap:
+          name: vnshop-keycloak-realm
+'''
+
+
+def keycloak_reconcile_job() -> str:
+    return '''apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vnshop-keycloak-reconcile
+  labels:
+    app.kubernetes.io/name: keycloak-reconcile
+    app.kubernetes.io/part-of: vnshop
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/sync-wave: "-5"
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+spec:
+  backoffLimit: 6
+  activeDeadlineSeconds: 900
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: keycloak-reconcile
+        app.kubernetes.io/part-of: vnshop
+    spec:
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: keycloak-reconcile
+        image: quay.io/keycloak/keycloak@sha256:0aae0de7fca85525f727d3354df17896092de8bb26ae4c12d89c77e5df8cbce4
+        command: [sh, -ec]
+        args:
+        - |
+          export HOME=/home/keycloak
+          until /opt/keycloak/bin/kcadm.sh config credentials --server http://keycloak:8080 --realm master --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD"; do sleep 5; done
+          client_id=$(/opt/keycloak/bin/kcadm.sh get clients -r vnshop -q clientId=vnshop-monitoring --fields id --format csv --noquotes)
+          if [ -z "$client_id" ]; then
+            client_id=$(/opt/keycloak/bin/kcadm.sh create clients -r vnshop -s clientId=vnshop-monitoring -s name='VNShop Monitoring Dashboard' -s protocol=openid-connect -s publicClient=true -s standardFlowEnabled=true -s enabled=true -s 'attributes={"pkce.code.challenge.method":"S256"}' -i)
+          fi
+          /opt/keycloak/bin/kcadm.sh update clients/$client_id -r vnshop -s redirectUris='["'"$AUTH_ORIGIN"'/monitoring/"]' -s webOrigins='["'"$AUTH_ORIGIN"'"]' -s publicClient=true -s standardFlowEnabled=true -s 'attributes={"pkce.code.challenge.method":"S256"}'
+          admin_role_id=$(/opt/keycloak/bin/kcadm.sh get roles/ADMIN -r vnshop --fields id --format csv --noquotes)
+          if ! /opt/keycloak/bin/kcadm.sh get clients/$client_id/scope-mappings/realm -r vnshop --fields name --format csv --noquotes | grep -qx ADMIN; then
+            printf '[{"id":"%s","name":"ADMIN"}]' "$admin_role_id" > /home/keycloak/admin-role.json
+            /opt/keycloak/bin/kcadm.sh create clients/$client_id/scope-mappings/realm -r vnshop -f /home/keycloak/admin-role.json
+          fi
+          for target in vnshop-gateway vnshop-web vnshop-api; do
+            target_id=$(/opt/keycloak/bin/kcadm.sh get clients -r vnshop -q clientId="$target" --fields id --format csv --noquotes)
+            if [ -n "$target_id" ]; then
+              case "$target" in
+                vnshop-gateway) /opt/keycloak/bin/kcadm.sh update clients/$target_id -r vnshop -s redirectUris='["'"$WEB_ORIGIN"'/login/oauth2/code/vnshop-gateway","'"$AUTH_ORIGIN"'/login/oauth2/code/vnshop-gateway"]' -s webOrigins='["'"$WEB_ORIGIN"'","'"$AUTH_ORIGIN"'"]' ;;
+                vnshop-web) /opt/keycloak/bin/kcadm.sh update clients/$target_id -r vnshop -s redirectUris='["'"$WEB_ORIGIN"'/*]' -s webOrigins='["'"$WEB_ORIGIN"'"]' ;;
+                vnshop-api) /opt/keycloak/bin/kcadm.sh update clients/$target_id -r vnshop -s redirectUris='["'"$AUTH_ORIGIN"'/*]' -s webOrigins='["'"$AUTH_ORIGIN"'"]' ;;
+              esac
+            fi
+          done
+          /opt/keycloak/bin/kcadm.sh update realms/vnshop -s enabled=true
+        env:
+        - name: KC_BOOTSTRAP_ADMIN_USERNAME
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: keycloak-admin-username}}
+        - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: keycloak-admin-password}}
+        - name: GATEWAY_OAUTH2_CLIENT_SECRET
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: gateway-oauth2-client-secret}}
+        envFrom:
+        - configMapRef: {name: vnshop-app-config}
+        volumeMounts:
+        - name: kcadm-home
+          mountPath: /home/keycloak
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: [ALL]
+      volumes:
+      - name: kcadm-home
+        emptyDir: {}
 '''
 
 
@@ -458,7 +578,7 @@ metadata:
 spec:
   ingressClassName: nginx
   tls:
-  - hosts: [web.{suffix}, api.{suffix}, auth.{suffix}, storage.{suffix}]
+  - hosts: [web.{suffix}, api.{suffix}, storage.{suffix}]
     secretName: vnshop-tls
   rules:
   - host: web.{suffix}
@@ -479,16 +599,6 @@ spec:
         backend:
           service:
             name: api-gateway
-            port:
-              number: 8080
-  - host: auth.{suffix}
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: keycloak
             port:
               number: 8080
   - host: storage.{suffix}
@@ -976,6 +1086,20 @@ def write_generated_files() -> None:
         )
         if env in {"staging", "prod"}:
             (directory / "ingress.yaml").write_text(ingress(env), encoding="utf-8")
+        if env in {"staging", "prod"}:
+            realm_source = (REPO / "infra/keycloak/vnshop-realm-prod.json").read_text(encoding="utf-8")
+            realm_source = realm_source.replace("vnshop.example", "vnshop.invalid") if env == "staging" else realm_source
+            realm_filename = "vnshop-realm-prod.json" if env == "prod" else "vnshop-realm.json"
+            (directory / realm_filename).write_text(
+                realm_source,
+                encoding="utf-8",
+            )
+            (directory / "keycloak-import-patch.yaml").write_text(
+                keycloak_import_patch(), encoding="utf-8"
+            )
+            (directory / "keycloak-reconcile-job.yaml").write_text(
+                keycloak_reconcile_job(), encoding="utf-8"
+            )
 
     print(f"generated Kubernetes manifests for {len(deployables)} deployables")
 

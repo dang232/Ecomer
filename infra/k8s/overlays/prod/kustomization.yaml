@@ -5,6 +5,7 @@ resources:
 - ../../base
 - namespace.yaml
 - ingress.yaml
+- keycloak-reconcile-job.yaml
 replicas:
 - name: vnshop-frontend
   count: 3
@@ -102,8 +103,19 @@ images:
 - name: ghcr.io/dang232/vnshop-video-transcoder
   newName: ghcr.io/dang232/vnshop-video-transcoder
   digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+configMapGenerator:
+- name: vnshop-keycloak-realm
+  files:
+  - vnshop-realm-prod.json
+  options:
+    annotations:
+      argocd.argoproj.io/sync-wave: "-20"
+generatorOptions:
+  disableNameSuffixHash: true
+
 patches:
 - path: configmap-env.yaml
+- path: keycloak-import-patch.yaml
 - target:
     kind: HorizontalPodAutoscaler
     name: vnshop-frontend

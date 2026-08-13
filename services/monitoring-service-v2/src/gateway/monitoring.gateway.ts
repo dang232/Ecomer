@@ -10,9 +10,11 @@ import { OnEvent } from '@nestjs/event-emitter';
 import * as jwt from 'jsonwebtoken';
 import jwksRsa from 'jwks-rsa';
 import { ConfigService } from '@nestjs/config';
+import type { Namespace } from 'socket.io';
 
 @WebSocketGateway({
   namespace: '/ws/monitoring',
+  path: '/monitoring/socket.io',
   cors: {
     origin: (process.env.CORS_ORIGINS ?? 'http://localhost:8096,http://localhost:3000').split(','),
     credentials: true,
@@ -31,12 +33,32 @@ export class MonitoringGateway implements OnGatewayConnection, OnGatewayDisconne
       'app.keycloak.jwkSetUri',
       'http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs',
     );
-    this.adminRole = this.config.get<string>('app.keycloak.adminRole', 'admin');
+    this.adminRole = this.config.get<string>('app.keycloak.adminRole', 'ADMIN');
 
     this.jwksClient = jwksRsa({
       jwksUri: jwkSetUri,
       cache: true,
       rateLimit: true,
+    });
+  }
+
+  afterInit(namespace: Namespace): void {
+    namespace.use((socket, next) => {
+      const token = (socket.handshake.auth?.token ?? socket.handshake.query['token']) as string | undefined;
+      if (!token) {
+        next(new Error('Unauthorized'));
+        return;
+      }
+      void this.verifyToken(token).then((payload) => {
+        const roles = payload?.realm_access as { roles?: string[] } | undefined;
+        const authorized = roles?.roles?.some((role) => role.toUpperCase() === this.adminRole.toUpperCase()) ?? false;
+        if (!authorized) {
+          next(new Error('Forbidden'));
+          return;
+        }
+        socket.data.tokenPayload = payload;
+        next();
+      }).catch(() => next(new Error('Unauthorized')));
     });
   }
 
@@ -55,7 +77,7 @@ export class MonitoringGateway implements OnGatewayConnection, OnGatewayDisconne
       }
 
       const roles = (payload as Record<string, unknown>).realm_access as { roles?: string[] } | undefined;
-      if (!roles?.roles?.includes(this.adminRole)) {
+      if (!roles?.roles?.some((role) => role.toUpperCase() === this.adminRole.toUpperCase())) {
         client.disconnect(true);
         return;
       }

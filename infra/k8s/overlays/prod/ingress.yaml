@@ -9,7 +9,7 @@ metadata:
 spec:
   ingressClassName: nginx
   tls:
-  - hosts: [web.vnshop.example, api.vnshop.example, auth.vnshop.example, storage.vnshop.example]
+  - hosts: [web.vnshop.example, api.vnshop.example, storage.vnshop.example]
     secretName: vnshop-tls
   rules:
   - host: web.vnshop.example
@@ -30,16 +30,6 @@ spec:
         backend:
           service:
             name: api-gateway
-            port:
-              number: 8080
-  - host: auth.vnshop.example
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: keycloak
             port:
               number: 8080
   - host: storage.vnshop.example

@@ -160,7 +160,8 @@ function secureUrl(
 ): URL | null {
   try {
     const url = new URL(value);
-    const hostname = url.hostname.toLowerCase();
+    const rawHostname = url.hostname.toLowerCase();
+    const hostname = rawHostname.replace(/\.+$/, "");
     const ipAddress = /^(?:\d{1,3}\.){3}\d{1,3}$/.test(hostname) || hostname.includes(":");
     const localHttp = allowInsecure && hostname === "localhost" && url.protocol === "http:";
     const localWs = allowInsecure && hostname === "localhost" && url.protocol === "ws:";
@@ -178,10 +179,12 @@ function secureUrl(
       url.password !== "" ||
       url.search !== "" ||
       url.hash !== "" ||
+      rawHostname.endsWith(".") ||
       hostname.includes("*") ||
       (!localHttp && !localWs && hostname === "localhost") ||
       hostname.endsWith(".localhost") ||
-      (!allowInsecure && ipAddress)
+      (!localHttp && !localWs && isInternalHostname(hostname)) ||
+      ipAddress
     ) {
       return null;
     }
@@ -189,6 +192,16 @@ function secureUrl(
   } catch {
     return null;
   }
+}
+
+function isInternalHostname(hostname: string): boolean {
+  return (
+    !hostname.includes(".") ||
+    hostname.endsWith(".local") ||
+    hostname.endsWith(".internal") ||
+    hostname.endsWith(".svc") ||
+    hostname.endsWith(".cluster.local")
+  );
 }
 
 const disabledProviders: ProviderConfig[] = providerIdSchema.options.map((id) => ({
@@ -215,7 +228,7 @@ export const MAINTENANCE_CONFIG: AppConfig = {
   payment: { providers: [], defaultMethod: "" },
   auth: {
     oauthProviders: [],
-    issuerUri: "https://auth.vnshop.invalid/realms/vnshop",
+    issuerUri: "https://api.vnshop.invalid/realms/vnshop",
     callbackUri: "https://web.vnshop.invalid/auth/callback",
     logoutUri: "https://web.vnshop.invalid/",
     clientId: "vnshop-web",

@@ -4,7 +4,7 @@ import { ConfigurationService } from './configuration.service.js';
 const productionOrigins = {
   WEB_ORIGIN: 'https://shop.vnshop.invalid',
   API_ORIGIN: 'https://api.vnshop.invalid',
-  AUTH_ORIGIN: 'https://auth.vnshop.invalid',
+  AUTH_ORIGIN: 'https://api.vnshop.invalid',
 };
 
 describe('ConfigurationService public runtime contract', () => {
@@ -27,7 +27,7 @@ describe('ConfigurationService public runtime contract', () => {
       webUri: 'https://shop.vnshop.invalid/',
       apiUri: 'https://api.vnshop.invalid/',
       auth: {
-        issuerUri: 'https://auth.vnshop.invalid/realms/vnshop',
+        issuerUri: 'https://api.vnshop.invalid/realms/vnshop',
         callbackUri: 'https://shop.vnshop.invalid/auth/callback',
         logoutUri: 'https://shop.vnshop.invalid/',
       },
@@ -45,7 +45,7 @@ describe('ConfigurationService public runtime contract', () => {
       ...process.env,
       WEB_ORIGIN: 'http://localhost:3000',
       API_ORIGIN: 'http://localhost:8080',
-      AUTH_ORIGIN: 'http://localhost:8085',
+      AUTH_ORIGIN: 'http://localhost:8080',
       RUNTIME_CONFIG_ALLOW_INSECURE: 'true',
     };
 
@@ -54,7 +54,7 @@ describe('ConfigurationService public runtime contract', () => {
     expect(config).toMatchObject({
       webUri: 'http://localhost:3000/',
       apiUri: 'http://localhost:8080/',
-      auth: { issuerUri: 'http://localhost:8085/realms/vnshop' },
+      auth: { issuerUri: 'http://localhost:8080/realms/vnshop' },
       websocket: {
         notificationsUri: 'ws://localhost:8080/ws/notifications',
         messagingUri: 'ws://localhost:8080/ws/messaging',
@@ -101,6 +101,13 @@ describe('ConfigurationService public runtime contract', () => {
     ['AUTH_ORIGIN', 'https://user:pass@auth.vnshop.invalid'],
     ['AUTH_ORIGIN', 'https://auth.vnshop.invalid?realm=vnshop'],
     ['WEB_ORIGIN', 'https://*.vnshop.invalid'],
+    ['API_ORIGIN', 'https://api-gateway'],
+    ['AUTH_ORIGIN', 'https://keycloak.svc.cluster.local'],
+    ['AUTH_ORIGIN', 'https://keycloak.svc.cluster.local.'],
+    ['AUTH_ORIGIN', 'https://keycloak.svc.cluster.local..'],
+    ['AUTH_ORIGIN', 'https://localhost.'],
+    ['API_ORIGIN', 'https://api.vnshop.invalid..'],
+    ['API_ORIGIN', 'https://[::1]/'],
   ])('fails closed for invalid %s value %s', (name, value) => {
     process.env[name] = value;
 

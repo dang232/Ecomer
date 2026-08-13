@@ -11,6 +11,8 @@ x-staging-env: &staging-env
   SPRING_PROFILES_ACTIVE: staging
   PAYMENT_MODE: stub
   CARRIER_MODE: stub
+  KEYCLOAK_ISSUER_URI: http://localhost:8180/realms/vnshop
+  KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
 
 services:
   postgres:
@@ -96,6 +98,7 @@ services:
       KC_DB_SCHEMA: keycloak
       KC_DB_USERNAME: vnshop
       KC_DB_PASSWORD: vnshop123
+      KC_HOSTNAME: http://localhost:8180
       STAGING: "true"
     expose:
       - "8080"
@@ -144,7 +147,6 @@ services:
       <<: *staging-env
       SERVER_PORT: 8080
       REDIS_HOST: redis
-      KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/vnshop
 
   user-service:
     <<: *staging-app
@@ -167,7 +169,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: vnshop123
       REDIS_HOST: redis
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/vnshop
+      KEYCLOAK_ISSUER_URI: http://localhost:8180/realms/vnshop
 
   product-service:
     <<: *staging-app
@@ -190,7 +192,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: vnshop123
       REDIS_HOST: redis
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/vnshop
+      KEYCLOAK_ISSUER_URI: http://localhost:8180/realms/vnshop
 
   inventory-service:
     <<: *staging-app
@@ -213,7 +215,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: vnshop123
       REDIS_HOST: redis
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/vnshop
+      KEYCLOAK_ISSUER_URI: http://localhost:8180/realms/vnshop
 
   cart-service:
     <<: *staging-app
@@ -231,7 +233,7 @@ services:
       PRODUCT_SERVICE_URL: http://product-service:8082
       USER_SERVICE_URL: http://user-service:8081
       USER_SERVICE_TIMEOUT_MS: ${USER_SERVICE_TIMEOUT_MS:-2000}
-      KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/vnshop
+      KEYCLOAK_ISSUER_URI: http://localhost:8180/realms/vnshop
 
   search-service:
     <<: *staging-app
@@ -254,7 +256,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: vnshop123
       REDIS_HOST: redis
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/vnshop
+      KEYCLOAK_ISSUER_URI: http://localhost:8180/realms/vnshop
 
   notification-service:
     <<: *staging-app
@@ -296,7 +298,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: vnshop123
       REDIS_HOST: redis
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/vnshop
+      KEYCLOAK_ISSUER_URI: http://localhost:8180/realms/vnshop
 
   review-service:
     <<: *staging-app
@@ -320,7 +322,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: vnshop123
       REDIS_HOST: redis
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/vnshop
+      KEYCLOAK_ISSUER_URI: http://localhost:8180/realms/vnshop
 
   seller-finance-service:
     <<: *staging-app
@@ -343,7 +345,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: vnshop123
       REDIS_HOST: redis
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/vnshop
+      KEYCLOAK_ISSUER_URI: http://localhost:8180/realms/vnshop
 
   order-service:
     <<: *staging-app
@@ -366,7 +368,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: vnshop123
       REDIS_HOST: redis
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/vnshop
+      KEYCLOAK_ISSUER_URI: http://localhost:8180/realms/vnshop
 
   payment-service:
     <<: *staging-app
@@ -389,7 +391,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: vnshop123
       REDIS_HOST: redis
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/vnshop
+      KEYCLOAK_ISSUER_URI: http://localhost:8180/realms/vnshop
 
   shipping-service:
     <<: *staging-app
@@ -412,7 +414,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: vnshop123
       REDIS_HOST: redis
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/vnshop
+      KEYCLOAK_ISSUER_URI: http://localhost:8180/realms/vnshop
 
 volumes:
   staging-postgres-data:

@@ -286,6 +286,8 @@ public class RouteConfig {
             .route("admin-videos", route -> route.path("/admin/videos/**")
                 .filters(filters -> resilient(filters, "product-service"))
                 .uri(productServiceUri))
+            .route("monitoring-ws", route -> route.path("/monitoring/socket.io/**")
+                .uri(monitoringServiceUri))
             .route("monitoring", route -> route.path("/monitoring/**")
                 .filters(filters -> resilient(filters, "monitoring-service"))
                 .uri(monitoringServiceUri))

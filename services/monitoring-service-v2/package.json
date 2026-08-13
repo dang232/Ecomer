@@ -19,10 +19,10 @@
     }
   },
   "scripts": {
-    "build": "nest build",
-    "start": "nest start",
-    "start:dev": "nest start --watch",
-    "start:debug": "nest start --debug --watch",
+    "build": "node scripts/prepare-public-assets.mjs && nest build",
+    "start": "node scripts/prepare-public-assets.mjs && nest start",
+    "start:dev": "node scripts/prepare-public-assets.mjs && nest start --watch",
+    "start:debug": "node scripts/prepare-public-assets.mjs && nest start --debug --watch",
     "start:prod": "node dist/main",
     "validate:openapi": "node ../../scripts/validate-openapi.mjs",
     "test": "jest",
@@ -51,6 +51,7 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "socket.io": "^4.8.3",
+    "socket.io-client": "4.8.3",
     "typeorm": "^1.1.0"
   },
   "devDependencies": {

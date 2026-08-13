@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+spec:
+  template:
+    spec:
+      containers:
+      - name: keycloak
+        args: [start, --http-enabled=true, --proxy-headers=xforwarded, --import-realm]
+        env:
+        - name: GATEWAY_OAUTH2_CLIENT_SECRET
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: gateway-oauth2-client-secret}}
+        volumeMounts:
+        - name: realm
+          mountPath: /opt/keycloak/data/import
+          readOnly: true
+      volumes:
+      - name: realm
+        configMap:
+          name: vnshop-keycloak-realm

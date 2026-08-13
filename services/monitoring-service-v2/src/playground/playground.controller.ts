@@ -5,7 +5,7 @@ import { DiscoveryService } from '../discovery/discovery.service.js';
 import { PlaygroundService, PlaygroundRequest } from './playground.service.js';
 
 @Controller('monitoring')
-@Roles('admin')
+@Roles('ADMIN')
 export class PlaygroundController {
   constructor(
     private readonly discoveryService: DiscoveryService,

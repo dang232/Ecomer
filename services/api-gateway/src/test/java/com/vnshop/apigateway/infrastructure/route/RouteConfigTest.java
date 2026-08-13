@@ -75,6 +75,7 @@ class RouteConfigTest {
         assertThat(matches(route(routes, "flash-sale-stock"), "/flash-sale/stock/p1")).isTrue();
         assertThat(matches(route(routes, "monitoring"), "/monitoring/openapi.json")).isTrue();
         assertThat(matches(route(routes, "monitoring"), "/monitoring/docs")).isTrue();
+        assertThat(matches(route(routes, "monitoring-ws"), "/monitoring/socket.io/?EIO=4&transport=websocket")).isTrue();
         assertThat(matches(route(routes, "configuration"), "/api/config")).isTrue();
         assertThat(matches(route(routes, "configuration"), "/api/config/public")).isTrue();
         assertThat(matches(route(routes, "configuration"), "/api/config/services")).isFalse();

@@ -27,7 +27,7 @@ export class RolesGuard implements CanActivate {
     const user = request.user as JwtPayload | undefined;
     if (!user) return false;
 
-    const userRoles = user.realm_access?.roles ?? [];
-    return requiredRoles.some((role) => userRoles.includes(role));
+    const userRoles = new Set((user.realm_access?.roles ?? []).map((role) => role.toUpperCase()));
+    return requiredRoles.some((role) => userRoles.has(role.toUpperCase()));
   }
 }

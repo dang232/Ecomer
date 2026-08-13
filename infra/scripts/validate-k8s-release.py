@@ -122,6 +122,70 @@ def fail(errors: list[str]) -> None:
     raise SystemExit(1)
 
 
+def validate_production_realm_hosts(environment: str, suffix: str, errors: list[str]) -> None:
+    if environment != "prod":
+        return
+    realm_path = REPO / "infra/keycloak/vnshop-realm-prod.json"
+    try:
+        realm = json.loads(realm_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        errors.append(f"production Keycloak realm cannot be loaded: {error}")
+        return
+
+    expected_hosts = {f"web.{suffix}", f"api.{suffix}"}
+    configured_hosts: set[str] = set()
+    monitoring_client = None
+    client_by_id: dict[str, dict] = {}
+    for client in realm.get("clients", []):
+        client_by_id[client.get("clientId", "")] = client
+        if client.get("clientId") == "vnshop-monitoring":
+            monitoring_client = client
+        for uri in client.get("redirectUris", []):
+            parsed = re.match(r"https://([^/]+)(?:/.*)?$", uri)
+            if parsed:
+                configured_hosts.add(parsed.group(1))
+        for origin in client.get("webOrigins", []):
+            parsed = re.match(r"https://([^/]+)$", origin)
+            if parsed:
+                configured_hosts.add(parsed.group(1))
+
+    if not expected_hosts.issubset(configured_hosts):
+        errors.append("production Keycloak realm must authorize the deployed web and API hosts")
+    if any(host.endswith(".example.com") for host in configured_hosts):
+        errors.append("production Keycloak realm contains stale .example.com hosts")
+    if not monitoring_client:
+        errors.append("production Keycloak realm must define the monitoring OIDC client")
+    else:
+        expected_callback = f"https://api.{suffix}/monitoring/"
+        if expected_callback not in monitoring_client.get("redirectUris", []):
+            errors.append("monitoring OIDC client must authorize the gateway-served dashboard callback")
+        if monitoring_client.get("attributes", {}).get("pkce.code.challenge.method") != "S256":
+            errors.append("monitoring OIDC client must require S256 PKCE")
+        monitoring_scope = next(
+            (mapping for mapping in realm.get("scopeMappings", [])
+             if mapping.get("client") == "vnshop-monitoring"),
+            None,
+        )
+        if not monitoring_scope or "ADMIN" not in monitoring_scope.get("roles", []):
+            errors.append("monitoring OIDC client must have an explicit ADMIN realm-role scope mapping")
+
+    expected_client_contracts = {
+        "vnshop-gateway": {
+            f"https://web.{suffix}/login/oauth2/code/vnshop-gateway",
+            f"https://api.{suffix}/login/oauth2/code/vnshop-gateway",
+        },
+        "vnshop-web": {f"https://web.{suffix}/*"},
+        "vnshop-api": {f"https://api.{suffix}/*"},
+    }
+    for client_id, expected_uris in expected_client_contracts.items():
+        client = client_by_id.get(client_id)
+        if not client:
+            errors.append(f"production Keycloak realm must define {client_id}")
+            continue
+        if not expected_uris.issubset(set(client.get("redirectUris", []))):
+            errors.append(f"production Keycloak realm must authorize expected redirect URIs for {client_id}")
+
+
 def render(environment: str) -> bytes:
     command = ["kubectl", "kustomize", str(REPO / "infra/k8s/overlays" / environment)]
     result = subprocess.run(command, cwd=REPO, capture_output=True, check=False)
@@ -272,9 +336,9 @@ def main() -> None:
         expected_public_config = {
             "WEB_ORIGIN": f"https://web.{suffix}",
             "API_ORIGIN": f"https://api.{suffix}",
-            "AUTH_ORIGIN": f"https://auth.{suffix}",
-            "KEYCLOAK_ISSUER_URI": f"https://auth.{suffix}/realms/vnshop",
-            "KEYCLOAK_PUBLIC_BASE_URL": f"https://auth.{suffix}",
+            "AUTH_ORIGIN": f"https://api.{suffix}",
+            "KEYCLOAK_ISSUER_URI": f"https://api.{suffix}/realms/vnshop",
+            "KEYCLOAK_PUBLIC_BASE_URL": f"https://api.{suffix}",
             "VNSHOP_FRONTEND_URL": f"https://web.{suffix}",
             "VNSHOP_PUBLIC_API_URL": f"https://api.{suffix}",
             "VNSHOP_AUTH_CALLBACK_BASE_URL": f"https://api.{suffix}/auth/oauth/callback",
@@ -295,10 +359,101 @@ def main() -> None:
                 rule.get("host") for rule in ingresses[0].get("spec", {}).get("rules", [])
             }
             expected_hosts = {
-                f"web.{suffix}", f"api.{suffix}", f"auth.{suffix}", f"storage.{suffix}"
+                f"web.{suffix}", f"api.{suffix}", f"storage.{suffix}"
             }
             if ingress_hosts != expected_hosts:
-                errors.append("ingress hosts must expose web, API, auth, and storage TLS origins")
+                errors.append("ingress hosts must expose web, API, and storage TLS origins")
+        validate_production_realm_hosts(args.environment, suffix, errors)
+
+        if args.environment == "staging":
+            realm_configmaps = [
+                doc for doc in documents
+                if doc.get("kind") == "ConfigMap"
+                and doc.get("metadata", {}).get("name") == "vnshop-keycloak-realm"
+            ]
+            if len(realm_configmaps) != 1:
+                errors.append("staging Keycloak realm ConfigMap is required")
+            elif "vnshop-realm.json" not in realm_configmaps[0].get("data", {}):
+                errors.append("staging Keycloak realm ConfigMap must contain vnshop-realm.json")
+            staging_reconcile = [
+                doc for doc in documents
+                if doc.get("kind") == "Job"
+                and doc.get("metadata", {}).get("name") == "vnshop-keycloak-reconcile"
+            ]
+            if len(staging_reconcile) != 1:
+                errors.append("staging Keycloak reconcile hook is required")
+
+        if args.environment == "prod":
+            realm_configmaps = [
+                doc for doc in documents
+                if doc.get("kind") == "ConfigMap"
+                and doc.get("metadata", {}).get("name") == "vnshop-keycloak-realm"
+            ]
+            if len(realm_configmaps) != 1:
+                errors.append("production Keycloak realm ConfigMap is required")
+            else:
+                realm_data = realm_configmaps[0].get("data", {})
+                if "vnshop-realm-prod.json" not in realm_data:
+                    errors.append("production Keycloak realm ConfigMap must contain vnshop-realm-prod.json")
+            keycloak = next(
+                (doc for doc in documents
+                 if doc.get("kind") == "Deployment"
+                 and doc.get("metadata", {}).get("name") == "keycloak"),
+                None,
+            )
+            keycloak_args = "\n".join(
+                str(value)
+                for container in (keycloak or {}).get("spec", {}).get("template", {}).get("spec", {}).get("containers", [])
+                if container.get("name") == "keycloak"
+                for value in container.get("args", [])
+            )
+            if "--import-realm" not in keycloak_args:
+                errors.append("production Keycloak must start with --import-realm")
+            keycloak_volume = any(
+                mount.get("mountPath") == "/opt/keycloak/data/import"
+                and mount.get("name") == "realm"
+                for container in (keycloak or {}).get("spec", {}).get("template", {}).get("spec", {}).get("containers", [])
+                for mount in container.get("volumeMounts", [])
+            )
+            if not keycloak_volume:
+                errors.append("production Keycloak must mount the GitOps realm import directory")
+            keycloak_secret_env = any(
+                entry.get("name") == "GATEWAY_OAUTH2_CLIENT_SECRET"
+                and entry.get("valueFrom", {}).get("secretKeyRef", {}).get("key") == "gateway-oauth2-client-secret"
+                for container in (keycloak or {}).get("spec", {}).get("template", {}).get("spec", {}).get("containers", [])
+                for entry in container.get("env", [])
+            )
+            if not keycloak_secret_env:
+                errors.append("production Keycloak must receive gateway-oauth2-client-secret")
+
+            reconcile_jobs = [
+                doc for doc in documents
+                if doc.get("kind") == "Job"
+                and doc.get("metadata", {}).get("name") == "vnshop-keycloak-reconcile"
+            ]
+            if len(reconcile_jobs) != 1:
+                errors.append("production Keycloak reconcile hook is required")
+            else:
+                annotations = reconcile_jobs[0].get("metadata", {}).get("annotations", {})
+                if annotations.get("argocd.argoproj.io/hook") != "Sync":
+                    errors.append("Keycloak reconcile hook must be an Argo Sync hook")
+                reconcile_text = "\n".join(
+                    str(value)
+                    for container in reconcile_jobs[0].get("spec", {}).get("template", {}).get("spec", {}).get("containers", [])
+                    for value in container.get("args", [])
+                )
+                reconcile_env = "\n".join(
+                    str(value)
+                    for container in reconcile_jobs[0].get("spec", {}).get("template", {}).get("spec", {}).get("containers", [])
+                    for value in container.get("env", [])
+                )
+                for invariant in ("vnshop-monitoring", "GATEWAY_OAUTH2_CLIENT_SECRET", "kcadm.sh update"):
+                    if invariant == "GATEWAY_OAUTH2_CLIENT_SECRET":
+                        if invariant not in reconcile_text and invariant not in reconcile_env:
+                            errors.append(f"Keycloak reconcile hook is missing {invariant}")
+                        continue
+                    if invariant not in reconcile_text:
+                        errors.append(f"Keycloak reconcile hook is missing {invariant}")
 
     rendered_names = {doc.get("metadata", {}).get("name") for doc in documents}
     if "vnshop-coupon" in rendered_names or "vnshop-review" in rendered_names:

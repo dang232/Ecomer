@@ -32,6 +32,14 @@ class SecurityConfigVideoUploadCsrfTest {
         assertThat(matcher.matches(exchange).block().isMatch()).isTrue();
     }
 
+    @Test
+    void proxiedKeycloakStateChangingRequestsDoNotRequireApplicationCsrf() throws Exception {
+        ServerWebExchangeMatcher matcher = csrfMatcher();
+
+        assertThat(matcher.matches(exchange(HttpMethod.POST, "/realms/vnshop/protocol/openid-connect/token"))
+                .block().isMatch()).isFalse();
+    }
+
     @SuppressWarnings("unchecked")
     private static ServerWebExchangeMatcher csrfMatcher() throws Exception {
         Method method = SecurityConfig.class.getDeclaredMethod("requiresCsrfProtection", org.springframework.web.server.ServerWebExchange.class);

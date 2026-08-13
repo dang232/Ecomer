@@ -46,6 +46,36 @@ class TieredKeyResolverTest {
     }
 
     @Test
+    void trusted_proxy_request_uses_first_forwarded_address() {
+        TieredKeyResolver trustedResolver = new TieredKeyResolver("10.0.0.0/8");
+        MockServerHttpRequest request = MockServerHttpRequest
+            .get("/payment/create")
+            .header("X-Forwarded-For", "198.51.100.7, 10.0.0.2")
+            .remoteAddress(new java.net.InetSocketAddress("10.0.0.1", 54321))
+            .build();
+        MockServerWebExchange exchange = MockServerWebExchange.from(request);
+
+        StepVerifier.create(trustedResolver.resolve(exchange))
+            .expectNext("anon:198.51.100.7")
+            .verifyComplete();
+    }
+
+    @Test
+    void configured_forwarded_headers_are_ignored_from_untrusted_peer() {
+        TieredKeyResolver trustedResolver = new TieredKeyResolver("10.0.0.0/8");
+        MockServerHttpRequest request = MockServerHttpRequest
+            .get("/payment/create")
+            .header("X-Forwarded-For", "198.51.100.7")
+            .remoteAddress(new java.net.InetSocketAddress("203.0.113.5", 54321))
+            .build();
+        MockServerWebExchange exchange = MockServerWebExchange.from(request);
+
+        StepVerifier.create(trustedResolver.resolve(exchange))
+            .expectNext("anon:203.0.113.5")
+            .verifyComplete();
+    }
+
+    @Test
     void authenticated_request_resolves_to_user_prefix_plus_subject() {
         Jwt jwt = Jwt.withTokenValue("token")
             .header("alg", "RS256")

@@ -1,0 +1,77 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vnshop-keycloak-reconcile
+  labels:
+    app.kubernetes.io/name: keycloak-reconcile
+    app.kubernetes.io/part-of: vnshop
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/sync-wave: "-5"
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+spec:
+  backoffLimit: 6
+  activeDeadlineSeconds: 900
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: keycloak-reconcile
+        app.kubernetes.io/part-of: vnshop
+    spec:
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: keycloak-reconcile
+        image: quay.io/keycloak/keycloak@sha256:0aae0de7fca85525f727d3354df17896092de8bb26ae4c12d89c77e5df8cbce4
+        command: [sh, -ec]
+        args:
+        - |
+          export HOME=/home/keycloak
+          until /opt/keycloak/bin/kcadm.sh config credentials --server http://keycloak:8080 --realm master --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD"; do sleep 5; done
+          client_id=$(/opt/keycloak/bin/kcadm.sh get clients -r vnshop -q clientId=vnshop-monitoring --fields id --format csv --noquotes)
+          if [ -z "$client_id" ]; then
+            client_id=$(/opt/keycloak/bin/kcadm.sh create clients -r vnshop -s clientId=vnshop-monitoring -s name='VNShop Monitoring Dashboard' -s protocol=openid-connect -s publicClient=true -s standardFlowEnabled=true -s enabled=true -s 'attributes={"pkce.code.challenge.method":"S256"}' -i)
+          fi
+          /opt/keycloak/bin/kcadm.sh update clients/$client_id -r vnshop -s redirectUris='["'"$AUTH_ORIGIN"'/monitoring/"]' -s webOrigins='["'"$AUTH_ORIGIN"'"]' -s publicClient=true -s standardFlowEnabled=true -s 'attributes={"pkce.code.challenge.method":"S256"}'
+          admin_role_id=$(/opt/keycloak/bin/kcadm.sh get roles/ADMIN -r vnshop --fields id --format csv --noquotes)
+          if ! /opt/keycloak/bin/kcadm.sh get clients/$client_id/scope-mappings/realm -r vnshop --fields name --format csv --noquotes | grep -qx ADMIN; then
+            printf '[{"id":"%s","name":"ADMIN"}]' "$admin_role_id" > /home/keycloak/admin-role.json
+            /opt/keycloak/bin/kcadm.sh create clients/$client_id/scope-mappings/realm -r vnshop -f /home/keycloak/admin-role.json
+          fi
+          for target in vnshop-gateway vnshop-web vnshop-api; do
+            target_id=$(/opt/keycloak/bin/kcadm.sh get clients -r vnshop -q clientId="$target" --fields id --format csv --noquotes)
+            if [ -n "$target_id" ]; then
+              case "$target" in
+                vnshop-gateway) /opt/keycloak/bin/kcadm.sh update clients/$target_id -r vnshop -s redirectUris='["'"$WEB_ORIGIN"'/login/oauth2/code/vnshop-gateway","'"$AUTH_ORIGIN"'/login/oauth2/code/vnshop-gateway"]' -s webOrigins='["'"$WEB_ORIGIN"'","'"$AUTH_ORIGIN"'"]' ;;
+                vnshop-web) /opt/keycloak/bin/kcadm.sh update clients/$target_id -r vnshop -s redirectUris='["'"$WEB_ORIGIN"'/*]' -s webOrigins='["'"$WEB_ORIGIN"'"]' ;;
+                vnshop-api) /opt/keycloak/bin/kcadm.sh update clients/$target_id -r vnshop -s redirectUris='["'"$AUTH_ORIGIN"'/*]' -s webOrigins='["'"$AUTH_ORIGIN"'"]' ;;
+              esac
+            fi
+          done
+          /opt/keycloak/bin/kcadm.sh update realms/vnshop -s enabled=true
+        env:
+        - name: KC_BOOTSTRAP_ADMIN_USERNAME
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: keycloak-admin-username}}
+        - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: keycloak-admin-password}}
+        - name: GATEWAY_OAUTH2_CLIENT_SECRET
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: gateway-oauth2-client-secret}}
+        envFrom:
+        - configMapRef: {name: vnshop-app-config}
+        volumeMounts:
+        - name: kcadm-home
+          mountPath: /home/keycloak
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: [ALL]
+      volumes:
+      - name: kcadm-home
+        emptyDir: {}

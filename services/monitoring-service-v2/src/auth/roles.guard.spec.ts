@@ -28,7 +28,7 @@ describe('RolesGuard', () => {
     jest
       .spyOn(reflector, 'getAllAndOverride')
       .mockReturnValueOnce(true)
-      .mockReturnValueOnce(['admin']);
+      .mockReturnValueOnce(['ADMIN']);
     expect(guard.canActivate(mockContext(undefined))).toBe(true);
   });
 
@@ -39,13 +39,13 @@ describe('RolesGuard', () => {
   });
 
   it('allows access when user has admin role', () => {
-    jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(['admin']);
-    const user = { sub: '1', realm_access: { roles: ['admin', 'buyer'] } };
+    jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(['ADMIN']);
+    const user = { sub: '1', realm_access: { roles: ['ADMIN', 'BUYER'] } };
     expect(guard.canActivate(mockContext(user))).toBe(true);
   });
 
   it('denies access when no user on request', () => {
-    jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(['admin']);
+    jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(['ADMIN']);
     expect(guard.canActivate(mockContext(undefined))).toBe(false);
   });
 });

@@ -134,7 +134,9 @@ export class ConfigurationService {
       throw new ServiceUnavailableException(`Invalid ${name}`);
     }
 
-    const hostname = url.hostname.toLowerCase();
+    const rawHostname = url.hostname.toLowerCase();
+    const hostname = rawHostname.replace(/\.+$/, '');
+    const ipHostname = hostname.replace(/^\[|\]$/g, '');
     const allowInsecureLocal = process.env.RUNTIME_CONFIG_ALLOW_INSECURE === 'true';
     const localHttp = allowInsecureLocal && hostname === 'localhost' && url.protocol === 'http:';
     const invalid =
@@ -145,14 +147,26 @@ export class ConfigurationService {
       url.password !== '' ||
       url.search !== '' ||
       url.hash !== '' ||
+      rawHostname.endsWith('.') ||
       hostname.includes('*') ||
       (!localHttp && (hostname === 'localhost' || hostname.endsWith('.localhost'))) ||
-      isIP(hostname) !== 0;
+      (!localHttp && this.isInternalHostname(hostname)) ||
+      isIP(ipHostname) !== 0;
 
     if (invalid) {
       throw new ServiceUnavailableException(`Invalid ${name}`);
     }
     return url;
+  }
+
+  private isInternalHostname(hostname: string): boolean {
+    return (
+      !hostname.includes('.') ||
+      hostname.endsWith('.local') ||
+      hostname.endsWith('.internal') ||
+      hostname.endsWith('.svc') ||
+      hostname.endsWith('.cluster.local')
+    );
   }
 
   private providerConfigs(): ProviderConfigDto[] {

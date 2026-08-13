@@ -4,14 +4,10 @@
  */
 const Auth = (() => {
   // ── Constants ──────────────────────────────────────────────────────────────
-  const isLocal = window.location.hostname === 'localhost' ||
-                  window.location.hostname === '127.0.0.1';
-  const KEYCLOAK_URL = isLocal
-    ? 'http://localhost:9090'
-    : 'http://keycloak:8085';
+  const KEYCLOAK_URL = window.location.origin;
   const REALM       = 'vnshop';
-  const CLIENT_ID   = 'monitoring-dashboard';
-  const REDIRECT_URI = window.location.origin + '/';
+  const CLIENT_ID   = 'vnshop-monitoring';
+  const REDIRECT_URI = window.location.origin + '/monitoring/';
 
   const AUTH_ENDPOINT  = `${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/auth`;
   const TOKEN_ENDPOINT = `${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/token`;
@@ -67,7 +63,7 @@ const Auth = (() => {
     const payload = parseJwt(token);
     if (!payload) return false;
     const roles = payload.realm_access && payload.realm_access.roles;
-    return Array.isArray(roles) && roles.includes('admin');
+    return Array.isArray(roles) && roles.includes('ADMIN');
   }
 
   // ── PKCE helpers ───────────────────────────────────────────────────────────
@@ -136,7 +132,7 @@ const Auth = (() => {
     sessionStorage.removeItem(SK_CODE_VERIFIER);
 
     // Clean the URL so the code param is not visible or reused
-    window.history.replaceState({}, document.title, '/');
+    window.history.replaceState({}, document.title, '/monitoring/');
 
     return data.access_token;
   }
