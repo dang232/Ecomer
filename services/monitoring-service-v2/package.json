@@ -20,9 +20,9 @@
   },
   "scripts": {
     "build": "node scripts/prepare-public-assets.mjs && nest build",
-    "start": "nest start",
-    "start:dev": "nest start --watch",
-    "start:debug": "nest start --debug --watch",
+    "start": "node scripts/prepare-public-assets.mjs && nest start",
+    "start:dev": "node scripts/prepare-public-assets.mjs && nest start --watch",
+    "start:debug": "node scripts/prepare-public-assets.mjs && nest start --debug --watch",
     "start:prod": "node dist/main",
     "validate:openapi": "node ../../scripts/validate-openapi.mjs",
     "test": "jest",

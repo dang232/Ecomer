@@ -1,1 +1,12 @@
+# Local configuration
+.env
+.env.*
+!.env.example
+
+# Dependencies and build output
+node_modules/
+dist/
+coverage/
+
+# Generated browser asset
 /public/js/socket.io.js
