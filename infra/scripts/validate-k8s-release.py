@@ -134,7 +134,10 @@ def validate_production_realm_hosts(environment: str, suffix: str, errors: list[
 
     expected_hosts = {f"web.{suffix}", f"api.{suffix}"}
     configured_hosts: set[str] = set()
+    monitoring_client = None
     for client in realm.get("clients", []):
+        if client.get("clientId") == "vnshop-monitoring":
+            monitoring_client = client
         for uri in client.get("redirectUris", []):
             parsed = re.match(r"https://([^/]+)(?:/.*)?$", uri)
             if parsed:
@@ -148,6 +151,12 @@ def validate_production_realm_hosts(environment: str, suffix: str, errors: list[
         errors.append("production Keycloak realm must authorize the deployed web and API hosts")
     if any(host.endswith(".example.com") for host in configured_hosts):
         errors.append("production Keycloak realm contains stale .example.com hosts")
+    if not monitoring_client:
+        errors.append("production Keycloak realm must define the monitoring OIDC client")
+    else:
+        expected_callback = f"https://api.{suffix}/"
+        if expected_callback not in monitoring_client.get("redirectUris", []):
+            errors.append("monitoring OIDC client must authorize the gateway-served dashboard callback")
 
 
 def render(environment: str) -> bytes:
@@ -328,6 +337,41 @@ def main() -> None:
             if ingress_hosts != expected_hosts:
                 errors.append("ingress hosts must expose web, API, and storage TLS origins")
         validate_production_realm_hosts(args.environment, suffix, errors)
+
+        if args.environment == "prod":
+            realm_configmaps = [
+                doc for doc in documents
+                if doc.get("kind") == "ConfigMap"
+                and doc.get("metadata", {}).get("name") == "vnshop-keycloak-realm"
+            ]
+            if len(realm_configmaps) != 1:
+                errors.append("production Keycloak realm ConfigMap is required")
+            else:
+                realm_data = realm_configmaps[0].get("data", {})
+                if "vnshop-realm-prod.json" not in realm_data:
+                    errors.append("production Keycloak realm ConfigMap must contain vnshop-realm-prod.json")
+            keycloak = next(
+                (doc for doc in documents
+                 if doc.get("kind") == "Deployment"
+                 and doc.get("metadata", {}).get("name") == "keycloak"),
+                None,
+            )
+            keycloak_args = "\n".join(
+                str(value)
+                for container in (keycloak or {}).get("spec", {}).get("template", {}).get("spec", {}).get("containers", [])
+                if container.get("name") == "keycloak"
+                for value in container.get("args", [])
+            )
+            if "--import-realm" not in keycloak_args:
+                errors.append("production Keycloak must start with --import-realm")
+            keycloak_volume = any(
+                mount.get("mountPath") == "/opt/keycloak/data/import"
+                and mount.get("name") == "realm"
+                for container in (keycloak or {}).get("spec", {}).get("template", {}).get("spec", {}).get("containers", [])
+                for mount in container.get("volumeMounts", [])
+            )
+            if not keycloak_volume:
+                errors.append("production Keycloak must mount the GitOps realm import directory")
 
     rendered_names = {doc.get("metadata", {}).get("name") for doc in documents}
     if "vnshop-coupon" in rendered_names or "vnshop-review" in rendered_names:
