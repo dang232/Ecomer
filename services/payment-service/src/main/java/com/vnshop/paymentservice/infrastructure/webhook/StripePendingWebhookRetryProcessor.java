@@ -8,6 +8,7 @@ import com.vnshop.paymentservice.domain.Chargeback;
 import com.vnshop.paymentservice.infrastructure.gateway.PaymentCallbackAttempt;
 import com.vnshop.paymentservice.infrastructure.gateway.PaymentCallbackHasher;
 import com.vnshop.paymentservice.infrastructure.gateway.PaymentCallbackLogStore;
+import com.vnshop.paymentservice.infrastructure.stripe.StripeChargebackAmount;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -118,7 +119,7 @@ public class StripePendingWebhookRetryProcessor implements PendingWebhookRetryPr
         String currency = dispute.path("currency").asText("VND").toUpperCase(java.util.Locale.ROOT);
         String providerPaymentId = dispute.path("payment_intent").asText(null);
         BigDecimal challengedAmount = dispute.path("amount").isNumber()
-                ? dispute.path("amount").decimalValue()
+                ? StripeChargebackAmount.toMajorUnits(dispute.path("amount").longValue(), currency)
                 : null;
         LocalDate dueDate = null;
         JsonNode dueBy = dispute.path("evidence_details").path("due_by");

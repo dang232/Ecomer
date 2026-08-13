@@ -75,7 +75,7 @@ class StripePendingWebhookRetryProcessorTest {
 
         verify(chargebackService).createFromWebhook(
                 eq("ORDER-123"), eq("dp_123"), eq(Chargeback.ChargebackProvider.STRIPE),
-                eq("fraudulent"), any(), eq(new java.math.BigDecimal("125000")), eq("USD"), eq("pi_123"));
+                eq("fraudulent"), any(), eq(new java.math.BigDecimal("1250.00")), eq("USD"), eq("pi_123"));
         verify(idempotencyService).markProcessed("evt_dispute_retry", "STRIPE", "charge.dispute.created");
         verify(promotionService, never()).promote(any(PaymentPromotionService.PromotionCommand.class));
         verify(callbackLogStore, never()).save(any(PaymentCallbackAttempt.class));
