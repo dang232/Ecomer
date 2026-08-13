@@ -6,7 +6,7 @@ const Auth = (() => {
   // ── Constants ──────────────────────────────────────────────────────────────
   const KEYCLOAK_URL = window.location.origin;
   const REALM       = 'vnshop';
-  const CLIENT_ID   = 'monitoring-dashboard';
+  const CLIENT_ID   = 'vnshop-web';
   const REDIRECT_URI = window.location.origin + '/';
 
   const AUTH_ENDPOINT  = `${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/auth`;
@@ -63,7 +63,7 @@ const Auth = (() => {
     const payload = parseJwt(token);
     if (!payload) return false;
     const roles = payload.realm_access && payload.realm_access.roles;
-    return Array.isArray(roles) && roles.includes('admin');
+    return Array.isArray(roles) && roles.includes('ADMIN');
   }
 
   // ── PKCE helpers ───────────────────────────────────────────────────────────

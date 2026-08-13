@@ -32,7 +32,7 @@ class StorageBootstrapContractTest(unittest.TestCase):
 
         self.assertNotIn("mc cors set", manifest)
         self.assertIn("MINIO_API_CORS_ALLOW_ORIGIN", platform)
-        self.assertIn("MINIO_API_CORS_ALLOW_ORIGIN: http://frontend:8080", base_config)
+        self.assertIn("MINIO_API_CORS_ALLOW_ORIGIN: https://web.vnshop.invalid", base_config)
         self.assertIn("VNSHOP_OBJECT_STORAGE_PUBLIC_ENDPOINT: https://storage.vnshop.invalid", base_config)
         self.assertNotIn("VNSHOP_OBJECT_STORAGE_PUBLIC_ENDPOINT: http://minio:9000", base_config)
         self.assertIn("local/vnshop-products", manifest)

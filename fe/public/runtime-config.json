@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0",
-  "generatedAt": "2026-07-31T11:54:00.000Z",
-  "expiresAt": "2026-07-31T11:59:00.000Z",
+  "generatedAt": "2026-08-13T13:00:00.000Z",
+  "expiresAt": "2026-08-13T13:05:00.000Z",
   "runtimeConfigUri": "http://localhost:5173/runtime-config.json",
   "webUri": "http://localhost:5173/",
   "apiUri": "http://localhost:8080/",
