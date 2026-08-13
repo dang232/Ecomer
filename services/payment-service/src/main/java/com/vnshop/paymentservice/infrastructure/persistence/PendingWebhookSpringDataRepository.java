@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
@@ -50,11 +51,19 @@ public interface PendingWebhookSpringDataRepository extends JpaRepository<Pendin
             @Param("nextRetryAt") Instant nextRetryAt);
 
     @Modifying
+    @Transactional
     @Query(value = """
-            INSERT INTO payment_svc.pending_webhooks
+            INSERT INTO payment_svc.pending_webhooks AS pending
                 (webhook_id, provider, event_type, payload, next_retry_at, status)
             VALUES (:webhookId, :provider, :eventType, :payload, :nextRetryAt, 'PENDING')
-            ON CONFLICT (webhook_id, provider) DO NOTHING
+            ON CONFLICT (webhook_id, provider) DO UPDATE
+            SET event_type = EXCLUDED.event_type,
+                payload = EXCLUDED.payload,
+                attempts = 0,
+                next_retry_at = EXCLUDED.next_retry_at,
+                status = 'PENDING',
+                lease_token = NULL
+            WHERE pending.status = 'FAILED'
             """, nativeQuery = true)
     int insertIfAbsent(
             @Param("webhookId") String webhookId,

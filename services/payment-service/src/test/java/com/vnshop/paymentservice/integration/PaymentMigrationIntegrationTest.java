@@ -11,9 +11,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import com.vnshop.paymentservice.infrastructure.gateway.PaymentCallbackEventStore;
+import com.vnshop.paymentservice.infrastructure.persistence.PendingWebhookSpringDataRepository;
 
 import java.util.UUID;
 import java.util.List;
+import java.util.Map;
+import java.time.Instant;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -33,6 +36,9 @@ class PaymentMigrationIntegrationTest {
 
     @Autowired
     private PaymentCallbackEventStore callbackEvents;
+
+    @Autowired
+    private PendingWebhookSpringDataRepository pendingWebhooks;
 
     @Test
     void appliesFlywayMigrationsAndCreatesPaymentCallbackEventEvidence() {
@@ -104,5 +110,25 @@ class PaymentMigrationIntegrationTest {
                 "update payment_svc.payment_callback_events set event_status = 'MUTATED' where payment_id = ?",
                 paymentId))
             .isInstanceOf(RuntimeException.class);
+    }
+
+    @Test
+    void reactivatesFailedWebhookWhenTheProviderRedeliversIt() {
+        String eventId = "evt_reactivated";
+        String provider = "STRIPE";
+        assertThat(pendingWebhooks.insertIfAbsent(
+                eventId, provider, "payment_intent.succeeded", "old-payload", Instant.now())).isEqualTo(1);
+        jdbcTemplate.update("update payment_svc.pending_webhooks set status = 'FAILED', attempts = 3 "
+                + "where webhook_id = ? and provider = ?", eventId, provider);
+
+        assertThat(pendingWebhooks.insertIfAbsent(
+                eventId, provider, "payment_intent.succeeded", "fresh-payload", Instant.now())).isEqualTo(1);
+
+        Map<String, Object> row = jdbcTemplate.queryForMap(
+                "select status, attempts, payload from payment_svc.pending_webhooks "
+                        + "where webhook_id = ? and provider = ?", eventId, provider);
+        assertThat(row).containsEntry("status", "PENDING")
+                .containsEntry("attempts", 0)
+                .containsEntry("payload", "fresh-payload");
     }
 }
