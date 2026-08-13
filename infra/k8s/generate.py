@@ -508,8 +508,8 @@ spec:
           /opt/keycloak/bin/kcadm.sh update clients/$client_id -r vnshop -s redirectUris='["'"$AUTH_ORIGIN"'/monitoring/"]' -s webOrigins='["'"$AUTH_ORIGIN"'"]' -s publicClient=true -s standardFlowEnabled=true -s 'attributes={"pkce.code.challenge.method":"S256"}'
           admin_role_id=$(/opt/keycloak/bin/kcadm.sh get roles/ADMIN -r vnshop --fields id --format csv --noquotes)
           if ! /opt/keycloak/bin/kcadm.sh get clients/$client_id/scope-mappings/realm -r vnshop --fields name --format csv --noquotes | grep -qx ADMIN; then
-            printf '[{"id":"%s","name":"ADMIN"}]' "$admin_role_id" > /tmp/admin-role.json
-            /opt/keycloak/bin/kcadm.sh create clients/$client_id/scope-mappings/realm -r vnshop -f /tmp/admin-role.json
+            printf '[{"id":"%s","name":"ADMIN"}]' "$admin_role_id" > /home/keycloak/admin-role.json
+            /opt/keycloak/bin/kcadm.sh create clients/$client_id/scope-mappings/realm -r vnshop -f /home/keycloak/admin-role.json
           fi
           for target in vnshop-gateway vnshop-web vnshop-api; do
             target_id=$(/opt/keycloak/bin/kcadm.sh get clients -r vnshop -q clientId="$target" --fields id --format csv --noquotes)

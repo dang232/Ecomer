@@ -12,6 +12,7 @@ data:
   KEYCLOAK_ISSUER_URI: https://api.vnshop.example/realms/vnshop
   KEYCLOAK_PUBLIC_BASE_URL: https://api.vnshop.example
   KEYCLOAK_ADMIN_ROLE: ADMIN
+  VNSHOP_RATE_LIMIT_TRUSTED_PROXY_CIDRS: "10.0.0.0/8"
   CORS_ORIGINS: https://web.vnshop.example,https://api.vnshop.example
   GATEWAY_CORS_ALLOWED_ORIGINS: https://web.vnshop.example
   VNSHOP_FRONTEND_URL: https://web.vnshop.example
