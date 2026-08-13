@@ -129,8 +129,11 @@ try {
     if (-not [Uri]::TryCreate($apiUrl, [UriKind]::Absolute, [ref] $apiUri) -or $apiUri.Scheme -ne "https") {
       throw "External VITE_E2E_API_URL must be an absolute HTTPS URL"
     }
-    if ($apiUri.Host.EndsWith(".invalid", [StringComparison]::OrdinalIgnoreCase)) {
-      throw "External VITE_E2E_API_URL cannot use a reserved .invalid host"
+    $isReservedStagingHost =
+      $externalUri.Host -eq "web.vnshop.invalid" -and
+      $apiUri.Host -eq "api.vnshop.invalid"
+    if ($apiUri.Host.EndsWith(".invalid", [StringComparison]::OrdinalIgnoreCase) -and -not $isReservedStagingHost) {
+      throw "External VITE_E2E_API_URL can use a reserved .invalid host only for the staging web.vnshop.invalid/api.vnshop.invalid pair"
     }
   } else {
     $existing = Invoke-Captured "docker" @("ps", "-a", "--filter", "name=^/$ContainerName$", "--format", "{{.ID}}")
