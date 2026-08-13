@@ -9,7 +9,7 @@ data:
   WEB_ORIGIN: https://web.vnshop.invalid
   API_ORIGIN: https://api.vnshop.invalid
   AUTH_ORIGIN: https://api.vnshop.invalid
-  KEYCLOAK_ISSUER_URI: https://auth.vnshop.invalid/realms/vnshop
+  KEYCLOAK_ISSUER_URI: https://api.vnshop.invalid/realms/vnshop
   KEYCLOAK_PUBLIC_BASE_URL: https://api.vnshop.invalid
   GATEWAY_CORS_ALLOWED_ORIGINS: https://web.vnshop.invalid
   VNSHOP_FRONTEND_URL: https://web.vnshop.invalid

@@ -17,7 +17,7 @@ data:
   SPRING_DATA_REDIS_PORT: "6379"
   KAFKA_BOOTSTRAP_SERVERS: kafka:9092
   KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
-  KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/vnshop
+  KEYCLOAK_ISSUER_URI: https://api.vnshop.invalid/realms/vnshop
   KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
   KEYCLOAK_ADMIN_BASE_URL: http://keycloak:8080
   KEYCLOAK_PUBLIC_BASE_URL: https://api.vnshop.invalid
