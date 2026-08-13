@@ -11,7 +11,7 @@ describe('ConfigurationController health contract', () => {
       ...originalEnv,
       WEB_ORIGIN: 'https://shop.vnshop.invalid',
       API_ORIGIN: 'https://api.vnshop.invalid',
-      AUTH_ORIGIN: 'https://auth.vnshop.invalid',
+      AUTH_ORIGIN: 'https://api.vnshop.invalid',
     };
   });
 
