@@ -258,6 +258,52 @@
       ]
     },
     {
+      "clientId": "vnshop-monitoring",
+      "name": "VNShop Monitoring Dashboard",
+      "description": "Admin-only monitoring dashboard served through the gateway",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "bearerOnly": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "authorizationServicesEnabled": false,
+      "frontchannelLogout": true,
+      "fullScopeAllowed": false,
+      "redirectUris": [
+        "http://localhost:8080/monitoring/",
+        "http://localhost:8096/monitoring/"
+      ],
+      "webOrigins": [
+        "http://localhost:8080",
+        "http://localhost:8096"
+      ],
+      "defaultClientScopes": ["web-origins", "acr", "profile", "roles", "email"],
+      "optionalClientScopes": ["offline_access"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:8080/monitoring/##http://localhost:8096/monitoring/"
+      },
+      "protocolMappers": [
+        {
+          "name": "realm roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    },
+    {
       "clientId": "vnshop-admin-api",
       "name": "VNShop Admin API",
       "description": "Confidential service-account client used by user-service to call the Keycloak Admin API (create users on self-registration). Local-dev secret committed; production should rotate via kcadm post-import.",

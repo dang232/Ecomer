@@ -306,7 +306,7 @@
       "frontchannelLogout": true,
       "fullScopeAllowed": false,
       "redirectUris": [
-        "https://api.vnshop.example/"
+        "https://api.vnshop.example/monitoring/"
       ],
       "webOrigins": [
         "https://api.vnshop.example"
@@ -315,7 +315,7 @@
       "optionalClientScopes": ["offline_access"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "https://api.vnshop.example/",
+        "post.logout.redirect.uris": "https://api.vnshop.example/monitoring/",
         "oauth2.device.authorization.grant.enabled": "false",
         "oidc.ciba.grant.enabled": "false"
       },
