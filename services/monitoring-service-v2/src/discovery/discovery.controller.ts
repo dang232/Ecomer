@@ -9,7 +9,7 @@ import { Roles } from "../auth/roles.decorator.js";
 import { DiscoveryService } from "./discovery.service.js";
 
 @Controller("monitoring")
-@Roles("admin")
+@Roles("ADMIN")
 export class DiscoveryController {
   constructor(private readonly discoveryService: DiscoveryService) {}
 

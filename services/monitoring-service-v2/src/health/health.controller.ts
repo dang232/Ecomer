@@ -5,7 +5,7 @@ import { MetricsService } from '../metrics/metrics.service.js';
 import { DiscoveryService } from '../discovery/discovery.service.js';
 
 @Controller('monitoring')
-@Roles('admin')
+@Roles('ADMIN')
 export class HealthController {
   constructor(
     private readonly healthService: HealthService,
