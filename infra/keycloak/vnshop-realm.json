@@ -327,6 +327,7 @@
       }
     }
   ],
+  "scopeMappings": [{"client": "vnshop-monitoring", "roles": ["ADMIN"]}],
   "clientScopeMappings": {
     "realm-management": [
       {

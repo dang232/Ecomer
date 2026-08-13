@@ -13,6 +13,7 @@ import { ConfigService } from '@nestjs/config';
 
 @WebSocketGateway({
   namespace: '/ws/monitoring',
+  path: '/monitoring/socket.io',
   cors: {
     origin: (process.env.CORS_ORIGINS ?? 'http://localhost:8096,http://localhost:3000').split(','),
     credentials: true,

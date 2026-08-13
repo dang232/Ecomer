@@ -128,6 +128,8 @@ public class SecurityConfig {
                 // ponytail: glob permits /<any>/actuator/health for downstream services — FE admin health checks carry no token
                 .pathMatchers("/" + "*/actuator/health", "/" + "*/actuator/info").permitAll()
                 .pathMatchers("/notification-service/health").permitAll()
+                .pathMatchers("/monitoring/", "/monitoring/css/**", "/monitoring/js/**").permitAll()
+                .pathMatchers("/monitoring/socket.io/**").permitAll()
                 .pathMatchers("/monitoring/**").hasRole("ADMIN")
                 .pathMatchers("/admin/**").hasRole("ADMIN")
                 .pathMatchers("/seller/**", "/sellers/me/**").hasRole("SELLER")
@@ -144,7 +146,7 @@ public class SecurityConfig {
                 .cache(org.springframework.security.config.Customizer.withDefaults())
                 .contentSecurityPolicy(csp -> csp.policyDirectives(
                     "default-src 'self'; " +
-                    "script-src 'self' https://js.stripe.com https://www.paypal.com; " +
+                    "script-src 'self' https://cdn.socket.io https://js.stripe.com https://www.paypal.com; " +
                     "style-src 'self' 'unsafe-inline'; " +
                     "img-src 'self' data: https://*.r2.dev; " +
                     "connect-src 'self' wss: https://api.stripe.com https://www.paypal.com; " +
@@ -184,7 +186,8 @@ public class SecurityConfig {
         boolean stateChanging = request.getMethod() != null && !SAFE_METHODS.contains(request.getMethod());
         boolean tusUpload = path.equals(TUS_UPLOAD_PATH) || path.startsWith(TUS_UPLOAD_PATH + "/");
         boolean publicAuth = PUBLIC_AUTH_PATHS.contains(path);
-        return cookieAuthenticated && stateChanging && !tusUpload && !publicAuth
+        boolean proxiedKeycloak = path.startsWith("/realms/");
+        return cookieAuthenticated && stateChanging && !tusUpload && !publicAuth && !proxiedKeycloak
                 ? ServerWebExchangeMatcher.MatchResult.match()
                 : ServerWebExchangeMatcher.MatchResult.notMatch();
     }

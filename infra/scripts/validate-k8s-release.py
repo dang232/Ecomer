@@ -135,7 +135,9 @@ def validate_production_realm_hosts(environment: str, suffix: str, errors: list[
     expected_hosts = {f"web.{suffix}", f"api.{suffix}"}
     configured_hosts: set[str] = set()
     monitoring_client = None
+    client_by_id: dict[str, dict] = {}
     for client in realm.get("clients", []):
+        client_by_id[client.get("clientId", "")] = client
         if client.get("clientId") == "vnshop-monitoring":
             monitoring_client = client
         for uri in client.get("redirectUris", []):
@@ -157,6 +159,31 @@ def validate_production_realm_hosts(environment: str, suffix: str, errors: list[
         expected_callback = f"https://api.{suffix}/monitoring/"
         if expected_callback not in monitoring_client.get("redirectUris", []):
             errors.append("monitoring OIDC client must authorize the gateway-served dashboard callback")
+        if monitoring_client.get("attributes", {}).get("pkce.code.challenge.method") != "S256":
+            errors.append("monitoring OIDC client must require S256 PKCE")
+        monitoring_scope = next(
+            (mapping for mapping in realm.get("scopeMappings", [])
+             if mapping.get("client") == "vnshop-monitoring"),
+            None,
+        )
+        if not monitoring_scope or "ADMIN" not in monitoring_scope.get("roles", []):
+            errors.append("monitoring OIDC client must have an explicit ADMIN realm-role scope mapping")
+
+    expected_client_contracts = {
+        "vnshop-gateway": {
+            f"https://web.{suffix}/login/oauth2/code/vnshop-gateway",
+            f"https://api.{suffix}/login/oauth2/code/vnshop-gateway",
+        },
+        "vnshop-web": {f"https://web.{suffix}/*"},
+        "vnshop-api": {f"https://api.{suffix}/*"},
+    }
+    for client_id, expected_uris in expected_client_contracts.items():
+        client = client_by_id.get(client_id)
+        if not client:
+            errors.append(f"production Keycloak realm must define {client_id}")
+            continue
+        if not expected_uris.issubset(set(client.get("redirectUris", []))):
+            errors.append(f"production Keycloak realm must authorize expected redirect URIs for {client_id}")
 
 
 def render(environment: str) -> bytes:

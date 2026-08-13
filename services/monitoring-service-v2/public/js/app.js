@@ -90,6 +90,7 @@
   const token = Auth.getToken();
 
   const socket = io('/ws/monitoring', {
+    path:              '/monitoring/socket.io',
     auth:              { token },
     transports:        ['websocket'],
     reconnectionDelay: 2000,
