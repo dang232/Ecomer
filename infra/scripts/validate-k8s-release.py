@@ -122,6 +122,34 @@ def fail(errors: list[str]) -> None:
     raise SystemExit(1)
 
 
+def validate_production_realm_hosts(environment: str, suffix: str, errors: list[str]) -> None:
+    if environment != "prod":
+        return
+    realm_path = REPO / "infra/keycloak/vnshop-realm-prod.json"
+    try:
+        realm = json.loads(realm_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        errors.append(f"production Keycloak realm cannot be loaded: {error}")
+        return
+
+    expected_hosts = {f"web.{suffix}", f"api.{suffix}"}
+    configured_hosts: set[str] = set()
+    for client in realm.get("clients", []):
+        for uri in client.get("redirectUris", []):
+            parsed = re.match(r"https://([^/]+)(?:/.*)?$", uri)
+            if parsed:
+                configured_hosts.add(parsed.group(1))
+        for origin in client.get("webOrigins", []):
+            parsed = re.match(r"https://([^/]+)$", origin)
+            if parsed:
+                configured_hosts.add(parsed.group(1))
+
+    if not expected_hosts.issubset(configured_hosts):
+        errors.append("production Keycloak realm must authorize the deployed web and API hosts")
+    if any(host.endswith(".example.com") for host in configured_hosts):
+        errors.append("production Keycloak realm contains stale .example.com hosts")
+
+
 def render(environment: str) -> bytes:
     command = ["kubectl", "kustomize", str(REPO / "infra/k8s/overlays" / environment)]
     result = subprocess.run(command, cwd=REPO, capture_output=True, check=False)
@@ -299,6 +327,7 @@ def main() -> None:
             }
             if ingress_hosts != expected_hosts:
                 errors.append("ingress hosts must expose web, API, and storage TLS origins")
+        validate_production_realm_hosts(args.environment, suffix, errors)
 
     rendered_names = {doc.get("metadata", {}).get("name") for doc in documents}
     if "vnshop-coupon" in rendered_names or "vnshop-review" in rendered_names:

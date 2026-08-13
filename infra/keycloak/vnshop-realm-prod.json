@@ -92,18 +92,18 @@
       "frontchannelLogout": true,
       "fullScopeAllowed": false,
       "redirectUris": [
-        "https://www.vnshop.example.com/login/oauth2/code/vnshop-gateway",
-        "https://api.vnshop.example.com/login/oauth2/code/vnshop-gateway"
+        "https://web.vnshop.example/login/oauth2/code/vnshop-gateway",
+        "https://api.vnshop.example/login/oauth2/code/vnshop-gateway"
       ],
       "webOrigins": [
-        "https://www.vnshop.example.com",
-        "https://api.vnshop.example.com"
+        "https://web.vnshop.example",
+        "https://api.vnshop.example"
       ],
       "defaultClientScopes": ["web-origins", "acr", "profile", "roles", "email"],
       "optionalClientScopes": ["address", "phone", "offline_access"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "https://www.vnshop.example.com/*##https://api.vnshop.example.com/*",
+        "post.logout.redirect.uris": "https://web.vnshop.example/*##https://api.vnshop.example/*",
         "oauth2.device.authorization.grant.enabled": "false",
         "oidc.ciba.grant.enabled": "false"
       },
@@ -179,10 +179,10 @@
       "frontchannelLogout": false,
       "fullScopeAllowed": false,
       "redirectUris": [
-        "https://api.vnshop.example.com/*"
+        "https://api.vnshop.example/*"
       ],
       "webOrigins": [
-        "https://api.vnshop.example.com"
+        "https://api.vnshop.example"
       ],
       "defaultClientScopes": ["web-origins", "acr", "profile", "roles", "email"],
       "optionalClientScopes": ["offline_access"],
@@ -249,16 +249,16 @@
       "frontchannelLogout": true,
       "fullScopeAllowed": false,
       "redirectUris": [
-        "https://www.vnshop.example.com/*"
+        "https://web.vnshop.example/*"
       ],
       "webOrigins": [
-        "https://www.vnshop.example.com"
+        "https://web.vnshop.example"
       ],
       "defaultClientScopes": ["web-origins", "acr", "profile", "roles", "email"],
       "optionalClientScopes": ["address", "phone", "offline_access"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "https://www.vnshop.example.com/*",
+        "post.logout.redirect.uris": "https://web.vnshop.example/*",
         "oauth2.device.authorization.grant.enabled": "false",
         "oidc.ciba.grant.enabled": "false"
       },
