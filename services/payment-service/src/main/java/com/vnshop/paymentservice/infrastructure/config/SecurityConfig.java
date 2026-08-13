@@ -37,7 +37,8 @@ public class SecurityConfig {
                         // reachable without an Authorization header. In prod the api-gateway
                         // permits the same paths; in local dev `stripe listen` forwards
                         // straight to this service, so the permit must live here too.
-                        .requestMatchers("/payment/*/ipn", "/payment/*/return", "/payment/*/webhook").permitAll()
+                        .requestMatchers("/payment/*/ipn", "/payment/*/return", "/payment/*/webhook",
+                                "/payment/stripe/chargeback-webhook").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
                 .build();

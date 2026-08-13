@@ -107,9 +107,11 @@ public class SecurityConfig {
                         "/api/config", "/api/config/public", "/sellers", "/sellers/*", "/flash-sale/active",
                         "/payment/methods", "/coupons").permitAll()
                 .pathMatchers(HttpMethod.POST, "/reviews/seller-summaries", "/products/counts",
-                        "/coupons/validate", "/checkout/validate-coupon").permitAll()
+                         "/coupons/validate", "/checkout/validate-coupon").permitAll()
                 .pathMatchers(HttpMethod.POST, "/webhooks/ghn", "/webhooks/ghtk").permitAll()
-                .pathMatchers("/auth/**", "/realms/**", "/resources/**", "/payment/*/callback", "/payment/*/ipn", "/payment/stripe/webhook").permitAll()
+                .pathMatchers(HttpMethod.POST, "/api/config/reload").hasRole("ADMIN")
+                .pathMatchers("/auth/**", "/realms/**", "/resources/**", "/payment/*/callback", "/payment/*/ipn",
+                        "/payment/stripe/webhook", "/payment/stripe/chargeback-webhook").permitAll()
                 // The WebSocket handshake on /ws/messaging carries the JWT through
                 // a subprotocol because browsers can't set Authorization headers on
                 // `new WebSocket(...)`, so it cannot pass the gateway's resource
