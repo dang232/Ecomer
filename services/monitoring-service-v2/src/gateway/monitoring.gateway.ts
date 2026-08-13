@@ -31,7 +31,7 @@ export class MonitoringGateway implements OnGatewayConnection, OnGatewayDisconne
       'app.keycloak.jwkSetUri',
       'http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs',
     );
-    this.adminRole = this.config.get<string>('app.keycloak.adminRole', 'admin');
+    this.adminRole = this.config.get<string>('app.keycloak.adminRole', 'ADMIN');
 
     this.jwksClient = jwksRsa({
       jwksUri: jwkSetUri,
