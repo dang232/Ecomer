@@ -187,6 +187,9 @@ spec:
         env:
         - name: SERVER_PORT
           value: "8080"
+        - name: CONFIG_SERVICE_INTERNAL_TOKEN
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: config-service-internal-token}
         - name: REDIS_PASSWORD
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: platform-redis-password}

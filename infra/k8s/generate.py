@@ -62,6 +62,7 @@ def workload_documents(item: dict) -> str:
         env_entries = [f'''        - name: {server_variable}
           value: "{port}"''']
         if service_id in {
+            "api-gateway",
             "configuration-service",
             "invoice-service",
             "order-service",

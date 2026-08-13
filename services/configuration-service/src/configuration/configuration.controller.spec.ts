@@ -30,9 +30,18 @@ describe('ConfigurationController health contract', () => {
   });
 
   it('marks internal configuration reads as administrator-only', () => {
-    for (const method of ['getAllServiceConfigs', 'getServiceConfig', 'getGlobalConfig'] as const) {
+    for (const method of ['getAllServiceConfigs', 'getServiceConfig', 'getGlobalConfig', 'reloadConfigs'] as const) {
       expect(Reflect.getMetadata(ROLES_KEY, ConfigurationController.prototype[method]))
         .toEqual(['ADMIN']);
     }
+  });
+
+  it('reloads configuration through the administrator endpoint', () => {
+    const service = new ConfigurationService();
+    const reload = jest.spyOn(service, 'reloadConfigs');
+    const controller = new ConfigurationController(service);
+
+    expect(controller.reloadConfigs()).toEqual({ status: 'reloaded' });
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 });

@@ -714,6 +714,7 @@ services:
       OTEL_TRACES_SAMPLER: parentbased_traceidratio
       OTEL_TRACES_SAMPLER_ARG: "1.0"
       GATEWAY_CORS_ALLOWED_ORIGINS: ${GATEWAY_CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      CONFIG_SERVICE_INTERNAL_TOKEN: ${CONFIG_SERVICE_INTERNAL_TOKEN:?CONFIG_SERVICE_INTERNAL_TOKEN must be set}
     deploy:
       resources:
         limits:
