@@ -184,7 +184,7 @@ function secureUrl(
       (!localHttp && !localWs && hostname === "localhost") ||
       hostname.endsWith(".localhost") ||
       (!localHttp && !localWs && isInternalHostname(hostname)) ||
-      (!allowInsecure && ipAddress)
+      ipAddress
     ) {
       return null;
     }

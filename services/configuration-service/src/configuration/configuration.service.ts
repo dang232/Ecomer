@@ -136,6 +136,7 @@ export class ConfigurationService {
 
     const rawHostname = url.hostname.toLowerCase();
     const hostname = rawHostname.replace(/\.+$/, '');
+    const ipHostname = hostname.replace(/^\[|\]$/g, '');
     const allowInsecureLocal = process.env.RUNTIME_CONFIG_ALLOW_INSECURE === 'true';
     const localHttp = allowInsecureLocal && hostname === 'localhost' && url.protocol === 'http:';
     const invalid =
@@ -150,7 +151,7 @@ export class ConfigurationService {
       hostname.includes('*') ||
       (!localHttp && (hostname === 'localhost' || hostname.endsWith('.localhost'))) ||
       (!localHttp && this.isInternalHostname(hostname)) ||
-      isIP(hostname) !== 0;
+      isIP(ipHostname) !== 0;
 
     if (invalid) {
       throw new ServiceUnavailableException(`Invalid ${name}`);

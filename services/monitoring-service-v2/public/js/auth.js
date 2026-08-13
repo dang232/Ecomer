@@ -4,11 +4,7 @@
  */
 const Auth = (() => {
   // ── Constants ──────────────────────────────────────────────────────────────
-  const isLocal = window.location.hostname === 'localhost' ||
-                  window.location.hostname === '127.0.0.1';
-  const KEYCLOAK_URL = isLocal
-    ? 'http://localhost:9090'
-    : 'http://keycloak:8085';
+  const KEYCLOAK_URL = window.location.origin;
   const REALM       = 'vnshop';
   const CLIENT_ID   = 'monitoring-dashboard';
   const REDIRECT_URI = window.location.origin + '/';

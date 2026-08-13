@@ -11,6 +11,8 @@ x-staging-env: &staging-env
   SPRING_PROFILES_ACTIVE: staging
   PAYMENT_MODE: stub
   CARRIER_MODE: stub
+  KEYCLOAK_ISSUER_URI: http://localhost:8180/realms/vnshop
+  KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
 
 services:
   postgres:
@@ -145,7 +147,6 @@ services:
       <<: *staging-env
       SERVER_PORT: 8080
       REDIS_HOST: redis
-      KEYCLOAK_ISSUER_URI: http://localhost:8180/realms/vnshop
 
   user-service:
     <<: *staging-app
