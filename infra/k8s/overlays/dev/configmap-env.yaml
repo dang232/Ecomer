@@ -6,6 +6,7 @@ data:
   SPRING_PROFILES_ACTIVE: dev
   NODE_ENV: development
   OTEL_TRACES_SAMPLER_ARG: "1.0"
+  RUNTIME_CONFIG_ALLOW_INSECURE: "true"
   WEB_ORIGIN: http://localhost:3000
   API_ORIGIN: http://localhost:8080
   AUTH_ORIGIN: http://localhost:8080
