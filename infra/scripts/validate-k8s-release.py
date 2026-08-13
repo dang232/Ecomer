@@ -272,9 +272,9 @@ def main() -> None:
         expected_public_config = {
             "WEB_ORIGIN": f"https://web.{suffix}",
             "API_ORIGIN": f"https://api.{suffix}",
-            "AUTH_ORIGIN": f"https://auth.{suffix}",
-            "KEYCLOAK_ISSUER_URI": f"https://auth.{suffix}/realms/vnshop",
-            "KEYCLOAK_PUBLIC_BASE_URL": f"https://auth.{suffix}",
+            "AUTH_ORIGIN": f"https://api.{suffix}",
+            "KEYCLOAK_ISSUER_URI": f"https://api.{suffix}/realms/vnshop",
+            "KEYCLOAK_PUBLIC_BASE_URL": f"https://api.{suffix}",
             "VNSHOP_FRONTEND_URL": f"https://web.{suffix}",
             "VNSHOP_PUBLIC_API_URL": f"https://api.{suffix}",
             "VNSHOP_AUTH_CALLBACK_BASE_URL": f"https://api.{suffix}/auth/oauth/callback",
@@ -295,10 +295,10 @@ def main() -> None:
                 rule.get("host") for rule in ingresses[0].get("spec", {}).get("rules", [])
             }
             expected_hosts = {
-                f"web.{suffix}", f"api.{suffix}", f"auth.{suffix}", f"storage.{suffix}"
+                f"web.{suffix}", f"api.{suffix}", f"storage.{suffix}"
             }
             if ingress_hosts != expected_hosts:
-                errors.append("ingress hosts must expose web, API, auth, and storage TLS origins")
+                errors.append("ingress hosts must expose web, API, and storage TLS origins")
 
     rendered_names = {doc.get("metadata", {}).get("name") for doc in documents}
     if "vnshop-coupon" in rendered_names or "vnshop-review" in rendered_names:

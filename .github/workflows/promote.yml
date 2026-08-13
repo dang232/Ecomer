@@ -110,7 +110,7 @@ jobs:
           fi
           [[ "$target" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]
           echo "E2E_INGRESS_IP=$target" >> "$GITHUB_ENV"
-          printf '%s\n' "$target web.vnshop.invalid api.vnshop.invalid auth.vnshop.invalid storage.vnshop.invalid" | sudo tee -a /etc/hosts
+          printf '%s\n' "$target web.vnshop.invalid api.vnshop.invalid storage.vnshop.invalid" | sudo tee -a /etc/hosts
 
       - name: Install and verify the staging trust root
         env:
@@ -121,7 +121,7 @@ jobs:
           printf '%s' "$CA_BASE64" | base64 --decode > vnshop-ci-root.crt
           sudo install -m 0644 vnshop-ci-root.crt /usr/local/share/ca-certificates/vnshop-ci-root.crt
           sudo update-ca-certificates
-          for host in web.vnshop.invalid api.vnshop.invalid auth.vnshop.invalid storage.vnshop.invalid; do
+          for host in web.vnshop.invalid api.vnshop.invalid storage.vnshop.invalid; do
             openssl s_client -connect "$E2E_INGRESS_IP:443" -servername "$host" -CAfile vnshop-ci-root.crt </dev/null 2>/dev/null |
               openssl x509 -noout -checkhost "$host" -issuer
           done
