@@ -503,12 +503,13 @@ spec:
           until /opt/keycloak/bin/kcadm.sh config credentials --server http://keycloak:8080 --realm master --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD"; do sleep 5; done
           client_id=$(/opt/keycloak/bin/kcadm.sh get clients -r vnshop -q clientId=vnshop-monitoring --fields id --format csv --noquotes)
           if [ -z "$client_id" ]; then
-            client_id=$(/opt/keycloak/bin/kcadm.sh create clients -r vnshop -s clientId=vnshop-monitoring -s name='VNShop Monitoring Dashboard' -s protocol=openid-connect -s publicClient=true -s standardFlowEnabled=true -s enabled=true -s 'attributes.pkce.code.challenge.method=S256' -i)
+            client_id=$(/opt/keycloak/bin/kcadm.sh create clients -r vnshop -s clientId=vnshop-monitoring -s name='VNShop Monitoring Dashboard' -s protocol=openid-connect -s publicClient=true -s standardFlowEnabled=true -s enabled=true -s 'attributes={"pkce.code.challenge.method":"S256"}' -i)
           fi
-          /opt/keycloak/bin/kcadm.sh update clients/$client_id -r vnshop -s redirectUris='["'"$AUTH_ORIGIN"'/monitoring/"]' -s webOrigins='["'"$AUTH_ORIGIN"'"]' -s publicClient=true -s standardFlowEnabled=true -s 'attributes.pkce.code.challenge.method=S256'
+          /opt/keycloak/bin/kcadm.sh update clients/$client_id -r vnshop -s redirectUris='["'"$AUTH_ORIGIN"'/monitoring/"]' -s webOrigins='["'"$AUTH_ORIGIN"'"]' -s publicClient=true -s standardFlowEnabled=true -s 'attributes={"pkce.code.challenge.method":"S256"}'
           admin_role_id=$(/opt/keycloak/bin/kcadm.sh get roles/ADMIN -r vnshop --fields id --format csv --noquotes)
           if ! /opt/keycloak/bin/kcadm.sh get clients/$client_id/scope-mappings/realm -r vnshop --fields name --format csv --noquotes | grep -qx ADMIN; then
-            /opt/keycloak/bin/kcadm.sh create clients/$client_id/scope-mappings/realm -r vnshop -s id="$admin_role_id" -s name=ADMIN
+            printf '[{"id":"%s","name":"ADMIN"}]' "$admin_role_id" > /tmp/admin-role.json
+            /opt/keycloak/bin/kcadm.sh create clients/$client_id/scope-mappings/realm -r vnshop -f /tmp/admin-role.json
           fi
           for target in vnshop-gateway vnshop-web vnshop-api; do
             target_id=$(/opt/keycloak/bin/kcadm.sh get clients -r vnshop -q clientId="$target" --fields id --format csv --noquotes)

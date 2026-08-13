@@ -19,7 +19,7 @@
     }
   },
   "scripts": {
-    "build": "nest build",
+    "build": "node scripts/prepare-public-assets.mjs && nest build",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
@@ -51,6 +51,7 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "socket.io": "^4.8.3",
+    "socket.io-client": "4.8.3",
     "typeorm": "^1.1.0"
   },
   "devDependencies": {
