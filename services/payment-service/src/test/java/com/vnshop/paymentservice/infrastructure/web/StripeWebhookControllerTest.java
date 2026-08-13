@@ -39,6 +39,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.eq;
 
 class StripeWebhookControllerTest {
 
@@ -149,6 +150,27 @@ class StripeWebhookControllerTest {
         assertThat(payments.byId.get(paymentId).status()).isEqualTo(PaymentStatus.PENDING);
         assertThat(logStore.savedAttempts).hasSize(1);
         assertThat(logStore.savedAttempts.get(0).processingStatus()).isEqualTo("IGNORED");
+    }
+
+    @Test
+    void chargebackEventIsNotGloballyMarkedByGeneralStripeController() {
+        WebhookIdempotencyService idempotency = mock(WebhookIdempotencyService.class);
+        StripeWebhookController controller = new StripeWebhookController(
+                new StripeProperties(true, "sk_test", "pk_test", "whsec_x"),
+                stubVerifier(eventOf("evt_dispute", "charge.dispute.created",
+                        paymentIntent(UUID.randomUUID(), "pi_dispute"))),
+                new PaymentPromotionService(new InMemoryPayments(),
+                        new LedgerService(new CapturingLedger()), new CapturingOutbox()),
+                new CapturingLogStore(),
+                idempotency);
+
+        ResponseEntity<ApiResponse<StripeWebhookController.StripeWebhookResponse>> response =
+                controller.webhook("t=1,v1=sig", "{}");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().data().outcome()).isEqualTo("charge.dispute.created");
+        verify(idempotency, never()).isAlreadyProcessed(any(), eq("STRIPE"));
+        verify(idempotency, never()).markProcessed(any(), eq("STRIPE"), eq("charge.dispute.created"));
     }
 
     private static StripeWebhookController controller(

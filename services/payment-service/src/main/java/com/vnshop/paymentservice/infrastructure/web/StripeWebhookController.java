@@ -79,6 +79,10 @@ public class StripeWebhookController {
             return ResponseEntity.badRequest().body(ApiResponse.error("malformed payload", "BAD_REQUEST"));
         }
 
+        if ("charge.dispute.created".equals(event.getType())) {
+            return ResponseEntity.ok(ApiResponse.ok(new StripeWebhookResponse(event.getId(), event.getType())));
+        }
+
         // Webhook-level dedup: same event delivered twice → 200 immediately.
         if (webhookIdempotencyService.isAlreadyProcessed(event.getId(), "STRIPE")) {
             return ResponseEntity.ok(ApiResponse.ok(new StripeWebhookResponse(event.getId(), "duplicate")));
