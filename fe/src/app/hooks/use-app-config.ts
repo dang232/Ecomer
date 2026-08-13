@@ -160,7 +160,8 @@ function secureUrl(
 ): URL | null {
   try {
     const url = new URL(value);
-    const hostname = url.hostname.toLowerCase().replace(/\.+$/, "");
+    const rawHostname = url.hostname.toLowerCase();
+    const hostname = rawHostname.replace(/\.+$/, "");
     const ipAddress = /^(?:\d{1,3}\.){3}\d{1,3}$/.test(hostname) || hostname.includes(":");
     const localHttp = allowInsecure && hostname === "localhost" && url.protocol === "http:";
     const localWs = allowInsecure && hostname === "localhost" && url.protocol === "ws:";
@@ -178,6 +179,7 @@ function secureUrl(
       url.password !== "" ||
       url.search !== "" ||
       url.hash !== "" ||
+      rawHostname.endsWith(".") ||
       hostname.includes("*") ||
       (!localHttp && !localWs && hostname === "localhost") ||
       hostname.endsWith(".localhost") ||
