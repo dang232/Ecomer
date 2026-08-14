@@ -15,6 +15,7 @@ public class Order {
     private final String orderNumber;
     private final String buyerId;
     private final Address shippingAddress;
+    private final ShippingDetails shippingDetails;
     private final List<SubOrder> subOrders;
     private Money itemsTotal;
     private Money shippingTotal;
@@ -48,9 +49,22 @@ public class Order {
 
     public Order(
             UUID id,
+            String buyerId,
+            Address shippingAddress,
+            ShippingDetails shippingDetails,
+            List<SubOrder> subOrders,
+            String paymentMethod,
+            String idempotencyKey) {
+        this(id, generateOrderNumber(), buyerId, shippingAddress, shippingDetails, subOrders,
+                Money.ZERO, Money.ZERO, Money.ZERO, Money.ZERO, paymentMethod, PaymentStatus.PENDING, idempotencyKey);
+    }
+
+    public Order(
+            UUID id,
             String orderNumber,
             String buyerId,
             Address shippingAddress,
+            ShippingDetails shippingDetails,
             List<SubOrder> subOrders,
             Money itemsTotal,
             Money shippingTotal,
@@ -59,7 +73,21 @@ public class Order {
             PaymentStatus paymentStatus,
             String idempotencyKey
     ) {
-        this(id, orderNumber, buyerId, shippingAddress, subOrders, itemsTotal, shippingTotal, discount,
+        this(id, orderNumber, buyerId, shippingAddress, shippingDetails, subOrders, itemsTotal, shippingTotal, discount,
+                Money.ZERO, paymentMethod, paymentStatus, idempotencyKey);
+    }
+
+    public Order(UUID id, String orderNumber, String buyerId, Address shippingAddress, List<SubOrder> subOrders,
+                 Money itemsTotal, Money shippingTotal, Money discount, Money taxTotal, String paymentMethod,
+                 PaymentStatus paymentStatus, String idempotencyKey) {
+        this(id, orderNumber, buyerId, shippingAddress, null, subOrders, itemsTotal, shippingTotal, discount,
+                taxTotal, paymentMethod, paymentStatus, idempotencyKey);
+    }
+
+    public Order(UUID id, String orderNumber, String buyerId, Address shippingAddress, List<SubOrder> subOrders,
+                 Money itemsTotal, Money shippingTotal, Money discount, String paymentMethod,
+                 PaymentStatus paymentStatus, String idempotencyKey) {
+        this(id, orderNumber, buyerId, shippingAddress, null, subOrders, itemsTotal, shippingTotal, discount,
                 Money.ZERO, paymentMethod, paymentStatus, idempotencyKey);
     }
 
@@ -68,6 +96,7 @@ public class Order {
             String orderNumber,
             String buyerId,
             Address shippingAddress,
+            ShippingDetails shippingDetails,
             List<SubOrder> subOrders,
             Money itemsTotal,
             Money shippingTotal,
@@ -88,6 +117,7 @@ public class Order {
         this.orderNumber = orderNumber;
         this.buyerId = buyerId;
         this.shippingAddress = Objects.requireNonNull(shippingAddress, "shippingAddress is required");
+        this.shippingDetails = shippingDetails;
         this.subOrders = List.copyOf(subOrders);
         this.itemsTotal = Objects.requireNonNull(itemsTotal, "itemsTotal is required");
         this.shippingTotal = Objects.requireNonNull(shippingTotal, "shippingTotal is required");
@@ -122,6 +152,10 @@ public class Order {
 
     public Address shippingAddress() {
         return shippingAddress;
+    }
+
+    public ShippingDetails shippingDetails() {
+        return shippingDetails;
     }
 
     public List<SubOrder> subOrders() {

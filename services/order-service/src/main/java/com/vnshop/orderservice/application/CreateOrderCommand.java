@@ -3,12 +3,14 @@ package com.vnshop.orderservice.application;
 import com.vnshop.orderservice.domain.Address;
 import com.vnshop.orderservice.domain.OrderItem;
 import com.vnshop.orderservice.domain.PaymentMethod;
+import com.vnshop.orderservice.domain.ShippingDetails;
 
 import java.util.List;
 
 public record CreateOrderCommand(
         String buyerId,
         Address shippingAddress,
+        ShippingDetails shippingDetails,
         List<OrderItem> items,
         String idempotencyKey,
         PaymentMethod paymentMethod,
@@ -19,11 +21,21 @@ public record CreateOrderCommand(
             Address shippingAddress,
             List<OrderItem> items,
             String idempotencyKey,
+            PaymentMethod paymentMethod,
+            String couponCode) {
+        this(buyerId, shippingAddress, null, items, idempotencyKey, paymentMethod, couponCode);
+    }
+
+    public CreateOrderCommand(
+            String buyerId,
+            Address shippingAddress,
+            List<OrderItem> items,
+            String idempotencyKey,
             PaymentMethod paymentMethod) {
-        this(buyerId, shippingAddress, items, idempotencyKey, paymentMethod, null);
+        this(buyerId, shippingAddress, null, items, idempotencyKey, paymentMethod, null);
     }
 
     public CreateOrderCommand(String buyerId, Address shippingAddress, List<OrderItem> items, String idempotencyKey) {
-        this(buyerId, shippingAddress, items, idempotencyKey, PaymentMethod.COD, null);
+        this(buyerId, shippingAddress, null, items, idempotencyKey, PaymentMethod.COD, null);
     }
 }

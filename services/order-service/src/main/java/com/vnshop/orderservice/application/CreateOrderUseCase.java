@@ -5,6 +5,7 @@ import com.vnshop.orderservice.domain.CommissionTier;
 import com.vnshop.orderservice.domain.Order;
 import com.vnshop.orderservice.domain.OrderItem;
 import com.vnshop.orderservice.domain.PaymentMethod;
+import com.vnshop.orderservice.domain.ShippingDetails;
 import com.vnshop.orderservice.domain.SubOrder;
 import com.vnshop.orderservice.domain.port.out.CommissionTierLookupPort;
 import com.vnshop.orderservice.domain.port.out.InventoryReservationPort;
@@ -90,6 +91,7 @@ public class CreateOrderUseCase {
                 .orElseGet(() -> createNewOrder(
                         command.buyerId(),
                         command.shippingAddress(),
+                        command.shippingDetails(),
                         command.items(),
                         command.idempotencyKey(),
                         command.paymentMethod(),
@@ -99,6 +101,7 @@ public class CreateOrderUseCase {
     private Order createNewOrder(
             String buyerId,
             Address shippingAddress,
+            ShippingDetails shippingDetails,
             List<OrderItem> items,
             String idempotencyKey,
             PaymentMethod paymentMethod,
@@ -112,6 +115,7 @@ public class CreateOrderUseCase {
                 UUID.randomUUID(),
                 buyerId,
                 shippingAddress,
+                shippingDetails,
                 subOrders,
                 paymentMethod == null ? PaymentMethod.COD.name() : paymentMethod.name(),
                 idempotencyKey);
@@ -141,7 +145,7 @@ public class CreateOrderUseCase {
             sagaOrchestrator.stepCompleted(sagaId, "PAYMENT");
 
             for (SubOrder subOrder : order.subOrders()) {
-                shippingRequestPort.requestShipping(order.id().toString(), subOrder, shippingAddress);
+                shippingRequestPort.requestShipping(order.id().toString(), subOrder, shippingAddress, shippingDetails);
             }
             sagaOrchestrator.stepCompleted(sagaId, "SHIPPING");
 
