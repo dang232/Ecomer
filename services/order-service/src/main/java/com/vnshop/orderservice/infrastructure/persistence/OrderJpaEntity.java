@@ -4,6 +4,7 @@ import com.vnshop.orderservice.domain.Address;
 import com.vnshop.orderservice.domain.Money;
 import com.vnshop.orderservice.domain.Order;
 import com.vnshop.orderservice.domain.PaymentStatus;
+import com.vnshop.orderservice.domain.ShippingDetails;
 import com.vnshop.orderservice.infrastructure.persistence.BaseJpaEntity;
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.AttributeOverrides;
@@ -44,6 +45,33 @@ public class OrderJpaEntity extends BaseJpaEntity {
 
     @Embedded
     private AddressEmbeddable shippingAddress;
+
+    @Column(name = "shipping_recipient_name")
+    private String shippingRecipientName;
+
+    @Column(name = "shipping_recipient_phone")
+    private String shippingRecipientPhone;
+
+    @Column(name = "shipping_ward_code")
+    private String shippingWardCode;
+
+    @Column(name = "shipping_district_code")
+    private String shippingDistrictCode;
+
+    @Column(name = "shipping_province_code")
+    private String shippingProvinceCode;
+
+    @Column(name = "shipping_weight_grams")
+    private Integer shippingWeightGrams;
+
+    @Column(name = "shipping_length_cm")
+    private Integer shippingLengthCm;
+
+    @Column(name = "shipping_width_cm")
+    private Integer shippingWidthCm;
+
+    @Column(name = "shipping_height_cm")
+    private Integer shippingHeightCm;
 
     @Embedded
     @AttributeOverrides({
@@ -110,6 +138,18 @@ public class OrderJpaEntity extends BaseJpaEntity {
         entity.orderNumber = order.orderNumber();
         entity.buyerId = order.buyerId();
         entity.shippingAddress = AddressEmbeddable.fromDomain(order.shippingAddress());
+        if (order.shippingDetails() != null) {
+            ShippingDetails details = order.shippingDetails();
+            entity.shippingRecipientName = details.recipientName();
+            entity.shippingRecipientPhone = details.recipientPhone();
+            entity.shippingWardCode = details.wardCode();
+            entity.shippingDistrictCode = details.districtCode();
+            entity.shippingProvinceCode = details.provinceCode();
+            entity.shippingWeightGrams = details.weightGrams();
+            entity.shippingLengthCm = details.lengthCm();
+            entity.shippingWidthCm = details.widthCm();
+            entity.shippingHeightCm = details.heightCm();
+        }
         entity.itemsTotal = MoneyEmbeddable.fromDomain(order.itemsTotal());
         entity.shippingTotal = MoneyEmbeddable.fromDomain(order.shippingTotal());
         entity.discount = MoneyEmbeddable.fromDomain(order.discount());
@@ -134,6 +174,7 @@ public class OrderJpaEntity extends BaseJpaEntity {
                 orderNumber,
                 buyerId,
                 shippingAddress.toDomain(),
+                shippingDetails(),
                 subOrders.stream().map(SubOrderJpaEntity::toDomain).toList(),
                 itemsTotal.toDomain(),
                 shippingTotal.toDomain(),
@@ -147,6 +188,15 @@ public class OrderJpaEntity extends BaseJpaEntity {
             order.recordFxDetails(externalAmount, externalCurrency, fxRate, fxRateAt);
         }
         return order;
+    }
+
+    private ShippingDetails shippingDetails() {
+        if (shippingRecipientName == null) {
+            return null;
+        }
+        return new ShippingDetails(shippingRecipientName, shippingRecipientPhone, shippingWardCode,
+                shippingDistrictCode, shippingProvinceCode, shippingWeightGrams, shippingLengthCm,
+                shippingWidthCm, shippingHeightCm);
     }
 
 

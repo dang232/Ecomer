@@ -3,6 +3,7 @@ package com.vnshop.orderservice.infrastructure.grpc;
 import com.vnshop.orderservice.domain.Address;
 import com.vnshop.orderservice.domain.OrderItem;
 import com.vnshop.orderservice.domain.SubOrder;
+import com.vnshop.orderservice.domain.ShippingDetails;
 import com.vnshop.orderservice.domain.port.out.ShippingRequestPort;
 import com.vnshop.proto.shipping.ShippingServiceGrpc;
 import com.vnshop.proto.shipping.ShippingRequest;
@@ -40,18 +41,44 @@ public class GrpcShippingRequestAdapter implements ShippingRequestPort {
                 .setOrderId(orderId)
                 .addSubOrders(com.vnshop.proto.shipping.SubOrder.newBuilder()
                         .setSellerId(subOrder.sellerId())
+                        .addAllItems(subOrder.items().stream().map(GrpcShippingRequestAdapter::toProtoItem).toList())
+                        .setShippingAddress(toLegacyProtoAddress(shippingAddress))
+                        .setDeclaredValue(toProtoMoney(subOrder.itemsTotal()))
+                        .setCodAmount(toProtoMoney(subOrder.itemsTotal().add(subOrder.shippingCost())))
+                        .build())
+                .build();
+        executeShipping(orderId, subOrder, request);
+    }
+
+    @Override
+    public void requestShipping(String orderId, SubOrder subOrder, Address shippingAddress, ShippingDetails shippingDetails) {
+        if (shippingDetails == null) {
+            throw new IllegalStateException("carrier shipping details are required for live labels");
+        }
+        ShippingRequest request = ShippingRequest.newBuilder()
+                .setOrderId(orderId)
+                .addSubOrders(com.vnshop.proto.shipping.SubOrder.newBuilder()
+                        .setSellerId(subOrder.sellerId())
                         .addAllItems(subOrder.items().stream()
                                 .map(GrpcShippingRequestAdapter::toProtoItem)
                                 .toList())
-                        .setShippingAddress(toProtoAddress(shippingAddress))
+                        .setShippingAddress(toProtoAddress(shippingAddress, shippingDetails))
+                        .setParcelWeightGrams(shippingDetails.weightGrams())
+                        .setParcelLengthCm(shippingDetails.lengthCm())
+                        .setParcelWidthCm(shippingDetails.widthCm())
+                        .setParcelHeightCm(shippingDetails.heightCm())
+                        .setDeclaredValue(toProtoMoney(subOrder.itemsTotal()))
+                        .setCodAmount(toProtoMoney(subOrder.itemsTotal().add(subOrder.shippingCost())))
                         .build())
                 .build();
 
+        executeShipping(orderId, subOrder, request);
+    }
+
+    private void executeShipping(String orderId, SubOrder subOrder, ShippingRequest request) {
         try {
             ShippingResponse response = circuitBreaker.executeSupplier(() ->
-                    shippingStub
-                            .withDeadlineAfter(5, TimeUnit.SECONDS)
-                            .requestShipping(request));
+                    shippingStub.withDeadlineAfter(5, TimeUnit.SECONDS).requestShipping(request));
 
             if (!response.getSuccess()) {
                 LOGGER.warn("Shipping request failed for order {} seller {}", orderId, subOrder.sellerId());
@@ -79,16 +106,38 @@ public class GrpcShippingRequestAdapter implements ShippingRequestPort {
                 .setProductId(item.productId())
                 .setVariant(item.variantSku())
                 .setQuantity(item.quantity())
+                .setDeclaredValue(toProtoMoney(item.totalPrice()))
                 .build();
     }
 
-    private static com.vnshop.proto.shipping.ShippingAddress toProtoAddress(Address address) {
+    private static com.vnshop.proto.shipping.ShippingAddress toProtoAddress(Address address, ShippingDetails details) {
         return com.vnshop.proto.shipping.ShippingAddress.newBuilder()
-                .setFullName("")
-                .setPhone("")
+                .setFullName(details.recipientName())
+                .setPhone(details.recipientPhone())
                 .setStreet(address.street())
+                .setWardCode(details.wardCode())
+                .setDistrictCode(details.districtCode())
+                .setProvinceCode(details.provinceCode())
                 .setCity(address.city())
                 .setProvince(address.district())
+                .build();
+    }
+
+    private static com.vnshop.proto.shipping.ShippingAddress toLegacyProtoAddress(Address address) {
+        return com.vnshop.proto.shipping.ShippingAddress.newBuilder()
+                .setStreet(address.street())
+                .setWardCode(address.ward() == null ? "" : address.ward())
+                .setDistrictCode(address.district())
+                .setProvinceCode(address.city())
+                .setCity(address.city())
+                .setProvince(address.district())
+                .build();
+    }
+
+    private static com.vnshop.proto.common.Money toProtoMoney(com.vnshop.orderservice.domain.Money money) {
+        return com.vnshop.proto.common.Money.newBuilder()
+                .setAmount(money.amount().toPlainString())
+                .setCurrency(money.currency())
                 .build();
     }
 }
