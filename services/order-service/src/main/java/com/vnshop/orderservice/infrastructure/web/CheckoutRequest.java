@@ -10,6 +10,7 @@ import java.util.List;
 
 public record CheckoutRequest(
         @Valid @NotNull AddressRequest shippingAddress,
+        @Valid @NotNull ShippingDetailsRequest shippingDetails,
         @Valid @NotEmpty List<OrderItemRequest> items,
         @NotNull PaymentMethod paymentMethod,
         String couponCode) {
