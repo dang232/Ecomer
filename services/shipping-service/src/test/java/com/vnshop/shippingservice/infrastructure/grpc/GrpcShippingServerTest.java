@@ -71,11 +71,15 @@ class GrpcShippingServerTest {
         assertEquals("Nguyen Van A", sent.toAddress().name());
         assertEquals("0901234567", sent.toAddress().phone());
         assertEquals("123 Le Loi", sent.toAddress().street());
-        assertEquals("Ho Chi Minh", sent.toAddress().district());
-        assertEquals("Ho Chi Minh", sent.toAddress().province());
+        assertEquals("W1", sent.toAddress().ward());
+        assertEquals("D1", sent.toAddress().district());
+        assertEquals("P1", sent.toAddress().province());
         assertEquals("prod-1:red x2", sent.itemDescription());
-        assertEquals(null, sent.parcel());
-        assertEquals(0L, sent.codAmountVnd());
+        assertEquals(2500, sent.parcel().weightGrams());
+        assertEquals(20, sent.parcel().lengthCm());
+        assertEquals(15, sent.parcel().widthCm());
+        assertEquals(10, sent.parcel().heightCm());
+        assertEquals(120000L, sent.codAmountVnd());
     }
 
     @Test
@@ -113,9 +117,13 @@ class GrpcShippingServerTest {
                         .addItems(com.vnshop.proto.shipping.SubOrderItem.newBuilder()
                                 .setProductId("prod-1").setVariant("red").setQuantity(2).build())
                         .setShippingAddress(com.vnshop.proto.shipping.ShippingAddress.newBuilder()
-                                .setFullName("Nguyen Van A").setPhone("0901234567")
+                        .setFullName("Nguyen Van A").setPhone("0901234567")
                                 .setStreet("123 Le Loi").setCity("Ho Chi Minh").setProvince("Ho Chi Minh")
+                                .setWardCode("W1").setDistrictCode("D1").setProvinceCode("P1")
                                 .build())
+                        .setParcelWeightGrams(2500).setParcelLengthCm(20).setParcelWidthCm(15).setParcelHeightCm(10)
+                        .setCodAmount(com.vnshop.proto.common.Money.newBuilder().setAmount("120000").setCurrency("VND"))
+                        .setDeclaredValue(com.vnshop.proto.common.Money.newBuilder().setAmount("120000").setCurrency("VND"))
                         .build())
                 .build();
     }

@@ -4,6 +4,7 @@ import com.vnshop.orderservice.domain.Address;
 import com.vnshop.orderservice.domain.Money;
 import com.vnshop.orderservice.domain.OrderItem;
 import com.vnshop.orderservice.domain.SubOrder;
+import com.vnshop.orderservice.domain.ShippingDetails;
 import com.vnshop.proto.shipping.ShippingServiceGrpc;
 import com.vnshop.proto.shipping.ShippingRequest;
 import com.vnshop.proto.shipping.ShippingResponse;
@@ -23,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -42,7 +44,7 @@ class GrpcShippingRequestAdapterTest {
         adapter = new GrpcShippingRequestAdapter(
                 shippingStub,
                 CircuitBreaker.ofDefaults("shipping-request-test"));
-        when(shippingStub.withDeadlineAfter(anyLong(), any())).thenReturn(shippingStub);
+        lenient().when(shippingStub.withDeadlineAfter(anyLong(), any())).thenReturn(shippingStub);
     }
 
     @Test
@@ -76,6 +78,10 @@ class GrpcShippingRequestAdapterTest {
         assertEquals("prod-1", sentItem.getProductId());
         assertEquals("sku-red", sentItem.getVariant());
         assertEquals(2, sentItem.getQuantity());
+        assertEquals("200000", sentItem.getDeclaredValue().getAmount());
+        assertEquals("VND", sentItem.getDeclaredValue().getCurrency());
+        assertEquals("200000", sentSub.getDeclaredValue().getAmount());
+        assertEquals("200000", sentSub.getCodAmount().getAmount());
     }
 
     @Test
@@ -105,6 +111,53 @@ class GrpcShippingRequestAdapterTest {
         assertEquals("456 Side St", sentAddr.getStreet());
         assertEquals("HCMC", sentAddr.getCity());
         assertEquals("District Y", sentAddr.getProvince());
+        assertEquals("Ward 2", sentAddr.getWardCode());
+        assertEquals("District Y", sentAddr.getDistrictCode());
+        assertEquals("HCMC", sentAddr.getProvinceCode());
+    }
+
+    @Test
+    void shouldMapLiveCarrierContactCodesAndParcelDetails() {
+        Address address = new Address("12 Carrier St", "Ward name", "District name", "Hanoi");
+        ShippingDetails details = new ShippingDetails(
+                "Nguyen Van A", "+84912345678", "W-001", "D-001", "P-001", 1500, 30, 20, 10);
+        OrderItem item = new OrderItem("prod-live", "sku-live", "seller-live", "Jacket", 1,
+                new Money(new BigDecimal("350000")), null);
+        SubOrder subOrder = new SubOrder("seller-live", List.of(item));
+
+        when(shippingStub.requestShipping(any())).thenReturn(ShippingResponse.newBuilder()
+                .setSuccess(true)
+                .addLabels(com.vnshop.proto.shipping.ShippingLabel.newBuilder().setTrackingCode("TRACK-LIVE").build())
+                .build());
+
+        adapter.requestShipping("order-live", subOrder, address, details);
+
+        verify(shippingStub).requestShipping(requestCaptor.capture());
+        com.vnshop.proto.shipping.SubOrder sentSub = requestCaptor.getValue().getSubOrders(0);
+        com.vnshop.proto.shipping.ShippingAddress sentAddress = sentSub.getShippingAddress();
+
+        assertEquals("Nguyen Van A", sentAddress.getFullName());
+        assertEquals("+84912345678", sentAddress.getPhone());
+        assertEquals("W-001", sentAddress.getWardCode());
+        assertEquals("D-001", sentAddress.getDistrictCode());
+        assertEquals("P-001", sentAddress.getProvinceCode());
+        assertEquals(1500, sentSub.getParcelWeightGrams());
+        assertEquals(30, sentSub.getParcelLengthCm());
+        assertEquals(20, sentSub.getParcelWidthCm());
+        assertEquals(10, sentSub.getParcelHeightCm());
+        assertEquals("350000", sentSub.getDeclaredValue().getAmount());
+        assertEquals("350000", sentSub.getCodAmount().getAmount());
+    }
+
+    @Test
+    void shouldRejectLiveShippingWhenCarrierDetailsAreAbsent() {
+        Address address = new Address("12 Carrier St", "Ward name", "District name", "Hanoi");
+        OrderItem item = new OrderItem("prod-live", "sku-live", "seller-live", "Jacket", 1,
+                new Money(new BigDecimal("350000")), null);
+        SubOrder subOrder = new SubOrder("seller-live", List.of(item));
+
+        assertThrows(IllegalStateException.class,
+                () -> adapter.requestShipping("order-live", subOrder, address, null));
     }
 
     @Test
