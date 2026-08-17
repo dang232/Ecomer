@@ -1,7 +1,11 @@
 import type { PlaceOrderInput } from "@/shared/api/endpoints/orders";
 import type { CheckoutProvider, PaymentStatus } from "@/shared/contracts/api";
 
-import type { CheckoutRecoveryRecord, CheckoutRecoveryStore } from "./recovery";
+import type {
+  CheckoutRecoveryRecord,
+  CheckoutRecoveryStore,
+  RecoveryOrderInput,
+} from "./recovery";
 import type { PurchasedCartItem } from "./cart-cleanup";
 import {
   attemptIdentity,
@@ -170,7 +174,7 @@ export function createCheckoutSubmissionController(
   };
 
   const reconcile = async (attempt: {
-    order: PlaceOrderInput;
+    order: RecoveryOrderInput;
     provider: CheckoutProvider;
     orderKey: string;
     cartFingerprint: string;
@@ -433,7 +437,7 @@ function recoveryOrder(
   };
 }
 
-function purchasedItemsFromOrder(order: PlaceOrderInput): PurchasedCartItem[] {
+function purchasedItemsFromOrder(order: PlaceOrderInput | RecoveryOrderInput): PurchasedCartItem[] {
   return order.items.map((item) => ({
     productId: item.productId,
     variantId: item.variantSku,
