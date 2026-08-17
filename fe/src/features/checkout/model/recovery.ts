@@ -25,6 +25,13 @@ const recoveryOrderSchema = z.object({
     district: z.string().min(1),
     city: z.string().min(1),
   }),
+  shippingDetails: z.object({
+    recipientName: z.string().min(1),
+    recipientPhone: z.string().min(1),
+    wardCode: z.string().min(1),
+    districtCode: z.string().min(1),
+    provinceCode: z.string().min(1),
+  }),
   paymentMethod: checkoutProviderSchema.optional(),
   couponCode: z.string().optional(),
   notes: z.string().optional(),

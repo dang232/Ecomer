@@ -13,6 +13,13 @@ const input: CheckoutSubmissionInput = {
   order: {
     items: [{ productId: "product-1", quantity: 1 }],
     shippingAddress: { street: "1 Main", district: "D1", city: "HCMC" },
+    shippingDetails: {
+      recipientName: "Buyer One",
+      recipientPhone: "+84900000000",
+      wardCode: "W1",
+      districtCode: "D1",
+      provinceCode: "P1",
+    },
     paymentMethod: "COD",
   },
 };
