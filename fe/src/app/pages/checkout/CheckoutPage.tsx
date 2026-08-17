@@ -397,6 +397,17 @@ export function CheckoutPage() {
             district: selectedAddress.district ?? "",
             city: selectedAddress.city,
           },
+          shippingDetails: {
+            recipientName:
+              profileQuery.data?.name ||
+              [profile?.firstName, profile?.lastName].filter(Boolean).join(" ") ||
+              profile?.username ||
+              "",
+            recipientPhone: selectedAddress.phone ?? profileQuery.data?.phone ?? "",
+            wardCode: selectedAddress.ward ?? "",
+            districtCode: selectedAddress.district ?? "",
+            provinceCode: selectedAddress.city,
+          },
           paymentMethod: selectedPaymentId,
           notes: note || undefined,
           couponCode: appliedCoupon ?? undefined,
