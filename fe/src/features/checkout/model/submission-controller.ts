@@ -1,11 +1,7 @@
 import type { PlaceOrderInput } from "@/shared/api/endpoints/orders";
 import type { CheckoutProvider, PaymentStatus } from "@/shared/contracts/api";
 
-import type {
-  CheckoutRecoveryRecord,
-  CheckoutRecoveryStore,
-  RecoveryOrderInput,
-} from "./recovery";
+import type { CheckoutRecoveryRecord, CheckoutRecoveryStore, RecoveryOrderInput } from "./recovery";
 import type { PurchasedCartItem } from "./cart-cleanup";
 import {
   attemptIdentity,
