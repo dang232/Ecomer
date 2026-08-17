@@ -1,4 +1,4 @@
-<!-- Generated: 2026-07-10 | Updated: 2026-07-10 -->
+<!-- Generated: 2026-07-10 | Updated: 2026-08-18 -->
 
 # VNShop E-Commerce Platform
 
@@ -11,6 +11,7 @@ Polyglot microservices marketplace (19 services, Spring Boot + NestJS + Python),
 | `README.md` | Primary project documentation — start here |
 | `AGENTS.md` | (this file) AI-readable project overview |
 | `HANDOFF.md` | Onboarding pickup doc for new contributors |
+| `docs/SESSION-HANDOVER-2026-08-18.md` | Current post-PR #314 status and next steps |
 | `docker-compose.yml` | Full stack orchestration (~60KB, all services + infra) |
 | `.env` | Local environment config (secrets — never commit) |
 | `.env.example` | Environment template (safe to commit) |
@@ -35,7 +36,15 @@ Polyglot microservices marketplace (19 services, Spring Boot + NestJS + Python),
 - **Messaging**: Kafka 8.2.0, SASL_PLAINTEXT, per-service ACLs
 - **Data**: PostgreSQL 17 (per-service), Redis 8, Elasticsearch 9, MinIO
 - **Payments**: COD, VietQR, SePay (live); Stripe, PayPal (sandbox); MoMo, VNPay (disabled by default)
-- **Shipping**: GHN/GHTK adapters (live code, `CARRIER_MODE=stub` default)
+- **Shipping**: GHN/GHTK adapters and live checkout protobuf contract are merged; `CARRIER_MODE=stub` remains a local default and production credentials/evidence are still required
+
+## Current Status
+
+- `main` is at `1cd5495f` (PR #314, 2026-08-17).
+- Backend live-shipping checkout carries recipient/address codes, parcel dimensions, declared value, COD amount, recovery data, labels, and cancellation compensation.
+- React checkout remains fail-closed until trusted parcel metadata is exposed by product/cart responses; do not invent dimensions in the browser.
+- Production Kubernetes manifests remain blocked by placeholder digests, empty secrets, example origins, stub/demo modes, and unresolved Kafka/Elasticsearch/provider security gates.
+- The next feature backlog is the unchecked August admin cursor-pagination plan after checkout and release verification.
 
 ## For AI Agents
 
@@ -59,7 +68,7 @@ Polyglot microservices marketplace (19 services, Spring Boot + NestJS + Python),
 
 ### Testing
 ```bash
-# API gate
+# API gate (historical documented baseline; rerun after PR #314)
 node infra/scripts/e2e-day.mjs       # 65/65 endpoints
 # FE gate
 cd fe && npx playwright test         # 108/108 scenarios

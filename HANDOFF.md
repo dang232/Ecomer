@@ -1,9 +1,22 @@
 # Handoff
 
-**Last updated:** 2026-05-23 (HEAD `7f986b5a`)
+> **Current status:** Read [`docs/SESSION-HANDOVER-2026-08-18.md`](docs/SESSION-HANDOVER-2026-08-18.md) first. This file remains a compatibility entry point and was refreshed after PR #314.
+
+**Last updated:** 2026-08-18 (HEAD `1cd5495f`)
 **Read this first if you're picking up this codebase.** It replaces the need to walk all 29 SESSION-HANDOVER files for the common pickup case.
 
 ---
+
+## Current Pickup
+
+The latest merged work is PR #314, which completes the backend live-shipping checkout contract. The remaining
+browser blocker is trusted parcel metadata: `fe/src/app/pages/checkout/CheckoutPage.tsx` intentionally refuses
+to submit when product/cart data cannot provide authoritative dimensions. Do not replace that guard with guessed
+browser values; implement the product/variant parcel-data contract first.
+
+Production readiness is still blocked by Kubernetes and provider evidence: all-zero application image digests,
+an empty SealedSecret, placeholder public origins, stub/demo provider modes, local server fallbacks, provider
+credentials, Kafka topology/TLS, and Elasticsearch security. See `docs/PRODUCTION-READINESS-REVIEW.md`.
 
 ## What this codebase is
 
@@ -19,10 +32,10 @@ Architecture details: `.sisyphus/ARCHITECTURE.md`. Per-service health: `.sisyphu
 
 ---
 
-## Current state (smoke test)
+## Current state (historical baseline)
 
 ```bash
-# FE
+# FE (historical baseline; rerun after PR #314)
 cd fe && npm run typecheck   # 2 pre-existing errors (PayPal + checkout)
 cd fe && npm test            # 156/156, 25 files
 cd fe && npx playwright test e2e/day-simulation.spec.ts --project=chromium  # 15/15, ~27s
@@ -103,9 +116,9 @@ The largest UX correctness pass since pt12.
 
 ---
 
-## What's still open
+## Historical Notes
 
-Three items, the first two deferred with written rationale, the third surfaced during the pt28 schema audit:
+The following notes are retained from the May handoff for historical context. They are not the current backlog:
 
 1. **PayPal capture round-trip.** Last unproven payment path. Manual browser test, must run while logged in as the buyer who owns the payment. Cannot be automated within this session.
 2. **Shipping tracking ownership check.** `GET /shipping/tracking/{code}` lets any authenticated user read any tracking code. Deferred in pt22 because: (a) tracking codes are carrier-opaque, not enumerable; (b) fix needs cross-service architecture work (shipping has no orderId/buyerId mapping); (c) GHN/GHTK/USPS/FedEx all expose tracking by code alone — pinning ours would be stricter than industry.
@@ -188,9 +201,16 @@ In-handover gotchas (numbered #40–53 across pt15–pt26): see the per-block fi
 
 ---
 
-## How to resume work
+## How to Resume Work
 
-### Pick something specific
+### Current priorities
+- Implement trusted parcel metadata across product/cart/checkout.
+- Run fresh shipping, order, frontend, API E2E, and Playwright verification.
+- Complete admin dashboard runtime evidence with Docker.
+- Close Kubernetes production-contract blockers.
+- Start the August admin cursor-pagination plan after release blockers are addressed.
+
+### Historical options
 - **PayPal capture** — start a browser session, log in as the buyer who placed an unconfirmed PayPal order, walk the sandbox, confirm the capture lands in `payment_status`.
 - **Observability** — distributed tracing on the new virtual-thread executor, request-id propagation through `@HttpExchange` interfaces, structured logging conventions across services.
 - **CI hardening** — matrix `mvnw verify` on every PR, profile-aware compose-up smoke test, automated docker rebuild + day-simulation gate.

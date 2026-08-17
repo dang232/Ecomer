@@ -1,6 +1,6 @@
 # Production Readiness Closure Plan
 
-Status: Active implementation round from the 2026-07-22 source audit.
+Status: Active release-closure plan; backend live-shipping contract merged in PR #314 (`1cd5495f`), browser and deployment proof still pending.
 
 This plan closes repository-owned correctness and safety gaps while keeping local stubs
 explicitly local. The existing [`PRODUCTION-READINESS-REVIEW.md`](PRODUCTION-READINESS-REVIEW.md)
@@ -28,10 +28,10 @@ real validators; production-profile context tests fail on unsafe values; local t
 
 ### 2. Route checkout shipping through carrier ports
 
-Add the missing application mapping around `CreateLabelCommand` and `CarrierGatewayPort`.
-Replace synthetic tracking generation in `GrpcShippingServer` with gateway results. Propagate
-provider failure through gRPC and make `GrpcShippingRequestAdapter` fail the saga when the
-response is unsuccessful. Populate required contact/address fields rather than empty strings.
+This code-owned slice is implemented by PR #314. The gRPC path now invokes `CreateLabelCommand` through
+`CreateLabelUseCase`, returns carrier labels, propagates provider failure, persists label records, and
+routes cancellation through the carrier path. The remaining code-owned work is to expose trusted parcel
+metadata from product/cart responses so the React checkout can submit the required fields.
 
 Primary files:
 
@@ -41,8 +41,9 @@ Primary files:
 - `services/order-service/src/main/java/com/vnshop/orderservice/infrastructure/grpc/GrpcShippingRequestAdapter.java`
 - `services/order-service/src/main/java/com/vnshop/orderservice/application/CreateOrderUseCase.java`
 
-Proof: fake gateway invocation test, provider failure compensation test, and carrier request
-mapping tests. No production-path test may accept a generated `VN...` label.
+Proof: fake gateway invocation test, provider failure compensation test, carrier request mapping tests,
+and a browser checkout test using authoritative parcel metadata. No production-path test may accept a
+generated synthetic label.
 
 ### 3. Make all commerce events durable
 
@@ -122,8 +123,7 @@ closed by source changes or local tests:
 - release mobile endpoint injection and CI carrier/release coverage;
 - notification provider credentials, video worker quotas, tmpfs enforcement, and durable
   media retry policy.
-- the shipping gRPC contract does not yet carry all provider-required contact, ward, district,
-  province-code, parcel, and amount fields;
+- the browser product/cart contract does not yet carry trusted parcel dimensions into checkout;
 - cart E2E requires a real PostgreSQL/Redis test environment (`DATABASE_URL` is mandatory).
 
 Each remains `blocked-external` in the readiness ledger until an owner supplies evidence.

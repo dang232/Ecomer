@@ -4,6 +4,19 @@
 > Scope: repository-wide review of local fallbacks, hardcoded local infrastructure, provider modes, and deployment placeholders.
 > Review mode: independent code-quality and architecture lanes plus repository evidence inspection.
 
+## Current Checkpoint — 2026-08-18
+
+The source tree is now at `main` merge `1cd5495f` (PR #314). The backend live-shipping checkout contract is
+implemented: order-to-shipping now carries recipient/contact data, carrier address codes, parcel dimensions,
+declared value, and COD amount; shipping persists labels and routes cancellation through the carrier path.
+
+This does **not** close the release gate. The React storefront still fails closed in
+`fe/src/app/pages/checkout/CheckoutPage.tsx` because product/cart responses do not expose trusted parcel
+dimensions. API and service-level tests that inject dimensions cannot substitute for browser checkout evidence.
+The next code-owned closure item is the authoritative product/variant parcel-data contract, followed by fresh
+browser/API compensation verification. The deployment findings below remain open unless new operational evidence
+closes them.
+
 ## Verdict
 
 **REQUEST CHANGES - do not treat the current tree as production-ready.**
@@ -188,8 +201,8 @@ They remain release blockers until their proof gates pass.
 - **Location:** [`GrpcShippingServer`](../services/shipping-service/src/main/java/com/vnshop/shippingservice/infrastructure/grpc/GrpcShippingServer.java):67-82; [`GrpcShippingRequestAdapter`](../services/order-service/src/main/java/com/vnshop/orderservice/infrastructure/grpc/GrpcShippingRequestAdapter.java):56-61.
 - **Evidence:** The server contains a TODO for `CreateLabelCommand`, always returns success, generates random tracking codes, and the order adapter logs `success=false` without failing the saga.
 - **Risk:** Orders can be marked shipping-complete without a provider shipment or usable carrier tracking code.
-- **Status:** `in-progress`; the gRPC path now invokes `CreateLabelUseCase` and propagates carrier failure, but the shared shipping contract still lacks carrier-required contact, ward, district, province-code, parcel, and amount fields.
-- **Proof gate:** A gRPC test must verify the configured carrier gateway is called and provider failure prevents `SHIPPING` completion.
+- **Status:** `backend-implemented`; PR #314 now invokes `CreateLabelUseCase`, propagates carrier failure, and carries the required contact, address-code, parcel, and amount fields. The browser remains blocked until trusted parcel metadata is available from product/cart contracts.
+- **Proof gate:** A gRPC test must verify the configured carrier gateway is called and provider failure prevents `SHIPPING` completion; a browser test must prove the storefront can provide trusted parcel metadata without a guessed fallback.
 
 #### PR-017 - Carrier webhook authentication is fail-open in default stub mode
 
@@ -258,16 +271,24 @@ Repository code can address PR-016 through PR-023. The following remain `blocked
 after those fixes until operational evidence is supplied: image digests, sealed secrets, public
 origins, live carrier/payment credentials, independent webhook secrets, Kafka topology/TLS,
 Elasticsearch security, FX policy, invoice identity, coupon ownership, shared staging DNS/gRPC
-configuration, provider contract approval, and the missing carrier-required fields in the shipping
-gRPC contract. These are not closed by unit tests or local Compose.
+configuration, provider contract approval, and trusted parcel metadata in the browser product/cart
+contract. These are not closed by unit tests or local Compose.
 
 ## 2026-07-22 execution evidence
 
 The first closure implementation round completed the repository-owned durability, security, and
 fallback-boundary work for PR-017, PR-018, PR-020, PR-021, PR-022, and PR-023. PR-019 is
 acknowledgement-safe but still needs shipment lookup/status persistence. PR-016 no longer creates
-synthetic tracking labels, but live carrier checkout remains blocked until the order-to-shipping
-contract supplies contact, ward, district, province-code, parcel, and amount data.
+synthetic tracking labels, but live carrier checkout remains blocked at the browser boundary until trusted
+product/cart parcel metadata is supplied. The order-to-shipping contract itself was completed by PR #314.
+
+## 2026-08-18 Verification Status
+
+- Source and targeted contract work: merged in PR #314.
+- Browser checkout with real cart data: **pending**; parcel metadata is absent and the UI fails closed.
+- Live provider label/cancellation evidence: **blocked-external** until GHN/GHTK credentials and provider access are supplied.
+- Kubernetes promotion: **blocked-external** by placeholder digests, empty SealedSecret, example origins, unsafe provider modes, and unresolved Kafka/Elasticsearch security.
+- Admin dashboard runtime evidence: pending Docker-backed migration, gateway, database, and browser checks.
 
 Fresh focused evidence:
 

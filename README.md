@@ -2,7 +2,7 @@
 
 A polyglot microservices e-commerce platform demonstrating DDD, CQRS, hexagonal architecture, and event-driven sagas, with a React SPA and Flutter mobile app.
 
-VNShop is a portfolio full-stack project for a Vietnamese multi-seller marketplace inspired by Shopee, Lazada, and Tiki. It ships with: 19 services (Spring Boot + NestJS), per-service Postgres, Kafka (SASL-authenticated + per-service ACLs) + saga + outbox, Keycloak-backed httpOnly-cookie auth, a React + Vite SPA, and a Flutter mobile app with OneSignal push notifications and VietQR/MoMo payment integration. The latest local Docker evidence run passed `e2e-day.mjs` (66/66 API checks) and Playwright (202 passed, 2 skipped, 204 total).
+VNShop is a portfolio full-stack project for a Vietnamese multi-seller marketplace inspired by Shopee, Lazada, and Tiki. It ships with: 19 services (Spring Boot + NestJS), per-service Postgres, Kafka (SASL-authenticated + per-service ACLs) + saga + outbox, Keycloak-backed httpOnly-cookie auth, a React + Vite SPA, and a Flutter mobile app with OneSignal push notifications and VietQR/MoMo payment integration. The current branch is `main` at merge `1cd5495f` (PR #314, 2026-08-17), which completes the backend live-shipping checkout contract. The latest documented local Docker evidence is `e2e-day.mjs` (66/66 API checks) and Playwright (202 passed, 2 skipped, 204 total); rerun both after the shipping-contract merge before treating those counts as fresh release evidence.
 
 ## System Requirements
 
@@ -26,7 +26,8 @@ VNShop is a portfolio full-stack project for a Vietnamese multi-seller marketpla
 | [Status reality](docs/STATUS-REALITY-2026-05-14.md) | Historical reconciliation of service health, feature coverage, and known gaps |
 | [Audit summary 2026-05-21](docs/AUDIT-SUMMARY-2026-05-21.md) | Consolidated security audit ledger (pt12 → pt23) — 18 findings closed across 7 services |
 | [E2E audit 2026-05-18](docs/E2E-AUDIT-2026-05-18.md) | What `e2e-day.mjs` and Playwright cover, plus the bugs fixed during the buildout |
-| [Latest session handover](docs/SESSION-HANDOVER-2026-07-10.md) | July implementation handover and current operational follow-ups |
+| [Current session handover](docs/SESSION-HANDOVER-2026-08-18.md) | Post-PR #314 status, blockers, and next steps |
+| [Historical session handover](docs/SESSION-HANDOVER-2026-07-10.md) | July implementation handover |
 | [Penetration test report](docs/PENETRATION-TESTING-REPORT-2026-07-11.md) | Security verification results and remaining findings |
 | [Release and recovery runbook](docs/operations/release-and-recovery.md) | Release, rollback, and recovery operating procedure |
 | [Frontend README](fe/README.md) | React + Vite SPA setup, scripts, layout |
@@ -47,9 +48,17 @@ retry persistence. The detailed implementation evidence is maintained in
 The Kubernetes promotion artifacts are still **not production-ready**. Before treating a deployment as
 live, resolve the empty SealedSecret, replace all-zero image digests, select live carrier/payment modes,
 provide independent provider secrets, secure the shared Kafka and Elasticsearch topology, and remove or
-gate server-side localhost/stub/demo fallbacks. Live shipping checkout also needs the missing carrier
-contract fields in the order-to-shipping gRPC request. The execution order and proof gates are in
+gate server-side localhost/stub/demo fallbacks. PR #314 now carries carrier contact, address-code, parcel,
+declared-value, and COD fields through the order-to-shipping gRPC contract. The remaining browser checkout
+gap is that the React storefront intentionally fails closed because product/cart responses do not yet expose
+trusted parcel dimensions; the API harness can provide those fields, but the real browser checkout cannot
+submit until an authoritative product/variant parcel-data contract is added. The execution order and proof gates are in
 [`docs/PRODUCTION-READINESS-CLOSURE-PLAN.md`](docs/PRODUCTION-READINESS-CLOSURE-PLAN.md).
+
+The immediate engineering sequence is: add trusted parcel metadata to the product/cart/checkout contract,
+run live-shipping and compensation verification, then close Kubernetes and provider evidence gates. The
+August admin cursor-pagination plan is the next feature backlog after these release-blocking checks; the
+older May-July handover and roadmap files are historical archives.
 
 Local-only values are intentional in `.env.example` and `infra/compose/staging/docker-compose.staging.yml`.
 They are documented for developer setup and must never be copied into shared staging or production. The
@@ -140,7 +149,8 @@ Historical baseline unit tests (2026-06-21):
 
 - **Flutter mobile app** (2026-07-10). VNShop mobile app with VietQR/MoMo payment integration, OneSignal push notifications, BLoC state management, Vietnamese/English localization, and Material 3 design system.
 - **Production-readiness reliability closure** (2026-07-22). Payment callbacks, shipping webhooks, product events, and search projection repair now use durable delivery boundaries; Kafka failures remain retryable instead of being acknowledged early. Missing inventory projections reject reservation, and notification retries persist retry/DLQ state.
-- **Shipping webhook hardening** (2026-07-22). GHN/GHTK callbacks use explicit public routes, shared application workflow, typed provider/security/retry configuration, fail-closed signature verification, idempotent durable acceptance, and `503` responses when durable delivery cannot be recorded. The live carrier adapter is wired, while the checkout contract still needs carrier-required address and parcel fields.
+- **Shipping webhook hardening** (2026-07-22). GHN/GHTK callbacks use explicit public routes, shared application workflow, typed provider/security/retry configuration, fail-closed signature verification, idempotent durable acceptance, and `503` responses when durable delivery cannot be recorded.
+- **Live-shipping checkout contract** (2026-08-14 to 2026-08-17, PR #314). Carrier contact/address codes, parcel dimensions, declared value, COD amount, recovery persistence, label persistence, carrier cancellation, and compensation-topic wiring now cross the order/shipping boundary. The browser still needs trusted parcel metadata from product/cart responses before it can submit live checkout.
 - **Consent-gated cart merge** (2026-07-22). Guest and server quantities are combined by intent through one authenticated atomic/idempotent merge operation; the browser effect cannot bypass the user's keep-separate choice.
 - **Service-owned operator read models** (2026-07-22). Admin orders and disputes are contextualized by `order-service`, payouts by `seller-finance-service`, and review queues by `product-service`; buyer/shop/product labels are batch-resolved through `user-service` public-profile APIs instead of frontend UUID fallbacks. The remaining operator risk is bounded pagination and live PostgreSQL integration coverage. See [`docs/FE-DATA-SEARCH-REVIEW-2026-07-22.md`](docs/FE-DATA-SEARCH-REVIEW-2026-07-22.md) and [`Architech.md`](Architech.md).
 - **CI and runtime hardening** (2026-07-22). The required `CI Gate` aggregates repository, frontend, mobile, Java, Node, Python, protobuf, secret-scan, and container checks. Notification runtime dependencies are pinned and included in its image. See [`docs/CI-PIPELINE.md`](docs/CI-PIPELINE.md).
@@ -168,7 +178,7 @@ Historical baseline unit tests (2026-06-21):
 | 3 | Per-seller commission tier on SubOrder | Design ready, hardcoded to STANDARD | Business decision |
 | 4 | VNPay payment method | Phase 3 | Business registration (MST + GPKD) |
 | 5 | Notifications inbox (FE bell) | Kafka consumer + FE bell icon shipped | — |
-| 6 | Complete live GHN/GHTK checkout contract | Carrier gateways, label use case, typed live configuration, webhook security, and durable events implemented; gRPC request still lacks carrier-required contact, ward, district, province-code, parcel, and amount fields | Provider contract and credentials |
+| 6 | Complete live GHN/GHTK checkout contract | Backend/protobuf contract is merged in PR #314; browser checkout is fail-closed until trusted parcel metadata is exposed by product/cart, and live-provider proof remains external | Product/cart parcel contract, provider contract, and credentials |
 | 7 | Native password reset / 2FA | Bounces to Keycloak account console | Design decision |
 | 8 | Email verification flow | Currently auto-verified on register | Design decision |
 | 9 | Hero/promo/trending CMS for HomePage | Stubs via `<ComingSoonCard>` | Content strategy |
