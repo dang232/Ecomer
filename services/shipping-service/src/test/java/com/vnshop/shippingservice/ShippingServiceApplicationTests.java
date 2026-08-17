@@ -7,6 +7,8 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.kafka.core.KafkaTemplate;
 
+import com.vnshop.shippingservice.infrastructure.carrier.CarrierHttpClient;
+
 @SpringBootTest(properties = {
 		"spring.autoconfigure.exclude=org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration,org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration,org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration,org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration",
 		"grpc.server.enabled=false",
@@ -20,6 +22,11 @@ class ShippingServiceApplicationTests {
 		@SuppressWarnings("unchecked")
 		KafkaTemplate<String, String> kafkaTemplate() {
 			return Mockito.mock(KafkaTemplate.class);
+		}
+
+		@Bean
+		CarrierHttpClient carrierHttpClient() {
+			return Mockito.mock(CarrierHttpClient.class);
 		}
 	}
 

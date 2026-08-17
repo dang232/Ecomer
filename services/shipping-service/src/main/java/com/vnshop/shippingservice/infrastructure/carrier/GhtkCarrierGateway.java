@@ -61,8 +61,8 @@ public class GhtkCarrierGateway implements CarrierGatewayAdapter {
                         request.toAddress().province(),
                         "Khac",
                         "0",
-                        request.codAmountVnd(),
-                        request.codAmountVnd(),
+                         request.codAmountVnd(),
+                         request.declaredValueVnd(),
                         "road")), GhtkCreateOrderResponse.class);
 
         return new ShippingLabel(request.carrier(), request.orderId(), response.order().label(), response.order().label(), response.order().fee());

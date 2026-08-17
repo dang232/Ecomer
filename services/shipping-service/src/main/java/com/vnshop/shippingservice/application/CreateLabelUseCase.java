@@ -50,6 +50,7 @@ public class CreateLabelUseCase {
                 toGatewayAddress(command.destination()),
                 toGatewayParcel(command.parcel()),
                 toVnd(command.codAmount()),
+                toVnd(command.declaredValue()),
                 itemDescription(command.items())));
 
         if (label == null || label.trackingCode() == null || label.trackingCode().isBlank()) {
