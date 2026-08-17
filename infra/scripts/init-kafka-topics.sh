@@ -31,6 +31,7 @@ TOPICS=(
   "payment.refunded:6"
   "inventory.released:6"
   "shipping.cancelled:6"
+  "shipping.cancel-requested:6"
   "shipping.status.updated:6"
   # invoice / notification topics
   "order.confirmed:6"
@@ -72,9 +73,10 @@ echo "All topics created."
 # --- Configure ACLs ---
 ACL="kafka-acls --bootstrap-server $BROKER --command-config $ADMIN_CONFIG"
 
-# order-service (svc-order): produces order.*, payment.refund.requested
+# order-service (svc-order): produces order.*, payment.refund.requested, shipping.cancel-requested
 $ACL --add --allow-principal User:svc-order --operation Write --topic order --resource-pattern-type prefixed
 $ACL --add --allow-principal User:svc-order --operation Write --topic payment.refund.requested
+$ACL --add --allow-principal User:svc-order --operation Write --topic shipping.cancel-requested
 # order-service: consumes payment.completed, payment.refunded, inventory.released, shipping.cancelled
 $ACL --add --allow-principal User:svc-order --operation Read --topic payment.completed
 $ACL --add --allow-principal User:svc-order --operation Read --topic payment.refunded
@@ -109,7 +111,9 @@ $ACL --add --allow-principal User:svc-product --operation Read --group product-s
 $ACL --add --allow-principal User:svc-product --operation Read --topic video.transcode.failed
 $ACL --add --allow-principal User:svc-product --operation Read --group product-service-video-transcode-failures
 
-# shipping-service (svc-shipping): produces shipping.cancelled and shipping.status.updated
+# shipping-service (svc-shipping): consumes cancellation requests and produces shipping.cancelled/status.updated
+$ACL --add --allow-principal User:svc-shipping --operation Read --topic shipping.cancel-requested
+$ACL --add --allow-principal User:svc-shipping --operation Read --group shipping-svc-cancel
 $ACL --add --allow-principal User:svc-shipping --operation Write --topic shipping.cancelled
 $ACL --add --allow-principal User:svc-shipping --operation Write --topic shipping.status.updated
 
