@@ -27,6 +27,8 @@ import com.vnshop.orderservice.domain.port.out.SagaCompensationPublisherPort;
 import com.vnshop.orderservice.domain.port.out.SagaStateRepository;
 import com.vnshop.orderservice.domain.port.out.ShippingRequestPort;
 import com.vnshop.orderservice.domain.port.out.SubOrderFinancialAllocationRepositoryPort;
+import com.vnshop.orderservice.domain.finance.FinancialComponents;
+import com.vnshop.orderservice.domain.finance.SubOrderFinancialAllocation;
 import com.vnshop.orderservice.domain.saga.SagaState;
 import java.math.BigDecimal;
 import java.util.List;
@@ -71,6 +73,30 @@ class CreateOrderUseCaseFinancialAllocationTest {
         ordering.verify(events).publishOrderCreated(any(Order.class));
     }
 
+    @Test
+    void requestsShippingFromPersistedFinancialAllocation() {
+        OrderRepositoryPort orders = mock(OrderRepositoryPort.class);
+        when(orders.findByIdempotencyKey(any())).thenReturn(Optional.empty());
+        when(orders.save(any())).thenAnswer(invocation -> withGeneratedSubOrderIds(invocation.getArgument(0)));
+        SubOrderFinancialAllocationRepositoryPort allocationRepository = mock(SubOrderFinancialAllocationRepositoryPort.class);
+        ShippingRequestPort shipping = mock(ShippingRequestPort.class);
+        AllocateOrderFinancialsUseCase allocationUseCase = new AllocateOrderFinancialsUseCase(allocationRepository);
+        CreateOrderUseCase useCase = new CreateOrderUseCase(orders,
+                mock(InventoryReservationPort.class), mock(PaymentRequestPort.class), shipping,
+                mock(OrderEventPublisherPort.class), standardTierLookup(), mock(CartRepositoryPort.class),
+                mock(MetricsPort.class), saga(), new TaxCalculationService((code, date) -> Optional.of(BigDecimal.ZERO)),
+                null, allocationUseCase);
+
+        useCase.create(new CreateOrderCommand("buyer", new Address("street", null, "district", "city"),
+                List.of(new OrderItem("product", "sku", "seller", "Product", 1,
+                        new Money(new BigDecimal("100000")), null)), "idempotency-" + UUID.randomUUID()));
+
+        var invocation = org.mockito.Mockito.mockingDetails(shipping).getInvocations().stream().findFirst().orElseThrow();
+        var arguments = invocation.getArguments();
+        org.assertj.core.api.Assertions.assertThat(arguments[4]).isEqualTo(new Money(new BigDecimal("100000")));
+        org.assertj.core.api.Assertions.assertThat(arguments[5]).isEqualTo(new Money(new BigDecimal("100000")));
+    }
+
     private static Order withGeneratedSubOrderIds(Order order) {
         List<SubOrder> persistedSubOrders = order.subOrders().stream().map(subOrder -> new SubOrder(1L,
                 subOrder.sellerId(), subOrder.items(), subOrder.fulfillmentStatus(), subOrder.shippingInfo(),
@@ -101,6 +127,7 @@ class CreateOrderUseCaseFinancialAllocationTest {
         }, new SagaCompensationPublisherPort() {
             @Override public void publishInventoryReleaseRequested(String orderId, String sagaId) { }
             @Override public void publishPaymentRefundRequested(String orderId, String sagaId) { }
+            @Override public void publishShippingCancellationRequested(String orderId, String sagaId, String reason) { }
         }, 1_000);
     }
 }

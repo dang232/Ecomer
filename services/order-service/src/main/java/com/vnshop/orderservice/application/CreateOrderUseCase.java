@@ -21,6 +21,7 @@ import com.vnshop.orderservice.application.tax.TaxResult;
 import com.vnshop.orderservice.application.finance.AllocateOrderFinancialsUseCase;
 import com.vnshop.orderservice.domain.Money;
 import com.vnshop.orderservice.application.coupon.CouponRedemptionService;
+import com.vnshop.orderservice.domain.finance.SubOrderFinancialAllocation;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -144,16 +145,22 @@ public class CreateOrderUseCase {
                     order.finalAmount());
             sagaOrchestrator.stepCompleted(sagaId, "PAYMENT");
 
-            for (SubOrder subOrder : order.subOrders()) {
-                Money payable = order.payableFor(subOrder);
-                Money codAmount = "COD".equalsIgnoreCase(order.paymentMethod()) ? payable : Money.ZERO;
-                shippingRequestPort.requestShipping(order.id().toString(), subOrder, shippingAddress,
-                        shippingDetails, codAmount, subOrder.itemsTotal());
+            Order savedOrder = orderRepository.save(order);
+            List<SubOrderFinancialAllocation> allocations = allocateOrderFinancialsUseCase.allocate(savedOrder);
+            Map<Long, SubOrderFinancialAllocation> allocationsBySubOrder = allocations.stream()
+                    .collect(Collectors.toMap(SubOrderFinancialAllocation::subOrderId, allocation -> allocation));
+            for (SubOrder subOrder : savedOrder.subOrders()) {
+                SubOrderFinancialAllocation allocation = Optional.ofNullable(allocationsBySubOrder.get(subOrder.id()))
+                        .orElseThrow(() -> new IllegalStateException(
+                                "financial allocation missing for sub-order " + subOrder.id()));
+                Money codAmount = "COD".equalsIgnoreCase(savedOrder.paymentMethod())
+                        ? new Money(allocation.components().buyerPaidAmount())
+                        : Money.ZERO;
+                Money declaredValue = new Money(allocation.components().itemGmvAmount());
+                shippingRequestPort.requestShipping(savedOrder.id().toString(), subOrder, shippingAddress,
+                        shippingDetails, codAmount, declaredValue);
             }
             sagaOrchestrator.stepCompleted(sagaId, "SHIPPING");
-
-            Order savedOrder = orderRepository.save(order);
-            allocateOrderFinancialsUseCase.allocate(savedOrder);
             orderEventPublisherPort.publishOrderCreated(savedOrder);
             metricsPort.recordOrderCreated();
             metricsPort.stopTimer(timerSample);
@@ -173,6 +180,7 @@ public class CreateOrderUseCase {
                 .map(step -> switch (step) {
                     case "INVENTORY" -> "PAYMENT";
                     case "PAYMENT" -> "SHIPPING";
+                    case "SHIPPING" -> "SHIPPING";
                     default -> "INVENTORY";
                 })
                 .orElse("INVENTORY");
