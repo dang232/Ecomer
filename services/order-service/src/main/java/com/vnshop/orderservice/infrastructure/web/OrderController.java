@@ -62,6 +62,7 @@ public class OrderController {
         return ApiResponse.ok(OrderResponse.fromDomain(checkoutOrderUseCase.checkout(new CheckoutOrderCommand(
                 JwtPrincipalUtil.currentUserId(),
                 request.shippingAddress().toDomain(),
+                request.shippingDetails().toDomain(),
                 request.toLineItems(),
                 idempotencyKey,
                 request.paymentMethod(),

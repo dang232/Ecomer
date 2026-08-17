@@ -348,6 +348,13 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
           'district': session.selectedAddress?.district,
           'city': session.selectedAddress?.city,
         },
+        'shippingDetails': {
+          'recipientName': session.selectedAddress?.recipientName,
+          'recipientPhone': session.selectedAddress?.phoneNumber,
+          'wardCode': session.selectedAddress?.ward,
+          'districtCode': session.selectedAddress?.district,
+          'provinceCode': session.selectedAddress?.city,
+        },
         'items': session.lineItems.map((item) => item.toJson()).toList(),
         'paymentMethod': paymentMethodString,
       },

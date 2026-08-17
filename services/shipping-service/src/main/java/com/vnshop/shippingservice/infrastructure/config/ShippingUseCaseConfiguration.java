@@ -4,9 +4,11 @@ import com.vnshop.shippingservice.application.CreateLabelUseCase;
 import com.vnshop.shippingservice.domain.port.out.CarrierGatewayPort;
 import com.vnshop.shippingservice.domain.port.out.CarrierLabelPolicyPort;
 import com.vnshop.shippingservice.domain.port.out.CodCollectionEvidencePort;
+import com.vnshop.shippingservice.domain.port.out.ShippingLabelRepositoryPort;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
+import org.springframework.beans.factory.ObjectProvider;
 
 @Configuration
 public class ShippingUseCaseConfiguration {
@@ -19,7 +21,11 @@ public class ShippingUseCaseConfiguration {
     CreateLabelUseCase createLabelUseCase(
             CarrierGatewayPort carrierGateway,
             CarrierLabelPolicyPort carrierLabelPolicyPort,
-            CodCollectionEvidencePort codCollectionEvidencePort) {
-        return new CreateLabelUseCase(carrierGateway, carrierLabelPolicyPort, codCollectionEvidencePort);
+            CodCollectionEvidencePort codCollectionEvidencePort,
+            ObjectProvider<ShippingLabelRepositoryPort> shippingLabelRepositoryProvider) {
+        ShippingLabelRepositoryPort shippingLabelRepositoryPort = shippingLabelRepositoryProvider
+                .getIfAvailable(ShippingLabelRepositoryPort::noop);
+        return new CreateLabelUseCase(carrierGateway, carrierLabelPolicyPort, codCollectionEvidencePort,
+                shippingLabelRepositoryPort);
     }
 }

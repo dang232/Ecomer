@@ -8,6 +8,7 @@ import com.vnshop.shippingservice.domain.model.ShippingLabel;
 import com.vnshop.shippingservice.domain.model.TrackingEvent;
 import com.vnshop.shippingservice.domain.model.TrackingInfo;
 import com.vnshop.shippingservice.domain.model.TrackingRequest;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
@@ -65,9 +66,10 @@ public class GhnCarrierGateway implements CarrierGatewayAdapter {
                 request.itemDescription(),
                 request.parcel().weightGrams(),
                 request.parcel().lengthCm(),
-                request.parcel().widthCm(),
-                request.parcel().heightCm(),
-                parseInt(properties.serviceTypeId(), "GHN serviceTypeId")), GhnCreateOrderResponse.class);
+                 request.parcel().widthCm(),
+                 request.parcel().heightCm(),
+                 parseInt(properties.serviceTypeId(), "GHN serviceTypeId"),
+                 request.declaredValueVnd()), GhnCreateOrderResponse.class);
 
         return new ShippingLabel(request.carrier(), request.orderId(), response.data().orderCode(), response.data().label(), response.data().totalFee());
     }
@@ -120,7 +122,7 @@ public class GhnCarrierGateway implements CarrierGatewayAdapter {
                                  String fromDistrictName, String fromProvinceName, String toName, String toPhone,
                                  String toAddress, String toWardName, String toDistrictName, String toProvinceName,
                                  long codAmount, String content, int weight, int length, int width, int height,
-                                 int serviceTypeId) {
+                                  int serviceTypeId, @JsonProperty("insurance_value") long insuranceValue) {
     }
 
     record GhnCreateOrderResponse(GhnCreateOrderData data) {

@@ -575,6 +575,17 @@ async function main() {
       headers: { "Idempotency-Key": idempotencyKey },
       body: {
         shippingAddress: { street: "1 Test Way", district: "Q1", city: "HCMC" },
+        shippingDetails: {
+          recipientName: "E2E Buyer",
+          recipientPhone: "+84900000004",
+          wardCode: "WARD-1",
+          districtCode: "DISTRICT-1",
+          provinceCode: "HCM",
+          weightGrams: 1000,
+          lengthCm: 30,
+          widthCm: 20,
+          heightCm: 10,
+        },
         paymentMethod: "COD",
         items: [
           {
@@ -698,6 +709,17 @@ async function main() {
       headers: { "Idempotency-Key": idempotencyKey },
       body: {
         shippingAddress: { street: "1 Test Way", district: "Q1", city: "HCMC" },
+        shippingDetails: {
+          recipientName: "E2E Buyer",
+          recipientPhone: "+84900000004",
+          wardCode: "WARD-1",
+          districtCode: "DISTRICT-1",
+          provinceCode: "HCM",
+          weightGrams: 1000,
+          lengthCm: 30,
+          widthCm: 20,
+          heightCm: 10,
+        },
         paymentMethod: "COD",
         items: [
           {

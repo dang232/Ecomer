@@ -32,7 +32,18 @@ export default function () {
       JSON.stringify({
         cartId: 'test-cart-1',
         paymentMethod: 'COD',
-        shippingAddress: { street: '123 Test', city: 'HCMC', district: '1' }
+        shippingAddress: { street: '123 Test', city: 'HCMC', district: '1' },
+        shippingDetails: {
+          recipientName: 'k6 Checkout Buyer',
+          recipientPhone: '+84900000003',
+          wardCode: 'WARD-1',
+          districtCode: 'DISTRICT-1',
+          provinceCode: 'HCM',
+          weightGrams: 1000,
+          lengthCm: 30,
+          widthCm: 20,
+          heightCm: 10,
+        }
       }),
       { headers: { ...defaultHeaders, 'Idempotency-Key': idempotencyKey } }
     );

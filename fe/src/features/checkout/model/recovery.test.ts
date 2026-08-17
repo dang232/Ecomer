@@ -21,11 +21,35 @@ describe("checkout recovery", () => {
     expect(storage.getItem(CHECKOUT_RECOVERY_STORAGE_KEY)).toBeNull();
   });
 
+  it("migrates a structurally valid version-one recovery record", () => {
+    const storage = memoryStorage();
+    storage.setItem(
+      CHECKOUT_RECOVERY_STORAGE_KEY,
+      JSON.stringify({
+        version: 1,
+        phase: "created",
+        orderKey: "00000000-0000-4000-8000-000000000001",
+        cartFingerprint: "cart-a",
+        provider: "COD",
+        paymentKey: "00000000-0000-4000-8000-000000000002",
+        orderId: "order-1",
+        total: 125000,
+        purchasedItems: [],
+      }),
+    );
+
+    expect(createCheckoutRecoveryStore(storage).read()).toMatchObject({
+      version: 2,
+      phase: "created",
+      orderId: "order-1",
+    });
+  });
+
   it("persists Stripe recovery without the client secret", () => {
     const storage = memoryStorage();
     const store = createCheckoutRecoveryStore(storage);
     store.write({
-      version: 1,
+      version: 2,
       phase: "stripe",
       orderKey: "00000000-0000-4000-8000-000000000001",
       cartFingerprint: "cart-a",
@@ -47,7 +71,7 @@ describe("checkout recovery", () => {
     const storage = memoryStorage();
     const store = createCheckoutRecoveryStore(storage);
     store.write({
-      version: 1,
+      version: 2,
       phase: "created",
       orderKey: "00000000-0000-4000-8000-000000000001",
       cartFingerprint: "cart-a",

@@ -25,6 +25,7 @@ public class KafkaSagaCompensationPublisher implements SagaCompensationPublisher
 
     private static final String TOPIC_INVENTORY_RELEASE_REQUESTED = "inventory.release-requested";
     private static final String TOPIC_PAYMENT_REFUND_REQUESTED = "payment.refund.requested";
+    private static final String TOPIC_SHIPPING_CANCEL_REQUESTED = "shipping.cancel-requested";
 
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
@@ -56,6 +57,18 @@ public class KafkaSagaCompensationPublisher implements SagaCompensationPublisher
         ));
         kafkaTemplate.send(TOPIC_PAYMENT_REFUND_REQUESTED, orderId, payload);
         LOG.info("Published payment.refund.requested for saga {} order {}", sagaId, orderId);
+    }
+
+    @Override
+    public void publishShippingCancellationRequested(String orderId, String sagaId, String reason) {
+        String payload = toJson(Map.of(
+                "orderId", orderId,
+                "sagaId", sagaId,
+                "reason", reason == null ? "order-compensation" : reason,
+                "timestamp", Instant.now().toString()
+        ));
+        kafkaTemplate.send(TOPIC_SHIPPING_CANCEL_REQUESTED, orderId, payload);
+        LOG.info("Published shipping.cancel-requested for saga {} order {}", sagaId, orderId);
     }
 
     private String toJson(Map<String, String> data) {

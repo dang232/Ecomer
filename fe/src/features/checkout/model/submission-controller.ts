@@ -1,7 +1,7 @@
 import type { PlaceOrderInput } from "@/shared/api/endpoints/orders";
 import type { CheckoutProvider, PaymentStatus } from "@/shared/contracts/api";
 
-import type { CheckoutRecoveryRecord, CheckoutRecoveryStore } from "./recovery";
+import type { CheckoutRecoveryRecord, CheckoutRecoveryStore, RecoveryOrderInput } from "./recovery";
 import type { PurchasedCartItem } from "./cart-cleanup";
 import {
   attemptIdentity,
@@ -170,7 +170,7 @@ export function createCheckoutSubmissionController(
   };
 
   const reconcile = async (attempt: {
-    order: PlaceOrderInput;
+    order: RecoveryOrderInput;
     provider: CheckoutProvider;
     orderKey: string;
     cartFingerprint: string;
@@ -180,7 +180,7 @@ export function createCheckoutSubmissionController(
     const delay = dependencies.reconciliationDelayMs ?? 150;
     for (let index = 0; index < maxAttempts; index += 1) {
       dependencies.recovery.write({
-        version: 1,
+        version: 2,
         phase: "order",
         orderKey: attempt.orderKey,
         cartFingerprint: attempt.cartFingerprint,
@@ -229,7 +229,7 @@ export function createCheckoutSubmissionController(
     };
     transition({ type: "place", attempt: attemptIdentity({ status: "placing", ...attempt }) });
     dependencies.recovery.write({
-      version: 1,
+      version: 2,
       phase: "order",
       orderKey: attempt.orderKey,
       cartFingerprint: attempt.cartFingerprint,
@@ -339,7 +339,7 @@ export function createCheckoutSubmissionController(
 
   function createdRecovery(order: CreatedOrder) {
     return {
-      version: 1 as const,
+      version: 2 as const,
       phase: "created" as const,
       orderKey: order.orderKey,
       cartFingerprint: order.cartFingerprint,
@@ -353,7 +353,7 @@ export function createCheckoutSubmissionController(
 
   function persistPaymentRecovery(payment: InitializedPayment) {
     const base = {
-      version: 1 as const,
+      version: 2 as const,
       orderKey: payment.orderKey,
       cartFingerprint: payment.cartFingerprint,
       provider: payment.provider,
@@ -433,7 +433,7 @@ function recoveryOrder(
   };
 }
 
-function purchasedItemsFromOrder(order: PlaceOrderInput): PurchasedCartItem[] {
+function purchasedItemsFromOrder(order: PlaceOrderInput | RecoveryOrderInput): PurchasedCartItem[] {
   return order.items.map((item) => ({
     productId: item.productId,
     variantId: item.variantSku,

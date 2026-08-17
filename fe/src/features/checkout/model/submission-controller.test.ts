@@ -13,6 +13,17 @@ const input: CheckoutSubmissionInput = {
   order: {
     items: [{ productId: "product-1", quantity: 1 }],
     shippingAddress: { street: "1 Main", district: "D1", city: "HCMC" },
+    shippingDetails: {
+      recipientName: "Buyer One",
+      recipientPhone: "+84900000000",
+      wardCode: "W1",
+      districtCode: "D1",
+      provinceCode: "P1",
+      weightGrams: 1000,
+      lengthCm: 30,
+      widthCm: 20,
+      heightCm: 10,
+    },
     paymentMethod: "COD",
   },
 };
@@ -118,7 +129,7 @@ describe("checkout submission controller", () => {
     const codConfirm = vi.fn();
     const deps = dependencies({ placeOrder, codConfirm });
     deps.recovery.write({
-      version: 1,
+      version: 2,
       phase: "created",
       provider: "COD",
       orderKey: "00000000-0000-4000-8000-000000000001",

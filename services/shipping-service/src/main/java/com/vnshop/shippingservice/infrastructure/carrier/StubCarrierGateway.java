@@ -50,6 +50,11 @@ public class StubCarrierGateway implements CarrierGatewayPort {
     }
 
     @Override
+    public void cancelLabel(com.vnshop.shippingservice.domain.model.CarrierCode carrier, String trackingCode) {
+        // Stub labels are local and cancellation is deterministic.
+    }
+
+    @Override
     public TrackingInfo track(TrackingRequest request) {
         // Test hook: tracking codes that start with MISSING- model the real
         // carrier "we have never seen this code" response so the use case can

@@ -8,6 +8,8 @@ import com.vnshop.shippingservice.application.CreateLabelResult;
 import com.vnshop.shippingservice.application.CreateLabelUseCase;
 import com.vnshop.shippingservice.domain.ShippingAddress;
 import com.vnshop.shippingservice.domain.ShippingLineItem;
+import com.vnshop.shippingservice.domain.Money;
+import com.vnshop.shippingservice.domain.Parcel;
 import com.vnshop.shippingservice.infrastructure.config.ShippingCheckoutProperties;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
@@ -109,18 +111,34 @@ public class GrpcShippingServer extends ShippingServiceGrpc.ShippingServiceImplB
                 .map(item -> new ShippingLineItem(
                         item.getProductId() + (item.getVariant().isBlank() ? "" : ":" + item.getVariant()),
                         item.getQuantity(),
-                        null))
+                        item.hasDeclaredValue() ? new java.math.BigDecimal(item.getDeclaredValue().getAmount())
+                                : null))
                 .toList();
+
+        var declaredValue = toMoney(subOrder.getDeclaredValue());
+        var codAmount = toMoney(subOrder.getCodAmount());
+        var parcel = subOrder.getParcelWeightGrams() > 0
+                ? new Parcel(subOrder.getParcelWeightGrams(), subOrder.getParcelLengthCm(),
+                subOrder.getParcelWidthCm(), subOrder.getParcelHeightCm())
+                : null;
 
         return new CreateLabelCommand(
                 checkoutProperties.defaultCarrier(),
                 orderId,
                 checkoutProperties.origin(),
                 new ShippingAddress(destination.getFullName(), destination.getPhone(), destination.getStreet(),
-                        null, destination.getProvince(), destination.getCity()),
-                null,
-                null,
-                null,
+                        destination.getWardCode(),
+                        destination.getDistrictCode(),
+                        destination.getProvinceCode()),
+                parcel,
+                codAmount,
+                declaredValue,
                 items);
     }
+
+    private static Money toMoney(com.vnshop.proto.common.Money money) {
+        return money == null || money.getAmount().isBlank() ? null
+                : new Money(new java.math.BigDecimal(money.getAmount()), money.getCurrency());
+    }
+
 }

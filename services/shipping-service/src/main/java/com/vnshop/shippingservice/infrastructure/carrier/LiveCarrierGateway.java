@@ -32,6 +32,11 @@ public class LiveCarrierGateway implements CarrierGatewayPort {
     }
 
     @Override
+    public void cancelLabel(CarrierCode carrier, String trackingCode) {
+        gatewayFor(carrier).cancelLabel(carrier, trackingCode);
+    }
+
+    @Override
     public TrackingInfo track(TrackingRequest request) {
         return gatewayFor(request.carrier()).track(request);
     }

@@ -5,6 +5,7 @@ import com.vnshop.orderservice.domain.Address;
 import com.vnshop.orderservice.domain.Order;
 import com.vnshop.orderservice.domain.OrderItem;
 import com.vnshop.orderservice.domain.PaymentMethod;
+import com.vnshop.orderservice.domain.ShippingDetails;
 import com.vnshop.orderservice.domain.port.out.ProductCatalogPort;
 
 import java.util.ArrayList;
@@ -40,6 +41,7 @@ public class CheckoutOrderUseCase {
         return createOrderUseCase.create(new CreateOrderCommand(
                 command.buyerId(),
                 command.shippingAddress(),
+                command.shippingDetails(),
                 resolved,
                 command.idempotencyKey(),
                 command.paymentMethod(),
@@ -83,6 +85,7 @@ public class CheckoutOrderUseCase {
     public record CheckoutOrderCommand(
             String buyerId,
             Address shippingAddress,
+            ShippingDetails shippingDetails,
             List<CheckoutLineItem> lineItems,
             String idempotencyKey,
             PaymentMethod paymentMethod,
@@ -93,8 +96,18 @@ public class CheckoutOrderUseCase {
                 Address shippingAddress,
                 List<CheckoutLineItem> lineItems,
                 String idempotencyKey,
+                PaymentMethod paymentMethod,
+                String couponCode) {
+            this(buyerId, shippingAddress, null, lineItems, idempotencyKey, paymentMethod, couponCode);
+        }
+
+        public CheckoutOrderCommand(
+                String buyerId,
+                Address shippingAddress,
+                List<CheckoutLineItem> lineItems,
+                String idempotencyKey,
                 PaymentMethod paymentMethod) {
-            this(buyerId, shippingAddress, lineItems, idempotencyKey, paymentMethod, null);
+            this(buyerId, shippingAddress, null, lineItems, idempotencyKey, paymentMethod, null);
         }
 
         public CheckoutOrderCommand(
@@ -102,7 +115,7 @@ public class CheckoutOrderUseCase {
                 Address shippingAddress,
                 List<CheckoutLineItem> lineItems,
                 String idempotencyKey) {
-            this(buyerId, shippingAddress, lineItems, idempotencyKey, PaymentMethod.COD, null);
+            this(buyerId, shippingAddress, null, lineItems, idempotencyKey, PaymentMethod.COD, null);
         }
     }
 

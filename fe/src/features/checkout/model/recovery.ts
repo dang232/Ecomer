@@ -25,13 +25,26 @@ const recoveryOrderSchema = z.object({
     district: z.string().min(1),
     city: z.string().min(1),
   }),
+  shippingDetails: z
+    .object({
+      recipientName: z.string().min(1),
+      recipientPhone: z.string().min(1),
+      wardCode: z.string().min(1),
+      districtCode: z.string().min(1),
+      provinceCode: z.string().min(1),
+      weightGrams: z.number().int().positive().optional(),
+      lengthCm: z.number().int().positive().optional(),
+      widthCm: z.number().int().positive().optional(),
+      heightCm: z.number().int().positive().optional(),
+    })
+    .optional(),
   paymentMethod: checkoutProviderSchema.optional(),
   couponCode: z.string().optional(),
   notes: z.string().optional(),
 });
 
 const baseSchema = z.object({
-  version: z.literal(1),
+  version: z.literal(2),
   orderKey: z.string().uuid(),
   cartFingerprint: z.string(),
   provider: checkoutProviderSchema,
@@ -88,6 +101,23 @@ export const checkoutRecoverySchema = z.discriminatedUnion("phase", [
   }),
 ]);
 
+const legacyRecoverySchema = z.object({
+  version: z.literal(1),
+  phase: z.string(),
+  orderKey: z.string().uuid(),
+  cartFingerprint: z.string(),
+  provider: checkoutProviderSchema,
+  purchasedItems: z.array(purchasedCartItemSchema).default([]),
+  order: z.unknown().optional(),
+});
+
+function migrateRecoveryRecord(value: unknown): unknown {
+  const legacy = legacyRecoverySchema.safeParse(value);
+  if (!legacy.success) return value;
+  const record = value as Record<string, unknown>;
+  return { ...record, version: 2 };
+}
+
 export type CheckoutRecoveryRecord = z.infer<typeof checkoutRecoverySchema>;
 export const CHECKOUT_RECOVERY_STORAGE_KEY = "vnshop:checkout-recovery";
 
@@ -105,7 +135,7 @@ export function createCheckoutRecoveryStore(
       const raw = storage.getItem(CHECKOUT_RECOVERY_STORAGE_KEY);
       if (!raw) return null;
       try {
-        const parsed = checkoutRecoverySchema.safeParse(JSON.parse(raw));
+        const parsed = checkoutRecoverySchema.safeParse(migrateRecoveryRecord(JSON.parse(raw)));
         if (parsed.success) return parsed.data;
       } catch {
         // The corrupt record is discarded below.
@@ -116,7 +146,7 @@ export function createCheckoutRecoveryStore(
     write(record) {
       storage.setItem(
         CHECKOUT_RECOVERY_STORAGE_KEY,
-        JSON.stringify(checkoutRecoverySchema.parse(record)),
+        JSON.stringify(checkoutRecoverySchema.parse({ ...record, version: 2 })),
       );
     },
     clear() {

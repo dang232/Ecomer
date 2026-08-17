@@ -11,6 +11,7 @@ import com.vnshop.shippingservice.domain.model.ShippingLabel;
 import com.vnshop.shippingservice.domain.port.out.CarrierGatewayPort;
 import com.vnshop.shippingservice.domain.port.out.CarrierLabelPolicyPort;
 import com.vnshop.shippingservice.domain.port.out.CodCollectionEvidencePort;
+import com.vnshop.shippingservice.domain.port.out.ShippingLabelRepositoryPort;
 
 import java.util.List;
 import java.util.Objects;
@@ -21,20 +22,30 @@ public class CreateLabelUseCase {
     private final CarrierGatewayPort carrierGateway;
     private final CarrierLabelPolicyPort carrierLabelPolicy;
     private final CodCollectionEvidencePort codCollectionEvidence;
+    private final ShippingLabelRepositoryPort shippingLabelRepository;
 
     public CreateLabelUseCase(
             CarrierGatewayPort carrierGateway,
             CarrierLabelPolicyPort carrierLabelPolicy) {
-        this(carrierGateway, carrierLabelPolicy, CodCollectionEvidencePort.noop());
+        this(carrierGateway, carrierLabelPolicy, CodCollectionEvidencePort.noop(), ShippingLabelRepositoryPort.noop());
     }
 
     public CreateLabelUseCase(
             CarrierGatewayPort carrierGateway,
             CarrierLabelPolicyPort carrierLabelPolicy,
             CodCollectionEvidencePort codCollectionEvidence) {
+        this(carrierGateway, carrierLabelPolicy, codCollectionEvidence, ShippingLabelRepositoryPort.noop());
+    }
+
+    public CreateLabelUseCase(
+            CarrierGatewayPort carrierGateway,
+            CarrierLabelPolicyPort carrierLabelPolicy,
+            CodCollectionEvidencePort codCollectionEvidence,
+            ShippingLabelRepositoryPort shippingLabelRepository) {
         this.carrierGateway = Objects.requireNonNull(carrierGateway, "carrierGateway is required");
         this.carrierLabelPolicy = Objects.requireNonNull(carrierLabelPolicy, "carrierLabelPolicy is required");
         this.codCollectionEvidence = Objects.requireNonNull(codCollectionEvidence, "codCollectionEvidence is required");
+        this.shippingLabelRepository = Objects.requireNonNull(shippingLabelRepository, "shippingLabelRepository is required");
     }
 
     public CreateLabelResult create(CreateLabelCommand command) {
@@ -50,6 +61,7 @@ public class CreateLabelUseCase {
                 toGatewayAddress(command.destination()),
                 toGatewayParcel(command.parcel()),
                 toVnd(command.codAmount()),
+                toVnd(command.declaredValue()),
                 itemDescription(command.items())));
 
         if (label == null || label.trackingCode() == null || label.trackingCode().isBlank()) {
@@ -61,6 +73,11 @@ public class CreateLabelUseCase {
                     UUID.randomUUID(), command.orderId(), label.carrier().name(), label.trackingCode(),
                     command.codAmount().amount(), command.codAmount().currency()));
         }
+
+        shippingLabelRepository.save(new com.vnshop.shippingservice.domain.model.ShippingLabelRecord(
+                UUID.nameUUIDFromBytes((command.orderId() + ":" + label.trackingCode()).getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+                command.orderId(), label.carrier(), label.trackingCode(),
+                com.vnshop.shippingservice.domain.model.ShippingLabelRecord.Status.CREATED));
 
         return new CreateLabelResult(
                 CarrierCode.valueOf(label.carrier().name()),

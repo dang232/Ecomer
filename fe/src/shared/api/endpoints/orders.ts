@@ -29,6 +29,17 @@ export interface PlaceOrderInput {
     district: string;
     city: string;
   };
+  shippingDetails: {
+    recipientName: string;
+    recipientPhone: string;
+    wardCode: string;
+    districtCode: string;
+    provinceCode: string;
+    weightGrams: number;
+    lengthCm: number;
+    widthCm: number;
+    heightCm: number;
+  };
   paymentMethod?: PaymentMethod;
   couponCode?: string;
   notes?: string;

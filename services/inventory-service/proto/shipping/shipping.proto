@@ -15,18 +15,28 @@ message ShippingAddress {
   string street = 3;
   string city = 4;
   string province = 5;
+  string ward_code = 6;
+  string district_code = 7;
+  string province_code = 8;
 }
 
 message SubOrderItem {
   string product_id = 1;
   string variant = 2;
   int32 quantity = 3;
+  vnshop.common.Money declared_value = 4;
 }
 
 message SubOrder {
   string seller_id = 1;
   repeated SubOrderItem items = 2;
   ShippingAddress shipping_address = 3;
+  int32 parcel_weight_grams = 4;
+  int32 parcel_length_cm = 5;
+  int32 parcel_width_cm = 6;
+  int32 parcel_height_cm = 7;
+  vnshop.common.Money cod_amount = 8;
+  vnshop.common.Money declared_value = 9;
 }
 
 message ShippingRequest {
