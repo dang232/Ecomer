@@ -180,7 +180,7 @@ export function createCheckoutSubmissionController(
     const delay = dependencies.reconciliationDelayMs ?? 150;
     for (let index = 0; index < maxAttempts; index += 1) {
       dependencies.recovery.write({
-        version: 1,
+        version: 2,
         phase: "order",
         orderKey: attempt.orderKey,
         cartFingerprint: attempt.cartFingerprint,
@@ -229,7 +229,7 @@ export function createCheckoutSubmissionController(
     };
     transition({ type: "place", attempt: attemptIdentity({ status: "placing", ...attempt }) });
     dependencies.recovery.write({
-      version: 1,
+      version: 2,
       phase: "order",
       orderKey: attempt.orderKey,
       cartFingerprint: attempt.cartFingerprint,
@@ -339,7 +339,7 @@ export function createCheckoutSubmissionController(
 
   function createdRecovery(order: CreatedOrder) {
     return {
-      version: 1 as const,
+      version: 2 as const,
       phase: "created" as const,
       orderKey: order.orderKey,
       cartFingerprint: order.cartFingerprint,
@@ -353,7 +353,7 @@ export function createCheckoutSubmissionController(
 
   function persistPaymentRecovery(payment: InitializedPayment) {
     const base = {
-      version: 1 as const,
+      version: 2 as const,
       orderKey: payment.orderKey,
       cartFingerprint: payment.cartFingerprint,
       provider: payment.provider,

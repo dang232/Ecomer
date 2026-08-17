@@ -125,7 +125,7 @@ describe("checkout submission controller", () => {
     const codConfirm = vi.fn();
     const deps = dependencies({ placeOrder, codConfirm });
     deps.recovery.write({
-      version: 1,
+      version: 2,
       phase: "created",
       provider: "COD",
       orderKey: "00000000-0000-4000-8000-000000000001",
