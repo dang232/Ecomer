@@ -47,6 +47,17 @@ export default function () {
       `${BASE_URL}/orders`,
       JSON.stringify({
         shippingAddress: { street: '500 Flash Sale', ward: 'Ward 5', district: 'District 5', city: 'Ho Chi Minh City' },
+        shippingDetails: {
+          recipientName: 'Flash Sale Buyer',
+          recipientPhone: '+84900000002',
+          wardCode: 'WARD-5',
+          districtCode: 'DISTRICT-5',
+          provinceCode: 'HCM',
+          weightGrams: 1000,
+          lengthCm: 30,
+          widthCm: 20,
+          heightCm: 10,
+        },
         items: [{ productId: PRODUCT_ID, variantSku: VARIANT_SKU, name: 'flash sale item', quantity: 1, unitPrice: 100000 }],
       }),
       { headers, tags: { flow: 'flash-sale', gate: 'redis-rate-limit' } }

@@ -78,6 +78,17 @@ export default function () {
       `${BASE_URL}/orders`,
       JSON.stringify({
         shippingAddress: { street: '1 Load Test', ward: 'Ward 1', district: 'District 1', city: 'Ho Chi Minh City' },
+        shippingDetails: {
+          recipientName: 'k6 Load Buyer',
+          recipientPhone: '+84900000001',
+          wardCode: 'WARD-1',
+          districtCode: 'DISTRICT-1',
+          provinceCode: 'HCM',
+          weightGrams: 1000,
+          lengthCm: 30,
+          widthCm: 20,
+          heightCm: 10,
+        },
         items: [{ productId, variantSku: sku, name: 'k6 load item', quantity: 1, unitPrice: 100000 }],
       }),
       {
