@@ -145,7 +145,10 @@ public class CreateOrderUseCase {
             sagaOrchestrator.stepCompleted(sagaId, "PAYMENT");
 
             for (SubOrder subOrder : order.subOrders()) {
-                shippingRequestPort.requestShipping(order.id().toString(), subOrder, shippingAddress, shippingDetails);
+                Money payable = order.payableFor(subOrder);
+                Money codAmount = "COD".equalsIgnoreCase(order.paymentMethod()) ? payable : Money.ZERO;
+                shippingRequestPort.requestShipping(order.id().toString(), subOrder, shippingAddress,
+                        shippingDetails, codAmount, payable);
             }
             sagaOrchestrator.stepCompleted(sagaId, "SHIPPING");
 

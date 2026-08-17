@@ -4,6 +4,7 @@ import com.vnshop.orderservice.domain.Address;
 import com.vnshop.orderservice.domain.OrderItem;
 import com.vnshop.orderservice.domain.SubOrder;
 import com.vnshop.orderservice.domain.ShippingDetails;
+import com.vnshop.orderservice.domain.Money;
 import com.vnshop.orderservice.domain.port.out.ShippingRequestPort;
 import com.vnshop.proto.shipping.ShippingServiceGrpc;
 import com.vnshop.proto.shipping.ShippingRequest;
@@ -52,9 +53,17 @@ public class GrpcShippingRequestAdapter implements ShippingRequestPort {
 
     @Override
     public void requestShipping(String orderId, SubOrder subOrder, Address shippingAddress, ShippingDetails shippingDetails) {
+        requestShipping(orderId, subOrder, shippingAddress, shippingDetails,
+                subOrder.itemsTotal().add(subOrder.shippingCost()), subOrder.itemsTotal());
+    }
+
+    @Override
+    public void requestShipping(String orderId, SubOrder subOrder, Address shippingAddress,
+                                ShippingDetails shippingDetails, Money codAmount, Money declaredValue) {
         if (shippingDetails == null) {
             throw new IllegalStateException("carrier shipping details are required for live labels");
         }
+        ShippingDetails parcelDetails = parcelFor(subOrder, shippingDetails);
         ShippingRequest request = ShippingRequest.newBuilder()
                 .setOrderId(orderId)
                 .addSubOrders(com.vnshop.proto.shipping.SubOrder.newBuilder()
@@ -62,13 +71,13 @@ public class GrpcShippingRequestAdapter implements ShippingRequestPort {
                         .addAllItems(subOrder.items().stream()
                                 .map(GrpcShippingRequestAdapter::toProtoItem)
                                 .toList())
-                        .setShippingAddress(toProtoAddress(shippingAddress, shippingDetails))
-                        .setParcelWeightGrams(shippingDetails.weightGrams())
-                        .setParcelLengthCm(shippingDetails.lengthCm())
-                        .setParcelWidthCm(shippingDetails.widthCm())
-                        .setParcelHeightCm(shippingDetails.heightCm())
-                        .setDeclaredValue(toProtoMoney(subOrder.itemsTotal()))
-                        .setCodAmount(toProtoMoney(subOrder.itemsTotal().add(subOrder.shippingCost())))
+                        .setShippingAddress(toProtoAddress(shippingAddress, parcelDetails))
+                        .setParcelWeightGrams(parcelDetails.weightGrams())
+                        .setParcelLengthCm(parcelDetails.lengthCm())
+                        .setParcelWidthCm(parcelDetails.widthCm())
+                        .setParcelHeightCm(parcelDetails.heightCm())
+                        .setDeclaredValue(toProtoMoney(declaredValue))
+                        .setCodAmount(toProtoMoney(codAmount))
                         .build())
                 .build();
 
@@ -121,6 +130,16 @@ public class GrpcShippingRequestAdapter implements ShippingRequestPort {
                 .setCity(address.city())
                 .setProvince(address.district())
                 .build();
+    }
+
+    private static ShippingDetails parcelFor(SubOrder subOrder, ShippingDetails contact) {
+        int units = subOrder.items().stream().mapToInt(OrderItem::quantity).sum();
+        int weight = Math.max(contact.weightGrams(), Math.multiplyExact(500, units));
+        int length = Math.max(contact.lengthCm(), 20 + Math.min(units, 5) * 2);
+        int width = Math.max(contact.widthCm(), 20);
+        int height = Math.max(contact.heightCm(), 10 + Math.min(units, 5) * 2);
+        return new ShippingDetails(contact.recipientName(), contact.recipientPhone(), contact.wardCode(),
+                contact.districtCode(), contact.provinceCode(), weight, length, width, height);
     }
 
     private static com.vnshop.proto.shipping.ShippingAddress toLegacyProtoAddress(Address address) {

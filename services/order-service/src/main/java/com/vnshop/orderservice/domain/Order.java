@@ -7,6 +7,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.math.RoundingMode;
 
 public class Order {
     private static final DateTimeFormatter ORDER_DATE_FORMAT = DateTimeFormatter.BASIC_ISO_DATE;
@@ -156,6 +157,20 @@ public class Order {
 
     public ShippingDetails shippingDetails() {
         return shippingDetails;
+    }
+
+    public Money payableFor(SubOrder subOrder) {
+        Objects.requireNonNull(subOrder, "subOrder is required");
+        BigDecimal itemTotal = subOrder.itemsTotal().amount();
+        BigDecimal totalItems = itemsTotal.amount();
+        BigDecimal discountShare = totalItems.signum() == 0
+                ? BigDecimal.ZERO
+                : discount.amount().multiply(itemTotal).divide(totalItems, 0, RoundingMode.HALF_UP);
+        BigDecimal taxShare = totalItems.signum() == 0
+                ? BigDecimal.ZERO
+                : taxTotal.amount().multiply(itemTotal).divide(totalItems, 0, RoundingMode.HALF_UP);
+        return new Money(itemTotal.add(subOrder.shippingCost().amount()).subtract(discountShare).add(taxShare),
+                finalAmount.currency());
     }
 
     public List<SubOrder> subOrders() {

@@ -12,6 +12,17 @@ public record ShippingDetails(
         int widthCm,
         int heightCm) {
 
+    private static final int LEGACY_WEIGHT_GRAMS = 1_000;
+    private static final int LEGACY_LENGTH_CM = 30;
+    private static final int LEGACY_WIDTH_CM = 20;
+    private static final int LEGACY_HEIGHT_CM = 10;
+
+    public ShippingDetails(String recipientName, String recipientPhone, String wardCode,
+                           String districtCode, String provinceCode) {
+        this(recipientName, recipientPhone, wardCode, districtCode, provinceCode,
+                LEGACY_WEIGHT_GRAMS, LEGACY_LENGTH_CM, LEGACY_WIDTH_CM, LEGACY_HEIGHT_CM);
+    }
+
     public ShippingDetails {
         requireNonBlank(recipientName, "recipientName");
         requireNonBlank(recipientPhone, "recipientPhone");
