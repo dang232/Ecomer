@@ -127,9 +127,9 @@ public class GrpcShippingServer extends ShippingServiceGrpc.ShippingServiceImplB
                 orderId,
                 checkoutProperties.origin(),
                 new ShippingAddress(destination.getFullName(), destination.getPhone(), destination.getStreet(),
-                        firstNonBlank(destination.getWardCode(), destination.getProvince()),
-                        firstNonBlank(destination.getDistrictCode(), destination.getProvince()),
-                        firstNonBlank(destination.getProvinceCode(), destination.getCity())),
+                        destination.getWardCode(),
+                        destination.getDistrictCode(),
+                        destination.getProvinceCode()),
                 parcel,
                 codAmount,
                 declaredValue,
@@ -141,7 +141,4 @@ public class GrpcShippingServer extends ShippingServiceGrpc.ShippingServiceImplB
                 : new Money(new java.math.BigDecimal(money.getAmount()), money.getCurrency());
     }
 
-    private static String firstNonBlank(String preferred, String fallback) {
-        return preferred == null || preferred.isBlank() ? fallback : preferred;
-    }
 }

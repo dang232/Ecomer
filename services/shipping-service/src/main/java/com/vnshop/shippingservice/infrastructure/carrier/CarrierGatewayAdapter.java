@@ -12,5 +12,9 @@ interface CarrierGatewayAdapter {
 
     ShippingLabel createLabel(LabelRequest request);
 
+    default void cancelLabel(com.vnshop.shippingservice.domain.model.CarrierCode carrier, String trackingCode) {
+        throw new UnsupportedOperationException("Carrier cancellation is not configured for " + carrier);
+    }
+
     TrackingInfo track(TrackingRequest request);
 }
