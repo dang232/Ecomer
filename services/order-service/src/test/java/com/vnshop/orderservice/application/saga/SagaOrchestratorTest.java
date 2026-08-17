@@ -142,6 +142,7 @@ class SagaOrchestratorTest {
 
         assertThat(compensationPublisher.paymentRefundCount).isEqualTo(1);
         assertThat(compensationPublisher.inventoryReleaseCount).isEqualTo(1);
+        assertThat(compensationPublisher.shippingCancellationCount).isEqualTo(1);
     }
 
     @Test
@@ -218,6 +219,7 @@ class SagaOrchestratorTest {
     static class RecordingCompensationPublisher implements SagaCompensationPublisherPort {
         int inventoryReleaseCount = 0;
         int paymentRefundCount = 0;
+        int shippingCancellationCount = 0;
 
         @Override
         public void publishInventoryReleaseRequested(String orderId, String sagaId) {
@@ -227,6 +229,11 @@ class SagaOrchestratorTest {
         @Override
         public void publishPaymentRefundRequested(String orderId, String sagaId) {
             paymentRefundCount++;
+        }
+
+        @Override
+        public void publishShippingCancellationRequested(String orderId, String sagaId, String reason) {
+            shippingCancellationCount++;
         }
     }
 }

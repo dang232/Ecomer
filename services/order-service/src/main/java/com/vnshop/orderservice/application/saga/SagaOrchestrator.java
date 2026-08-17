@@ -127,6 +127,8 @@ public class SagaOrchestrator {
                 // Payment was charged, inventory was reserved — reverse both
                 compensationPublisher.publishPaymentRefundRequested(orderId, sagaId);
                 compensationPublisher.publishInventoryReleaseRequested(orderId, sagaId);
+                compensationPublisher.publishShippingCancellationRequested(
+                        orderId, sagaId, "shipping-step-failed");
                 break;
             case "PAYMENT":
             case "PAYMENT_CHARGE":

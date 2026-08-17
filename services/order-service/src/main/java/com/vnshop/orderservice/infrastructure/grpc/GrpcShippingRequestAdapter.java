@@ -133,13 +133,7 @@ public class GrpcShippingRequestAdapter implements ShippingRequestPort {
     }
 
     private static ShippingDetails parcelFor(SubOrder subOrder, ShippingDetails contact) {
-        int units = subOrder.items().stream().mapToInt(OrderItem::quantity).sum();
-        int weight = Math.max(contact.weightGrams(), Math.multiplyExact(500, units));
-        int length = Math.max(contact.lengthCm(), 20 + Math.min(units, 5) * 2);
-        int width = Math.max(contact.widthCm(), 20);
-        int height = Math.max(contact.heightCm(), 10 + Math.min(units, 5) * 2);
-        return new ShippingDetails(contact.recipientName(), contact.recipientPhone(), contact.wardCode(),
-                contact.districtCode(), contact.provinceCode(), weight, length, width, height);
+        return contact;
     }
 
     private static com.vnshop.proto.shipping.ShippingAddress toLegacyProtoAddress(Address address) {

@@ -144,7 +144,7 @@ class GrpcShippingRequestAdapterTest {
         assertEquals(1500, sentSub.getParcelWeightGrams());
         assertEquals(30, sentSub.getParcelLengthCm());
         assertEquals(20, sentSub.getParcelWidthCm());
-        assertEquals(12, sentSub.getParcelHeightCm());
+        assertEquals(10, sentSub.getParcelHeightCm());
         assertEquals("350000", sentSub.getDeclaredValue().getAmount());
         assertEquals("350000", sentSub.getCodAmount().getAmount());
     }
