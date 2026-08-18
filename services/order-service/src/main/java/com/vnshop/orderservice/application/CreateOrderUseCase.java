@@ -5,6 +5,7 @@ import com.vnshop.orderservice.domain.CommissionTier;
 import com.vnshop.orderservice.domain.Order;
 import com.vnshop.orderservice.domain.OrderItem;
 import com.vnshop.orderservice.domain.PaymentMethod;
+import com.vnshop.orderservice.domain.ParcelDimensions;
 import com.vnshop.orderservice.domain.ShippingDetails;
 import com.vnshop.orderservice.domain.SubOrder;
 import com.vnshop.orderservice.domain.port.out.CommissionTierLookupPort;
@@ -86,6 +87,7 @@ public class CreateOrderUseCase {
         if (command.items() == null || command.items().isEmpty()) {
             throw new IllegalArgumentException("items must not be empty");
         }
+        validateTrustedParcels(command.items(), command.shippingDetails());
 
         orderRepository.lockIdempotencyKey(command.idempotencyKey());
         return orderRepository.findByIdempotencyKey(command.idempotencyKey())
@@ -197,6 +199,17 @@ public class CreateOrderUseCase {
             subOrders.add(new SubOrder(entry.getKey(), entry.getValue(), tier));
         }
         return List.copyOf(subOrders);
+    }
+
+    private static void validateTrustedParcels(List<OrderItem> items, ShippingDetails shippingDetails) {
+        if (shippingDetails == null) {
+            return;
+        }
+        Map<String, List<OrderItem>> itemsBySeller = items.stream()
+                .collect(Collectors.groupingBy(OrderItem::sellerId, Collectors.toList()));
+        for (Map.Entry<String, List<OrderItem>> entry : itemsBySeller.entrySet()) {
+            ParcelDimensions.aggregate(entry.getValue(), entry.getKey());
+        }
     }
 
     private static List<OrderItem> applyLineItemTaxes(List<OrderItem> items, TaxResult taxResult) {

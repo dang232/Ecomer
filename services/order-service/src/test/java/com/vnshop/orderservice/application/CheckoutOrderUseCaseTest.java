@@ -172,6 +172,30 @@ class CheckoutOrderUseCaseTest {
     }
 
     @Test
+    void rejectsMissingParcelMetadataBeforeAnyOrderSideEffect() {
+        catalog.add(new CatalogProduct(
+                "p1", "seller-A", "Missing Parcel Product",
+                List.of(new CatalogProduct.Variant("sku-1", new Money(new BigDecimal("100000")))), ""));
+
+        assertThatThrownBy(() -> newUseCase().checkout(new CheckoutOrderCommand(
+                "buyer-1",
+                new Address("street", "ward", "district", "city"),
+                new com.vnshop.orderservice.domain.ShippingDetails(
+                        "Recipient", "+84900000000", "W-001", "D-001", "P-001", 9999, 99, 98, 97),
+                List.of(new CheckoutLineItem("p1", "sku-1", 1)),
+                "idem-missing-parcel",
+                PaymentMethod.COD,
+                null)))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("trusted parcel metadata");
+
+        assertThat(inventory.reserveCalls).isZero();
+        assertThat(payment.requestCalls).isZero();
+        assertThat(repository.saveCalls).isZero();
+        assertThat(shipping.requestCalls).isZero();
+    }
+
+    @Test
     void picksFirstVariantWhenClientOmitsVariantSku() {
         catalog.add(new CatalogProduct(
                 "p1",
@@ -314,9 +338,11 @@ class CheckoutOrderUseCaseTest {
         private final Map<UUID, Order> byId = new HashMap<>();
         private final Map<String, Order> byIdem = new HashMap<>();
         private long nextSubOrderId = 1L;
+        private int saveCalls;
 
         @Override
         public Order save(Order order) {
+            saveCalls++;
             List<SubOrder> persistedSubOrders = order.subOrders().stream().map(subOrder -> new SubOrder(nextSubOrderId++,
                     subOrder.sellerId(), subOrder.items(), subOrder.fulfillmentStatus(), subOrder.shippingInfo(),
                     subOrder.commissionTier())).toList();
@@ -337,16 +363,19 @@ class CheckoutOrderUseCaseTest {
     }
 
     private static final class RecordingInventory implements InventoryReservationPort {
-        @Override public void reserve(String orderId, List<OrderItem> items) {}
+        private int reserveCalls;
+        @Override public void reserve(String orderId, List<OrderItem> items) { reserveCalls++; }
         @Override public void release(String orderId) {}
     }
 
     private static final class RecordingPayment implements PaymentRequestPort {
-        @Override public void requestPayment(String orderId, String buyerId, String paymentMethod, Money amount) {}
+        private int requestCalls;
+        @Override public void requestPayment(String orderId, String buyerId, String paymentMethod, Money amount) { requestCalls++; }
     }
 
     private static final class RecordingShipping implements ShippingRequestPort {
-        @Override public void requestShipping(String orderId, SubOrder subOrder, Address address) {}
+        private int requestCalls;
+        @Override public void requestShipping(String orderId, SubOrder subOrder, Address address) { requestCalls++; }
     }
 
 
