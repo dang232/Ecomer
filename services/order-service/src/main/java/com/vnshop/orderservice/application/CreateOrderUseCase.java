@@ -207,7 +207,7 @@ public class CreateOrderUseCase {
             OrderItem item = items.get(index);
             TaxResult.LineItemTax tax = taxResult.lineItems().get(index);
             return new OrderItem(item.productId(), item.variantSku(), item.sellerId(), item.name(), item.quantity(),
-                    item.unitPrice(), item.imageUrl(), tax.rate(), BigDecimal.valueOf(tax.taxAmount()));
+                    item.unitPrice(), item.imageUrl(), item.parcel(), tax.rate(), BigDecimal.valueOf(tax.taxAmount()));
         }).toList();
     }
 
