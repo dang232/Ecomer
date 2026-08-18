@@ -31,11 +31,11 @@ import {
   createCheckoutRecoveryStore,
   createCheckoutSubmissionController,
   shouldClearCartAfterSubmission,
+  trustedParcelDimensions,
   type CheckoutRecoveryStore,
   type CheckoutSubmissionController,
   type CheckoutSubmissionResult,
 } from "../../../features/checkout";
-import { trustedParcelDimensions } from "../../../features/checkout/model/parcel";
 import { readJsonText } from "../../../shared/api/read-json";
 import { useAuth } from "../../hooks/auth-context";
 import { useCart } from "../../hooks/use-cart";
