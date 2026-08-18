@@ -6,6 +6,7 @@ import com.vnshop.productservice.domain.Product;
 import com.vnshop.productservice.domain.ProductImage;
 import com.vnshop.productservice.domain.ProductStatus;
 import com.vnshop.productservice.domain.ProductVariant;
+import com.vnshop.productservice.domain.ParcelDimensions;
 import com.vnshop.productservice.domain.ProductTag;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
@@ -161,6 +162,18 @@ public class ProductJpaEntity extends BaseJpaEntity {
         @Column(name = "stock_quantity", nullable = false)
         private int stockQuantity;
 
+        @Column(name = "parcel_weight_grams")
+        private Integer parcelWeightGrams;
+
+        @Column(name = "parcel_length_cm")
+        private Integer parcelLengthCm;
+
+        @Column(name = "parcel_width_cm")
+        private Integer parcelWidthCm;
+
+        @Column(name = "parcel_height_cm")
+        private Integer parcelHeightCm;
+
         protected ProductVariantEmbeddable() {
         }
 
@@ -171,11 +184,30 @@ public class ProductJpaEntity extends BaseJpaEntity {
             embeddable.price = MoneyEmbeddable.fromDomain(variant.price());
             embeddable.imageUrl = variant.imageUrl();
             embeddable.stockQuantity = variant.stockQuantity();
+            if (variant.parcel() != null) {
+                embeddable.parcelWeightGrams = variant.parcel().weightGrams();
+                embeddable.parcelLengthCm = variant.parcel().lengthCm();
+                embeddable.parcelWidthCm = variant.parcel().widthCm();
+                embeddable.parcelHeightCm = variant.parcel().heightCm();
+            }
             return embeddable;
         }
 
         ProductVariant toDomain() {
-            return new ProductVariant(sku, name, price.toDomain(), imageUrl, stockQuantity);
+            ParcelDimensions parcel = null;
+            boolean anyParcelValue = parcelWeightGrams != null
+                    || parcelLengthCm != null
+                    || parcelWidthCm != null
+                    || parcelHeightCm != null;
+            if (anyParcelValue) {
+                if (parcelWeightGrams == null || parcelLengthCm == null
+                        || parcelWidthCm == null || parcelHeightCm == null) {
+                    throw new IllegalStateException("stored parcel metadata must be complete");
+                }
+                parcel = new ParcelDimensions(
+                        parcelWeightGrams, parcelLengthCm, parcelWidthCm, parcelHeightCm);
+            }
+            return new ProductVariant(sku, name, price.toDomain(), imageUrl, stockQuantity, parcel);
         }
     }
 
