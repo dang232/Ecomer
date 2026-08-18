@@ -13,6 +13,7 @@ describe('MergeCartUseCase', () => {
     const repository: CartRepository = {
       findByUserId: jest.fn(),
       save: jest.fn(),
+      refreshParcels: jest.fn(),
       delete: jest.fn(),
       mergeGuestCart,
     };
@@ -26,7 +27,10 @@ describe('MergeCartUseCase', () => {
       }),
     };
 
-    const result = await new MergeCartUseCase(repository, productClient).execute(
+    const result = await new MergeCartUseCase(
+      repository,
+      productClient,
+    ).execute(
       'user-1',
       'session-1',
       [{ productId: 'p1', quantity: 2 }],

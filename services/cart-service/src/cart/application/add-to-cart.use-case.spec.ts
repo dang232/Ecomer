@@ -15,6 +15,7 @@ describe('AddToCartUseCase', () => {
     const repository: CartRepository = {
       findByUserId: jest.fn().mockResolvedValue(existingCart),
       save,
+      refreshParcels: jest.fn(),
       delete: jest.fn(),
       mergeGuestCart: jest.fn(),
     };

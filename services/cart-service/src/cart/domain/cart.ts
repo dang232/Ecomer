@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { CartFullException } from './cart-full.exception';
 import { CartItemLimitExceededException } from './cart-item-limit-exceeded.exception';
 import { CartItemNotFoundException } from './cart-item-not-found.exception';
@@ -13,6 +14,8 @@ export class Cart {
     public readonly userId: string,
     private _items: CartItem[],
     private _updatedAt: Date,
+    private _version: number,
+    private readonly _generationId: string,
   ) {}
 
   static create(userId: string): Cart {
@@ -20,15 +23,17 @@ export class Cart {
       throw new InvalidCartOperationException('userId required');
     }
 
-    return new Cart(userId, [], new Date());
+    return new Cart(userId, [], new Date(), 0, randomUUID());
   }
 
   static fromPersistence(
     userId: string,
     items: CartItem[],
     updatedAt: Date,
+    version = 1,
+    generationId = Cart.legacyGenerationId(userId),
   ): Cart {
-    return new Cart(userId, items, updatedAt);
+    return new Cart(userId, items, updatedAt, version, generationId);
   }
 
   get items(): readonly CartItem[] {
@@ -37,6 +42,22 @@ export class Cart {
 
   get updatedAt(): Date {
     return this._updatedAt;
+  }
+
+  get version(): number {
+    return this._version;
+  }
+
+  get generationId(): string {
+    return this._generationId;
+  }
+
+  private static legacyGenerationId(userId: string): string {
+    return `legacy:${userId}`;
+  }
+
+  markPersisted(version: number): void {
+    this._version = version;
   }
 
   get itemCount(): number {
