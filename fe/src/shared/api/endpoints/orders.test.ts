@@ -28,12 +28,9 @@ describe("placeOrder", () => {
     vi.mocked(api.post).mockResolvedValue(order);
 
     await expect(placeOrder(recipientOnlyOrder, "checkout-key")).resolves.toBe(order);
-    expect(api.post).toHaveBeenCalledWith(
-      "/orders",
-      expect.anything(),
-      recipientOnlyOrder,
-      { idempotencyKey: "checkout-key" },
-    );
+    expect(api.post).toHaveBeenCalledWith("/orders", expect.anything(), recipientOnlyOrder, {
+      idempotencyKey: "checkout-key",
+    });
     expect(recipientOnlyOrder.shippingDetails).not.toHaveProperty("weightGrams");
     expect(recipientOnlyOrder.shippingDetails).not.toHaveProperty("lengthCm");
     expect(recipientOnlyOrder.shippingDetails).not.toHaveProperty("widthCm");
@@ -59,7 +56,9 @@ describe("findOrderByIdempotencyKey", () => {
   it("maps the non-enumerating 404 to a typed not-found result", async () => {
     vi.mocked(api.get).mockRejectedValue(new ApiError(404, "NOT_FOUND", "Not found"));
 
-    await expect(findOrderByIdempotencyKey("missing-key")).resolves.toEqual({ kind: "not-found" });
+    await expect(findOrderByIdempotencyKey("missing-key")).resolves.toEqual({
+      kind: "not-found",
+    });
   });
 
   it("preserves non-404 failures", async () => {
