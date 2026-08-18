@@ -2,7 +2,13 @@ package com.vnshop.productservice.domain;
 
 import java.util.Objects;
 
-public record ProductVariant(String sku, String name, Money price, String imageUrl, int stockQuantity) {
+public record ProductVariant(
+        String sku,
+        String name,
+        Money price,
+        String imageUrl,
+        int stockQuantity,
+        ParcelDimensions parcel) {
     public ProductVariant {
         requireNonBlank(sku, "sku");
         Objects.requireNonNull(price, "price is required");
@@ -17,7 +23,11 @@ public record ProductVariant(String sku, String name, Money price, String imageU
      * legacy entities written before the stock column existed.
      */
     public ProductVariant(String sku, String name, Money price, String imageUrl) {
-        this(sku, name, price, imageUrl, 0);
+        this(sku, name, price, imageUrl, 0, null);
+    }
+
+    public ProductVariant(String sku, String name, Money price, String imageUrl, int stockQuantity) {
+        this(sku, name, price, imageUrl, stockQuantity, null);
     }
 
     @Override
