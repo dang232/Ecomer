@@ -180,7 +180,7 @@ class GrpcShippingRequestAdapterTest {
     }
 
     @Test
-    void shouldAggregateWeightAndMaximumDimensionsPerSeller() {
+    void shouldPackOneConservativeParcelPerSellerWithQuantityAwareLength() {
         Address address = new Address("12 Carrier St", "Ward name", "District name", "Hanoi");
         ShippingDetails details = new ShippingDetails(
                 "Nguyen Van A", "+84912345678", "W-001", "D-001", "P-001", 9999, 99, 98, 97);
@@ -199,9 +199,25 @@ class GrpcShippingRequestAdapterTest {
         verify(shippingStub).requestShipping(requestCaptor.capture());
         com.vnshop.proto.shipping.SubOrder sentSub = requestCaptor.getValue().getSubOrders(0);
         assertEquals(1800, sentSub.getParcelWeightGrams());
-        assertEquals(25, sentSub.getParcelLengthCm());
+        assertEquals(45, sentSub.getParcelLengthCm());
         assertEquals(20, sentSub.getParcelWidthCm());
         assertEquals(35, sentSub.getParcelHeightCm());
+    }
+
+    @Test
+    void shouldRejectParcelArithmeticOverflowBeforeGrpcCall() {
+        Address address = new Address("12 Carrier St", "Ward name", "District name", "Hanoi");
+        ShippingDetails details = new ShippingDetails(
+                "Nguyen Van A", "+84912345678", "W-001", "D-001", "P-001", 9999, 99, 98, 97);
+        OrderItem item = new OrderItem("prod-overflow", "sku-overflow", "seller-overflow", "Oversized", 2,
+                new Money(new BigDecimal("100000")), null,
+                new ParcelDimensions(500, Integer.MAX_VALUE, 20, 30));
+        SubOrder subOrder = new SubOrder("seller-overflow", List.of(item));
+
+        assertThrows(ArithmeticException.class,
+                () -> adapter.requestShipping("order-overflow", subOrder, address, details));
+
+        verify(shippingStub, never()).requestShipping(any());
     }
 
     @Test
