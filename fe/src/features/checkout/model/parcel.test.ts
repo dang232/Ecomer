@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import { productIdSchema } from "@/shared/contracts/api/branded-ids";
 
-import { trustedParcelDimensions } from "./parcel";
+import { hasTrustedParcelMetadata } from "./parcel";
 
-describe("trustedParcelDimensions", () => {
-  it("aggregates complete cart lines using quantity and maximum dimensions", () => {
-    const result = trustedParcelDimensions([
+describe("hasTrustedParcelMetadata", () => {
+  it("accepts a cart when every line has complete parcel metadata", () => {
+    const result = hasTrustedParcelMetadata([
       {
         productId: productIdSchema.parse("product-1"),
         name: "One",
@@ -29,17 +29,12 @@ describe("trustedParcelDimensions", () => {
       },
     ]);
 
-    expect(result).toEqual({
-      weightGrams: 2500,
-      lengthCm: 30,
-      widthCm: 20,
-      heightCm: 10,
-    });
+    expect(result).toBe(true);
   });
 
   it("fails closed when any cart line has no parcel metadata", () => {
     expect(
-      trustedParcelDimensions([
+      hasTrustedParcelMetadata([
         {
           productId: productIdSchema.parse("product-1"),
           name: "One",
@@ -51,10 +46,10 @@ describe("trustedParcelDimensions", () => {
           parcel: null,
         },
       ]),
-    ).toBeNull();
+    ).toBe(false);
   });
 
   it("fails closed for an empty cart", () => {
-    expect(trustedParcelDimensions([])).toBeNull();
+    expect(hasTrustedParcelMetadata([])).toBe(false);
   });
 });
