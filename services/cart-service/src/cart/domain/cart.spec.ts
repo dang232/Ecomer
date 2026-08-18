@@ -48,6 +48,32 @@ describe('Cart', () => {
   });
 
   describe('variant support', () => {
+    it('preserves parcel metadata on a cart item', () => {
+      const parcel = {
+        weightGrams: 1500,
+        lengthCm: 30,
+        widthCm: 20,
+        heightCm: 10,
+      };
+      const cart = Cart.create('user-1');
+
+      cart.addItem(
+        CartItem.create(
+          'product-1',
+          'T-Shirt',
+          '',
+          Money.of(200),
+          1,
+          'size-M',
+          undefined,
+          undefined,
+          parcel,
+        ),
+      );
+
+      expect(cart.items[0]?.parcel).toEqual(parcel);
+    });
+
     it('same product with different variants = 2 distinct line items', () => {
       const cart = Cart.create('user-1');
 
