@@ -50,8 +50,11 @@ export { REDIS_CLIENT } from './redis-client.token';
       useFactory: (configService: ConfigService): ProductClientPort =>
         new ProductHttpClientAdapter(
           configService.get<string>('PRODUCT_SERVICE_URL'),
-          configService.get<string>('USER_SERVICE_URL') ?? 'http://user-service:8081',
-          Number(configService.get<string>('USER_SERVICE_TIMEOUT_MS') ?? '2000'),
+          configService.get<string>('USER_SERVICE_URL') ??
+            'http://user-service:8081',
+          Number(
+            configService.get<string>('USER_SERVICE_TIMEOUT_MS') ?? '2000',
+          ),
         ),
       inject: [ConfigService],
     },
@@ -65,9 +68,11 @@ export { REDIS_CLIENT } from './redis-client.token';
     },
     {
       provide: ViewCartUseCase,
-      useFactory: (repository: CartRepository): ViewCartUseCase =>
-        new ViewCartUseCase(repository),
-      inject: [CART_REPOSITORY],
+      useFactory: (
+        repository: CartRepository,
+        productClient: ProductClientPort,
+      ): ViewCartUseCase => new ViewCartUseCase(repository, productClient),
+      inject: [CART_REPOSITORY, PRODUCT_CLIENT],
     },
     {
       provide: UpdateCartItemUseCase,

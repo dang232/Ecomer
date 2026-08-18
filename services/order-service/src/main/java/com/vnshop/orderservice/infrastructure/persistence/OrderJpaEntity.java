@@ -194,6 +194,11 @@ public class OrderJpaEntity extends BaseJpaEntity {
         if (shippingRecipientName == null) {
             return null;
         }
+        if (shippingWeightGrams == null || shippingLengthCm == null
+                || shippingWidthCm == null || shippingHeightCm == null) {
+            return new ShippingDetails(shippingRecipientName, shippingRecipientPhone, shippingWardCode,
+                    shippingDistrictCode, shippingProvinceCode);
+        }
         return new ShippingDetails(shippingRecipientName, shippingRecipientPhone, shippingWardCode,
                 shippingDistrictCode, shippingProvinceCode, shippingWeightGrams, shippingLengthCm,
                 shippingWidthCm, shippingHeightCm);

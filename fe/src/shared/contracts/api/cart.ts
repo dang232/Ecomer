@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { productIdSchema, sellerIdSchema } from "@/shared/contracts/api/branded-ids";
+import { parcelDimensionsSchema } from "@/shared/contracts/api/product";
 
 // BE returns Money as `{ amount: number, currency: string }` (cart-service).
 // FE works with bare numbers in VND throughout the cart flow, so we accept
@@ -30,6 +31,7 @@ export const cartItemSchema = z
     name: z.string().optional(),
     image: z.string().optional(),
     price: z.number().optional(),
+    parcel: parcelDimensionsSchema.nullable().optional(),
   })
   .passthrough()
   .transform((raw) => ({
@@ -41,6 +43,7 @@ export const cartItemSchema = z
     sellerId: raw.sellerId,
     ...(raw.sellerName !== undefined ? { sellerName: raw.sellerName } : {}),
     variantId: raw.variantId ?? raw.variantSku ?? undefined,
+    parcel: raw.parcel ?? null,
   }));
 
 export const cartSchema = z

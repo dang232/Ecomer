@@ -236,6 +236,7 @@ async function main() {
             priceCurrency: "VND",
             imageUrl: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300",
             stockQuantity: 50,
+            parcel: { weightGrams: 1000, lengthCm: 30, widthCm: 20, heightCm: 10 },
           },
         ],
         images: [

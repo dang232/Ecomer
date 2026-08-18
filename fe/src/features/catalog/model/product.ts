@@ -1,3 +1,5 @@
+import type { ParcelDimensions } from "@/shared/contracts/api/product";
+
 export interface Product {
   id: string;
   name: string;
@@ -28,6 +30,7 @@ export interface Product {
     priceCurrency?: string;
     imageUrl?: string;
     stockQuantity?: number;
+    parcel?: ParcelDimensions | null;
   }[];
   shipping: string;
   shippingFee: number;

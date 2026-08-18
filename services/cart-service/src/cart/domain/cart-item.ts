@@ -1,5 +1,6 @@
 import { InvalidCartOperationException } from './invalid-cart-operation.exception';
 import { Money } from './money';
+import type { ParcelDimensions } from './parcel-dimensions';
 
 export class CartItem {
   private constructor(
@@ -12,6 +13,7 @@ export class CartItem {
     private readonly _variantId: string | null,
     public readonly sellerId?: string,
     public readonly sellerName?: string,
+    public readonly parcel: ParcelDimensions | null = null,
   ) {}
 
   /** Returns the composite key used to distinguish line items in a cart. */
@@ -28,6 +30,7 @@ export class CartItem {
     variantId?: string | null,
     sellerId?: string,
     sellerName?: string,
+    parcel?: ParcelDimensions | null,
   ): CartItem {
     if (quantity < 1) {
       throw new InvalidCartOperationException(
@@ -49,6 +52,7 @@ export class CartItem {
       variantId ?? null,
       sellerId,
       sellerName,
+      parcel ?? null,
     );
   }
 
@@ -62,6 +66,7 @@ export class CartItem {
     variantId?: string | null,
     sellerId?: string,
     sellerName?: string,
+    parcel?: ParcelDimensions | null,
   ): CartItem {
     return new CartItem(
       productId,
@@ -73,6 +78,7 @@ export class CartItem {
       variantId ?? null,
       sellerId,
       sellerName,
+      parcel ?? null,
     );
   }
 
@@ -91,6 +97,21 @@ export class CartItem {
 
   get subtotal(): Money {
     return this.unitPrice.multiply(this._quantity);
+  }
+
+  withParcel(parcel: ParcelDimensions | null): CartItem {
+    return new CartItem(
+      this.productId,
+      this.productName,
+      this.productImage,
+      this.unitPrice,
+      this._quantity,
+      this.addedAt,
+      this._variantId,
+      this.sellerId,
+      this.sellerName,
+      parcel,
+    );
   }
 
   updateQuantity(quantity: number): void {

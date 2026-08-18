@@ -2,6 +2,16 @@ import { z } from "zod";
 
 import { productIdSchema, sellerIdSchema } from "@/shared/contracts/api/branded-ids";
 
+export const parcelDimensionsSchema = z
+  .object({
+    weightGrams: z.number().int().positive(),
+    lengthCm: z.number().int().positive(),
+    widthCm: z.number().int().positive(),
+    heightCm: z.number().int().positive(),
+  })
+  .strict();
+export type ParcelDimensions = z.infer<typeof parcelDimensionsSchema>;
+
 // BE returns image objects ({url, alt, sortOrder}); some other endpoints (e.g.
 // search) emit a flat string array or `imageUrl`; legacy demo data sometimes
 // ships single `image`. Accept all shapes and let `fromServer` flatten.
@@ -25,6 +35,7 @@ const productVariantSchema = z
     priceCurrency: z.string().optional(),
     imageUrl: z.string().nullable().optional(),
     stockQuantity: z.number().optional(),
+    parcel: parcelDimensionsSchema.nullable().optional(),
   })
   .passthrough();
 

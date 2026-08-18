@@ -106,7 +106,8 @@ public class CalculateCheckoutUseCase {
                 product.name(),
                 line.quantity(),
                 variant.unitPrice(),
-                product.imageUrl());
+                product.imageUrl(),
+                variant.parcel());
     }
 
     private OrderItem resolveCartItem(CartItemSnapshot item) {
@@ -123,7 +124,8 @@ public class CalculateCheckoutUseCase {
                         catalogProduct.name(),
                         item.quantity(),
                         catalogVariant.unitPrice(),
-                        catalogProduct.imageUrl());
+                        catalogProduct.imageUrl(),
+                        catalogVariant.parcel());
             }
         }
 

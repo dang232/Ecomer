@@ -3,6 +3,7 @@ package com.vnshop.productservice.application;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.vnshop.productservice.domain.Money;
+import com.vnshop.productservice.domain.ParcelDimensions;
 import com.vnshop.productservice.domain.Product;
 import com.vnshop.productservice.domain.ProductVariant;
 import com.vnshop.productservice.domain.ProductTag;
@@ -107,5 +108,38 @@ class ProductResponseTest {
                 List.of(), List.of(), List.of(new ProductTag("wireless", "Wireless")), false, false, false);
 
         assertThat(ProductResponse.fromDomain(product).tags()).containsExactly("Wireless");
+    }
+
+    @Test
+    void exposesVariantParcelDimensions() {
+        ProductVariant variant = new ProductVariant(
+                "parcelled",
+                "Parcelled",
+                new Money(new BigDecimal("100")),
+                null,
+                1,
+                new ParcelDimensions(1500, 30, 20, 10));
+
+        Product product = new Product(
+                UUID.randomUUID(), "seller-parcel", "Parcelled product", null, null, null,
+                List.of(variant), List.of());
+
+        ProductResponse.VariantResponse response = ProductResponse.fromDomain(product)
+                .variants()
+                .getFirst();
+
+        assertThat(response.parcel()).isEqualTo(new ProductResponse.ParcelResponse(1500, 30, 20, 10));
+    }
+
+    @Test
+    void leavesVariantParcelDimensionsNullWhenMetadataIsMissing() {
+        ProductVariant variant = new ProductVariant(
+                "unparcelled", "Unparcelled", new Money(new BigDecimal("100")), null, 1);
+
+        Product product = new Product(
+                UUID.randomUUID(), "seller-parcel", "Unparcelled product", null, null, null,
+                List.of(variant), List.of());
+
+        assertThat(ProductResponse.fromDomain(product).variants().getFirst().parcel()).isNull();
     }
 }

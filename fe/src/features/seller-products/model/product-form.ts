@@ -10,17 +10,41 @@
 import { z } from "zod";
 
 import type { SellerProductWriteBody, SellerVariant } from "@/shared/api/endpoints/products";
+import { parcelDimensionsSchema, type ParcelDimensions } from "@/shared/contracts/api/product";
 
 export const sellerProductOfferModes = ["single", "variants"] as const;
 export type SellerProductOfferMode = (typeof sellerProductOfferModes)[number];
 
 const stockQuantitySchema = z.number().int().min(0, "Stock cannot be negative");
 
+const sellerProductParcelSchema = parcelDimensionsSchema
+  .partial()
+  .superRefine((parcel, context) => {
+    const fields = ["weightGrams", "lengthCm", "widthCm", "heightCm"] as const;
+    const hasAnyValue = fields.some((field) => parcel[field] !== undefined);
+    if (!hasAnyValue) return;
+
+    fields.forEach((field) => {
+      if (parcel[field] === undefined) {
+        context.addIssue({
+          code: "custom",
+          path: [field],
+          message: "Parcel metadata must be complete",
+        });
+      }
+    });
+  })
+  .transform((parcel) => {
+    const hasAnyValue = Object.values(parcel).some((value) => value !== undefined);
+    return hasAnyValue ? parcel : undefined;
+  });
+
 const sellerProductOfferSchema = z.object({
   /** Optional merchant reference. A service-safe SKU is generated when omitted. */
   sku: z.string().trim().max(100).default(""),
   priceAmount: z.number().positive("Price must be greater than 0"),
   stockQuantity: stockQuantitySchema,
+  parcel: sellerProductParcelSchema.optional(),
 });
 
 const sellerProductVariantSchema = sellerProductOfferSchema.extend({
@@ -105,6 +129,7 @@ type EditableVariant = {
   priceAmount?: number;
   imageUrl?: string;
   stockQuantity?: number;
+  parcel?: ParcelDimensions | null;
 };
 
 export interface SellerProductFormSource {
@@ -127,6 +152,7 @@ export function fromSellerProduct(product: SellerProductFormSource): SellerProdu
       priceAmount: variant.priceAmount ?? 0,
       stockQuantity: variant.stockQuantity ?? 0,
       ...(variant.imageUrl ? { imageUrl: variant.imageUrl } : {}),
+      ...(variant.parcel ? { parcel: variant.parcel } : {}),
     }));
   const standardOffer =
     variants.length === 1 && variants[0]?.name === "Standard" ? variants[0] : null;
@@ -148,6 +174,7 @@ export function fromSellerProduct(product: SellerProductFormSource): SellerProdu
           sku: standardOffer.sku,
           priceAmount: standardOffer.priceAmount,
           stockQuantity: standardOffer.stockQuantity,
+          ...(standardOffer.parcel ? { parcel: standardOffer.parcel } : {}),
         }
       : { sku: "", priceAmount: 0, stockQuantity: 0 },
     variants: standardOffer ? [] : variants,
@@ -199,7 +226,45 @@ function toApiVariant(
 ): SellerVariant {
   const sku = variant.sku.trim() || generatedSku(productName, variant.name, index, usedSkus);
   usedSkus.add(sku.toLowerCase());
-  return { ...variant, sku, priceCurrency: "VND" };
+  const { parcel: formParcel, ...variantWithoutParcel } = variant;
+  const parcel = completeParcel(formParcel);
+  return {
+    ...variantWithoutParcel,
+    sku,
+    priceCurrency: "VND",
+    ...(parcel ? { parcel } : {}),
+  };
+}
+
+function completeParcel(
+  parcel: z.infer<typeof sellerProductParcelSchema> | undefined,
+): ParcelDimensions | undefined {
+  const weightGrams = parcel?.weightGrams;
+  const lengthCm = parcel?.lengthCm;
+  const widthCm = parcel?.widthCm;
+  const heightCm = parcel?.heightCm;
+  if (
+    typeof weightGrams === "number" &&
+    Number.isInteger(weightGrams) &&
+    weightGrams > 0 &&
+    typeof lengthCm === "number" &&
+    Number.isInteger(lengthCm) &&
+    lengthCm > 0 &&
+    typeof widthCm === "number" &&
+    Number.isInteger(widthCm) &&
+    widthCm > 0 &&
+    typeof heightCm === "number" &&
+    Number.isInteger(heightCm) &&
+    heightCm > 0
+  ) {
+    return {
+      weightGrams,
+      lengthCm,
+      widthCm,
+      heightCm,
+    };
+  }
+  return undefined;
 }
 
 /** Map seller-facing values to the product-service write contract. */

@@ -32,10 +32,6 @@ const recoveryOrderSchema = z.object({
       wardCode: z.string().min(1),
       districtCode: z.string().min(1),
       provinceCode: z.string().min(1),
-      weightGrams: z.number().int().positive().optional(),
-      lengthCm: z.number().int().positive().optional(),
-      widthCm: z.number().int().positive().optional(),
-      heightCm: z.number().int().positive().optional(),
     })
     .optional(),
   paymentMethod: checkoutProviderSchema.optional(),

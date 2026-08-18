@@ -14,7 +14,6 @@ import {
 } from "@/shared/api/endpoints/checkout";
 import { listActiveCoupons, validateCouponCode } from "@/shared/api/endpoints/coupons";
 import { findOrderByIdempotencyKey, placeOrder } from "@/shared/api/endpoints/orders";
-import type { PlaceOrderInput } from "@/shared/api/endpoints/orders";
 import {
   codConfirm,
   momoCreate,
@@ -32,6 +31,7 @@ import {
   createCheckoutRecoveryStore,
   createCheckoutSubmissionController,
   shouldClearCartAfterSubmission,
+  hasTrustedParcelMetadata,
   type CheckoutRecoveryStore,
   type CheckoutSubmissionController,
   type CheckoutSubmissionResult,
@@ -58,17 +58,6 @@ const checkoutProgressSchema = z.object({
   note: z.string().optional(),
 });
 type CheckoutProgress = z.infer<typeof checkoutProgressSchema>;
-
-type ParcelDimensions = Pick<
-  PlaceOrderInput["shippingDetails"],
-  "weightGrams" | "lengthCm" | "widthCm" | "heightCm"
->;
-
-function trustedParcelDimensions(): ParcelDimensions | null {
-  // Product/cart contracts do not currently expose carrier-trusted parcel
-  // metadata. Keep checkout fail-closed instead of inventing dimensions.
-  return null;
-}
 
 function readCheckoutProgress(): CheckoutProgress | null {
   try {
@@ -393,11 +382,9 @@ export function CheckoutPage() {
       return;
     }
 
-    // Parcel dimensions must come from trusted catalog data. The current
-    // product/cart contracts do not expose them, so never invent carrier
-    // values at the browser boundary.
-    const parcelDimensions = trustedParcelDimensions();
-    if (!parcelDimensions) {
+    // Parcel metadata is server-authoritative. The cart is only a readiness
+    // gate here; never aggregate seller parcels into one order-level value.
+    if (!hasTrustedParcelMetadata(cartItems)) {
       toast.error("Shipping parcel dimensions are unavailable for this cart.");
       return;
     }
@@ -428,7 +415,6 @@ export function CheckoutPage() {
             wardCode: selectedAddress.ward ?? "",
             districtCode: selectedAddress.district ?? "",
             provinceCode: selectedAddress.city,
-            ...parcelDimensions,
           },
           paymentMethod: selectedPaymentId,
           notes: note || undefined,

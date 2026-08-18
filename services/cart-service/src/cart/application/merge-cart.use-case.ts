@@ -35,6 +35,7 @@ export class MergeCartUseCase {
           item.variantId,
           snapshot.sellerId,
           snapshot.sellerName,
+          snapshot.parcel,
         ),
       );
     }

@@ -3,6 +3,8 @@ package com.vnshop.orderservice.application;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -14,6 +16,8 @@ import com.vnshop.orderservice.domain.CommissionTier;
 import com.vnshop.orderservice.domain.Money;
 import com.vnshop.orderservice.domain.Order;
 import com.vnshop.orderservice.domain.OrderItem;
+import com.vnshop.orderservice.domain.PaymentMethod;
+import com.vnshop.orderservice.domain.ShippingDetails;
 import com.vnshop.orderservice.domain.SubOrder;
 import com.vnshop.orderservice.domain.port.out.CartRepositoryPort;
 import com.vnshop.orderservice.domain.port.out.CommissionTierLookupPort;
@@ -95,6 +99,42 @@ class CreateOrderUseCaseFinancialAllocationTest {
         var arguments = invocation.getArguments();
         org.assertj.core.api.Assertions.assertThat(arguments[4]).isEqualTo(new Money(new BigDecimal("100000")));
         org.assertj.core.api.Assertions.assertThat(arguments[5]).isEqualTo(new Money(new BigDecimal("100000")));
+    }
+
+    @Test
+    void existingKeyRetryReturnsBeforeTrustedParcelValidation() {
+        OrderRepositoryPort orders = mock(OrderRepositoryPort.class);
+        Order existing = new Order(UUID.randomUUID(), "buyer", new Address("street", null, "district", "city"),
+                List.of(new SubOrder("seller", List.of(new OrderItem("product", "sku", "seller", "Product", 1,
+                        new Money(new BigDecimal("100000")), null)))), "COD", "existing-key");
+        when(orders.findByIdempotencyKey("existing-key")).thenReturn(Optional.of(existing));
+        InventoryReservationPort inventory = mock(InventoryReservationPort.class);
+        PaymentRequestPort payment = mock(PaymentRequestPort.class);
+        ShippingRequestPort shipping = mock(ShippingRequestPort.class);
+        OrderEventPublisherPort events = mock(OrderEventPublisherPort.class);
+        SubOrderFinancialAllocationRepositoryPort allocations = mock(SubOrderFinancialAllocationRepositoryPort.class);
+        CreateOrderUseCase useCase = new CreateOrderUseCase(orders, inventory, payment, shipping, events,
+                standardTierLookup(), mock(CartRepositoryPort.class), mock(MetricsPort.class), saga(),
+                new TaxCalculationService((code, date) -> Optional.of(BigDecimal.ZERO)), null,
+                new AllocateOrderFinancialsUseCase(allocations));
+
+        Order retry = useCase.create(new CreateOrderCommand(
+                "buyer",
+                existing.shippingAddress(),
+                new ShippingDetails("Recipient", "+84900000000", "W-001", "D-001", "P-001", 9999, 99, 98, 97),
+                List.of(new OrderItem("missing-parcel-product", "sku", "seller", "Product", 1,
+                        new Money(new BigDecimal("100000")), null)),
+                "existing-key",
+                PaymentMethod.COD,
+                null));
+
+        org.assertj.core.api.Assertions.assertThat(retry).isSameAs(existing);
+        verify(inventory, never()).reserve(any(), any());
+        verify(payment, never()).requestPayment(any(), any(), any(), any());
+        verify(shipping, never()).requestShipping(any(), any(), any(), any(), any(), any());
+        verify(orders, never()).save(any());
+        verify(events, never()).publishOrderCreated(any());
+        verify(allocations, never()).saveAll(any());
     }
 
     private static Order withGeneratedSubOrderIds(Order order) {

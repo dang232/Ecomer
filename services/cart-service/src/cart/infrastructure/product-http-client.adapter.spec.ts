@@ -24,6 +24,17 @@ describe('ProductHttpClientAdapter', () => {
     expect(snap.productName).toBe('p-1');
     expect(snap.productImage).toBe('');
     expect(snap.unitPrice.amount).toBe(0);
+    expect(snap.degraded).toBe(true);
+  });
+
+  it('marks a transient fallback snapshot as degraded', async () => {
+    (global as { fetch: typeof fetch }).fetch = jest.fn().mockRejectedValue(
+      new Error('product service unavailable'),
+    ) as typeof fetch;
+
+    const snap = await new ProductHttpClientAdapter(URL).getSnapshot('p-1');
+
+    expect(snap.degraded).toBe(true);
   });
 
   it('throws ProductNotFoundException on 404', async () => {
@@ -60,6 +71,34 @@ describe('ProductHttpClientAdapter', () => {
     expect(snap.productImage).toBe('https://cdn/wh1000xm5-hero.jpg');
     expect(snap.unitPrice.amount).toBe(8990000);
     expect(snap.unitPrice.currency).toBe('VND');
+    expect(snap.parcel).toBeNull();
+  });
+
+  it('selects parcel metadata from the requested variant', async () => {
+    mockFetch({
+      id: 'p-parcel',
+      variants: [
+        {
+          sku: 'small',
+          priceAmount: 100,
+          parcel: { weightGrams: 500, lengthCm: 10, widthCm: 10, heightCm: 5 },
+        },
+        {
+          sku: 'large',
+          priceAmount: 200,
+          parcel: { weightGrams: 1500, lengthCm: 30, widthCm: 20, heightCm: 10 },
+        },
+      ],
+    });
+
+    const snap = await new ProductHttpClientAdapter(URL).getSnapshot('p-parcel', 'large');
+
+    expect(snap.parcel).toEqual({
+      weightGrams: 1500,
+      lengthCm: 30,
+      widthCm: 20,
+      heightCm: 10,
+    });
   });
 
   it('falls back to variants[0].imageUrl when images[] is empty', async () => {

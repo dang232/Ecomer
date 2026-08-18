@@ -1493,7 +1493,16 @@
           "currency": "VND",
           "stock": "Tồn",
           "stockPlaceholder": "0",
-          "stockHint": "sản phẩm"
+          "stockHint": "sản phẩm",
+          "parcelLabel": "Thông tin kiện hàng (không bắt buộc)",
+          "parcelHint": "Nhập đủ bốn giá trị lớn hơn 0 để thêm dữ liệu vận chuyển đáng tin cậy.",
+          "parcelPlaceholder": "VD: 500",
+          "parcel": {
+            "weightGrams": "Khối lượng (g)",
+            "lengthCm": "Dài (cm)",
+            "widthCm": "Rộng (cm)",
+            "heightCm": "Cao (cm)"
+          }
         },
         "publication": {
           "draftNotice": "Sản phẩm của bạn đã được lưu dưới dạng bản nháp và chưa hiển thị trên danh mục.",

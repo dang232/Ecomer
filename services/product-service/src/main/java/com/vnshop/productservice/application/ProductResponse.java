@@ -2,6 +2,7 @@ package com.vnshop.productservice.application;
 
 import com.vnshop.productservice.domain.Product;
 import com.vnshop.productservice.domain.ProductVariant;
+import com.vnshop.productservice.domain.ParcelDimensions;
 import com.vnshop.productservice.domain.review.ProductReviewSummary;
 import java.math.BigDecimal;
 import java.util.List;
@@ -47,7 +48,14 @@ public record ProductResponse(
                 summary.reviewCount(),
                 product.tags().stream().map(tag -> tag.displayLabel()).toList(),
                 product.variants().stream()
-                        .map(v -> new VariantResponse(v.sku(), v.name(), v.price().amount(), v.price().currency(), v.imageUrl(), v.stockQuantity()))
+                        .map(v -> new VariantResponse(
+                                v.sku(),
+                                v.name(),
+                                v.price().amount(),
+                                v.price().currency(),
+                                v.imageUrl(),
+                                v.stockQuantity(),
+                                ParcelResponse.fromDomain(v.parcel())))
                         .toList(),
                 product.images().stream()
                         .map(i -> new ImageResponse(i.url(), i.alt(), i.sortOrder()))
@@ -61,8 +69,22 @@ public record ProductResponse(
             BigDecimal priceAmount,
             String priceCurrency,
             String imageUrl,
-            int stockQuantity
-    ) {}
+            int stockQuantity,
+            ParcelResponse parcel
+    ) {
+    }
+
+    public record ParcelResponse(int weightGrams, int lengthCm, int widthCm, int heightCm) {
+        static ParcelResponse fromDomain(ParcelDimensions parcel) {
+            return parcel == null
+                    ? null
+                    : new ParcelResponse(
+                            parcel.weightGrams(),
+                            parcel.lengthCm(),
+                            parcel.widthCm(),
+                            parcel.heightCm());
+        }
+    }
 
     public record ImageResponse(String url, String alt, int sortOrder) {}
 }

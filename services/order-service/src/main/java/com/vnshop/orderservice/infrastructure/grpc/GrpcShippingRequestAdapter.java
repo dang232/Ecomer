@@ -5,6 +5,7 @@ import com.vnshop.orderservice.domain.OrderItem;
 import com.vnshop.orderservice.domain.SubOrder;
 import com.vnshop.orderservice.domain.ShippingDetails;
 import com.vnshop.orderservice.domain.Money;
+import com.vnshop.orderservice.domain.ParcelDimensions;
 import com.vnshop.orderservice.domain.port.out.ShippingRequestPort;
 import com.vnshop.proto.shipping.ShippingServiceGrpc;
 import com.vnshop.proto.shipping.ShippingRequest;
@@ -63,7 +64,11 @@ public class GrpcShippingRequestAdapter implements ShippingRequestPort {
         if (shippingDetails == null) {
             throw new IllegalStateException("carrier shipping details are required for live labels");
         }
-        ShippingDetails parcelDetails = parcelFor(subOrder, shippingDetails);
+        ParcelDimensions parcel = ParcelDimensions.aggregate(subOrder.items(), subOrder.sellerId());
+        ShippingDetails parcelDetails = new ShippingDetails(
+                shippingDetails.recipientName(), shippingDetails.recipientPhone(), shippingDetails.wardCode(),
+                shippingDetails.districtCode(), shippingDetails.provinceCode(), parcel.weightGrams(),
+                parcel.lengthCm(), parcel.widthCm(), parcel.heightCm());
         ShippingRequest request = ShippingRequest.newBuilder()
                 .setOrderId(orderId)
                 .addSubOrders(com.vnshop.proto.shipping.SubOrder.newBuilder()
@@ -128,12 +133,8 @@ public class GrpcShippingRequestAdapter implements ShippingRequestPort {
                 .setDistrictCode(details.districtCode())
                 .setProvinceCode(details.provinceCode())
                 .setCity(address.city())
-                .setProvince(address.district())
+                .setProvince(address.city())
                 .build();
-    }
-
-    private static ShippingDetails parcelFor(SubOrder subOrder, ShippingDetails contact) {
-        return contact;
     }
 
     private static com.vnshop.proto.shipping.ShippingAddress toLegacyProtoAddress(Address address) {

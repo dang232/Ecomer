@@ -64,7 +64,8 @@ create_product() {
         priceAmount: $price,
         priceCurrency: "VND",
         imageUrl: $img,
-        stockQuantity: $stock
+        stockQuantity: $stock,
+        parcel: { weightGrams: 1000, lengthCm: 30, widthCm: 20, heightCm: 10 }
       }],
       images: [
         { url: $img, alt: $name, sortOrder: 0 }

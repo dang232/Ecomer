@@ -1,6 +1,7 @@
 package com.vnshop.orderservice.infrastructure.persistence;
 
 import com.vnshop.orderservice.domain.OrderItem;
+import com.vnshop.orderservice.domain.ParcelDimensions;
 import com.vnshop.orderservice.infrastructure.persistence.BaseJpaEntity;
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.AttributeOverrides;
@@ -57,6 +58,18 @@ public class OrderItemJpaEntity extends BaseJpaEntity {
     @Column(name = "image_url", length = 1024)
     private String imageUrl;
 
+    @Column(name = "parcel_weight_grams")
+    private Integer parcelWeightGrams;
+
+    @Column(name = "parcel_length_cm")
+    private Integer parcelLengthCm;
+
+    @Column(name = "parcel_width_cm")
+    private Integer parcelWidthCm;
+
+    @Column(name = "parcel_height_cm")
+    private Integer parcelHeightCm;
+
     @Column(name = "tax_rate", precision = 5, scale = 4)
     private BigDecimal taxRate;
 
@@ -76,13 +89,33 @@ public class OrderItemJpaEntity extends BaseJpaEntity {
         entity.quantity = item.quantity();
         entity.unitPrice = OrderJpaEntity.MoneyEmbeddable.fromDomain(item.unitPrice());
         entity.imageUrl = item.imageUrl();
+        if (item.parcel() != null) {
+            entity.parcelWeightGrams = item.parcel().weightGrams();
+            entity.parcelLengthCm = item.parcel().lengthCm();
+            entity.parcelWidthCm = item.parcel().widthCm();
+            entity.parcelHeightCm = item.parcel().heightCm();
+        }
         entity.taxRate = item.taxRate();
         entity.taxAmount = item.taxAmount();
         return entity;
     }
 
     OrderItem toDomain() {
+        ParcelDimensions parcel = parcelDimensions();
         return new OrderItem(productId, variantSku, sellerId, name, quantity, unitPrice.toDomain(), imageUrl,
-                taxRate, taxAmount);
+                parcel, taxRate, taxAmount);
+    }
+
+    private ParcelDimensions parcelDimensions() {
+        boolean anyParcelValue = parcelWeightGrams != null || parcelLengthCm != null
+                || parcelWidthCm != null || parcelHeightCm != null;
+        if (!anyParcelValue) {
+            return null;
+        }
+        if (parcelWeightGrams == null || parcelLengthCm == null
+                || parcelWidthCm == null || parcelHeightCm == null) {
+            throw new IllegalStateException("stored parcel metadata must be complete");
+        }
+        return new ParcelDimensions(parcelWeightGrams, parcelLengthCm, parcelWidthCm, parcelHeightCm);
     }
 }

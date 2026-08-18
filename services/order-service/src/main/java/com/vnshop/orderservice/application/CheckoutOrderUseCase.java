@@ -11,6 +11,7 @@ import com.vnshop.orderservice.domain.port.out.ProductCatalogPort;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * HTTP-edge wrapper around {@link CreateOrderUseCase}. Accepts the lightweight
@@ -34,6 +35,12 @@ public class CheckoutOrderUseCase {
 
     public Order checkout(CheckoutOrderCommand command) {
         Objects.requireNonNull(command, "command is required");
+        Optional<Order> existingOrder = createOrderUseCase.findExistingOrderForBuyer(
+                command.idempotencyKey(), command.buyerId());
+        if (existingOrder.isPresent()) {
+            return existingOrder.get();
+        }
+
         if (command.lineItems() == null || command.lineItems().isEmpty()) {
             throw new IllegalArgumentException("items must not be empty");
         }
@@ -67,7 +74,8 @@ public class CheckoutOrderUseCase {
                     product.name(),
                     line.quantity(),
                     variant.unitPrice(),
-                    product.imageUrl()));
+                    product.imageUrl(),
+                    variant.parcel()));
         }
         return resolved;
     }

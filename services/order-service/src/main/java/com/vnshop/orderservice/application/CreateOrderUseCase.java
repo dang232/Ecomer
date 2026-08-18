@@ -5,6 +5,7 @@ import com.vnshop.orderservice.domain.CommissionTier;
 import com.vnshop.orderservice.domain.Order;
 import com.vnshop.orderservice.domain.OrderItem;
 import com.vnshop.orderservice.domain.PaymentMethod;
+import com.vnshop.orderservice.domain.ParcelDimensions;
 import com.vnshop.orderservice.domain.ShippingDetails;
 import com.vnshop.orderservice.domain.SubOrder;
 import com.vnshop.orderservice.domain.port.out.CommissionTierLookupPort;
@@ -79,24 +80,46 @@ public class CreateOrderUseCase {
     }
 
     @Transactional
+    public Optional<Order> findExistingOrderForBuyer(String idempotencyKey, String buyerId) {
+        requireNonBlank(buyerId, "buyerId");
+        requireNonBlank(idempotencyKey, "idempotencyKey");
+        orderRepository.lockIdempotencyKey(idempotencyKey);
+        return reconcileExistingOrder(idempotencyKey, buyerId);
+    }
+
+    @Transactional
     public Order create(CreateOrderCommand command) {
         requireNonBlank(command.buyerId(), "buyerId");
         requireNonBlank(command.idempotencyKey(), "idempotencyKey");
+
+        orderRepository.lockIdempotencyKey(command.idempotencyKey());
+        Optional<Order> existingOrder = reconcileExistingOrder(command.idempotencyKey(), command.buyerId());
+        if (existingOrder.isPresent()) {
+            return existingOrder.get();
+        }
+
         Objects.requireNonNull(command.shippingAddress(), "shippingAddress is required");
         if (command.items() == null || command.items().isEmpty()) {
             throw new IllegalArgumentException("items must not be empty");
         }
+        validateTrustedParcels(command.items(), command.shippingDetails());
 
-        orderRepository.lockIdempotencyKey(command.idempotencyKey());
-        return orderRepository.findByIdempotencyKey(command.idempotencyKey())
-                .orElseGet(() -> createNewOrder(
-                        command.buyerId(),
-                        command.shippingAddress(),
-                        command.shippingDetails(),
-                        command.items(),
-                        command.idempotencyKey(),
-                        command.paymentMethod(),
-                        command.couponCode()));
+        return createNewOrder(
+                command.buyerId(),
+                command.shippingAddress(),
+                command.shippingDetails(),
+                command.items(),
+                command.idempotencyKey(),
+                command.paymentMethod(),
+                command.couponCode());
+    }
+
+    private Optional<Order> reconcileExistingOrder(String idempotencyKey, String buyerId) {
+        Optional<Order> existingOrder = orderRepository.findByIdempotencyKey(idempotencyKey);
+        if (existingOrder.isPresent() && !buyerId.equals(existingOrder.get().buyerId())) {
+            throw new OrderAccessDeniedException("not authorized for this order");
+        }
+        return existingOrder;
     }
 
     private Order createNewOrder(
@@ -199,6 +222,17 @@ public class CreateOrderUseCase {
         return List.copyOf(subOrders);
     }
 
+    private static void validateTrustedParcels(List<OrderItem> items, ShippingDetails shippingDetails) {
+        if (shippingDetails == null) {
+            return;
+        }
+        Map<String, List<OrderItem>> itemsBySeller = items.stream()
+                .collect(Collectors.groupingBy(OrderItem::sellerId, Collectors.toList()));
+        for (Map.Entry<String, List<OrderItem>> entry : itemsBySeller.entrySet()) {
+            ParcelDimensions.aggregate(entry.getValue(), entry.getKey());
+        }
+    }
+
     private static List<OrderItem> applyLineItemTaxes(List<OrderItem> items, TaxResult taxResult) {
         if (taxResult.lineItems().size() != items.size()) {
             throw new IllegalStateException("tax calculation must return one result per order item");
@@ -207,7 +241,7 @@ public class CreateOrderUseCase {
             OrderItem item = items.get(index);
             TaxResult.LineItemTax tax = taxResult.lineItems().get(index);
             return new OrderItem(item.productId(), item.variantSku(), item.sellerId(), item.name(), item.quantity(),
-                    item.unitPrice(), item.imageUrl(), tax.rate(), BigDecimal.valueOf(tax.taxAmount()));
+                    item.unitPrice(), item.imageUrl(), item.parcel(), tax.rate(), BigDecimal.valueOf(tax.taxAmount()));
         }).toList();
     }
 

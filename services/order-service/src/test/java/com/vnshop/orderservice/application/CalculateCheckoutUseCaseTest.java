@@ -5,11 +5,15 @@ import com.vnshop.orderservice.application.CheckoutOrderUseCase.CheckoutLineItem
 import com.vnshop.orderservice.application.CheckoutOrderUseCase.ProductNotFoundException;
 import com.vnshop.orderservice.domain.catalog.CatalogProduct;
 import com.vnshop.orderservice.domain.Money;
+import com.vnshop.orderservice.domain.OrderItem;
+import com.vnshop.orderservice.domain.ParcelDimensions;
 import com.vnshop.orderservice.domain.checkout.CartItemSnapshot;
 import com.vnshop.orderservice.domain.checkout.CartSnapshot;
 import com.vnshop.orderservice.domain.port.out.CartRepositoryPort;
 import com.vnshop.orderservice.domain.port.out.CouponValidationPort;
 import com.vnshop.orderservice.domain.port.out.ProductCatalogPort;
+import com.vnshop.orderservice.application.tax.TaxCalculationService;
+import com.vnshop.orderservice.application.tax.TaxResult;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -22,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -92,6 +97,29 @@ class CalculateCheckoutUseCaseTest {
         assertThat(breakdown.shippingEstimate()).isEqualByComparingTo("0");
         assertThat(breakdown.taxTotal()).isEqualByComparingTo("40000");
         assertThat(breakdown.finalAmount()).isEqualByComparingTo("438000");
+    }
+
+    @Test
+    void lineItemPreviewPreservesCatalogVariantParcelOnResolvedItem() {
+        catalog.add(new CatalogProduct(
+                "p1", "seller-A", "Parcel Product",
+                List.of(new CatalogProduct.Variant("sku1", new Money(new BigDecimal("199000"), "VND"),
+                        new ParcelDimensions(1200, 30, 20, 10))), ""));
+
+        TaxCalculationService capturingTax = mock(TaxCalculationService.class);
+        when(capturingTax.calculate(any())).thenAnswer(invocation -> new TaxResult(
+                BigDecimal.ZERO, BigDecimal.ZERO,
+                List.of(new TaxResult.LineItemTax("p1", "sku1", BigDecimal.ZERO, 0))));
+        CalculateCheckoutUseCase parcelUseCase = new CalculateCheckoutUseCase(cart, catalog, null, capturingTax);
+
+        CheckoutBreakdown breakdown = parcelUseCase.calculate(List.of(new CheckoutLineItem("p1", "sku1", 1)));
+
+        assertThat(breakdown.itemsTotal()).isEqualByComparingTo("199000");
+        org.mockito.ArgumentCaptor<List<OrderItem>> itemsCaptor = org.mockito.ArgumentCaptor.forClass(List.class);
+        verify(capturingTax).calculate(itemsCaptor.capture());
+        List<OrderItem> resolvedItems = itemsCaptor.getValue();
+        assertThat(resolvedItems.getFirst().parcel())
+                .isEqualTo(new ParcelDimensions(1200, 30, 20, 10));
     }
 
     @Test

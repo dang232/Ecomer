@@ -1,6 +1,7 @@
 package com.vnshop.orderservice.domain.catalog;
 
 import com.vnshop.orderservice.domain.Money;
+import com.vnshop.orderservice.domain.ParcelDimensions;
 
 import java.util.List;
 import java.util.Optional;
@@ -27,6 +28,9 @@ public record CatalogProduct(
         return variants.stream().filter(v -> variantSku.equals(v.sku())).findFirst();
     }
 
-    public record Variant(String sku, Money unitPrice) {
+    public record Variant(String sku, Money unitPrice, ParcelDimensions parcel) {
+        public Variant(String sku, Money unitPrice) {
+            this(sku, unitPrice, null);
+        }
     }
 }

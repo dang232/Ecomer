@@ -84,6 +84,7 @@ function guestItemsToCart(items: GuestCartItem[]): Cart {
       quantity: it.quantity,
       sellerId: undefined,
       variantId: it.variantId,
+      parcel: null,
     })),
     itemCount: items.reduce((n, i) => n + i.quantity, 0),
     totalAmount: 0,
@@ -112,6 +113,7 @@ function optimisticAdd(
       quantity,
       sellerId: undefined,
       variantId,
+      parcel: null,
     });
   }
   return recomputeTotals({ ...base, items });
@@ -360,6 +362,7 @@ export function useCart() {
               quantity: item.quantity,
               sellerId: undefined,
               variantId: item.variantId,
+              parcel: null,
             };
           }
           const variant = findVariant(raw, item.variantId);
@@ -367,6 +370,9 @@ export function useCart() {
           const sellerId = sellerIdSchema.safeParse(mapped.sellerId);
           const price = variant?.priceAmount ?? mapped.price;
           const image = variant?.imageUrl ?? mapped.image;
+          const parcel = item.variantId
+            ? (variant?.parcel ?? null)
+            : (raw.variants?.[0]?.parcel ?? null);
           return {
             productId: item.productId,
             name: mapped.name,
@@ -376,6 +382,7 @@ export function useCart() {
             quantity: item.quantity,
             sellerId: sellerId.success ? sellerId.data : undefined,
             variantId: item.variantId,
+            parcel,
           };
         }),
         totalAmount: guestItems.reduce((sum, item, idx) => {

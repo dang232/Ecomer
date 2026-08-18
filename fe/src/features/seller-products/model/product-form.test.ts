@@ -18,6 +18,13 @@ const validForm = {
   variants: [],
 };
 
+const completeParcel = {
+  weightGrams: 500,
+  lengthCm: 30,
+  widthCm: 20,
+  heightCm: 10,
+};
+
 describe("sellerProductFormSchema", () => {
   it("accepts a simple product with one seller-facing offer", () => {
     expect(sellerProductFormSchema.safeParse(validForm).success).toBe(true);
@@ -68,6 +75,30 @@ describe("sellerProductFormSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("rejects partial parcel metadata", () => {
+    const result = sellerProductFormSchema.safeParse({
+      ...validForm,
+      offer: {
+        ...validForm.offer,
+        parcel: { weightGrams: completeParcel.weightGrams, lengthCm: completeParcel.lengthCm },
+      },
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects non-positive parcel metadata", () => {
+    const result = sellerProductFormSchema.safeParse({
+      ...validForm,
+      offer: {
+        ...validForm.offer,
+        parcel: { ...completeParcel, widthCm: 0 },
+      },
+    });
+
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("toSellerProductWriteBody", () => {
@@ -89,6 +120,37 @@ describe("toSellerProductWriteBody", () => {
         },
       ],
     });
+  });
+
+  it("serializes complete parcel metadata for a single offer", () => {
+    const result = toSellerProductWriteBody({
+      ...validForm,
+      offer: { ...validForm.offer, parcel: completeParcel },
+    });
+
+    expect(result.variants).toEqual([
+      expect.objectContaining({ name: "Standard", parcel: completeParcel }),
+    ]);
+  });
+
+  it("serializes complete parcel metadata for option-based offers", () => {
+    const result = toSellerProductWriteBody({
+      ...validForm,
+      offerMode: "variants",
+      variants: [
+        {
+          sku: "PHONE-BLUE",
+          name: "Blue",
+          priceAmount: 990000,
+          stockQuantity: 5,
+          parcel: completeParcel,
+        },
+      ],
+    });
+
+    expect(result.variants).toEqual([
+      expect.objectContaining({ sku: "PHONE-BLUE", parcel: completeParcel }),
+    ]);
   });
 
   it("creates stable, distinct SKUs for blank seller references", () => {
@@ -114,6 +176,15 @@ describe("toSellerProductWriteBody", () => {
       description: "",
       brand: "",
       tags: [],
+      offer: {
+        ...validForm.offer,
+        parcel: {
+          weightGrams: undefined,
+          lengthCm: undefined,
+          widthCm: undefined,
+          heightCm: undefined,
+        },
+      },
       images: [
         { url: "blob:http://localhost/preview", alt: "local", sortOrder: 0 },
         { url: "https://cdn.example.com/phone.jpg", alt: "saved", sortOrder: 1 },
@@ -125,6 +196,19 @@ describe("toSellerProductWriteBody", () => {
     expect(result.images).toEqual([
       { url: "https://cdn.example.com/phone.jpg", alt: "saved", sortOrder: 1 },
     ]);
+    expect(result.variants?.[0]).not.toHaveProperty("parcel");
+  });
+
+  it("does not serialize a partial parcel object", () => {
+    const result = toSellerProductWriteBody({
+      ...validForm,
+      offer: {
+        ...validForm.offer,
+        parcel: { weightGrams: completeParcel.weightGrams },
+      },
+    });
+
+    expect(result.variants?.[0]).not.toHaveProperty("parcel");
   });
 });
 
@@ -138,7 +222,15 @@ describe("fromSellerProduct", () => {
         brand: "VN",
         tags: ["audio"],
         images: ["https://cdn.example.com/phone.jpg"],
-        variants: [{ sku: "SKU-1", name: "Standard", priceAmount: 990000, stockQuantity: 4 }],
+        variants: [
+          {
+            sku: "SKU-1",
+            name: "Standard",
+            priceAmount: 990000,
+            stockQuantity: 4,
+            parcel: completeParcel,
+          },
+        ],
       }),
     ).toEqual({
       name: "Phone",
@@ -148,7 +240,7 @@ describe("fromSellerProduct", () => {
       tags: ["audio"],
       images: [{ url: "https://cdn.example.com/phone.jpg", sortOrder: 0 }],
       offerMode: "single",
-      offer: { sku: "SKU-1", priceAmount: 990000, stockQuantity: 4 },
+      offer: { sku: "SKU-1", priceAmount: 990000, stockQuantity: 4, parcel: completeParcel },
       variants: [],
     });
   });
@@ -164,5 +256,24 @@ describe("fromSellerProduct", () => {
     });
     expect(form.offerMode).toBe("variants");
     expect(form.variants).toHaveLength(2);
+  });
+
+  it("preserves parcel metadata when editing option-based offers", () => {
+    const form = fromSellerProduct({
+      name: "T-shirt",
+      images: [],
+      variants: [
+        {
+          sku: "TEE-S",
+          name: "Small",
+          priceAmount: 200000,
+          stockQuantity: 3,
+          parcel: completeParcel,
+        },
+        { sku: "TEE-M", name: "Medium", priceAmount: 200000, stockQuantity: 8 },
+      ],
+    });
+
+    expect(form.variants[0]?.parcel).toEqual(completeParcel);
   });
 });
