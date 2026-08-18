@@ -3,6 +3,7 @@ package com.vnshop.orderservice.infrastructure.grpc;
 import com.vnshop.orderservice.domain.Address;
 import com.vnshop.orderservice.domain.Money;
 import com.vnshop.orderservice.domain.OrderItem;
+import com.vnshop.orderservice.domain.ParcelDimensions;
 import com.vnshop.orderservice.domain.SubOrder;
 import com.vnshop.orderservice.domain.ShippingDetails;
 import com.vnshop.proto.shipping.ShippingServiceGrpc;
@@ -25,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -120,9 +122,9 @@ class GrpcShippingRequestAdapterTest {
     void shouldMapLiveCarrierContactCodesAndParcelDetails() {
         Address address = new Address("12 Carrier St", "Ward name", "District name", "Hanoi");
         ShippingDetails details = new ShippingDetails(
-                "Nguyen Van A", "+84912345678", "W-001", "D-001", "P-001", 1500, 30, 20, 10);
+                "Nguyen Van A", "+84912345678", "W-001", "D-001", "P-001", 9999, 99, 98, 97);
         OrderItem item = new OrderItem("prod-live", "sku-live", "seller-live", "Jacket", 1,
-                new Money(new BigDecimal("350000")), null);
+                new Money(new BigDecimal("350000")), null, new ParcelDimensions(1500, 30, 20, 10));
         SubOrder subOrder = new SubOrder("seller-live", List.of(item));
 
         when(shippingStub.requestShipping(any())).thenReturn(ShippingResponse.newBuilder()
@@ -160,6 +162,73 @@ class GrpcShippingRequestAdapterTest {
 
         assertThrows(IllegalStateException.class,
                 () -> adapter.requestShipping("order-live", subOrder, address, null));
+    }
+
+    @Test
+    void shouldRejectLiveShippingWithoutTrustedParcelBeforeGrpcCall() {
+        Address address = new Address("12 Carrier St", "Ward name", "District name", "Hanoi");
+        ShippingDetails details = new ShippingDetails(
+                "Nguyen Van A", "+84912345678", "W-001", "D-001", "P-001", 9999, 99, 98, 97);
+        OrderItem item = new OrderItem("prod-live", "sku-live", "seller-live", "Jacket", 1,
+                new Money(new BigDecimal("350000")), null);
+        SubOrder subOrder = new SubOrder("seller-live", List.of(item));
+
+        assertThrows(IllegalStateException.class,
+                () -> adapter.requestShipping("order-live", subOrder, address, details));
+
+        verify(shippingStub, never()).requestShipping(any());
+    }
+
+    @Test
+    void shouldAggregateWeightAndMaximumDimensionsPerSeller() {
+        Address address = new Address("12 Carrier St", "Ward name", "District name", "Hanoi");
+        ShippingDetails details = new ShippingDetails(
+                "Nguyen Van A", "+84912345678", "W-001", "D-001", "P-001", 9999, 99, 98, 97);
+        OrderItem first = new OrderItem("prod-1", "sku-1", "seller-1", "Box 1", 2,
+                new Money(new BigDecimal("100000")), null, new ParcelDimensions(500, 10, 20, 30));
+        OrderItem second = new OrderItem("prod-2", "sku-2", "seller-1", "Box 2", 1,
+                new Money(new BigDecimal("200000")), null, new ParcelDimensions(800, 25, 15, 35));
+        SubOrder subOrder = new SubOrder("seller-1", List.of(first, second));
+        when(shippingStub.requestShipping(any())).thenReturn(ShippingResponse.newBuilder()
+                .setSuccess(true)
+                .addLabels(com.vnshop.proto.shipping.ShippingLabel.newBuilder().setTrackingCode("TRACK").build())
+                .build());
+
+        adapter.requestShipping("order-aggregate", subOrder, address, details);
+
+        verify(shippingStub).requestShipping(requestCaptor.capture());
+        com.vnshop.proto.shipping.SubOrder sentSub = requestCaptor.getValue().getSubOrders(0);
+        assertEquals(1800, sentSub.getParcelWeightGrams());
+        assertEquals(25, sentSub.getParcelLengthCm());
+        assertEquals(20, sentSub.getParcelWidthCm());
+        assertEquals(35, sentSub.getParcelHeightCm());
+    }
+
+    @Test
+    void shouldKeepParcelAggregationLocalToEachSellerSubOrder() {
+        Address address = new Address("12 Carrier St", "Ward name", "District name", "Hanoi");
+        ShippingDetails details = new ShippingDetails(
+                "Nguyen Van A", "+84912345678", "W-001", "D-001", "P-001", 9999, 99, 98, 97);
+        OrderItem sellerOneItem = new OrderItem("prod-1", "sku-1", "seller-1", "Box 1", 1,
+                new Money(new BigDecimal("100000")), null, new ParcelDimensions(500, 10, 11, 12));
+        OrderItem sellerTwoItem = new OrderItem("prod-2", "sku-2", "seller-2", "Box 2", 1,
+                new Money(new BigDecimal("200000")), null, new ParcelDimensions(900, 20, 21, 22));
+        when(shippingStub.requestShipping(any())).thenReturn(ShippingResponse.newBuilder()
+                .setSuccess(true)
+                .addLabels(com.vnshop.proto.shipping.ShippingLabel.newBuilder().setTrackingCode("TRACK").build())
+                .build());
+
+        adapter.requestShipping("order-sellers", new SubOrder("seller-1", List.of(sellerOneItem)), address, details);
+        adapter.requestShipping("order-sellers", new SubOrder("seller-2", List.of(sellerTwoItem)), address, details);
+
+        var requests = org.mockito.Mockito.mockingDetails(shippingStub).getInvocations().stream()
+                .filter(invocation -> invocation.getMethod().getName().equals("requestShipping"))
+                .toList();
+        assertEquals(2, requests.size());
+        ShippingRequest firstRequest = (ShippingRequest) requests.get(0).getArguments()[0];
+        ShippingRequest secondRequest = (ShippingRequest) requests.get(1).getArguments()[0];
+        assertEquals(500, firstRequest.getSubOrders(0).getParcelWeightGrams());
+        assertEquals(900, secondRequest.getSubOrders(0).getParcelWeightGrams());
     }
 
     @Test

@@ -5,6 +5,7 @@ import com.vnshop.orderservice.domain.OrderItem;
 import com.vnshop.orderservice.domain.SubOrder;
 import com.vnshop.orderservice.domain.ShippingDetails;
 import com.vnshop.orderservice.domain.Money;
+import com.vnshop.orderservice.domain.ParcelDimensions;
 import com.vnshop.orderservice.domain.port.out.ShippingRequestPort;
 import com.vnshop.proto.shipping.ShippingServiceGrpc;
 import com.vnshop.proto.shipping.ShippingRequest;
@@ -133,7 +134,22 @@ public class GrpcShippingRequestAdapter implements ShippingRequestPort {
     }
 
     private static ShippingDetails parcelFor(SubOrder subOrder, ShippingDetails contact) {
-        return contact;
+        int weightGrams = 0;
+        int lengthCm = 0;
+        int widthCm = 0;
+        int heightCm = 0;
+        for (OrderItem item : subOrder.items()) {
+            ParcelDimensions parcel = item.parcel();
+            if (parcel == null) {
+                throw new IllegalStateException("trusted parcel metadata is required for seller " + subOrder.sellerId());
+            }
+            weightGrams = Math.addExact(weightGrams, Math.multiplyExact(parcel.weightGrams(), item.quantity()));
+            lengthCm = Math.max(lengthCm, parcel.lengthCm());
+            widthCm = Math.max(widthCm, parcel.widthCm());
+            heightCm = Math.max(heightCm, parcel.heightCm());
+        }
+        return new ShippingDetails(contact.recipientName(), contact.recipientPhone(), contact.wardCode(),
+                contact.districtCode(), contact.provinceCode(), weightGrams, lengthCm, widthCm, heightCm);
     }
 
     private static com.vnshop.proto.shipping.ShippingAddress toLegacyProtoAddress(Address address) {
