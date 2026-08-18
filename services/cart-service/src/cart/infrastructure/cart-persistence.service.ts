@@ -3,7 +3,7 @@ import { EntityManager, LockMode, OptimisticLockError } from '@mikro-orm/core';
 import Redis from 'ioredis';
 import { Cart } from '../domain/cart';
 import { CartItem } from '../domain/cart-item';
-import { CartRepository } from '../domain/cart.repository';
+import type { CartRepository, ParcelPatch } from '../domain/cart.repository';
 import { Money } from '../domain/money';
 import type { ParcelDimensions } from '../domain/parcel-dimensions';
 import { CartMikroOrmEntity } from './cart.mikro-orm-entity.js';
@@ -32,6 +32,8 @@ interface PersistedCart {
   userId: string;
   items: PersistedCartItem[];
   updatedAt: string;
+  version?: number;
+  generationId?: string;
   processedMergeKeys?: string[];
 }
 
@@ -52,48 +54,162 @@ export class CartPersistenceService implements CartRepository {
 
   async findByUserId(userId: string): Promise<Cart | null> {
     const cached = await this.getFromRedis(userId);
-    if (cached !== null) {
-      return cached;
+
+    let loaded: { cart: Cart; version: number } | null;
+    try {
+      loaded = await this.em.transactional(async (em) => {
+        await this.lockCart(em, userId);
+        const entity = await em.findOne(
+          CartMikroOrmEntity,
+          { userId },
+          { lockMode: LockMode.PESSIMISTIC_WRITE },
+        );
+        if (!entity) {
+          return null;
+        }
+
+        return { cart: this.toDomain(entity), version: entity.version ?? 1 };
+      });
+    } catch (err: unknown) {
+      await this.redis
+        .del(this.redisKey(userId))
+        .catch((deleteErr: unknown) =>
+          this.logger.warn(
+            `Redis cleanup failed (non-fatal): ${String(deleteErr)}`,
+          ),
+        );
+      this.logger.warn(
+        `Postgres read failed (non-fatal cache cleanup): ${String(err)}`,
+      );
+      throw err;
     }
 
-    const entity = await this.em.fork().findOne(CartMikroOrmEntity, { userId });
-    if (!entity) {
+    if (loaded === null) {
+      await this.redis
+        .del(this.redisKey(userId))
+        .catch((err: unknown) =>
+          this.logger.warn(`Redis del failed (non-fatal): ${String(err)}`),
+        );
       return null;
     }
 
-    const cart = this.toDomain(entity);
-    await this.setInRedis(userId, cart).catch((err: unknown) =>
-      this.logger.warn(`Redis write failed (non-fatal): ${String(err)}`),
-    );
-    return cart;
+    if (
+      cached !== null &&
+      cached.version === loaded.version &&
+      cached.generationId === loaded.cart.generationId
+    ) {
+      return cached;
+    }
+
+    try {
+      await this.setInRedis(userId, loaded.cart);
+    } catch (err: unknown) {
+      await this.redis
+        .del(this.redisKey(userId))
+        .catch((deleteErr: unknown) =>
+          this.logger.warn(
+            `Redis cleanup failed (non-fatal): ${String(deleteErr)}`,
+          ),
+        );
+      this.logger.warn(
+        `Redis cache population failed (non-fatal): ${String(err)}`,
+      );
+      return loaded.cart;
+    }
+
+    let current: { version: number; generationId: string } | null;
+    try {
+      current = await this.em.transactional(async (em) => {
+        await this.lockCart(em, userId);
+        const entity = await em.findOne(
+          CartMikroOrmEntity,
+          { userId },
+          { lockMode: LockMode.PESSIMISTIC_WRITE },
+        );
+        return entity
+          ? {
+              version: entity.version ?? 1,
+              generationId: this.toDomain(entity).generationId,
+            }
+          : null;
+      });
+    } catch (err: unknown) {
+      await this.redis
+        .del(this.redisKey(userId))
+        .catch((deleteErr: unknown) =>
+          this.logger.warn(
+            `Redis cleanup failed (non-fatal): ${String(deleteErr)}`,
+          ),
+        );
+      this.logger.warn(`Postgres cache validation failed: ${String(err)}`);
+      throw err;
+    }
+
+    try {
+      if (
+        current === null ||
+        current.version !== loaded.version ||
+        current.generationId !== loaded.cart.generationId
+      ) {
+        await this.redis.del(this.redisKey(userId));
+      }
+    } catch (err: unknown) {
+      await this.redis
+        .del(this.redisKey(userId))
+        .catch((deleteErr: unknown) =>
+          this.logger.warn(
+            `Redis cleanup failed (non-fatal): ${String(deleteErr)}`,
+          ),
+        );
+      this.logger.warn(
+        `Redis cache validation cleanup failed (non-fatal): ${String(err)}`,
+      );
+    }
+
+    return loaded.cart;
   }
 
   async save(cart: Cart, _ttlSeconds: number): Promise<void> {
-    const em = this.em.fork();
-
     try {
-      const existing = await em.findOne(CartMikroOrmEntity, {
-        userId: cart.userId,
-      });
+      await this.em.transactional(async (em) => {
+        await this.lockCart(em, cart.userId);
+        const existing = await em.findOne(
+          CartMikroOrmEntity,
+          { userId: cart.userId },
+          { lockMode: LockMode.PESSIMISTIC_WRITE },
+        );
 
-      if (existing) {
-        existing.items = this.itemsToJson(cart);
+        if (!existing) {
+          if (cart.version !== 0) {
+            throw this.versionConflict();
+          }
+          const entity = em.create(CartMikroOrmEntity, {
+            userId: cart.userId,
+            items: this.itemsToJson(cart, undefined, 1),
+            updatedAt: cart.updatedAt,
+            version: 1,
+          });
+          await em.persistAndFlush(entity);
+          cart.markPersisted(entity.version);
+          return;
+        }
+
+        if (cart.version !== existing.version) {
+          throw this.versionConflict();
+        }
+        const processedMergeKeys = this.processedMergeKeys(existing);
+        existing.items = this.itemsToJson(
+          cart,
+          processedMergeKeys,
+          existing.version + 1,
+        );
         existing.updatedAt = cart.updatedAt;
         await em.flush();
-      } else {
-        const entity = em.create(CartMikroOrmEntity, {
-          userId: cart.userId,
-          items: this.itemsToJson(cart),
-          updatedAt: cart.updatedAt,
-          version: 1,
-        });
-        await em.persistAndFlush(entity);
-      }
+        cart.markPersisted(existing.version);
+      });
     } catch (err) {
       if (err instanceof OptimisticLockError) {
-        const conflict = new Error('Concurrent cart modification detected');
-        (conflict as NodeJS.ErrnoException).code = 'CART_VERSION_CONFLICT';
-        throw conflict;
+        throw this.versionConflict();
       }
       throw err;
     }
@@ -106,12 +222,59 @@ export class CartPersistenceService implements CartRepository {
       );
   }
 
+  async refreshParcels(
+    userId: string,
+    patches: readonly ParcelPatch[],
+  ): Promise<Cart> {
+    const result = await this.em.transactional(async (em) => {
+      await this.lockCart(em, userId);
+      const entity = await em.findOne(
+        CartMikroOrmEntity,
+        { userId },
+        { lockMode: LockMode.PESSIMISTIC_WRITE },
+      );
+      if (!entity) {
+        return { cart: Cart.create(userId), changed: false, found: false };
+      }
+
+      const cart = this.toDomain(entity);
+      const changed = patches.reduce(
+        (hasChanged, patch) =>
+          cart.replaceParcel(patch.itemKey, patch.parcel) || hasChanged,
+        false,
+      );
+
+      if (changed) {
+        entity.items = this.itemsToJson(
+          cart,
+          this.processedMergeKeys(entity),
+          entity.version + 1,
+        );
+        entity.updatedAt = cart.updatedAt;
+        await em.flush();
+        cart.markPersisted(entity.version);
+      }
+
+      return { cart, changed, found: true };
+    });
+
+    await this.redis
+      .del(this.redisKey(userId))
+      .catch((err: unknown) =>
+        this.logger.warn(`Redis del failed (non-fatal): ${String(err)}`),
+      );
+
+    return result.cart;
+  }
+
   async delete(userId: string): Promise<void> {
-    const em = this.em.fork();
-    const entity = await em.findOne(CartMikroOrmEntity, { userId });
-    if (entity) {
-      await em.removeAndFlush(entity);
-    }
+    await this.em.transactional(async (em) => {
+      await this.lockCart(em, userId);
+      const entity = await em.findOne(CartMikroOrmEntity, { userId });
+      if (entity) {
+        await em.removeAndFlush(entity);
+      }
+    });
 
     await this.redis
       .del(this.redisKey(userId))
@@ -132,6 +295,7 @@ export class CartPersistenceService implements CartRepository {
   ): Promise<Cart> {
     const guestUserId = guestCart.userId;
     const merged = await this.em.transactional(async (em) => {
+      await this.lockCart(em, userId);
       const userEntity = await em.findOne(
         CartMikroOrmEntity,
         { userId },
@@ -150,7 +314,7 @@ export class CartPersistenceService implements CartRepository {
       if (!guestEntity) {
         guestEntity = em.create(CartMikroOrmEntity, {
           userId: guestUserId,
-          items: this.itemsToJson(guestCart),
+          items: this.itemsToJson(guestCart, undefined, 1),
           updatedAt: guestCart.updatedAt,
           version: 1,
         });
@@ -169,13 +333,17 @@ export class CartPersistenceService implements CartRepository {
         -100,
       );
       if (userEntity) {
-        userEntity.items = this.itemsToJson(userCart, processedMergeKeys);
+        userEntity.items = this.itemsToJson(
+          userCart,
+          processedMergeKeys,
+          userEntity.version + 1,
+        );
         userEntity.updatedAt = userCart.updatedAt;
       } else {
         await em.persist(
           em.create(CartMikroOrmEntity, {
             userId,
-            items: this.itemsToJson(userCart, processedMergeKeys),
+            items: this.itemsToJson(userCart, processedMergeKeys, 1),
             updatedAt: userCart.updatedAt,
             version: 1,
           }),
@@ -183,6 +351,11 @@ export class CartPersistenceService implements CartRepository {
       }
       em.remove(guestEntity);
       await em.flush();
+      if (userEntity) {
+        userCart.markPersisted(userEntity.version);
+      } else {
+        userCart.markPersisted(1);
+      }
       return userCart;
     });
 
@@ -202,7 +375,11 @@ export class CartPersistenceService implements CartRepository {
     try {
       const value = await this.redis.get(this.redisKey(userId));
       if (!value) return null;
-      return this.deserializeCart(JSON.parse(value) as PersistedCart);
+      const persisted = JSON.parse(value) as PersistedCart;
+      if (typeof persisted.version !== 'number') {
+        return null;
+      }
+      return this.deserializeCart(persisted);
     } catch (err) {
       this.logger.warn(
         `Redis read failed (falling through to Postgres): ${String(err)}`,
@@ -230,6 +407,8 @@ export class CartPersistenceService implements CartRepository {
         parcel: item.parcel,
       })),
       updatedAt: cart.updatedAt.toISOString(),
+      version: cart.version,
+      generationId: cart.generationId,
     };
     await this.redis.setex(
       this.redisKey(userId),
@@ -258,7 +437,13 @@ export class CartPersistenceService implements CartRepository {
         item.parcel ?? null,
       ),
     );
-    return Cart.fromPersistence(entity.userId, items, entity.updatedAt);
+    return Cart.fromPersistence(
+      entity.userId,
+      items,
+      entity.updatedAt,
+      entity.version ?? 1,
+      persisted.generationId,
+    );
   }
 
   private deserializeCart(persisted: PersistedCart): Cart {
@@ -280,7 +465,23 @@ export class CartPersistenceService implements CartRepository {
       persisted.userId,
       items,
       new Date(persisted.updatedAt),
+      persisted.version ?? 1,
+      persisted.generationId,
     );
+  }
+
+  private async lockCart(em: EntityManager, userId: string): Promise<void> {
+    await em
+      .getConnection()
+      .execute('select pg_advisory_xact_lock(hashtextextended(?, 0))', [
+        userId,
+      ]);
+  }
+
+  private versionConflict(): Error {
+    const conflict = new Error('Concurrent cart modification detected');
+    (conflict as NodeJS.ErrnoException).code = 'CART_VERSION_CONFLICT';
+    return conflict;
   }
 
   private processedMergeKeys(entity: CartMikroOrmEntity | null): string[] {
@@ -294,6 +495,7 @@ export class CartPersistenceService implements CartRepository {
   private itemsToJson(
     cart: Cart,
     processedMergeKeys?: string[],
+    version = cart.version,
   ): PersistedCart {
     return {
       userId: cart.userId,
@@ -313,6 +515,8 @@ export class CartPersistenceService implements CartRepository {
         parcel: item.parcel,
       })),
       updatedAt: cart.updatedAt.toISOString(),
+      version,
+      generationId: cart.generationId,
       ...(processedMergeKeys ? { processedMergeKeys } : {}),
     };
   }
