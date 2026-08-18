@@ -5,6 +5,7 @@ import { Cart } from '../domain/cart';
 import { CartItem } from '../domain/cart-item';
 import { CartRepository } from '../domain/cart.repository';
 import { Money } from '../domain/money';
+import type { ParcelDimensions } from '../domain/parcel-dimensions';
 import { CartMikroOrmEntity } from './cart.mikro-orm-entity.js';
 
 const THIRTY_DAYS_SECONDS = 30 * 24 * 60 * 60;
@@ -24,6 +25,7 @@ interface PersistedCartItem {
   addedAt: string;
   sellerId?: string;
   sellerName?: string;
+  parcel?: ParcelDimensions | null;
 }
 
 interface PersistedCart {
@@ -155,13 +157,17 @@ export class CartPersistenceService implements CartRepository {
         await em.persistAndFlush(guestEntity);
       }
 
-      const userCart = userEntity ? this.toDomain(userEntity) : Cart.create(userId);
+      const userCart = userEntity
+        ? this.toDomain(userEntity)
+        : Cart.create(userId);
       const persistedGuest = this.toDomain(guestEntity);
       for (const item of persistedGuest.items) {
         userCart.addItem(item);
       }
 
-      const processedMergeKeys = [...priorMergeKeys, idempotencyKey].slice(-100);
+      const processedMergeKeys = [...priorMergeKeys, idempotencyKey].slice(
+        -100,
+      );
       if (userEntity) {
         userEntity.items = this.itemsToJson(userCart, processedMergeKeys);
         userEntity.updatedAt = userCart.updatedAt;
@@ -182,9 +188,11 @@ export class CartPersistenceService implements CartRepository {
 
     await Promise.all(
       [userId, guestUserId].map((ownerId) =>
-        this.redis.del(this.redisKey(ownerId)).catch((err: unknown) =>
-          this.logger.warn(`Redis del failed (non-fatal): ${String(err)}`),
-        ),
+        this.redis
+          .del(this.redisKey(ownerId))
+          .catch((err: unknown) =>
+            this.logger.warn(`Redis del failed (non-fatal): ${String(err)}`),
+          ),
       ),
     );
     return merged;
@@ -196,7 +204,9 @@ export class CartPersistenceService implements CartRepository {
       if (!value) return null;
       return this.deserializeCart(JSON.parse(value) as PersistedCart);
     } catch (err) {
-      this.logger.warn(`Redis read failed (falling through to Postgres): ${String(err)}`);
+      this.logger.warn(
+        `Redis read failed (falling through to Postgres): ${String(err)}`,
+      );
       return null;
     }
   }
@@ -209,11 +219,15 @@ export class CartPersistenceService implements CartRepository {
         variantId: item.variantId,
         productName: item.productName,
         productImage: item.productImage,
-        unitPrice: { amount: item.unitPrice.amount, currency: item.unitPrice.currency },
-          quantity: item.quantity,
-          addedAt: item.addedAt.toISOString(),
-          sellerId: item.sellerId,
-          sellerName: item.sellerName,
+        unitPrice: {
+          amount: item.unitPrice.amount,
+          currency: item.unitPrice.currency,
+        },
+        quantity: item.quantity,
+        addedAt: item.addedAt.toISOString(),
+        sellerId: item.sellerId,
+        sellerName: item.sellerName,
+        parcel: item.parcel,
       })),
       updatedAt: cart.updatedAt.toISOString(),
     };
@@ -241,6 +255,7 @@ export class CartPersistenceService implements CartRepository {
         item.variantId,
         item.sellerId,
         item.sellerName,
+        item.parcel ?? null,
       ),
     );
     return Cart.fromPersistence(entity.userId, items, entity.updatedAt);
@@ -258,6 +273,7 @@ export class CartPersistenceService implements CartRepository {
         item.variantId,
         item.sellerId,
         item.sellerName,
+        item.parcel ?? null,
       ),
     );
     return Cart.fromPersistence(
@@ -270,10 +286,15 @@ export class CartPersistenceService implements CartRepository {
   private processedMergeKeys(entity: CartMikroOrmEntity | null): string[] {
     if (!entity || !entity.items || typeof entity.items !== 'object') return [];
     const keys = (entity.items as PersistedCart).processedMergeKeys;
-    return Array.isArray(keys) && keys.every((key) => typeof key === 'string') ? keys : [];
+    return Array.isArray(keys) && keys.every((key) => typeof key === 'string')
+      ? keys
+      : [];
   }
 
-  private itemsToJson(cart: Cart, processedMergeKeys?: string[]): PersistedCart {
+  private itemsToJson(
+    cart: Cart,
+    processedMergeKeys?: string[],
+  ): PersistedCart {
     return {
       userId: cart.userId,
       items: cart.items.map((item) => ({
@@ -281,11 +302,15 @@ export class CartPersistenceService implements CartRepository {
         variantId: item.variantId,
         productName: item.productName,
         productImage: item.productImage,
-        unitPrice: { amount: item.unitPrice.amount, currency: item.unitPrice.currency },
+        unitPrice: {
+          amount: item.unitPrice.amount,
+          currency: item.unitPrice.currency,
+        },
         quantity: item.quantity,
         addedAt: item.addedAt.toISOString(),
         sellerId: item.sellerId,
         sellerName: item.sellerName,
+        parcel: item.parcel,
       })),
       updatedAt: cart.updatedAt.toISOString(),
       ...(processedMergeKeys ? { processedMergeKeys } : {}),

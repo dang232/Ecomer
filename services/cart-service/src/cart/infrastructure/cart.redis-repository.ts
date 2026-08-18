@@ -3,6 +3,7 @@ import { Cart } from '../domain/cart';
 import { CartItem } from '../domain/cart-item';
 import { CartRepository } from '../domain/cart.repository';
 import { Money } from '../domain/money';
+import type { ParcelDimensions } from '../domain/parcel-dimensions';
 
 interface PersistedMoney {
   amount: number;
@@ -19,6 +20,7 @@ interface PersistedCartItem {
   addedAt: string;
   sellerId?: string;
   sellerName?: string;
+  parcel?: ParcelDimensions | null;
 }
 
 interface PersistedCart {
@@ -106,6 +108,7 @@ export class CartRedisRepository implements CartRepository {
         item.variantId,
         item.sellerId,
         item.sellerName,
+        item.parcel ?? null,
       ),
     );
     return Cart.fromPersistence(persisted.userId, items, new Date(persisted.updatedAt));
@@ -127,6 +130,7 @@ export class CartRedisRepository implements CartRepository {
         addedAt: item.addedAt.toISOString(),
         sellerId: item.sellerId,
         sellerName: item.sellerName,
+        parcel: item.parcel,
       })),
       updatedAt: cart.updatedAt.toISOString(),
       ...(processedMergeKeys ? { processedMergeKeys } : {}),
