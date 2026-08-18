@@ -22,6 +22,7 @@ describe('MergeCartUseCase', () => {
         productName: 'Product',
         productImage: '',
         unitPrice: Money.of(1000),
+        parcel: null,
       }),
     };
 
