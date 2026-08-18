@@ -7,6 +7,7 @@
  */
 
 import type { ProductDetail, ProductSummary } from "@/shared/contracts/api";
+import type { ParcelDimensions } from "@/shared/contracts/api/product";
 
 import type { Product } from "./product";
 
@@ -70,7 +71,15 @@ function parseVariantAttributes(variants: ProductSummary["variants"]): {
 export function findVariant(
   p: ProductSummary | ProductDetail,
   sku: string | undefined,
-): { sku?: string; name?: string; priceAmount?: number; imageUrl?: string } | undefined {
+):
+  | {
+      sku?: string;
+      name?: string;
+      priceAmount?: number;
+      imageUrl?: string;
+      parcel?: ParcelDimensions | null;
+    }
+  | undefined {
   if (!sku) return undefined;
   const variant = p.variants?.find((candidate) => candidate.sku === sku);
   return variant ? { ...variant, imageUrl: variant.imageUrl ?? undefined } : undefined;
