@@ -78,7 +78,15 @@ async function main() {
       categoryId,
       brand,
       variants: [
-        { sku, name: "Default", priceAmount, priceCurrency: "VND", imageUrl, stockQuantity },
+        {
+          sku,
+          name: "Default",
+          priceAmount,
+          priceCurrency: "VND",
+          imageUrl,
+          stockQuantity,
+          parcel: { weightGrams: 1000, lengthCm: 30, widthCm: 20, heightCm: 10 },
+        },
       ],
       images: [{ url: imageUrl, alt: name, sortOrder: 0 }],
     };
