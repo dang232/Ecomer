@@ -21,6 +21,12 @@ describe("ProductVariantFields", () => {
     expect(screen.getByLabelText("seller.products.editor.variants.price *")).toBeVisible();
     expect(screen.getByLabelText("seller.products.editor.variants.stock")).toBeVisible();
     expect(
+      screen.getByLabelText("seller.products.editor.variants.parcel.weightGrams"),
+    ).toBeVisible();
+    expect(screen.getByLabelText("seller.products.editor.variants.parcel.lengthCm")).toBeVisible();
+    expect(screen.getByLabelText("seller.products.editor.variants.parcel.widthCm")).toBeVisible();
+    expect(screen.getByLabelText("seller.products.editor.variants.parcel.heightCm")).toBeVisible();
+    expect(
       screen.queryByLabelText("seller.products.editor.variants.name *"),
     ).not.toBeInTheDocument();
     expect(screen.getByLabelText("seller.products.editor.variants.sku")).not.toBeVisible();
@@ -38,11 +44,17 @@ describe("ProductVariantFields", () => {
     ).toHaveAttribute("aria-checked", "true");
     expect(screen.getByLabelText("seller.products.editor.variants.name *")).toBeVisible();
     expect(
+      screen.getByLabelText("seller.products.editor.variants.parcel.weightGrams"),
+    ).toBeVisible();
+    expect(
       screen.getByRole("button", { name: "seller.products.editor.variants.add" }),
     ).toBeVisible();
 
     fireEvent.click(screen.getByRole("button", { name: "seller.products.editor.variants.add" }));
     expect(screen.getAllByLabelText("seller.products.editor.variants.name *")).toHaveLength(2);
+    expect(
+      screen.getAllByLabelText("seller.products.editor.variants.parcel.weightGrams"),
+    ).toHaveLength(2);
   });
 
   it("groups the seller price input while keeping the form value numeric", () => {

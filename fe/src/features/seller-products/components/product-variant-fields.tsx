@@ -22,6 +22,11 @@ const newVariant = () => ({
   stockQuantity: 0,
 });
 
+const parcelFieldKeys = ["weightGrams", "lengthCm", "widthCm", "heightCm"] as const;
+type ParcelFieldKey = (typeof parcelFieldKeys)[number];
+type ParcelFieldName =
+  `offer.parcel.${ParcelFieldKey}` | `variants.${number}.parcel.${ParcelFieldKey}`;
+
 export function ProductVariantFields({ form, disabled }: ProductVariantFieldsProps) {
   const { t } = useTranslation();
   const {
@@ -137,6 +142,16 @@ function SingleOfferFields({ form }: { form: UseFormReturn<SellerProductForm> })
         error={errors.offer?.stockQuantity?.message}
         inputId="product-offer-stock"
       />
+      <ParcelFields
+        register={register}
+        names={{
+          weightGrams: "offer.parcel.weightGrams",
+          lengthCm: "offer.parcel.lengthCm",
+          widthCm: "offer.parcel.widthCm",
+          heightCm: "offer.parcel.heightCm",
+        }}
+        errors={errors.offer?.parcel}
+      />
       <MerchantSkuField
         register={register}
         name="offer.sku"
@@ -225,6 +240,17 @@ function VariantCard({
         />
       </div>
 
+      <ParcelFields
+        register={register}
+        names={{
+          weightGrams: `variants.${index}.parcel.weightGrams`,
+          lengthCm: `variants.${index}.parcel.lengthCm`,
+          widthCm: `variants.${index}.parcel.widthCm`,
+          heightCm: `variants.${index}.parcel.heightCm`,
+        }}
+        errors={variantError?.parcel}
+      />
+
       <MerchantSkuField
         register={register}
         name={sku}
@@ -233,6 +259,56 @@ function VariantCard({
       />
     </article>
   );
+}
+
+function ParcelFields({
+  register,
+  names,
+  errors,
+}: {
+  register: UseFormReturn<SellerProductForm>["register"];
+  names: Record<ParcelFieldKey, ParcelFieldName>;
+  errors?: Partial<Record<ParcelFieldKey, { message?: string }>>;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="space-y-3 sm:col-span-2">
+      <div>
+        <p className="text-sm font-semibold text-foreground">
+          {t("seller.products.editor.variants.parcelLabel")}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {t("seller.products.editor.variants.parcelHint")}
+        </p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {parcelFieldKeys.map((field) => (
+          <Field
+            key={field}
+            label={t(`seller.products.editor.variants.parcel.${field}`)}
+            error={errors?.[field]?.message}
+            inputId={names[field]}
+          >
+            <input
+              id={names[field]}
+              type="number"
+              min={1}
+              step={1}
+              inputMode="numeric"
+              placeholder={t("seller.products.editor.variants.parcelPlaceholder")}
+              {...register(names[field], { setValueAs: parseOptionalInteger })}
+              className={inputClass(Boolean(errors?.[field]))}
+              aria-invalid={Boolean(errors?.[field])}
+            />
+          </Field>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function parseOptionalInteger(value: string): number | undefined {
+  return value === "" ? undefined : Number(value);
 }
 
 function CurrencyField({
