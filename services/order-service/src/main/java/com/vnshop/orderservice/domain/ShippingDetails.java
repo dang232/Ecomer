@@ -7,20 +7,15 @@ public record ShippingDetails(
         String wardCode,
         String districtCode,
         String provinceCode,
-        int weightGrams,
-        int lengthCm,
-        int widthCm,
-        int heightCm) {
-
-    private static final int LEGACY_WEIGHT_GRAMS = 1_000;
-    private static final int LEGACY_LENGTH_CM = 30;
-    private static final int LEGACY_WIDTH_CM = 20;
-    private static final int LEGACY_HEIGHT_CM = 10;
+        Integer weightGrams,
+        Integer lengthCm,
+        Integer widthCm,
+        Integer heightCm) {
 
     public ShippingDetails(String recipientName, String recipientPhone, String wardCode,
                            String districtCode, String provinceCode) {
         this(recipientName, recipientPhone, wardCode, districtCode, provinceCode,
-                LEGACY_WEIGHT_GRAMS, LEGACY_LENGTH_CM, LEGACY_WIDTH_CM, LEGACY_HEIGHT_CM);
+                null, null, null, null);
     }
 
     public ShippingDetails {
@@ -29,7 +24,12 @@ public record ShippingDetails(
         requireNonBlank(wardCode, "wardCode");
         requireNonBlank(districtCode, "districtCode");
         requireNonBlank(provinceCode, "provinceCode");
-        if (weightGrams <= 0 || lengthCm <= 0 || widthCm <= 0 || heightCm <= 0) {
+        boolean parcelAbsent = weightGrams == null && lengthCm == null && widthCm == null && heightCm == null;
+        boolean parcelComplete = weightGrams != null && lengthCm != null && widthCm != null && heightCm != null;
+        if (!parcelAbsent && !parcelComplete) {
+            throw new IllegalArgumentException("parcel dimensions and weight must be provided together");
+        }
+        if (parcelComplete && (weightGrams <= 0 || lengthCm <= 0 || widthCm <= 0 || heightCm <= 0)) {
             throw new IllegalArgumentException("parcel dimensions and weight must be positive");
         }
     }
