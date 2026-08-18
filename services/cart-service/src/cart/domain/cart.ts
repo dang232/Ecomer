@@ -74,6 +74,12 @@ export class Cart {
       }
 
       existing.updateQuantity(quantity);
+      const parcel = item.parcel;
+      if (existing.parcel === null && parcel !== null) {
+        this._items = this._items.map((cartItem) =>
+          cartItem === existing ? existing.withParcel(parcel) : cartItem,
+        );
+      }
     } else {
       if (this._items.length >= Cart.MAX_ITEMS) {
         throw new CartFullException(Cart.MAX_ITEMS);

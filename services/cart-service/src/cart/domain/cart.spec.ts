@@ -74,6 +74,36 @@ describe('Cart', () => {
       expect(cart.items[0]?.parcel).toEqual(parcel);
     });
 
+    it('does not replace valid parcel metadata with null when merging', () => {
+      const parcel = {
+        weightGrams: 1500,
+        lengthCm: 30,
+        widthCm: 20,
+        heightCm: 10,
+      };
+      const cart = Cart.create('user-1');
+
+      cart.addItem(
+        CartItem.create(
+          'product-1',
+          'T-Shirt',
+          '',
+          Money.of(200),
+          1,
+          undefined,
+          undefined,
+          undefined,
+          parcel,
+        ),
+      );
+      cart.addItem(
+        CartItem.create('product-1', 'T-Shirt', '', Money.of(200), 2),
+      );
+
+      expect(cart.items[0]?.quantity).toBe(3);
+      expect(cart.items[0]?.parcel).toEqual(parcel);
+    });
+
     it('same product with different variants = 2 distinct line items', () => {
       const cart = Cart.create('user-1');
 

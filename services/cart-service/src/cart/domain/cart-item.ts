@@ -99,6 +99,21 @@ export class CartItem {
     return this.unitPrice.multiply(this._quantity);
   }
 
+  withParcel(parcel: ParcelDimensions): CartItem {
+    return new CartItem(
+      this.productId,
+      this.productName,
+      this.productImage,
+      this.unitPrice,
+      this._quantity,
+      this.addedAt,
+      this._variantId,
+      this.sellerId,
+      this.sellerName,
+      parcel,
+    );
+  }
+
   updateQuantity(quantity: number): void {
     this._quantity = quantity;
   }
