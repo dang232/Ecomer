@@ -8,6 +8,7 @@ import com.vnshop.orderservice.domain.Order;
 import com.vnshop.orderservice.domain.OrderItem;
 import com.vnshop.orderservice.domain.ParcelDimensions;
 import com.vnshop.orderservice.domain.SubOrder;
+import com.vnshop.orderservice.domain.ShippingDetails;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
@@ -44,6 +45,46 @@ class OrderJpaEntityFinancialMappingTest {
         Order restored = OrderJpaEntity.fromDomain(order).toDomain();
 
         assertThat(restored.subOrders().getFirst().items().getFirst().parcel()).isNull();
+    }
+
+    @Test
+    void roundTripsContactOnlyShippingDetailsWithoutInventingParcelMetadata() {
+        Order order = new Order(UUID.randomUUID(), "buyer",
+                new Address("street", null, "district", "city"),
+                new ShippingDetails("Recipient", "+84900000000", "W-001", "D-001", "P-001"),
+                List.of(new SubOrder("seller", List.of(new OrderItem("product", "sku", "seller", "Product", 1,
+                        new Money(new BigDecimal("100000")), null)))),
+                "COD",
+                "idempotency-" + UUID.randomUUID());
+
+        Order restored = OrderJpaEntity.fromDomain(order).toDomain();
+
+        assertThat(restored.shippingDetails()).isNotNull();
+        assertThat(restored.shippingDetails().recipientName()).isEqualTo("Recipient");
+        assertThat(restored.shippingDetails().wardCode()).isEqualTo("W-001");
+        assertThat(restored.shippingDetails().weightGrams()).isNull();
+        assertThat(restored.shippingDetails().lengthCm()).isNull();
+        assertThat(restored.shippingDetails().widthCm()).isNull();
+        assertThat(restored.shippingDetails().heightCm()).isNull();
+    }
+
+    @Test
+    void loadsLegacyOrderWithPartialParcelColumnsAsContactOnlyDetails() {
+        OrderJpaEntity entity = OrderJpaEntity.fromDomain(new Order(UUID.randomUUID(), "buyer",
+                new Address("street", null, "district", "city"),
+                new ShippingDetails("Recipient", "+84900000000", "W-001", "D-001", "P-001"),
+                List.of(new SubOrder("seller", List.of(new OrderItem("product", "sku", "seller", "Product", 1,
+                        new Money(new BigDecimal("100000")), null)))),
+                "COD", "idempotency-" + UUID.randomUUID()));
+        entity.setShippingWeightGrams(1500);
+        entity.setShippingLengthCm(null);
+
+        Order restored = entity.toDomain();
+
+        assertThat(restored.shippingDetails().weightGrams()).isNull();
+        assertThat(restored.shippingDetails().lengthCm()).isNull();
+        assertThat(restored.shippingDetails().widthCm()).isNull();
+        assertThat(restored.shippingDetails().heightCm()).isNull();
     }
 
     @Test
