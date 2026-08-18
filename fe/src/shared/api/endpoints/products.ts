@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { api } from "@/shared/api/client";
+import type { ParcelDimensions } from "@/shared/contracts/api/product";
 import {
   pageSchema,
   productDetailSchema,
@@ -116,6 +117,7 @@ export interface SellerVariant {
   priceCurrency?: string;
   imageUrl?: string;
   stockQuantity: number;
+  parcel?: ParcelDimensions;
 }
 
 export interface SellerImage {
