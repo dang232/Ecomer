@@ -1,4 +1,5 @@
 import type { MoneyResponse } from './money.response';
+import type { ParcelDimensions } from '../domain/parcel-dimensions';
 
 export interface CartItemResponse {
   productId: string;
@@ -8,6 +9,7 @@ export interface CartItemResponse {
   unitPrice: MoneyResponse;
   quantity: number;
   subtotal: MoneyResponse;
+  parcel: ParcelDimensions | null;
   addedAt: string;
   sellerId?: string;
   sellerName?: string;

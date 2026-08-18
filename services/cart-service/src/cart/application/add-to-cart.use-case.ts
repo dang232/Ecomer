@@ -29,6 +29,7 @@ export class AddToCartUseCase {
       command.variantId,
       snapshot.sellerId,
       snapshot.sellerName,
+      snapshot.parcel,
     );
 
     cart.addItem(item);
