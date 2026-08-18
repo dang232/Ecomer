@@ -29,6 +29,7 @@ import com.vnshop.orderservice.domain.port.out.MetricsPort;
 import com.vnshop.orderservice.domain.port.out.OutboxPort;
 import com.vnshop.orderservice.domain.port.out.SagaCompensationPublisherPort;
 import com.vnshop.orderservice.domain.port.out.SagaStateRepository;
+import com.vnshop.orderservice.infrastructure.product.ProductCatalogUnavailableException;
 import com.vnshop.orderservice.domain.saga.SagaState;
 import org.junit.jupiter.api.Test;
 
@@ -196,6 +197,101 @@ class CheckoutOrderUseCaseTest {
     }
 
     @Test
+    void existingKeyRetryWithMissingParcelMetadataReturnsExistingOrderWithoutSideEffects() {
+        catalog.add(new CatalogProduct(
+                "p1", "seller-A", "Trusted Parcel Product",
+                List.of(new CatalogProduct.Variant("sku-1", new Money(new BigDecimal("100000"), "VND"),
+                        new ParcelDimensions(1000, 20, 10, 10))), ""));
+        catalog.add(new CatalogProduct(
+                "p2", "seller-A", "Missing Parcel Product",
+                List.of(new CatalogProduct.Variant("sku-2", new Money(new BigDecimal("100000"), "VND"))), ""));
+        CouponRedemptionService coupons = mock(CouponRedemptionService.class);
+        when(coupons.consume(eq("SAVE10"), any(Money.class), eq("buyer-1"), any(UUID.class)))
+                .thenReturn(new Money(new BigDecimal("10000"), "VND"));
+        CheckoutOrderUseCase useCase = newUseCase(coupons);
+        CheckoutOrderCommand firstCommand = new CheckoutOrderCommand(
+                "buyer-1",
+                new Address("street", "ward", "district", "city"),
+                new com.vnshop.orderservice.domain.ShippingDetails(
+                        "Recipient", "+84900000000", "W-001", "D-001", "P-001", 9999, 99, 98, 97),
+                List.of(new CheckoutLineItem("p1", "sku-1", 1)),
+                "idem-missing-parcel-retry",
+                PaymentMethod.COD,
+                "SAVE10");
+
+        Order first = useCase.checkout(firstCommand);
+        Order retry = useCase.checkout(new CheckoutOrderCommand(
+                "buyer-1",
+                firstCommand.shippingAddress(),
+                firstCommand.shippingDetails(),
+                List.of(new CheckoutLineItem("p2", "sku-2", 1)),
+                firstCommand.idempotencyKey(),
+                PaymentMethod.COD,
+                "SAVE10"));
+
+        assertThat(retry.id()).isEqualTo(first.id());
+        assertThat(inventory.reserveCalls).isEqualTo(1);
+        assertThat(payment.requestCalls).isEqualTo(1);
+        assertThat(repository.saveCalls).isEqualTo(1);
+        assertThat(shipping.requestCalls).isEqualTo(1);
+        verify(coupons, times(1)).consume(eq("SAVE10"), any(Money.class), eq("buyer-1"), eq(first.id()));
+    }
+
+    @Test
+    void existingKeyRetryReturnsExistingOrderWhenCatalogBecomesUnavailable() {
+        catalog.add(new CatalogProduct(
+                "p1", "seller-A", "Product",
+                List.of(new CatalogProduct.Variant("sku-1", new Money(new BigDecimal("100000"), "VND"),
+                        new ParcelDimensions(1000, 20, 10, 10))), ""));
+        CheckoutOrderUseCase useCase = newUseCase();
+        CheckoutOrderCommand command = new CheckoutOrderCommand(
+                "buyer-1",
+                new Address("street", "ward", "district", "city"),
+                List.of(new CheckoutLineItem("p1", "sku-1", 1)),
+                "idem-catalog-retry");
+
+        Order first = useCase.checkout(command);
+        catalog.unavailable = true;
+
+        Order retry = useCase.checkout(command);
+
+        assertThat(retry.id()).isEqualTo(first.id());
+        assertThat(inventory.reserveCalls).isEqualTo(1);
+        assertThat(payment.requestCalls).isEqualTo(1);
+        assertThat(repository.saveCalls).isEqualTo(1);
+        assertThat(shipping.requestCalls).isEqualTo(1);
+    }
+
+    @Test
+    void existingKeyRetryByAnotherBuyerIsRejectedBeforeCatalogResolution() {
+        catalog.add(new CatalogProduct(
+                "p1", "seller-A", "Product",
+                List.of(new CatalogProduct.Variant("sku-1", new Money(new BigDecimal("100000"), "VND"),
+                        new ParcelDimensions(1000, 20, 10, 10))), ""));
+        CheckoutOrderUseCase useCase = newUseCase();
+        CheckoutOrderCommand command = new CheckoutOrderCommand(
+                "buyer-1",
+                new Address("street", "ward", "district", "city"),
+                List.of(new CheckoutLineItem("p1", "sku-1", 1)),
+                "idem-owner-retry");
+
+        Order first = useCase.checkout(command);
+        catalog.unavailable = true;
+
+        assertThatThrownBy(() -> useCase.checkout(new CheckoutOrderCommand(
+                "buyer-2",
+                command.shippingAddress(),
+                command.lineItems(),
+                command.idempotencyKey())))
+                .isInstanceOf(OrderAccessDeniedException.class);
+        assertThat(first.buyerId()).isEqualTo("buyer-1");
+        assertThat(inventory.reserveCalls).isEqualTo(1);
+        assertThat(payment.requestCalls).isEqualTo(1);
+        assertThat(repository.saveCalls).isEqualTo(1);
+        assertThat(shipping.requestCalls).isEqualTo(1);
+    }
+
+    @Test
     void picksFirstVariantWhenClientOmitsVariantSku() {
         catalog.add(new CatalogProduct(
                 "p1",
@@ -323,6 +419,7 @@ class CheckoutOrderUseCaseTest {
 
     private static final class FakeProductCatalog implements ProductCatalogPort {
         private final Map<String, CatalogProduct> products = new HashMap<>();
+        private boolean unavailable;
 
         void add(CatalogProduct product) {
             products.put(product.productId(), product);
@@ -330,6 +427,9 @@ class CheckoutOrderUseCaseTest {
 
         @Override
         public Optional<CatalogProduct> findByProductId(String productId) {
+            if (unavailable) {
+                throw new ProductCatalogUnavailableException("catalog unavailable", new IllegalStateException("catalog down"));
+            }
             return Optional.ofNullable(products.get(productId));
         }
     }

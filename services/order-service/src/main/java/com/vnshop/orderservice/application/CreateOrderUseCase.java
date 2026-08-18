@@ -80,25 +80,46 @@ public class CreateOrderUseCase {
     }
 
     @Transactional
+    public Optional<Order> findExistingOrderForBuyer(String idempotencyKey, String buyerId) {
+        requireNonBlank(buyerId, "buyerId");
+        requireNonBlank(idempotencyKey, "idempotencyKey");
+        orderRepository.lockIdempotencyKey(idempotencyKey);
+        return reconcileExistingOrder(idempotencyKey, buyerId);
+    }
+
+    @Transactional
     public Order create(CreateOrderCommand command) {
         requireNonBlank(command.buyerId(), "buyerId");
         requireNonBlank(command.idempotencyKey(), "idempotencyKey");
+
+        orderRepository.lockIdempotencyKey(command.idempotencyKey());
+        Optional<Order> existingOrder = reconcileExistingOrder(command.idempotencyKey(), command.buyerId());
+        if (existingOrder.isPresent()) {
+            return existingOrder.get();
+        }
+
         Objects.requireNonNull(command.shippingAddress(), "shippingAddress is required");
         if (command.items() == null || command.items().isEmpty()) {
             throw new IllegalArgumentException("items must not be empty");
         }
         validateTrustedParcels(command.items(), command.shippingDetails());
 
-        orderRepository.lockIdempotencyKey(command.idempotencyKey());
-        return orderRepository.findByIdempotencyKey(command.idempotencyKey())
-                .orElseGet(() -> createNewOrder(
-                        command.buyerId(),
-                        command.shippingAddress(),
-                        command.shippingDetails(),
-                        command.items(),
-                        command.idempotencyKey(),
-                        command.paymentMethod(),
-                        command.couponCode()));
+        return createNewOrder(
+                command.buyerId(),
+                command.shippingAddress(),
+                command.shippingDetails(),
+                command.items(),
+                command.idempotencyKey(),
+                command.paymentMethod(),
+                command.couponCode());
+    }
+
+    private Optional<Order> reconcileExistingOrder(String idempotencyKey, String buyerId) {
+        Optional<Order> existingOrder = orderRepository.findByIdempotencyKey(idempotencyKey);
+        if (existingOrder.isPresent() && !buyerId.equals(existingOrder.get().buyerId())) {
+            throw new OrderAccessDeniedException("not authorized for this order");
+        }
+        return existingOrder;
     }
 
     private Order createNewOrder(
