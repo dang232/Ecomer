@@ -1,6 +1,5 @@
 import { Cart } from '../domain/cart';
-import { CartExpirationPolicy } from '../domain/cart-expiration-policy';
-import { CartRepository } from '../domain/cart.repository';
+import type { CartRepository, ParcelPatch } from '../domain/cart.repository';
 import type { ProductClientPort } from './product-client.port';
 import { toCartResponse } from './cart-response.mapper';
 import type { CartResponse } from './cart.response';
@@ -14,6 +13,7 @@ export class ViewCartUseCase {
   async execute(userId: string): Promise<CartResponse> {
     const cart =
       (await this.cartRepository.findByUserId(userId)) ?? Cart.create(userId);
+    const itemKeys = cart.items.map((item) => item.itemKey);
 
     const refreshes = await Promise.allSettled(
       cart.items.map((item) =>
@@ -21,20 +21,22 @@ export class ViewCartUseCase {
       ),
     );
 
-    let changed = false;
+    const patches: ParcelPatch[] = [];
     for (let index = 0; index < refreshes.length; index += 1) {
       const refresh = refreshes[index];
       if (refresh?.status === 'fulfilled' && !refresh.value.degraded) {
-        changed =
-          cart.replaceParcel(cart.items[index]?.itemKey ?? '', refresh.value.parcel) ||
-          changed;
+        const itemKey = itemKeys[index];
+        if (itemKey !== undefined) {
+          patches.push({ itemKey, parcel: refresh.value.parcel });
+        }
       }
     }
 
-    if (changed) {
-      await this.cartRepository.save(cart, CartExpirationPolicy.TTL_SECONDS);
-    }
+    const refreshedCart =
+      patches.length > 0
+        ? await this.cartRepository.refreshParcels(userId, patches)
+        : cart;
 
-    return toCartResponse(cart);
+    return toCartResponse(refreshedCart);
   }
 }

@@ -35,10 +35,28 @@ function cartWithItem(parcel: typeof completeParcel | null): Cart {
   );
 }
 
-function repository(cart: Cart): CartRepository & { save: jest.Mock } {
+function repository(cart: Cart): CartRepository & {
+  refreshParcels: jest.Mock;
+  save: jest.Mock;
+} {
+  const refreshParcels = jest.fn().mockImplementation(
+    (
+      _userId: string,
+      patches: readonly {
+        itemKey: string;
+        parcel: typeof completeParcel | null;
+      }[],
+    ) => {
+      for (const patch of patches) {
+        cart.replaceParcel(patch.itemKey, patch.parcel);
+      }
+      return Promise.resolve(cart);
+    },
+  );
   return {
     findByUserId: jest.fn().mockResolvedValue(cart),
     save: jest.fn(),
+    refreshParcels,
     delete: jest.fn(),
     mergeGuestCart: jest.fn(),
   };
@@ -68,7 +86,10 @@ describe('ViewCartUseCase', () => {
       'sku-large',
     );
     expect(result.items[0]?.parcel).toEqual(completeParcel);
-    expect(cartRepository.save).toHaveBeenCalledWith(cart, expect.any(Number));
+    expect(cartRepository.refreshParcels).toHaveBeenCalledWith('user-1', [
+      { itemKey: 'product-1:sku-large', parcel: completeParcel },
+    ]);
+    expect(cartRepository.save).not.toHaveBeenCalled();
   });
 
   it('replaces stale parcel metadata while preserving line identity and cart fields', async () => {
@@ -98,7 +119,10 @@ describe('ViewCartUseCase', () => {
     expect(item?.sellerId).toBe('seller-1');
     expect(item?.unitPrice).toEqual({ amount: 1000, currency: 'VND' });
     expect(item?.addedAt).toBe(originalAddedAt.toISOString());
-    expect(cartRepository.save).toHaveBeenCalledWith(cart, expect.any(Number));
+    expect(cartRepository.refreshParcels).toHaveBeenCalledWith('user-1', [
+      { itemKey: 'product-1:sku-large', parcel: completeParcel },
+    ]);
+    expect(cartRepository.save).not.toHaveBeenCalled();
   });
 
   it('preserves trusted parcel metadata when the product snapshot is unavailable', async () => {
@@ -116,6 +140,7 @@ describe('ViewCartUseCase', () => {
     ).execute('user-1');
 
     expect(result.items[0]?.parcel).toEqual(completeParcel);
+    expect(cartRepository.refreshParcels).not.toHaveBeenCalled();
     expect(cartRepository.save).not.toHaveBeenCalled();
   });
 
@@ -139,6 +164,7 @@ describe('ViewCartUseCase', () => {
     ).execute('user-1');
 
     expect(result.items[0]?.parcel).toEqual(completeParcel);
+    expect(cartRepository.refreshParcels).not.toHaveBeenCalled();
     expect(cartRepository.save).not.toHaveBeenCalled();
   });
 
@@ -197,13 +223,17 @@ describe('ViewCartUseCase', () => {
 
     const result = await execution;
 
-    expect(result.items.find((item) => item.productId === 'product-1')?.parcel).toEqual(
-      completeParcel,
-    );
-    expect(result.items.find((item) => item.productId === 'product-2')?.parcel).toEqual(
-      completeParcel,
-    );
-    expect(cartRepository.save).toHaveBeenCalledTimes(1);
+    expect(
+      result.items.find((item) => item.productId === 'product-1')?.parcel,
+    ).toEqual(completeParcel);
+    expect(
+      result.items.find((item) => item.productId === 'product-2')?.parcel,
+    ).toEqual(completeParcel);
+    expect(cartRepository.refreshParcels).toHaveBeenCalledTimes(1);
+    expect(cartRepository.refreshParcels).toHaveBeenCalledWith('user-1', [
+      { itemKey: 'product-1:sku-large', parcel: completeParcel },
+    ]);
+    expect(cartRepository.save).not.toHaveBeenCalled();
   });
 
   it('clears stale parcel metadata when the authoritative snapshot has no valid parcel', async () => {
@@ -225,6 +255,87 @@ describe('ViewCartUseCase', () => {
     ).execute('user-1');
 
     expect(result.items[0]?.parcel).toBeNull();
-    expect(cartRepository.save).toHaveBeenCalledTimes(1);
+    expect(cartRepository.refreshParcels).toHaveBeenCalledWith('user-1', [
+      { itemKey: 'product-1:sku-large', parcel: null },
+    ]);
+    expect(cartRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('returns the atomically refreshed cart so concurrent quantity and added lines survive', async () => {
+    const cart = cartWithItem(null);
+    cart.addItem(
+      CartItem.create(
+        'product-2',
+        'Mouse',
+        'mouse.png',
+        Money.of(500),
+        1,
+        null,
+        'seller-2',
+        'Shop 2',
+        completeParcel,
+      ),
+    );
+    const concurrentCart = Cart.create('user-1');
+    concurrentCart.addItem(
+      CartItem.fromPersistence(
+        'product-1',
+        'Keyboard',
+        'keyboard.png',
+        Money.of(1000),
+        7,
+        originalAddedAt,
+        'sku-large',
+        'seller-1',
+        'Shop',
+        completeParcel,
+      ),
+    );
+    concurrentCart.addItem(
+      CartItem.create(
+        'product-3',
+        'Desk Mat',
+        'desk-mat.png',
+        Money.of(500),
+        1,
+        null,
+        'seller-3',
+        'Shop 3',
+        completeParcel,
+      ),
+    );
+    const cartRepository = repository(cart);
+    cartRepository.refreshParcels.mockResolvedValue(concurrentCart);
+    const productClient: ProductClientPort = {
+      getSnapshot: jest.fn((productId: string) =>
+        Promise.resolve({
+          productId,
+          productName: productId === 'product-1' ? 'Keyboard' : 'Mouse',
+          productImage: `${productId}.png`,
+          unitPrice: Money.of(productId === 'product-1' ? 1000 : 500),
+          parcel: completeParcel,
+        }),
+      ),
+    };
+
+    const result = await new ViewCartUseCase(
+      cartRepository,
+      productClient,
+    ).execute('user-1');
+
+    expect(result.items).toHaveLength(2);
+    expect(
+      result.items.find((item) => item.productId === 'product-1')?.quantity,
+    ).toBe(7);
+    expect(
+      result.items.find((item) => item.productId === 'product-2'),
+    ).toBeUndefined();
+    expect(
+      result.items.find((item) => item.productId === 'product-3')?.quantity,
+    ).toBe(1);
+    expect(cartRepository.refreshParcels).toHaveBeenCalledWith('user-1', [
+      { itemKey: 'product-1:sku-large', parcel: completeParcel },
+      { itemKey: 'product-2', parcel: completeParcel },
+    ]);
   });
 });
