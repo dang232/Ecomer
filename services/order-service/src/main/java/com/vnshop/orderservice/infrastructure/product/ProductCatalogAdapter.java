@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vnshop.orderservice.domain.catalog.CatalogProduct;
 import com.vnshop.orderservice.domain.Money;
+import com.vnshop.orderservice.domain.ParcelDimensions;
 import com.vnshop.orderservice.domain.port.out.ProductCatalogPort;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
@@ -91,10 +92,21 @@ public class ProductCatalogAdapter implements ProductCatalogPort {
                                 v.sku,
                                 new Money(
                                         v.priceAmount == null ? BigDecimal.ZERO : v.priceAmount,
-                                        v.priceCurrency == null || v.priceCurrency.isBlank() ? "VND" : v.priceCurrency)))
+                                        v.priceCurrency == null || v.priceCurrency.isBlank() ? "VND" : v.priceCurrency),
+                                v.parcel == null ? null : toParcel(v.parcel)))
                         .toList();
         String imageUrl = (data.images == null || data.images.isEmpty()) ? "" : data.images.get(0).url;
         return new CatalogProduct(data.id, data.sellerId, data.name, variants, imageUrl);
+    }
+
+    private static ParcelDimensions toParcel(ParcelDto parcel) {
+        if (parcel.weightGrams == null || parcel.lengthCm == null
+                || parcel.widthCm == null || parcel.heightCm == null
+                || parcel.weightGrams <= 0 || parcel.lengthCm <= 0
+                || parcel.widthCm <= 0 || parcel.heightCm <= 0) {
+            return null;
+        }
+        return new ParcelDimensions(parcel.weightGrams, parcel.lengthCm, parcel.widthCm, parcel.heightCm);
     }
 
     // --- DTOs mirroring product-service ApiResponse<ProductResponse> wire shape ---
@@ -133,6 +145,24 @@ public class ProductCatalogAdapter implements ProductCatalogPort {
 
         @JsonProperty("priceCurrency")
         public String priceCurrency;
+
+        @JsonProperty("parcel")
+        public ParcelDto parcel;
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private static class ParcelDto {
+        @JsonProperty("weightGrams")
+        public Integer weightGrams;
+
+        @JsonProperty("lengthCm")
+        public Integer lengthCm;
+
+        @JsonProperty("widthCm")
+        public Integer widthCm;
+
+        @JsonProperty("heightCm")
+        public Integer heightCm;
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
