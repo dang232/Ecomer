@@ -3,6 +3,7 @@ import { VariantNotFoundException } from '../domain/variant-not-found.exception'
 import { Money } from '../domain/money';
 import type { ProductClientPort } from '../application/product-client.port';
 import type { ProductSnapshot } from '../application/product-snapshot';
+import type { ParcelDimensions } from '../domain/parcel-dimensions';
 import CircuitBreaker from 'opossum';
 
 // product-service ProductResponse — the actual wire shape today.
@@ -15,6 +16,14 @@ interface ProductServiceVariant {
   priceCurrency?: string;
   imageUrl?: string;
   stockQuantity?: number;
+  parcel?: ProductServiceParcel | null;
+}
+
+interface ProductServiceParcel {
+  weightGrams?: number;
+  lengthCm?: number;
+  widthCm?: number;
+  heightCm?: number;
 }
 
 interface ProductServiceImage {
@@ -98,6 +107,52 @@ function pickImage(product: ProductServiceResponse, variantId?: string | null): 
   return product.variants?.[0]?.imageUrl ?? '';
 }
 
+function parseParcel(parcel: ProductServiceParcel | null | undefined): ParcelDimensions | null {
+  if (
+    parcel?.weightGrams === undefined ||
+    parcel.lengthCm === undefined ||
+    parcel.widthCm === undefined ||
+    parcel.heightCm === undefined
+  ) {
+    return null;
+  }
+
+  if (
+    !Number.isInteger(parcel.weightGrams) ||
+    !Number.isInteger(parcel.lengthCm) ||
+    !Number.isInteger(parcel.widthCm) ||
+    !Number.isInteger(parcel.heightCm) ||
+    parcel.weightGrams <= 0 ||
+    parcel.lengthCm <= 0 ||
+    parcel.widthCm <= 0 ||
+    parcel.heightCm <= 0
+  ) {
+    return null;
+  }
+
+  return {
+    weightGrams: parcel.weightGrams,
+    lengthCm: parcel.lengthCm,
+    widthCm: parcel.widthCm,
+    heightCm: parcel.heightCm,
+  };
+}
+
+function pickParcel(
+  product: ProductServiceResponse,
+  variantId?: string | null,
+): ParcelDimensions | null {
+  if (variantId && product.variants) {
+    const matched = product.variants.find((variant) => variant.sku === variantId);
+    if (!matched) {
+      throw new VariantNotFoundException(product.productId ?? product.id ?? '(unknown)', variantId);
+    }
+    return parseParcel(matched.parcel);
+  }
+
+  return parseParcel(product.variants?.[0]?.parcel);
+}
+
 export class ProductHttpClientAdapter implements ProductClientPort {
   private readonly circuitBreaker: CircuitBreaker;
   private readonly productServiceUrl: string | undefined;
@@ -147,6 +202,7 @@ export class ProductHttpClientAdapter implements ProductClientPort {
         productName: productId,
         productImage: '',
         unitPrice: Money.zero('VND'),
+        parcel: null,
       };
     }
 
@@ -159,6 +215,7 @@ export class ProductHttpClientAdapter implements ProductClientPort {
         productName: product.productName ?? product.name ?? productId,
         productImage: pickImage(product, variantId),
         unitPrice: Money.of(amount, currency),
+        parcel: pickParcel(product, variantId),
         sellerId: product.sellerId,
         sellerName: await this.fetchSellerName(product.sellerId),
       };
@@ -178,6 +235,7 @@ export class ProductHttpClientAdapter implements ProductClientPort {
         productName: productId,
         productImage: '',
         unitPrice: Money.zero('VND'),
+        parcel: null,
       };
     }
   }

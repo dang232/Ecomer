@@ -60,6 +60,34 @@ describe('ProductHttpClientAdapter', () => {
     expect(snap.productImage).toBe('https://cdn/wh1000xm5-hero.jpg');
     expect(snap.unitPrice.amount).toBe(8990000);
     expect(snap.unitPrice.currency).toBe('VND');
+    expect(snap.parcel).toBeNull();
+  });
+
+  it('selects parcel metadata from the requested variant', async () => {
+    mockFetch({
+      id: 'p-parcel',
+      variants: [
+        {
+          sku: 'small',
+          priceAmount: 100,
+          parcel: { weightGrams: 500, lengthCm: 10, widthCm: 10, heightCm: 5 },
+        },
+        {
+          sku: 'large',
+          priceAmount: 200,
+          parcel: { weightGrams: 1500, lengthCm: 30, widthCm: 20, heightCm: 10 },
+        },
+      ],
+    });
+
+    const snap = await new ProductHttpClientAdapter(URL).getSnapshot('p-parcel', 'large');
+
+    expect(snap.parcel).toEqual({
+      weightGrams: 1500,
+      lengthCm: 30,
+      widthCm: 20,
+      heightCm: 10,
+    });
   });
 
   it('falls back to variants[0].imageUrl when images[] is empty', async () => {
