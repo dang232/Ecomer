@@ -31,7 +31,7 @@ import {
   createCheckoutRecoveryStore,
   createCheckoutSubmissionController,
   shouldClearCartAfterSubmission,
-  trustedParcelDimensions,
+  hasTrustedParcelMetadata,
   type CheckoutRecoveryStore,
   type CheckoutSubmissionController,
   type CheckoutSubmissionResult,
@@ -382,10 +382,9 @@ export function CheckoutPage() {
       return;
     }
 
-    // Parcel dimensions must come from trusted catalog data. Never invent
-    // carrier values at the browser boundary when metadata is incomplete.
-    const parcelDimensions = trustedParcelDimensions(cartItems);
-    if (!parcelDimensions) {
+    // Parcel metadata is server-authoritative. The cart is only a readiness
+    // gate here; never aggregate seller parcels into one order-level value.
+    if (!hasTrustedParcelMetadata(cartItems)) {
       toast.error("Shipping parcel dimensions are unavailable for this cart.");
       return;
     }
@@ -416,7 +415,6 @@ export function CheckoutPage() {
             wardCode: selectedAddress.ward ?? "",
             districtCode: selectedAddress.district ?? "",
             provinceCode: selectedAddress.city,
-            ...parcelDimensions,
           },
           paymentMethod: selectedPaymentId,
           notes: note || undefined,
