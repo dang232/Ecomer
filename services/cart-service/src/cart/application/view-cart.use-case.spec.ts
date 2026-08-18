@@ -4,6 +4,7 @@ import type { CartRepository } from '../domain/cart.repository';
 import { Money } from '../domain/money';
 import { ViewCartUseCase } from './view-cart.use-case';
 import type { ProductClientPort } from './product-client.port';
+import type { ProductSnapshot } from './product-snapshot';
 
 const originalAddedAt = new Date('2026-08-18T09:00:00.000Z');
 const completeParcel = {
@@ -118,8 +119,95 @@ describe('ViewCartUseCase', () => {
     expect(cartRepository.save).not.toHaveBeenCalled();
   });
 
-  it('keeps parcel null when the authoritative snapshot has no valid parcel', async () => {
-    const cart = cartWithItem(null);
+  it('preserves trusted parcel metadata when the product snapshot is degraded', async () => {
+    const cart = cartWithItem(completeParcel);
+    const cartRepository = repository(cart);
+    const productClient: ProductClientPort = {
+      getSnapshot: jest.fn().mockResolvedValue({
+        productId: 'product-1',
+        productName: 'product-1',
+        productImage: '',
+        unitPrice: Money.zero('VND'),
+        parcel: null,
+        degraded: true,
+      }),
+    };
+
+    const result = await new ViewCartUseCase(
+      cartRepository,
+      productClient,
+    ).execute('user-1');
+
+    expect(result.items[0]?.parcel).toEqual(completeParcel);
+    expect(cartRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('refreshes snapshots concurrently and saves once while preserving failed items', async () => {
+    const staleParcel = { ...completeParcel, weightGrams: 1000 };
+    const cart = cartWithItem(staleParcel);
+    cart.addItem(
+      CartItem.create(
+        'product-2',
+        'Mouse',
+        'mouse.png',
+        Money.of(500),
+        1,
+        null,
+        'seller-2',
+        'Shop 2',
+        completeParcel,
+      ),
+    );
+    const cartRepository = repository(cart);
+    let resolveFirst: ((snapshot: ProductSnapshot) => void) | undefined;
+    let rejectSecond: ((reason: Error) => void) | undefined;
+    let resolveSecondStarted: (() => void) | undefined;
+    const secondStarted = new Promise<void>((resolve) => {
+      resolveSecondStarted = resolve;
+    });
+    const firstSnapshot = new Promise<ProductSnapshot>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const secondSnapshot = new Promise<ProductSnapshot>((_, reject) => {
+      rejectSecond = reject;
+    });
+    const productClient: ProductClientPort = {
+      getSnapshot: jest.fn((productId: string) => {
+        if (productId === 'product-1') return firstSnapshot;
+        resolveSecondStarted?.();
+        return secondSnapshot;
+      }),
+    };
+
+    const execution = new ViewCartUseCase(
+      cartRepository,
+      productClient,
+    ).execute('user-1');
+    await secondStarted;
+    expect(productClient.getSnapshot).toHaveBeenCalledTimes(2);
+
+    resolveFirst?.({
+      productId: 'product-1',
+      productName: 'Keyboard',
+      productImage: 'keyboard.png',
+      unitPrice: Money.of(1000),
+      parcel: completeParcel,
+    });
+    rejectSecond?.(new Error('product service unavailable'));
+
+    const result = await execution;
+
+    expect(result.items.find((item) => item.productId === 'product-1')?.parcel).toEqual(
+      completeParcel,
+    );
+    expect(result.items.find((item) => item.productId === 'product-2')?.parcel).toEqual(
+      completeParcel,
+    );
+    expect(cartRepository.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears stale parcel metadata when the authoritative snapshot has no valid parcel', async () => {
+    const cart = cartWithItem(completeParcel);
     const cartRepository = repository(cart);
     const productClient: ProductClientPort = {
       getSnapshot: jest.fn().mockResolvedValue({
@@ -137,6 +225,6 @@ describe('ViewCartUseCase', () => {
     ).execute('user-1');
 
     expect(result.items[0]?.parcel).toBeNull();
-    expect(cartRepository.save).not.toHaveBeenCalled();
+    expect(cartRepository.save).toHaveBeenCalledTimes(1);
   });
 });

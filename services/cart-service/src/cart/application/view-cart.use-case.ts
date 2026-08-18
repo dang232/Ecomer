@@ -15,14 +15,19 @@ export class ViewCartUseCase {
     const cart =
       (await this.cartRepository.findByUserId(userId)) ?? Cart.create(userId);
 
+    const refreshes = await Promise.allSettled(
+      cart.items.map((item) =>
+        this.productClient.getSnapshot(item.productId, item.variantId),
+      ),
+    );
+
     let changed = false;
-    for (const item of cart.items) {
-      const snapshot = await this.productClient
-        .getSnapshot(item.productId, item.variantId)
-        .catch(() => undefined);
-      if (snapshot) {
-        const parcel = snapshot.parcel;
-        changed = cart.replaceParcel(item.itemKey, parcel) || changed;
+    for (let index = 0; index < refreshes.length; index += 1) {
+      const refresh = refreshes[index];
+      if (refresh?.status === 'fulfilled' && !refresh.value.degraded) {
+        changed =
+          cart.replaceParcel(cart.items[index]?.itemKey ?? '', refresh.value.parcel) ||
+          changed;
       }
     }
 

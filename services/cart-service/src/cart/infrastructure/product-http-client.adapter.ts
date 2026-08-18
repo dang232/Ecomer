@@ -203,6 +203,7 @@ export class ProductHttpClientAdapter implements ProductClientPort {
         productImage: '',
         unitPrice: Money.zero('VND'),
         parcel: null,
+        degraded: true,
       };
     }
 
@@ -236,6 +237,7 @@ export class ProductHttpClientAdapter implements ProductClientPort {
         productImage: '',
         unitPrice: Money.zero('VND'),
         parcel: null,
+        degraded: true,
       };
     }
   }

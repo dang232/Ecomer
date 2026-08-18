@@ -24,6 +24,17 @@ describe('ProductHttpClientAdapter', () => {
     expect(snap.productName).toBe('p-1');
     expect(snap.productImage).toBe('');
     expect(snap.unitPrice.amount).toBe(0);
+    expect(snap.degraded).toBe(true);
+  });
+
+  it('marks a transient fallback snapshot as degraded', async () => {
+    (global as { fetch: typeof fetch }).fetch = jest.fn().mockRejectedValue(
+      new Error('product service unavailable'),
+    ) as typeof fetch;
+
+    const snap = await new ProductHttpClientAdapter(URL).getSnapshot('p-1');
+
+    expect(snap.degraded).toBe(true);
   });
 
   it('throws ProductNotFoundException on 404', async () => {

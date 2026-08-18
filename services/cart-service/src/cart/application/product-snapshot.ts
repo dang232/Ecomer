@@ -7,6 +7,7 @@ export interface ProductSnapshot {
   productImage: string;
   unitPrice: Money;
   parcel: ParcelDimensions | null;
+  degraded?: boolean;
   sellerId?: string;
   sellerName?: string;
 }

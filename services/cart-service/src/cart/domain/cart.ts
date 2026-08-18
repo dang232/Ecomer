@@ -75,7 +75,7 @@ export class Cart {
 
       existing.updateQuantity(quantity);
       const parcel = item.parcel;
-      if (existing.parcel === null && parcel !== null) {
+      if (parcel !== null) {
         this._items = this._items.map((cartItem) =>
           cartItem === existing ? existing.withParcel(parcel) : cartItem,
         );
