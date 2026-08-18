@@ -128,7 +128,7 @@ public class GrpcShippingRequestAdapter implements ShippingRequestPort {
                 .setDistrictCode(details.districtCode())
                 .setProvinceCode(details.provinceCode())
                 .setCity(address.city())
-                .setProvince(address.district())
+                .setProvince(address.city())
                 .build();
     }
 

@@ -138,6 +138,8 @@ class GrpcShippingRequestAdapterTest {
 
         assertEquals("Nguyen Van A", sentAddress.getFullName());
         assertEquals("+84912345678", sentAddress.getPhone());
+        assertEquals("Hanoi", sentAddress.getCity());
+        assertEquals("Hanoi", sentAddress.getProvince());
         assertEquals("W-001", sentAddress.getWardCode());
         assertEquals("D-001", sentAddress.getDistrictCode());
         assertEquals("P-001", sentAddress.getProvinceCode());
