@@ -137,4 +137,30 @@ export class Cart {
     this._items = [];
     this._updatedAt = new Date();
   }
+
+  replaceParcel(itemKey: string, parcel: CartItem['parcel']): boolean {
+    const item = this._items.find((cartItem) => cartItem.itemKey === itemKey);
+    if (!item) {
+      return false;
+    }
+
+    const current = item.parcel;
+    const unchanged =
+      current === parcel ||
+      (current !== null &&
+        parcel !== null &&
+        current.weightGrams === parcel.weightGrams &&
+        current.lengthCm === parcel.lengthCm &&
+        current.widthCm === parcel.widthCm &&
+        current.heightCm === parcel.heightCm);
+    if (unchanged) {
+      return false;
+    }
+
+    this._items = this._items.map((cartItem) =>
+      cartItem === item ? item.withParcel(parcel) : cartItem,
+    );
+    this._updatedAt = new Date();
+    return true;
+  }
 }
