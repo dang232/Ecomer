@@ -67,7 +67,8 @@ public class CheckoutOrderUseCase {
                     product.name(),
                     line.quantity(),
                     variant.unitPrice(),
-                    product.imageUrl()));
+                    product.imageUrl(),
+                    variant.parcel()));
         }
         return resolved;
     }

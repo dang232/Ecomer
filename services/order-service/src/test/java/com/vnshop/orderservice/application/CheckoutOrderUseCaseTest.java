@@ -11,6 +11,7 @@ import com.vnshop.orderservice.domain.OrderItem;
 import com.vnshop.orderservice.domain.SubOrder;
 import com.vnshop.orderservice.domain.CommissionTier;
 import com.vnshop.orderservice.domain.PaymentMethod;
+import com.vnshop.orderservice.domain.ParcelDimensions;
 import com.vnshop.orderservice.domain.port.out.CommissionTierLookupPort;
 import com.vnshop.orderservice.domain.port.out.InventoryReservationPort;
 import com.vnshop.orderservice.domain.port.out.OrderEventPublisherPort;
@@ -149,6 +150,25 @@ class CheckoutOrderUseCaseTest {
         assertThat(order.shippingTotal().amount()).isEqualByComparingTo("0");
         assertThat(order.taxTotal().amount()).isEqualByComparingTo("40000");
         assertThat(order.finalAmount().amount()).isEqualByComparingTo("438000");
+    }
+
+    @Test
+    void snapshotsSelectedVariantParcelFromCatalogOnOrderItem() {
+        CatalogProduct.Variant defaultVariant = new CatalogProduct.Variant(
+                "default", new Money(new BigDecimal("100000"), "VND"),
+                new ParcelDimensions(500, 10, 11, 12));
+        CatalogProduct.Variant selectedVariant = new CatalogProduct.Variant(
+                "selected", new Money(new BigDecimal("150000"), "VND"),
+                new ParcelDimensions(1200, 30, 20, 10));
+        catalog.add(new CatalogProduct("p1", "seller-A", "Variant Product",
+                List.of(defaultVariant, selectedVariant), ""));
+
+        Order order = newUseCase().checkout(new CheckoutOrderCommand(
+                "buyer-1", new Address("street", "ward", "district", "city"),
+                List.of(new CheckoutLineItem("p1", "selected", 2)), "idem-parcel"));
+
+        assertThat(order.subOrders().getFirst().items().getFirst().parcel())
+                .isEqualTo(new ParcelDimensions(1200, 30, 20, 10));
     }
 
     @Test

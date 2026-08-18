@@ -11,12 +11,23 @@ public record OrderItem(
         int quantity,
         Money unitPrice,
         String imageUrl,
+        ParcelDimensions parcel,
         BigDecimal taxRate,
         BigDecimal taxAmount
 ) {
     public OrderItem(String productId, String variantSku, String sellerId, String name, int quantity,
                      Money unitPrice, String imageUrl) {
-        this(productId, variantSku, sellerId, name, quantity, unitPrice, imageUrl, null, null);
+        this(productId, variantSku, sellerId, name, quantity, unitPrice, imageUrl, null, null, null);
+    }
+
+    public OrderItem(String productId, String variantSku, String sellerId, String name, int quantity,
+                     Money unitPrice, String imageUrl, ParcelDimensions parcel) {
+        this(productId, variantSku, sellerId, name, quantity, unitPrice, imageUrl, parcel, null, null);
+    }
+
+    public OrderItem(String productId, String variantSku, String sellerId, String name, int quantity,
+                     Money unitPrice, String imageUrl, BigDecimal taxRate, BigDecimal taxAmount) {
+        this(productId, variantSku, sellerId, name, quantity, unitPrice, imageUrl, null, taxRate, taxAmount);
     }
 
     public OrderItem {
