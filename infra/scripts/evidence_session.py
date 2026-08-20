@@ -42,6 +42,7 @@ VERIFIER_OWNERS = {
     "F1": "plan-compliance-owner", "F2": "code-quality-owner", "F3": "runtime-qa-owner", "F4": "scope-fidelity-owner",
 }
 REPORT_PRODUCERS = set(VERIFIER_OWNERS.values())
+GATE_ENTRY_FIELDS = {"gate_id", "status", "evidence_class", "producing_system", "owner", "environment_identity", "fresh_until", "artifact_digest", "command_binding", "signature_type", "provider_issued_id"}
 
 
 def now() -> str:
@@ -91,6 +92,23 @@ def load_json(path: Path) -> dict:
 def strict(value: dict, fields: set[str], name: str) -> None:
     if set(value) != fields:
         raise ValueError(f"{name} has unknown or missing fields")
+
+
+def report_binding(report: dict, run_record: dict, task_id: str, barrier_record: dict | None = None) -> None:
+    if report["attempt_id"] != run_record["attempt_id"] or str(report["task_id"]) != str(task_id):
+        raise ValueError("report is unbound to canonical attempt")
+    if task_id in {"1", "2", "3", "4", "5", "6", "7"}:
+        if task_id == "1":
+            expected_commit, expected_tree = run_record["requested_commit"], run_record["requested_tree"]
+        else:
+            expected_commit, expected_tree = report["commit_sha"], report["tree_sha"]
+            if not (len(expected_commit) == 40 and len(expected_tree) == 40 and expected_commit == expected_commit.lower() and expected_tree == expected_tree.lower()):
+                raise ValueError("task report commit/tree must be full lowercase SHA values")
+        if report["commit_sha"] != expected_commit or report["tree_sha"] != expected_tree:
+            raise ValueError("task report commit/tree binding mismatch")
+    elif task_id in {"F1", "F2", "F3", "F4"}:
+        if not barrier_record or report["commit_sha"] != barrier_record.get("final_commit") or report["tree_sha"] != barrier_record.get("final_tree"):
+            raise ValueError("final verifier report must bind to final barrier commit/tree")
 
 
 def git(repo: Path, *args: str) -> str:
@@ -204,8 +222,10 @@ def checkpoint(args: argparse.Namespace) -> int:
         raise ValueError("final status is forbidden before seal")
     if not all(run_record[field] for field in ("workspace_manifest_sha256", "detached_baseline_manifest_sha256", "workspace_closure_sha256", "detached_baseline_closure_sha256")):
         raise ValueError("both prechange captures must be attached")
-    if report["attempt_id"] != args.attempt_id or str(report["task_id"]) != str(args.task) or report["commit_sha"] != run_record["requested_commit"] or report["tree_sha"] != run_record["requested_tree"]:
-        raise ValueError("report is unbound to canonical run")
+    barrier_record = None
+    if str(args.task) in {"F1", "F2", "F3", "F4"}:
+        barrier_record = load_json(root / args.attempt_id / "barrier.json")
+    report_binding(report, run_record, str(args.task), barrier_record)
     if report["evidence_class"] not in EVIDENCE_CLASSES or report["repository_status"] not in STATUSES or report["production_status"] not in STATUSES:
         raise ValueError("unknown evidence enum")
     expected_owner = VERIFIER_OWNERS.get(str(args.task))
@@ -243,7 +263,19 @@ def barrier(args: argparse.Namespace) -> int:
         raise ValueError("barrier deadline must be ISO-8601") from exc
     if deadline <= datetime.now(timezone.utc):
         raise ValueError("barrier deadline must be in the future")
-    required = {"schema_version": "barrier.v1", "attempt_id": args.attempt_id, "coordinator_identity": args.coordinator, "final_commit": args.commit, "final_tree": args.tree, "deadline": args.deadline, "required_verifiers": REQUIRED_TASKS, "required_statuses": ["PASS", "BLOCKED_EXTERNAL"], "checkpoint_hashes": [], "created_at": now()}
+    raw_hashes = getattr(args, "checkpoint_hashes", None)
+    if raw_hashes:
+        checkpoint_hashes = json.loads(raw_hashes)
+    else:
+        checkpoint_hashes = []
+        for task_id in ["1", "2", "3", "4", "5", "6", "7"]:
+            paths = list((root / args.attempt_id).glob(f"**/task-{task_id}/checkpoint.json"))
+            if len(paths) != 1:
+                raise ValueError("barrier requires task 1-7 checkpoint hashes")
+            checkpoint_hashes.append({"task_id": task_id, "sha256": digest(paths[0])})
+    if not isinstance(checkpoint_hashes, list) or sorted(item.get("task_id") for item in checkpoint_hashes) != ["1", "2", "3", "4", "5", "6", "7"]:
+        raise ValueError("barrier checkpoint hashes must contain exactly task 1-7")
+    required = {"schema_version": "barrier.v1", "attempt_id": args.attempt_id, "coordinator_identity": args.coordinator, "final_commit": args.commit, "final_tree": args.tree, "deadline": args.deadline, "required_verifiers": REQUIRED_TASKS, "required_statuses": ["PASS", "BLOCKED_EXTERNAL"], "checkpoint_hashes": checkpoint_hashes, "created_at": now()}
     path = root / args.attempt_id / "barrier.json"
     if path.exists():
         raise ValueError("barrier already exists")
@@ -277,8 +309,7 @@ def aggregate(args: argparse.Namespace) -> int:
         if checkpoint_record["report_sha256"] != digest(paths[0].parent / "report.json"):
             raise ValueError(f"mutated report for checkpoint: {task_id}")
         report = load_json(paths[0].parent / "report.json"); strict(report, REPORT_FIELDS, "report.json")
-        if report["attempt_id"] != args.attempt_id or report["task_id"] != task_id or report["commit_sha"] != barrier_record["final_commit"] or report["tree_sha"] != barrier_record["final_tree"]:
-            raise ValueError(f"report binding mismatch: {task_id}")
+        report_binding(report, run_record, task_id, barrier_record)
         expected_owner = VERIFIER_OWNERS.get(task_id)
         if expected_owner and (report["owner"] != expected_owner or report["producer"] != expected_owner):
             raise ValueError(f"report owner mismatch: {task_id}")
@@ -287,8 +318,9 @@ def aggregate(args: argparse.Namespace) -> int:
         if parse_timestamp(report["fresh_until"]) < parse_timestamp(report["created_at"]):
             raise ValueError(f"stale report: {task_id}")
         checkpoints.append({"task_id": task_id, "path": str(paths[0]), "sha256": digest(paths[0])})
-    if barrier_record.get("checkpoint_hashes") and sorted(item["sha256"] for item in checkpoints) != sorted(item["sha256"] for item in barrier_record["checkpoint_hashes"]):
-        raise ValueError("checkpoint hashes do not match barrier")
+    task_hashes = [item for item in checkpoints if item["task_id"] in {"1", "2", "3", "4", "5", "6", "7"}]
+    if sorted(item["sha256"] for item in task_hashes) != sorted(item["sha256"] for item in barrier_record["checkpoint_hashes"]):
+        raise ValueError("task checkpoint hashes do not match barrier")
     aggregate_status = "FAIL" if missing or duplicate else "PASS"
     record = {"schema_version": "aggregate.v1", "attempt_id": args.attempt_id, "required_task_ids": REQUIRED_TASKS, "checkpoint_hashes": checkpoints, "missing_ids": missing, "duplicate_ids": duplicate, "late_replacements": [], "aggregate_status": aggregate_status, "created_at": now()}
     atomic_write(root / args.attempt_id / "aggregate.json", record)
@@ -315,13 +347,31 @@ def seal(args: argparse.Namespace) -> int:
     if aggregate_record.get("aggregate_status") != "PASS":
         raise ValueError("cannot seal incomplete aggregate")
     reports = []
+    gate_entries = []
     for item in aggregate_record["checkpoint_hashes"]:
         checkpoint_path = Path(item["path"]); report_path = checkpoint_path.parent / "report.json"; report = load_json(report_path); strict(report, REPORT_FIELDS, "report.json"); reports.append(report)
+        for entry in report["telemetry"]:
+            strict(entry, GATE_ENTRY_FIELDS, "gate evidence")
+            if entry["status"] not in {"PASS", "FAIL", "BLOCKED_EXTERNAL", "INCONCLUSIVE"}:
+                raise ValueError("invalid gate evidence status")
+            if parse_timestamp(entry["fresh_until"]) < datetime.now(timezone.utc):
+                raise ValueError("stale gate evidence")
+            gate_entries.append(entry)
+    decisions = []
+    for gate_id in mandatory:
+        matches = [entry for entry in gate_entries if entry["gate_id"] == gate_id]
+        if len(matches) != 1:
+            decisions.append({"gate_id": gate_id, "status": "NO-GO", "reason": "missing-or-duplicate-evidence"})
+            continue
+        entry = matches[0]
+        trusted_external = entry["signature_type"] != "repository-commit" and bool(entry["provider_issued_id"])
+        passing = entry["status"] == "PASS" and trusted_external
+        decisions.append({"gate_id": gate_id, "status": "PASS" if passing else "NO-GO", "evidence_digest": entry["artifact_digest"]})
     repository_status = "FAIL" if any(report["repository_status"] == "FAIL" for report in reports) else "PASS"
-    production_status = "GO" if repository_status == "PASS" and all(report["production_status"] == "GO" for report in reports) else "NO-GO"
+    production_status = "GO" if repository_status == "PASS" and all(decision["status"] == "PASS" for decision in decisions) else "NO-GO"
     if any(report["production_status"] in {"BLOCKED_EXTERNAL", "INCONCLUSIVE", "NO-GO", "FAIL"} for report in reports):
         production_status = "NO-GO"
-    gate_decisions = [{"task_id": report["task_id"], "repository_status": report["repository_status"], "production_status": report["production_status"]} for report in reports]
+    gate_decisions = decisions + [{"task_id": report["task_id"], "repository_status": report["repository_status"], "production_status": report["production_status"]} for report in reports]
     canonical_manifest = {"run_sha256": digest(root / args.attempt_id / "run.json"), "aggregate_sha256": digest(root / args.attempt_id / "aggregate.json"), "checkpoint_hashes": aggregate_record["checkpoint_hashes"], "gate_decisions": gate_decisions}
     record = {"schema_version": "sealed.v1", "attempt_id": args.attempt_id, "recomputed_commit": args.commit, "recomputed_tree": args.tree, "aggregate_hash": digest(root / args.attempt_id / "aggregate.json"), "gate_matrix_path": str(args.matrix.resolve()), "gate_matrix_sha256": digest(args.matrix), "canonical_manifest_hash": hashlib.sha256(json.dumps(canonical_manifest, sort_keys=True).encode()).hexdigest(), "repository_status": repository_status, "production_status": production_status, "gate_decisions": gate_decisions, "sealed_at": now()}
     path = root / args.attempt_id / "sealed.json"
@@ -365,7 +415,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("command", choices=["capture-workspace", "capture-detached", "create", "attach-prechange", "checkpoint", "create-barrier", "aggregate", "seal", "verify-final"])
     parser.add_argument("--root", type=Path, default=Path(os.environ.get("VNSHOP_EVIDENCE_ROOT", r"C:\Users\dangq\AppData\Local\Temp\vnshop-evidence")))
-    parser.add_argument("--output", type=Path); parser.add_argument("--commit"); parser.add_argument("--tree-sha", dest="tree"); parser.add_argument("--repo", type=Path, default=Path.cwd()); parser.add_argument("--attempt-id"); parser.add_argument("--prechange-dir", type=Path); parser.add_argument("--task"); parser.add_argument("--report", type=Path); parser.add_argument("--coordinator", default="release-coordinator"); parser.add_argument("--deadline", default="2099-01-01T00:00:00Z"); parser.add_argument("--matrix", type=Path); parser.add_argument("--json", action="store_true")
+    parser.add_argument("--output", type=Path); parser.add_argument("--commit"); parser.add_argument("--tree-sha", dest="tree"); parser.add_argument("--repo", type=Path, default=Path.cwd()); parser.add_argument("--attempt-id"); parser.add_argument("--prechange-dir", type=Path); parser.add_argument("--task"); parser.add_argument("--report", type=Path); parser.add_argument("--coordinator", default="release-coordinator"); parser.add_argument("--deadline", default="2099-01-01T00:00:00Z"); parser.add_argument("--checkpoint-hashes"); parser.add_argument("--matrix", type=Path); parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
     try:
         if args.command == "capture-workspace":

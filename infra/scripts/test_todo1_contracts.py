@@ -104,7 +104,6 @@ def test_lifecycle_barrier_aggregate_seal_verify_and_mutation_rejection(tmp_path
     tree = "b" * 40
     run = {"attempt_id": "attempt", "schema_version": "evidence.v1", "requested_commit": commit, "requested_tree": tree, "deployment_authority": "repository-commit", "environment_identity": {}, "created_at": "2026-08-20T00:00:00Z", "workspace_manifest_sha256": "1" * 64, "detached_baseline_manifest_sha256": "2" * 64, "workspace_closure_sha256": "3" * 64, "detached_baseline_closure_sha256": "4" * 64, "allowed_path_set_sha256": "5" * 64}
     module.atomic_write(run_path, run)
-    module.barrier(Namespace(root=root, attempt_id="attempt", commit=commit, tree=tree, coordinator="release-coordinator", deadline="2099-01-01T00:00:00Z", json=False))
     for task_id in module.REQUIRED_TASKS:
         owner = module.VERIFIER_OWNERS[task_id]
         folder = root / "attempt" / (f"task-{task_id}" if task_id.isdigit() else f"final/{task_id}")
@@ -114,6 +113,7 @@ def test_lifecycle_barrier_aggregate_seal_verify_and_mutation_rejection(tmp_path
         module.atomic_write(report_path, report)
         checkpoint = {"schema_version": "evidence.v1", "attempt_id": "attempt", "task_id": task_id, "report_sha256": module.digest(report_path), "input_manifest_sha256": "a" * 64, "checkpoint_status": "RECORDED", "created_at": "2026-08-20T00:00:00Z"}
         module.atomic_write(folder / "checkpoint.json", checkpoint)
+    module.barrier(Namespace(root=root, attempt_id="attempt", commit=commit, tree=tree, coordinator="release-coordinator", deadline="2099-01-01T00:00:00Z", json=False))
     assert module.aggregate(Namespace(root=root, attempt_id="attempt", json=False)) == 0
     matrix = root / "gates.yaml"
     matrix.write_text("schema_version: production-gates.v1\nmandatory: [gate]\nprovenance:\n  required: [producer_identity]\n", encoding="utf-8")

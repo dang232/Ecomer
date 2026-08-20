@@ -19,7 +19,7 @@ cases:
       command: [python, -m, pytest, -q, infra/scripts/test_validate_k8s_release.py]
       cwd: .
     - id: release-helper-contract
-      command: [python, -m, pytest, -q, infra/scripts/test_todo2_contracts.py]
+      command: [python, -m, pytest, -q, infra/scripts/test_validate_k8s_release.py, infra/scripts/validate-k8s-release.test.py]
       cwd: .
   task-2-negative:
     - id: release-policy-negative
@@ -49,7 +49,7 @@ cases:
       cwd: .
   task-5-happy:
     - id: restore-contract
-      command: [python, -m, pytest, -q, infra/scripts/test_restore_contracts.py]
+      command: [python, -m, pytest, -q, infra/scripts/test_todo5_contracts.py]
       cwd: .
   task-5-negative:
     - id: restore-negative
@@ -64,6 +64,12 @@ cases:
       command: [python, infra/load-tests/dataset/generate.py, --manifest, infra/load-tests/dataset/manifest.yaml, --target, production]
       cwd: .
   task-7-happy:
+    - id: k6-contract
+      command: [node, --test, infra/load-tests/k6-10k-dau.test.js]
+      cwd: .
+    - id: provider-preflight
+      command: [python, infra/load-tests/provider-isolation-preflight.py, --target, isolated-fixture]
+      cwd: .
     - id: k6-contract
       command: [k6, inspect, infra/load-tests/k6-10k-dau.js]
       cwd: .
@@ -108,4 +114,22 @@ cases:
       cwd: .
     - id: generator-safety
       command: [python, infra/load-tests/dataset/generate.py, --manifest, infra/load-tests/dataset/manifest.yaml, --target, production]
+      cwd: .
+    - id: provider-egress
+      command: [python, infra/load-tests/dataset/generate.py, --manifest, infra/load-tests/dataset/manifest.yaml, --target, provider-egress]
+      cwd: .
+    - id: empty-target
+      command: [python, infra/load-tests/dataset/generate.py, --manifest, infra/load-tests/dataset/manifest.yaml, --target, ""]
+      cwd: .
+    - id: unknown-target
+      command: [python, infra/load-tests/dataset/generate.py, --manifest, infra/load-tests/dataset/manifest.yaml, --target, unknown]
+      cwd: .
+    - id: production-credential
+      command: [python, infra/load-tests/dataset/generate.py, --manifest, infra/load-tests/dataset/manifest.yaml, --target, production-credential]
+      cwd: .
+    - id: same-cluster
+      command: [python, infra/load-tests/dataset/generate.py, --manifest, infra/load-tests/dataset/manifest.yaml, --target, same-cluster]
+      cwd: .
+    - id: diff-stat
+      command: [git, diff, --stat]
       cwd: .
