@@ -144,6 +144,7 @@ def create(args: argparse.Namespace) -> int:
         if item.name != "prechange"
         and not (item.name.startswith("attempt-") and (item / "superseded.json").is_file())
         and not item.name.startswith("prechange-")
+        and not item.name.startswith("verifier-")
     ]
     if unexpected:
         raise ValueError("evidence root may contain only the ordered prechange directory")
