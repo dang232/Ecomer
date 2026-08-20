@@ -18,6 +18,9 @@ cases:
     - id: release-policy
       command: [python, -m, pytest, -q, infra/scripts/test_validate_k8s_release.py]
       cwd: .
+    - id: release-helper-contract
+      command: [python, -m, pytest, -q, infra/scripts/test_todo2_contracts.py]
+      cwd: .
   task-2-negative:
     - id: release-policy-negative
       command: [python, infra/scripts/validate-k8s-release.py, --environment, prod]
@@ -26,48 +29,72 @@ cases:
     - id: kafka-contract
       command: [python, -m, pytest, -q, infra/scripts/test_todo3_contracts.py]
       cwd: .
+    - id: kafka-inventory
+      command: [python, infra/scripts/kafka-inventory-contract.py, --inventory, infra/kafka/topic-inventory.yaml]
+      cwd: .
   task-3-negative:
     - id: kafka-drill-negative
-      command: [python, -c, "import json; from pathlib import Path; x=json.loads(Path('infra/k8s/kafka/kafka-statefulset.yaml').read_text(encoding='utf-8').replace('---','{}')); assert 'kafka' in Path('infra/k8s/kafka/kafka-statefulset.yaml').read_text(encoding='utf-8').lower()"]
+      command: [python, -m, pytest, -q, infra/scripts/test_todo3_contracts.py, -k, "negative or reject or plaintext or production"]
       cwd: .
   task-4-happy:
     - id: elasticsearch-contract
       command: [python, -m, pytest, -q, infra/scripts/test_todo4_contracts.py]
       cwd: .
+    - id: elasticsearch-topology
+      command: [python, infra/scripts/k8s-topology-contract.py, --manifest, infra/k8s/elasticsearch/elasticsearch-statefulset.yaml]
+      cwd: .
   task-4-negative:
     - id: elasticsearch-drill-negative
-      command: [python, -c, "from pathlib import Path; x=Path('infra/k8s/elasticsearch/elasticsearch-statefulset.yaml').read_text(encoding='utf-8'); assert 'discovery.type: single-node' not in x"]
+      command: [python, -m, pytest, -q, infra/scripts/test_todo4_contracts.py, -k, "negative or reject or single or anonymous"]
       cwd: .
   task-5-happy:
     - id: restore-contract
-      command: [python, -c, "from pathlib import Path; assert Path('infra/k8s/base/backup-jobs.yaml').is_file(); assert Path('infra/scripts/backup.sh').is_file(); assert Path('infra/scripts/restore.sh').is_file()"]
+      command: [python, -m, pytest, -q, infra/scripts/test_restore_contracts.py]
       cwd: .
   task-5-negative:
     - id: restore-negative
-      command: [python, -c, "from pathlib import Path; x=Path('infra/scripts/restore.sh').read_text(encoding='utf-8'); assert 'production' not in x.lower() or 'reject' in x.lower()"]
+      command: [python, infra/scripts/restore-drill.py, --target, production]
       cwd: .
   task-6-happy:
     - id: dataset-contract
-      command: [python, -c, "import re; from pathlib import Path; x=Path('infra/load-tests/workload-contract.yaml').read_text(encoding='utf-8'); assert sum(map(int,re.findall(r'logical_count: (\\d+)',x))) == 20000000"]
+      command: [python, -m, pytest, -q, infra/load-tests/dataset/test_generate.py]
       cwd: .
   task-6-negative:
     - id: dataset-negative
-      command: [python, -c, "from pathlib import Path; x=Path('infra/load-tests/workload-contract.yaml').read_text(encoding='utf-8').lower(); assert 'production' not in x and 'prod' not in x"]
+      command: [python, infra/load-tests/dataset/generate.py, --manifest, infra/load-tests/dataset/manifest.yaml, --target, production]
       cwd: .
   task-7-happy:
     - id: k6-contract
-      command: [python, -c, "from pathlib import Path; x=Path('infra/load-tests/k6-load.js').read_text(encoding='utf-8'); assert 'http_req_failed' in x and 'BASE_URL' in x"]
+      command: [k6, inspect, infra/load-tests/k6-10k-dau.js]
       cwd: .
   task-7-negative:
     - id: provider-negative
-      command: [python, -c, "from pathlib import Path; p=Path('infra/load-tests/provider-isolation-preflight.py'); assert p.is_file(); x=p.read_text(encoding='utf-8').lower(); assert 'production' in x and 'reject' in x"]
+      command: [python, infra/load-tests/provider-isolation-preflight.py, --target, production]
       cwd: .
   F3:
     - id: api-runtime
       command: [node, --check, infra/scripts/e2e-day.mjs]
       cwd: .
     - id: browser-runtime
-      command: [node, -e, "const fs=require('fs'); const p='fe/package.json'; if(!fs.existsSync(p)) process.exit(3); console.log('browser prerequisite recorded; runtime execution remains external')"]
+      command: [pnpm, --dir, fe, exec, playwright, test, --project=chromium]
+      cwd: .
+    - id: production-render
+      command: [kubectl, kustomize, infra/k8s/overlays/prod, --load-restrictor, LoadRestrictionsNone]
+      cwd: .
+    - id: release-runtime
+      command: [python, infra/scripts/validate-k8s-release.py, --environment, prod]
+      cwd: .
+    - id: dataset-runtime
+      command: [python, infra/load-tests/dataset/generate.py, --manifest, infra/load-tests/dataset/manifest.yaml, --target, isolated-fixture]
+      cwd: .
+    - id: provider-runtime
+      command: [python, infra/load-tests/provider-isolation-preflight.py, --target, isolated-fixture]
+      cwd: .
+    - id: k6-runtime
+      command: [k6, run, infra/load-tests/k6-10k-dau.js]
+      cwd: .
+    - id: restore-runtime
+      command: [python, infra/scripts/restore-drill.py, --target, isolated-fixture]
       cwd: .
   F4:
     - id: scope-check
@@ -76,9 +103,9 @@ cases:
     - id: allowed-path-contract
       command: [python, -c, "import importlib.util; s=importlib.util.spec_from_file_location('e','infra/scripts/evidence_session.py'); e=importlib.util.module_from_spec(s); s.loader.exec_module(e); assert len(e.ALLOWED_PATHS) >= 30 and '*' not in '\\n'.join(e.ALLOWED_PATHS)"]
       cwd: .
-    - id: empty-target
-      command: [python, infra/scripts/create-readiness-baseline.py, --commit, b5a84516009008e2940336925dd8381b1231dd5a, --tree-sha, 0565a2a0468c0a46aa69c8c434f0f4a1b2552c4d, --target, "", --manifest, infra/load-tests/workload-contract.yaml]
+    - id: scope-gate
+      command: [python, infra/scripts/scope_gate.py, --workspace-manifest, C:\\Users\\dangq\\AppData\\Local\\Temp\\vnshop-evidence\\prechange\\workspace\\file-manifest.json, --detached-manifest, C:\\Users\\dangq\\AppData\\Local\\Temp\\vnshop-evidence\\prechange\\detached\\file-manifest.json, --allowed-path-set, C:\\Users\\dangq\\AppData\\Local\\Temp\\vnshop-evidence\\prechange\\allowed-paths.txt]
       cwd: .
-    - id: unknown-target
-      command: [python, infra/scripts/create-readiness-baseline.py, --commit, b5a84516009008e2940336925dd8381b1231dd5a, --tree-sha, 0565a2a0468c0a46aa69c8c434f0f4a1b2552c4d, --target, mystery, --manifest, infra/load-tests/workload-contract.yaml]
+    - id: generator-safety
+      command: [python, infra/load-tests/dataset/generate.py, --manifest, infra/load-tests/dataset/manifest.yaml, --target, production]
       cwd: .

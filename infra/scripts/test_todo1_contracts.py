@@ -109,16 +109,16 @@ def test_lifecycle_barrier_aggregate_seal_verify_and_mutation_rejection(tmp_path
         owner = module.VERIFIER_OWNERS[task_id]
         folder = root / "attempt" / (f"task-{task_id}" if task_id.isdigit() else f"final/{task_id}")
         folder.mkdir(parents=True)
-        report = {"schema_version": "evidence.v1", "task_id": task_id, "producer": owner, "owner": owner, "attempt_id": "attempt", "commit_sha": commit, "tree_sha": tree, "evidence_class": "repository-static", "repository_status": "PASS", "production_status": "NO-GO", "commands": [], "inputs": [], "outputs": [], "telemetry": [], "business_reconciliation": {}, "provenance": {"producer_identity": owner, "environment_identity": {"isolated": True}, "command_binding": "test", "artifact_digest": "a" * 64}, "created_at": "2026-08-20T00:00:00Z", "fresh_until": "2099-01-01T00:00:00Z", "file_manifest_sha256": "a" * 64}
+        report = {"schema_version": "evidence.v1", "task_id": task_id, "producer": owner, "owner": owner, "attempt_id": "attempt", "commit_sha": commit, "tree_sha": tree, "evidence_class": "repository-static", "repository_status": "PASS", "production_status": "NO-GO", "commands": [], "inputs": [], "outputs": [], "telemetry": [], "business_reconciliation": {}, "provenance": {"producer_identity": owner, "environment_identity": {"isolated": True}, "command_binding": "test", "artifact_digest": "a" * 64, "signature_type": "repository-commit"}, "created_at": "2026-08-20T00:00:00Z", "fresh_until": "2099-01-01T00:00:00Z", "file_manifest_sha256": "a" * 64}
         report_path = folder / "report.json"
         module.atomic_write(report_path, report)
         checkpoint = {"schema_version": "evidence.v1", "attempt_id": "attempt", "task_id": task_id, "report_sha256": module.digest(report_path), "input_manifest_sha256": "a" * 64, "checkpoint_status": "RECORDED", "created_at": "2026-08-20T00:00:00Z"}
         module.atomic_write(folder / "checkpoint.json", checkpoint)
     assert module.aggregate(Namespace(root=root, attempt_id="attempt", json=False)) == 0
     matrix = root / "gates.yaml"
-    matrix.write_text("schema_version: test\n", encoding="utf-8")
+    matrix.write_text("schema_version: production-gates.v1\nmandatory: [gate]\nprovenance:\n  required: [producer_identity]\n", encoding="utf-8")
     assert module.seal(Namespace(root=root, attempt_id="attempt", commit=commit, tree=tree, matrix=matrix, json=False)) == 2
-    assert module.verify_final(Namespace(root=root, attempt_id="attempt", json=False)) == 0
+    assert module.verify_final(Namespace(root=root, attempt_id="attempt", json=False)) == 2
     sealed = module.load_json(root / "attempt" / "sealed.json")
     assert sealed["repository_status"] == "PASS"
     assert sealed["production_status"] == "NO-GO"
@@ -135,3 +135,22 @@ def test_matrix_has_all_coordinator_cases_and_explicit_allowlist_hash():
     assert set(matrix["cases"]) == {"task-1-happy", "task-1-negative", "task-2-happy", "task-2-negative", "task-3-happy", "task-3-negative", "task-4-happy", "task-4-negative", "task-5-happy", "task-5-negative", "task-6-happy", "task-6-negative", "task-7-happy", "task-7-negative", "F3", "F4"}
     assert len(module.ALLOWED_PATHS) > 10
     assert "*" not in "\n".join(module.ALLOWED_PATHS)
+
+
+def test_matrix_uses_behavioral_commands_and_exact_paths():
+    text = MATRIX.read_text(encoding="utf-8")
+    assert "--help" not in text
+    assert "fake echo" not in text.lower()
+    assert "json.loads" not in text
+    assert "provider-isolation-preflight.py" in text
+    assert "scope_gate.py" in text
+    assert "node, --check, infra/scripts/e2e-day.mjs" in text
+    for path in ("infra/scripts/test_todo3_contracts.py", "infra/scripts/test_todo4_contracts.py", "infra/load-tests/dataset/manifest.yaml", "infra/load-tests/k6-10k-dau.js"):
+        assert path in text
+
+
+def test_timestamps_are_parsed_and_timezone_is_required():
+    module = load_module(EVIDENCE, "todo1_timestamps")
+    assert module.parse_timestamp("2026-08-20T00:00:00Z") < module.parse_timestamp("2026-08-21T00:00:00+00:00")
+    with pytest.raises(ValueError):
+        module.parse_timestamp("2026-08-20T00:00:00")

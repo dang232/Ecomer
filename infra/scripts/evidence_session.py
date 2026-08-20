@@ -48,6 +48,16 @@ def now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
+def parse_timestamp(value: str) -> datetime:
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except (AttributeError, TypeError, ValueError) as exc:
+        raise ValueError("timestamp must be ISO-8601") from exc
+    if parsed.tzinfo is None:
+        raise ValueError("timestamp must include timezone")
+    return parsed.astimezone(timezone.utc)
+
+
 def digest(path: Path) -> str:
     if path.is_symlink() or path.is_dir():
         raise ValueError(f"symlink/directory is not a file evidence path: {path}")
@@ -205,11 +215,11 @@ def checkpoint(args: argparse.Namespace) -> int:
     if not isinstance(provenance, dict) or not provenance.get("producer_identity") or not provenance.get("environment_identity") or not provenance.get("command_binding") or not provenance.get("artifact_digest"):
         raise ValueError("provenance trust anchor is incomplete")
     signature_type = provenance.get("signature_type")
-    if report["evidence_class"] == "repository-static" and signature_type != "repository-commit":
-        raise ValueError("repository evidence requires repository-commit provenance")
+    if report["evidence_class"] in {"repository-static", "bounded-local-runtime"} and signature_type != "repository-commit":
+        raise ValueError("repository/bounded-local evidence requires repository-commit provenance")
     if report["evidence_class"] in {"isolated-runtime", "operator-external-blocked"} and signature_type in {None, "repository-commit"}:
         raise ValueError("external evidence requires an independent trust anchor")
-    if report["fresh_until"] < report["created_at"]:
+    if parse_timestamp(report["fresh_until"]) < parse_timestamp(report["created_at"]):
         raise ValueError("invalid freshness")
     task_dir = root / args.attempt_id / f"task-{args.task}"; task_dir.mkdir(parents=True, exist_ok=True)
     checkpoint_record = {"schema_version": SCHEMA, "attempt_id": args.attempt_id, "task_id": str(args.task), "report_sha256": digest(report_path), "input_manifest_sha256": report["file_manifest_sha256"], "checkpoint_status": "RECORDED", "created_at": now()}
@@ -223,8 +233,8 @@ def checkpoint(args: argparse.Namespace) -> int:
 
 def barrier(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve(); run_record = load_json(root / args.attempt_id / "run.json"); strict(run_record, RUN_FIELDS, "run.json")
-    if args.commit != run_record["requested_commit"] or args.tree != run_record["requested_tree"]:
-        raise ValueError("barrier commit/tree must match canonical run")
+    if not args.commit or not args.tree or len(args.commit) != 40 or len(args.tree) != 40:
+        raise ValueError("barrier requires immutable final commit/tree")
     if args.coordinator != "release-coordinator":
         raise ValueError("barrier coordinator must be release-coordinator")
     try:
@@ -245,7 +255,7 @@ def barrier(args: argparse.Namespace) -> int:
 def aggregate(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve(); run_record = load_json(root / args.attempt_id / "run.json"); strict(run_record, RUN_FIELDS, "run.json")
     barrier_record = load_json(root / args.attempt_id / "barrier.json")
-    if barrier_record.get("schema_version") != "barrier.v1" or barrier_record.get("attempt_id") != args.attempt_id or barrier_record.get("final_commit") != run_record["requested_commit"] or barrier_record.get("final_tree") != run_record["requested_tree"]:
+    if barrier_record.get("schema_version") != "barrier.v1" or barrier_record.get("attempt_id") != args.attempt_id:
         raise ValueError("invalid barrier binding")
     if barrier_record.get("coordinator_identity") != "release-coordinator" or barrier_record.get("required_verifiers") != REQUIRED_TASKS or barrier_record.get("required_statuses") != ["PASS", "BLOCKED_EXTERNAL"]:
         raise ValueError("barrier verifier contract mismatch")
@@ -267,14 +277,14 @@ def aggregate(args: argparse.Namespace) -> int:
         if checkpoint_record["report_sha256"] != digest(paths[0].parent / "report.json"):
             raise ValueError(f"mutated report for checkpoint: {task_id}")
         report = load_json(paths[0].parent / "report.json"); strict(report, REPORT_FIELDS, "report.json")
-        if report["attempt_id"] != args.attempt_id or report["task_id"] != task_id or report["commit_sha"] != run_record["requested_commit"] or report["tree_sha"] != run_record["requested_tree"]:
+        if report["attempt_id"] != args.attempt_id or report["task_id"] != task_id or report["commit_sha"] != barrier_record["final_commit"] or report["tree_sha"] != barrier_record["final_tree"]:
             raise ValueError(f"report binding mismatch: {task_id}")
         expected_owner = VERIFIER_OWNERS.get(task_id)
         if expected_owner and (report["owner"] != expected_owner or report["producer"] != expected_owner):
             raise ValueError(f"report owner mismatch: {task_id}")
         if report["repository_status"] not in STATUSES or report["production_status"] not in STATUSES or report["evidence_class"] not in EVIDENCE_CLASSES:
             raise ValueError(f"report enum mismatch: {task_id}")
-        if report["fresh_until"] < report["created_at"]:
+        if parse_timestamp(report["fresh_until"]) < parse_timestamp(report["created_at"]):
             raise ValueError(f"stale report: {task_id}")
         checkpoints.append({"task_id": task_id, "path": str(paths[0]), "sha256": digest(paths[0])})
     if barrier_record.get("checkpoint_hashes") and sorted(item["sha256"] for item in checkpoints) != sorted(item["sha256"] for item in barrier_record["checkpoint_hashes"]):
@@ -288,10 +298,19 @@ def aggregate(args: argparse.Namespace) -> int:
 
 def seal(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve(); run_record = load_json(root / args.attempt_id / "run.json"); strict(run_record, RUN_FIELDS, "run.json")
-    if args.commit != run_record["requested_commit"] or args.tree != run_record["requested_tree"]:
-        raise ValueError("seal commit/tree mismatch")
+    barrier_record = load_json(root / args.attempt_id / "barrier.json")
+    if args.commit != barrier_record.get("final_commit") or args.tree != barrier_record.get("final_tree"):
+        raise ValueError("seal commit/tree must match final barrier")
     if not args.matrix or not args.matrix.is_file():
         raise ValueError("seal requires a production gate matrix")
+    import yaml
+    gate_matrix = yaml.safe_load(args.matrix.read_text(encoding="utf-8"))
+    if not isinstance(gate_matrix, dict) or gate_matrix.get("schema_version") != "production-gates.v1":
+        raise ValueError("invalid production gate matrix")
+    mandatory = gate_matrix.get("mandatory")
+    required_provenance = gate_matrix.get("provenance", {}).get("required", [])
+    if not isinstance(mandatory, list) or not mandatory or not required_provenance:
+        raise ValueError("production gate matrix is incomplete")
     aggregate_record = load_json(root / args.attempt_id / "aggregate.json")
     if aggregate_record.get("aggregate_status") != "PASS":
         raise ValueError("cannot seal incomplete aggregate")
@@ -302,8 +321,9 @@ def seal(args: argparse.Namespace) -> int:
     production_status = "GO" if repository_status == "PASS" and all(report["production_status"] == "GO" for report in reports) else "NO-GO"
     if any(report["production_status"] in {"BLOCKED_EXTERNAL", "INCONCLUSIVE", "NO-GO", "FAIL"} for report in reports):
         production_status = "NO-GO"
-    canonical_manifest = {"run_sha256": digest(root / args.attempt_id / "run.json"), "aggregate_sha256": digest(root / args.attempt_id / "aggregate.json"), "checkpoint_hashes": aggregate_record["checkpoint_hashes"]}
-    record = {"schema_version": "sealed.v1", "attempt_id": args.attempt_id, "recomputed_commit": args.commit, "recomputed_tree": args.tree, "aggregate_hash": digest(root / args.attempt_id / "aggregate.json"), "gate_matrix_path": str(args.matrix.resolve()), "gate_matrix_sha256": digest(args.matrix), "canonical_manifest_hash": hashlib.sha256(json.dumps(canonical_manifest, sort_keys=True).encode()).hexdigest(), "repository_status": repository_status, "production_status": production_status, "gate_decisions": [{"task_id": report["task_id"], "repository_status": report["repository_status"], "production_status": report["production_status"]} for report in reports], "sealed_at": now()}
+    gate_decisions = [{"task_id": report["task_id"], "repository_status": report["repository_status"], "production_status": report["production_status"]} for report in reports]
+    canonical_manifest = {"run_sha256": digest(root / args.attempt_id / "run.json"), "aggregate_sha256": digest(root / args.attempt_id / "aggregate.json"), "checkpoint_hashes": aggregate_record["checkpoint_hashes"], "gate_decisions": gate_decisions}
+    record = {"schema_version": "sealed.v1", "attempt_id": args.attempt_id, "recomputed_commit": args.commit, "recomputed_tree": args.tree, "aggregate_hash": digest(root / args.attempt_id / "aggregate.json"), "gate_matrix_path": str(args.matrix.resolve()), "gate_matrix_sha256": digest(args.matrix), "canonical_manifest_hash": hashlib.sha256(json.dumps(canonical_manifest, sort_keys=True).encode()).hexdigest(), "repository_status": repository_status, "production_status": production_status, "gate_decisions": gate_decisions, "sealed_at": now()}
     path = root / args.attempt_id / "sealed.json"
     if path.exists():
         raise ValueError("sealed output already exists")
@@ -314,7 +334,8 @@ def seal(args: argparse.Namespace) -> int:
 
 def verify_final(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve(); run_record = load_json(root / args.attempt_id / "run.json"); strict(run_record, RUN_FIELDS, "run.json"); sealed_path = root / args.attempt_id / "sealed.json"; sealed = load_json(sealed_path)
-    if sealed.get("schema_version") != "sealed.v1" or sealed.get("attempt_id") != args.attempt_id or sealed.get("recomputed_commit") != run_record["requested_commit"] or sealed.get("recomputed_tree") != run_record["requested_tree"]:
+    barrier_record = load_json(root / args.attempt_id / "barrier.json")
+    if sealed.get("schema_version") != "sealed.v1" or sealed.get("attempt_id") != args.attempt_id or sealed.get("recomputed_commit") != barrier_record.get("final_commit") or sealed.get("recomputed_tree") != barrier_record.get("final_tree"):
         raise ValueError("sealed output binding mismatch")
     if sealed.get("aggregate_hash") != digest(root / args.attempt_id / "aggregate.json"):
         raise ValueError("sealed aggregate mutation detected")
@@ -329,15 +350,15 @@ def verify_final(args: argparse.Namespace) -> int:
         if item["sha256"] != digest(checkpoint_path):
             raise ValueError("sealed checkpoint mutation detected")
         report = load_json(report_path); strict(report, REPORT_FIELDS, "report.json")
-        if report["attempt_id"] != args.attempt_id or report["commit_sha"] != run_record["requested_commit"] or report["tree_sha"] != run_record["requested_tree"]:
+        if report["attempt_id"] != args.attempt_id or report["commit_sha"] != barrier_record.get("final_commit") or report["tree_sha"] != barrier_record.get("final_tree"):
             raise ValueError("sealed report binding mismatch")
-    canonical_manifest = {"run_sha256": digest(root / args.attempt_id / "run.json"), "aggregate_sha256": digest(root / args.attempt_id / "aggregate.json"), "checkpoint_hashes": aggregate_record["checkpoint_hashes"]}
+    canonical_manifest = {"run_sha256": digest(root / args.attempt_id / "run.json"), "aggregate_sha256": digest(root / args.attempt_id / "aggregate.json"), "checkpoint_hashes": aggregate_record["checkpoint_hashes"], "gate_decisions": sealed.get("gate_decisions", [])}
     if sealed.get("canonical_manifest_hash") != hashlib.sha256(json.dumps(canonical_manifest, sort_keys=True).encode()).hexdigest():
         raise ValueError("sealed canonical manifest mutation detected")
     if sealed["repository_status"] not in {"PASS", "FAIL"} or sealed["production_status"] not in {"GO", "NO-GO"}:
         raise ValueError("sealed status enum invalid")
     print(json.dumps({"status": "PASS", "repository_status": sealed["repository_status"], "production_status": sealed["production_status"]}, sort_keys=True) if args.json else "PASS")
-    return 0
+    return 0 if sealed["production_status"] == "GO" else 2
 
 
 def main() -> int:
