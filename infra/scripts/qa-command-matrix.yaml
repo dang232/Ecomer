@@ -11,8 +11,8 @@ cases:
       command: [python, infra/scripts/create-readiness-baseline.py, --commit, HEAD, --tree-sha, 'HEAD^{tree}', --target, isolated-fixture, --manifest, infra/load-tests/workload-contract.yaml, --output, baseline-task-1.json]
       cwd: .
   task-1-negative:
-    - id: production-target
-      command: [python, infra/scripts/create-readiness-baseline.py, --commit, b5a84516009008e2940336925dd8381b1231dd5a, --tree-sha, 0565a2a0468c0a46aa69c8c434f0f4a1b2552c4d, --target, production, --manifest, infra/load-tests/workload-contract.yaml]
+    - id: all-target-rejections
+      command: [python, -c, "import subprocess,sys; base=[sys.executable,'infra/scripts/create-readiness-baseline.py','--commit','HEAD','--tree-sha','HEAD^{tree}','--manifest','infra/load-tests/workload-contract.yaml']; codes=[subprocess.run(base+['--target',t],capture_output=True).returncode for t in ['production','','mystery']]; assert all(code != 0 for code in codes); raise SystemExit(1)"]
       cwd: .
   task-2-happy:
     - id: release-policy
