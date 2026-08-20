@@ -20,24 +20,24 @@ STATUSES = {"PASS", "FAIL", "BLOCKED_EXTERNAL", "INCONCLUSIVE", "NO-GO"}
 ALLOWED_PATHS = {
     "infra/scripts/evidence_session.py", "infra/scripts/create-readiness-baseline.py", "infra/scripts/powershell-runner.py",
     "infra/scripts/qa-command-matrix.yaml", "infra/load-tests/workload-contract.yaml",
-    "infra/scripts/test_todo1_contracts.py", "infra/scripts/validate-k8s-release.py", "infra/scripts/validate-k8s-release.test.py",
+    "infra/scripts/test_todo1_contracts.py", "infra/scripts/test_todo2_contracts.py", "infra/scripts/test_todo3_contracts.py", "infra/scripts/test_todo4_contracts.py", "infra/scripts/test_todo5_contracts.py", "infra/scripts/test_todo6_contracts.py", "infra/scripts/test_todo7_contracts.py", "infra/scripts/validate-k8s-release.py", "infra/scripts/validate-k8s-release.test.py",
     "infra/scripts/render-inventory.py", "infra/scripts/k8s-topology-contract.py", "infra/scripts/evidence_gate.py",
     "infra/scripts/plan_contract_check.py", "infra/scripts/quality_gate.py", "infra/scripts/scope_gate.py",
-    "infra/scripts/kafka-failure-drill.py", "infra/scripts/elasticsearch-failure-drill.py", "infra/scripts/restore-fixture.py",
+    "infra/scripts/kafka-failure-drill.py", "infra/scripts/kafka-inventory-contract.py", "infra/scripts/elasticsearch-failure-drill.py", "infra/scripts/elasticsearch-inventory-contract.py", "infra/scripts/restore-fixture.py",
     "infra/scripts/restore-drill.py", "infra/load-tests/dataset/manifest.yaml", "infra/load-tests/dataset/generate.py",
-    "infra/load-tests/k6-10k-dau.js", "infra/scripts/provider-preflight.py", "infra/evidence/production-gates.yaml",
+    "infra/load-tests/k6-10k-dau.js", "infra/load-tests/k6-load.js", "infra/load-tests/k6-smoke.js", "infra/load-tests/k6-release.js", "infra/load-tests/k6-flash-sale.js", "infra/load-tests/provider-isolation-preflight.py", "infra/scripts/provider-preflight.py", "infra/evidence/production-gates.yaml",
     ".github/workflows/ci.yml", ".github/workflows/cd.yml", ".github/workflows/promote.yml",
     ".github/workflows/verify-production.yml", ".github/workflows/verify-backup.yml",
     ".github/workflows/test-alert-delivery.yml", ".github/workflows/rollback.yml",
     "docs/operations/release-and-recovery.md", "docs/PRODUCTION-READINESS-REVIEW.md",
-    "docs/PRODUCTION-READINESS-CLOSURE-PLAN.md", "infra/production-no-go-checklist.md",
+    "docs/PRODUCTION-READINESS-CLOSURE-PLAN.md", "infra/production-no-go-checklist.md", "infra/k8s/kafka/kafka-statefulset.yaml", "infra/k8s/elasticsearch/elasticsearch-statefulset.yaml", "infra/k8s/base/kustomization.yaml", "infra/k8s/base/platform-services.yaml", "infra/k8s/base/workloads.yaml", "infra/k8s/base/backup-jobs.yaml", "infra/k8s/base/jobs/db-backup-cronjob.yaml", "infra/scripts/backup.sh", "infra/scripts/restore.sh", "infra/scripts/backup-cron.sh",
 }
 RUN_FIELDS = {"attempt_id", "schema_version", "requested_commit", "requested_tree", "deployment_authority", "environment_identity", "created_at", "workspace_manifest_sha256", "detached_baseline_manifest_sha256", "workspace_closure_sha256", "detached_baseline_closure_sha256", "allowed_path_set_sha256"}
 REPORT_FIELDS = {"schema_version", "task_id", "producer", "owner", "attempt_id", "commit_sha", "tree_sha", "evidence_class", "repository_status", "production_status", "commands", "inputs", "outputs", "telemetry", "business_reconciliation", "provenance", "created_at", "fresh_until", "file_manifest_sha256"}
 CHECKPOINT_FIELDS = {"schema_version", "attempt_id", "task_id", "report_sha256", "input_manifest_sha256", "checkpoint_status", "created_at"}
 REQUIRED_TASKS = ["1", "2", "3", "4", "5", "6", "7", "F1", "F2", "F3", "F4"]
 VERIFIER_OWNERS = {
-    "1": "runtime-qa-owner", "2": "code-quality-owner", "3": "platform-operations-owner", "4": "platform-operations-owner",
+    "1": "runtime-qa-owner", "2": "release-engineering-owner", "3": "platform-operations-owner", "4": "platform-operations-owner",
     "5": "disaster-recovery-owner", "6": "capacity-test-owner", "7": "capacity-test-owner",
     "F1": "plan-compliance-owner", "F2": "code-quality-owner", "F3": "runtime-qa-owner", "F4": "scope-fidelity-owner",
 }
@@ -203,6 +203,11 @@ def checkpoint(args: argparse.Namespace) -> int:
     provenance = report["provenance"]
     if not isinstance(provenance, dict) or not provenance.get("producer_identity") or not provenance.get("environment_identity") or not provenance.get("command_binding") or not provenance.get("artifact_digest"):
         raise ValueError("provenance trust anchor is incomplete")
+    signature_type = provenance.get("signature_type")
+    if report["evidence_class"] == "repository-static" and signature_type != "repository-commit":
+        raise ValueError("repository evidence requires repository-commit provenance")
+    if report["evidence_class"] in {"isolated-runtime", "operator-external-blocked"} and signature_type in {None, "repository-commit"}:
+        raise ValueError("external evidence requires an independent trust anchor")
     if report["fresh_until"] < report["created_at"]:
         raise ValueError("invalid freshness")
     task_dir = root / args.attempt_id / f"task-{args.task}"; task_dir.mkdir(parents=True, exist_ok=True)
@@ -219,6 +224,14 @@ def barrier(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve(); run_record = load_json(root / args.attempt_id / "run.json"); strict(run_record, RUN_FIELDS, "run.json")
     if args.commit != run_record["requested_commit"] or args.tree != run_record["requested_tree"]:
         raise ValueError("barrier commit/tree must match canonical run")
+    if args.coordinator != "release-coordinator":
+        raise ValueError("barrier coordinator must be release-coordinator")
+    try:
+        deadline = datetime.fromisoformat(args.deadline.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError("barrier deadline must be ISO-8601") from exc
+    if deadline <= datetime.now(timezone.utc):
+        raise ValueError("barrier deadline must be in the future")
     required = {"schema_version": "barrier.v1", "attempt_id": args.attempt_id, "coordinator_identity": args.coordinator, "final_commit": args.commit, "final_tree": args.tree, "deadline": args.deadline, "required_verifiers": REQUIRED_TASKS, "required_statuses": ["PASS", "BLOCKED_EXTERNAL"], "checkpoint_hashes": [], "created_at": now()}
     path = root / args.attempt_id / "barrier.json"
     if path.exists():
@@ -233,6 +246,13 @@ def aggregate(args: argparse.Namespace) -> int:
     barrier_record = load_json(root / args.attempt_id / "barrier.json")
     if barrier_record.get("schema_version") != "barrier.v1" or barrier_record.get("attempt_id") != args.attempt_id or barrier_record.get("final_commit") != run_record["requested_commit"] or barrier_record.get("final_tree") != run_record["requested_tree"]:
         raise ValueError("invalid barrier binding")
+    if barrier_record.get("coordinator_identity") != "release-coordinator" or barrier_record.get("required_verifiers") != REQUIRED_TASKS or barrier_record.get("required_statuses") != ["PASS", "BLOCKED_EXTERNAL"]:
+        raise ValueError("barrier verifier contract mismatch")
+    try:
+        if datetime.fromisoformat(barrier_record["deadline"].replace("Z", "+00:00")) <= datetime.now(timezone.utc):
+            raise ValueError("barrier deadline expired")
+    except KeyError as exc:
+        raise ValueError("barrier deadline missing") from exc
     checkpoints = []; missing = []; duplicate = []
     for task_id in REQUIRED_TASKS:
         paths = list((root / args.attempt_id).glob(f"**/task-{task_id}/checkpoint.json")) + list((root / args.attempt_id).glob(f"**/{task_id}/checkpoint.json"))
@@ -256,6 +276,8 @@ def aggregate(args: argparse.Namespace) -> int:
         if report["fresh_until"] < report["created_at"]:
             raise ValueError(f"stale report: {task_id}")
         checkpoints.append({"task_id": task_id, "path": str(paths[0]), "sha256": digest(paths[0])})
+    if barrier_record.get("checkpoint_hashes") and sorted(item["sha256"] for item in checkpoints) != sorted(item["sha256"] for item in barrier_record["checkpoint_hashes"]):
+        raise ValueError("checkpoint hashes do not match barrier")
     aggregate_status = "FAIL" if missing or duplicate else "PASS"
     record = {"schema_version": "aggregate.v1", "attempt_id": args.attempt_id, "required_task_ids": REQUIRED_TASKS, "checkpoint_hashes": checkpoints, "missing_ids": missing, "duplicate_ids": duplicate, "late_replacements": [], "aggregate_status": aggregate_status, "created_at": now()}
     atomic_write(root / args.attempt_id / "aggregate.json", record)
@@ -267,6 +289,8 @@ def seal(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve(); run_record = load_json(root / args.attempt_id / "run.json"); strict(run_record, RUN_FIELDS, "run.json")
     if args.commit != run_record["requested_commit"] or args.tree != run_record["requested_tree"]:
         raise ValueError("seal commit/tree mismatch")
+    if not args.matrix or not args.matrix.is_file():
+        raise ValueError("seal requires a production gate matrix")
     aggregate_record = load_json(root / args.attempt_id / "aggregate.json")
     if aggregate_record.get("aggregate_status") != "PASS":
         raise ValueError("cannot seal incomplete aggregate")
@@ -275,8 +299,10 @@ def seal(args: argparse.Namespace) -> int:
         checkpoint_path = Path(item["path"]); report_path = checkpoint_path.parent / "report.json"; report = load_json(report_path); strict(report, REPORT_FIELDS, "report.json"); reports.append(report)
     repository_status = "FAIL" if any(report["repository_status"] == "FAIL" for report in reports) else "PASS"
     production_status = "GO" if repository_status == "PASS" and all(report["production_status"] == "GO" for report in reports) else "NO-GO"
+    if any(report["production_status"] in {"BLOCKED_EXTERNAL", "INCONCLUSIVE", "NO-GO", "FAIL"} for report in reports):
+        production_status = "NO-GO"
     canonical_manifest = {"run_sha256": digest(root / args.attempt_id / "run.json"), "aggregate_sha256": digest(root / args.attempt_id / "aggregate.json"), "checkpoint_hashes": aggregate_record["checkpoint_hashes"]}
-    record = {"schema_version": "sealed.v1", "attempt_id": args.attempt_id, "recomputed_commit": args.commit, "recomputed_tree": args.tree, "aggregate_hash": digest(root / args.attempt_id / "aggregate.json"), "canonical_manifest_hash": hashlib.sha256(json.dumps(canonical_manifest, sort_keys=True).encode()).hexdigest(), "repository_status": repository_status, "production_status": production_status, "gate_decisions": [{"task_id": report["task_id"], "repository_status": report["repository_status"], "production_status": report["production_status"]} for report in reports], "sealed_at": now()}
+    record = {"schema_version": "sealed.v1", "attempt_id": args.attempt_id, "recomputed_commit": args.commit, "recomputed_tree": args.tree, "aggregate_hash": digest(root / args.attempt_id / "aggregate.json"), "gate_matrix_path": str(args.matrix.resolve()), "gate_matrix_sha256": digest(args.matrix), "canonical_manifest_hash": hashlib.sha256(json.dumps(canonical_manifest, sort_keys=True).encode()).hexdigest(), "repository_status": repository_status, "production_status": production_status, "gate_decisions": [{"task_id": report["task_id"], "repository_status": report["repository_status"], "production_status": report["production_status"]} for report in reports], "sealed_at": now()}
     path = root / args.attempt_id / "sealed.json"
     if path.exists():
         raise ValueError("sealed output already exists")
@@ -291,6 +317,24 @@ def verify_final(args: argparse.Namespace) -> int:
         raise ValueError("sealed output binding mismatch")
     if sealed.get("aggregate_hash") != digest(root / args.attempt_id / "aggregate.json"):
         raise ValueError("sealed aggregate mutation detected")
+    gate_matrix = Path(sealed.get("gate_matrix_path", ""))
+    if not gate_matrix.is_file() or sealed.get("gate_matrix_sha256") != digest(gate_matrix):
+        raise ValueError("sealed gate matrix mutation detected")
+    aggregate_record = load_json(root / args.attempt_id / "aggregate.json")
+    if aggregate_record.get("aggregate_status") != "PASS" or len(aggregate_record.get("checkpoint_hashes", [])) != len(REQUIRED_TASKS):
+        raise ValueError("sealed aggregate is incomplete")
+    for item in aggregate_record["checkpoint_hashes"]:
+        checkpoint_path = Path(item["path"]); report_path = checkpoint_path.parent / "report.json"
+        if item["sha256"] != digest(checkpoint_path):
+            raise ValueError("sealed checkpoint mutation detected")
+        report = load_json(report_path); strict(report, REPORT_FIELDS, "report.json")
+        if report["attempt_id"] != args.attempt_id or report["commit_sha"] != run_record["requested_commit"] or report["tree_sha"] != run_record["requested_tree"]:
+            raise ValueError("sealed report binding mismatch")
+    canonical_manifest = {"run_sha256": digest(root / args.attempt_id / "run.json"), "aggregate_sha256": digest(root / args.attempt_id / "aggregate.json"), "checkpoint_hashes": aggregate_record["checkpoint_hashes"]}
+    if sealed.get("canonical_manifest_hash") != hashlib.sha256(json.dumps(canonical_manifest, sort_keys=True).encode()).hexdigest():
+        raise ValueError("sealed canonical manifest mutation detected")
+    if sealed["repository_status"] not in {"PASS", "FAIL"} or sealed["production_status"] not in {"GO", "NO-GO"}:
+        raise ValueError("sealed status enum invalid")
     print(json.dumps({"status": "PASS", "repository_status": sealed["repository_status"], "production_status": sealed["production_status"]}, sort_keys=True) if args.json else "PASS")
     return 0
 

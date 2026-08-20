@@ -115,7 +115,9 @@ def test_lifecycle_barrier_aggregate_seal_verify_and_mutation_rejection(tmp_path
         checkpoint = {"schema_version": "evidence.v1", "attempt_id": "attempt", "task_id": task_id, "report_sha256": module.digest(report_path), "input_manifest_sha256": "a" * 64, "checkpoint_status": "RECORDED", "created_at": "2026-08-20T00:00:00Z"}
         module.atomic_write(folder / "checkpoint.json", checkpoint)
     assert module.aggregate(Namespace(root=root, attempt_id="attempt", json=False)) == 0
-    assert module.seal(Namespace(root=root, attempt_id="attempt", commit=commit, tree=tree, json=False)) == 2
+    matrix = root / "gates.yaml"
+    matrix.write_text("schema_version: test\n", encoding="utf-8")
+    assert module.seal(Namespace(root=root, attempt_id="attempt", commit=commit, tree=tree, matrix=matrix, json=False)) == 2
     assert module.verify_final(Namespace(root=root, attempt_id="attempt", json=False)) == 0
     sealed = module.load_json(root / "attempt" / "sealed.json")
     assert sealed["repository_status"] == "PASS"
