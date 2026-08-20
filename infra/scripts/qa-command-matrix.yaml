@@ -1,0 +1,22 @@
+schema_version: qa-command-matrix.v1
+cases:
+  task-1-happy:
+    - id: python-version
+      command: [python, --version]
+      cwd: .
+    - id: workload-contract
+      command: [python, -c, "import re; x=open('infra/load-tests/workload-contract.yaml').read(); assert sum(map(int,re.findall(r'logical_count: (\\d+)',x))) == 20000000"]
+      cwd: .
+    - id: baseline
+      command: [python, infra/scripts/create-readiness-baseline.py, --commit, b5a84516009008e2940336925dd8381b1231dd5a, --tree-sha, 0565a2a0468c0a46aa69c8c434f0f4a1b2552c4d, --target, isolated-fixture, --manifest, infra/load-tests/workload-contract.yaml, --output, baseline-task-1.json]
+      cwd: .
+  task-1-negative:
+    - id: production-target
+      command: [python, infra/scripts/create-readiness-baseline.py, --commit, b5a84516009008e2940336925dd8381b1231dd5a, --tree-sha, 0565a2a0468c0a46aa69c8c434f0f4a1b2552c4d, --target, production, --manifest, infra/load-tests/workload-contract.yaml]
+      cwd: .
+    - id: empty-target
+      command: [python, infra/scripts/create-readiness-baseline.py, --commit, b5a84516009008e2940336925dd8381b1231dd5a, --tree-sha, 0565a2a0468c0a46aa69c8c434f0f4a1b2552c4d, --target, "", --manifest, infra/load-tests/workload-contract.yaml]
+      cwd: .
+    - id: unknown-target
+      command: [python, infra/scripts/create-readiness-baseline.py, --commit, b5a84516009008e2940336925dd8381b1231dd5a, --tree-sha, 0565a2a0468c0a46aa69c8c434f0f4a1b2552c4d, --target, mystery, --manifest, infra/load-tests/workload-contract.yaml]
+      cwd: .
