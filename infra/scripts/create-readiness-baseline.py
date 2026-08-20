@@ -138,7 +138,9 @@ def main() -> int:
     try:
         actual_commit = git_value(repo, "rev-parse", "HEAD")
         actual_tree = git_value(repo, "rev-parse", "HEAD^{tree}")
-        if actual_commit != args.commit or actual_tree != args.tree_sha:
+        requested_commit = actual_commit if args.commit == "HEAD" else args.commit
+        requested_tree = actual_tree if args.tree_sha in {"HEAD^{tree}", "HEAD^{{tree}}"} else args.tree_sha
+        if actual_commit != requested_commit or actual_tree != requested_tree:
             raise ValueError("requested commit/tree does not match checked-out tree")
         status = run(["git", "diff", "--exit-code"], repo)
         untracked = run(["git", "ls-files", "--others", "--exclude-standard"], repo)
@@ -150,8 +152,8 @@ def main() -> int:
             "status": "BLOCKED_EXTERNAL" if docker_blocked else "PASS",
             "repository_status": "PASS" if status["exit_code"] == 0 and untracked["stdout"].strip() == "" else "FAIL",
             "production_status": "NO-GO",
-            "commit_sha": args.commit,
-            "tree_sha": args.tree_sha,
+            "commit_sha": requested_commit,
+            "tree_sha": requested_tree,
             "environment_identity": {"target": args.target, "host": platform.node(), "cwd": str(repo), "isolated": True, "production": False},
             "service_inventory": [{"service": n, "domain": d, "framework": f, "path": p} for n, d, f, p in SERVICES],
             "runtime_versions": tool_versions,
