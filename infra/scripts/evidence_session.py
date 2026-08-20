@@ -122,7 +122,12 @@ def capture(repo: Path, output: Path, kind: str, commit: str, tree: str) -> dict
 def create(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve()
     root.mkdir(parents=True, exist_ok=True)
-    unexpected = [item for item in root.iterdir() if item.name != "prechange"]
+    unexpected = [
+        item for item in root.iterdir()
+        if item.name != "prechange"
+        and not (item.name.startswith("attempt-") and (item / "superseded.json").is_file())
+        and not item.name.startswith("prechange-")
+    ]
     if unexpected:
         raise ValueError("evidence root may contain only the ordered prechange directory")
     if (root / "prechange").exists() and not (root / "prechange").is_dir():
