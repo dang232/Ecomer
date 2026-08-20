@@ -6,7 +6,6 @@ import argparse
 import hashlib
 import json
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -21,10 +20,28 @@ STATUSES = {"PASS", "FAIL", "BLOCKED_EXTERNAL", "INCONCLUSIVE", "NO-GO"}
 ALLOWED_PATHS = {
     "infra/scripts/evidence_session.py", "infra/scripts/create-readiness-baseline.py", "infra/scripts/powershell-runner.py",
     "infra/scripts/qa-command-matrix.yaml", "infra/load-tests/workload-contract.yaml",
+    "infra/scripts/test_todo1_contracts.py", "infra/scripts/validate-k8s-release.py", "infra/scripts/validate-k8s-release.test.py",
+    "infra/scripts/render-inventory.py", "infra/scripts/k8s-topology-contract.py", "infra/scripts/evidence_gate.py",
+    "infra/scripts/plan_contract_check.py", "infra/scripts/quality_gate.py", "infra/scripts/scope_gate.py",
+    "infra/scripts/kafka-failure-drill.py", "infra/scripts/elasticsearch-failure-drill.py", "infra/scripts/restore-fixture.py",
+    "infra/scripts/restore-drill.py", "infra/load-tests/dataset/manifest.yaml", "infra/load-tests/dataset/generate.py",
+    "infra/load-tests/k6-10k-dau.js", "infra/scripts/provider-preflight.py", "infra/evidence/production-gates.yaml",
+    ".github/workflows/ci.yml", ".github/workflows/cd.yml", ".github/workflows/promote.yml",
+    ".github/workflows/verify-production.yml", ".github/workflows/verify-backup.yml",
+    ".github/workflows/test-alert-delivery.yml", ".github/workflows/rollback.yml",
+    "docs/operations/release-and-recovery.md", "docs/PRODUCTION-READINESS-REVIEW.md",
+    "docs/PRODUCTION-READINESS-CLOSURE-PLAN.md", "infra/production-no-go-checklist.md",
 }
 RUN_FIELDS = {"attempt_id", "schema_version", "requested_commit", "requested_tree", "deployment_authority", "environment_identity", "created_at", "workspace_manifest_sha256", "detached_baseline_manifest_sha256", "workspace_closure_sha256", "detached_baseline_closure_sha256", "allowed_path_set_sha256"}
 REPORT_FIELDS = {"schema_version", "task_id", "producer", "owner", "attempt_id", "commit_sha", "tree_sha", "evidence_class", "repository_status", "production_status", "commands", "inputs", "outputs", "telemetry", "business_reconciliation", "provenance", "created_at", "fresh_until", "file_manifest_sha256"}
 CHECKPOINT_FIELDS = {"schema_version", "attempt_id", "task_id", "report_sha256", "input_manifest_sha256", "checkpoint_status", "created_at"}
+REQUIRED_TASKS = ["1", "2", "3", "4", "5", "6", "7", "F1", "F2", "F3", "F4"]
+VERIFIER_OWNERS = {
+    "1": "runtime-qa-owner", "2": "code-quality-owner", "3": "platform-operations-owner", "4": "platform-operations-owner",
+    "5": "disaster-recovery-owner", "6": "capacity-test-owner", "7": "capacity-test-owner",
+    "F1": "plan-compliance-owner", "F2": "code-quality-owner", "F3": "runtime-qa-owner", "F4": "scope-fidelity-owner",
+}
+REPORT_PRODUCERS = set(VERIFIER_OWNERS.values())
 
 
 def now() -> str:
@@ -179,6 +196,12 @@ def checkpoint(args: argparse.Namespace) -> int:
         raise ValueError("report is unbound to canonical run")
     if report["evidence_class"] not in EVIDENCE_CLASSES or report["repository_status"] not in STATUSES or report["production_status"] not in STATUSES:
         raise ValueError("unknown evidence enum")
+    expected_owner = VERIFIER_OWNERS.get(str(args.task))
+    if expected_owner and (report["owner"] != expected_owner or report["producer"] != expected_owner):
+        raise ValueError("report owner/producer does not match named verifier")
+    provenance = report["provenance"]
+    if not isinstance(provenance, dict) or not provenance.get("producer_identity") or not provenance.get("environment_identity") or not provenance.get("command_binding") or not provenance.get("artifact_digest"):
+        raise ValueError("provenance trust anchor is incomplete")
     if report["fresh_until"] < report["created_at"]:
         raise ValueError("invalid freshness")
     task_dir = root / args.attempt_id / f"task-{args.task}"; task_dir.mkdir(parents=True, exist_ok=True)
@@ -191,11 +214,91 @@ def checkpoint(args: argparse.Namespace) -> int:
     return 0
 
 
+def barrier(args: argparse.Namespace) -> int:
+    root = Path(args.root).resolve(); run_record = load_json(root / args.attempt_id / "run.json"); strict(run_record, RUN_FIELDS, "run.json")
+    if args.commit != run_record["requested_commit"] or args.tree != run_record["requested_tree"]:
+        raise ValueError("barrier commit/tree must match canonical run")
+    required = {"schema_version": "barrier.v1", "attempt_id": args.attempt_id, "coordinator_identity": args.coordinator, "final_commit": args.commit, "final_tree": args.tree, "deadline": args.deadline, "required_verifiers": REQUIRED_TASKS, "required_statuses": ["PASS", "BLOCKED_EXTERNAL"], "checkpoint_hashes": [], "created_at": now()}
+    path = root / args.attempt_id / "barrier.json"
+    if path.exists():
+        raise ValueError("barrier already exists")
+    atomic_write(path, required)
+    print(json.dumps(required, sort_keys=True) if args.json else str(path))
+    return 0
+
+
+def aggregate(args: argparse.Namespace) -> int:
+    root = Path(args.root).resolve(); run_record = load_json(root / args.attempt_id / "run.json"); strict(run_record, RUN_FIELDS, "run.json")
+    barrier_record = load_json(root / args.attempt_id / "barrier.json")
+    if barrier_record.get("schema_version") != "barrier.v1" or barrier_record.get("attempt_id") != args.attempt_id or barrier_record.get("final_commit") != run_record["requested_commit"] or barrier_record.get("final_tree") != run_record["requested_tree"]:
+        raise ValueError("invalid barrier binding")
+    checkpoints = []; missing = []; duplicate = []
+    for task_id in REQUIRED_TASKS:
+        paths = list((root / args.attempt_id).glob(f"**/task-{task_id}/checkpoint.json")) + list((root / args.attempt_id).glob(f"**/{task_id}/checkpoint.json"))
+        if not paths:
+            missing.append(task_id); continue
+        if len(paths) != 1:
+            duplicate.append(task_id); continue
+        checkpoint_record = load_json(paths[0]); strict(checkpoint_record, CHECKPOINT_FIELDS, "checkpoint.json")
+        if checkpoint_record["attempt_id"] != args.attempt_id or checkpoint_record["task_id"] != task_id or checkpoint_record["checkpoint_status"] != "RECORDED":
+            raise ValueError(f"invalid checkpoint binding: {task_id}")
+        if checkpoint_record["report_sha256"] != digest(paths[0].parent / "report.json"):
+            raise ValueError(f"mutated report for checkpoint: {task_id}")
+        report = load_json(paths[0].parent / "report.json"); strict(report, REPORT_FIELDS, "report.json")
+        if report["attempt_id"] != args.attempt_id or report["task_id"] != task_id or report["commit_sha"] != run_record["requested_commit"] or report["tree_sha"] != run_record["requested_tree"]:
+            raise ValueError(f"report binding mismatch: {task_id}")
+        expected_owner = VERIFIER_OWNERS.get(task_id)
+        if expected_owner and (report["owner"] != expected_owner or report["producer"] != expected_owner):
+            raise ValueError(f"report owner mismatch: {task_id}")
+        if report["repository_status"] not in STATUSES or report["production_status"] not in STATUSES or report["evidence_class"] not in EVIDENCE_CLASSES:
+            raise ValueError(f"report enum mismatch: {task_id}")
+        if report["fresh_until"] < report["created_at"]:
+            raise ValueError(f"stale report: {task_id}")
+        checkpoints.append({"task_id": task_id, "path": str(paths[0]), "sha256": digest(paths[0])})
+    aggregate_status = "FAIL" if missing or duplicate else "PASS"
+    record = {"schema_version": "aggregate.v1", "attempt_id": args.attempt_id, "required_task_ids": REQUIRED_TASKS, "checkpoint_hashes": checkpoints, "missing_ids": missing, "duplicate_ids": duplicate, "late_replacements": [], "aggregate_status": aggregate_status, "created_at": now()}
+    atomic_write(root / args.attempt_id / "aggregate.json", record)
+    print(json.dumps(record, sort_keys=True) if args.json else str(root / args.attempt_id / "aggregate.json"))
+    return 0 if aggregate_status == "PASS" else 2
+
+
+def seal(args: argparse.Namespace) -> int:
+    root = Path(args.root).resolve(); run_record = load_json(root / args.attempt_id / "run.json"); strict(run_record, RUN_FIELDS, "run.json")
+    if args.commit != run_record["requested_commit"] or args.tree != run_record["requested_tree"]:
+        raise ValueError("seal commit/tree mismatch")
+    aggregate_record = load_json(root / args.attempt_id / "aggregate.json")
+    if aggregate_record.get("aggregate_status") != "PASS":
+        raise ValueError("cannot seal incomplete aggregate")
+    reports = []
+    for item in aggregate_record["checkpoint_hashes"]:
+        checkpoint_path = Path(item["path"]); report_path = checkpoint_path.parent / "report.json"; report = load_json(report_path); strict(report, REPORT_FIELDS, "report.json"); reports.append(report)
+    repository_status = "FAIL" if any(report["repository_status"] == "FAIL" for report in reports) else "PASS"
+    production_status = "GO" if repository_status == "PASS" and all(report["production_status"] == "GO" for report in reports) else "NO-GO"
+    canonical_manifest = {"run_sha256": digest(root / args.attempt_id / "run.json"), "aggregate_sha256": digest(root / args.attempt_id / "aggregate.json"), "checkpoint_hashes": aggregate_record["checkpoint_hashes"]}
+    record = {"schema_version": "sealed.v1", "attempt_id": args.attempt_id, "recomputed_commit": args.commit, "recomputed_tree": args.tree, "aggregate_hash": digest(root / args.attempt_id / "aggregate.json"), "canonical_manifest_hash": hashlib.sha256(json.dumps(canonical_manifest, sort_keys=True).encode()).hexdigest(), "repository_status": repository_status, "production_status": production_status, "gate_decisions": [{"task_id": report["task_id"], "repository_status": report["repository_status"], "production_status": report["production_status"]} for report in reports], "sealed_at": now()}
+    path = root / args.attempt_id / "sealed.json"
+    if path.exists():
+        raise ValueError("sealed output already exists")
+    atomic_write(path, record)
+    print(json.dumps(record, sort_keys=True) if args.json else str(path))
+    return 0 if production_status == "GO" else 2
+
+
+def verify_final(args: argparse.Namespace) -> int:
+    root = Path(args.root).resolve(); run_record = load_json(root / args.attempt_id / "run.json"); strict(run_record, RUN_FIELDS, "run.json"); sealed_path = root / args.attempt_id / "sealed.json"; sealed = load_json(sealed_path)
+    if sealed.get("schema_version") != "sealed.v1" or sealed.get("attempt_id") != args.attempt_id or sealed.get("recomputed_commit") != run_record["requested_commit"] or sealed.get("recomputed_tree") != run_record["requested_tree"]:
+        raise ValueError("sealed output binding mismatch")
+    if sealed.get("aggregate_hash") != digest(root / args.attempt_id / "aggregate.json"):
+        raise ValueError("sealed aggregate mutation detected")
+    print(json.dumps({"status": "PASS", "repository_status": sealed["repository_status"], "production_status": sealed["production_status"]}, sort_keys=True) if args.json else "PASS")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=["capture-workspace", "capture-detached", "create", "attach-prechange", "checkpoint", "aggregate", "seal", "verify-final"])
+    parser.add_argument("command", choices=["capture-workspace", "capture-detached", "create", "attach-prechange", "checkpoint", "create-barrier", "aggregate", "seal", "verify-final"])
     parser.add_argument("--root", type=Path, default=Path(os.environ.get("VNSHOP_EVIDENCE_ROOT", r"C:\Users\dangq\AppData\Local\Temp\vnshop-evidence")))
-    parser.add_argument("--output", type=Path); parser.add_argument("--commit"); parser.add_argument("--tree-sha", dest="tree"); parser.add_argument("--repo", type=Path, default=Path.cwd()); parser.add_argument("--attempt-id"); parser.add_argument("--prechange-dir", type=Path); parser.add_argument("--task"); parser.add_argument("--report", type=Path); parser.add_argument("--json", action="store_true")
+    parser.add_argument("--output", type=Path); parser.add_argument("--commit"); parser.add_argument("--tree-sha", dest="tree"); parser.add_argument("--repo", type=Path, default=Path.cwd()); parser.add_argument("--attempt-id"); parser.add_argument("--prechange-dir", type=Path); parser.add_argument("--task"); parser.add_argument("--report", type=Path); parser.add_argument("--coordinator", default="release-coordinator"); parser.add_argument("--deadline", default="2099-01-01T00:00:00Z"); parser.add_argument("--matrix", type=Path); parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
     try:
         if args.command == "capture-workspace":
@@ -208,7 +311,15 @@ def main() -> int:
         if args.command == "create": return create(args)
         if args.command == "attach-prechange": return attach(args)
         if args.command == "checkpoint": return checkpoint(args)
-        raise ValueError(f"{args.command} is coordinator-owned and unavailable before final barrier")
+        if args.command == "create-barrier":
+            if not args.attempt_id or not args.commit or not args.tree: raise ValueError("create-barrier requires attempt, commit, and tree")
+            return barrier(args)
+        if args.command == "aggregate": return aggregate(args)
+        if args.command == "seal":
+            if not args.attempt_id or not args.commit or not args.tree: raise ValueError("seal requires attempt, commit, and tree")
+            return seal(args)
+        if args.command == "verify-final": return verify_final(args)
+        raise ValueError(f"unsupported lifecycle command: {args.command}")
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         print(json.dumps({"status": "FAIL", "error": str(exc)}), file=sys.stderr); return 2
 

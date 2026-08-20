@@ -14,6 +14,62 @@ cases:
     - id: production-target
       command: [python, infra/scripts/create-readiness-baseline.py, --commit, b5a84516009008e2940336925dd8381b1231dd5a, --tree-sha, 0565a2a0468c0a46aa69c8c434f0f4a1b2552c4d, --target, production, --manifest, infra/load-tests/workload-contract.yaml]
       cwd: .
+  task-2-happy:
+    - id: release-policy
+      command: [python, infra/scripts/validate-k8s-release.py, --help]
+      cwd: .
+  task-2-negative:
+    - id: release-policy-negative
+      command: [python, infra/scripts/validate-k8s-release.py, --help]
+      cwd: .
+  task-3-happy:
+    - id: kafka-contract
+      command: [python, infra/scripts/kafka-inventory-contract.py, --help]
+      cwd: .
+  task-3-negative:
+    - id: kafka-drill-negative
+      command: [python, infra/scripts/kafka-failure-drill.py, --help]
+      cwd: .
+  task-4-happy:
+    - id: elasticsearch-contract
+      command: [python, infra/scripts/elasticsearch-failure-drill.py, --help]
+      cwd: .
+  task-4-negative:
+    - id: elasticsearch-drill-negative
+      command: [python, infra/scripts/elasticsearch-failure-drill.py, --help]
+      cwd: .
+  task-5-happy:
+    - id: restore-contract
+      command: [python, infra/scripts/restore-drill.py, --help]
+      cwd: .
+  task-5-negative:
+    - id: restore-negative
+      command: [python, infra/scripts/restore-drill.py, --help]
+      cwd: .
+  task-6-happy:
+    - id: dataset-contract
+      command: [python, infra/load-tests/dataset/generate.py, --help]
+      cwd: .
+  task-6-negative:
+    - id: dataset-negative
+      command: [python, infra/load-tests/dataset/generate.py, --help]
+      cwd: .
+  task-7-happy:
+    - id: k6-contract
+      command: [k6, version]
+      cwd: .
+  task-7-negative:
+    - id: provider-negative
+      command: [python, infra/scripts/provider-preflight.py, --help]
+      cwd: .
+  F3:
+    - id: api-runtime
+      command: [python, infra/scripts/e2e-day.mjs, --help]
+      cwd: .
+  F4:
+    - id: scope-check
+      command: [git, diff, --check]
+      cwd: .
     - id: empty-target
       command: [python, infra/scripts/create-readiness-baseline.py, --commit, b5a84516009008e2940336925dd8381b1231dd5a, --tree-sha, 0565a2a0468c0a46aa69c8c434f0f4a1b2552c4d, --target, "", --manifest, infra/load-tests/workload-contract.yaml]
       cwd: .
