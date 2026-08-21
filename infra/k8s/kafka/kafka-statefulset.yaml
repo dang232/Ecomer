@@ -7,37 +7,52 @@ metadata:
     app.kubernetes.io/name: kafka
     app.kubernetes.io/part-of: vnshop
 data:
-  server.properties: |
-    process.roles=broker,controller
-    default.replication.factor=3
-    min.insync.replicas=2
-    offsets.topic.replication.factor=3
-    transaction.state.log.replication.factor=3
-    transaction.state.log.min.isr=2
-    unclean.leader.election.enable=false
-    auto.create.topics.enable=false
-    authorizer.class.name=org.apache.kafka.metadata.authorizer.StandardAuthorizer
-    allow.everyone.if.no.acl.found=false
-    super.users=User:kafka-controller;User:kafka-admin
-    ssl.client.auth=required
-    ssl.endpoint.identification.algorithm=HTTPS
-    ssl.keystore.type=JKS
-    ssl.truststore.type=JKS
-    ssl.keystore.location=/etc/kafka/tls/broker.keystore.jks
-    ssl.truststore.location=/etc/kafka/tls/ca.truststore.jks
-    ssl.keystore.password=${KAFKA_SSL_KEYSTORE_PASSWORD}
-    ssl.truststore.password=${KAFKA_SSL_TRUSTSTORE_PASSWORD}
-    listener.name.client.sasl.enabled.mechanisms=PLAIN
-    listener.name.client.plain.sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required;
-    listener.name.internal.ssl.client.auth=required
-    listener.name.controller.ssl.client.auth=required
-    listener.security.protocol.map=CLIENT:SASL_SSL,INTERNAL:SSL,CONTROLLER:SSL
-    inter.broker.listener.name=INTERNAL
-    controller.listener.names=CONTROLLER
-    log.dirs=/var/lib/kafka/data
-    num.partitions=6
-    log.retention.hours=168
-
+  broker-jaas-entrypoint.sh: |
+    #!/usr/bin/env bash
+    set -euo pipefail
+    umask 077
+    output=/run/kafka-jaas/kafka_server_jaas.conf
+    : > "$output"
+    printf '%s\n' 'client.KafkaServer {' '  org.apache.kafka.common.security.plain.PlainLoginModule required' > "$output"
+    shopt -s nullglob
+    username_files=(/run/kafka-credentials/*.username)
+    test "${#username_files[@]}" = 15
+    declare -A seen_principals=()
+    for username_file in "${username_files[@]}"; do
+      test -r "$username_file"
+      expected_principal="${username_file##*/}"
+      expected_principal="${expected_principal%.username}"
+      [[ "$expected_principal" =~ ^[A-Za-z0-9._-]+$ ]]
+      password_file="${username_file%.username}.password"
+      test -r "$password_file"
+      original_hash=$(sha256sum "$username_file" | awk '{print $1}')
+      sanitized_hash=$(LC_ALL=C tr -d '\000' < "$username_file" | sha256sum | awk '{print $1}')
+      test "$original_hash" = "$sanitized_hash"
+      original_hash=$(sha256sum "$password_file" | awk '{print $1}')
+      sanitized_hash=$(LC_ALL=C tr -d '\000' < "$password_file" | sha256sum | awk '{print $1}')
+      test "$original_hash" = "$sanitized_hash"
+      IFS= read -r -d '' username < "$username_file" || true
+      IFS= read -r -d '' password < "$password_file" || true
+      test -s "$username_file" -a -s "$password_file"
+      [[ "$username" == "$expected_principal" ]]
+      [[ -z "${seen_principals[$username]+present}" ]]
+      seen_principals[$username]=1
+      ! LC_ALL=C grep -q '[[:cntrl:]]' "$username_file"
+      ! LC_ALL=C grep -q '[[:cntrl:]]' "$password_file"
+      ! LC_ALL=C grep -q '"' "$username_file"
+      ! LC_ALL=C grep -q '"' "$password_file"
+      test "${username//\\/}" = "$username"
+      test "${password//\\/}" = "$password"
+      [[ "$username" != *'"'* && "$username" != *'\\'* && "$password" != *'"'* && "$password" != *'\\'* ]]
+      [[ "$username" =~ ^[A-Za-z0-9._-]+$ ]]
+      printf '  user_%s="%s"\n' "$username" "$password" >> "$output"
+    done
+    printf '%s\n' '  ;' '};' >> "$output"
+    chmod 600 "$output"
+    export KAFKA_OPTS="${KAFKA_OPTS:-} -Djava.security.auth.login.config=$output"
+    export KAFKA_NODE_ID="${HOSTNAME##*-}"
+    test "$KAFKA_NODE_ID" = 0 -o "$KAFKA_NODE_ID" = 1 -o "$KAFKA_NODE_ID" = 2
+    exec /etc/confluent/docker/run
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -79,6 +94,7 @@ metadata:
     app.kubernetes.io/name: kafka
     app.kubernetes.io/part-of: vnshop
 spec:
+  publishNotReadyAddresses: true
   selector:
     app.kubernetes.io/name: kafka
   ports:
@@ -110,7 +126,7 @@ metadata:
 spec:
   replicas: 3
   serviceName: kafka-headless
-  podManagementPolicy: OrderedReady
+  podManagementPolicy: Parallel
   selector:
     matchLabels:
       app.kubernetes.io/name: kafka
@@ -124,6 +140,7 @@ spec:
     spec:
       serviceAccountName: kafka
       automountServiceAccountToken: false
+      enableServiceLinks: false
       topologySpreadConstraints:
       - maxSkew: 1
         topologyKey: topology.kubernetes.io/zone
@@ -153,11 +170,30 @@ spec:
         - |
           ordinal="${HOSTNAME##*-}"
           test "$ordinal" = 0 -o "$ordinal" = 1 -o "$ordinal" = 2
+          mkdir -p /run/kafka-init
+          umask 077
+          cat > /run/kafka-init/server.properties <<EOF
+          process.roles=broker,controller
+          node.id=$ordinal
+          controller.quorum.voters=0@kafka-0.kafka-headless:9093,1@kafka-1.kafka-headless:9093,2@kafka-2.kafka-headless:9093
+          controller.listener.names=CONTROLLER
+          listeners=CLIENT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,INTERNAL://0.0.0.0:9094
+          listener.security.protocol.map=CLIENT:SASL_SSL,CONTROLLER:SSL,INTERNAL:SSL
+          inter.broker.listener.name=INTERNAL
+          advertised.listeners=CLIENT://kafka:9092,INTERNAL://kafka-$ordinal.kafka-headless:9094
+          log.dirs=/var/lib/kafka/data
+          ssl.client.auth=required
+          ssl.endpoint.identification.algorithm=HTTPS
+          ssl.keystore.type=JKS
+          ssl.truststore.type=JKS
+          ssl.keystore.location=/etc/kafka/tls/broker.keystore.jks
+          ssl.truststore.location=/etc/kafka/tls/ca.truststore.jks
+          EOF
           if [ ! -f /var/lib/kafka/data/meta.properties ]; then
-            kafka-storage format --config /etc/kafka/server.properties --cluster-id "$KAFKA_CLUSTER_ID" --ignore-formatted
+            kafka-storage format --config /run/kafka-init/server.properties --cluster-id "$CLUSTER_ID" --ignore-formatted
           fi
         env:
-        - name: KAFKA_CLUSTER_ID
+        - name: CLUSTER_ID
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: platform-kafka-cluster-id}
         - name: KAFKA_SSL_KEYSTORE_PASSWORD
@@ -168,7 +204,7 @@ spec:
             secretKeyRef: {name: vnshop-runtime-secrets, key: platform-kafka-truststore-password}
         volumeMounts:
         - {name: kafka-data, mountPath: /var/lib/kafka/data}
-        - {name: kafka-config, mountPath: /etc/kafka/server.properties, subPath: server.properties, readOnly: true}
+        - {name: kafka-init-runtime, mountPath: /run/kafka-init}
         - {name: kafka-tls, mountPath: /etc/kafka/tls, readOnly: true}
         securityContext:
           allowPrivilegeEscalation: false
@@ -177,65 +213,77 @@ spec:
       - name: kafka
         image: confluentinc/cp-kafka@sha256:acbbf674f2ed40e5d0a8ca51beb0f00692c866fc22b5ce06f8cadbdc54cd4436
         imagePullPolicy: IfNotPresent
-        command: ["/bin/bash", "-ec"]
-        args:
-        - |
-          export KAFKA_NODE_ID="${HOSTNAME##*-}"
-          test "$KAFKA_NODE_ID" = 0 -o "$KAFKA_NODE_ID" = 1 -o "$KAFKA_NODE_ID" = 2
-          exec /etc/confluent/docker/run
+        command: ["/bin/bash", "/opt/kafka/broker-jaas-entrypoint.sh"]
         ports:
         - {name: client, containerPort: 9092}
         - {name: controller, containerPort: 9093}
         - {name: internal, containerPort: 9094}
         env:
-        - {name: KAFKA_PROCESS_ROLES, value: broker,controller}
+        - {name: KAFKA_PROCESS_ROLES, value: 'broker,controller'}
         - name: POD_NAME
           valueFrom: {fieldRef: {fieldPath: metadata.name}}
         - {name: KAFKA_CONTROLLER_QUORUM_VOTERS, value: '0@kafka-0.kafka-headless:9093,1@kafka-1.kafka-headless:9093,2@kafka-2.kafka-headless:9093'}
         - {name: KAFKA_LISTENERS, value: 'CLIENT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,INTERNAL://0.0.0.0:9094'}
         - {name: KAFKA_ADVERTISED_LISTENERS, value: 'CLIENT://kafka:9092,INTERNAL://$(POD_NAME).kafka-headless:9094'}
+        - {name: KAFKA_SASL_ENABLED_MECHANISMS, value: PLAIN}
+        - {name: KAFKA_DEFAULT_REPLICATION_FACTOR, value: "3"}
+        - {name: KAFKA_MIN_INSYNC_REPLICAS, value: "2"}
+        - {name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR, value: "3"}
+        - {name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR, value: "3"}
+        - {name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR, value: "2"}
+        - {name: KAFKA_UNCLEAN_LEADER_ELECTION_ENABLE, value: "false"}
+        - {name: KAFKA_NUM_PARTITIONS, value: "6"}
+        - {name: KAFKA_LOG_RETENTION_HOURS, value: "168"}
+        - {name: KAFKA_LOG_DIRS, value: /var/lib/kafka/data}
+        - {name: KAFKA_LISTENER_NAME_CLIENT_SASL_ENABLED_MECHANISMS, value: PLAIN}
+        - {name: KAFKA_LISTENER_NAME_CLIENT_SSL_CLIENT_AUTH, value: required}
+        - {name: KAFKA_LISTENER_NAME_INTERNAL_SSL_CLIENT_AUTH, value: required}
+        - {name: KAFKA_LISTENER_NAME_CONTROLLER_SSL_CLIENT_AUTH, value: required}
         - {name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP, value: 'CLIENT:SASL_SSL,CONTROLLER:SSL,INTERNAL:SSL'}
         - {name: KAFKA_INTER_BROKER_LISTENER_NAME, value: INTERNAL}
         - {name: KAFKA_CONTROLLER_LISTENER_NAMES, value: CONTROLLER}
-        - {name: KAFKA_SASL_ENABLED_MECHANISMS, value: PLAIN}
-        - {name: KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL, value: PLAIN}
         - {name: KAFKA_AUTO_CREATE_TOPICS_ENABLE, value: "false"}
         - {name: KAFKA_AUTHORIZER_CLASS_NAME, value: org.apache.kafka.metadata.authorizer.StandardAuthorizer}
         - {name: KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND, value: "false"}
-        - {name: KAFKA_SUPER_USERS, value: 'User:kafka-controller;User:kafka-admin'}
+        - {name: KAFKA_SUPER_USERS, value: 'User:kafka-node;User:kafka-admin'}
+        - {name: KAFKA_SSL_PRINCIPAL_MAPPING_RULES, value: 'RULE:^CN=(kafka-node),O=VNShop$/$1/,DEFAULT'}
         - {name: KAFKA_SSL_CLIENT_AUTH, value: required}
         - {name: KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM, value: HTTPS}
         - {name: KAFKA_SSL_KEYSTORE_TYPE, value: JKS}
         - {name: KAFKA_SSL_TRUSTSTORE_TYPE, value: JKS}
-        - {name: KAFKA_SSL_KEYSTORE_FILENAME, value: broker.keystore.jks}
-        - {name: KAFKA_SSL_TRUSTSTORE_FILENAME, value: ca.truststore.jks}
+        - {name: KAFKA_SSL_KEYSTORE_LOCATION, value: /etc/kafka/tls/broker.keystore.jks}
+        - {name: KAFKA_SSL_TRUSTSTORE_LOCATION, value: /etc/kafka/tls/ca.truststore.jks}
+        - name: KAFKA_SSL_KEY_PASSWORD
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-kafka-broker-keystore-password}}
         - name: KAFKA_SSL_KEYSTORE_PASSWORD
           valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-kafka-broker-keystore-password}}
         - name: KAFKA_SSL_TRUSTSTORE_PASSWORD
           valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-kafka-truststore-password}}
-        - name: KAFKA_CLUSTER_ID
+        - name: CLUSTER_ID
           valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-kafka-cluster-id}}
         volumeMounts:
         - {name: kafka-data, mountPath: /var/lib/kafka/data}
-        - {name: kafka-config, mountPath: /etc/kafka/server.properties, subPath: server.properties, readOnly: true}
+        - {name: kafka-jaas-script, mountPath: /opt/kafka/broker-jaas-entrypoint.sh, subPath: broker-jaas-entrypoint.sh, readOnly: true}
+        - {name: kafka-jaas-runtime, mountPath: /run/kafka-jaas}
+        - {name: kafka-credentials, mountPath: /run/kafka-credentials, readOnly: true}
         - {name: kafka-tls, mountPath: /etc/kafka/tls, readOnly: true}
         readinessProbe:
           exec:
-            command: ["/bin/bash", "-ec", "test -r /etc/kafka/tls/ca.truststore.jks && kafka-broker-api-versions --bootstrap-server kafka:9092 --command-config /etc/kafka/tls/admin.properties >/dev/null"]
+            command: ["/bin/bash", "-ec", "test -r /etc/kafka/tls/ca.truststore.jks -a -r /etc/kafka/tls/admin.keystore.jks -a -r /etc/kafka/tls/admin.properties && kafka-broker-api-versions --bootstrap-server kafka:9092 --command-config /etc/kafka/tls/admin.properties >/dev/null"]
           initialDelaySeconds: 45
           periodSeconds: 10
           timeoutSeconds: 8
           failureThreshold: 6
         livenessProbe:
           exec:
-            command: ["/bin/bash", "-ec", "kafka-broker-api-versions --bootstrap-server kafka:9092 --command-config /etc/kafka/tls/admin.properties >/dev/null"]
+            command: ["/bin/bash", "-ec", "test -r /etc/kafka/tls/ca.truststore.jks -a -r /etc/kafka/tls/admin.keystore.jks -a -r /etc/kafka/tls/admin.properties && kafka-broker-api-versions --bootstrap-server kafka:9092 --command-config /etc/kafka/tls/admin.properties >/dev/null"]
           initialDelaySeconds: 90
           periodSeconds: 20
           timeoutSeconds: 8
           failureThreshold: 3
         startupProbe:
           exec:
-            command: ["/bin/bash", "-ec", "kafka-broker-api-versions --bootstrap-server kafka:9092 --command-config /etc/kafka/tls/admin.properties >/dev/null"]
+            command: ["/bin/bash", "-ec", "test -r /etc/kafka/tls/ca.truststore.jks -a -r /etc/kafka/tls/admin.keystore.jks -a -r /etc/kafka/tls/admin.properties && kafka-broker-api-versions --bootstrap-server kafka:9092 --command-config /etc/kafka/tls/admin.properties >/dev/null"]
           periodSeconds: 10
           timeoutSeconds: 8
           failureThreshold: 30
@@ -247,11 +295,53 @@ spec:
           capabilities: {drop: [ALL]}
       volumes:
       - {name: kafka-config, configMap: {name: kafka-config}}
+      - name: kafka-init-runtime
+        emptyDir:
+          medium: Memory
+      - {name: kafka-jaas-script, configMap: {name: kafka-config, defaultMode: 365}}
+      - name: kafka-jaas-runtime
+        emptyDir:
+          medium: Memory
+      - name: kafka-credentials
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {key: order-service-kafka-username, path: svc-order.username}
+          - {key: order-service-kafka-password, path: svc-order.password}
+          - {key: payment-service-kafka-username, path: svc-payment.username}
+          - {key: payment-service-kafka-password, path: svc-payment.password}
+          - {key: inventory-service-kafka-username, path: svc-inventory.username}
+          - {key: inventory-service-kafka-password, path: svc-inventory.password}
+          - {key: product-service-kafka-username, path: svc-product.username}
+          - {key: product-service-kafka-password, path: svc-product.password}
+          - {key: shipping-service-kafka-username, path: svc-shipping.username}
+          - {key: shipping-service-kafka-password, path: svc-shipping.password}
+          - {key: search-service-kafka-username, path: svc-search.username}
+          - {key: search-service-kafka-password, path: svc-search.password}
+          - {key: recommendations-service-kafka-username, path: svc-recommendations.username}
+          - {key: recommendations-service-kafka-password, path: svc-recommendations.password}
+          - {key: seller-finance-service-kafka-username, path: svc-finance.username}
+          - {key: seller-finance-service-kafka-password, path: svc-finance.password}
+          - {key: notification-service-kafka-username, path: svc-notification.username}
+          - {key: notification-service-kafka-password, path: svc-notification.password}
+          - {key: messaging-service-kafka-username, path: svc-messaging.username}
+          - {key: messaging-service-kafka-password, path: svc-messaging.password}
+          - {key: invoice-service-kafka-username, path: svc-invoice.username}
+          - {key: invoice-service-kafka-password, path: svc-invoice.password}
+          - {key: user-service-kafka-username, path: svc-user.username}
+          - {key: user-service-kafka-password, path: svc-user.password}
+          - {key: video-transcoder-kafka-username, path: svc-video-transcoder.username}
+          - {key: video-transcoder-kafka-password, path: svc-video-transcoder.password}
+          - {key: video-moderator-kafka-username, path: svc-video-moderator.username}
+          - {key: video-moderator-kafka-password, path: svc-video-moderator.password}
+          - {key: platform-kafka-admin-username, path: kafka-admin.username}
+          - {key: platform-kafka-admin-password, path: kafka-admin.password}
       - name: kafka-tls
         secret:
           secretName: vnshop-runtime-secrets
           items:
           - {key: platform-kafka-broker-keystore, path: broker.keystore.jks}
+          - {key: platform-kafka-admin-keystore, path: admin.keystore.jks}
           - {key: platform-kafka-truststore, path: ca.truststore.jks}
           - {key: platform-kafka-admin-client-properties, path: admin.properties}
   volumeClaimTemplates:

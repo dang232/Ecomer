@@ -14,9 +14,21 @@ listeners:
 certificate_contract:
   ca_secret_key: platform-kafka-truststore
   broker_keystore_secret_key: platform-kafka-broker-keystore
+  broker_keystore_password_secret_key: platform-kafka-broker-keystore-password
+  broker_key_password_secret_key: platform-kafka-broker-keystore-password
+  broker_key_and_keystore_passwords_equal: true
   admin_keystore_secret_key: platform-kafka-admin-keystore
   hostname_verification: HTTPS
   required_eku: serverAuth,clientAuth
+  subject_dn_contract:
+    node: 'CN=kafka-node,O=VNShop'
+    controller_principal: kafka-node
+    broker_principal: kafka-node
+    application_forbidden_principals: [kafka-node, kafka-admin]
+  principal_mapping:
+    rules: 'RULE:^CN=(kafka-node),O=VNShop$/$1/,DEFAULT'
+    controller_principal: kafka-node
+    broker_principal: kafka-node
 maintenance_order:
   - pause-or-drain-producers-and-consumers
   - verify-authenticated-cluster-identity-and-three-broker-quorum
