@@ -4,32 +4,17 @@ import { WsAdapter } from "@nestjs/platform-ws";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
 import { startTracing } from "./tracing";
+import { createKafkaClientConfig } from "./messaging/infrastructure/kafka-client.config";
 
 async function bootstrap() {
   startTracing();
   const app = await NestFactory.create(AppModule);
   app.useWebSocketAdapter(new WsAdapter(app));
 
-  const brokers = (process.env.KAFKA_BOOTSTRAP_SERVERS ?? "localhost:9092")
-    .split(",")
-    .map((b: string) => b.trim())
-    .filter((b: string) => b.length > 0);
-
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.KAFKA,
     options: {
-      client: {
-        clientId: "messaging-service",
-        brokers,
-        ...(process.env.KAFKA_SASL_USERNAME && {
-          sasl: {
-            mechanism: "plain" as const,
-            username: process.env.KAFKA_SASL_USERNAME,
-            password: process.env.KAFKA_SASL_PASSWORD ?? "",
-          },
-        }),
-        ssl: true,
-      },
+      client: createKafkaClientConfig("messaging-service"),
       consumer: {
         groupId: process.env.KAFKA_CONSUMER_GROUP ?? "messaging-service",
         allowAutoTopicCreation: false,

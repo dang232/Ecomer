@@ -6,6 +6,7 @@ import {
 } from "@nestjs/common";
 import { Kafka, Producer } from "kafkajs";
 import { MessagePublisher, PublishMessageInput } from "./message-publisher";
+import { createKafkaClientConfig, createKafkaProducerConfig } from "../infrastructure/kafka-client.config";
 
 export const MESSAGING_TOPIC = "messaging.message.sent";
 
@@ -26,23 +27,8 @@ export class KafkaMessagePublisher
   private connected = false;
 
   async onModuleInit(): Promise<void> {
-    const brokers = (process.env.KAFKA_BOOTSTRAP_SERVERS ?? "localhost:9092")
-      .split(",")
-      .map((b) => b.trim())
-      .filter((b) => b.length > 0);
-    this.kafka = new Kafka({
-      clientId: "messaging-service-producer",
-      brokers,
-      ssl: true,
-      sasl: process.env.KAFKA_SASL_USERNAME
-        ? {
-            mechanism: "plain",
-            username: process.env.KAFKA_SASL_USERNAME,
-            password: process.env.KAFKA_SASL_PASSWORD ?? "",
-          }
-        : undefined,
-    });
-    this.producer = this.kafka.producer();
+    this.kafka = new Kafka(createKafkaClientConfig("messaging-service-producer"));
+    this.producer = this.kafka.producer(createKafkaProducerConfig());
     try {
       await this.producer.connect();
       this.connected = true;
