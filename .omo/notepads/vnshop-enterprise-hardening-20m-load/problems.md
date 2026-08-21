@@ -41,3 +41,4 @@ _Auto-scaffolded by /start-work. Append new entries below - never overwrite._
 
 - Todo 4 cannot produce authenticated Elasticsearch node-loss evidence until Docker or an isolated Elasticsearch cluster plus real certificates/SealedSecret material are supplied; production remains `NO-GO` by contract.
 - Todo 3 remediation external blocker (2026-08-21): no authenticated isolated Kafka cluster, Docker daemon, registry provenance, sealed Kafka material, or live cluster identity is available; broker-loss proof therefore remains `BLOCKED_EXTERNAL` and production remains `NO-GO`. Existing unrelated dirty worktree paths, including the video-transcoder test, were preserved and unstaged.
+- Todo 3 repository-owned follow-up (2026-08-21): direct helper and semantic ACL tests were absent; external runtime remains unavailable, so this repair can prove configuration contracts only and must not promote broker-loss evidence to PASS.
