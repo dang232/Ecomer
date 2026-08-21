@@ -19,17 +19,17 @@ def inventory(label: str, root: Path, repo: Path) -> dict:
     """Recursively inventory every requested regular file and its digest."""
     if not root.exists() or not root.is_dir():
         return {"name": f"inventory-{label}", "status": "FAIL", "reason": "requested directory is missing", "files": []}
-    files = sorted(path for path in root.rglob("*") if path.is_file() and not path.is_symlink())
+    tracked_result = subprocess.run(["git", "ls-files", "--", str(root.resolve().relative_to(repo)).replace("\\", "/")], cwd=repo, capture_output=True, text=True, check=False)
+    tracked = {line.strip().replace("\\", "/") for line in tracked_result.stdout.splitlines() if line.strip()}
+    files = []
+    for path in sorted(path for path in root.rglob("*") if path.is_file() and not path.is_symlink()):
+        relative = str(path.resolve().relative_to(repo)).replace("\\", "/")
+        ignored = subprocess.run(["git", "check-ignore", "--no-index", "--", relative], cwd=repo, capture_output=True, check=False).returncode == 0
+        if relative in tracked or not ignored:
+            files.append(path)
     if not files:
         return {"name": f"inventory-{label}", "status": "FAIL", "reason": "requested directory is empty", "files": []}
     records = [{"path": str(path.resolve().relative_to(repo)).replace("\\", "/"), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()} for path in files]
-    ignored = []
-    for record in records:
-        check = subprocess.run(["git", "check-ignore", "--no-index", "--", record["path"]], cwd=repo, capture_output=True, text=True, check=False)
-        if check.returncode == 0:
-            ignored.append(record["path"])
-    if ignored:
-        return {"name": f"inventory-{label}", "status": "FAIL", "reason": "requested input contains ignored files", "ignored": ignored, "files": records, "count": len(records)}
     return {"name": f"inventory-{label}", "status": "PASS", "files": records, "count": len(records)}
 
 

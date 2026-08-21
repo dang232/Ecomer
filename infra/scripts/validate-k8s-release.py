@@ -15,6 +15,7 @@ import yaml
 REPO = Path(__file__).resolve().parents[2]
 DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
 ZERO_DIGEST = "sha256:" + ("0" * 64)
+ATTESTATION_ID = re.compile(r"^(?:https://|oci://|registry://|rekor://|sigstore://)[^\s]+$")
 REQUIRED_ENVIRONMENT = {
     "cart-service": {
         "PORT", "DATABASE_URL", "REDIS_HOST", "REDIS_PORT", "REDIS_PASSWORD",
@@ -266,18 +267,42 @@ def validate_lock(lock: dict, catalog: dict, errors: list[str]) -> dict[str, dic
         if not DIGEST.fullmatch(digest) or digest == ZERO_DIGEST:
             errors.append(f"{artifact_id}: release lock requires a non-placeholder sha256 digest")
         for field in ("sbom", "provenance"):
-            if not isinstance(artifact.get(field), str) or not artifact[field]:
+            if not isinstance(artifact.get(field), str) or not artifact[field] or not _external_uri(artifact[field]):
                 errors.append(f"{artifact_id}: {field} evidence URI is required")
         if artifact.get("provenanceVerified") is not True:
             errors.append(f"{artifact_id}: signed provenance must be verified before locking")
         provenance = artifact.get("provenanceRecord")
         if not isinstance(provenance, dict) or not all(provenance.get(field) for field in ("producer", "sourceCommit", "artifactDigest", "attestationId")):
             errors.append(f"{artifact_id}: structured independent provenance record is required")
-        elif provenance.get("producer") in {"", "repository", "self"} or provenance.get("attestationId") in {"repository", "self"}:
+        elif (
+            provenance.get("producer") in {"", "repository", "self"}
+            or not isinstance(provenance.get("attestationId"), str)
+            or not ATTESTATION_ID.fullmatch(provenance["attestationId"])
+            or not re.fullmatch(r"[0-9a-f]{40}", str(provenance.get("sourceCommit", "")))
+            or not DIGEST.fullmatch(str(provenance.get("artifactDigest", "")))
+        ):
             errors.append(f"{artifact_id}: provenance producer and attestation must be independent")
         elif provenance.get("sourceCommit") != lock.get("sourceCommit") or provenance.get("artifactDigest") != digest:
             errors.append(f"{artifact_id}: provenance identity does not match lock")
     return by_id
+
+
+def _external_uri(value: str) -> bool:
+    """Return whether an evidence URI names an external artifact authority."""
+    return bool(re.match(r"^(?:https://|oci://|registry://|rekor://|sigstore://)[^\s]+$", value)) and not any(
+        marker in value.lower() for marker in ("repository", "self-authored", "file://")
+    )
+
+
+def _unsafe_origin(origin: str) -> bool:
+    """Reject non-HTTPS, local, private, and placeholder origin hosts."""
+    parsed = urlparse(origin)
+    host = parsed.hostname or ""
+    try:
+        unsafe_ip = ipaddress.ip_address(host).is_private or ipaddress.ip_address(host).is_loopback or ipaddress.ip_address(host).is_link_local
+    except ValueError:
+        unsafe_ip = False
+    return parsed.scheme != "https" or not host or host == "localhost" or unsafe_ip or host.endswith((".example", ".invalid"))
 
 
 def is_strict_environment(environment: str) -> bool:
@@ -321,14 +346,10 @@ def validate_release_policy(
 
             if key.endswith("ORIGIN") or key.endswith("ORIGINS") or "PUBLIC_URL" in key \
                     or "CALLBACK_BASE_URL" in key or key == "KEYCLOAK_ISSUER_URI":
-                parsed = urlparse(normalized.split(",", 1)[0])
-                host = parsed.hostname or ""
-                try:
-                    unsafe_ip = ipaddress.ip_address(host).is_private or ipaddress.ip_address(host).is_loopback or ipaddress.ip_address(host).is_link_local
-                except ValueError:
-                    unsafe_ip = False
-                if parsed.scheme != "https" or host == "localhost" or unsafe_ip or host.endswith((".example", ".invalid")):
-                    errors.append(f"vnshop-app-config {key} must not use a placeholder origin")
+                for raw_origin in normalized.split(","):
+                    origin = raw_origin.strip()
+                    if _unsafe_origin(origin):
+                        errors.append(f"vnshop-app-config {key} must not use a placeholder origin")
 
     for document in documents:
         if document.get("kind") == "Secret":
@@ -498,11 +519,12 @@ def main() -> None:
         origin_values = {key: value for key, value in app_config_data.items() if key.endswith("_ORIGIN") or key.endswith("_ORIGINS") or "PUBLIC_URL" in key or "CALLBACK_BASE_URL" in key or key == "KEYCLOAK_ISSUER_URI"}
         parsed_origins = {}
         for key, value in origin_values.items():
-            parsed = urlparse(str(value).split(",", 1)[0])
-            if parsed.scheme != "https" or not parsed.hostname or parsed.hostname.endswith((".example", ".example.com", ".invalid")):
+            values = [part.strip() for part in str(value).split(",")]
+            parsed_values = [urlparse(part) for part in values]
+            if any(_unsafe_origin(part) or parsed.hostname.endswith(".example.com") for part, parsed in zip(values, parsed_values, strict=True)):
                 errors.append(f"vnshop-app-config {key} must be a real HTTPS origin")
             else:
-                parsed_origins[key] = parsed.hostname
+                parsed_origins[key] = parsed_values[0].hostname
         for key in ("WEB_ORIGIN", "API_ORIGIN", "AUTH_ORIGIN", "KEYCLOAK_ISSUER_URI"):
             if key not in parsed_origins:
                 errors.append(f"vnshop-app-config {key} is required for coherent origins")

@@ -70,6 +70,45 @@ def final_entries(repo: Path) -> dict[str, dict]:
     return entries
 
 
+def compare_entries(
+    workspace: dict[str, dict],
+    detached: dict[str, dict],
+    final: dict[str, dict],
+    allowed: set[str],
+) -> tuple[list[str], dict[str, str]]:
+    """Classify every captured/final path and return scope errors."""
+    errors: list[str] = []
+    classifications: dict[str, str] = {}
+    all_paths = set(workspace) | set(detached) | set(final)
+    for path in sorted(all_paths):
+        original = workspace.get(path)
+        baseline = detached.get(path)
+        current = final.get(path, {"path": path, "status": "MISSING", "sha256": None})
+        if original and original.get("status", "  ") != "  " and original.get("sha256") == current.get("sha256") and current.get("status") == "FILE":
+            classifications[path] = "PREEXISTING_UNCHANGED"
+            continue
+        baseline_same = baseline is not None and baseline.get("sha256") == current.get("sha256") and current.get("status") == "FILE"
+        workspace_same = original is not None and original.get("sha256") == current.get("sha256") and current.get("status") == "FILE"
+        if baseline_same and workspace_same:
+            classifications[path] = "UNCHANGED"
+            continue
+        if original and original.get("status", "  ") != "  " and workspace_same:
+            classifications[path] = "PREEXISTING_UNCHANGED"
+            continue
+        if path not in allowed:
+            errors.append(f"out-of-allowlist final tree/worktree change: {path}")
+            classifications[path] = "OUT_OF_SCOPE"
+        elif original and original.get("status", "  ") in {" M", "M ", "MM", " D", "D ", "A ", "AM"} and not workspace_same:
+            errors.append(f"pre-existing path mutated: {path}")
+            classifications[path] = "PREEXISTING_MUTATED"
+        else:
+            classifications[path] = "ALLOWED_CHANGED"
+        prior_status = (original or baseline or {}).get("status")
+        if (current.get("status") == "SYMLINK") != (prior_status == "SYMLINK"):
+            errors.append(f"symlink-type change: {path}")
+    return sorted(set(errors)), classifications
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo", type=Path, default=Path.cwd())
@@ -110,33 +149,8 @@ def main() -> int:
     if workspace_meta.get("capture", {}).get("commit_sha") != detached_meta.get("capture", {}).get("commit_sha") or workspace_meta.get("capture", {}).get("tree_sha") != detached_meta.get("capture", {}).get("tree_sha"):
         errors.append("workspace and detached captures are not bound to one commit/tree")
     final = final_entries(repo)
-    all_paths = set(workspace) | set(detached) | set(final)
-    classifications: dict[str, str] = {}
-    for path in sorted(all_paths):
-        original = workspace.get(path)
-        baseline = detached.get(path)
-        current = final.get(path, {"path": path, "status": "MISSING", "sha256": None})
-        if original and original.get("status", "  ") != "  " and original.get("sha256") == current.get("sha256") and current.get("status") == "FILE":
-            classifications[path] = "PREEXISTING_UNCHANGED"
-            continue
-        baseline_same = baseline is not None and baseline.get("sha256") == current.get("sha256") and current.get("status") == "FILE"
-        workspace_same = original is not None and original.get("sha256") == current.get("sha256") and current.get("status") == "FILE"
-        if baseline_same and workspace_same:
-            classifications[path] = "UNCHANGED"
-            continue
-        if original and original.get("status", "  ") != "  " and workspace_same:
-            classifications[path] = "PREEXISTING_UNCHANGED"
-            continue
-        if path not in allowed:
-            errors.append(f"out-of-allowlist final tree/worktree change: {path}")
-            classifications[path] = "OUT_OF_SCOPE"
-        elif original and original.get("status", "  ") in {" M", "M ", "MM", " D", "D ", "A ", "AM"} and not workspace_same:
-            errors.append(f"pre-existing path mutated: {path}")
-            classifications[path] = "PREEXISTING_MUTATED"
-        else:
-            classifications[path] = "ALLOWED_CHANGED"
-        if (current.get("status") == "SYMLINK") != (original or baseline or {}).get("status") == "SYMLINK":
-            errors.append(f"symlink-type change: {path}")
+    scope_errors, classifications = compare_entries(workspace, detached, final, allowed)
+    errors.extend(scope_errors)
     payload = {"schema_version": "scope-gate.v1", "status": "PASS" if not errors else "FAIL", "repository_status": "PASS" if not errors else "FAIL", "production_status": "NO-GO", "errors": sorted(set(errors)), "classifications": classifications}
     print(json.dumps(payload, indent=2, sort_keys=True))
     return 0 if not errors else 1

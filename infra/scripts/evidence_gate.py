@@ -12,10 +12,11 @@ from pathlib import Path
 
 STATUSES = {"PASS", "FAIL", "BLOCKED_EXTERNAL", "INCONCLUSIVE", "NO-GO"}
 EVIDENCE_CLASSES = {"repository-static", "bounded-local-runtime", "isolated-runtime", "operator-external-blocked", "production-prohibited"}
+COMMAND_OUTCOMES = {"PASS", "FAIL", "EXPECTED_REJECTION", "BLOCKED_EXTERNAL", "SKIPPED_DUE_TO_PRIOR_FAILURE"}
 REPORT_FIELDS = {"schema_version", "task_id", "producer", "owner", "attempt_id", "commit_sha", "tree_sha", "evidence_class", "repository_status", "production_status", "commands", "inputs", "outputs", "telemetry", "business_reconciliation", "provenance", "created_at", "fresh_until", "file_manifest_sha256"}
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 SHA1 = re.compile(r"^[0-9a-f]{40}$")
-CASES = {"forged-status", "stale-sealed-report", "post-seal-mutation", "duplicate-evidence", "late-replacement", "alternate-workflow-override"}
+CASES = {"forged-status", "forged-manifest-digest", "forged-artifact-digest", "path-traversal", "incomplete-command", "stale-sealed-report", "post-seal-mutation", "duplicate-evidence", "late-replacement", "alternate-workflow-override", "self-authored-external"}
 
 
 def _json(path: Path) -> dict:
@@ -70,6 +71,29 @@ def _artifact_list(report: dict, field: str, root: Path) -> None:
             raise ValueError(f"{field}[{index}] hash mismatch")
 
 
+def _manifest_digest(report: dict, root: Path) -> str:
+    """Require the report manifest hash to name a real output artifact."""
+    outputs = report.get("outputs")
+    if not isinstance(outputs, list):
+        raise ValueError("outputs must be a list")
+    manifests = [entry for entry in outputs if isinstance(entry, dict) and Path(str(entry.get("path", ""))).name == "file-manifest.json"]
+    if len(manifests) != 1:
+        raise ValueError("outputs must contain exactly one file-manifest.json")
+    manifest = manifests[0]
+    if manifest["sha256"] != report["file_manifest_sha256"]:
+        raise ValueError("file_manifest_sha256 is not bound to file-manifest.json")
+    path = _relative_file(root, manifest["path"], "outputs.file-manifest.json.path")
+    actual = _sha256(path)
+    if actual != report["file_manifest_sha256"]:
+        raise ValueError("file_manifest.json hash mismatch")
+    return actual
+
+
+def _report_hash(report_path: Path) -> str:
+    """Hash the exact serialized report bytes used by seal binding."""
+    return _sha256(report_path)
+
+
 def _commands(report: dict, root: Path) -> None:
     commands = report.get("commands")
     if not isinstance(commands, list) or not commands:
@@ -78,10 +102,25 @@ def _commands(report: dict, root: Path) -> None:
     for index, command in enumerate(commands):
         if not isinstance(command, dict) or not required.issubset(command):
             raise ValueError(f"commands[{index}] is incomplete")
+        if command["outcome"] not in COMMAND_OUTCOMES:
+            raise ValueError(f"commands[{index}] outcome or exit_code is invalid")
+        if command["outcome"] == "SKIPPED_DUE_TO_PRIOR_FAILURE":
+            if command["exit_code"] is not None:
+                raise ValueError(f"commands[{index}] skipped command must not have an exit_code")
+        elif not isinstance(command["exit_code"], int):
+            raise ValueError(f"commands[{index}] outcome or exit_code is invalid")
         if not isinstance(command["argv"], list) or not command["argv"] or not all(isinstance(item, str) and item for item in command["argv"]):
             raise ValueError(f"commands[{index}].argv is empty or malformed")
-        _timestamp(command["start_at"], f"commands[{index}].start_at")
-        _timestamp(command["end_at"], f"commands[{index}].end_at")
+        start = _timestamp(command["start_at"], f"commands[{index}].start_at")
+        end = _timestamp(command["end_at"], f"commands[{index}].end_at")
+        if end < start:
+            raise ValueError(f"commands[{index}] timestamps are out of order")
+        if command["outcome"] == "PASS" and command["exit_code"] != 0:
+            raise ValueError(f"commands[{index}] PASS must have exit_code 0")
+        if command["outcome"] != "PASS" and command["exit_code"] == 0:
+            raise ValueError(f"commands[{index}] non-PASS must have nonzero exit_code")
+        if command["stdout_path"] == command["stderr_path"]:
+            raise ValueError(f"commands[{index}] stdout and stderr artifacts must be distinct")
         for path_field, hash_field in (("stdout_path", "stdout_sha256"), ("stderr_path", "stderr_sha256")):
             path = _relative_file(root, command[path_field], f"commands[{index}].{path_field}")
             if not isinstance(command[hash_field], str) or not SHA256.fullmatch(command[hash_field]) or _sha256(path) != command[hash_field]:
@@ -93,10 +132,15 @@ def _provenance(report: dict) -> None:
     required = ("producer_identity", "owner", "environment_identity", "command_binding", "artifact_digest", "signature_type")
     if not isinstance(provenance, dict) or any(not provenance.get(field) for field in required):
         raise ValueError("provenance trust anchor is incomplete")
+    if provenance["producer_identity"] != report["producer"] or provenance["owner"] != report["owner"]:
+        raise ValueError("report and provenance identities do not match")
     if not SHA256.fullmatch(str(provenance["artifact_digest"])):
         raise ValueError("provenance artifact digest is invalid")
-    if report["evidence_class"] == "operator-external-blocked" and provenance["signature_type"] == "repository-commit":
+    external = report["evidence_class"] in {"isolated-runtime", "operator-external-blocked"}
+    if external and provenance["signature_type"] == "repository-commit":
         raise ValueError("external evidence cannot be self-authored")
+    if external and not provenance.get("provider_issued_id"):
+        raise ValueError("external evidence requires a provider-issued identifier")
     authority = provenance.get("deployment_authority")
     if authority not in {"repository-commit", "argocd-application:vnshop-prod"}:
         raise ValueError("alternate workflow authority is not accepted")
@@ -124,9 +168,10 @@ def validate_report(report_path: Path, evidence_root: Path, seal_path: Path | No
     _commands(report, evidence_root)
     _artifact_list(report, "inputs", evidence_root)
     _artifact_list(report, "outputs", evidence_root)
-    if not SHA256.fullmatch(str(report["file_manifest_sha256"])):
-        raise ValueError("file_manifest_sha256 is invalid")
     _provenance(report)
+    manifest_digest = _manifest_digest(report, evidence_root)
+    if report["provenance"]["artifact_digest"] != manifest_digest:
+        raise ValueError("provenance artifact digest must bind to file-manifest.json")
     report_hash = _sha256(report_path)
     if seen_report_hashes is not None and report_hash in seen_report_hashes:
         raise ValueError("duplicate evidence report")
@@ -134,70 +179,103 @@ def validate_report(report_path: Path, evidence_root: Path, seal_path: Path | No
         seen_report_hashes.add(report_hash)
     if seal_path is not None:
         seal = _json(seal_path)
-        if seal.get("report_sha256") != report_hash and seal.get("report_sha256") != hashlib.sha256(json.dumps(report, sort_keys=True, separators=(",", ":")).encode()).hexdigest():
+        if seal.get("report_sha256") != report_hash:
             raise ValueError("sealed report mutation detected")
     return report
 
 
-def rejected(report: dict, sealed: dict | None = None, deadline: str = "2026-08-20T10:30:00Z") -> tuple[bool, str]:
-    """Compatibility wrapper that applies strict structural checks to a dict."""
-    if set(report) != REPORT_FIELDS:
-        return True, "strict evidence schema mismatch"
-    if report.get("production_status") == "GO":
-        return True, "forged or closed-enum status"
-    if report.get("fresh_until", "") < report.get("created_at", ""):
-        return True, "stale evidence"
-    if sealed is not None and sealed.get("report_sha256") != hashlib.sha256(json.dumps(report, sort_keys=True).encode()).hexdigest():
-        return True, "post-seal mutation"
-    if report.get("created_at", "") > deadline:
-        return True, "late replacement"
-    if any(not report.get(field) for field in ("commands", "inputs", "outputs", "file_manifest_sha256")):
-        return True, "missing evidence fields"
+def rejected(report: dict, sealed: dict | None = None, deadline: str | None = None, root: Path | None = None) -> tuple[bool, str]:
+    """Reject a report unless the real artifact validator can inspect its files."""
+    if root is None:
+        return True, "real evidence root is required"
+    report_path = root / "report.json"
+    report_path.write_text(json.dumps(report, sort_keys=True) + "\n", encoding="utf-8")
+    seal_path = None
+    if sealed is not None:
+        seal_path = root / "sealed.json"
+        seal_path.write_text(json.dumps(sealed, sort_keys=True) + "\n", encoding="utf-8")
     try:
-        if report.get("repository_status") not in STATUSES or report.get("production_status") not in STATUSES:
-            raise ValueError("invalid evidence enum")
-        _provenance(report)
-    except ValueError as exc:
+        validate_report(report_path, root, seal_path, deadline)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
         return True, str(exc)
     return False, "accepted"
 
 
-def base_report() -> dict:
-    """Return a deliberately incomplete fixture for legacy adversarial CLI cases."""
-    return {"schema_version": "evidence.v1", "task_id": "2", "producer": "release-engineering-owner", "owner": "release-engineering-owner", "attempt_id": "attempt-fixture", "commit_sha": "a" * 40, "tree_sha": "b" * 40, "evidence_class": "repository-static", "repository_status": "PASS", "production_status": "NO-GO", "commands": [{"outcome": "PASS"}], "inputs": [{"path": "missing", "sha256": "c" * 64}], "outputs": [{"path": "missing", "sha256": "c" * 64}], "telemetry": [], "business_reconciliation": {}, "provenance": {"producer_identity": "release-engineering-owner", "owner": "release-engineering-owner", "environment_identity": {"isolated": True}, "command_binding": "fixture", "artifact_digest": "c" * 64, "signature_type": "repository-commit", "deployment_authority": "repository-commit"}, "created_at": "2026-08-20T10:00:00Z", "fresh_until": "2026-08-20T11:00:00Z", "file_manifest_sha256": "c" * 64}
+def base_report(root: Path | None = None) -> dict:
+    """Create a complete report fixture when an evidence root is provided."""
+    if root is None:
+        return {"schema_version": "evidence.v1"}
+    for name in ("stdout.txt", "stderr.txt", "input.json", "output.json"):
+        (root / name).write_text(name, encoding="utf-8")
+    manifest = root / "file-manifest.json"
+    manifest.write_text(json.dumps({"files": ["output.json"]}, sort_keys=True) + "\n", encoding="utf-8")
+    manifest_hash = _sha256(manifest)
+    return {"schema_version": "evidence.v1", "task_id": "2", "producer": "release-engineering-owner", "owner": "release-engineering-owner", "attempt_id": "attempt-fixture", "commit_sha": "a" * 40, "tree_sha": "b" * 40, "evidence_class": "repository-static", "repository_status": "PASS", "production_status": "NO-GO", "commands": [{"outcome": "PASS", "argv": ["python", "-c", "pass"], "cwd": ".", "start_at": "2099-01-01T00:00:00Z", "end_at": "2099-01-01T00:00:01Z", "stdout_path": "stdout.txt", "stdout_sha256": _sha256(root / "stdout.txt"), "stderr_path": "stderr.txt", "stderr_sha256": _sha256(root / "stderr.txt"), "exit_code": 0}], "inputs": [{"path": "input.json", "sha256": _sha256(root / "input.json")}], "outputs": [{"path": "file-manifest.json", "sha256": manifest_hash}, {"path": "output.json", "sha256": _sha256(root / "output.json")}], "telemetry": [], "business_reconciliation": {"not_applicable": "static"}, "provenance": {"producer_identity": "release-engineering-owner", "owner": "release-engineering-owner", "environment_identity": {"isolated": True}, "command_binding": "fixture", "artifact_digest": manifest_hash, "signature_type": "repository-commit", "deployment_authority": "repository-commit"}, "created_at": "2099-01-01T00:00:00Z", "fresh_until": "2099-01-02T00:00:00Z", "file_manifest_sha256": manifest_hash}
 
 
 def fixture(case: str, root: Path) -> tuple[dict, dict | None]:
-    """Write a legacy adversarial input without using it as validation authority."""
-    report = base_report()
+    """Write complete hostile artifacts and mutate one trust boundary per case."""
+    report = base_report(root)
     sealed = None
-    if case == "forged-status":
+    if case == "forged-manifest-digest":
+        report["file_manifest_sha256"] = "0" * 64
+    elif case == "forged-artifact-digest":
+        report["provenance"]["artifact_digest"] = "0" * 64
+    elif case == "path-traversal":
+        report["inputs"][0]["path"] = "../outside"
+    elif case == "incomplete-command":
+        report["commands"][0].pop("argv")
+    elif case == "forged-status":
         report["production_status"] = "GO"
     elif case == "stale-sealed-report":
-        report["fresh_until"] = "2026-08-20T09:00:00Z"
+        report["fresh_until"] = "2000-01-01T00:00:00Z"
     elif case == "post-seal-mutation":
-        sealed = {"report_sha256": hashlib.sha256(json.dumps(report, sort_keys=True).encode()).hexdigest()}
+        report_path = root / "report.json"
+        report_path.write_text(json.dumps(report, sort_keys=True) + "\n", encoding="utf-8")
+        sealed = {"report_sha256": _sha256(report_path)}
         report["repository_status"] = "FAIL"
-    elif case == "duplicate-evidence":
-        report["duplicate_of"] = "same-report"
     elif case == "late-replacement":
-        report["created_at"] = "2026-08-20T12:00:00Z"
+        report["created_at"] = "2099-01-01T00:00:00Z"
     elif case == "alternate-workflow-override":
         report["provenance"]["deployment_authority"] = "kubectl-apply"
+    elif case == "self-authored-external":
+        report["evidence_class"] = "operator-external-blocked"
     (root / f"{case}.input.json").write_text(json.dumps({"report": report, "sealed": sealed}, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return report, sealed
 
 
 def evaluate(root: Path, cases: list[str]) -> dict:
-    """Evaluate only known adversarial fixture names."""
+    """Evaluate hostile cases through validate_report and real artifact hashes."""
     root.mkdir(parents=True, exist_ok=True)
     results = {}
     for case in cases:
         if case not in CASES:
             results[case] = {"status": "FAIL", "reason": "unknown adversarial case"}
             continue
-        report, sealed = fixture(case, root)
-        is_rejected, reason = rejected(report, sealed)
+        case_root = root / case
+        case_root.mkdir(parents=True, exist_ok=True)
+        report, sealed = fixture(case, case_root)
+        report_path = case_root / "report.json"
+        report_path.write_text(json.dumps(report, sort_keys=True) + "\n", encoding="utf-8")
+        if case == "duplicate-evidence":
+            report_path.write_bytes((case_root / "report.json").read_bytes())
+            seen = {_sha256(report_path)}
+            (case_root / "duplicate.json").write_bytes(report_path.read_bytes())
+            try:
+                validate_report(case_root / "duplicate.json", case_root, seen_report_hashes=seen)
+                is_rejected, reason = False, "duplicate evidence accepted"
+            except ValueError as exc:
+                is_rejected, reason = True, str(exc)
+        else:
+            seal_path = None
+            if sealed is not None:
+                seal_path = case_root / "sealed.json"
+                seal_path.write_text(json.dumps(sealed, sort_keys=True) + "\n", encoding="utf-8")
+            try:
+                validate_report(report_path, case_root, seal_path, "2098-12-31T00:00:00Z" if case == "late-replacement" else None)
+                is_rejected, reason = False, "accepted"
+            except (OSError, ValueError, json.JSONDecodeError) as exc:
+                is_rejected, reason = True, str(exc)
         results[case] = {"status": "PASS" if is_rejected else "FAIL", "rejected": is_rejected, "reason": reason, "production_status": "NO-GO"}
         (root / f"{case}.result.json").write_text(json.dumps(results[case], indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return {"schema_version": "evidence-gate.v1", "status": "PASS" if results and all(item["status"] == "PASS" for item in results.values()) else "FAIL", "cases": results}

@@ -63,5 +63,16 @@ class Todo2ReleasePolicyTests(unittest.TestCase):
         self.assertIn("provenance", text)
         self.assertIn("verified", text)
 
+    def test_lock_rejects_fake_provider_attestation(self):
+        catalog = [{"id": f"service-{index}", "image": f"ghcr.io/vnshop/service-{index}"} for index in range(19)]
+        artifacts = [{"id": item["id"], "image": item["image"], "digest": "sha256:" + "a" * 64, "sbom": "https://registry.example/sbom", "provenance": "https://registry.example/provenance", "provenanceVerified": True, "provenanceRecord": {"producer": "registry", "sourceCommit": "a" * 40, "artifactDigest": "sha256:" + "a" * 64, "attestationId": "fake"}} for item in catalog]
+        errors: list[str] = []
+        validator.validate_lock({"sourceCommit": "a" * 40, "artifacts": artifacts}, {"deployables": catalog}, errors)
+        self.assertTrue(any("independent" in error for error in errors))
+
     def test_policy_rejects_prod_override_flags(self):
         self.assertTrue(any("only permitted for dev" in item for item in validator.validate_release_policy([], "prod", allow_unresolved=True)))
+
+    def test_policy_rejects_unsafe_secondary_origin(self):
+        errors = validator.validate_release_policy([config({"CORS_ORIGINS": "https://web.acme.test,https://localhost:3000"})], "prod")
+        self.assertTrue(any("placeholder origin" in error for error in errors))

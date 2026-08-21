@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 import sys
@@ -23,7 +24,8 @@ def _env(container: dict) -> dict[str, str]:
     return values
 
 
-def check(documents: list[dict]) -> list[str]:
+def _check_documents(documents: list[dict]) -> list[str]:
+    """Check structured topology predicates only for an authenticated render."""
     errors: list[str] = []
     identities = [(d.get("kind"), d.get("metadata", {}).get("namespace", ""), d.get("metadata", {}).get("name")) for d in documents]
     for kind, namespace, name in sorted(set(identities)):
@@ -47,6 +49,12 @@ def check(documents: list[dict]) -> list[str]:
             errors.append("Kafka client certificate authentication is required")
         if env.get("KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM", "").lower() != "https":
             errors.append("Kafka hostname verification must be enabled")
+        required_kafka = {"KAFKA_AUTO_CREATE_TOPICS_ENABLE", "KAFKA_AUTHORIZER_CLASS_NAME", "KAFKA_CONTROLLER_QUORUM_VOTERS", "KAFKA_INTER_BROKER_LISTENER_NAME", "KAFKA_CONTROLLER_LISTENER_NAMES"}
+        missing_kafka = sorted(required_kafka - set(env))
+        if missing_kafka:
+            errors.append(f"Kafka HA/security fields are missing: {', '.join(missing_kafka)}")
+        if len(kafka[0].get("spec", {}).get("volumeClaimTemplates", [])) != 1:
+            errors.append("Kafka persistent storage claim is required")
     elastic = [d for d in documents if d.get("kind") == "StatefulSet" and d.get("metadata", {}).get("name") == "elasticsearch"]
     if len(elastic) != 1:
         errors.append("exactly one rendered Elasticsearch StatefulSet is required")
@@ -59,12 +67,43 @@ def check(documents: list[dict]) -> list[str]:
             errors.append("Elasticsearch security must be enabled")
         if env.get("xpack.security.http.ssl.enabled", "").lower() != "true":
             errors.append("Elasticsearch HTTPS security must be enabled")
+        if env.get("xpack.security.transport.ssl.enabled", "").lower() != "true":
+            errors.append("Elasticsearch transport TLS must be enabled")
+        if "master" not in {role.strip() for role in env.get("node.roles", "").split(",")}:
+            errors.append("Elasticsearch role matrix must include master eligibility")
+        if elastic[0].get("spec", {}).get("replicas") != 3 or len(elastic[0].get("spec", {}).get("volumeClaimTemplates", [])) != 1:
+            errors.append("Elasticsearch HA replicas and persistent storage are required")
     names = {(d.get("kind"), d.get("metadata", {}).get("name")) for d in documents}
+    required_authority_objects = {
+        ("ConfigMap", "kafka-config"),
+        ("ConfigMap", "elasticsearch-security-contract"),
+        ("PodDisruptionBudget", "kafka"),
+        ("PodDisruptionBudget", "elasticsearch"),
+        ("NetworkPolicy", "default-deny"),
+        ("NetworkPolicy", "elasticsearch-default-deny"),
+    }
+    for kind, name in sorted(required_authority_objects - names):
+        errors.append(f"canonical authority object is missing: {kind}/{name}")
     if ("CronJob", "db-backup") in names:
         errors.append("legacy backup CronJob is rendered")
     if ("CronJob", "vnshop-authoritative-backup") not in names:
         errors.append("authoritative backup CronJob is missing")
     return sorted(set(errors))
+
+
+def check(documents: list[dict], *, authority: str | None = None, manifest_sha256: str | None = None) -> list[str]:
+    """Validate documents only when they equal the authenticated production render."""
+    if authority != "kubectl-kustomize:infra/k8s/overlays/prod" or not isinstance(manifest_sha256, str) or len(manifest_sha256) != 64:
+        return ["topology checks require canonical production render authority and digest"]
+    rendered = subprocess.run(["kubectl", "kustomize", str(CANONICAL_OVERLAY), "--load-restrictor", "LoadRestrictionsNone"], cwd=ROOT, capture_output=True, check=False)
+    if rendered.returncode:
+        return ["canonical production render is unavailable"]
+    if hashlib.sha256(rendered.stdout).hexdigest() != manifest_sha256:
+        return ["topology manifest digest does not match canonical production render"]
+    canonical = [doc for doc in yaml.safe_load_all(rendered.stdout) if isinstance(doc, dict)]
+    if documents != canonical:
+        return ["topology documents are not byte-bound to canonical production render"]
+    return _check_documents(canonical)
 
 
 def main() -> int:
@@ -93,7 +132,7 @@ def main() -> int:
                 actual_resources = sorted((item.get("kind"), item.get("name"), item.get("namespace", "")) for item in payload.get("resources", []))
                 if actual_resources != expected_resources:
                     raise ValueError("inventory resource identities do not match canonical render")
-                errors = check(documents)
+                errors = check(documents, authority=payload.get("authority"), manifest_sha256=payload.get("manifest_sha256"))
         else:
             manifest = args.manifest
             if not manifest:
@@ -109,7 +148,7 @@ def main() -> int:
                 if manifest.read_bytes() != raw:
                     raise ValueError("supplied manifest is not byte-identical to canonical production render")
             documents = [doc for doc in yaml.safe_load_all(raw) if isinstance(doc, dict)]
-            errors = check(documents)
+            errors = check(documents, authority="kubectl-kustomize:infra/k8s/overlays/prod", manifest_sha256=hashlib.sha256(raw).hexdigest())
     except (OSError, RuntimeError, ValueError, yaml.YAMLError) as exc:
         print(json.dumps({"status": "BLOCKED_EXTERNAL", "errors": [str(exc)]}, sort_keys=True))
         return 1
