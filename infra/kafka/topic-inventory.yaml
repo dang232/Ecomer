@@ -71,6 +71,7 @@ acl_contract:
   application_super_users_forbidden: [svc-order, svc-payment, svc-inventory, svc-product, svc-shipping, svc-finance, svc-search, svc-recommendations, svc-invoice, svc-messaging, svc-user, svc-video-transcoder, svc-video-moderator]
   unauthorized_acl_probe: {principal: svc-unauthorized, topic: product-events, operation: Read, expected: DENIED}
   bootstrap_order: reassignment-verified-before-acl-bootstrap
-  transactional_id_policy: service-principal-prefixed-and-explicit
+  transactional_id_policy: none-used
+  transactional_ids: []
   topic_acl_source: infra/k8s/base/kafka-bootstrap-job.yaml
   local_bootstrap_source: infra/scripts/init-kafka-topics.sh

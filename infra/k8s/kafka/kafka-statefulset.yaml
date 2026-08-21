@@ -189,6 +189,8 @@ spec:
         - {name: internal, containerPort: 9094}
         env:
         - {name: KAFKA_PROCESS_ROLES, value: broker,controller}
+        - name: POD_NAME
+          valueFrom: {fieldRef: {fieldPath: metadata.name}}
         - {name: KAFKA_CONTROLLER_QUORUM_VOTERS, value: '0@kafka-0.kafka-headless:9093,1@kafka-1.kafka-headless:9093,2@kafka-2.kafka-headless:9093'}
         - {name: KAFKA_LISTENERS, value: 'CLIENT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,INTERNAL://0.0.0.0:9094'}
         - {name: KAFKA_ADVERTISED_LISTENERS, value: 'CLIENT://kafka:9092,INTERNAL://$(POD_NAME).kafka-headless:9094'}
@@ -213,8 +215,6 @@ spec:
           valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-kafka-truststore-password}}
         - name: KAFKA_CLUSTER_ID
           valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-kafka-cluster-id}}
-        - name: POD_NAME
-          valueFrom: {fieldRef: {fieldPath: metadata.name}}
         volumeMounts:
         - {name: kafka-data, mountPath: /var/lib/kafka/data}
         - {name: kafka-config, mountPath: /etc/kafka/server.properties, subPath: server.properties, readOnly: true}

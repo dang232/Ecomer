@@ -979,6 +979,10 @@ spec:
         - name: KAFKA_SASL_PASSWORD
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: messaging-service-kafka-password}
+        - name: KAFKA_SSL_TRUSTSTORE_LOCATION
+          value: /etc/kafka/tls/client.truststore.jks
+        - name: KAFKA_SSL_KEYSTORE_LOCATION
+          value: /etc/kafka/tls/client.keystore.jks
         envFrom:
         - configMapRef:
             name: vnshop-app-config
@@ -1016,9 +1020,18 @@ spec:
           capabilities:
             drop: ["ALL"]
         volumeMounts:
+        - name: kafka-tls
+          mountPath: /etc/kafka/tls
+          readOnly: true
         - name: scratch
           mountPath: /tmp
       volumes:
+      - name: kafka-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {key: messaging-service-kafka-ca, path: client.truststore.jks}
+          - {key: messaging-service-kafka-client-keystore, path: client.keystore.jks}
       - name: scratch
         emptyDir:
           medium: Memory
@@ -1281,6 +1294,12 @@ spec:
         - name: KAFKA_SASL_PASSWORD
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: notification-service-kafka-password}
+        - name: KAFKA_SSL_CA_FILE
+          value: /etc/kafka/tls/ca.crt
+        - name: KAFKA_SSL_CERT_FILE
+          value: /etc/kafka/tls/client.crt
+        - name: KAFKA_SSL_KEY_FILE
+          value: /etc/kafka/tls/client.key
         - name: REDIS_URL
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: notification-service-redis-url}
@@ -1324,9 +1343,19 @@ spec:
           capabilities:
             drop: ["ALL"]
         volumeMounts:
+        - name: kafka-tls
+          mountPath: /etc/kafka/tls
+          readOnly: true
         - name: scratch
           mountPath: /tmp
       volumes:
+      - name: kafka-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {key: notification-service-kafka-ca, path: ca.crt}
+          - {key: notification-service-kafka-client-cert, path: client.crt}
+          - {key: notification-service-kafka-client-key, path: client.key}
       - name: scratch
         emptyDir:
           medium: Memory

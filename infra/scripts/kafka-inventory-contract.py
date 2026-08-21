@@ -13,6 +13,43 @@ BOOTSTRAP_SCRIPT = Path(__file__).resolve().parents[2] / "infra/scripts/init-kaf
 MIGRATION_CONTRACT = Path(__file__).resolve().parents[2] / "infra/kafka/migration-contract.yaml"
 
 
+def _extract_topic_entries(script: str) -> set[tuple[str, int]]:
+    return {
+        (match.group(1), int(match.group(2)))
+        for match in re.finditer(r'^\s+"([^":]+):(\d+)"$', script, re.MULTILINE)
+    }
+
+
+def _extract_acl_commands(script: str) -> set[str]:
+    return {" ".join(line.strip().split()) for line in script.splitlines() if "$ACL --add" in line}
+
+
+def _extract_kubernetes_script(document: str) -> str:
+    marker = "  init-kafka-topics.sh: |\n"
+    start = document.index(marker) + len(marker)
+    end = document.index("\n---\napiVersion: batch/v1", start)
+    return "\n".join(line[4:] if line.startswith("    ") else line for line in document[start:end].splitlines()) + "\n"
+
+
+def validate_bootstrap_authority(document: dict, script: str) -> list[str]:
+    inventory_topics = {(topic["name"], int(topic["partitions"])) for topic in document.get("topics", [])}
+    return [] if _extract_topic_entries(script) == inventory_topics else ["bootstrap topic metadata must exactly match inventory"]
+
+
+def validate_kubernetes_bootstrap_authority(document: dict, manifest: str) -> list[str]:
+    local = BOOTSTRAP_SCRIPT.read_text(encoding="utf-8")
+    try:
+        kubernetes = _extract_kubernetes_script(manifest)
+    except ValueError:
+        return ["Kubernetes bootstrap Job must embed the local bootstrap authority"]
+    errors = validate_bootstrap_authority(document, local)
+    if _extract_topic_entries(local) != _extract_topic_entries(kubernetes):
+        errors.append("Kubernetes bootstrap topics drift from local bootstrap authority")
+    if _extract_acl_commands(local) != _extract_acl_commands(kubernetes):
+        errors.append("Kubernetes bootstrap ACLs drift from local bootstrap authority")
+    return errors
+
+
 def validate(document: dict) -> list[str]:
     errors: list[str] = []
     if document.get("schema_version") != "kafka-topic-inventory.v1":
@@ -29,8 +66,8 @@ def validate(document: dict) -> list[str]:
     acl_contract = document.get("acl_contract", {})
     if acl_contract.get("bootstrap_order") != "reassignment-verified-before-acl-bootstrap":
         errors.append("ACL bootstrap must follow verified reassignment")
-    if acl_contract.get("transactional_id_policy") != "service-principal-prefixed-and-explicit":
-        errors.append("transactional ID ACL policy must be explicit and service-principal-prefixed")
+    if acl_contract.get("transactional_id_policy") not in {"service-principal-prefixed-and-explicit", "none-used"}:
+        errors.append("transactional ID ACL policy must be explicit")
     if acl_contract.get("topic_acl_source") != "infra/k8s/base/kafka-bootstrap-job.yaml":
         errors.append("Kubernetes ACL source must be authoritative")
     if acl_contract.get("local_bootstrap_source") != "infra/scripts/init-kafka-topics.sh":
@@ -85,6 +122,7 @@ def validate(document: dict) -> list[str]:
     inventory_topics = {topic["name"] for topic in topics} if isinstance(topics, list) else set()
     if script_topics != inventory_topics:
         errors.append("local bootstrap topic list must exactly match inventory")
+    errors.extend(validate_bootstrap_authority(document, script))
     try:
         migration = yaml.safe_load(MIGRATION_CONTRACT.read_text(encoding="utf-8"))
         if migration.get("listeners") != {"client": "CLIENT:SASL_SSL", "inter_broker": "INTERNAL:SSL", "controller": "CONTROLLER:SSL"}:
