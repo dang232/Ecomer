@@ -42,10 +42,11 @@ async function bootstrap() {
             password: process.env.KAFKA_SASL_PASSWORD ?? '',
           },
         }),
+        ssl: true,
       },
       consumer: {
         groupId: process.env.KAFKA_CONSUMER_GROUP ?? 'notification-service',
-        allowAutoTopicCreation: true,
+        allowAutoTopicCreation: false,
       },
     },
   });

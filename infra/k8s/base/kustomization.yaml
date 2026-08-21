@@ -4,6 +4,7 @@ resources:
 - configmap.yaml
 - sealedsecret.yaml
 - network-policies.yaml
+- ../kafka/kafka-statefulset.yaml
 - platform-services.yaml
 - workloads.yaml
 - migration-job.yaml

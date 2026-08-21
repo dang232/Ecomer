@@ -1,0 +1,51 @@
+schema_version: kafka-migration-contract.v1
+inventory: infra/kafka/topic-inventory.yaml
+authority: infra/k8s/kafka/kafka-statefulset.yaml
+cluster:
+  mode: KRaft
+  node_ids: {kafka-0: 0, kafka-1: 1, kafka-2: 2}
+  voters: '0@kafka-0.kafka-headless:9093,1@kafka-1.kafka-headless:9093,2@kafka-2.kafka-headless:9093'
+  cluster_id_secret_key: platform-kafka-cluster-id
+  pvc_policy: reuse-only-when-cluster-id-and-node-id-match; otherwise halt and replace under maintenance
+listeners:
+  client: CLIENT:SASL_SSL
+  inter_broker: INTERNAL:SSL
+  controller: CONTROLLER:SSL
+certificate_contract:
+  ca_secret_key: platform-kafka-truststore
+  broker_keystore_secret_key: platform-kafka-broker-keystore
+  admin_keystore_secret_key: platform-kafka-admin-keystore
+  hostname_verification: HTTPS
+  required_eku: serverAuth,clientAuth
+maintenance_order:
+  - pause-or-drain-producers-and-consumers
+  - verify-authenticated-cluster-identity-and-three-broker-quorum
+  - generate-rf1-to-rf3-reassignment
+  - apply-and-monitor-reassignment
+  - verify-every-partition-completed-and-isr-at-least-two
+  - run-secure-topic-and-acl-bootstrap
+cutover:
+  - render-and-validate-secure-authority
+  - verify-authenticated-cluster-identity-and-three-broker-quorum
+  - pause-or-drain-producers-and-consumers
+  - generate-rf1-to-rf3-reassignment
+  - apply-reassignment-with-command-config
+  - verify-every-partition-completed-and-isr-at-least-two
+  - run-secure-topic-and-acl-bootstrap
+rollback:
+  partial_reassignment: abort-and-restore-last-verified-replica-map
+  offline_replica_or_isr_loss: abort-without-bootstrap
+  incompatible_partition_or_config: halt-and-require-manual-inventory-reconciliation
+  timeout_seconds: 900
+reassignment_execution:
+  mode: operator-only
+  apply: requires authenticated isolated Kafka cluster and maintenance gate
+  monitor: requires authenticated partition-state evidence until every partition is completed
+  abort: required on timeout, offline replica, ISR loss, or incompatible metadata
+  rollback: restore last verified replica map; never claim completion from a declarative fixture
+  cleanup: operator receipt required; repository checks never mutate topics
+prevention:
+  production_rf1_creation: forbidden
+  production_plaintext_bootstrap: forbidden
+  old_bootstrap_script: local-only-and-refuses-non-local-target
+  old_platform_kafka_resource: absent-from-active-render

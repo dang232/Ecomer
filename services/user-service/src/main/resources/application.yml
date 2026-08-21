@@ -42,15 +42,25 @@ spring:
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     properties:
-      security.protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_PLAINTEXT}
+      security.protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_SSL}
       sasl.mechanism: PLAIN
       sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_SASL_USERNAME}" password="${KAFKA_SASL_PASSWORD}";
       ssl.endpoint.identification.algorithm: https
+      ssl.truststore.location: ${KAFKA_SSL_TRUSTSTORE_LOCATION:/etc/kafka/tls/ca.truststore.jks}
+      ssl.truststore.password: ${KAFKA_SSL_TRUSTSTORE_PASSWORD}
+      ssl.keystore.location: ${KAFKA_SSL_KEYSTORE_LOCATION:/etc/kafka/tls/client.keystore.jks}
+      ssl.keystore.password: ${KAFKA_SSL_KEYSTORE_PASSWORD}
+      ssl.client.auth: required
     admin:
       properties:
-        security.protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_PLAINTEXT}
+        security.protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_SSL}
         sasl.mechanism: PLAIN
         sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_SASL_USERNAME}" password="${KAFKA_SASL_PASSWORD}";
+        ssl.truststore.location: ${KAFKA_SSL_TRUSTSTORE_LOCATION:/etc/kafka/tls/ca.truststore.jks}
+        ssl.truststore.password: ${KAFKA_SSL_TRUSTSTORE_PASSWORD}
+        ssl.keystore.location: ${KAFKA_SSL_KEYSTORE_LOCATION:/etc/kafka/tls/client.keystore.jks}
+        ssl.keystore.password: ${KAFKA_SSL_KEYSTORE_PASSWORD}
+        ssl.endpoint.identification.algorithm: https
 
 # Service-account credentials for the Keycloak Admin API. Used by AuthController
 # to create users on POST /auth/register. The realm import in

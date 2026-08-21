@@ -1,25 +1,4 @@
-# =============================================================================
-# VNShop Kafka — Production StatefulSet (3 brokers, KRaft mode)
-#
-# Broker configuration is supplied via the kafka-config ConfigMap below,
-# which mounts infra/kafka/server.properties into each pod.
-#
-# Key production settings (see infra/kafka/server.properties for details):
-#   default.replication.factor=3
-#   min.insync.replicas=2
-#   unclean.leader.election.enable=false
-#   log.retention.hours=168
-#
-# Local dev uses a single-broker Docker Compose service with
-# replication.factor=1. Do NOT apply this manifest locally.
-# =============================================================================
-
----
-# ConfigMap — mounts server.properties into each broker pod.
-# Apply after updating infra/kafka/server.properties and running:
-#   kubectl create configmap kafka-config \
-#     --from-file=server.properties=infra/kafka/server.properties \
-#     --dry-run=client -o yaml | kubectl apply -f -
+# Production Kafka authority. Certificates and passwords are external SealedSecret data.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -29,26 +8,45 @@ metadata:
     app.kubernetes.io/part-of: vnshop
 data:
   server.properties: |
+    process.roles=broker,controller
     default.replication.factor=3
     min.insync.replicas=2
-    unclean.leader.election.enable=false
-    num.partitions=6
-    log.retention.hours=168
     offsets.topic.replication.factor=3
     transaction.state.log.replication.factor=3
     transaction.state.log.min.isr=2
-    log.segment.bytes=1073741824
-    log.retention.check.interval.ms=300000
-    num.network.threads=3
-    num.io.threads=8
-    num.recovery.threads.per.data.dir=1
-    socket.send.buffer.bytes=102400
-    socket.receive.buffer.bytes=102400
-    socket.request.max.bytes=104857600
+    unclean.leader.election.enable=false
+    auto.create.topics.enable=false
+    authorizer.class.name=org.apache.kafka.metadata.authorizer.StandardAuthorizer
+    allow.everyone.if.no.acl.found=false
+    super.users=User:kafka-controller;User:kafka-admin
+    ssl.client.auth=required
+    ssl.endpoint.identification.algorithm=HTTPS
+    ssl.keystore.type=JKS
+    ssl.truststore.type=JKS
+    ssl.keystore.location=/etc/kafka/tls/broker.keystore.jks
+    ssl.truststore.location=/etc/kafka/tls/ca.truststore.jks
+    ssl.keystore.password=${KAFKA_SSL_KEYSTORE_PASSWORD}
+    ssl.truststore.password=${KAFKA_SSL_TRUSTSTORE_PASSWORD}
+    listener.name.client.sasl.enabled.mechanisms=PLAIN
+    listener.name.client.plain.sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required;
+    listener.name.internal.ssl.client.auth=required
+    listener.name.controller.ssl.client.auth=required
+    listener.security.protocol.map=CLIENT:SASL_SSL,INTERNAL:SSL,CONTROLLER:SSL
+    inter.broker.listener.name=INTERNAL
+    controller.listener.names=CONTROLLER
+    log.dirs=/var/lib/kafka/data
+    num.partitions=6
+    log.retention.hours=168
 
 ---
-# Headless Service — enables stable DNS for each broker pod
-# (kafka-0.kafka-headless, kafka-1.kafka-headless, kafka-2.kafka-headless).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kafka
+  labels: {app.kubernetes.io/name: kafka, app.kubernetes.io/part-of: vnshop}
+automountServiceAccountToken: false
+
+---
 apiVersion: v1
 kind: Service
 metadata:
@@ -58,18 +56,21 @@ metadata:
     app.kubernetes.io/part-of: vnshop
 spec:
   clusterIP: None
+  publishNotReadyAddresses: true
   selector:
     app.kubernetes.io/name: kafka
   ports:
-  - name: broker
+  - name: client
     port: 9092
-    targetPort: broker
+    targetPort: client
   - name: controller
     port: 9093
     targetPort: controller
+  - name: internal
+    port: 9094
+    targetPort: internal
 
 ---
-# Client Service — stable ClusterIP for application bootstrap addresses.
 apiVersion: v1
 kind: Service
 metadata:
@@ -81,9 +82,20 @@ spec:
   selector:
     app.kubernetes.io/name: kafka
   ports:
-  - name: broker
+  - name: client
     port: 9092
-    targetPort: broker
+    targetPort: client
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: kafka
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kafka
 
 ---
 apiVersion: apps/v1
@@ -93,34 +105,38 @@ metadata:
   labels:
     app.kubernetes.io/name: kafka
     app.kubernetes.io/part-of: vnshop
+  annotations:
+    vnshop.io/kafka-authority: production-kraft-v1
 spec:
-  # 3 replicas satisfy default.replication.factor=3 and min.insync.replicas=2.
-  # Scaling below 3 will violate ISR constraints and stall producers with acks=all.
   replicas: 3
   serviceName: kafka-headless
+  podManagementPolicy: OrderedReady
   selector:
     matchLabels:
       app.kubernetes.io/name: kafka
-  # Ordered rollout ensures one broker restarts at a time, preserving quorum.
-  podManagementPolicy: OrderedReady
   updateStrategy:
     type: RollingUpdate
-
   template:
     metadata:
       labels:
         app.kubernetes.io/name: kafka
         app.kubernetes.io/part-of: vnshop
     spec:
-      # Spread pods across nodes to avoid co-location failures.
+      serviceAccountName: kafka
+      automountServiceAccountToken: false
       topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: kafka
       - maxSkew: 1
         topologyKey: kubernetes.io/hostname
         whenUnsatisfiable: DoNotSchedule
         labelSelector:
           matchLabels:
             app.kubernetes.io/name: kafka
-
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -128,162 +144,121 @@ spec:
         fsGroup: 1000
         seccompProfile:
           type: RuntimeDefault
-
       initContainers:
-      # Formats the KRaft storage directory on first boot using the pod's
-      # ordinal index as the broker.id / node.id.
       - name: kafka-init
-        image: confluentinc/cp-kafka:8.2.0
-        command:
-        - /bin/sh
-        - -c
+        image: confluentinc/cp-kafka@sha256:acbbf674f2ed40e5d0a8ca51beb0f00692c866fc22b5ce06f8cadbdc54cd4436
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/bash", "-ec"]
+        args:
         - |
-          BROKER_ID=${HOSTNAME##*-}
-          STORAGE_DIR=/var/lib/kafka/data
-          META_FILE="${STORAGE_DIR}/meta.properties"
-          if [ ! -f "${META_FILE}" ]; then
-            echo "Formatting KRaft storage for broker ${BROKER_ID}..."
-            kafka-storage format \
-              --config /etc/kafka/server.properties \
-              --cluster-id "${KAFKA_CLUSTER_ID}" \
-              --ignore-formatted
+          ordinal="${HOSTNAME##*-}"
+          test "$ordinal" = 0 -o "$ordinal" = 1 -o "$ordinal" = 2
+          if [ ! -f /var/lib/kafka/data/meta.properties ]; then
+            kafka-storage format --config /etc/kafka/server.properties --cluster-id "$KAFKA_CLUSTER_ID" --ignore-formatted
           fi
         env:
         - name: KAFKA_CLUSTER_ID
           valueFrom:
-            secretKeyRef:
-              name: kafka-secret
-              key: cluster-id
+            secretKeyRef: {name: vnshop-runtime-secrets, key: platform-kafka-cluster-id}
+        - name: KAFKA_SSL_KEYSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: platform-kafka-broker-keystore-password}
+        - name: KAFKA_SSL_TRUSTSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: platform-kafka-truststore-password}
         volumeMounts:
-        - name: kafka-data
-          mountPath: /var/lib/kafka/data
-        - name: kafka-config
-          mountPath: /etc/kafka/server.properties
-          subPath: server.properties
+        - {name: kafka-data, mountPath: /var/lib/kafka/data}
+        - {name: kafka-config, mountPath: /etc/kafka/server.properties, subPath: server.properties, readOnly: true}
+        - {name: kafka-tls, mountPath: /etc/kafka/tls, readOnly: true}
         securityContext:
           allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-
+          capabilities: {drop: [ALL]}
       containers:
       - name: kafka
-        image: confluentinc/cp-kafka:8.2.0
+        image: confluentinc/cp-kafka@sha256:acbbf674f2ed40e5d0a8ca51beb0f00692c866fc22b5ce06f8cadbdc54cd4436
         imagePullPolicy: IfNotPresent
+        command: ["/bin/bash", "-ec"]
+        args:
+        - |
+          export KAFKA_NODE_ID="${HOSTNAME##*-}"
+          test "$KAFKA_NODE_ID" = 0 -o "$KAFKA_NODE_ID" = 1 -o "$KAFKA_NODE_ID" = 2
+          exec /etc/confluent/docker/run
         ports:
-        - name: broker
-          containerPort: 9092
-        - name: controller
-          containerPort: 9093
-
+        - {name: client, containerPort: 9092}
+        - {name: controller, containerPort: 9093}
+        - {name: internal, containerPort: 9094}
         env:
-        # Derive broker ID and advertised listener from the pod ordinal.
-        - name: KAFKA_NODE_ID
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
-        - name: KAFKA_PROCESS_ROLES
-          value: "broker,controller"
-        - name: KAFKA_CONTROLLER_QUORUM_VOTERS
-          # All three brokers participate in the KRaft controller quorum.
-          value: "0@kafka-0.kafka-headless:9093,1@kafka-1.kafka-headless:9093,2@kafka-2.kafka-headless:9093"
-        - name: KAFKA_LISTENERS
-          value: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093"
-        - name: KAFKA_ADVERTISED_LISTENERS
-          value: "PLAINTEXT://$(POD_NAME).kafka-headless:9092"
-        - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
-          value: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
-        - name: KAFKA_INTER_BROKER_LISTENER_NAME
-          value: "PLAINTEXT"
-        - name: KAFKA_CONTROLLER_LISTENER_NAMES
-          value: "CONTROLLER"
-        - name: KAFKA_AUTO_CREATE_TOPICS_ENABLE
-          value: "false"
+        - {name: KAFKA_PROCESS_ROLES, value: broker,controller}
+        - {name: KAFKA_CONTROLLER_QUORUM_VOTERS, value: '0@kafka-0.kafka-headless:9093,1@kafka-1.kafka-headless:9093,2@kafka-2.kafka-headless:9093'}
+        - {name: KAFKA_LISTENERS, value: 'CLIENT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,INTERNAL://0.0.0.0:9094'}
+        - {name: KAFKA_ADVERTISED_LISTENERS, value: 'CLIENT://kafka:9092,INTERNAL://$(POD_NAME).kafka-headless:9094'}
+        - {name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP, value: 'CLIENT:SASL_SSL,CONTROLLER:SSL,INTERNAL:SSL'}
+        - {name: KAFKA_INTER_BROKER_LISTENER_NAME, value: INTERNAL}
+        - {name: KAFKA_CONTROLLER_LISTENER_NAMES, value: CONTROLLER}
+        - {name: KAFKA_SASL_ENABLED_MECHANISMS, value: PLAIN}
+        - {name: KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL, value: PLAIN}
+        - {name: KAFKA_AUTO_CREATE_TOPICS_ENABLE, value: "false"}
+        - {name: KAFKA_AUTHORIZER_CLASS_NAME, value: org.apache.kafka.metadata.authorizer.StandardAuthorizer}
+        - {name: KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND, value: "false"}
+        - {name: KAFKA_SUPER_USERS, value: 'User:kafka-controller;User:kafka-admin'}
+        - {name: KAFKA_SSL_CLIENT_AUTH, value: required}
+        - {name: KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM, value: HTTPS}
+        - {name: KAFKA_SSL_KEYSTORE_TYPE, value: JKS}
+        - {name: KAFKA_SSL_TRUSTSTORE_TYPE, value: JKS}
+        - {name: KAFKA_SSL_KEYSTORE_FILENAME, value: broker.keystore.jks}
+        - {name: KAFKA_SSL_TRUSTSTORE_FILENAME, value: ca.truststore.jks}
+        - name: KAFKA_SSL_KEYSTORE_PASSWORD
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-kafka-broker-keystore-password}}
+        - name: KAFKA_SSL_TRUSTSTORE_PASSWORD
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-kafka-truststore-password}}
         - name: KAFKA_CLUSTER_ID
-          valueFrom:
-            secretKeyRef:
-              name: kafka-secret
-              key: cluster-id
-        - name: KAFKA_LOG_DIRS
-          value: "/var/lib/kafka/data"
-
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-kafka-cluster-id}}
+        - name: POD_NAME
+          valueFrom: {fieldRef: {fieldPath: metadata.name}}
         volumeMounts:
-        - name: kafka-data
-          mountPath: /var/lib/kafka/data
-        - name: kafka-config
-          mountPath: /etc/kafka/server.properties
-          subPath: server.properties
-
-        # Readiness: TCP check on the controller port (PLAINTEXT, no auth).
-        # Pod is only added to the Service endpoint slice once this passes.
+        - {name: kafka-data, mountPath: /var/lib/kafka/data}
+        - {name: kafka-config, mountPath: /etc/kafka/server.properties, subPath: server.properties, readOnly: true}
+        - {name: kafka-tls, mountPath: /etc/kafka/tls, readOnly: true}
         readinessProbe:
-          tcpSocket:
-            port: controller
-          initialDelaySeconds: 30
+          exec:
+            command: ["/bin/bash", "-ec", "test -r /etc/kafka/tls/ca.truststore.jks && kafka-broker-api-versions --bootstrap-server kafka:9092 --command-config /etc/kafka/tls/admin.properties >/dev/null"]
+          initialDelaySeconds: 45
           periodSeconds: 10
-          timeoutSeconds: 5
+          timeoutSeconds: 8
           failureThreshold: 6
-
-        # Liveness: same TCP probe. Container is restarted if the port
-        # stops accepting connections (e.g. JVM deadlock / OOM kill).
         livenessProbe:
-          tcpSocket:
-            port: controller
-          initialDelaySeconds: 60
+          exec:
+            command: ["/bin/bash", "-ec", "kafka-broker-api-versions --bootstrap-server kafka:9092 --command-config /etc/kafka/tls/admin.properties >/dev/null"]
+          initialDelaySeconds: 90
           periodSeconds: 20
-          timeoutSeconds: 5
+          timeoutSeconds: 8
           failureThreshold: 3
-
-        # Startup probe gives the broker up to 5 minutes (30 * 10s) to
-        # format storage and join the quorum on first boot before liveness
-        # kicks in.
         startupProbe:
-          tcpSocket:
-            port: controller
+          exec:
+            command: ["/bin/bash", "-ec", "kafka-broker-api-versions --bootstrap-server kafka:9092 --command-config /etc/kafka/tls/admin.properties >/dev/null"]
           periodSeconds: 10
-          timeoutSeconds: 5
+          timeoutSeconds: 8
           failureThreshold: 30
-
         resources:
-          requests:
-            cpu: 500m
-            memory: 1Gi
-          limits:
-            cpu: 2000m
-            memory: 2Gi
-
+          requests: {cpu: 500m, memory: 1Gi}
+          limits: {cpu: "2", memory: 2Gi}
         securityContext:
           allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: false
-          capabilities:
-            drop:
-            - ALL
-
+          capabilities: {drop: [ALL]}
       volumes:
-      - name: kafka-config
-        configMap:
-          name: kafka-config
-
-  # Persistent volume claims — one 20 Gi volume per broker pod.
-  # The storage class must support ReadWriteOnce (block storage).
-  # Adjust storageClassName to match your cloud provider:
-  #   AWS EKS:  gp3
-  #   GKE:      standard-rwo
-  #   AKS:      managed-premium
+      - {name: kafka-config, configMap: {name: kafka-config}}
+      - name: kafka-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {key: platform-kafka-broker-keystore, path: broker.keystore.jks}
+          - {key: platform-kafka-truststore, path: ca.truststore.jks}
+          - {key: platform-kafka-admin-client-properties, path: admin.properties}
   volumeClaimTemplates:
   - metadata:
       name: kafka-data
-      labels:
-        app.kubernetes.io/name: kafka
-        app.kubernetes.io/part-of: vnshop
+      labels: {app.kubernetes.io/name: kafka, app.kubernetes.io/part-of: vnshop}
     spec:
-      accessModes:
-      - ReadWriteOnce
-      resources:
-        requests:
-          storage: 20Gi
+      accessModes: [ReadWriteOnce]
       storageClassName: standard-rwo
+      resources: {requests: {storage: 100Gi}}

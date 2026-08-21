@@ -23,7 +23,7 @@ kafka:
     bootstrap-servers: localhost:9092
     username: test-finance
     password: test-finance-password
-    security-protocol: PLAINTEXT
+    security-protocol: SASL_SSL
     sasl-mechanism: PLAIN
   health:
     consumer:

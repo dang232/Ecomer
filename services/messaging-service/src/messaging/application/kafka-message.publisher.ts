@@ -33,6 +33,14 @@ export class KafkaMessagePublisher
     this.kafka = new Kafka({
       clientId: "messaging-service-producer",
       brokers,
+      ssl: true,
+      sasl: process.env.KAFKA_SASL_USERNAME
+        ? {
+            mechanism: "plain",
+            username: process.env.KAFKA_SASL_USERNAME,
+            password: process.env.KAFKA_SASL_PASSWORD ?? "",
+          }
+        : undefined,
     });
     this.producer = this.kafka.producer();
     try {

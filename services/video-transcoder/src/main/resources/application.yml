@@ -74,17 +74,16 @@ springdoc:
 spring:
   config:
     activate:
-      on-profile: dev
+      on-profile: local-only-dev
   kafka:
     properties:
-      security.protocol: PLAINTEXT
-      sasl.jaas.config: ""
+      security.protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_SSL}
 
 ---
 spring:
   config:
     activate:
-      on-profile: docker
+      on-profile: local-only-docker
   kafka:
     properties:
-      security.protocol: SASL_PLAINTEXT
+      security.protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_SSL}

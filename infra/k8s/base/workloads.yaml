@@ -2785,9 +2785,17 @@ spec:
         - name: MODERATOR_KAFKA_BOOTSTRAP_SERVERS
           value: kafka:9092
         - name: MODERATOR_KAFKA_SECURITY_PROTOCOL
-          value: SASL_PLAINTEXT
+          value: SASL_SSL
         - name: MODERATOR_KAFKA_SASL_MECHANISM
           value: PLAIN
+        - name: MODERATOR_KAFKA_SSL_CA_FILE
+          value: /etc/kafka/tls/ca.crt
+        - name: MODERATOR_KAFKA_SSL_CERT_FILE
+          value: /etc/kafka/tls/client.crt
+        - name: MODERATOR_KAFKA_SSL_KEY_FILE
+          value: /etc/kafka/tls/client.key
+        - name: MODERATOR_KAFKA_SSL_CHECK_HOSTNAME
+          value: "true"
         - name: MODERATOR_KAFKA_SASL_USERNAME
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: video-moderator-kafka-username}
@@ -2841,11 +2849,21 @@ spec:
         volumeMounts:
         - name: scratch
           mountPath: /tmp
+        - name: kafka-client-tls
+          mountPath: /etc/kafka/tls
+          readOnly: true
       volumes:
       - name: scratch
         emptyDir:
           medium: Memory
           sizeLimit: 4Gi
+      - name: kafka-client-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {key: video-moderator-kafka-ca, path: ca.crt}
+          - {key: video-moderator-kafka-client-cert, path: client.crt}
+          - {key: video-moderator-kafka-client-key, path: client.key}
 ---
 apiVersion: v1
 kind: Service

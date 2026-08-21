@@ -17,12 +17,19 @@ data:
 
     BROKER="kafka:9092"
     ADMIN_CONFIG="/tmp/admin.properties"
+    INVENTORY_AUTHORITY="infra/kafka/topic-inventory.yaml"
 
     # Create admin client config for SASL authentication
     cat > $ADMIN_CONFIG <<EOF
-    security.protocol=SASL_PLAINTEXT
+    security.protocol=SASL_SSL
     sasl.mechanism=PLAIN
-    sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="admin" password="${KAFKA_ADMIN_PASSWORD:?KAFKA_ADMIN_PASSWORD is required}";
+    ssl.endpoint.identification.algorithm=HTTPS
+    ssl.client.auth=required
+    ssl.truststore.location=/etc/kafka/tls/ca.truststore.jks
+    ssl.keystore.location=/etc/kafka/tls/admin.keystore.jks
+    ssl.truststore.password=${KAFKA_SSL_TRUSTSTORE_PASSWORD:?KAFKA_SSL_TRUSTSTORE_PASSWORD is required}
+    ssl.keystore.password=${KAFKA_SSL_KEYSTORE_PASSWORD:?KAFKA_SSL_KEYSTORE_PASSWORD is required}
+    sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="kafka-admin" password="${KAFKA_ADMIN_PASSWORD:?KAFKA_ADMIN_PASSWORD is required}";
     EOF
 
     echo "Waiting for Kafka to be ready..."
@@ -80,7 +87,8 @@ data:
     for entry in "${TOPICS[@]}"; do
       IFS=':' read -r topic partitions <<< "$entry"
       kafka-topics --bootstrap-server $BROKER --command-config $ADMIN_CONFIG \
-        --create --if-not-exists --topic "$topic" --partitions "$partitions" --replication-factor 1
+        --create --if-not-exists --topic "$topic" --partitions "$partitions" --replication-factor 3 \
+        --config min.insync.replicas=2
     done
     echo "All topics created."
 
@@ -260,6 +268,12 @@ spec:
         - name: KAFKA_ADMIN_PASSWORD
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: platform-kafka-admin-password}
+        - name: KAFKA_SSL_TRUSTSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: platform-kafka-truststore-password}
+        - name: KAFKA_SSL_KEYSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: platform-kafka-admin-keystore-password}
         resources:
           requests: {cpu: 25m, memory: 128Mi}
           limits: {cpu: 500m, memory: 512Mi}
@@ -267,6 +281,13 @@ spec:
         volumeMounts:
         - {name: script, mountPath: /opt/vnshop/init-kafka-topics.sh, subPath: init-kafka-topics.sh, readOnly: true}
         - {name: tmp, mountPath: /tmp}
+        - {name: kafka-tls, mountPath: /etc/kafka/tls, readOnly: true}
       volumes:
       - {name: script, configMap: {name: vnshop-kafka-bootstrap, defaultMode: 0555}}
       - {name: tmp, emptyDir: {}}
+      - name: kafka-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {key: platform-kafka-admin-keystore, path: admin.keystore.jks}
+          - {key: platform-kafka-truststore, path: ca.truststore.jks}
