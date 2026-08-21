@@ -1,10 +1,9 @@
 package com.vnshop.inventoryservice.infrastructure.config;
 
 import org.apache.kafka.clients.admin.AdminClientConfig;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.kafka.autoconfigure.KafkaProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.kafka.core.KafkaAdmin;
 
 import java.util.HashMap;
@@ -19,24 +18,9 @@ import java.util.Map;
 public class KafkaAdminConfig {
 
     @Bean
-    public KafkaAdmin kafkaAdmin(
-            @Value("${spring.kafka.bootstrap-servers}") String bootstrapServers,
-            @Value("${spring.kafka.properties.security.protocol}") String securityProtocol,
-            @Value("${spring.kafka.properties.sasl.mechanism}") String saslMechanism,
-            @Value("${spring.kafka.properties.sasl.jaas.config}") String jaasConfig) {
-        Map<String, Object> configs = new HashMap<>();
-        configs.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        configs.put("security.protocol", securityProtocol);
-        configs.put("sasl.mechanism", saslMechanism);
-        configs.put("sasl.jaas.config", jaasConfig);
+    public KafkaAdmin kafkaAdmin(KafkaProperties kafkaProperties) {
+        Map<String, Object> configs = new HashMap<>(kafkaProperties.buildAdminProperties());
         return new KafkaAdmin(configs);
     }
 
-    @Bean
-    public org.apache.kafka.clients.admin.NewTopic inventoryReleaseRequestedTopic() {
-        return TopicBuilder.name("inventory.release-requested")
-                .partitions(6)
-                .replicas(1)
-                .build();
-    }
 }
