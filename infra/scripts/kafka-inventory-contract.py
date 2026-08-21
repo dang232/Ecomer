@@ -180,6 +180,208 @@ def _validate_workload_tls_bindings(document: dict, manifest: str) -> list[str]:
     return errors
 
 
+def _validate_broker_auth_source(document: dict, manifest: str, migration: str | None = None) -> list[str]:
+    errors: list[str] = []
+    if "listener.name.client.plain.sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required;" in manifest:
+        errors.append("broker CLIENT PLAIN JAAS source is empty")
+    if "export KAFKA_OPTS=" not in manifest or "java.security.auth.login.config" not in manifest:
+        errors.append("broker must load an external generated JAAS source")
+    if "emptyDir:" not in manifest or "medium: Memory" not in manifest:
+        errors.append("broker JAAS workspace must be memory-backed")
+    if "umask 077" not in manifest:
+        errors.append("broker JAAS generation must set umask 077")
+    if "client.KafkaServer" not in manifest:
+        errors.append("broker JAAS must use the listener-scoped client.KafkaServer section")
+    if re.search(r"listener\.name\.client\.plain\.sasl\.jaas\.config\s*=", manifest):
+        errors.append("broker must not override static listener-scoped JAAS with an inline CLIENT property")
+    if re.search(r'user_[A-Za-z0-9._-]+\s*=\s*"', manifest):
+        errors.append("broker manifest must not contain literal JAAS credentials")
+    principals = {client.get("principal") for client in document.get("clients", [])}
+    username_keys = {client.get("username_secret") for client in document.get("clients", [])}
+    password_keys = {client.get("password_secret") for client in document.get("clients", [])}
+    try:
+        broker_documents = [doc for doc in yaml.safe_load_all(manifest.lstrip("\ufeff")) if isinstance(doc, dict)]
+        broker_statefulset = next(doc for doc in broker_documents if doc.get("kind") == "StatefulSet")
+        broker_pod = broker_statefulset["spec"]["template"]["spec"]
+        credential_volumes = [volume for volume in broker_pod.get("volumes", []) if volume.get("name") == "kafka-credentials"]
+        credential_items = [item for volume in credential_volumes for item in volume.get("secret", {}).get("items", [])]
+    except (StopIteration, KeyError, TypeError, yaml.YAMLError):
+        credential_items = []
+    expected_paths: dict[str, str] = {}
+    for client in document.get("clients", []):
+        principal = client.get("principal")
+        if principal in expected_paths:
+            errors.append(f"broker credential principals must be unique: {principal}")
+        expected_paths[client.get("username_secret")] = f"{principal}.username"
+        expected_paths[client.get("password_secret")] = f"{principal}.password"
+    for key in sorted(username_keys | password_keys):
+        matches = [item for item in credential_items if item.get("key") == key]
+        if not key or len(matches) != 1:
+            errors.append(f"broker credential Secret key must be represented exactly once: {key}")
+        elif matches[0].get("path") != expected_paths.get(key):
+            errors.append(f"broker credential Secret key has wrong principal-derived path: {key}")
+    if len(credential_items) != len(username_keys | password_keys):
+        errors.append("broker credential Secret projection contains duplicate or extra mappings")
+    projected_paths = [item.get("path") for item in credential_items]
+    if len(projected_paths) != len(set(projected_paths)):
+        errors.append("broker credential Secret projection contains duplicate paths")
+    if len(principals) != len(document.get("clients", [])):
+        errors.append("broker credential principals must be unique")
+    if migration is not None:
+        try:
+            migration_document = yaml.safe_load(migration)
+            certificate = migration_document.get("certificate_contract", {})
+            mapping = certificate.get("principal_mapping", {})
+            expected_mapping = "RULE:^CN=(kafka-node),O=VNShop$/$1/,DEFAULT"
+            if mapping.get("rules") != expected_mapping:
+                errors.append("certificate principal mapping rules are not exact and fail-closed")
+            subject = certificate.get("subject_dn_contract", {})
+            if subject.get("node") != "CN=kafka-node,O=VNShop":
+                errors.append("combined Kafka node certificate subject is incomplete")
+            if mapping.get("controller_principal") != "kafka-node" or mapping.get("broker_principal") != "kafka-node":
+                errors.append("certificate principal mapping identities are incomplete")
+            if set(subject.get("application_forbidden_principals", [])) != {"kafka-node", "kafka-admin"}:
+                errors.append("application certificate principal exclusions are incomplete")
+            if "server.properties" in next(doc for doc in broker_documents if doc.get("kind") == "ConfigMap").get("data", {}):
+                errors.append("Kafka ConfigMap must not own broker server.properties")
+            if "KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL" in manifest:
+                errors.append("SSL-only INTERNAL listener must not declare an inter-broker SASL mechanism")
+            if "User:kafka-node;User:kafka-admin" not in manifest:
+                errors.append("Kafka super-users do not match combined node certificate principal")
+            certificate_contract = certificate
+            admin_keystore_key = certificate_contract.get("admin_keystore_secret_key")
+            statefulset = next(doc for doc in broker_documents if doc.get("kind") == "StatefulSet")
+            pod_spec = statefulset["spec"]["template"]["spec"]
+            if statefulset.get("spec", {}).get("podManagementPolicy") != "Parallel":
+                errors.append("Kafka podManagementPolicy must be exactly Parallel")
+            tls_volumes = [volume for volume in pod_spec.get("volumes", []) if volume.get("name") == "kafka-tls"]
+            tls_items = [item for volume in tls_volumes for item in volume.get("secret", {}).get("items", [])]
+            expected_tls = {
+                "platform-kafka-broker-keystore": "broker.keystore.jks",
+                admin_keystore_key: "admin.keystore.jks",
+                "platform-kafka-truststore": "ca.truststore.jks",
+                "platform-kafka-admin-client-properties": "admin.properties",
+            }
+            for secret_key, path in expected_tls.items():
+                matches = [item for item in tls_items if item.get("key") == secret_key and item.get("path") == path]
+                if len(matches) != 1:
+                    errors.append(f"Kafka TLS Secret mapping must contain exactly one {secret_key} -> {path}")
+            if len({item.get("path") for item in tls_items}) != len(tls_items):
+                errors.append("Kafka TLS Secret mappings must have unique paths")
+            if len({item.get("key") for item in tls_items}) != len(tls_items):
+                errors.append("Kafka TLS Secret mappings must have unique keys")
+            try:
+                runtime_env = next(doc for doc in broker_documents if doc.get("kind") == "StatefulSet")["spec"]["template"]["spec"]["containers"][0].get("env", [])
+                pod_spec = next(doc for doc in broker_documents if doc.get("kind") == "StatefulSet")["spec"]["template"]["spec"]
+                if pod_spec.get("enableServiceLinks") is not False:
+                    errors.append("Kafka pod enableServiceLinks must be exactly false")
+                env_names = [entry.get("name") for entry in runtime_env if isinstance(entry, dict)]
+                if len(env_names) != len(set(env_names)):
+                    errors.append("Kafka main container environment contains duplicate names")
+                deprecated_names = {"KAFKA_PORT", "KAFKA_ADVERTISED_PORT", "KAFKA_HOST", "KAFKA_ADVERTISED_HOST"}
+                if deprecated_names & set(env_names):
+                    errors.append("Kafka main container contains deprecated service-link environment variables")
+                cluster_bindings = [entry for entry in runtime_env if entry.get("name") == "CLUSTER_ID"]
+                if len(cluster_bindings) != 1 or cluster_bindings[0].get("valueFrom", {}).get("secretKeyRef") != {"name": "vnshop-runtime-secrets", "key": "platform-kafka-cluster-id"} or any(entry.get("name") == "KAFKA_CLUSTER_ID" for entry in runtime_env):
+                    errors.append("Kafka main container must use the documented CLUSTER_ID Secret binding")
+                init = next(doc for doc in broker_documents if doc.get("kind") == "StatefulSet")["spec"]["template"]["spec"]["initContainers"][0]
+                init_cluster_bindings = [entry for entry in init.get("env", []) if entry.get("name") == "CLUSTER_ID"]
+                if len(init_cluster_bindings) != 1 or init_cluster_bindings[0].get("valueFrom", {}).get("secretKeyRef") != {"name": "vnshop-runtime-secrets", "key": "platform-kafka-cluster-id"}:
+                    errors.append("Kafka init container must share the documented CLUSTER_ID Secret binding")
+                runtime_values = {entry.get("name"): entry.get("value") for entry in runtime_env if isinstance(entry, dict)}
+                init_properties: dict[str, str] = {}
+                init_script = "\n".join(init.get("args", []))
+                properties_match = re.search(r"cat > /run/kafka-init/server\.properties <<EOF\n(?P<properties>.*?)\n\s*EOF", init_script, re.DOTALL)
+                if properties_match:
+                    for line in properties_match.group("properties").splitlines():
+                        key, separator, value = line.strip().partition("=")
+                        if separator:
+                            init_properties[key] = value
+                if runtime_values.get("KAFKA_CONTROLLER_QUORUM_VOTERS") != init_properties.get("controller.quorum.voters"):
+                    errors.append("runtime quorum voters must equal init KRaft voters")
+                if runtime_values.get("KAFKA_LISTENERS") != init_properties.get("listeners"):
+                    errors.append("runtime listeners must equal init KRaft listeners")
+                init_advertised = init_properties.get("advertised.listeners", "")
+                main_advertised = runtime_values.get("KAFKA_ADVERTISED_LISTENERS", "")
+                expected_init_advertised = "CLIENT://kafka:9092,INTERNAL://kafka-$ordinal.kafka-headless:9094"
+                expected_main_advertised = "CLIENT://kafka:9092,INTERNAL://$(POD_NAME).kafka-headless:9094"
+                if init_advertised != expected_init_advertised:
+                    errors.append("Kafka init advertised listeners must use CLIENT service DNS and ordinal headless DNS")
+                if main_advertised != expected_main_advertised:
+                    errors.append("Kafka main advertised listeners must use CLIENT service DNS and POD_NAME headless DNS")
+                unsafe_advertised_tokens = ("0.0.0.0", "localhost", "127.0.0.1", "::")
+                if not init_advertised or not main_advertised:
+                    errors.append("Kafka init and main advertised listeners are required")
+                if any(token in init_advertised.lower() or token in main_advertised.lower() for token in unsafe_advertised_tokens):
+                    errors.append("Kafka advertised listeners must use routable endpoints")
+                if "CONTROLLER://" in init_advertised or "CONTROLLER://" in main_advertised:
+                    errors.append("Kafka advertised listeners must not include CONTROLLER")
+                normalized_init_advertised = init_advertised.replace("kafka-$ordinal", "$(POD_NAME)")
+                if normalized_init_advertised != main_advertised:
+                    errors.append("Kafka init and main advertised listeners must have semantic template parity")
+                parity_values = {
+                    "KAFKA_PROCESS_ROLES": "process.roles",
+                    "KAFKA_CONTROLLER_LISTENER_NAMES": "controller.listener.names",
+                    "KAFKA_LISTENER_SECURITY_PROTOCOL_MAP": "listener.security.protocol.map",
+                    "KAFKA_INTER_BROKER_LISTENER_NAME": "inter.broker.listener.name",
+                    "KAFKA_LOG_DIRS": "log.dirs",
+                }
+                for runtime_key, init_key in parity_values.items():
+                    expected_value = init_properties.get(init_key)
+                    if runtime_values.get(runtime_key) != expected_value:
+                        errors.append(f"runtime {runtime_key} must equal init {init_key}")
+                if runtime_values.get("KAFKA_SUPER_USERS") != "User:kafka-node;User:kafka-admin":
+                    errors.append("runtime Kafka super-users do not match combined node principal")
+                critical_values = {
+                    "KAFKA_DEFAULT_REPLICATION_FACTOR": "3",
+                    "KAFKA_MIN_INSYNC_REPLICAS": "2",
+                    "KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR": "3",
+                    "KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR": "3",
+                    "KAFKA_TRANSACTION_STATE_LOG_MIN_ISR": "2",
+                    "KAFKA_UNCLEAN_LEADER_ELECTION_ENABLE": "false",
+                    "KAFKA_NUM_PARTITIONS": "6",
+                    "KAFKA_LOG_RETENTION_HOURS": "168",
+                    "KAFKA_LOG_DIRS": "/var/lib/kafka/data",
+                    "KAFKA_LISTENER_NAME_CLIENT_SASL_ENABLED_MECHANISMS": "PLAIN",
+                    "KAFKA_LISTENER_NAME_CLIENT_SSL_CLIENT_AUTH": "required",
+                    "KAFKA_LISTENER_NAME_INTERNAL_SSL_CLIENT_AUTH": "required",
+                    "KAFKA_LISTENER_NAME_CONTROLLER_SSL_CLIENT_AUTH": "required",
+                    "KAFKA_SSL_KEYSTORE_LOCATION": "/etc/kafka/tls/broker.keystore.jks",
+                    "KAFKA_SSL_TRUSTSTORE_LOCATION": "/etc/kafka/tls/ca.truststore.jks",
+                    "KAFKA_SSL_PRINCIPAL_MAPPING_RULES": expected_mapping,
+                }
+                if any(runtime_values.get(key) != value for key, value in critical_values.items()):
+                    errors.append("runtime SSL principal mapping does not match migration contract")
+                if "KAFKA_SSL_KEYSTORE_FILENAME" in runtime_values or "KAFKA_SSL_TRUSTSTORE_FILENAME" in runtime_values:
+                    errors.append("runtime Kafka SSL filename variables are forbidden")
+                container_mounts = runtime_env = next(doc for doc in broker_documents if doc.get("kind") == "StatefulSet")["spec"]["template"]["spec"]["containers"][0].get("volumeMounts", [])
+                if any(mount.get("subPath") == "server.properties" for mount in container_mounts):
+                    errors.append("Kafka container must not mount a divergent server.properties")
+                init = next(doc for doc in broker_documents if doc.get("kind") == "StatefulSet")["spec"]["template"]["spec"]["initContainers"][0]
+                init_script = "\n".join(init.get("args", []))
+                required_init = ("node.id=$ordinal", "controller.quorum.voters=", "controller.listener.names=CONTROLLER", "listener.security.protocol.map=CLIENT:SASL_SSL,CONTROLLER:SSL,INTERNAL:SSL", "log.dirs=/var/lib/kafka/data", "kafka-storage format --config /run/kafka-init/server.properties")
+                if any(marker not in init_script for marker in required_init):
+                    errors.append("KRaft init formatting contract is incomplete")
+                for probe_name in ("readinessProbe", "livenessProbe", "startupProbe"):
+                    command_text = " ".join(statefulset["spec"]["template"]["spec"]["containers"][0].get(probe_name, {}).get("exec", {}).get("command", []))
+                    for path in ("/etc/kafka/tls/ca.truststore.jks", "/etc/kafka/tls/admin.keystore.jks", "/etc/kafka/tls/admin.properties"):
+                        if path not in command_text:
+                            errors.append(f"Kafka {probe_name} must check/read {path}")
+            except (StopIteration, KeyError, TypeError):
+                errors.append("Kafka runtime security environment is unavailable")
+            broker_documents = [doc for doc in yaml.safe_load_all(manifest.lstrip("\ufeff")) if isinstance(doc, dict)]
+            statefulset = next(doc for doc in broker_documents if doc.get("kind") == "StatefulSet")
+            init_runtime = [volume for volume in statefulset["spec"]["template"]["spec"].get("volumes", []) if volume.get("name") == "kafka-init-runtime"]
+            if len(init_runtime) != 1 or init_runtime[0].get("emptyDir", {}).get("medium") != "Memory":
+                errors.append("KRaft init workspace must be memory-backed")
+            tls_items = [item for volume in tls_volumes for item in volume.get("secret", {}).get("items", []) if item.get("key") == "platform-kafka-broker-keystore"]
+            if len(tls_items) != 1:
+                errors.append("combined node certificate must have exactly one broker keystore source")
+        except (AttributeError, TypeError, yaml.YAMLError):
+            errors.append("certificate principal mapping contract is unavailable")
+    return errors
+
+
 def validate(document: dict) -> list[str]:
     errors: list[str] = []
     if document.get("schema_version") != "kafka-topic-inventory.v1":
@@ -271,6 +473,12 @@ def validate(document: dict) -> list[str]:
         errors.extend(_validate_workload_tls_bindings(document, WORKLOADS.read_text(encoding="utf-8-sig")))
     except (OSError, TypeError, ValueError, yaml.YAMLError) as exc:
         errors.append(f"Kafka workload authority unavailable: {exc}")
+    try:
+        broker_manifest = (BOOTSTRAP_SCRIPT.parent.parent / "k8s/kafka/kafka-statefulset.yaml").read_text(encoding="utf-8")
+        migration_manifest = MIGRATION_CONTRACT.read_text(encoding="utf-8")
+        errors.extend(_validate_broker_auth_source(document, broker_manifest, migration_manifest))
+    except OSError as exc:
+        errors.append(f"Kafka broker authority unavailable: {exc}")
     try:
         manifest = (BOOTSTRAP_SCRIPT.parent.parent / "k8s/base/kafka-bootstrap-job.yaml").read_text(encoding="utf-8")
         errors.extend(validate_kubernetes_bootstrap_authority(document, manifest))
