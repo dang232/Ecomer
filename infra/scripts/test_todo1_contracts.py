@@ -78,6 +78,16 @@ def test_runner_preserves_first_failure_and_skips_later_steps(tmp_path):
     assert payload["commands"][1]["outcome"] == "SKIPPED_DUE_TO_PRIOR_FAILURE"
 
 
+def test_runner_marks_expected_rejection_as_pass(tmp_path):
+    matrix = tmp_path / "matrix.yaml"
+    matrix.write_text("schema_version: qa-command-matrix.v1\ncases:\n  case:\n    - id: hostile\n      command: [python, -c, 'raise SystemExit(9)']\n      cwd: .\n      expect_failure: true\n    - id: after\n      command: [python, -c, 'raise SystemExit(0)']\n      cwd: .\n", encoding="utf-8")
+    result = subprocess.run([sys.executable, str(RUNNER), "--matrix", str(matrix), "--case", "case", "--attempt-id", "attempt", "--evidence-dir", str(tmp_path / "evidence")], cwd=ROOT, text=True, capture_output=True)
+    assert result.returncode == 0
+    payload = json.loads((tmp_path / "evidence" / "runner-result.json").read_text(encoding="utf-8"))
+    assert payload["commands"][0]["outcome"] == "EXPECTED_REJECTION"
+    assert payload["commands"][1]["outcome"] == "PASS"
+
+
 def test_checkpoint_rejects_final_status_before_seal(tmp_path):
     root = tmp_path / "evidence"
     root.mkdir()
@@ -100,15 +110,15 @@ def test_lifecycle_barrier_aggregate_seal_verify_and_mutation_rejection(tmp_path
     root.mkdir()
     run_path = root / "attempt" / "run.json"
     run_path.parent.mkdir()
-    commit = "a" * 40
-    tree = "b" * 40
+    commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+    tree = subprocess.check_output(["git", "rev-parse", "HEAD^{tree}"], cwd=ROOT, text=True).strip()
     run = {"attempt_id": "attempt", "schema_version": "evidence.v1", "requested_commit": commit, "requested_tree": tree, "deployment_authority": "repository-commit", "environment_identity": {}, "created_at": "2026-08-20T00:00:00Z", "workspace_manifest_sha256": "1" * 64, "detached_baseline_manifest_sha256": "2" * 64, "workspace_closure_sha256": "3" * 64, "detached_baseline_closure_sha256": "4" * 64, "allowed_path_set_sha256": "5" * 64}
     module.atomic_write(run_path, run)
     for task_id in module.REQUIRED_TASKS:
         owner = module.VERIFIER_OWNERS[task_id]
         folder = root / "attempt" / (f"task-{task_id}" if task_id.isdigit() else f"final/{task_id}")
         folder.mkdir(parents=True)
-        report = {"schema_version": "evidence.v1", "task_id": task_id, "producer": owner, "owner": owner, "attempt_id": "attempt", "commit_sha": commit, "tree_sha": tree, "evidence_class": "repository-static", "repository_status": "PASS", "production_status": "NO-GO", "commands": [], "inputs": [], "outputs": [], "telemetry": [], "business_reconciliation": {}, "provenance": {"producer_identity": owner, "environment_identity": {"isolated": True}, "command_binding": "test", "artifact_digest": "a" * 64, "signature_type": "repository-commit"}, "created_at": "2026-08-20T00:00:00Z", "fresh_until": "2099-01-01T00:00:00Z", "file_manifest_sha256": "a" * 64}
+        report = {"schema_version": "evidence.v1", "task_id": task_id, "producer": owner, "owner": owner, "attempt_id": "attempt", "commit_sha": commit, "tree_sha": tree, "evidence_class": "repository-static", "repository_status": "PASS", "production_status": "NO-GO", "commands": [], "inputs": [], "outputs": [], "telemetry": [], "business_reconciliation": {}, "provenance": {"producer_identity": owner, "owner": owner, "environment_identity": {"isolated": True}, "command_binding": "test", "artifact_digest": "a" * 64, "signature_type": "repository-commit", "signature": commit, "tree_sha": tree}, "created_at": "2026-08-20T00:00:00Z", "fresh_until": "2099-01-01T00:00:00Z", "file_manifest_sha256": "a" * 64}
         report_path = folder / "report.json"
         module.atomic_write(report_path, report)
         checkpoint = {"schema_version": "evidence.v1", "attempt_id": "attempt", "task_id": task_id, "report_sha256": module.digest(report_path), "input_manifest_sha256": "a" * 64, "checkpoint_status": "RECORDED", "created_at": "2026-08-20T00:00:00Z"}
@@ -144,7 +154,7 @@ def test_matrix_uses_behavioral_commands_and_exact_paths():
     assert "json.loads" not in text
     assert "provider-isolation-preflight.py" in text
     assert "scope_gate.py" in text
-    assert "node, --check, infra/scripts/e2e-day.mjs" in text
+    assert "node, infra/scripts/e2e-day.mjs" in text
     for path in ("infra/scripts/test_todo3_contracts.py", "infra/scripts/test_todo4_contracts.py", "infra/load-tests/dataset/manifest.yaml", "infra/load-tests/k6-10k-dau.js"):
         assert path in text
 
