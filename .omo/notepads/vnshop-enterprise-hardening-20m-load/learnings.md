@@ -6,7 +6,7 @@ _Auto-scaffolded by /start-work. Append new entries below - never overwrite._
 
 ---
 
-- Todo 1 canonical captures: workspace preservation was captured before detached verification; detached capture is bound to commit b5a84516009008e2940336925dd8381b1231dd5a/tree 0565a2a0468c0a46aa69c8c434f0f4a1b2552c4d. 
+- Todo 1 canonical captures: workspace preservation was captured before detached verification; detached capture is bound to commit b5a84516009008e2940336925dd8381b1231dd5a/tree 0565a2a0468c0a46aa69c8c434f0f4a1b2552c4d.
 - Focused contract suite passes 5 tests. Windows subprocess output can emit an access-violation diagnostic while pytest still exits 0; evidence records remain valid.
 
 - Independent verification repair: capture-detached now verifies actual HEAD/tree identity and rejects dirty repositories before hashing. Clean detached baseline at commit 32b35afff0c6f24fa2c928fd7d96e88a5fdac009 reports repository_status=PASS.
