@@ -5,6 +5,8 @@ resources:
 - sealedsecret.yaml
 - network-policies.yaml
 - ../kafka/kafka-statefulset.yaml
+- ../elasticsearch/elasticsearch-statefulset.yaml
+- ../elasticsearch/security-contract.yaml
 - platform-services.yaml
 - workloads.yaml
 - migration-job.yaml

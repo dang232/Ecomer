@@ -60,9 +60,18 @@ spring:
     template:
       observation-enabled: true
   elasticsearch:
-    uris: http://${ELASTICSEARCH_HOST:elasticsearch}:${ELASTICSEARCH_PORT:9200}
-    username: elastic
-    password: ${ELASTIC_PASSWORD}
+    uris: ${ELASTICSEARCH_URL:https://elasticsearch:9200}
+    username: ${ELASTICSEARCH_USERNAME:search-service}
+    password: ${ELASTICSEARCH_PASSWORD}
+    restclient:
+      ssl:
+        bundle: ${ELASTICSEARCH_SSL_BUNDLE:elasticsearch}
+  ssl:
+    bundle:
+      pem:
+        elasticsearch:
+          truststore:
+            certificate: ${ELASTICSEARCH_CA_CERTIFICATE:/etc/elasticsearch/tls/ca.crt}
   security:
     oauth2:
       resourceserver:
@@ -98,7 +107,7 @@ management:
       validate-group-membership: false
       group:
         readiness:
-          include: readinessState,db
+          include: readinessState,db,elasticsearch
         liveness:
           include: livenessState
   tracing:

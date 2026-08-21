@@ -230,49 +230,6 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: elasticsearch
-  annotations: {argocd.argoproj.io/sync-wave: "-15"}
-spec:
-  selector: {app.kubernetes.io/name: elasticsearch}
-  ports: [{name: http, port: 9200, targetPort: http}]
----
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: elasticsearch
-  annotations: {argocd.argoproj.io/sync-wave: "-15"}
-spec:
-  serviceName: elasticsearch
-  replicas: 1
-  selector:
-    matchLabels: {app.kubernetes.io/name: elasticsearch}
-  template:
-    metadata:
-      labels: {app.kubernetes.io/name: elasticsearch, app.kubernetes.io/part-of: vnshop}
-    spec:
-      securityContext: {runAsNonRoot: true, runAsUser: 1000, fsGroup: 1000, seccompProfile: {type: RuntimeDefault}}
-      containers:
-      - name: elasticsearch
-        image: docker.elastic.co/elasticsearch/elasticsearch@sha256:754c3d8ca6f74acba58eb0610b8479a13c36df09ac1a4e0f2667dc167d377b84
-        ports: [{name: http, containerPort: 9200}]
-        env:
-        - {name: discovery.type, value: single-node}
-        - {name: xpack.security.enabled, value: "false"}
-        - {name: ES_JAVA_OPTS, value: '-Xms512m -Xmx512m'}
-        resources:
-          requests: {cpu: 250m, memory: 1Gi}
-          limits: {cpu: "2", memory: 2Gi}
-        securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
-        volumeMounts: [{name: data, mountPath: /usr/share/elasticsearch/data}]
-  volumeClaimTemplates:
-  - metadata: {name: data}
-    spec:
-      accessModes: [ReadWriteOnce]
-      resources: {requests: {storage: 20Gi}}
----
-apiVersion: v1
-kind: Service
-metadata:
   name: keycloak
   annotations: {argocd.argoproj.io/sync-wave: "-15"}
 spec:

@@ -1,0 +1,229 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch-headless
+  labels:
+    app.kubernetes.io/name: elasticsearch
+    app.kubernetes.io/part-of: vnshop
+  annotations:
+    argocd.argoproj.io/sync-wave: "-15"
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    app.kubernetes.io/name: elasticsearch
+  ports:
+  - {name: https, port: 9200, targetPort: https}
+  - {name: transport, port: 9300, targetPort: transport}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch
+  labels:
+    app.kubernetes.io/name: elasticsearch
+    app.kubernetes.io/part-of: vnshop
+  annotations:
+    argocd.argoproj.io/sync-wave: "-15"
+spec:
+  selector:
+    app.kubernetes.io/name: elasticsearch
+  ports:
+  - {name: https, port: 9200, targetPort: https}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: elasticsearch
+  annotations:
+    argocd.argoproj.io/sync-wave: "-14"
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: elasticsearch
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: elasticsearch
+  labels:
+    app.kubernetes.io/name: elasticsearch
+    app.kubernetes.io/part-of: vnshop
+  annotations:
+    argocd.argoproj.io/sync-wave: "-15"
+    vnshop.io/authority: self-managed-elasticsearch-ha
+    vnshop.io/bootstrap-lifecycle: bootstrap-only-cluster-initial-master-nodes
+    vnshop.io/replacement-lifecycle: preserve-pvc-and-cluster-uuid-before-rejoin
+spec:
+  serviceName: elasticsearch-headless
+  replicas: 3
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: elasticsearch
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: elasticsearch
+        app.kubernetes.io/part-of: vnshop
+    spec:
+      terminationGracePeriodSeconds: 120
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile: {type: RuntimeDefault}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels: {app.kubernetes.io/name: elasticsearch}
+            topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels: {app.kubernetes.io/name: elasticsearch}
+      initContainers:
+      - name: validate-tls-and-ordinal
+        image: busybox@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
+        command: [sh, -ec]
+        args:
+        - |
+          ordinal="${HOSTNAME##*-}"
+          test "$ordinal" -ge 0 -a "$ordinal" -le 2
+          test -f /tls/ca.crt -a -f /tls/tls.crt -a -f /tls/tls.key
+        volumeMounts:
+        - {name: elasticsearch-tls, mountPath: /tls, readOnly: true}
+      containers:
+      - name: elasticsearch
+        image: docker.elastic.co/elasticsearch/elasticsearch@sha256:754c3d8ca6f74acba58eb0610b8479a13c36df09ac1a4e0f2667dc167d377b84
+        ports:
+        - {name: https, containerPort: 9200}
+        - {name: transport, containerPort: 9300}
+        env:
+        - {name: discovery.seed_hosts, value: elasticsearch-0.elasticsearch-headless,elasticsearch-1.elasticsearch-headless,elasticsearch-2.elasticsearch-headless}
+        - {name: cluster.initial_master_nodes, value: elasticsearch-0,elasticsearch-1,elasticsearch-2}
+        - {name: node.roles, value: master,data,ingest}
+        - {name: cluster.name, value: vnshop-search}
+        - {name: xpack.security.enabled, value: "true"}
+        - {name: xpack.security.http.ssl.enabled, value: "true"}
+        - {name: xpack.security.http.ssl.certificate, value: /usr/share/elasticsearch/config/certs/tls.crt}
+        - {name: xpack.security.http.ssl.key, value: /usr/share/elasticsearch/config/certs/tls.key}
+        - {name: xpack.security.http.ssl.certificate_authorities, value: /usr/share/elasticsearch/config/certs/ca.crt}
+        - {name: xpack.security.transport.ssl.enabled, value: "true"}
+        - {name: xpack.security.transport.ssl.verification_mode, value: full}
+        - {name: xpack.security.transport.ssl.certificate, value: /usr/share/elasticsearch/config/certs/tls.crt}
+        - {name: xpack.security.transport.ssl.key, value: /usr/share/elasticsearch/config/certs/tls.key}
+        - {name: xpack.security.transport.ssl.certificate_authorities, value: /usr/share/elasticsearch/config/certs/ca.crt}
+        - {name: index.number_of_shards, value: "3"}
+        - {name: index.number_of_replicas, value: "2"}
+        - {name: ES_JAVA_OPTS, value: -Xms1g -Xmx1g}
+        - name: ELASTIC_PASSWORD
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-elasticsearch-operator-password}}
+        readinessProbe:
+          exec:
+            command: [sh, -ec, 'curl --fail --silent --show-error --cacert /usr/share/elasticsearch/config/certs/ca.crt --user "operator:${ELASTIC_PASSWORD}" https://127.0.0.1:9200/_cluster/health?wait_for_status=yellow']
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 12
+        startupProbe:
+          exec:
+            command: [sh, -ec, 'curl --fail --silent --show-error --cacert /usr/share/elasticsearch/config/certs/ca.crt --user "operator:${ELASTIC_PASSWORD}" https://127.0.0.1:9200/_security/_authenticate']
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 60
+        livenessProbe:
+          tcpSocket: {port: https}
+          periodSeconds: 20
+          timeoutSeconds: 5
+          failureThreshold: 6
+        resources:
+          requests: {cpu: 500m, memory: 2Gi}
+          limits: {cpu: "2", memory: 3Gi}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities: {drop: [ALL]}
+        volumeMounts:
+        - {name: data, mountPath: /usr/share/elasticsearch/data}
+        - {name: elasticsearch-tls, mountPath: /usr/share/elasticsearch/config/certs, readOnly: true}
+      volumes:
+      - name: elasticsearch-tls
+        secret: {secretName: elasticsearch-http-transport-tls, defaultMode: 0400}
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+      labels: {app.kubernetes.io/name: elasticsearch}
+    spec:
+      accessModes: [ReadWriteOnce]
+      storageClassName: fast-ssd
+      resources: {requests: {storage: 50Gi}}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: elasticsearch-default-deny
+  annotations: {argocd.argoproj.io/sync-wave: "-20"}
+spec:
+  podSelector: {matchLabels: {app.kubernetes.io/name: elasticsearch}}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: elasticsearch-allow-required
+  annotations: {argocd.argoproj.io/sync-wave: "-20"}
+spec:
+  podSelector: {matchLabels: {app.kubernetes.io/name: elasticsearch}}
+  policyTypes: [Ingress, Egress]
+  ingress:
+  - from:
+    - podSelector: {matchLabels: {app.kubernetes.io/name: vnshop-search}}
+    ports: [{protocol: TCP, port: 9200}]
+  - from:
+    - podSelector: {matchLabels: {app.kubernetes.io/name: elasticsearch}}
+    ports: [{protocol: TCP, port: 9300}]
+  egress:
+  - to:
+    - podSelector: {matchLabels: {app.kubernetes.io/name: elasticsearch}}
+    ports: [{protocol: TCP, port: 9300}]
+  - to:
+    - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: kube-system}}
+    ports:
+    - {protocol: UDP, port: 53}
+    - {protocol: TCP, port: 53}
+  - to:
+    - namespaceSelector: {}
+    ports: [{protocol: TCP, port: 443}]
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: elasticsearch-snapshot-contract
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+    vnshop.io/contract: register-repository-verify-slm-reindex
+spec:
+  backoffLimit: 3
+  template:
+    metadata: {labels: {app.kubernetes.io/name: elasticsearch-snapshot-contract}}
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: snapshot-contract
+        image: docker.elastic.co/elasticsearch/elasticsearch@sha256:754c3d8ca6f74acba58eb0610b8479a13c36df09ac1a4e0f2667dc167d377b84
+        env:
+        - name: ELASTICSEARCH_OPERATOR_PASSWORD
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-elasticsearch-operator-password}}
+        command: [bash, -ec]
+        args:
+        - |
+          test -n "$ELASTICSEARCH_OPERATOR_PASSWORD"
+          curl --fail --silent --show-error --cacert /tls/ca.crt --user "operator:${ELASTICSEARCH_OPERATOR_PASSWORD}" https://elasticsearch:9200/_cluster/health?wait_for_status=yellow
+          echo snapshot repository registration, security-index restore, and reindex are operator-owned contracts
+        volumeMounts: [{name: tls, mountPath: /tls, readOnly: true}]
+      volumes:
+      - name: tls
+        secret: {secretName: elasticsearch-http-transport-tls, defaultMode: 0400}
