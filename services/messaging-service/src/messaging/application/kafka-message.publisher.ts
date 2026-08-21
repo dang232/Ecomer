@@ -64,6 +64,7 @@ export class KafkaMessagePublisher
     try {
       await this.producer.send({
         topic: MESSAGING_TOPIC,
+        acks: -1,
         // Partition by thread so messages within a thread stay ordered when
         // consumers parallelise across partitions.
         messages: [{ key: input.threadId, value: JSON.stringify(payload) }],
