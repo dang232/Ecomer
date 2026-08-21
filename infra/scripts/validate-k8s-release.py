@@ -6,6 +6,8 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
+import ipaddress
 
 import yaml
 
@@ -78,6 +80,14 @@ OPTIONAL_PROVIDER_SECRET_FLAGS = {
     "payment-paypal-client-secret": "PAYPAL_ENABLED",
 }
 
+PROVIDER_SECRET_KEYS = {
+    "VIETQR_ENABLED": {"payment-vietqr-account-no", "payment-vietqr-account-name"},
+    "VNPAY_ENABLED": {"payment-vnpay-tmn-code", "payment-vnpay-hash-secret"},
+    "MOMO_ENABLED": {"payment-momo-partner-code", "payment-momo-access-key", "payment-momo-secret-key"},
+    "STRIPE_ENABLED": {"payment-stripe-secret-key", "payment-stripe-publishable-key", "payment-stripe-webhook-secret"},
+    "PAYPAL_ENABLED": {"payment-paypal-client-id", "payment-paypal-client-secret"},
+}
+
 
 def collect_required_secret_keys(documents: list[dict], app_config_data: dict) -> set[str]:
     """Return runtime Secret keys required by the rendered provider configuration.
@@ -111,6 +121,37 @@ def collect_required_secret_keys(documents: list[dict], app_config_data: dict) -
     collect(documents)
     required.discard("")
     return required
+
+
+def collect_secret_references(documents: list[dict]) -> set[str]:
+    present: set[str] = set()
+
+    def collect(value):
+        if isinstance(value, dict):
+            reference = value.get("secretKeyRef")
+            if isinstance(reference, dict) and reference.get("name") == "vnshop-runtime-secrets":
+                key = reference.get("key")
+                if isinstance(key, str) and key:
+                    present.add(key)
+            for nested in value.values():
+                collect(nested)
+        elif isinstance(value, list):
+            for nested in value:
+                collect(nested)
+
+    collect(documents)
+    return present
+
+
+def validate_enabled_provider_secret_refs(
+    documents: list[dict], app_config_data: dict, errors: list[str]
+) -> None:
+    present = collect_secret_references(documents)
+    for flag, required in sorted(PROVIDER_SECRET_KEYS.items()):
+        if str(app_config_data.get(flag, "false")).lower() != "true":
+            continue
+        for key in sorted(required - present):
+            errors.append(f"enabled provider {flag} is missing SealedSecret reference {key}")
 
 
 def fail(errors: list[str]) -> None:
@@ -229,7 +270,111 @@ def validate_lock(lock: dict, catalog: dict, errors: list[str]) -> dict[str, dic
                 errors.append(f"{artifact_id}: {field} evidence URI is required")
         if artifact.get("provenanceVerified") is not True:
             errors.append(f"{artifact_id}: signed provenance must be verified before locking")
+        provenance = artifact.get("provenanceRecord")
+        if not isinstance(provenance, dict) or not all(provenance.get(field) for field in ("producer", "sourceCommit", "artifactDigest", "attestationId")):
+            errors.append(f"{artifact_id}: structured independent provenance record is required")
+        elif provenance.get("sourceCommit") != lock.get("sourceCommit") or provenance.get("artifactDigest") != digest:
+            errors.append(f"{artifact_id}: provenance identity does not match lock")
     return by_id
+
+
+def is_strict_environment(environment: str) -> bool:
+    return environment in {"staging", "prod"}
+
+
+def validate_release_policy(
+    documents: list[dict],
+    environment: str,
+    *,
+    allow_unresolved: bool = False,
+    allow_unsealed: bool = False,
+) -> list[str]:
+    """Validate policies that must not be satisfied by production placeholders."""
+    errors: list[str] = []
+    strict = is_strict_environment(environment)
+
+    if (allow_unresolved or allow_unsealed) and strict:
+        errors.append("--allow-unresolved and --allow-unsealed are only permitted for dev")
+
+    configmaps = [doc for doc in documents if doc.get("kind") == "ConfigMap"]
+    app_config = next(
+        (doc for doc in configmaps if doc.get("metadata", {}).get("name") == "vnshop-app-config"),
+        {},
+    )
+    app_data = app_config.get("data", {})
+
+    if strict:
+        for key, value in app_data.items():
+            if not isinstance(value, str):
+                continue
+            normalized = value.strip()
+            lowered = normalized.lower()
+            if key.endswith("_MODE") and lowered in {"stub", "demo"}:
+                errors.append(f"vnshop-app-config {key} must not use {lowered} mode")
+            if key in {"KAFKA_SECURITY_PROTOCOL", "KAFKA_SASL_SECURITY_PROTOCOL"} \
+                    and lowered == "sasl_plaintext":
+                errors.append("Kafka must not use SASL_PLAINTEXT in staging or prod")
+            if key.startswith("ELASTICSEARCH") and lowered.startswith("http://"):
+                errors.append(f"vnshop-app-config {key} must use an HTTPS Elasticsearch endpoint")
+
+            if key.endswith("ORIGIN") or key.endswith("ORIGINS") or "PUBLIC_URL" in key \
+                    or "CALLBACK_BASE_URL" in key or key == "KEYCLOAK_ISSUER_URI":
+                parsed = urlparse(normalized.split(",", 1)[0])
+                host = parsed.hostname or ""
+                try:
+                    unsafe_ip = ipaddress.ip_address(host).is_private or ipaddress.ip_address(host).is_loopback or ipaddress.ip_address(host).is_link_local
+                except ValueError:
+                    unsafe_ip = False
+                if parsed.scheme != "https" or host == "localhost" or unsafe_ip or host.endswith((".example", ".invalid")):
+                    errors.append(f"vnshop-app-config {key} must not use a placeholder origin")
+
+    for document in documents:
+        if document.get("kind") == "Secret":
+            if strict or not allow_unsealed:
+                errors.append("rendered desired state must not contain plaintext Secret resources")
+        pod_spec = document.get("spec", {}).get("template", {}).get("spec")
+        if document.get("kind") == "CronJob":
+            pod_spec = document.get("spec", {}).get("jobTemplate", {}).get("spec", {}).get("template", {}).get("spec")
+        if not isinstance(pod_spec, dict):
+            continue
+        if document.get("kind") == "StatefulSet" and document.get("metadata", {}).get("name") == "elasticsearch":
+            containers = pod_spec.get("containers", [])
+            for container in containers:
+                values = {entry.get("name"): str(entry.get("value", "")) for entry in container.get("env", [])}
+                if strict and values.get("discovery.type") == "single-node":
+                    errors.append("Elasticsearch production topology must not use single-node discovery")
+                if strict and values.get("xpack.security.enabled", "").lower() != "true":
+                    errors.append("Elasticsearch security must be enabled in staging or prod")
+                if strict and not any(entry.get("name") in {"ELASTIC_PASSWORD", "ELASTICSEARCH_PASSWORD"} for entry in container.get("env", [])):
+                    errors.append("Elasticsearch requires a secret-backed authentication input")
+                for entry in container.get("env", []):
+                    if entry.get("name") == "xpack.security.enabled" and str(entry.get("value", "")).lower() == "false":
+                        if strict:
+                            errors.append("Elasticsearch security must be enabled in staging or prod")
+        if strict and document.get("kind") == "StatefulSet" and document.get("metadata", {}).get("name") == "kafka":
+            values = {entry.get("name"): str(entry.get("value", "")) for entry in pod_spec.get("containers", [])[0].get("env", [])} if pod_spec.get("containers") else {}
+            if values.get("KAFKA_LISTENERS", "").lower().find("plaintext") >= 0 or values.get("KAFKA_ADVERTISED_LISTENERS", "").lower().find("plaintext") >= 0:
+                errors.append("Kafka production listeners must not use plaintext")
+            if "SASL_SSL" not in values.get("KAFKA_LISTENER_SECURITY_PROTOCOL_MAP", ""):
+                errors.append("Kafka production clients require SASL_SSL")
+            if values.get("KAFKA_SSL_CLIENT_AUTH", "").lower() not in {"required", "requested"}:
+                errors.append("Kafka production requires client certificate authentication")
+        for container in [*pod_spec.get("initContainers", []), *pod_spec.get("containers", [])]:
+            image = container.get("image", "")
+            if "@sha256:" not in image:
+                errors.append(f"mutable platform image reference: {image}")
+            elif not re.search(r"@sha256:[0-9a-f]{64}$", image) or image.endswith(ZERO_DIGEST):
+                if strict or not allow_unresolved:
+                    errors.append(f"platform image requires a non-placeholder sha256 digest: {image.split('@', 1)[0]}")
+
+    sealed = [doc for doc in documents if doc.get("kind") == "SealedSecret"]
+    if len(sealed) == 1:
+        encrypted_data = sealed[0].get("spec", {}).get("encryptedData")
+        if not encrypted_data and (strict or not allow_unsealed):
+            errors.append("SealedSecret encryptedData must be populated before release")
+    if strict:
+        validate_enabled_provider_secret_refs(documents, app_data, errors)
+    return errors
 
 
 def main() -> None:
@@ -259,6 +404,15 @@ def main() -> None:
         fail(errors)
         return
 
+    errors.extend(
+        validate_release_policy(
+            documents,
+            args.environment,
+            allow_unresolved=args.allow_unresolved,
+            allow_unsealed=args.allow_unsealed,
+        )
+    )
+
     if any(document.get("kind") == "Secret" for document in documents):
         errors.append("rendered desired state must not contain plaintext Secret resources")
 
@@ -287,6 +441,8 @@ def main() -> None:
             continue
         artifact_id = document.get("metadata", {}).get("labels", {}).get("vnshop.io/artifact-id")
         if artifact_id:
+            if artifact_id in deployments:
+                errors.append(f"duplicate application Deployment for {artifact_id}")
             deployments[artifact_id] = document
     if set(deployments) != set(catalog_by_id):
         errors.append("rendered application Deployments must exactly match the 19-artifact catalog")
