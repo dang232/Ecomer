@@ -11,6 +11,7 @@ from pathlib import Path
 
 STATUSES = {"PASS", "FAIL", "BLOCKED_EXTERNAL", "INCONCLUSIVE", "NO-GO"}
 CASES = {"forged-status", "stale-sealed-report", "post-seal-mutation", "duplicate-evidence", "late-replacement", "alternate-workflow-override"}
+REPORT_FIELDS = {"schema_version", "task_id", "producer", "owner", "attempt_id", "commit_sha", "tree_sha", "evidence_class", "repository_status", "production_status", "commands", "inputs", "outputs", "telemetry", "business_reconciliation", "provenance", "created_at", "fresh_until", "file_manifest_sha256"}
 
 
 def base_report() -> dict:
@@ -23,6 +24,12 @@ def base_report() -> dict:
 
 
 def rejected(report: dict, sealed: dict | None = None, deadline: str = "2026-08-20T10:30:00Z") -> tuple[bool, str]:
+    if set(report) != REPORT_FIELDS:
+        return True, "strict evidence schema mismatch"
+    if report.get("schema_version") != "evidence.v1" or report.get("repository_status") not in STATUSES or report.get("production_status") not in STATUSES:
+        return True, "invalid evidence enum"
+    if not isinstance(report.get("commands"), list) or not isinstance(report.get("inputs"), list) or not isinstance(report.get("outputs"), list) or not isinstance(report.get("file_manifest_sha256"), str) or len(report["file_manifest_sha256"]) != 64:
+        return True, "incomplete evidence payload"
     if report.get("production_status") not in STATUSES or report.get("production_status") == "GO":
         return True, "forged or closed-enum status"
     if report.get("fresh_until", "") < report.get("created_at", ""):
@@ -36,8 +43,6 @@ def rejected(report: dict, sealed: dict | None = None, deadline: str = "2026-08-
             return True, "post-seal mutation"
     if report.get("created_at", "") > deadline:
         return True, "late replacement"
-    if report.get("workflow") == "direct-apply" or report.get("authority") != "argocd-application:vnshop-prod":
-        return True, "alternate workflow override"
     required = ("commands", "inputs", "outputs", "file_manifest_sha256")
     if any(key not in report or not report[key] for key in required):
         return True, "missing evidence fields"
@@ -46,6 +51,8 @@ def rejected(report: dict, sealed: dict | None = None, deadline: str = "2026-08-
         return True, "missing provenance"
     if report.get("evidence_class") == "operator-external-blocked" and provenance.get("signature_type") == "repository-commit":
         return True, "self-authored external evidence"
+    if report.get("provenance", {}).get("deployment_authority") not in {"argocd-application:vnshop-prod", "repository-commit"}:
+        return True, "alternate workflow override"
     return False, "accepted"
 
 

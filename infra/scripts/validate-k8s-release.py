@@ -228,7 +228,7 @@ def validate_production_realm_hosts(environment: str, suffix: str, errors: list[
 
 
 def render(environment: str) -> bytes:
-    command = ["kubectl", "kustomize", str(REPO / "infra/k8s/overlays" / environment)]
+    command = ["kubectl", "kustomize", str(REPO / "infra/k8s/overlays" / environment), "--load-restrictor", "LoadRestrictionsNone"]
     result = subprocess.run(command, cwd=REPO, capture_output=True, check=False)
     if result.returncode != 0:
         raise SystemExit(result.stderr.decode("utf-8", errors="replace"))

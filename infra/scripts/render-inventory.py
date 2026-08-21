@@ -65,12 +65,11 @@ def inventory(raw: bytes) -> dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--overlay", type=Path, default=ROOT / "infra/k8s/overlays/prod")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--manifest", type=Path)
     args = parser.parse_args()
     try:
-        canonical = render(args.overlay.resolve())
+        canonical = render(ROOT / "infra/k8s/overlays/prod")
         raw = canonical
         if args.manifest:
             supplied = args.manifest.read_bytes()

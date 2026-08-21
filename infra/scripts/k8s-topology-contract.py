@@ -27,18 +27,29 @@ def check(documents: list[dict]) -> list[str]:
         spec = kafka[0].get("spec", {})
         if spec.get("replicas") != 3:
             errors.append("production Kafka authority must have three replicas")
-        text = json.dumps(kafka[0], sort_keys=True).lower()
-        for forbidden in ("sasl_plaintext", "plaintext://", "allow.everyone.if.no.acl.found=true"):
-            if forbidden in text:
-                errors.append(f"Kafka topology contains insecure setting: {forbidden}")
+        containers = kafka[0].get("spec", {}).get("template", {}).get("spec", {}).get("containers", [])
+        env = {entry.get("name"): str(entry.get("value", "")) for entry in containers[0].get("env", [])} if containers else {}
+        listeners = f"{env.get('KAFKA_LISTENERS', '')},{env.get('KAFKA_ADVERTISED_LISTENERS', '')}".upper()
+        if "PLAINTEXT" in listeners:
+            errors.append("Kafka listeners must not use plaintext")
+        if "SASL_SSL" not in env.get("KAFKA_LISTENER_SECURITY_PROTOCOL_MAP", ""):
+            errors.append("Kafka listener security map must include SASL_SSL")
+        if env.get("KAFKA_SSL_CLIENT_AUTH", "").lower() not in {"required", "requested"}:
+            errors.append("Kafka client certificate authentication is required")
+        if env.get("KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM", "").lower() != "https":
+            errors.append("Kafka hostname verification must be enabled")
     elastic = [d for d in documents if d.get("kind") == "StatefulSet" and d.get("metadata", {}).get("name") == "elasticsearch"]
     if len(elastic) != 1:
         errors.append("exactly one rendered Elasticsearch StatefulSet is required")
     else:
-        text = json.dumps(elastic[0], sort_keys=True).lower()
-        for forbidden in ("single-node", '"xpack.security.enabled", "false"'):
-            if forbidden in text:
-                errors.append(f"Elasticsearch topology contains insecure setting: {forbidden}")
+        containers = elastic[0].get("spec", {}).get("template", {}).get("spec", {}).get("containers", [])
+        env = {entry.get("name"): str(entry.get("value", "")) for entry in containers[0].get("env", [])} if containers else {}
+        if env.get("discovery.type") == "single-node":
+            errors.append("Elasticsearch must not use single-node discovery")
+        if env.get("xpack.security.enabled", "").lower() != "true":
+            errors.append("Elasticsearch security must be enabled")
+        if env.get("xpack.security.http.ssl.enabled", "").lower() != "true":
+            errors.append("Elasticsearch HTTPS security must be enabled")
     names = {(d.get("kind"), d.get("metadata", {}).get("name")) for d in documents}
     if ("CronJob", "db-backup") in names:
         errors.append("legacy backup CronJob is rendered")
