@@ -84,6 +84,26 @@ def compare_entries(
         original = workspace.get(path)
         baseline = detached.get(path)
         current = final.get(path, {"path": path, "status": "MISSING", "sha256": None})
+        captured = original or baseline
+        captured_status = captured.get("status") if captured else None
+        current_status = current.get("status")
+        captured_exists = captured_status in {"FILE", "SYMLINK", "DIRECTORY", "  ", " M", "M ", "MM", " D", "D ", "A ", "AM"}
+        if captured_exists and current_status == "MISSING":
+            errors.append(f"captured path disappeared: {path}")
+            classifications[path] = "CAPTURED_DISAPPEARED"
+            continue
+        if captured_exists and captured_status == "SYMLINK" and current_status != "SYMLINK":
+            errors.append(f"file-type change: {path}")
+            classifications[path] = "TYPE_CHANGED"
+            continue
+        if captured_exists and captured_status != "SYMLINK" and current_status == "SYMLINK":
+            errors.append(f"file-type change: {path}")
+            classifications[path] = "TYPE_CHANGED"
+            continue
+        if captured_exists and captured_status == "FILE" and current_status not in {"FILE", "MISSING"}:
+            errors.append(f"file-type change: {path}")
+            classifications[path] = "TYPE_CHANGED"
+            continue
         if original and original.get("status", "  ") != "  " and original.get("sha256") == current.get("sha256") and current.get("status") == "FILE":
             classifications[path] = "PREEXISTING_UNCHANGED"
             continue
@@ -103,9 +123,6 @@ def compare_entries(
             classifications[path] = "PREEXISTING_MUTATED"
         else:
             classifications[path] = "ALLOWED_CHANGED"
-        prior_status = (original or baseline or {}).get("status")
-        if (current.get("status") == "SYMLINK") != (prior_status == "SYMLINK"):
-            errors.append(f"symlink-type change: {path}")
     return sorted(set(errors)), classifications
 
 

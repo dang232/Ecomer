@@ -144,6 +144,55 @@ def test_scope_rejects_allowlisted_regular_file_replaced_by_symlink(tmp_path: Pa
     assert "symlink-type change: allowed.py" in errors
 
 
+@pytest.mark.parametrize(
+    ("captured_status", "final_status", "expected"),
+    [
+        ("FILE", "MISSING", "captured path disappeared: allowed.py"),
+        ("  ", "MISSING", "captured path disappeared: allowed.py"),
+        ("FILE", "SYMLINK", "file-type change: allowed.py"),
+        ("SYMLINK", "FILE", "file-type change: allowed.py"),
+        ("FILE", "DIRECTORY", "file-type change: allowed.py"),
+    ],
+)
+def test_scope_compare_entries_rejects_captured_deletion_and_type_changes(
+    captured_status: str, final_status: str, expected: str
+) -> None:
+    workspace = {"allowed.py": {"path": "allowed.py", "status": captured_status, "sha256": "a" * 64}}
+    detached = {"allowed.py": {"path": "allowed.py", "status": captured_status, "sha256": "a" * 64}}
+    final = {"allowed.py": {"path": "allowed.py", "status": final_status, "sha256": "b" * 64}}
+
+    errors, classifications = scope.compare_entries(workspace, detached, final, {"allowed.py"})
+
+    assert expected in errors
+    assert classifications["allowed.py"] != "ALLOWED_CHANGED"
+
+
+def test_scope_compare_entries_distinguishes_allowlisted_new_file() -> None:
+    errors, classifications = scope.compare_entries(
+        {},
+        {},
+        {"new.py": {"path": "new.py", "status": "FILE", "sha256": "b" * 64}},
+        {"new.py"},
+    )
+
+    assert errors == []
+    assert classifications == {"new.py": "ALLOWED_CHANGED"}
+
+
+def test_scope_compare_entries_preserves_preexisting_dirty_unchanged_file() -> None:
+    entry = {"path": "dirty.py", "status": " M", "sha256": "a" * 64}
+
+    errors, classifications = scope.compare_entries(
+        {"dirty.py": entry},
+        {"dirty.py": {"path": "dirty.py", "status": "  ", "sha256": "b" * 64}},
+        {"dirty.py": {"path": "dirty.py", "status": "FILE", "sha256": "a" * 64}},
+        set(),
+    )
+
+    assert errors == []
+    assert classifications == {"dirty.py": "PREEXISTING_UNCHANGED"}
+
+
 def test_topology_public_check_requires_canonical_context() -> None:
     assert topology.check([]) == ["topology checks require canonical production render authority and digest"]
 
@@ -160,7 +209,7 @@ def test_gate_matrix_binds_external_owner_and_producer() -> None:
     session = importlib.util.module_from_spec(session_spec)
     session_spec.loader.exec_module(session)
     matrix = yaml.safe_load((ROOT / "infra/evidence/production-gates.yaml").read_text(encoding="utf-8"))
-    gate = {"gate_id": "registry_provenance", "status": "PASS", "evidence_class": "isolated-runtime", "producing_system": "attacker", "owner": "attacker", "environment_identity": "prod", "fresh_until": "2099-01-01T00:00:00Z", "artifact_digest": "a" * 64, "command_binding": "fake", "signature_type": "external", "provider_issued_id": "fake"}
+    gate = {"gate_id": "registry_provenance", "status": "PASS", "evidence_class": "isolated-runtime", "producing_system": "attacker", "owner": "attacker", "authority": "attacker", "environment_identity": "prod", "fresh_until": "2099-01-01T00:00:00Z", "artifact_digest": "a" * 64, "command_binding": "fake", "signature_type": "external", "provider_issued_id": "https://attacker.example.invalid/attacker/fake"}
     assert session._gate_entry(gate, set(matrix["mandatory"]), matrix) is False
 
 
@@ -170,7 +219,7 @@ def test_derive_statuses_rejects_missing_mandatory_gate() -> None:
     session = importlib.util.module_from_spec(session_spec)
     session_spec.loader.exec_module(session)
     matrix = yaml.safe_load((ROOT / "infra/evidence/production-gates.yaml").read_text(encoding="utf-8"))
-    gate_entries = [{"gate_id": gate_id, "status": "PASS", "evidence_class": "isolated-runtime", "producing_system": "registry-attestation", "owner": "release-engineering-owner", "environment_identity": "prod", "fresh_until": "2099-01-01T00:00:00Z", "artifact_digest": "a" * 64, "command_binding": "fake", "signature_type": "external", "provider_issued_id": "fake"} for gate_id in matrix["mandatory"][:-1]]
+    gate_entries = [{"gate_id": gate_id, "status": "PASS", "evidence_class": "isolated-runtime", "producing_system": matrix["gates"][gate_id]["producing_system"], "owner": matrix["gates"][gate_id]["owner"], "authority": matrix["gates"][gate_id]["authority"], "environment_identity": "prod", "fresh_until": "2099-01-01T00:00:00Z", "artifact_digest": "a" * 64, "command_binding": "fake", "signature_type": "external", "provider_issued_id": f"https://{matrix['gates'][gate_id]['producing_system']}.example.invalid/{matrix['gates'][gate_id]['authority']}/fake"} for gate_id in matrix["mandatory"][:-1]]
     _, production_status, decisions = session.derive_statuses([], gate_entries, matrix)
     assert production_status == "NO-GO"
     assert any(item.get("reason") == "missing-or-duplicate-evidence" for item in decisions)
