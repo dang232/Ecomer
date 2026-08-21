@@ -232,6 +232,18 @@ def test_inventory_acl_authority_is_mechanically_checked_in_both_bootstraps() ->
     assert module.validate_kubernetes_bootstrap_authority(document, k8s) == []
 
 
+def test_inventory_acl_semantics_reject_each_mutated_dimension() -> None:
+    document = yaml.safe_load(INVENTORY.read_text(encoding="utf-8"))
+    module = _load("kafka_inventory_acl_semantics", ROOT / "infra/scripts/kafka-inventory-contract.py")
+    for field, value in (("principal", "User:wrong"), ("operation", "Read"), ("resource_type", "group"), ("resource_name", "wrong"), ("pattern_type", "literal")):
+        mutated = yaml.safe_load(yaml.safe_dump(document))
+        mutated["acl_entries"][0][field] = value
+        assert any("ACL" in error for error in module.validate(mutated)), field
+
+    mutated_script = BOOTSTRAP.read_text(encoding="utf-8").replace("--operation Write --topic payment.completed", "--operation Read --topic payment.completed", 1)
+    assert any("ACL" in error for error in module.validate_bootstrap_authority(document, mutated_script))
+
+
 def test_transactional_policy_is_explicit_and_principal_prefixed() -> None:
     document = yaml.safe_load(INVENTORY.read_text(encoding="utf-8"))
     assert document["acl_contract"]["transactional_id_policy"] in {"none-used", "service-principal-prefixed-and-explicit"}

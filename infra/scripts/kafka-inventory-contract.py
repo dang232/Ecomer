@@ -24,6 +24,20 @@ def _extract_acl_commands(script: str) -> set[str]:
     return {" ".join(line.strip().split()) for line in script.splitlines() if "$ACL --add" in line}
 
 
+def _extract_acl_entries(script: str) -> set[tuple[str, str, str, str, str]]:
+    entries: set[tuple[str, str, str, str, str]] = set()
+    for command in _extract_acl_commands(script):
+        principal = re.search(r"--allow-principal\s+(\S+)", command)
+        operation = re.search(r"--operation\s+(\S+)", command)
+        resource = re.search(r"--(topic|group|transactional-id)\s+(\S+)", command)
+        if not principal or not operation or not resource:
+            continue
+        resource_type, resource_name = resource.groups()
+        pattern = re.search(r"--resource-pattern-type\s+(\S+)", command)
+        entries.add((principal.group(1), operation.group(1), resource_type, resource_name, pattern.group(1) if pattern else "literal"))
+    return entries
+
+
 def _extract_kubernetes_script(document: str) -> str:
     marker = "  init-kafka-topics.sh: |\n"
     start = document.index(marker) + len(marker)
@@ -33,7 +47,19 @@ def _extract_kubernetes_script(document: str) -> str:
 
 def validate_bootstrap_authority(document: dict, script: str) -> list[str]:
     inventory_topics = {(topic["name"], int(topic["partitions"])) for topic in document.get("topics", [])}
-    return [] if _extract_topic_entries(script) == inventory_topics else ["bootstrap topic metadata must exactly match inventory"]
+    errors = [] if _extract_topic_entries(script) == inventory_topics else ["bootstrap topic metadata must exactly match inventory"]
+    declared = {
+        (entry["principal"], entry["operation"], entry["resource_type"], entry["resource_name"], entry.get("pattern_type", "literal"))
+        for entry in document.get("acl_entries", [])
+    }
+    actual = _extract_acl_entries(script)
+    if len(actual) != len(_extract_acl_commands(script)):
+        errors.append("bootstrap ACL contains malformed command")
+    if actual != declared or len(declared) != len(document.get("acl_entries", [])):
+        errors.append("bootstrap ACL semantics must exactly match inventory")
+    if len(document.get("acl_entries", [])) != len({tuple(entry.items()) for entry in document.get("acl_entries", [])}):
+        errors.append("inventory ACL entries must be unique")
+    return errors
 
 
 def validate_kubernetes_bootstrap_authority(document: dict, manifest: str) -> list[str]:
@@ -47,6 +73,11 @@ def validate_kubernetes_bootstrap_authority(document: dict, manifest: str) -> li
         errors.append("Kubernetes bootstrap topics drift from local bootstrap authority")
     if _extract_acl_commands(local) != _extract_acl_commands(kubernetes):
         errors.append("Kubernetes bootstrap ACLs drift from local bootstrap authority")
+    if _extract_acl_entries(kubernetes) != {
+        (entry["principal"], entry["operation"], entry["resource_type"], entry["resource_name"], entry.get("pattern_type", "literal"))
+        for entry in document.get("acl_entries", [])
+    }:
+        errors.append("Kubernetes bootstrap ACL semantics must exactly match inventory")
     return errors
 
 
@@ -123,6 +154,11 @@ def validate(document: dict) -> list[str]:
     if script_topics != inventory_topics:
         errors.append("local bootstrap topic list must exactly match inventory")
     errors.extend(validate_bootstrap_authority(document, script))
+    try:
+        manifest = (BOOTSTRAP_SCRIPT.parent.parent / "k8s/base/kafka-bootstrap-job.yaml").read_text(encoding="utf-8")
+        errors.extend(validate_kubernetes_bootstrap_authority(document, manifest))
+    except OSError as exc:
+        errors.append(f"Kubernetes bootstrap authority unavailable: {exc}")
     try:
         migration = yaml.safe_load(MIGRATION_CONTRACT.read_text(encoding="utf-8"))
         if migration.get("listeners") != {"client": "CLIENT:SASL_SSL", "inter_broker": "INTERNAL:SSL", "controller": "CONTROLLER:SSL"}:

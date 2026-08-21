@@ -66,7 +66,182 @@ clients:
   - {service: user-service, principal: svc-user, bootstrap: kafka:9092, protocol: SASL_SSL, mechanism: PLAIN, ca_secret: user-service-kafka-ca, client_cert_secret: user-service-kafka-client-cert, client_key_secret: user-service-kafka-client-key, username_secret: user-service-kafka-username, password_secret: user-service-kafka-password, hostname_verification: HTTPS, groups: [user-service-gdpr-export], fallback: fail-closed}
   - {service: video-transcoder, principal: svc-video-transcoder, bootstrap: kafka:9092, protocol: SASL_SSL, mechanism: PLAIN, ca_secret: video-transcoder-kafka-ca, client_cert_secret: video-transcoder-kafka-client-cert, client_key_secret: video-transcoder-kafka-client-key, username_secret: video-transcoder-kafka-username, password_secret: video-transcoder-kafka-password, hostname_verification: HTTPS, groups: [transcoder-worker], fallback: fail-closed}
   - {service: video-moderator, principal: svc-video-moderator, bootstrap: kafka:9092, protocol: SASL_SSL, mechanism: PLAIN, ca_secret: video-moderator-kafka-ca, client_cert_secret: video-moderator-kafka-client-cert, client_key_secret: video-moderator-kafka-client-key, username_secret: video-moderator-kafka-username, password_secret: video-moderator-kafka-password, hostname_verification: HTTPS, groups: [moderator-worker], fallback: fail-closed}
+java_tls:
+  - {service: order-service, truststore_secret: order-service-kafka-truststore, keystore_secret: order-service-kafka-keystore, truststore_password_secret: order-service-kafka-truststore-password, keystore_password_secret: order-service-kafka-keystore-password}
+  - {service: payment-service, truststore_secret: payment-service-kafka-truststore, keystore_secret: payment-service-kafka-keystore, truststore_password_secret: payment-service-kafka-truststore-password, keystore_password_secret: payment-service-kafka-keystore-password}
+  - {service: inventory-service, truststore_secret: inventory-service-kafka-truststore, keystore_secret: inventory-service-kafka-keystore, truststore_password_secret: inventory-service-kafka-truststore-password, keystore_password_secret: inventory-service-kafka-keystore-password}
+  - {service: product-service, truststore_secret: product-service-kafka-truststore, keystore_secret: product-service-kafka-keystore, truststore_password_secret: product-service-kafka-truststore-password, keystore_password_secret: product-service-kafka-keystore-password}
+  - {service: shipping-service, truststore_secret: shipping-service-kafka-truststore, keystore_secret: shipping-service-kafka-keystore, truststore_password_secret: shipping-service-kafka-truststore-password, keystore_password_secret: shipping-service-kafka-keystore-password}
+  - {service: search-service, truststore_secret: search-service-kafka-truststore, keystore_secret: search-service-kafka-keystore, truststore_password_secret: search-service-kafka-truststore-password, keystore_password_secret: search-service-kafka-keystore-password}
+  - {service: recommendations-service, truststore_secret: recommendations-service-kafka-truststore, keystore_secret: recommendations-service-kafka-keystore, truststore_password_secret: recommendations-service-kafka-truststore-password, keystore_password_secret: recommendations-service-kafka-keystore-password}
+  - {service: seller-finance-service, truststore_secret: seller-finance-service-kafka-truststore, keystore_secret: seller-finance-service-kafka-keystore, truststore_password_secret: seller-finance-service-kafka-truststore-password, keystore_password_secret: seller-finance-service-kafka-keystore-password}
+  - {service: invoice-service, truststore_secret: invoice-service-kafka-truststore, keystore_secret: invoice-service-kafka-keystore, truststore_password_secret: invoice-service-kafka-truststore-password, keystore_password_secret: invoice-service-kafka-keystore-password}
+  - {service: user-service, truststore_secret: user-service-kafka-truststore, keystore_secret: user-service-kafka-keystore, truststore_password_secret: user-service-kafka-truststore-password, keystore_password_secret: user-service-kafka-keystore-password}
+  - {service: video-transcoder, truststore_secret: video-transcoder-kafka-truststore, keystore_secret: video-transcoder-kafka-keystore, truststore_password_secret: video-transcoder-kafka-truststore-password, keystore_password_secret: video-transcoder-kafka-keystore-password}
   - {service: kafka-admin-bootstrap, principal: kafka-admin, bootstrap: kafka:9092, protocol: SASL_SSL, mechanism: PLAIN, ca_secret: platform-kafka-truststore, client_cert_secret: platform-kafka-admin-keystore, client_key_secret: platform-kafka-admin-keystore-password, username_secret: platform-kafka-admin-username, password_secret: platform-kafka-admin-password, hostname_verification: HTTPS, groups: [], fallback: refuse-production-on-missing-secret}
+acl_entries:
+  - {operation: Write, pattern_type: prefixed, principal: 'User:svc-order', resource_name: order,
+  resource_type: topic}
+  - {operation: Write, pattern_type: literal, principal: 'User:svc-order', resource_name: payment.refund.requested,
+  resource_type: topic}
+  - {operation: Write, pattern_type: literal, principal: 'User:svc-order', resource_name: shipping.cancel-requested,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-order', resource_name: payment.completed,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-order', resource_name: payment.refunded,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-order', resource_name: inventory.released,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-order', resource_name: shipping.cancelled,
+  resource_type: topic}
+  - {operation: Read, pattern_type: prefixed, principal: 'User:svc-order', resource_name: order,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-order', resource_name: order-service-payment,
+  resource_type: group}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-order', resource_name: order-service-refund,
+  resource_type: group}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-order', resource_name: order-service-projection,
+  resource_type: group}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-order', resource_name: order-service-finance,
+  resource_type: group}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-order', resource_name: order-service-saga-compensation,
+  resource_type: group}
+  - {operation: Write, pattern_type: literal, principal: 'User:svc-payment', resource_name: payment.completed,
+  resource_type: topic}
+  - {operation: Write, pattern_type: literal, principal: 'User:svc-payment', resource_name: payment.refunded,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-payment', resource_name: payment.refund.requested,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-payment', resource_name: payment-service-paypal-refund,
+  resource_type: group}
+  - {operation: Write, pattern_type: literal, principal: 'User:svc-inventory', resource_name: inventory.released,
+  resource_type: topic}
+  - {operation: Write, pattern_type: literal, principal: 'User:svc-product', resource_name: product-events,
+  resource_type: topic}
+  - {operation: Write, pattern_type: literal, principal: 'User:svc-product', resource_name: video.upload.completed,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-product', resource_name: order.delivered,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-product', resource_name: product-service-review-purchases,
+  resource_type: group}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-product', resource_name: video.transcode.failed,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-product', resource_name: product-service-video-transcode-failures,
+  resource_type: group}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-shipping', resource_name: shipping.cancel-requested,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-shipping', resource_name: shipping-svc-cancel,
+  resource_type: group}
+  - {operation: Write, pattern_type: literal, principal: 'User:svc-shipping', resource_name: shipping.cancelled,
+  resource_type: topic}
+  - {operation: Write, pattern_type: literal, principal: 'User:svc-shipping', resource_name: shipping.status.updated,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-finance', resource_name: order.created,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-finance', resource_name: order.paid,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-finance', resource_name: payment.refunded,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-finance', resource_name: seller-finance-service,
+  resource_type: group}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-finance', resource_name: seller-finance-service-refund,
+  resource_type: group}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-search', resource_name: product-events,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-search', resource_name: search-service,
+  resource_type: group}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-recommendations', resource_name: order.created,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-recommendations', resource_name: recommendations-service,
+  resource_type: group}
+  - {operation: Write, pattern_type: literal, principal: 'User:svc-user', resource_name: gdpr.export-requested,
+  resource_type: topic}
+  - {operation: Write, pattern_type: literal, principal: 'User:svc-user', resource_name: gdpr.deletion-requested,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-user', resource_name: gdpr.export-fragment,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-user', resource_name: gdpr.deletion-completed,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-user', resource_name: user-service-gdpr-export,
+  resource_type: group}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-invoice', resource_name: order.confirmed,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-invoice', resource_name: order.confirmed.retry,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-invoice', resource_name: order.confirmed.DLT,
+  resource_type: topic}
+  - {operation: Write, pattern_type: literal, principal: 'User:svc-invoice', resource_name: order.confirmed.retry,
+  resource_type: topic}
+  - {operation: Write, pattern_type: literal, principal: 'User:svc-invoice', resource_name: order.confirmed.DLT,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-invoice', resource_name: invoice-service,
+  resource_type: group}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-order', resource_name: notification.events,
+  resource_type: topic}
+  - {operation: Write, pattern_type: literal, principal: 'User:svc-order', resource_name: notification.events,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-notification', resource_name: '"$topic"',
+  resource_type: topic}
+  - {operation: Read, pattern_type: prefixed, principal: 'User:svc-notification', resource_name: notification-service,
+  resource_type: group}
+  - {operation: Write, pattern_type: literal, principal: 'User:svc-messaging', resource_name: messaging.message.sent,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-messaging', resource_name: messaging.message.sent,
+  resource_type: topic}
+  - {operation: Read, pattern_type: prefixed, principal: 'User:svc-messaging', resource_name: messaging-service,
+  resource_type: group}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-order', resource_name: gdpr.export-requested,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-order', resource_name: gdpr.deletion-requested,
+  resource_type: topic}
+  - {operation: Write, pattern_type: literal, principal: 'User:svc-order', resource_name: gdpr.export-fragment,
+  resource_type: topic}
+  - {operation: Write, pattern_type: literal, principal: 'User:svc-order', resource_name: gdpr.deletion-completed,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-order', resource_name: order-service-gdpr,
+  resource_type: group}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-payment', resource_name: gdpr.export-requested,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-payment', resource_name: gdpr.deletion-requested,
+  resource_type: topic}
+  - {operation: Write, pattern_type: literal, principal: 'User:svc-payment', resource_name: gdpr.export-fragment,
+  resource_type: topic}
+  - {operation: Write, pattern_type: literal, principal: 'User:svc-payment', resource_name: gdpr.deletion-completed,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-payment', resource_name: payment-service-gdpr,
+  resource_type: group}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-shipping', resource_name: gdpr.export-requested,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-shipping', resource_name: gdpr.deletion-requested,
+  resource_type: topic}
+  - {operation: Write, pattern_type: literal, principal: 'User:svc-shipping', resource_name: gdpr.export-fragment,
+  resource_type: topic}
+  - {operation: Write, pattern_type: literal, principal: 'User:svc-shipping', resource_name: gdpr.deletion-completed,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-shipping', resource_name: shipping-service-gdpr,
+  resource_type: group}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-video-transcoder', resource_name: video.upload.completed,
+  resource_type: topic}
+  - {operation: Write, pattern_type: literal, principal: 'User:svc-video-transcoder',
+  resource_name: video.transcode.completed, resource_type: topic}
+  - {operation: Write, pattern_type: literal, principal: 'User:svc-video-transcoder',
+  resource_name: video.transcode.failed, resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-video-transcoder', resource_name: video.transcode.completed.DLT,
+  resource_type: topic}
+  - {operation: Write, pattern_type: literal, principal: 'User:svc-video-transcoder',
+  resource_name: video.transcode.completed.DLT, resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-video-moderator', resource_name: video.transcode.completed,
+  resource_type: topic}
+  - {operation: Read, pattern_type: literal, principal: 'User:svc-video-moderator', resource_name: moderator-worker,
+  resource_type: group}
+  - {operation: Write, pattern_type: literal, principal: 'User:svc-video-moderator', resource_name: video.moderation.completed,
+  resource_type: topic}
+  - {operation: Write, pattern_type: literal, principal: 'User:svc-video-moderator', resource_name: video.published,
+  resource_type: topic}
+  - {operation: Write, pattern_type: literal, principal: 'User:svc-video-moderator', resource_name: video.rejected,
+  resource_type: topic}
+  - {operation: Write, pattern_type: literal, principal: 'User:svc-video-moderator', resource_name: video.moderation.dlt,
+  resource_type: topic}
 acl_contract:
   application_super_users_forbidden: [svc-order, svc-payment, svc-inventory, svc-product, svc-shipping, svc-finance, svc-search, svc-recommendations, svc-invoice, svc-messaging, svc-user, svc-video-transcoder, svc-video-moderator]
   unauthorized_acl_probe: {principal: svc-unauthorized, topic: product-events, operation: Read, expected: DENIED}
