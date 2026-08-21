@@ -20,17 +20,18 @@ STATUSES = {"PASS", "FAIL", "BLOCKED_EXTERNAL", "INCONCLUSIVE", "NO-GO"}
 ALLOWED_PATHS = {
     "infra/scripts/evidence_session.py", "infra/scripts/create-readiness-baseline.py", "infra/scripts/powershell-runner.py",
     "infra/scripts/qa-command-matrix.yaml", "infra/load-tests/workload-contract.yaml",
-    "infra/scripts/test_todo1_contracts.py", "infra/scripts/test_todo2_contracts.py", "infra/scripts/test_todo3_contracts.py", "infra/scripts/test_todo4_contracts.py", "infra/scripts/test_todo5_contracts.py", "infra/scripts/test_todo6_contracts.py", "infra/scripts/test_todo7_contracts.py", "infra/scripts/validate-k8s-release.py", "infra/scripts/validate-k8s-release.test.py",
+    "infra/scripts/test_todo1_contracts.py", "infra/scripts/test_todo2_contracts.py", "infra/scripts/test_todo3_contracts.py", "infra/scripts/test_todo4_contracts.py", "infra/scripts/test_todo5_contracts.py", "infra/scripts/test_todo6_contracts.py", "infra/scripts/test_todo7_contracts.py", "infra/scripts/test_validate_k8s_release.py", "infra/scripts/validate-k8s-release.py", "infra/scripts/validate-k8s-release.test.py", "infra/scripts/validate-k8s-release/__init__.py", "infra/scripts/validate-k8s-release/test.py",
     "infra/scripts/render-inventory.py", "infra/scripts/k8s-topology-contract.py", "infra/scripts/evidence_gate.py",
     "infra/scripts/plan_contract_check.py", "infra/scripts/quality_gate.py", "infra/scripts/scope_gate.py",
-    "infra/scripts/kafka-failure-drill.py", "infra/scripts/kafka-inventory-contract.py", "infra/scripts/elasticsearch-failure-drill.py", "infra/scripts/elasticsearch-inventory-contract.py", "infra/scripts/restore-fixture.py",
-    "infra/scripts/restore-drill.py", "infra/load-tests/dataset/manifest.yaml", "infra/load-tests/dataset/generate.py",
-    "infra/load-tests/k6-10k-dau.js", "infra/load-tests/k6-load.js", "infra/load-tests/k6-smoke.js", "infra/load-tests/k6-release.js", "infra/load-tests/k6-flash-sale.js", "infra/load-tests/provider-isolation-preflight.py", "infra/scripts/provider-preflight.py", "infra/evidence/production-gates.yaml",
+    "infra/scripts/kafka-failure-drill.py", "infra/scripts/kafka-inventory-contract.py", "infra/scripts/elasticsearch-failure-drill.py", "infra/scripts/elasticsearch-inventory-contract.py", "infra/scripts/restore-fixture.py", "infra/scripts/restore-drill.py",
+    "infra/load-tests/dataset/manifest.yaml", "infra/load-tests/dataset/generate.py", "infra/load-tests/dataset/test_generate.py", "infra/load-tests/dataset/fixtures/manifest.yaml", "infra/load-tests/dataset/fixtures/target-identity.json", "infra/load-tests/dataset/fixtures/checkpoint.json", "infra/load-tests/dataset/fixtures/reconciliation.json",
+    "infra/load-tests/k6-10k-dau.js", "infra/load-tests/k6-10k-dau.test.js", "infra/load-tests/k6-load.js", "infra/load-tests/k6-smoke.js", "infra/load-tests/k6-release.js", "infra/load-tests/k6-flash-sale.js", "infra/load-tests/provider-isolation-preflight.py", "infra/load-tests/provider-isolation-preflight.test.py", "infra/scripts/provider-preflight.py", "infra/evidence/production-gates.yaml",
     ".github/workflows/ci.yml", ".github/workflows/cd.yml", ".github/workflows/promote.yml",
     ".github/workflows/verify-production.yml", ".github/workflows/verify-backup.yml",
     ".github/workflows/test-alert-delivery.yml", ".github/workflows/rollback.yml",
     "docs/operations/release-and-recovery.md", "docs/PRODUCTION-READINESS-REVIEW.md",
-    "docs/PRODUCTION-READINESS-CLOSURE-PLAN.md", "infra/production-no-go-checklist.md", "infra/k8s/kafka/kafka-statefulset.yaml", "infra/k8s/elasticsearch/elasticsearch-statefulset.yaml", "infra/k8s/base/kustomization.yaml", "infra/k8s/base/platform-services.yaml", "infra/k8s/base/workloads.yaml", "infra/k8s/base/backup-jobs.yaml", "infra/k8s/base/jobs/db-backup-cronjob.yaml", "infra/scripts/backup.sh", "infra/scripts/restore.sh", "infra/scripts/backup-cron.sh",
+    "docs/PRODUCTION-READINESS-CLOSURE-PLAN.md", "infra/production-no-go-checklist.md", "infra/k8s/kafka/kafka-statefulset.yaml", "infra/k8s/elasticsearch/elasticsearch-statefulset.yaml", "infra/k8s/elasticsearch/security-contract.yaml", "infra/k8s/base/kustomization.yaml", "infra/k8s/base/configmap.yaml", "infra/k8s/base/kafka-bootstrap-job.yaml", "infra/k8s/base/network-policies.yaml", "infra/k8s/base/platform-services.yaml", "infra/k8s/base/workloads.yaml", "infra/k8s/base/backup-jobs.yaml", "infra/k8s/base/jobs/db-backup-cronjob.yaml", "infra/scripts/backup.sh", "infra/scripts/restore.sh", "infra/scripts/backup-cron.sh", "infra/scripts/init-kafka-topics.sh", "infra/kafka/topic-inventory.yaml", "infra/kafka/migration-contract.yaml",
+    "services/invoice-service/src/main/resources/application.yml", "services/messaging-service/src/main.ts", "services/messaging-service/src/messaging/application/kafka-message.publisher.ts", "services/notification-service/src/main.ts", "services/recommendations-service/src/main/resources/application.yml", "services/search-service/src/main/resources/application.yml", "services/seller-finance-service/src/main/resources/application.yml", "services/seller-finance-service/src/test/resources/application.yml", "services/user-service/src/main/resources/application.yml", "services/video-moderator/app/config.py", "services/video-moderator/app/consumer.py", "services/video-moderator/app/producer.py", "services/video-transcoder/src/main/resources/application.yml", "services/video-transcoder/src/test/java/com/vnshop/transcoder/config/DockerKafkaConfigurationTest.java",
 }
 RUN_FIELDS = {"attempt_id", "schema_version", "requested_commit", "requested_tree", "deployment_authority", "environment_identity", "created_at", "workspace_manifest_sha256", "detached_baseline_manifest_sha256", "workspace_closure_sha256", "detached_baseline_closure_sha256", "allowed_path_set_sha256"}
 REPORT_FIELDS = {"schema_version", "task_id", "producer", "owner", "attempt_id", "commit_sha", "tree_sha", "evidence_class", "repository_status", "production_status", "commands", "inputs", "outputs", "telemetry", "business_reconciliation", "provenance", "created_at", "fresh_until", "file_manifest_sha256"}
@@ -321,6 +322,11 @@ def attach(args: argparse.Namespace) -> int:
             raise ValueError(f"{kind} manifest schema mismatch")
         values[kind] = capture_record
     run_record.update({"workspace_manifest_sha256": values["workspace"]["manifest_sha256"], "detached_baseline_manifest_sha256": values["detached"]["manifest_sha256"], "workspace_closure_sha256": values["workspace"]["closure_sha256"], "detached_baseline_closure_sha256": values["detached"]["closure_sha256"]})
+    allowed_path_file = prechange / "allowed-paths.txt"
+    allowed_path_file.write_text("\n".join(sorted(ALLOWED_PATHS)), encoding="utf-8", newline="\n")
+    allowed_hash = hashlib.sha256(allowed_path_file.read_bytes()).hexdigest()
+    if allowed_hash != run_record["allowed_path_set_sha256"]:
+        run_record["allowed_path_set_sha256"] = allowed_hash
     atomic_write(run_path, run_record)
     print(json.dumps(run_record, sort_keys=True) if args.json else args.attempt_id)
     return 0

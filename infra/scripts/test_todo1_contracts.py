@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 import subprocess
 import sys
@@ -157,6 +158,28 @@ def test_matrix_uses_behavioral_commands_and_exact_paths():
     assert "node, infra/scripts/e2e-day.mjs" in text
     for path in ("infra/scripts/test_todo3_contracts.py", "infra/scripts/test_todo4_contracts.py", "infra/load-tests/dataset/manifest.yaml", "infra/load-tests/k6-10k-dau.js"):
         assert path in text
+
+
+def test_allowlist_covers_plan_paths_without_unrelated_frontend_scope():
+    module = load_module(EVIDENCE, "todo1_allowlist")
+    required = {
+        "infra/k8s/base/configmap.yaml", "infra/k8s/base/kafka-bootstrap-job.yaml", "infra/scripts/init-kafka-topics.sh",
+        "infra/kafka/topic-inventory.yaml", "infra/kafka/migration-contract.yaml", "infra/k8s/elasticsearch/security-contract.yaml",
+        "infra/k8s/base/network-policies.yaml", "infra/scripts/validate-k8s-release/__init__.py", "infra/scripts/validate-k8s-release/test.py",
+        "infra/load-tests/k6-10k-dau.test.js", "infra/load-tests/provider-isolation-preflight.py",
+        "services/search-service/src/main/resources/application.yml", "services/video-transcoder/src/main/resources/application.yml",
+    }
+    assert required <= module.ALLOWED_PATHS
+    assert not any(path.startswith("fe/") for path in module.ALLOWED_PATHS)
+    assert "services/shipping-service/src/main/java/com/vnshop/shippingservice/application/CancelShipmentUseCase.java" not in module.ALLOWED_PATHS
+
+
+def test_allowed_path_file_hash_matches_run_descriptor(tmp_path):
+    module = load_module(EVIDENCE, "todo1_allowlist_hash")
+    allowed = tmp_path / "allowed-paths.txt"
+    allowed.write_text("\n".join(sorted(module.ALLOWED_PATHS)), encoding="utf-8", newline="\n")
+    expected = hashlib.sha256(allowed.read_bytes()).hexdigest()
+    assert expected == hashlib.sha256("\n".join(sorted(module.ALLOWED_PATHS)).encode()).hexdigest()
 
 
 def test_timestamps_are_parsed_and_timezone_is_required():
