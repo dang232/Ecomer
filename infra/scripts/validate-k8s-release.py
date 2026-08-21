@@ -192,8 +192,8 @@ def validate_production_realm_hosts(environment: str, suffix: str, errors: list[
 
     if not expected_hosts.issubset(configured_hosts):
         errors.append("production Keycloak realm must authorize the deployed web and API hosts")
-    if any(host.endswith(".example.com") for host in configured_hosts):
-        errors.append("production Keycloak realm contains stale .example.com hosts")
+    if any(host in {"localhost", "127.0.0.1"} or host.endswith((".example", ".example.com", ".invalid")) for host in configured_hosts):
+        errors.append("production Keycloak realm contains placeholder hosts")
     if not monitoring_client:
         errors.append("production Keycloak realm must define the monitoring OIDC client")
     else:
@@ -273,6 +273,8 @@ def validate_lock(lock: dict, catalog: dict, errors: list[str]) -> dict[str, dic
         provenance = artifact.get("provenanceRecord")
         if not isinstance(provenance, dict) or not all(provenance.get(field) for field in ("producer", "sourceCommit", "artifactDigest", "attestationId")):
             errors.append(f"{artifact_id}: structured independent provenance record is required")
+        elif provenance.get("producer") in {"", "repository", "self"} or provenance.get("attestationId") in {"repository", "self"}:
+            errors.append(f"{artifact_id}: provenance producer and attestation must be independent")
         elif provenance.get("sourceCommit") != lock.get("sourceCommit") or provenance.get("artifactDigest") != digest:
             errors.append(f"{artifact_id}: provenance identity does not match lock")
     return by_id
@@ -368,10 +370,14 @@ def validate_release_policy(
                     errors.append(f"platform image requires a non-placeholder sha256 digest: {image.split('@', 1)[0]}")
 
     sealed = [doc for doc in documents if doc.get("kind") == "SealedSecret"]
+    if len(sealed) != 1 and strict:
+        errors.append("exactly one SealedSecret is required")
     if len(sealed) == 1:
         encrypted_data = sealed[0].get("spec", {}).get("encryptedData")
         if not encrypted_data and (strict or not allow_unsealed):
             errors.append("SealedSecret encryptedData must be populated before release")
+        if strict and isinstance(encrypted_data, dict) and any(not isinstance(key, str) or not key.strip() or not isinstance(value, str) or not value.strip() for key, value in encrypted_data.items()):
+            errors.append("SealedSecret encryptedData must contain non-empty ciphertext for every key")
     if strict:
         validate_enabled_provider_secret_refs(documents, app_data, errors)
     return errors
@@ -489,21 +495,19 @@ def main() -> None:
 
     if args.environment in {"staging", "prod"}:
         suffix = "vnshop.invalid" if args.environment == "staging" else "vnshop.example"
-        expected_public_config = {
-            "WEB_ORIGIN": f"https://web.{suffix}",
-            "API_ORIGIN": f"https://api.{suffix}",
-            "AUTH_ORIGIN": f"https://api.{suffix}",
-            "KEYCLOAK_ISSUER_URI": f"https://api.{suffix}/realms/vnshop",
-            "KEYCLOAK_PUBLIC_BASE_URL": f"https://api.{suffix}",
-            "VNSHOP_FRONTEND_URL": f"https://web.{suffix}",
-            "VNSHOP_PUBLIC_API_URL": f"https://api.{suffix}",
-            "VNSHOP_AUTH_CALLBACK_BASE_URL": f"https://api.{suffix}/auth/oauth/callback",
-            "VNSHOP_OBJECT_STORAGE_PUBLIC_ENDPOINT": f"https://storage.{suffix}",
-            "VNSHOP_USER_STORAGE_PUBLIC_ENDPOINT": f"https://storage.{suffix}",
-        }
-        for key, expected_value in expected_public_config.items():
-            if app_config_data.get(key) != expected_value:
-                errors.append(f"vnshop-app-config {key} must equal {expected_value}")
+        origin_values = {key: value for key, value in app_config_data.items() if key.endswith("_ORIGIN") or key.endswith("_ORIGINS") or "PUBLIC_URL" in key or "CALLBACK_BASE_URL" in key or key == "KEYCLOAK_ISSUER_URI"}
+        parsed_origins = {}
+        for key, value in origin_values.items():
+            parsed = urlparse(str(value).split(",", 1)[0])
+            if parsed.scheme != "https" or not parsed.hostname or parsed.hostname.endswith((".example", ".example.com", ".invalid")):
+                errors.append(f"vnshop-app-config {key} must be a real HTTPS origin")
+            else:
+                parsed_origins[key] = parsed.hostname
+        for key in ("WEB_ORIGIN", "API_ORIGIN", "AUTH_ORIGIN", "KEYCLOAK_ISSUER_URI"):
+            if key not in parsed_origins:
+                errors.append(f"vnshop-app-config {key} is required for coherent origins")
+        if parsed_origins.get("API_ORIGIN") and parsed_origins.get("AUTH_ORIGIN") and parsed_origins["API_ORIGIN"] != parsed_origins["AUTH_ORIGIN"]:
+            errors.append("API_ORIGIN and AUTH_ORIGIN must use one authority")
         ingresses = [
             doc for doc in documents
             if doc.get("kind") == "Ingress" and doc.get("metadata", {}).get("name") == "vnshop"

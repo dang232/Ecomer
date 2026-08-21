@@ -65,10 +65,13 @@ def inventory(raw: bytes) -> dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--overlay", type=Path)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--manifest", type=Path)
     args = parser.parse_args()
     try:
+        if args.overlay is not None and args.overlay.resolve() != (ROOT / "infra/k8s/overlays/prod").resolve():
+            raise ValueError("alternate overlay authority is rejected; production overlay is canonical")
         canonical = render(ROOT / "infra/k8s/overlays/prod")
         raw = canonical
         if args.manifest:

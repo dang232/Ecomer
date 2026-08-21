@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic F1 plan-contract validation and optional evidence report check."""
+"""Validate every Todo and final-verifier row as an independent contract."""
 from __future__ import annotations
 
 import argparse
@@ -8,23 +8,10 @@ import re
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[2]
 STATUSES = {"PASS", "FAIL", "BLOCKED_EXTERNAL", "INCONCLUSIVE", "NO-GO"}
-IMPLEMENTATION_ROWS = 8
-EXPECTED_OWNERS = {
-    "1": "Todo 1",
-    "2": "Todo 2",
-    "3": "Todo 3",
-    "4": "Todo 4",
-    "5": "Todo 5",
-    "6": "Todo 6",
-    "7": "Todo 7",
-    "8": "Todo 8",
-    "F1": "plan-compliance-owner",
-    "F2": "code-quality-owner",
-    "F3": "runtime-qa-owner",
-    "F4": "scope-fidelity-owner",
-}
+ROW_RE = re.compile(r"^- \[[ xX]\] (\d+|F[1-4])\. (.+)$", re.MULTILINE)
+EXPECTED = [str(index) for index in range(1, 9)] + [f"F{index}" for index in range(1, 5)]
+OWNERS = {**{str(index): f"Todo {index}" for index in range(1, 9)}, "F1": "plan-compliance-owner", "F2": "code-quality-owner", "F3": "runtime-qa-owner", "F4": "scope-fidelity-owner"}
 
 
 def check_report(value: dict) -> list[str]:
@@ -37,26 +24,36 @@ def check_report(value: dict) -> list[str]:
     return errors
 
 
+def _row_block(plan: str, start: int, end: int) -> str:
+    return plan[start:end]
+
+
 def plan_contract(plan: str) -> list[str]:
     errors: list[str] = []
-    rows = re.findall(r"^- \[[ xX]\] ([1-8])\.", plan, flags=re.MULTILINE)
-    if len(rows) != IMPLEMENTATION_ROWS or set(rows) != set(str(index) for index in range(1, 9)):
-        errors.append("plan must contain exactly eight implementation rows 1-8")
-    final_rows = re.findall(r"^- \[[ xX]\] (F[1-4])\.", plan, flags=re.MULTILINE)
-    if final_rows != ["F1", "F2", "F3", "F4"]:
-        errors.append("plan must contain F1-F4 in order")
-    placeholder_rows = re.findall(r"^- \[[ xX]\].*(?:TODO|placeholder|your task here).*", plan, flags=re.MULTILINE | re.IGNORECASE)
-    if placeholder_rows:
-        errors.append("plan contains an unresolved placeholder row")
+    matches = list(ROW_RE.finditer(plan))
+    rows = [match.group(1) for match in matches]
+    if rows != EXPECTED:
+        errors.append("plan must contain exactly Todo 1-8 followed by F1-F4")
+    for index, match in enumerate(matches):
+        task = match.group(1)
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(plan)
+        block = _row_block(plan, match.start(), end)
+        normalized = block.replace("`", "")
+        if task.startswith("F"):
+            if "Reuse the canonical" not in block and "Reuse the same canonical" not in block:
+                errors.append(f"{task}: missing canonical attempt field")
+            if "python infra/scripts/evidence_session.py checkpoint" not in normalized:
+                errors.append(f"{task}: missing checkpoint invocation")
+            if OWNERS[task] not in block:
+                errors.append(f"{task}: missing owner field")
+        elif any(token not in block for token in ("Parallelization:", "Blocked by:", "Commit:")) or not re.search(r"Commit:\s*[YN]\s*\|", block):
+            errors.append(f"{task}: missing dependency/parallelization/commit field")
+        if "attempt" not in block.lower() or "checkpoint" not in block.lower():
+            errors.append(f"{task}: missing attempt/checkpoint contract")
+        if not task.startswith("F") and ("QA scenarios" not in block or ("python infra/scripts/powershell-runner.py" not in normalized and not (task == "8" and "python infra/scripts/evidence_session.py aggregate" in normalized))):
+            errors.append(f"{task}: missing exact QA invocation")
     if "fake values" not in plan.lower() or "BLOCKED_EXTERNAL" not in plan:
         errors.append("plan must explicitly forbid fake values and define blocked external evidence")
-    if "attempt ID" not in plan and "attempt_id" not in plan:
-        errors.append("plan must define canonical attempt binding")
-    if "checkpoint" not in plan.lower() or "ownership" not in plan.lower():
-        errors.append("plan must define checkpoint and ownership contracts")
-    for task, owner in EXPECTED_OWNERS.items():
-        if task in {"F1", "F2", "F3", "F4"} and owner not in plan:
-            errors.append(f"missing verifier owner contract: {owner}")
     return errors
 
 

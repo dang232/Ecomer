@@ -12,14 +12,23 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[2]
+CANONICAL_OVERLAY = ROOT / "infra/k8s/overlays/prod"
+
+
+def _env(container: dict) -> dict[str, str]:
+    values: dict[str, str] = {}
+    for entry in container.get("env", []):
+        if isinstance(entry, dict) and isinstance(entry.get("name"), str) and "value" in entry:
+            values[entry["name"]] = str(entry["value"])
+    return values
 
 
 def check(documents: list[dict]) -> list[str]:
     errors: list[str] = []
-    identities = [(d.get("kind"), d.get("metadata", {}).get("name")) for d in documents]
-    for kind, name in sorted(set(identities)):
-        if identities.count((kind, name)) > 1:
-            errors.append(f"duplicate rendered authority: {kind}/{name}")
+    identities = [(d.get("kind"), d.get("metadata", {}).get("namespace", ""), d.get("metadata", {}).get("name")) for d in documents]
+    for kind, namespace, name in sorted(set(identities)):
+        if identities.count((kind, namespace, name)) > 1:
+            errors.append(f"duplicate rendered authority: {kind}/{namespace}/{name}")
     kafka = [d for d in documents if d.get("kind") == "StatefulSet" and d.get("metadata", {}).get("name") == "kafka"]
     if len(kafka) != 1:
         errors.append("exactly one rendered Kafka StatefulSet is required")
@@ -28,7 +37,7 @@ def check(documents: list[dict]) -> list[str]:
         if spec.get("replicas") != 3:
             errors.append("production Kafka authority must have three replicas")
         containers = kafka[0].get("spec", {}).get("template", {}).get("spec", {}).get("containers", [])
-        env = {entry.get("name"): str(entry.get("value", "")) for entry in containers[0].get("env", [])} if containers else {}
+        env = _env(containers[0]) if containers else {}
         listeners = f"{env.get('KAFKA_LISTENERS', '')},{env.get('KAFKA_ADVERTISED_LISTENERS', '')}".upper()
         if "PLAINTEXT" in listeners:
             errors.append("Kafka listeners must not use plaintext")
@@ -43,7 +52,7 @@ def check(documents: list[dict]) -> list[str]:
         errors.append("exactly one rendered Elasticsearch StatefulSet is required")
     else:
         containers = elastic[0].get("spec", {}).get("template", {}).get("spec", {}).get("containers", [])
-        env = {entry.get("name"): str(entry.get("value", "")) for entry in containers[0].get("env", [])} if containers else {}
+        env = _env(containers[0]) if containers else {}
         if env.get("discovery.type") == "single-node":
             errors.append("Elasticsearch must not use single-node discovery")
         if env.get("xpack.security.enabled", "").lower() != "true":
@@ -66,7 +75,25 @@ def main() -> int:
     try:
         if args.inventory:
             payload = json.loads(args.inventory.read_text(encoding="utf-8"))
-            errors = list(payload.get("errors", []))
+            if payload.get("authority") != "kubectl-kustomize:infra/k8s/overlays/prod":
+                raise ValueError("inventory authority is not canonical production Kustomize")
+            if payload.get("status") != "PASS" or payload.get("errors"):
+                errors = list(payload.get("errors", [])) or ["inventory status is not PASS"]
+            else:
+                expected_raw = subprocess.run(["kubectl", "kustomize", str(CANONICAL_OVERLAY), "--load-restrictor", "LoadRestrictionsNone"], cwd=ROOT, capture_output=True, check=False)
+                if expected_raw.returncode:
+                    raise RuntimeError(expected_raw.stderr.decode("utf-8", errors="replace"))
+                expected_sha = __import__("hashlib").sha256(expected_raw.stdout).hexdigest()
+                if payload.get("manifest_sha256") != expected_sha:
+                    raise ValueError("inventory manifest digest does not match canonical render")
+                documents = [doc for doc in yaml.safe_load_all(expected_raw.stdout) if isinstance(doc, dict)]
+                if payload.get("resource_count") != len(documents):
+                    raise ValueError("inventory resource count does not match canonical render")
+                expected_resources = sorted((doc.get("kind"), doc.get("metadata", {}).get("name"), doc.get("metadata", {}).get("namespace", "")) for doc in documents)
+                actual_resources = sorted((item.get("kind"), item.get("name"), item.get("namespace", "")) for item in payload.get("resources", []))
+                if actual_resources != expected_resources:
+                    raise ValueError("inventory resource identities do not match canonical render")
+                errors = check(documents)
         else:
             manifest = args.manifest
             if not manifest:

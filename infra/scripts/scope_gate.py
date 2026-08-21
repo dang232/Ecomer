@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare final paths with Todo 1's dual prechange captures and allowed set."""
+"""Compare the complete final Git tree/worktree with authenticated captures."""
 from __future__ import annotations
 
 import argparse
@@ -9,91 +9,135 @@ import subprocess
 from pathlib import Path
 
 
-DEFAULT_ALLOWED = {"infra/scripts/validate-k8s-release.py", "infra/scripts/validate-k8s-release.test.py", "infra/scripts/render-inventory.py", "infra/scripts/k8s-topology-contract.py", "infra/scripts/evidence_gate.py", "infra/scripts/plan_contract_check.py", "infra/scripts/quality_gate.py", "infra/scripts/scope_gate.py", "infra/evidence/production-gates.yaml"}
+DEFAULT_ALLOWED = {"infra/scripts/validate-k8s-release.py", "infra/scripts/validate-k8s-release.test.py", "infra/scripts/render-inventory.py", "infra/scripts/k8s-topology-contract.py", "infra/scripts/evidence_gate.py", "infra/scripts/plan_contract_check.py", "infra/scripts/quality_gate.py", "infra/scripts/scope_gate.py", "infra/evidence/production-gates.yaml", "infra/scripts/test_todo2_contracts.py"}
+
+
+def _sha(path: Path) -> str | None:
+    if path.is_symlink() or not path.is_file():
+        return None
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def load_entries(path: Path | None) -> dict[str, dict]:
-    if not path:
+    if path is None:
         return {}
     value = json.loads(path.read_text(encoding="utf-8-sig"))
-    return {item["path"].replace("\\", "/"): item for item in value.get("entries", [])}
+    return {str(item["path"]).replace("\\", "/"): item for item in value.get("entries", [])}
 
 
-def load_json(path: Path) -> dict:
-    return json.loads(path.read_text(encoding="utf-8-sig"))
-
-
-def verify_capture(manifest_path: Path | None, errors: list[str]) -> tuple[dict[str, dict], dict]:
-    if not manifest_path:
+def _capture(manifest_path: Path | None, errors: list[str]) -> tuple[dict[str, dict], dict]:
+    if manifest_path is None:
         errors.append("workspace and detached manifests are required")
         return {}, {}
-    capture_dir = manifest_path.parent
+    directory = manifest_path.resolve().parent
     try:
-        manifest = load_json(manifest_path)
-        capture = load_json(capture_dir / "capture.json")
-        closure = load_json(capture_dir / "closure.json")
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+        capture = json.loads((directory / "capture.json").read_text(encoding="utf-8-sig"))
+        closure = json.loads((directory / "closure.json").read_text(encoding="utf-8-sig"))
     except (OSError, ValueError, json.JSONDecodeError) as exc:
-        errors.append(f"invalid capture: {exc}")
+        errors.append(f"invalid capture {manifest_path}: {exc}")
         return {}, {}
-    actual_manifest_hash = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
-    actual_closure_hash = hashlib.sha256((capture_dir / "closure.json").read_bytes()).hexdigest()
-    if capture.get("manifest_sha256") != actual_manifest_hash or closure.get("manifest_sha256") != actual_manifest_hash:
+    manifest_hash = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+    closure_path = directory / "closure.json"
+    closure_hash = hashlib.sha256(closure_path.read_bytes()).hexdigest()
+    if capture.get("schema_version") != "capture.v1" or closure.get("schema_version") != "closure.v1":
+        errors.append(f"capture schema mismatch: {manifest_path}")
+    if capture.get("manifest_sha256") != manifest_hash or closure.get("manifest_sha256") != manifest_hash:
         errors.append(f"capture manifest hash mismatch: {manifest_path}")
-    if capture.get("closure_sha256") != actual_closure_hash:
+    if capture.get("closure_sha256") != closure_hash:
         errors.append(f"capture closure hash mismatch: {manifest_path}")
+    if capture.get("capture_kind") != manifest.get("capture_kind") or capture.get("capture_kind") != closure.get("capture_kind"):
+        errors.append(f"capture kind mismatch: {manifest_path}")
     if capture.get("commit_sha") != closure.get("commit_sha") or capture.get("tree_sha") != closure.get("tree_sha"):
-        errors.append(f"capture commit/tree binding mismatch: {manifest_path}")
-    return {item["path"].replace("\\", "/"): item for item in manifest.get("entries", [])}, {"capture": capture, "closure": closure}
+        errors.append(f"capture commit/tree mismatch: {manifest_path}")
+    return {str(item["path"]).replace("\\", "/"): item for item in manifest.get("entries", [])}, {"capture": capture, "closure": closure, "manifest_sha256": manifest_hash, "closure_sha256": closure_hash}
 
 
-def current_paths(repo: Path) -> list[str]:
-    result = subprocess.run(["git", "status", "--porcelain=v1", "--untracked-files=all"], cwd=repo, capture_output=True, text=True, check=False)
-    return [line[3:].split(" -> ")[-1].replace("\\", "/") for line in result.stdout.splitlines() if len(line) >= 4]
+def _git(repo: Path, *args: str) -> list[str]:
+    result = subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True, check=False)
+    if result.returncode:
+        raise ValueError(result.stderr.strip() or "git command failed")
+    return [line.replace("\\", "/") for line in result.stdout.splitlines() if line]
+
+
+def final_entries(repo: Path) -> dict[str, dict]:
+    paths = set(_git(repo, "ls-files")) | set(_git(repo, "ls-files", "--others", "--exclude-standard"))
+    entries: dict[str, dict] = {}
+    for path in paths:
+        full = repo / path
+        status = "SYMLINK" if full.is_symlink() else ("FILE" if full.is_file() else "MISSING")
+        entries[path] = {"path": path, "status": status, "sha256": _sha(full)}
+    return entries
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo", type=Path, default=Path.cwd())
-    parser.add_argument("--workspace-manifest", type=Path)
-    parser.add_argument("--detached-manifest", type=Path)
+    parser.add_argument("--workspace-manifest", type=Path, required=True)
+    parser.add_argument("--detached-manifest", type=Path, required=True)
     parser.add_argument("--allowed-path-set", type=Path)
     parser.add_argument("--allowed-paths", type=Path)
-    parser.add_argument("--allowed-paths-sha256")
+    parser.add_argument("--allowed-paths-sha256", required=True)
+    parser.add_argument("--run-json", type=Path)
     args = parser.parse_args()
     repo = args.repo.resolve()
-    workspace = load_entries(args.workspace_manifest)
-    detached = load_entries(args.detached_manifest)
     errors: list[str] = []
-    workspace, workspace_meta = verify_capture(args.workspace_manifest, errors)
-    detached, detached_meta = verify_capture(args.detached_manifest, errors)
-    allowed = set(DEFAULT_ALLOWED)
-    allowed.update({"infra/scripts/validate-k8s-release/__init__.py", "infra/scripts/validate-k8s-release/test.py"})
-    if args.allowed_path_set:
-        allowed = {line.strip().replace("\\", "/") for line in args.allowed_path_set.read_text(encoding="utf-8").splitlines() if line.strip()}
+    workspace, workspace_meta = _capture(args.workspace_manifest, errors)
+    detached, detached_meta = _capture(args.detached_manifest, errors)
     if args.allowed_paths:
-        allowed = {line.strip().replace("\\", "/") for line in args.allowed_paths.read_text(encoding="utf-8").splitlines() if line.strip()}
-        if args.allowed_paths_sha256 and hashlib.sha256(args.allowed_paths.read_bytes()).hexdigest() != args.allowed_paths_sha256:
+        allowed_bytes = args.allowed_paths.read_bytes()
+        allowed = {line.strip().replace("\\", "/") for line in allowed_bytes.decode("utf-8-sig").splitlines() if line.strip()}
+        if hashlib.sha256(allowed_bytes).hexdigest() != args.allowed_paths_sha256:
             errors.append("allowed-paths.txt hash mismatch")
-    paths = sorted(set(current_paths(repo)))
-    outside: list[str] = []
-    mutated: list[str] = []
+    elif args.allowed_path_set:
+        allowed_bytes = args.allowed_path_set.read_bytes()
+        allowed = {line.strip().replace("\\", "/") for line in allowed_bytes.decode("utf-8-sig").splitlines() if line.strip()}
+        if hashlib.sha256(allowed_bytes).hexdigest() != args.allowed_paths_sha256:
+            errors.append("allowed-path-set hash mismatch")
+    else:
+        allowed = set(DEFAULT_ALLOWED)
+        errors.append("authenticated allowed-path file is required")
+    if args.run_json:
+        run = json.loads(args.run_json.read_text(encoding="utf-8-sig"))
+        for field, meta_key in (("workspace_manifest_sha256", "workspace"), ("detached_baseline_manifest_sha256", "detached"), ("workspace_closure_sha256", "workspace"), ("detached_baseline_closure_sha256", "detached")):
+            actual = workspace_meta.get("manifest_sha256" if "manifest" in field else "closure_sha256") if meta_key == "workspace" else detached_meta.get("manifest_sha256" if "manifest" in field else "closure_sha256")
+            if run.get(field) != actual:
+                errors.append(f"run binding mismatch: {field}")
+        if run.get("allowed_path_set_sha256") != args.allowed_paths_sha256:
+            errors.append("run allowed-path hash mismatch")
+    if workspace_meta.get("capture", {}).get("capture_kind") != "workspace" or detached_meta.get("capture", {}).get("capture_kind") != "detached":
+        errors.append("both authenticated workspace and detached captures are required")
+    if workspace_meta.get("capture", {}).get("commit_sha") != detached_meta.get("capture", {}).get("commit_sha") or workspace_meta.get("capture", {}).get("tree_sha") != detached_meta.get("capture", {}).get("tree_sha"):
+        errors.append("workspace and detached captures are not bound to one commit/tree")
+    final = final_entries(repo)
+    all_paths = set(workspace) | set(detached) | set(final)
     classifications: dict[str, str] = {}
-    for path in paths:
+    for path in sorted(all_paths):
         original = workspace.get(path)
-        final = {"path": path, "status": "  ", "sha256": hashlib.sha256((repo / path).read_bytes()).hexdigest()} if (repo / path).is_file() else {"path": path, "status": "??", "sha256": None}
-        if original and original.get("status") != "  " and original.get("sha256") == final.get("sha256"):
+        baseline = detached.get(path)
+        current = final.get(path, {"path": path, "status": "MISSING", "sha256": None})
+        if original and original.get("status", "  ") != "  " and original.get("sha256") == current.get("sha256") and current.get("status") == "FILE":
+            classifications[path] = "PREEXISTING_UNCHANGED"
+            continue
+        baseline_same = baseline is not None and baseline.get("sha256") == current.get("sha256") and current.get("status") == "FILE"
+        workspace_same = original is not None and original.get("sha256") == current.get("sha256") and current.get("status") == "FILE"
+        if baseline_same and workspace_same:
+            classifications[path] = "UNCHANGED"
+            continue
+        if original and original.get("status", "  ") != "  " and workspace_same:
             classifications[path] = "PREEXISTING_UNCHANGED"
             continue
         if path not in allowed:
-            outside.append(path)
-        if original and original.get("status") != "  " and original.get("sha256") != final.get("sha256"):
-            mutated.append(path)
-        classifications.setdefault(path, "ALLOWED_CHANGED" if path in allowed else "OUT_OF_SCOPE")
-    errors.extend(f"out-of-scope path: {path}" for path in outside)
-    errors.extend(f"pre-existing path mutated: {path}" for path in mutated)
-    if workspace_meta.get("capture", {}).get("commit_sha") != detached_meta.get("capture", {}).get("commit_sha") or workspace_meta.get("capture", {}).get("tree_sha") != detached_meta.get("capture", {}).get("tree_sha"):
-        errors.append("workspace and detached captures are not bound to the same commit/tree")
-    payload = {"schema_version": "scope-gate.v1", "status": "PASS" if not errors else "FAIL", "repository_status": "PASS" if not errors else "FAIL", "production_status": "NO-GO", "errors": errors, "classifications": classifications, "workspace_manifest": str(args.workspace_manifest) if args.workspace_manifest else None, "detached_manifest": str(args.detached_manifest) if args.detached_manifest else None}
+            errors.append(f"out-of-allowlist final tree/worktree change: {path}")
+            classifications[path] = "OUT_OF_SCOPE"
+        elif original and original.get("status", "  ") in {" M", "M ", "MM", " D", "D ", "A ", "AM"} and not workspace_same:
+            errors.append(f"pre-existing path mutated: {path}")
+            classifications[path] = "PREEXISTING_MUTATED"
+        else:
+            classifications[path] = "ALLOWED_CHANGED"
+        if (current.get("status") == "SYMLINK") != (original or baseline or {}).get("status") == "SYMLINK":
+            errors.append(f"symlink-type change: {path}")
+    payload = {"schema_version": "scope-gate.v1", "status": "PASS" if not errors else "FAIL", "repository_status": "PASS" if not errors else "FAIL", "production_status": "NO-GO", "errors": sorted(set(errors)), "classifications": classifications}
     print(json.dumps(payload, indent=2, sort_keys=True))
     return 0 if not errors else 1
 
