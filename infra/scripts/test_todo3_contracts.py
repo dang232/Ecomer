@@ -281,6 +281,43 @@ def test_inventory_validates_workload_runtime_bindings_and_local_compose_mode() 
         assert "KAFKA_LOCAL_MODE: plaintext" in block
 
 
+def _mutated_workloads(mutator) -> str:
+    documents = [doc for doc in yaml.safe_load_all(WORKLOADS.read_text(encoding="utf-8-sig")) if isinstance(doc, dict)]
+    mutator(documents)
+    return "---\n".join(yaml.safe_dump(doc, sort_keys=False) for doc in documents)
+
+
+def test_workload_tls_binding_mutations_fail_structural_validation() -> None:
+    module = _load("kafka_inventory_workload_mutations", ROOT / "infra/scripts/kafka-inventory-contract.py")
+    document = yaml.safe_load(INVENTORY.read_text(encoding="utf-8"))
+
+    def deployment(documents: list[dict], artifact: str) -> dict:
+        return next(doc for doc in documents if doc.get("kind") == "Deployment" and doc.get("metadata", {}).get("labels", {}).get("vnshop.io/artifact-id") == artifact)
+
+    def wrong_java_secret_item(documents: list[dict]) -> None:
+        items = next(volume for volume in deployment(documents, "order-service")["spec"]["template"]["spec"]["volumes"] if volume["name"] == "kafka-tls")["secret"]["items"]
+        items[0]["key"] = "wrong-truststore"
+
+    def wrong_pem_secret_item(documents: list[dict]) -> None:
+        items = next(volume for volume in deployment(documents, "messaging-service")["spec"]["template"]["spec"]["volumes"] if volume["name"] == "kafka-tls")["secret"]["items"]
+        items[0]["key"] = "wrong-ca"
+
+    def wrong_mount_path(documents: list[dict]) -> None:
+        mounts = deployment(documents, "order-service")["spec"]["template"]["spec"]["containers"][0]["volumeMounts"]
+        next(mount for mount in mounts if mount["name"] == "kafka-tls")["mountPath"] = "/wrong/tls"
+
+    def wrong_video_volume(documents: list[dict]) -> None:
+        pod = deployment(documents, "video-moderator")["spec"]["template"]["spec"]
+        next(volume for volume in pod["volumes"] if volume["name"] == "kafka-client-tls")["name"] = "wrong-tls"
+
+    def wrong_video_item(documents: list[dict]) -> None:
+        items = next(volume for volume in deployment(documents, "video-moderator")["spec"]["template"]["spec"]["volumes"] if volume["name"] == "kafka-client-tls")["secret"]["items"]
+        items[0]["key"] = "wrong-moderator-ca"
+
+    for mutation in (wrong_java_secret_item, wrong_pem_secret_item, wrong_mount_path, wrong_video_volume, wrong_video_item):
+        assert module._validate_workload_tls_bindings(document, _mutated_workloads(mutation)), mutation.__name__
+
+
 def test_transactional_policy_is_explicit_and_principal_prefixed() -> None:
     document = yaml.safe_load(INVENTORY.read_text(encoding="utf-8"))
     assert document["acl_contract"]["transactional_id_policy"] in {"none-used", "service-principal-prefixed-and-explicit"}

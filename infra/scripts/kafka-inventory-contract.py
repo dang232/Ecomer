@@ -124,6 +124,62 @@ def validate_kubernetes_bootstrap_authority(document: dict, manifest: str) -> li
     return errors
 
 
+def _validate_workload_tls_bindings(document: dict, manifest: str) -> list[str]:
+    errors: list[str] = []
+    workloads = [doc for doc in yaml.safe_load_all(manifest) if isinstance(doc, dict)]
+    deployments = {
+        doc.get("metadata", {}).get("labels", {}).get("vnshop.io/artifact-id"): doc
+        for doc in workloads if doc.get("kind") == "Deployment"
+    }
+    java_tls = {entry["service"]: entry for entry in document.get("java_tls", [])}
+    for client in document.get("clients", []):
+        service = client.get("service")
+        if service == "kafka-admin-bootstrap":
+            continue
+        workload = deployments.get(service)
+        if workload is None:
+            errors.append(f"Kafka client workload is missing: {service}")
+            continue
+        pod = workload.get("spec", {}).get("template", {}).get("spec", {})
+        container = next(iter(pod.get("containers", [])), {})
+        env = {item.get("name"): item for item in container.get("env", [])}
+        if client.get("tls_format") == "PEM":
+            prefix = "MODERATOR_" if service == "video-moderator" else ""
+            volume_name = "kafka-client-tls" if service == "video-moderator" else "kafka-tls"
+            expected = {
+                f"{prefix}KAFKA_SSL_CA_FILE": (client["ca_secret"], "ca.crt"),
+                f"{prefix}KAFKA_SSL_CERT_FILE": (client["client_cert_secret"], "client.crt"),
+                f"{prefix}KAFKA_SSL_KEY_FILE": (client["client_key_secret"], "client.key"),
+            }
+        else:
+            tls = java_tls.get(service, {})
+            volume_name = "kafka-tls"
+            expected = {
+                "KAFKA_SSL_TRUSTSTORE_LOCATION": (tls.get("truststore_secret"), "ca.truststore.jks"),
+                "KAFKA_SSL_KEYSTORE_LOCATION": (tls.get("keystore_secret"), "client.keystore.jks"),
+            }
+            for password_name, secret_name in (("KAFKA_SSL_TRUSTSTORE_PASSWORD", "truststore_password_secret"), ("KAFKA_SSL_KEYSTORE_PASSWORD", "keystore_password_secret")):
+                if not env.get(password_name, {}).get("valueFrom", {}).get("secretKeyRef", {}).get("key") == tls.get(secret_name):
+                    errors.append(f"workload {service} has invalid JKS password binding: {password_name}")
+        mounts = [mount for mount in pod.get("containers", [])[0].get("volumeMounts", []) if mount.get("name") == volume_name]
+        if len(mounts) != 1 or mounts[0].get("mountPath") != "/etc/kafka/tls":
+            errors.append(f"workload {service} has invalid TLS mount")
+        volumes = [volume for volume in pod.get("volumes", []) if volume.get("name") == volume_name]
+        if len(volumes) != 1:
+            errors.append(f"workload {service} has invalid TLS volume")
+            continue
+        secret = volumes[0].get("secret", {})
+        if secret.get("secretName") != "vnshop-runtime-secrets":
+            errors.append(f"workload {service} has invalid TLS Secret source")
+        actual_items = {item.get("key"): item.get("path") for item in secret.get("items", [])}
+        for env_name, (secret_key, path) in expected.items():
+            if env.get(env_name, {}).get("value") != f"/etc/kafka/tls/{path}":
+                errors.append(f"workload {service} has invalid TLS path: {env_name}")
+            if actual_items.get(secret_key) != path:
+                errors.append(f"workload {service} has invalid TLS Secret item: {secret_key}")
+    return errors
+
+
 def validate(document: dict) -> list[str]:
     errors: list[str] = []
     if document.get("schema_version") != "kafka-topic-inventory.v1":
@@ -212,38 +268,7 @@ def validate(document: dict) -> list[str]:
         errors.append("local bootstrap topic list must exactly match inventory")
     errors.extend(validate_bootstrap_authority(document, script))
     try:
-        workloads = [doc for doc in yaml.safe_load_all(WORKLOADS.read_text(encoding="utf-8-sig")) if isinstance(doc, dict)]
-        deployments = {
-            doc.get("metadata", {}).get("labels", {}).get("vnshop.io/artifact-id"): doc
-            for doc in workloads if doc.get("kind") == "Deployment"
-        }
-        for client in document.get("clients", []):
-            service = client.get("service")
-            if service == "kafka-admin-bootstrap":
-                continue
-            workload = deployments.get(service)
-            if workload is None:
-                errors.append(f"Kafka client workload is missing: {service}")
-                continue
-            pod = workload.get("spec", {}).get("template", {}).get("spec", {})
-            container = next(iter(pod.get("containers", [])), {})
-            env = {item.get("name"): item for item in container.get("env", [])}
-            if client.get("tls_format") == "PEM":
-                expected = {"KAFKA_SSL_CA_FILE": "/etc/kafka/tls/ca.crt", "KAFKA_SSL_CERT_FILE": "/etc/kafka/tls/client.crt", "KAFKA_SSL_KEY_FILE": "/etc/kafka/tls/client.key"}
-                if service == "video-moderator":
-                    expected = {key.replace("KAFKA_", "MODERATOR_KAFKA_"): value for key, value in expected.items()}
-                for name, value in expected.items():
-                    if env.get(name, {}).get("value") != value:
-                        errors.append(f"workload {service} has invalid PEM binding: {name}")
-            else:
-                expected = {"KAFKA_SSL_TRUSTSTORE_LOCATION": "/etc/kafka/tls/ca.truststore.jks", "KAFKA_SSL_KEYSTORE_LOCATION": "/etc/kafka/tls/client.keystore.jks"}
-                for name, value in expected.items():
-                    if env.get(name, {}).get("value") != value:
-                        errors.append(f"workload {service} has invalid JKS binding: {name}")
-                if not env.get("KAFKA_SSL_TRUSTSTORE_PASSWORD", {}).get("valueFrom") or not env.get("KAFKA_SSL_KEYSTORE_PASSWORD", {}).get("valueFrom"):
-                    errors.append(f"workload {service} is missing JKS password bindings")
-            if service != "video-moderator" and not any(volume.get("name") in {"kafka-tls", "kafka-client-tls"} for volume in pod.get("volumes", [])):
-                errors.append(f"workload {service} is missing kafka-tls volume")
+        errors.extend(_validate_workload_tls_bindings(document, WORKLOADS.read_text(encoding="utf-8-sig")))
     except (OSError, TypeError, ValueError, yaml.YAMLError) as exc:
         errors.append(f"Kafka workload authority unavailable: {exc}")
     try:
