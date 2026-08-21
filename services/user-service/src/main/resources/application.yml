@@ -46,11 +46,10 @@ spring:
       sasl.mechanism: PLAIN
       sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_SASL_USERNAME}" password="${KAFKA_SASL_PASSWORD}";
       ssl.endpoint.identification.algorithm: https
-      ssl.truststore.location: ${KAFKA_SSL_TRUSTSTORE_LOCATION}
-      ssl.truststore.password: ${KAFKA_SSL_TRUSTSTORE_PASSWORD}
-      ssl.keystore.location: ${KAFKA_SSL_KEYSTORE_LOCATION}
-      ssl.keystore.password: ${KAFKA_SSL_KEYSTORE_PASSWORD}
-      ssl.client.auth: required
+      ssl.truststore.location: ${KAFKA_SSL_TRUSTSTORE_LOCATION:}
+      ssl.truststore.password: ${KAFKA_SSL_TRUSTSTORE_PASSWORD:}
+      ssl.keystore.location: ${KAFKA_SSL_KEYSTORE_LOCATION:}
+      ssl.keystore.password: ${KAFKA_SSL_KEYSTORE_PASSWORD:}
     admin:
       properties:
         security.protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_SSL}

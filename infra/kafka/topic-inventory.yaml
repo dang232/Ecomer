@@ -227,6 +227,7 @@ clients:
   - order-service-saga-compensation
   - order-service-gdpr
   fallback: fail-closed
+  tls_format: JKS
 - service: payment-service
   principal: svc-payment
   bootstrap: kafka:9092
@@ -242,6 +243,7 @@ clients:
   - payment-service-paypal-refund
   - payment-service-gdpr
   fallback: fail-closed
+  tls_format: JKS
 - service: inventory-service
   principal: svc-inventory
   bootstrap: kafka:9092
@@ -256,6 +258,7 @@ clients:
   groups:
   - inventory-service-gdpr
   fallback: fail-closed
+  tls_format: JKS
 - service: product-service
   principal: svc-product
   bootstrap: kafka:9092
@@ -271,6 +274,7 @@ clients:
   - product-service-review-purchases
   - product-service-video-transcode-failures
   fallback: fail-closed
+  tls_format: JKS
 - service: shipping-service
   principal: svc-shipping
   bootstrap: kafka:9092
@@ -286,6 +290,7 @@ clients:
   - shipping-svc-cancel
   - shipping-service-gdpr
   fallback: fail-closed
+  tls_format: JKS
 - service: search-service
   principal: svc-search
   bootstrap: kafka:9092
@@ -300,6 +305,7 @@ clients:
   groups:
   - search-service
   fallback: fail-closed
+  tls_format: JKS
 - service: recommendations-service
   principal: svc-recommendations
   bootstrap: kafka:9092
@@ -314,6 +320,7 @@ clients:
   groups:
   - recommendations-service
   fallback: fail-closed
+  tls_format: JKS
 - service: seller-finance-service
   principal: svc-finance
   bootstrap: kafka:9092
@@ -329,6 +336,7 @@ clients:
   - seller-finance-service
   - seller-finance-service-refund
   fallback: fail-closed
+  tls_format: JKS
 - service: notification-service
   principal: svc-notification
   bootstrap: kafka:9092
@@ -343,6 +351,7 @@ clients:
   groups:
   - notification-service-server
   fallback: fail-closed
+  tls_format: PEM
 - service: messaging-service
   principal: svc-messaging
   bootstrap: kafka:9092
@@ -357,6 +366,7 @@ clients:
   groups:
   - messaging-service
   fallback: fail-closed
+  tls_format: PEM
 - service: invoice-service
   principal: svc-invoice
   bootstrap: kafka:9092
@@ -371,6 +381,7 @@ clients:
   groups:
   - invoice-service
   fallback: fail-closed
+  tls_format: JKS
 - service: user-service
   principal: svc-user
   bootstrap: kafka:9092
@@ -385,6 +396,7 @@ clients:
   groups:
   - user-service-gdpr-export
   fallback: fail-closed
+  tls_format: JKS
 - service: video-transcoder
   principal: svc-video-transcoder
   bootstrap: kafka:9092
@@ -399,6 +411,7 @@ clients:
   groups:
   - transcoder-worker
   fallback: fail-closed
+  tls_format: JKS
 - service: video-moderator
   principal: svc-video-moderator
   bootstrap: kafka:9092
@@ -413,6 +426,21 @@ clients:
   groups:
   - moderator-worker
   fallback: fail-closed
+  tls_format: PEM
+- service: kafka-admin-bootstrap
+  principal: kafka-admin
+  bootstrap: kafka:9092
+  protocol: SASL_SSL
+  mechanism: PLAIN
+  ca_secret: platform-kafka-truststore
+  client_cert_secret: platform-kafka-admin-keystore
+  client_key_secret: platform-kafka-admin-keystore-password
+  username_secret: platform-kafka-admin-username
+  password_secret: platform-kafka-admin-password
+  hostname_verification: HTTPS
+  groups: []
+  fallback: refuse-production-on-missing-secret
+  tls_format: JKS
 java_tls:
 - service: order-service
   truststore_secret: order-service-kafka-truststore
@@ -469,19 +497,6 @@ java_tls:
   keystore_secret: video-transcoder-kafka-keystore
   truststore_password_secret: video-transcoder-kafka-truststore-password
   keystore_password_secret: video-transcoder-kafka-keystore-password
-- service: kafka-admin-bootstrap
-  principal: kafka-admin
-  bootstrap: kafka:9092
-  protocol: SASL_SSL
-  mechanism: PLAIN
-  ca_secret: platform-kafka-truststore
-  client_cert_secret: platform-kafka-admin-keystore
-  client_key_secret: platform-kafka-admin-keystore-password
-  username_secret: platform-kafka-admin-username
-  password_secret: platform-kafka-admin-password
-  hostname_verification: HTTPS
-  groups: []
-  fallback: refuse-production-on-missing-secret
 acl_entries:
 - operation: Write
   pattern_type: prefixed
@@ -734,81 +749,6 @@ acl_entries:
   resource_name: notification.events
   resource_type: topic
 - operation: Read
-  pattern_type: literal
-  principal: User:svc-notification
-  resource_name: order.created
-  resource_type: topic
-- operation: Read
-  pattern_type: literal
-  principal: User:svc-notification
-  resource_name: order.cancelled
-  resource_type: topic
-- operation: Read
-  pattern_type: literal
-  principal: User:svc-notification
-  resource_name: order.shipped
-  resource_type: topic
-- operation: Read
-  pattern_type: literal
-  principal: User:svc-notification
-  resource_name: order.delivered
-  resource_type: topic
-- operation: Read
-  pattern_type: literal
-  principal: User:svc-notification
-  resource_name: payment.completed
-  resource_type: topic
-- operation: Read
-  pattern_type: literal
-  principal: User:svc-notification
-  resource_name: payment.refunded
-  resource_type: topic
-- operation: Read
-  pattern_type: literal
-  principal: User:svc-notification
-  resource_name: product.approved
-  resource_type: topic
-- operation: Read
-  pattern_type: literal
-  principal: User:svc-notification
-  resource_name: product.rejected
-  resource_type: topic
-- operation: Read
-  pattern_type: literal
-  principal: User:svc-notification
-  resource_name: review.replied
-  resource_type: topic
-- operation: Read
-  pattern_type: literal
-  principal: User:svc-notification
-  resource_name: return.requested
-  resource_type: topic
-- operation: Read
-  pattern_type: literal
-  principal: User:svc-notification
-  resource_name: payout.completed
-  resource_type: topic
-- operation: Read
-  pattern_type: literal
-  principal: User:svc-notification
-  resource_name: user.registered
-  resource_type: topic
-- operation: Read
-  pattern_type: literal
-  principal: User:svc-notification
-  resource_name: user.password-reset
-  resource_type: topic
-- operation: Read
-  pattern_type: literal
-  principal: User:svc-notification
-  resource_name: video.published
-  resource_type: topic
-- operation: Read
-  pattern_type: literal
-  principal: User:svc-notification
-  resource_name: video.rejected
-  resource_type: topic
-- operation: Read
   pattern_type: prefixed
   principal: User:svc-notification
   resource_name: notification-service
@@ -961,122 +901,77 @@ acl_entries:
 - principal: User:svc-notification
   operation: Read
   resource_type: topic
-  resource_name: gdpr.export-requested
+  resource_name: order.cancelled
   pattern_type: literal
 - principal: User:svc-notification
   operation: Read
   resource_type: topic
-  resource_name: gdpr.export-fragment
+  resource_name: order.created
   pattern_type: literal
 - principal: User:svc-notification
   operation: Read
   resource_type: topic
-  resource_name: gdpr.deletion-requested
+  resource_name: order.delivered
   pattern_type: literal
 - principal: User:svc-notification
   operation: Read
   resource_type: topic
-  resource_name: gdpr.deletion-completed
+  resource_name: order.shipped
   pattern_type: literal
 - principal: User:svc-notification
   operation: Read
   resource_type: topic
-  resource_name: inventory.released
+  resource_name: payment.completed
   pattern_type: literal
 - principal: User:svc-notification
   operation: Read
   resource_type: topic
-  resource_name: notification.events
+  resource_name: payment.refunded
   pattern_type: literal
 - principal: User:svc-notification
   operation: Read
   resource_type: topic
-  resource_name: messaging.message.sent
+  resource_name: payout.completed
   pattern_type: literal
 - principal: User:svc-notification
   operation: Read
   resource_type: topic
-  resource_name: order.confirmed
+  resource_name: product.approved
   pattern_type: literal
 - principal: User:svc-notification
   operation: Read
   resource_type: topic
-  resource_name: order.confirmed.retry
+  resource_name: product.rejected
   pattern_type: literal
 - principal: User:svc-notification
   operation: Read
   resource_type: topic
-  resource_name: order.confirmed.DLT
+  resource_name: return.requested
   pattern_type: literal
 - principal: User:svc-notification
   operation: Read
   resource_type: topic
-  resource_name: order.paid
+  resource_name: review.replied
   pattern_type: literal
 - principal: User:svc-notification
   operation: Read
   resource_type: topic
-  resource_name: order.updated
+  resource_name: user.password-reset
   pattern_type: literal
 - principal: User:svc-notification
   operation: Read
   resource_type: topic
-  resource_name: payment.refund.requested
+  resource_name: user.registered
   pattern_type: literal
 - principal: User:svc-notification
   operation: Read
   resource_type: topic
-  resource_name: product-events
+  resource_name: video.published
   pattern_type: literal
 - principal: User:svc-notification
   operation: Read
   resource_type: topic
-  resource_name: shipping.cancel-requested
-  pattern_type: literal
-- principal: User:svc-notification
-  operation: Read
-  resource_type: topic
-  resource_name: shipping.cancelled
-  pattern_type: literal
-- principal: User:svc-notification
-  operation: Read
-  resource_type: topic
-  resource_name: shipping.status.updated
-  pattern_type: literal
-- principal: User:svc-notification
-  operation: Read
-  resource_type: topic
-  resource_name: video.moderation.completed
-  pattern_type: literal
-- principal: User:svc-notification
-  operation: Read
-  resource_type: topic
-  resource_name: video.moderation.dlt
-  pattern_type: literal
-- principal: User:svc-notification
-  operation: Read
-  resource_type: topic
-  resource_name: video.transcode.completed
-  pattern_type: literal
-- principal: User:svc-notification
-  operation: Read
-  resource_type: topic
-  resource_name: video.transcode.completed.DLT
-  pattern_type: literal
-- principal: User:svc-notification
-  operation: Read
-  resource_type: topic
-  resource_name: video.transcode.failed
-  pattern_type: literal
-- principal: User:svc-notification
-  operation: Read
-  resource_type: topic
-  resource_name: video.upload.completed
-  pattern_type: literal
-- principal: User:svc-notification
-  operation: Read
-  resource_type: topic
-  resource_name: video.upload.completed.DLT
+  resource_name: video.rejected
   pattern_type: literal
 acl_contract:
   application_super_users_forbidden:

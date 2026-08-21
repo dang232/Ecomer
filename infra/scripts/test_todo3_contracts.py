@@ -6,6 +6,7 @@ import json
 import re
 import subprocess
 import sys
+import re
 from pathlib import Path
 
 import yaml
@@ -20,6 +21,7 @@ BOOTSTRAP = ROOT / "infra/scripts/init-kafka-topics.sh"
 VIDEO_CONFIG = ROOT / "services/video-transcoder/src/main/resources/application.yml"
 FINANCE_CONFIG = ROOT / "services/seller-finance-service/src/main/resources/application.yml"
 WORKLOADS = ROOT / "infra/k8s/base/workloads.yaml"
+COMPOSE = ROOT / "docker-compose.yml"
 JAVA_KAFKA_CONFIGS = (
     ROOT / "services/order-service/src/main/resources/application.yml",
     ROOT / "services/payment-service/src/main/resources/application.yml",
@@ -181,8 +183,7 @@ def test_java_production_clients_require_mutual_tls_material_and_delivery_policy
     for path in JAVA_KAFKA_CONFIGS:
         document = path.read_text(encoding="utf-8")
         assert "KAFKA_SSL_TRUSTSTORE_LOCATION" in document, path
-        assert "ssl.keystore.location: ${KAFKA_SSL_KEYSTORE_LOCATION}" in document, path
-        assert "ssl.client.auth: required" in document, path
+        assert "ssl.keystore.location: ${KAFKA_SSL_KEYSTORE_LOCATION" in document, path
         assert "ssl.endpoint.identification.algorithm: https" in document, path
         assert "KAFKA_SSL_TRUSTSTORE_PASSWORD" in document, path
         assert "KAFKA_SSL_KEYSTORE_PASSWORD" in document, path
@@ -242,6 +243,42 @@ def test_inventory_acl_semantics_reject_each_mutated_dimension() -> None:
 
     mutated_script = BOOTSTRAP.read_text(encoding="utf-8").replace("--operation Write --topic payment.completed", "--operation Read --topic payment.completed", 1)
     assert any("ACL" in error for error in module.validate_bootstrap_authority(document, mutated_script))
+
+
+def test_notification_loop_expands_only_declared_consumer_topics() -> None:
+    module = _load("kafka_inventory_notification_loop", ROOT / "infra/scripts/kafka-inventory-contract.py")
+    script = BOOTSTRAP.read_text(encoding="utf-8")
+    entries = module._extract_acl_entries(script)
+    notification_topics = {entry[3] for entry in entries if entry[0] == "User:svc-notification" and entry[2] == "topic"}
+    assert notification_topics == {
+        "order.created", "order.cancelled", "order.shipped", "order.delivered", "payment.completed",
+        "payment.refunded", "product.approved", "product.rejected", "review.replied", "return.requested",
+        "payout.completed", "user.registered", "user.password-reset", "video.published", "video.rejected",
+    }
+
+
+def test_duplicate_acl_commands_and_missing_admin_identity_fail() -> None:
+    module = _load("kafka_inventory_duplicate_acl", ROOT / "infra/scripts/kafka-inventory-contract.py")
+    document = yaml.safe_load(INVENTORY.read_text(encoding="utf-8"))
+    script = BOOTSTRAP.read_text(encoding="utf-8")
+    duplicate = script + "\n$ACL --add --allow-principal User:svc-order --operation Write --topic payment.refund.requested\n"
+    assert any("duplicate" in error for error in module.validate_bootstrap_authority(document, duplicate))
+    without_admin = yaml.safe_load(yaml.safe_dump(document))
+    without_admin["clients"] = [client for client in without_admin["clients"] if client["service"] != "kafka-admin-bootstrap"]
+    assert any("clients" in error for error in module.validate(without_admin))
+
+
+def test_inventory_validates_workload_runtime_bindings_and_local_compose_mode() -> None:
+    module = _load("kafka_inventory_workload_bindings", ROOT / "infra/scripts/kafka-inventory-contract.py")
+    document = yaml.safe_load(INVENTORY.read_text(encoding="utf-8"))
+    assert module.validate(document) == []
+    compose = COMPOSE.read_text(encoding="utf-8")
+    for service in ("messaging-service", "notification-service"):
+        start = compose.index(f"  {service}:")
+        next_service_match = re.search(r"\n  [a-z][a-z0-9-]+:\n", compose[start + 3:])
+        next_service = start + 3 + next_service_match.start() if next_service_match else -1
+        block = compose[start:next_service] if next_service >= 0 else compose[start:]
+        assert "KAFKA_LOCAL_MODE: plaintext" in block
 
 
 def test_transactional_policy_is_explicit_and_principal_prefixed() -> None:

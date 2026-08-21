@@ -1089,8 +1089,9 @@ services:
       OTEL_TRACES_SAMPLER: parentbased_traceidratio
       OTEL_TRACES_SAMPLER_ARG: "1.0"
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      KAFKA_SASL_USERNAME: svc-order
-      KAFKA_SASL_PASSWORD: ${KAFKA_SVC_ORDER_PASSWORD:-kafka-order}
+      KAFKA_SASL_USERNAME: svc-notification
+      KAFKA_SASL_PASSWORD: ${KAFKA_SVC_NOTIFICATION_PASSWORD:-kafka-notification}
+      KAFKA_LOCAL_MODE: plaintext
       KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
       # Email channel (SES). Set EMAIL_ENABLED=true + AWS creds to activate.
@@ -1489,6 +1490,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_SASL_USERNAME: svc-messaging
       KAFKA_SASL_PASSWORD: ${KAFKA_SVC_MESSAGING_PASSWORD:-kafka-messaging}
+      KAFKA_LOCAL_MODE: plaintext
       KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
     healthcheck:

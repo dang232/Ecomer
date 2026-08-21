@@ -11,6 +11,7 @@ import yaml
 
 BOOTSTRAP_SCRIPT = Path(__file__).resolve().parents[2] / "infra/scripts/init-kafka-topics.sh"
 MIGRATION_CONTRACT = Path(__file__).resolve().parents[2] / "infra/kafka/migration-contract.yaml"
+WORKLOADS = Path(__file__).resolve().parents[2] / "infra/k8s/base/workloads.yaml"
 
 
 def _extract_topic_entries(script: str) -> set[tuple[str, int]]:
@@ -20,14 +21,46 @@ def _extract_topic_entries(script: str) -> set[tuple[str, int]]:
     }
 
 
-def _extract_acl_commands(script: str) -> set[str]:
-    commands = {" ".join(line.strip().split()) for line in script.splitlines() if "$ACL --add" in line}
-    topics = re.findall(r'^\s+"([^":]+):\d+"$', script, re.MULTILINE)
-    expanded = set(commands)
-    for command in commands:
-        if ' --topic "$topic"' in command:
-            expanded.remove(command)
-            expanded.update(command.replace(' --topic "$topic"', f" --topic {topic}") for topic in topics)
+def _extract_acl_commands(script: str) -> list[str]:
+    lines = script.splitlines()
+    commands: list[str] = []
+    arrays: dict[str, list[str]] = {}
+    current_array: str | None = None
+    for line in lines:
+        stripped = line.strip()
+        array_start = re.match(r"(\w+)=\(\s*$", stripped)
+        if array_start:
+            current_array = array_start.group(1)
+            arrays[current_array] = []
+            continue
+        if current_array and stripped == ")":
+            current_array = None
+            continue
+        if current_array:
+            value = re.fullmatch(r'"([^"]+)"', stripped)
+            if value:
+                arrays[current_array].append(value.group(1))
+        if "$ACL --add" in stripped:
+            commands.append(" ".join(stripped.split()))
+
+    expanded: list[str] = []
+    active_loop: str | None = None
+    for line in lines:
+        stripped = line.strip()
+        loop = re.match(r'for topic in "\$\{(\w+)\[@\]\}"; do', stripped)
+        if loop:
+            active_loop = loop.group(1)
+            continue
+        if active_loop and stripped == "done":
+            active_loop = None
+            continue
+        if "$ACL --add" not in stripped:
+            continue
+        command = " ".join(stripped.split())
+        if ' --topic "$topic"' in command and active_loop:
+            expanded.extend(command.replace(' --topic "$topic"', f" --topic {topic}") for topic in arrays.get(active_loop, []))
+        elif ' --topic "$topic"' not in command:
+            expanded.append(command)
     return expanded
 
 
@@ -54,14 +87,17 @@ def _extract_kubernetes_script(document: str) -> str:
 
 def validate_bootstrap_authority(document: dict, script: str) -> list[str]:
     inventory_topics = {(topic["name"], int(topic["partitions"])) for topic in document.get("topics", [])}
+    commands = _extract_acl_commands(script)
     errors = [] if _extract_topic_entries(script) == inventory_topics else ["bootstrap topic metadata must exactly match inventory"]
     declared = {
         (entry["principal"], entry["operation"], entry["resource_type"], entry["resource_name"], entry.get("pattern_type", "literal"))
         for entry in document.get("acl_entries", [])
     }
     actual = _extract_acl_entries(script)
-    if len(actual) != len(_extract_acl_commands(script)):
+    if len(actual) != len(commands):
         errors.append("bootstrap ACL contains malformed command")
+    if len(commands) != len(set(commands)):
+        errors.append("bootstrap ACL contains duplicate command")
     if actual != declared or len(declared) != len(document.get("acl_entries", [])):
         errors.append("bootstrap ACL semantics must exactly match inventory")
     if len(document.get("acl_entries", [])) != len({tuple(entry.items()) for entry in document.get("acl_entries", [])}):
@@ -141,8 +177,9 @@ def validate(document: dict) -> list[str]:
             if int(topic.get("partitions", 0)) < 1:
                 errors.append(f"topic {name} must have positive partitions")
     clients = document.get("clients")
-    if not isinstance(clients, list) or len(clients) < 14:
-        errors.append("inventory must cover all 13 application clients and admin bootstrap")
+    expected_identities = {"order-service", "payment-service", "inventory-service", "product-service", "shipping-service", "search-service", "recommendations-service", "seller-finance-service", "notification-service", "messaging-service", "invoice-service", "user-service", "video-transcoder", "video-moderator", "kafka-admin-bootstrap"}
+    if not isinstance(clients, list) or {client.get("service") for client in clients} != expected_identities:
+        errors.append("inventory clients must cover 14 application identities and kafka-admin-bootstrap")
     else:
         identities: set[str] = set()
         for client in clients:
@@ -157,6 +194,8 @@ def validate(document: dict) -> list[str]:
                 errors.append(f"client {service} is not secure SASL_SSL with hostname verification")
             if client.get("fallback") != "fail-closed" and service != "kafka-admin-bootstrap":
                 errors.append(f"client {service} has non-fail-closed fallback")
+            if client.get("tls_format") not in {"JKS", "PEM"}:
+                errors.append(f"client {service} has invalid tls_format")
     java_tls = document.get("java_tls")
     expected_java_services = {"order-service", "payment-service", "inventory-service", "product-service", "shipping-service", "search-service", "recommendations-service", "seller-finance-service", "invoice-service", "user-service", "video-transcoder"}
     if not isinstance(java_tls, list) or {entry.get("service") for entry in java_tls if entry.get("service") != "kafka-admin-bootstrap"} != expected_java_services:
@@ -172,6 +211,41 @@ def validate(document: dict) -> list[str]:
     if script_topics != inventory_topics:
         errors.append("local bootstrap topic list must exactly match inventory")
     errors.extend(validate_bootstrap_authority(document, script))
+    try:
+        workloads = [doc for doc in yaml.safe_load_all(WORKLOADS.read_text(encoding="utf-8-sig")) if isinstance(doc, dict)]
+        deployments = {
+            doc.get("metadata", {}).get("labels", {}).get("vnshop.io/artifact-id"): doc
+            for doc in workloads if doc.get("kind") == "Deployment"
+        }
+        for client in document.get("clients", []):
+            service = client.get("service")
+            if service == "kafka-admin-bootstrap":
+                continue
+            workload = deployments.get(service)
+            if workload is None:
+                errors.append(f"Kafka client workload is missing: {service}")
+                continue
+            pod = workload.get("spec", {}).get("template", {}).get("spec", {})
+            container = next(iter(pod.get("containers", [])), {})
+            env = {item.get("name"): item for item in container.get("env", [])}
+            if client.get("tls_format") == "PEM":
+                expected = {"KAFKA_SSL_CA_FILE": "/etc/kafka/tls/ca.crt", "KAFKA_SSL_CERT_FILE": "/etc/kafka/tls/client.crt", "KAFKA_SSL_KEY_FILE": "/etc/kafka/tls/client.key"}
+                if service == "video-moderator":
+                    expected = {key.replace("KAFKA_", "MODERATOR_KAFKA_"): value for key, value in expected.items()}
+                for name, value in expected.items():
+                    if env.get(name, {}).get("value") != value:
+                        errors.append(f"workload {service} has invalid PEM binding: {name}")
+            else:
+                expected = {"KAFKA_SSL_TRUSTSTORE_LOCATION": "/etc/kafka/tls/ca.truststore.jks", "KAFKA_SSL_KEYSTORE_LOCATION": "/etc/kafka/tls/client.keystore.jks"}
+                for name, value in expected.items():
+                    if env.get(name, {}).get("value") != value:
+                        errors.append(f"workload {service} has invalid JKS binding: {name}")
+                if not env.get("KAFKA_SSL_TRUSTSTORE_PASSWORD", {}).get("valueFrom") or not env.get("KAFKA_SSL_KEYSTORE_PASSWORD", {}).get("valueFrom"):
+                    errors.append(f"workload {service} is missing JKS password bindings")
+            if service != "video-moderator" and not any(volume.get("name") in {"kafka-tls", "kafka-client-tls"} for volume in pod.get("volumes", [])):
+                errors.append(f"workload {service} is missing kafka-tls volume")
+    except (OSError, TypeError, ValueError, yaml.YAMLError) as exc:
+        errors.append(f"Kafka workload authority unavailable: {exc}")
     try:
         manifest = (BOOTSTRAP_SCRIPT.parent.parent / "k8s/base/kafka-bootstrap-job.yaml").read_text(encoding="utf-8")
         errors.extend(validate_kubernetes_bootstrap_authority(document, manifest))
