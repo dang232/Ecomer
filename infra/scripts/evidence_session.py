@@ -12,6 +12,7 @@ import tempfile
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlsplit
 
 
 SCHEMA = "evidence.v1"
@@ -43,7 +44,7 @@ VERIFIER_OWNERS = {
     "F1": "plan-compliance-owner", "F2": "code-quality-owner", "F3": "runtime-qa-owner", "F4": "scope-fidelity-owner",
 }
 REPORT_PRODUCERS = set(VERIFIER_OWNERS.values())
-GATE_ENTRY_FIELDS = {"gate_id", "status", "evidence_class", "producing_system", "owner", "environment_identity", "fresh_until", "artifact_digest", "command_binding", "signature_type", "provider_issued_id"}
+GATE_ENTRY_FIELDS = {"gate_id", "status", "evidence_class", "producing_system", "owner", "authority", "environment_identity", "fresh_until", "artifact_digest", "command_binding", "signature_type", "provider_issued_id"}
 
 
 def now() -> str:
@@ -169,6 +170,19 @@ def _repo_for(args: argparse.Namespace) -> Path:
     return Path(getattr(args, "repo", Path.cwd())).resolve()
 
 
+def _provider_id_matches(value: object, producing_system: str, authority: str) -> bool:
+    if not isinstance(value, str) or not value or value != value.strip() or any(char.isspace() for char in value):
+        return False
+    parsed = urlsplit(value)
+    if parsed.scheme != "https" or not parsed.netloc or parsed.username or parsed.password or parsed.fragment:
+        return False
+    expected_host = producing_system.lower().replace("_", "-") + ".example.invalid"
+    if parsed.hostname != expected_host:
+        return False
+    authority_token = authority.rstrip("/").split(":")[-1].split("/")[-1].lower()
+    return parsed.path.lower().startswith(f"/{authority_token}/") and len(parsed.path) > len(authority_token) + 2
+
+
 def _gate_entry(entry: dict, mandatory: set[str], gate_matrix: dict) -> bool:
     strict(entry, GATE_ENTRY_FIELDS, "gate evidence")
     if entry["gate_id"] not in mandatory:
@@ -188,14 +202,14 @@ def _gate_entry(entry: dict, mandatory: set[str], gate_matrix: dict) -> bool:
         return False
     definitions = gate_matrix.get("gates", {})
     definition = definitions.get(entry["gate_id"], {}) if isinstance(definitions, dict) else {}
-    if isinstance(definition, dict):
-        for field, entry_field in (("owner", "owner"), ("producing_system", "producing_system")):
-            if definition.get(field) and definition[field] != entry[entry_field]:
-                return False
+    if not isinstance(definition, dict) or not all(isinstance(definition.get(field), str) and definition[field] for field in ("owner", "producing_system", "authority")):
+        return False
+    if any(entry[field] != definition[field] for field in ("owner", "producing_system", "authority")):
+        return False
     external = entry["evidence_class"] in {"isolated-runtime", "operator-external-blocked"} or entry["producing_system"] not in {"repository", "git"}
     if external and entry["signature_type"] == "repository-commit":
         return False
-    if entry["status"] == "PASS" and external and not entry["provider_issued_id"]:
+    if entry["status"] == "PASS" and external and not _provider_id_matches(entry["provider_issued_id"], entry["producing_system"], entry["authority"]):
         return False
     return True
 
@@ -203,9 +217,18 @@ def _gate_entry(entry: dict, mandatory: set[str], gate_matrix: dict) -> bool:
 def derive_statuses(reports: list[dict], gate_entries: list[dict], gate_matrix: dict) -> tuple[str, str, list[dict]]:
     mandatory = gate_matrix["mandatory"]
     decisions: list[dict] = []
-    malformed_gate = any(entry.get("gate_id") == "__invalid__" for entry in gate_entries)
+    validated_entries: list[dict] = []
+    malformed_gate = False
+    for entry in gate_entries:
+        if entry.get("gate_id") == "__invalid__":
+            malformed_gate = True
+            continue
+        if _gate_entry(entry, set(mandatory), gate_matrix):
+            validated_entries.append(entry)
+        else:
+            malformed_gate = True
     for gate_id in mandatory:
-        matches = [entry for entry in gate_entries if entry["gate_id"] == gate_id]
+        matches = [entry for entry in validated_entries if entry["gate_id"] == gate_id]
         if len(matches) != 1:
             decisions.append({"gate_id": gate_id, "status": "NO-GO", "reason": "missing-or-duplicate-evidence"})
             continue

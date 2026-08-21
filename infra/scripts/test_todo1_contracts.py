@@ -182,6 +182,63 @@ def test_allowed_path_file_hash_matches_run_descriptor(tmp_path):
     assert expected == hashlib.sha256("\n".join(sorted(module.ALLOWED_PATHS)).encode()).hexdigest()
 
 
+def test_gate_contract_rejects_fake_provider_id_and_authority_variants():
+    module = load_module(EVIDENCE, "todo1_gate_contract")
+    import yaml
+    matrix = yaml.safe_load((ROOT / "infra/evidence/production-gates.yaml").read_text(encoding="utf-8"))
+    gate_id = matrix["mandatory"][0]
+    definition = matrix["gates"][gate_id]
+    entry = {"gate_id": gate_id, "status": "PASS", "evidence_class": "isolated-runtime", "producing_system": definition["producing_system"], "owner": definition["owner"], "authority": definition["authority"], "environment_identity": {"cluster": "fixture"}, "fresh_until": "2099-01-01T00:00:00Z", "artifact_digest": "a" * 64, "command_binding": "fixture-command", "signature_type": "external", "provider_issued_id": "fake"}
+    assert module._gate_entry(entry, set(matrix["mandatory"]), matrix) is False
+    entry["provider_issued_id"] = f"https://{definition['producing_system'].replace('_', '-').lower()}.example.invalid/{definition['authority'].split(':')[-1].split('/')[-1]}/fixture-001"
+    assert module._gate_entry(entry, set(matrix["mandatory"]), matrix) is True
+    entry["authority"] = "wrong-authority"
+    assert module._gate_entry(entry, set(matrix["mandatory"]), matrix) is False
+
+
+def test_all_mandatory_gate_contracts_require_structured_provider_ids():
+    module = load_module(EVIDENCE, "todo1_all_gate_contracts")
+    import yaml
+    matrix = yaml.safe_load((ROOT / "infra/evidence/production-gates.yaml").read_text(encoding="utf-8"))
+    entries = []
+    for gate_id in matrix["mandatory"]:
+        definition = matrix["gates"][gate_id]
+        prefix = definition["authority"].split(":")[-1].split("/")[-1]
+        entries.append({"gate_id": gate_id, "status": "PASS", "evidence_class": "isolated-runtime", "producing_system": definition["producing_system"], "owner": definition["owner"], "authority": definition["authority"], "environment_identity": {"cluster": "fixture"}, "fresh_until": "2099-01-01T00:00:00Z", "artifact_digest": "a" * 64, "command_binding": "fixture-command", "signature_type": "external", "provider_issued_id": f"https://{definition['producing_system'].replace('_', '-').lower()}.example.invalid/{prefix}/fixture-{gate_id}"})
+    assert all(module._gate_entry(entry, set(matrix["mandatory"]), matrix) for entry in entries)
+    assert module.derive_statuses([], entries, matrix)[:2] == ("PASS", "GO")
+    entries[0]["provider_issued_id"] = "fake"
+    assert module.derive_statuses([], entries, matrix)[:2] == ("PASS", "NO-GO")
+
+
+def test_gate_contract_rejects_missing_id_repository_signature_and_unknown_fields():
+    module = load_module(EVIDENCE, "todo1_gate_rejection")
+    import yaml
+    matrix = yaml.safe_load((ROOT / "infra/evidence/production-gates.yaml").read_text(encoding="utf-8"))
+    gate_id = matrix["mandatory"][0]
+    definition = matrix["gates"][gate_id]
+    entry = {"gate_id": gate_id, "status": "PASS", "evidence_class": "isolated-runtime", "producing_system": definition["producing_system"], "owner": definition["owner"], "authority": definition["authority"], "environment_identity": {"cluster": "fixture"}, "fresh_until": "2099-01-01T00:00:00Z", "artifact_digest": "a" * 64, "command_binding": "fixture-command", "signature_type": "external", "provider_issued_id": ""}
+    assert module._gate_entry(entry, set(matrix["mandatory"]), matrix) is False
+    entry["provider_issued_id"] = "https://registry-attestation.example.invalid/registry-attestation-bundle/id"
+    entry["signature_type"] = "repository-commit"
+    assert module._gate_entry(entry, set(matrix["mandatory"]), matrix) is False
+    entry["signature_type"] = "external"
+    entry["extra"] = True
+    with pytest.raises(ValueError, match="unknown or missing"):
+        module._gate_entry(entry, set(matrix["mandatory"]), matrix)
+
+
+def test_derive_statuses_rejects_missing_duplicate_and_contradictory_gate_entries():
+    module = load_module(EVIDENCE, "todo1_gate_statuses")
+    import yaml
+    matrix = yaml.safe_load((ROOT / "infra/evidence/production-gates.yaml").read_text(encoding="utf-8"))
+    assert module.derive_statuses([], [], matrix)[:2] == ("PASS", "NO-GO")
+    gate_id = matrix["mandatory"][0]
+    definition = matrix["gates"][gate_id]
+    entry = {"gate_id": gate_id, "status": "PASS", "evidence_class": "isolated-runtime", "producing_system": definition["producing_system"], "owner": definition["owner"], "authority": definition["authority"], "environment_identity": {"cluster": "fixture"}, "fresh_until": "2099-01-01T00:00:00Z", "artifact_digest": "a" * 64, "command_binding": "fixture-command", "signature_type": "external", "provider_issued_id": f"https://{definition['producing_system'].replace('_', '-').lower()}.example.invalid/{definition['authority'].split(':')[-1].split('/')[-1]}/fixture"}
+    assert module.derive_statuses([], [entry, dict(entry)], matrix)[:2] == ("PASS", "NO-GO")
+
+
 def test_timestamps_are_parsed_and_timezone_is_required():
     module = load_module(EVIDENCE, "todo1_timestamps")
     assert module.parse_timestamp("2026-08-20T00:00:00Z") < module.parse_timestamp("2026-08-21T00:00:00+00:00")
