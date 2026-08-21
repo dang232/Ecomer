@@ -21,7 +21,14 @@ def _extract_topic_entries(script: str) -> set[tuple[str, int]]:
 
 
 def _extract_acl_commands(script: str) -> set[str]:
-    return {" ".join(line.strip().split()) for line in script.splitlines() if "$ACL --add" in line}
+    commands = {" ".join(line.strip().split()) for line in script.splitlines() if "$ACL --add" in line}
+    topics = re.findall(r'^\s+"([^":]+):\d+"$', script, re.MULTILINE)
+    expanded = set(commands)
+    for command in commands:
+        if ' --topic "$topic"' in command:
+            expanded.remove(command)
+            expanded.update(command.replace(' --topic "$topic"', f" --topic {topic}") for topic in topics)
+    return expanded
 
 
 def _extract_acl_entries(script: str) -> set[tuple[str, str, str, str, str]]:
@@ -150,6 +157,17 @@ def validate(document: dict) -> list[str]:
                 errors.append(f"client {service} is not secure SASL_SSL with hostname verification")
             if client.get("fallback") != "fail-closed" and service != "kafka-admin-bootstrap":
                 errors.append(f"client {service} has non-fail-closed fallback")
+    java_tls = document.get("java_tls")
+    expected_java_services = {"order-service", "payment-service", "inventory-service", "product-service", "shipping-service", "search-service", "recommendations-service", "seller-finance-service", "invoice-service", "user-service", "video-transcoder"}
+    if not isinstance(java_tls, list) or {entry.get("service") for entry in java_tls if entry.get("service") != "kafka-admin-bootstrap"} != expected_java_services:
+        errors.append("java_tls must cover every Java Kafka workload")
+    else:
+        for entry in java_tls:
+            if entry.get("service") == "kafka-admin-bootstrap":
+                continue
+            for field in ("truststore_secret", "keystore_secret", "truststore_password_secret", "keystore_password_secret"):
+                if not entry.get(field):
+                    errors.append(f"Java TLS entry {entry.get('service')} missing {field}")
     inventory_topics = {topic["name"] for topic in topics} if isinstance(topics, list) else set()
     if script_topics != inventory_topics:
         errors.append("local bootstrap topic list must exactly match inventory")
