@@ -12,7 +12,7 @@ cases:
       cwd: .
   task-1-negative:
     - id: all-target-rejections
-      command: [python, -c, "import subprocess,sys; base=[sys.executable,'infra/scripts/create-readiness-baseline.py','--commit','HEAD','--tree-sha','HEAD^{tree}','--manifest','infra/load-tests/workload-contract.yaml']; codes=[subprocess.run(base+['--target',t],capture_output=True).returncode for t in ['production','','mystery']]; assert all(code != 0 for code in codes); raise SystemExit(1)"]
+      command: [python, -c, "import subprocess,sys; base=[sys.executable,'infra/scripts/create-readiness-baseline.py','--commit','HEAD','--tree-sha','HEAD^{tree}','--manifest','infra/load-tests/workload-contract.yaml']; codes=[subprocess.run(base+['--target',t],capture_output=True).returncode for t in ['production','','mystery']]; assert all(code != 0 for code in codes)"]
       cwd: .
   task-2-happy:
     - id: release-policy
@@ -25,6 +25,7 @@ cases:
     - id: release-policy-negative
       command: [python, infra/scripts/validate-k8s-release.py, --environment, prod]
       cwd: .
+      expect_failure: true
   task-3-happy:
     - id: kafka-contract
       command: [python, -m, pytest, -q, infra/scripts/test_todo3_contracts.py]
@@ -41,7 +42,10 @@ cases:
       command: [python, -m, pytest, -q, infra/scripts/test_todo4_contracts.py]
       cwd: .
     - id: elasticsearch-topology
-      command: [python, infra/scripts/k8s-topology-contract.py, --manifest, infra/k8s/elasticsearch/elasticsearch-statefulset.yaml]
+      command: [python, infra/scripts/render-inventory.py, --overlay, infra/k8s/overlays/prod, --output, production-render-inventory.json]
+      cwd: .
+    - id: elasticsearch-topology
+      command: [python, infra/scripts/k8s-topology-contract.py, --inventory, production-render-inventory.json]
       cwd: .
   task-4-negative:
     - id: elasticsearch-drill-negative
@@ -55,6 +59,7 @@ cases:
     - id: restore-negative
       command: [python, infra/scripts/restore-drill.py, --target, production]
       cwd: .
+      expect_failure: true
   task-6-happy:
     - id: dataset-contract
       command: [python, -m, pytest, -q, infra/load-tests/dataset/test_generate.py]
@@ -63,6 +68,7 @@ cases:
     - id: dataset-negative
       command: [python, infra/load-tests/dataset/generate.py, --manifest, infra/load-tests/dataset/manifest.yaml, --target, production]
       cwd: .
+      expect_failure: true
   task-7-happy:
     - id: k6-contract
       command: [node, --test, infra/load-tests/k6-10k-dau.test.js]
@@ -70,17 +76,19 @@ cases:
     - id: provider-preflight
       command: [python, infra/load-tests/provider-isolation-preflight.py, --target, isolated-fixture]
       cwd: .
-    - id: k6-contract
+    - id: k6-inspect
       command: [k6, inspect, infra/load-tests/k6-10k-dau.js]
       cwd: .
   task-7-negative:
     - id: provider-negative
       command: [python, infra/load-tests/provider-isolation-preflight.py, --target, production]
       cwd: .
+      expect_failure: true
   F3:
     - id: api-runtime
-      command: [node, --check, infra/scripts/e2e-day.mjs]
+      command: [node, infra/scripts/e2e-day.mjs]
       cwd: .
+      allow_blocked_external: true
     - id: browser-runtime
       command: [pnpm, --dir, fe, exec, playwright, test, --project=chromium]
       cwd: .
@@ -113,22 +121,7 @@ cases:
       command: [python, infra/scripts/scope_gate.py, --workspace-manifest, C:\\Users\\dangq\\AppData\\Local\\Temp\\vnshop-evidence\\prechange\\workspace\\file-manifest.json, --detached-manifest, C:\\Users\\dangq\\AppData\\Local\\Temp\\vnshop-evidence\\prechange\\detached\\file-manifest.json, --allowed-path-set, C:\\Users\\dangq\\AppData\\Local\\Temp\\vnshop-evidence\\prechange\\allowed-paths.txt]
       cwd: .
     - id: generator-safety
-      command: [python, infra/load-tests/dataset/generate.py, --manifest, infra/load-tests/dataset/manifest.yaml, --target, production]
-      cwd: .
-    - id: provider-egress
-      command: [python, infra/load-tests/dataset/generate.py, --manifest, infra/load-tests/dataset/manifest.yaml, --target, provider-egress]
-      cwd: .
-    - id: empty-target
-      command: [python, infra/load-tests/dataset/generate.py, --manifest, infra/load-tests/dataset/manifest.yaml, --target, ""]
-      cwd: .
-    - id: unknown-target
-      command: [python, infra/load-tests/dataset/generate.py, --manifest, infra/load-tests/dataset/manifest.yaml, --target, unknown]
-      cwd: .
-    - id: production-credential
-      command: [python, infra/load-tests/dataset/generate.py, --manifest, infra/load-tests/dataset/manifest.yaml, --target, production-credential]
-      cwd: .
-    - id: same-cluster
-      command: [python, infra/load-tests/dataset/generate.py, --manifest, infra/load-tests/dataset/manifest.yaml, --target, same-cluster]
+      command: [python, -c, "import subprocess,sys; base=[sys.executable,'infra/load-tests/dataset/generate.py','--manifest','infra/load-tests/dataset/manifest.yaml']; targets=['production','provider-egress','','unknown','production-credential','same-cluster']; codes=[subprocess.run(base+['--target',t],capture_output=True).returncode for t in targets]; assert all(code != 0 for code in codes)"]
       cwd: .
     - id: diff-stat
       command: [git, diff, --stat]

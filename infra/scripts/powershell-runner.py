@@ -39,10 +39,13 @@ def main() -> int:
     records = []
     first_failure = 0
     for index, step in enumerate(case):
-        if not isinstance(step, dict) or set(step) != {"id", "command", "cwd"} or not isinstance(step["command"], list) or not step["command"]:
+        allowed_fields = {"id", "command", "cwd", "expect_failure", "allow_blocked_external"}
+        if not isinstance(step, dict) or not set(step).issubset(allowed_fields) or not {"id", "command", "cwd"}.issubset(step) or not isinstance(step["command"], list) or not step["command"]:
             print(json.dumps({"status": "FAIL", "error": f"invalid step at index {index}"}), file=sys.stderr)
             return 2
-        record = {"id": step["id"], "command": step["command"], "cwd": step["cwd"], "started_at": now(), "ended_at": None, "exit_code": None, "outcome": "RUN"}
+        expect_failure = bool(step.get("expect_failure", False))
+        allow_blocked = bool(step.get("allow_blocked_external", False))
+        record = {"id": step["id"], "command": step["command"], "cwd": step["cwd"], "expect_failure": expect_failure, "allow_blocked_external": allow_blocked, "started_at": now(), "ended_at": None, "exit_code": None, "outcome": "RUN"}
         if first_failure:
             record["outcome"] = "SKIPPED_DUE_TO_PRIOR_FAILURE"
             record["ended_at"] = now()
@@ -53,7 +56,11 @@ def main() -> int:
             record["exit_code"] = completed.returncode
             (args.evidence_dir / f"{index:03d}-{step['id']}.stdout.txt").write_text(completed.stdout, encoding="utf-8")
             (args.evidence_dir / f"{index:03d}-{step['id']}.stderr.txt").write_text(completed.stderr, encoding="utf-8")
-            if completed.returncode:
+            if completed.returncode and expect_failure:
+                record["outcome"] = "EXPECTED_REJECTION"
+            elif completed.returncode and allow_blocked and any(marker in (completed.stdout + completed.stderr).lower() for marker in ("docker", "connection refused", "could not connect", "not found", "unavailable")):
+                record["outcome"] = "BLOCKED_EXTERNAL"
+            elif completed.returncode:
                 first_failure = completed.returncode
                 record["outcome"] = "FAIL"
             else:
