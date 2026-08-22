@@ -16,8 +16,8 @@ class DockerKafkaConfigurationTest {
             assertThat(resource).isNotNull();
             String yaml = new String(resource.readAllBytes(), StandardCharsets.UTF_8);
             assertThat(yaml)
-                    .contains("on-profile: docker")
-                    .contains("security.protocol: SASL_PLAINTEXT");
+                    .contains("on-profile: local-only-docker")
+                    .contains("security.protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_SSL}");
         }
     }
 }
