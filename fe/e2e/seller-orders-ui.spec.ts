@@ -42,7 +42,7 @@ test.describe("seller orders queue UI", () => {
     ).toBeVisible({ timeout: 20_000 });
 
     // Click the Orders nav button. The label is localized; match either.
-    const ordersTab = page.getByRole("button", { name: /^(Orders|Đơn hàng)$/ }).first();
+    const ordersTab = page.getByRole("link", { name: /^(Orders|Đơn hàng)$/ }).first();
     await expect(ordersTab).toBeVisible({ timeout: 10_000 });
     await ordersTab.click();
 
