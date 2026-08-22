@@ -6,7 +6,6 @@ import { PageSkeleton, ProductDetailSkeleton } from "@/shared/ui";
 import { ErrorBoundary } from "./components/error-boundary";
 import { orderDetailOptions } from "./hooks/use-orders";
 import { productDetailOptions } from "./hooks/use-products";
-import { profileOptions } from "./hooks/use-profile";
 import { sellerDetailOptions, sellerProductsOptions } from "./hooks/use-sellers";
 import {
   AdminLayout,
@@ -217,10 +216,6 @@ export const router = createBrowserRouter([
       {
         path: "profile",
         element: guardedWithBoundary(createElement(ProfilePage)),
-        loader: () => {
-          void queryClient.prefetchQuery(profileOptions());
-          return null;
-        },
       },
       {
         path: "seller/register",
