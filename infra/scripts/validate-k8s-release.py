@@ -248,6 +248,18 @@ def load_lock(environment: str, errors: list[str]) -> dict | None:
     return lock
 
 
+def validate_release_lock_presence(
+    environment: str,
+    lock: dict | None,
+    *,
+    allow_unresolved: bool,
+    errors: list[str],
+) -> None:
+    """Require an external release lock unless unresolved dev validation is explicit."""
+    if lock is None and not allow_unresolved:
+        errors.append(f"missing infra/release/locks/{environment}.json")
+
+
 def validate_lock(lock: dict, catalog: dict, errors: list[str]) -> dict[str, dict]:
     if not re.fullmatch(r"[0-9a-f]{40}", lock.get("sourceCommit", "")):
         errors.append("release lock sourceCommit must be a full lowercase Git SHA")
@@ -302,7 +314,7 @@ def _unsafe_origin(origin: str) -> bool:
         unsafe_ip = ipaddress.ip_address(host).is_private or ipaddress.ip_address(host).is_loopback or ipaddress.ip_address(host).is_link_local
     except ValueError:
         unsafe_ip = False
-    return parsed.scheme != "https" or not host or host == "localhost" or unsafe_ip or host.endswith((".example", ".invalid"))
+    return parsed.scheme != "https" or not host or host == "localhost" or unsafe_ip or host.endswith((".example", ".example.com", ".invalid"))
 
 
 def is_strict_environment(environment: str) -> bool:
@@ -415,9 +427,13 @@ def main() -> None:
     errors: list[str] = []
     lock = load_lock(args.environment, errors)
     lock_by_id: dict[str, dict] = {}
-    if lock is None and not args.allow_unresolved:
-        errors.append(f"missing infra/release/locks/{args.environment}.json")
-    elif lock is not None:
+    validate_release_lock_presence(
+        args.environment,
+        lock,
+        allow_unresolved=args.allow_unresolved,
+        errors=errors,
+    )
+    if lock is not None:
         lock_by_id = validate_lock(lock, catalog, errors)
 
     first = render(args.environment)

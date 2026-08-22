@@ -76,3 +76,23 @@ class Todo2ReleasePolicyTests(unittest.TestCase):
     def test_policy_rejects_unsafe_secondary_origin(self):
         errors = validator.validate_release_policy([config({"CORS_ORIGINS": "https://web.acme.test,https://localhost:3000"})], "prod")
         self.assertTrue(any("placeholder origin" in error for error in errors))
+
+    def test_staging_rejects_placeholder_external_origin(self):
+        errors = validator.validate_release_policy(
+            [config({"PUBLIC_URL": "https://api.example.com"})], "staging"
+        )
+        self.assertTrue(any("placeholder origin" in error for error in errors))
+
+    def test_missing_external_lock_is_reported(self):
+        errors: list[str] = []
+        validator.validate_release_lock_presence(
+            "staging", None, allow_unresolved=False, errors=errors
+        )
+        self.assertEqual(errors, ["missing infra/release/locks/staging.json"])
+
+    def test_dev_unresolved_lock_is_explicitly_allowed(self):
+        errors: list[str] = []
+        validator.validate_release_lock_presence(
+            "dev", None, allow_unresolved=True, errors=errors
+        )
+        self.assertEqual(errors, [])
