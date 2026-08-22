@@ -4,6 +4,7 @@ import com.vnshop.shippingservice.domain.port.out.ShippingCancellationEventPubli
 import com.vnshop.shippingservice.domain.port.out.CarrierGatewayPort;
 import com.vnshop.shippingservice.domain.port.out.ShippingLabelRepositoryPort;
 import java.util.concurrent.CompletionException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ public class CancelShipmentUseCase {
         this(shippingEventPublisher, null, ShippingLabelRepositoryPort.noop());
     }
 
+    @Autowired
     public CancelShipmentUseCase(
             ShippingCancellationEventPublisherPort shippingEventPublisher,
             CarrierGatewayPort carrierGateway,

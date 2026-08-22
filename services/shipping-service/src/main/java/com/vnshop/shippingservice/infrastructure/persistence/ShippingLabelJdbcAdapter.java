@@ -3,9 +3,7 @@ package com.vnshop.shippingservice.infrastructure.persistence;
 import com.vnshop.shippingservice.domain.model.CarrierCode;
 import com.vnshop.shippingservice.domain.model.ShippingLabelRecord;
 import com.vnshop.shippingservice.domain.port.out.ShippingLabelRepositoryPort;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.ResultSet;
@@ -13,8 +11,6 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.UUID;
 
-@Repository
-@ConditionalOnBean(JdbcTemplate.class)
 public class ShippingLabelJdbcAdapter implements ShippingLabelRepositoryPort {
     private final JdbcTemplate jdbcTemplate;
 
