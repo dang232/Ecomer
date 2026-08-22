@@ -1504,6 +1504,9 @@ spec:
         - name: CONFIG_SERVICE_INTERNAL_TOKEN
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: config-service-internal-token}
+        - name: GRPC_CLIENT_PAYMENT_SERVICE_TOKEN
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: payment-grpc-service-token}
         - name: SPRING_DATASOURCE_URL
           value: "jdbc:postgresql://postgres:5432/vnshop?currentSchema=order_svc"
         - name: SPRING_DATASOURCE_USERNAME
@@ -1689,6 +1692,9 @@ spec:
         - name: CONFIG_SERVICE_INTERNAL_TOKEN
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: config-service-internal-token}
+        - name: GRPC_SERVER_AUTH_TOKEN
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: payment-grpc-service-token}
         - name: SPRING_DATASOURCE_URL
           value: "jdbc:postgresql://postgres:5432/vnshop?currentSchema=payment_svc"
         - name: SPRING_DATASOURCE_USERNAME
