@@ -93,7 +93,12 @@ export function MarketplaceHome({ view }: MarketplaceHomeProps) {
 
 export function MarketplaceHomeSkeleton() {
   return (
-    <PageContainer className="space-y-6" aria-busy="true" aria-label="Loading storefront">
+    <PageContainer
+      className="space-y-6"
+      role="status"
+      aria-busy="true"
+      aria-label="Loading storefront"
+    >
       <Skeleton className="aspect-[16/10] w-full sm:aspect-[2.4/1]" />
       <div className="grid grid-cols-5 gap-3 border-y border-border py-3">
         {Array.from({ length: 5 }, (_, index) => (
