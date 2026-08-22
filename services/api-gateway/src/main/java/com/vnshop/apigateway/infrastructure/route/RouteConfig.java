@@ -45,6 +45,7 @@ public class RouteConfig {
     private final String configurationServiceUri;
     private final String couponServiceUri;
     private final String keycloakServiceUri;
+    private final String minioServiceUri;
     private final String configurationServiceToken;
 
     public RouteConfig(
@@ -64,6 +65,7 @@ public class RouteConfig {
         @Value("${vnshop.routes.configuration-service:http://configuration-service:8097}") String configurationServiceUri,
         @Value("${vnshop.routes.coupon-service:http://coupon-service:8088}") String couponServiceUri,
         @Value("${vnshop.routes.keycloak:http://keycloak:8080}") String keycloakServiceUri,
+        @Value("${vnshop.routes.minio:http://minio:9000}") String minioServiceUri,
         @Value("${CONFIG_SERVICE_INTERNAL_TOKEN:}") String configurationServiceToken
     ) {
         this.productServiceUri = productServiceUri;
@@ -82,6 +84,7 @@ public class RouteConfig {
         this.configurationServiceUri = configurationServiceUri;
         this.couponServiceUri = couponServiceUri;
         this.keycloakServiceUri = keycloakServiceUri;
+        this.minioServiceUri = minioServiceUri;
         this.configurationServiceToken = configurationServiceToken;
     }
 
@@ -105,6 +108,13 @@ public class RouteConfig {
             .route("keycloak-oidc", route -> route.path("/realms/**", "/resources/**")
                 .filters(filters -> rateLimited(filters, "keycloak", authRateLimiter, tieredKeyResolver))
                 .uri(keycloakServiceUri))
+            .route("minio-public", route -> route.path(
+                    "/vnshop-avatars/**", "/vnshop-products/**", "/vnshop-reviews/**", "/vnshop-videos/**")
+                .filters(filters -> filters
+                    .preserveHostHeader()
+                    .dedupeResponseHeader(
+                        "Access-Control-Allow-Credentials Access-Control-Allow-Origin", "RETAIN_FIRST"))
+                .uri(minioServiceUri))
             .route("products", route -> route.path("/products/**")
                 .filters(filters -> rateLimited(filters, "product-service", generalRateLimiter, tieredKeyResolver))
                 .uri(productServiceUri))

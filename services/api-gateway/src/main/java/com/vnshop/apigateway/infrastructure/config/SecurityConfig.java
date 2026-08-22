@@ -44,6 +44,8 @@ public class SecurityConfig {
             "/auth/login", "/auth/register", "/auth/password-reset-request", "/auth/forgot-password");
     private static final String CSRF_COOKIE = "vnshop_csrf";
     private static final String CSRF_HEADER = "X-CSRF-Token";
+    private static final List<String> PUBLIC_OBJECT_PREFIXES = List.of(
+            "/vnshop-avatars/", "/vnshop-products/", "/vnshop-reviews/", "/vnshop-videos/");
 
     /**
      * Define an explicit reactive CORS configuration source so Spring
@@ -96,6 +98,9 @@ public class SecurityConfig {
                 // cross-origin POST/PUT — permit it on every path so the
                 // CORS filter has a chance to respond with allow-origin.
                 .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .pathMatchers(HttpMethod.GET, "/vnshop-avatars/**", "/vnshop-products/**", "/vnshop-reviews/**", "/vnshop-videos/**").permitAll()
+                .pathMatchers(HttpMethod.HEAD, "/vnshop-avatars/**", "/vnshop-products/**", "/vnshop-reviews/**", "/vnshop-videos/**").permitAll()
+                .pathMatchers(HttpMethod.PUT, "/vnshop-avatars/**", "/vnshop-products/**", "/vnshop-reviews/**", "/vnshop-videos/**").permitAll()
                 // Seller review management is a protected read model even
                 // though public product reviews share the /reviews prefix.
                 .pathMatchers(HttpMethod.GET, "/reviews/seller/me").hasRole("SELLER")
@@ -187,7 +192,8 @@ public class SecurityConfig {
         boolean tusUpload = path.equals(TUS_UPLOAD_PATH) || path.startsWith(TUS_UPLOAD_PATH + "/");
         boolean publicAuth = PUBLIC_AUTH_PATHS.contains(path);
         boolean proxiedKeycloak = path.startsWith("/realms/");
-        return cookieAuthenticated && stateChanging && !tusUpload && !publicAuth && !proxiedKeycloak
+        boolean publicObject = PUBLIC_OBJECT_PREFIXES.stream().anyMatch(path::startsWith);
+        return cookieAuthenticated && stateChanging && !tusUpload && !publicAuth && !proxiedKeycloak && !publicObject
                 ? ServerWebExchangeMatcher.MatchResult.match()
                 : ServerWebExchangeMatcher.MatchResult.notMatch();
     }
