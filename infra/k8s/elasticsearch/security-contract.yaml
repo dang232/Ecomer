@@ -19,6 +19,22 @@ data:
       users: [search-service]
     operator:
       users: [operator]
+  bootstrap-lifecycle.yml: |
+    mode: bootstrap-only
+    initial_master_nodes: [elasticsearch-0, elasticsearch-1, elasticsearch-2]
+    existing_pvc: preserve-ordinal-pvc-and-cluster-uuid
+    replacement: verify-cluster-uuid-before-rejoin
+    mismatch: fail-closed-on-cluster-uuid-or-pvc-identity-mismatch
+    recovery: operator-confirmed-new-cluster-only
+  tls-contract.yml: |
+    secret: elasticsearch-http-transport-tls
+    ca_key: ca.crt
+    certificate_key: tls.crt
+    private_key: tls.key
+    required_sans: [elasticsearch, elasticsearch-headless, elasticsearch-0.elasticsearch-headless, elasticsearch-1.elasticsearch-headless, elasticsearch-2.elasticsearch-headless]
+    required_eku: [serverAuth, clientAuth]
+    hostname_verification: full
+    missing_or_invalid_material: fail-closed
   restore-security-index.md: |
     Restore procedure is operator-only and must use authenticated HTTPS with the operator principal.
     Restore the `.security-7` index before application indices; verify role mappings and authenticate

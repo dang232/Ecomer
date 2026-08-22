@@ -59,6 +59,9 @@ spec:
   serviceName: elasticsearch-headless
   replicas: 3
   podManagementPolicy: Parallel
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
   selector:
     matchLabels:
       app.kubernetes.io/name: elasticsearch
@@ -66,7 +69,7 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: elasticsearch
-        app.kubernetes.io/part-of: vnshop
+        app.kubernetes.io/part-of: vnshop-elasticsearch
     spec:
       terminationGracePeriodSeconds: 120
       securityContext:
@@ -87,6 +90,61 @@ spec:
         labelSelector:
           matchLabels: {app.kubernetes.io/name: elasticsearch}
       initContainers:
+      - name: generate-file-realm
+        image: docker.elastic.co/elasticsearch/elasticsearch@sha256:754c3d8ca6f74acba58eb0610b8479a13c36df09ac1a4e0f2667dc167d377b84
+        command: [bash, -ec]
+        args:
+        - |
+          umask 077
+          test -n "$ELASTICSEARCH_ELASTIC_PASSWORD"
+          test -n "$ELASTICSEARCH_OPERATOR_PASSWORD"
+          test -n "$ELASTICSEARCH_SEARCH_PASSWORD"
+          test "$ELASTICSEARCH_ELASTIC_PASSWORD" != "$ELASTICSEARCH_OPERATOR_PASSWORD"
+          test "$ELASTICSEARCH_ELASTIC_PASSWORD" != "$ELASTICSEARCH_SEARCH_PASSWORD"
+          test "$ELASTICSEARCH_OPERATOR_PASSWORD" != "$ELASTICSEARCH_SEARCH_PASSWORD"
+          rm -rf /identity/*
+          cp -r /usr/share/elasticsearch/config/. /identity/
+          mkdir -p /identity/certs
+           cat /tls/ca.crt > /identity/certs/ca.crt
+           cat /tls/tls.crt > /identity/certs/tls.crt
+           cat /tls/tls.key > /identity/certs/tls.key
+          chmod 400 /identity/certs/ca.crt /identity/certs/tls.crt /identity/certs/tls.key
+          cat > /identity/roles.yml <<'EOF'
+          search_service:
+            cluster: [monitor]
+            indices:
+            - names: [products]
+              privileges: [read, view_index_metadata]
+          operator:
+            cluster: [all]
+            indices:
+            - names: ["*"]
+              privileges: [all]
+          EOF
+          test -s /identity/roles.yml
+          ES_PATH_CONF=/identity /usr/share/elasticsearch/bin/elasticsearch-users useradd operator -p "$ELASTICSEARCH_OPERATOR_PASSWORD" -r operator
+          ES_PATH_CONF=/identity /usr/share/elasticsearch/bin/elasticsearch-users useradd search-service -p "$ELASTICSEARCH_SEARCH_PASSWORD" -r search_service
+          cat > /identity/role_mapping.yml <<'EOF'
+          search_service:
+          - "user:search-service"
+          operator:
+          - "user:operator"
+          EOF
+          for file in /identity/users /identity/users_roles /identity/roles.yml /identity/role_mapping.yml /identity/certs/ca.crt /identity/certs/tls.crt /identity/certs/tls.key; do
+            test -s "$file"
+            mode="$(stat -c '%a' "$file")"
+            test "$mode" = 600 -o "$mode" = 400
+          done
+        env:
+        - name: ELASTICSEARCH_ELASTIC_PASSWORD
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-elasticsearch-elastic-password}}
+        - name: ELASTICSEARCH_OPERATOR_PASSWORD
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-elasticsearch-operator-password}}
+        - name: ELASTICSEARCH_SEARCH_PASSWORD
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: search-service-elasticsearch-password}}
+        volumeMounts:
+        - {name: elasticsearch-config, mountPath: /identity}
+        - {name: elasticsearch-tls, mountPath: /tls, readOnly: true}
       - name: validate-tls-and-ordinal
         image: busybox@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
         command: [sh, -ec]
@@ -104,9 +162,11 @@ spec:
         - {name: https, containerPort: 9200}
         - {name: transport, containerPort: 9300}
         env:
-        - {name: discovery.seed_hosts, value: elasticsearch-0.elasticsearch-headless,elasticsearch-1.elasticsearch-headless,elasticsearch-2.elasticsearch-headless}
-        - {name: cluster.initial_master_nodes, value: elasticsearch-0,elasticsearch-1,elasticsearch-2}
-        - {name: node.roles, value: master,data,ingest}
+        - name: POD_NAME
+          valueFrom: {fieldRef: {fieldPath: metadata.name}}
+        - {name: discovery.seed_hosts, value: "elasticsearch-0.elasticsearch-headless,elasticsearch-1.elasticsearch-headless,elasticsearch-2.elasticsearch-headless"}
+        - {name: network.publish_host, value: "$(POD_NAME).elasticsearch-headless"}
+        - {name: node.roles, value: "master,data,ingest"}
         - {name: cluster.name, value: vnshop-search}
         - {name: xpack.security.enabled, value: "true"}
         - {name: xpack.security.http.ssl.enabled, value: "true"}
@@ -118,20 +178,29 @@ spec:
         - {name: xpack.security.transport.ssl.certificate, value: /usr/share/elasticsearch/config/certs/tls.crt}
         - {name: xpack.security.transport.ssl.key, value: /usr/share/elasticsearch/config/certs/tls.key}
         - {name: xpack.security.transport.ssl.certificate_authorities, value: /usr/share/elasticsearch/config/certs/ca.crt}
-        - {name: index.number_of_shards, value: "3"}
-        - {name: index.number_of_replicas, value: "2"}
         - {name: ES_JAVA_OPTS, value: -Xms1g -Xmx1g}
         - name: ELASTIC_PASSWORD
+          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-elasticsearch-elastic-password}}
+        - name: ELASTICSEARCH_OPERATOR_PASSWORD
           valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-elasticsearch-operator-password}}
+        command: [bash, -ec]
+        args:
+        - |
+          shopt -s nullglob
+          state_files=(/usr/share/elasticsearch/data/nodes/0/_state/global-*.st)
+          if (( ${#state_files[@]} == 0 )); then
+            exec /usr/local/bin/docker-entrypoint.sh elasticsearch -E cluster.initial_master_nodes=elasticsearch-0,elasticsearch-1,elasticsearch-2
+          fi
+          exec /usr/local/bin/docker-entrypoint.sh
         readinessProbe:
           exec:
-            command: [sh, -ec, 'curl --fail --silent --show-error --cacert /usr/share/elasticsearch/config/certs/ca.crt --user "operator:${ELASTIC_PASSWORD}" https://127.0.0.1:9200/_cluster/health?wait_for_status=yellow']
+             command: [sh, -ec, 'curl --fail --silent --show-error --cacert /usr/share/elasticsearch/config/certs/ca.crt --user "operator:${ELASTICSEARCH_OPERATOR_PASSWORD}" https://${HOSTNAME}.elasticsearch-headless:9200/_cluster/health?wait_for_status=yellow']
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 12
         startupProbe:
           exec:
-            command: [sh, -ec, 'curl --fail --silent --show-error --cacert /usr/share/elasticsearch/config/certs/ca.crt --user "operator:${ELASTIC_PASSWORD}" https://127.0.0.1:9200/_security/_authenticate']
+             command: [sh, -ec, 'curl --fail --silent --show-error --cacert /usr/share/elasticsearch/config/certs/ca.crt --user "operator:${ELASTICSEARCH_OPERATOR_PASSWORD}" https://${HOSTNAME}.elasticsearch-headless:9200/_security/_authenticate']
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 60
@@ -148,10 +217,12 @@ spec:
           capabilities: {drop: [ALL]}
         volumeMounts:
         - {name: data, mountPath: /usr/share/elasticsearch/data}
-        - {name: elasticsearch-tls, mountPath: /usr/share/elasticsearch/config/certs, readOnly: true}
+        - {name: elasticsearch-config, mountPath: /usr/share/elasticsearch/config}
       volumes:
+      - name: elasticsearch-config
+        emptyDir: {medium: Memory}
       - name: elasticsearch-tls
-        secret: {secretName: elasticsearch-http-transport-tls, defaultMode: 0400}
+        secret: {secretName: elasticsearch-http-transport-tls, defaultMode: 0440}
   volumeClaimTemplates:
   - metadata:
       name: data
@@ -185,6 +256,9 @@ spec:
   - from:
     - podSelector: {matchLabels: {app.kubernetes.io/name: elasticsearch}}
     ports: [{protocol: TCP, port: 9300}]
+  - from:
+    - podSelector: {matchLabels: {app.kubernetes.io/name: elasticsearch-snapshot-contract}}
+    ports: [{protocol: TCP, port: 9200}]
   egress:
   - to:
     - podSelector: {matchLabels: {app.kubernetes.io/name: elasticsearch}}
@@ -195,8 +269,29 @@ spec:
     - {protocol: UDP, port: 53}
     - {protocol: TCP, port: 53}
   - to:
-    - namespaceSelector: {}
-    ports: [{protocol: TCP, port: 443}]
+    - podSelector: {matchLabels: {app.kubernetes.io/name: minio}}
+    ports: [{protocol: TCP, port: 9000}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: elasticsearch-snapshot-allow
+  annotations: {argocd.argoproj.io/sync-wave: "-20"}
+spec:
+  podSelector: {matchLabels: {app.kubernetes.io/name: elasticsearch-snapshot-contract}}
+  policyTypes: [Ingress, Egress]
+  egress:
+  - to:
+    - podSelector: {matchLabels: {app.kubernetes.io/name: elasticsearch}}
+    ports: [{protocol: TCP, port: 9200}]
+  - to:
+    - podSelector: {matchLabels: {app.kubernetes.io/name: minio}}
+    ports: [{protocol: TCP, port: 9000}]
+  - to:
+    - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: kube-system}}
+    ports:
+    - {protocol: UDP, port: 53}
+    - {protocol: TCP, port: 53}
 ---
 apiVersion: batch/v1
 kind: Job
@@ -222,7 +317,13 @@ spec:
         - |
           test -n "$ELASTICSEARCH_OPERATOR_PASSWORD"
           curl --fail --silent --show-error --cacert /tls/ca.crt --user "operator:${ELASTICSEARCH_OPERATOR_PASSWORD}" https://elasticsearch:9200/_cluster/health?wait_for_status=yellow
-          echo snapshot repository registration, security-index restore, and reindex are operator-owned contracts
+          curl --fail --silent --show-error --cacert /tls/ca.crt --user "operator:${ELASTICSEARCH_OPERATOR_PASSWORD}" https://elasticsearch:9200/_snapshot/vnshop-s3
+          curl --fail --silent --show-error --cacert /tls/ca.crt --user "operator:${ELASTICSEARCH_OPERATOR_PASSWORD}" https://elasticsearch:9200/_slm/policy/vnshop-daily
+          curl --fail --silent --show-error --cacert /tls/ca.crt --user "operator:${ELASTICSEARCH_OPERATOR_PASSWORD}" https://elasticsearch:9200/_security/user/operator
+          curl --fail --silent --show-error --cacert /tls/ca.crt --user "operator:${ELASTICSEARCH_OPERATOR_PASSWORD}" https://elasticsearch:9200/_security/user/search-service
+          curl --fail --silent --show-error --cacert /tls/ca.crt --user "operator:${ELASTICSEARCH_OPERATOR_PASSWORD}" https://elasticsearch:9200/_security/role/search_service
+          curl --fail --silent --show-error --cacert /tls/ca.crt --user "operator:${ELASTICSEARCH_OPERATOR_PASSWORD}" https://elasticsearch:9200/_security/role-mapping/search_service
+          printf '%s\n' '{"status":"PASS","contract":"authenticated-snapshot-security-state"}'
         volumeMounts: [{name: tls, mountPath: /tls, readOnly: true}]
       volumes:
       - name: tls
