@@ -1,0 +1,95 @@
+# Explicit local development overlay. This file is never auto-loaded.
+# Use: docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile apps up -d
+# Debug ports are loopback-only and must not be copied to shared environments.
+services:
+  order-service:
+    environment:
+      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=127.0.0.1:5005
+    ports:
+      - "127.0.0.1:5005:5005"
+
+  payment-service:
+    environment:
+      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=127.0.0.1:5006
+    ports:
+      - "127.0.0.1:5006:5006"
+
+  product-service:
+    environment:
+      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=127.0.0.1:5007
+    ports:
+      - "127.0.0.1:5007:5007"
+
+  api-gateway:
+    environment:
+      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=127.0.0.1:5008
+    ports:
+      - "127.0.0.1:5008:5008"
+
+  postgres-legacy:
+    ports:
+      - "127.0.0.1:5432:5432"
+  postgres-user:
+    ports:
+      - "127.0.0.1:5433:5432"
+  postgres-product:
+    ports:
+      - "127.0.0.1:5434:5432"
+  postgres-order:
+    ports:
+      - "127.0.0.1:5435:5432"
+  postgres-payment:
+    ports:
+      - "127.0.0.1:5436:5432"
+  postgres-inventory:
+    ports:
+      - "127.0.0.1:5437:5432"
+  postgres-search:
+    ports:
+      - "127.0.0.1:5438:5432"
+  postgres-shipping:
+    ports:
+      - "127.0.0.1:5439:5432"
+  postgres-cart:
+    ports:
+      - "127.0.0.1:5442:5432"
+  postgres-invoice:
+    ports:
+      - "127.0.0.1:5441:5432"
+  timescaledb:
+    ports:
+      - "127.0.0.1:5440:5432"
+  kafka:
+    ports:
+      - "127.0.0.1:9092:9092"
+      - "127.0.0.1:29092:29092"
+  minio:
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+  jaeger:
+    ports:
+      - "127.0.0.1:16686:16686"
+      - "127.0.0.1:14250:14250"
+      - "127.0.0.1:4318:4318"
+  grafana:
+    ports:
+      - "127.0.0.1:3001:3000"
+  loki:
+    ports:
+      - "127.0.0.1:3100:3100"
+  alertmanager:
+    ports:
+      - "127.0.0.1:9093:9093"
+  cart-service:
+    ports:
+      - "127.0.0.1:8084:8084"
+  notification-service:
+    ports:
+      - "127.0.0.1:8087:8087"
+  messaging-service:
+    ports:
+      - "127.0.0.1:8095:8095"
+  unleash:
+    ports:
+      - "127.0.0.1:4242:4242"
