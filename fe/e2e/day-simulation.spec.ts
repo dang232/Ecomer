@@ -13,6 +13,7 @@ import {
   type ProductListResponse,
 } from "./_api";
 import { loginAsPersona, registerAndLoginViaOidc, uniqueTestId } from "./_auth";
+import { createTrustedSellerProduct } from "./_commerce";
 import { credentialForPersona } from "./modernization/_credentials";
 
 /**
@@ -151,7 +152,7 @@ test.describe("day simulation — buyer", () => {
   }) => {
     const auth = await registerBuyer(request);
     const headers = authHeaders(auth);
-    const product = await firstProduct(request);
+    const product = await createTrustedSellerProduct(request);
 
     // 1) Cart: add, read, update qty, remove, then add again for checkout
     const add1 = await request.post(`${apiURL}/cart/items`, {
@@ -231,8 +232,15 @@ test.describe("day simulation — buyer", () => {
           district: "101",
           city: "Ho Chi Minh",
         },
+        shippingDetails: {
+          recipientName: "Day Sim",
+          recipientPhone: "0901234567",
+          wardCode: "1442",
+          districtCode: "101",
+          provinceCode: "79",
+        },
         paymentMethod: "COD",
-        items: [{ productId: product.id, quantity: 1 }],
+        items: [{ productId: product.id, variantSku: product.sku, quantity: 1 }],
       },
     });
     if (!place.ok()) {
@@ -258,8 +266,15 @@ test.describe("day simulation — buyer", () => {
           district: "101",
           city: "Ho Chi Minh",
         },
+        shippingDetails: {
+          recipientName: "Day Sim",
+          recipientPhone: "0901234567",
+          wardCode: "1442",
+          districtCode: "101",
+          provinceCode: "79",
+        },
         paymentMethod: "COD",
-        items: [{ productId: product.id, quantity: 1 }],
+        items: [{ productId: product.id, variantSku: product.sku, quantity: 1 }],
       },
     });
     expect(replay.ok()).toBeTruthy();
@@ -356,7 +371,7 @@ test.describe("day simulation — buyer", () => {
       password: PASSWORD,
     });
 
-    const product = await firstProduct(request);
+    const product = await createTrustedSellerProduct(request);
     await page.goto(`/product/${product.id}`);
     const addBtn = page.getByRole("button", { name: /add to cart|thêm vào giỏ/i }).first();
     await expect(addBtn).toBeVisible({ timeout: 15_000 });
@@ -548,7 +563,7 @@ test.describe("day simulation — payment-method shells", () => {
     const headersA = authHeaders(buyerA);
     const seller1 = await loginForPersona(request, "seller");
     const headersSeller1 = authHeaders(seller1);
-    const product = await firstProduct(request);
+    const product = await createTrustedSellerProduct(request);
 
     // Step 1: buyer A places a COD order.
     const idem = `idor-return-${uniqueTestId()}`;
@@ -561,8 +576,15 @@ test.describe("day simulation — payment-method shells", () => {
           district: "101",
           city: "Ho Chi Minh",
         },
+        shippingDetails: {
+          recipientName: "Return IDOR Buyer",
+          recipientPhone: "0901234572",
+          wardCode: "1442",
+          districtCode: "101",
+          provinceCode: "79",
+        },
         paymentMethod: "COD",
-        items: [{ productId: product.id, quantity: 1 }],
+        items: [{ productId: product.id, variantSku: product.sku, quantity: 1 }],
       },
     });
     expect(place.ok(), `place order: ${place.status()} ${await place.text()}`).toBeTruthy();
@@ -662,7 +684,7 @@ test.describe("day simulation — payment-method shells", () => {
     const headersB = authHeaders(buyerB);
 
     // Buyer A places a real order so the BE has a row to probe.
-    const product = await firstProduct(request);
+    const product = await createTrustedSellerProduct(request);
     const idem = `idor-test-${uniqueTestId()}`;
     const place = await request.post(`${apiURL}/orders`, {
       headers: { ...headersA, "Idempotency-Key": idem },
@@ -673,8 +695,15 @@ test.describe("day simulation — payment-method shells", () => {
           district: "101",
           city: "Ho Chi Minh",
         },
+        shippingDetails: {
+          recipientName: "Buyer A",
+          recipientPhone: "0901234573",
+          wardCode: "1442",
+          districtCode: "101",
+          provinceCode: "79",
+        },
         paymentMethod: "COD",
-        items: [{ productId: product.id, quantity: 1 }],
+        items: [{ productId: product.id, variantSku: product.sku, quantity: 1 }],
       },
     });
     expect(place.ok(), `place: ${place.status()} ${await place.text()}`).toBeTruthy();
