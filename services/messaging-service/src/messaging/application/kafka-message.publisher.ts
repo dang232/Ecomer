@@ -7,6 +7,7 @@ import {
 import { Kafka, Producer } from "kafkajs";
 import { MessagePublisher, PublishMessageInput } from "./message-publisher";
 import { createKafkaClientConfig, createKafkaProducerConfig } from "../infrastructure/kafka-client.config";
+import { injectKafkaContext } from "../infrastructure/kafka-trace-propagation";
 
 export const MESSAGING_TOPIC = "messaging.message.sent";
 
@@ -67,7 +68,11 @@ export class KafkaMessagePublisher
         acks: -1,
         // Partition by thread so messages within a thread stay ordered when
         // consumers parallelise across partitions.
-        messages: [{ key: input.threadId, value: JSON.stringify(payload) }],
+        messages: [{
+          key: input.threadId,
+          value: JSON.stringify(payload),
+          headers: injectKafkaContext({}),
+        }],
       });
     } catch (err) {
       this.logger.warn(
