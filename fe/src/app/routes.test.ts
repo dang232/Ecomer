@@ -18,6 +18,13 @@ describe("application routes", () => {
     expect(orderRoute?.loader).toBeUndefined();
   });
 
+  it("does not prefetch the buyer profile before the auth provider is ready", () => {
+    const root = router.routes.find((route) => route.path === "/");
+    const profileRoute = root?.children?.find((route) => route.path === "profile");
+
+    expect(profileRoute?.loader).toBeUndefined();
+  });
+
   it("registers seller onboarding under the authenticated storefront", () => {
     const root = router.routes.find((route) => route.path === "/");
     const sellerRegistrationRoute = root?.children?.find(
