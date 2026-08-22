@@ -10,8 +10,9 @@ FROM eclipse-temurin:25-jre-alpine AS runner
 RUN apk upgrade --no-cache && apk add --no-cache curl && addgroup -g 1000 vnshop && adduser -D -u 1000 -G vnshop vnshop
 WORKDIR /app
 COPY --from=builder /workspace/target/app.jar app.jar
+COPY --from=builder /workspace/target/opentelemetry-javaagent.jar /app/opentelemetry-javaagent.jar
 RUN chown -R vnshop:vnshop /app
 USER vnshop
 EXPOSE 8090
 HEALTHCHECK --interval=30s --timeout=20s --start-period=30s --retries=3 CMD curl -f http://localhost:8090/actuator/health/readiness || exit 1
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["sh", "-c", "export JAVA_TOOL_OPTIONS=\"-javaagent:/app/opentelemetry-javaagent.jar ${JAVA_TOOL_OPTIONS:-}\"; exec java -jar app.jar"]
