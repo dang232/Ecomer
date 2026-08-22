@@ -1,8 +1,9 @@
 import { test, expect, type Page, type APIRequestContext } from "@playwright/test";
 
 import { loginViaOidc, uniqueTestId } from "../_auth";
-import { readJson, type AuthResponse, type ProductListResponse } from "../_api";
+import { readJson, type AuthResponse } from "../_api";
 import { expectNoGlobalError } from "../_helpers";
+import { createTrustedSellerProduct } from "../_commerce";
 
 /**
  * Critical user flow: Product Search → Add to Cart → Checkout
@@ -30,8 +31,15 @@ interface TestBuyer {
 async function seedBuyer(request: APIRequestContext): Promise<TestBuyer> {
   const stamp = uniqueTestId();
   const email = `e2e_spec_checkout_${stamp}@vnshop.local`;
+  const phone = `+849${Date.now().toString().slice(-8)}`;
   const reg = await request.post(`${apiURL}/auth/register`, {
-    data: { firstName: "QA", lastName: "Buyer", email, password: PASSWORD },
+    data: {
+      firstName: "QA",
+      lastName: "Buyer",
+      email,
+      password: PASSWORD,
+      phone,
+    },
   });
   expect(reg.ok(), `register: ${reg.status()} ${await reg.text()}`).toBeTruthy();
   const login = await request.post(`${apiURL}/auth/login`, {
@@ -71,16 +79,8 @@ async function addProductToCart(
   expect(r.ok(), `add to cart: ${r.status()} ${await r.text()}`).toBeTruthy();
 }
 
-async function getFirstProductId(request: APIRequestContext): Promise<string> {
-  const r = await request.get(`${apiURL}/products?size=1`);
-  expect(r.ok()).toBeTruthy();
-  const id = (await readJson<ProductListResponse>(r)).data?.content?.[0]?.id;
-  expect(id, "expected a seeded product").toBeTruthy();
-  if (!id) throw new Error("expected a seeded product");
-  return id;
-}
-
 async function authenticatePage(page: Page, buyer: TestBuyer): Promise<void> {
+  await page.context().clearCookies();
   await loginViaOidc(page, buyer.email, PASSWORD);
 }
 
@@ -118,8 +118,8 @@ test.describe("Checkout Flow", () => {
 
   test("Cart shows correct items and total", async ({ page }) => {
     const buyer = await seedBuyer(page.request);
-    const productId = await getFirstProductId(page.request);
-    await addProductToCart(page.request, buyer, productId, 2);
+    const product = await createTrustedSellerProduct(page.request);
+    await addProductToCart(page.request, buyer, product.id, 2);
 
     await authenticatePage(page, buyer);
     await page.goto("/cart");
@@ -152,8 +152,8 @@ test.describe("Checkout Flow", () => {
 
   test("Checkout with cart but no address shows address prompt", async ({ page }) => {
     const buyer = await seedBuyer(page.request);
-    const productId = await getFirstProductId(page.request);
-    await addProductToCart(page.request, buyer, productId);
+    const product = await createTrustedSellerProduct(page.request);
+    await addProductToCart(page.request, buyer, product.id);
 
     await authenticatePage(page, buyer);
     await page.goto("/checkout");
@@ -174,8 +174,8 @@ test.describe("Checkout Flow", () => {
     page,
   }) => {
     const buyer = await seedBuyer(page.request);
-    const productId = await getFirstProductId(page.request);
-    await addProductToCart(page.request, buyer, productId);
+    const product = await createTrustedSellerProduct(page.request);
+    await addProductToCart(page.request, buyer, product.id);
     await seedAddress(page.request, buyer);
 
     await authenticatePage(page, buyer);
@@ -251,8 +251,8 @@ test.describe("Checkout Flow", () => {
 
   test("Checkout 4-step progress indicator is visible throughout", async ({ page }) => {
     const buyer = await seedBuyer(page.request);
-    const productId = await getFirstProductId(page.request);
-    await addProductToCart(page.request, buyer, productId);
+    const product = await createTrustedSellerProduct(page.request);
+    await addProductToCart(page.request, buyer, product.id);
     await seedAddress(page.request, buyer);
 
     await authenticatePage(page, buyer);
@@ -280,8 +280,8 @@ test.describe("Checkout Flow", () => {
 
   test("Can update cart item quantity from cart page", async ({ page }) => {
     const buyer = await seedBuyer(page.request);
-    const productId = await getFirstProductId(page.request);
-    await addProductToCart(page.request, buyer, productId, 1);
+    const product = await createTrustedSellerProduct(page.request);
+    await addProductToCart(page.request, buyer, product.id, 1);
 
     await authenticatePage(page, buyer);
     await page.goto("/cart");
@@ -302,8 +302,8 @@ test.describe("Checkout Flow", () => {
 
   test("Can remove item from cart", async ({ page }) => {
     const buyer = await seedBuyer(page.request);
-    const productId = await getFirstProductId(page.request);
-    await addProductToCart(page.request, buyer, productId, 1);
+    const product = await createTrustedSellerProduct(page.request);
+    await addProductToCart(page.request, buyer, product.id, 1);
 
     await authenticatePage(page, buyer);
     await page.goto("/cart");
@@ -313,11 +313,11 @@ test.describe("Checkout Flow", () => {
     });
 
     // Remove item
-    const removeBtn = page.getByRole("button", { name: /^Remove$|^Xo/i }).first();
+    const removeBtn = page.getByRole("button", { name: /Remove from cart|Xóa khỏi giỏ/i }).first();
     await removeBtn.click();
     await page
       .getByRole("dialog")
-      .getByRole("button", { name: /^Remove$|^Xo/i })
+      .getByRole("button", { name: /^Remove$|^Xóa/i })
       .click();
 
     // Cart should now be empty or item should be gone
