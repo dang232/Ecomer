@@ -23,13 +23,63 @@ spec:
   - from:
     - podSelector:
         matchLabels:
-          app.kubernetes.io/part-of: vnshop
+           app.kubernetes.io/part-of: vnshop
     - namespaceSelector:
         matchLabels:
-          kubernetes.io/metadata.name: ingress-nginx
+           kubernetes.io/metadata.name: ingress-nginx
+    ports:
+    - {protocol: TCP, port: 8080}
+    - {protocol: TCP, port: 8081}
+    - {protocol: TCP, port: 8082}
+    - {protocol: TCP, port: 8083}
+    - {protocol: TCP, port: 8084}
+    - {protocol: TCP, port: 8086}
+    - {protocol: TCP, port: 8087}
+    - {protocol: TCP, port: 8088}
+    - {protocol: TCP, port: 8090}
+    - {protocol: TCP, port: 8091}
+    - {protocol: TCP, port: 8092}
+    - {protocol: TCP, port: 8093}
+    - {protocol: TCP, port: 8094}
+    - {protocol: TCP, port: 8095}
+    - {protocol: TCP, port: 8096}
+    - {protocol: TCP, port: 8097}
+    - {protocol: TCP, port: 8098}
+    - {protocol: TCP, port: 9000}
+    - {protocol: TCP, port: 9092}
+    - {protocol: TCP, port: 9093}
+    - {protocol: TCP, port: 9094}
+    - {protocol: TCP, port: 9095}
+    - {protocol: TCP, port: 9200}
   egress:
   - to:
-    - podSelector: {}
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/part-of: vnshop
+    ports:
+    - {protocol: TCP, port: 8080}
+    - {protocol: TCP, port: 8081}
+    - {protocol: TCP, port: 8082}
+    - {protocol: TCP, port: 8083}
+    - {protocol: TCP, port: 8084}
+    - {protocol: TCP, port: 8086}
+    - {protocol: TCP, port: 8087}
+    - {protocol: TCP, port: 8088}
+    - {protocol: TCP, port: 8090}
+    - {protocol: TCP, port: 8091}
+    - {protocol: TCP, port: 8092}
+    - {protocol: TCP, port: 8093}
+    - {protocol: TCP, port: 8094}
+    - {protocol: TCP, port: 8095}
+    - {protocol: TCP, port: 8096}
+    - {protocol: TCP, port: 8097}
+    - {protocol: TCP, port: 8098}
+    - {protocol: TCP, port: 9000}
+    - {protocol: TCP, port: 9092}
+    - {protocol: TCP, port: 9093}
+    - {protocol: TCP, port: 9094}
+    - {protocol: TCP, port: 9095}
+    - {protocol: TCP, port: 9200}
   - to:
     - namespaceSelector:
         matchLabels:
@@ -37,21 +87,59 @@ spec:
     ports:
     - {protocol: UDP, port: 53}
     - {protocol: TCP, port: 53}
-  - to:
-    - namespaceSelector: {}
-    ports:
-    - {protocol: TCP, port: 443}
-  - to:
-    - ipBlock:
-        cidr: 0.0.0.0/0
-        except:
-        - 10.0.0.0/8
-        - 100.64.0.0/10
-        - 127.0.0.0/8
-        - 169.254.0.0/16
-        - 172.16.0.0/12
-        - 192.168.0.0/16
-        - 224.0.0.0/4
-        - 240.0.0.0/4
-    ports:
-    - {protocol: TCP, port: 443}
+  # External HTTPS egress must use an approved egress gateway/CIDR policy.
+  # It is intentionally not open from every workload in this base policy.
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-frontend
+spec:
+  podSelector:
+    matchLabels: {app.kubernetes.io/name: vnshop-frontend}
+  policyTypes: [Ingress]
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels: {kubernetes.io/metadata.name: ingress-nginx}
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: ingress-nginx
+          app.kubernetes.io/component: controller
+    ports: [{protocol: TCP, port: 8080}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-api-gateway
+spec:
+  podSelector:
+    matchLabels: {app.kubernetes.io/name: vnshop-api-gateway}
+  policyTypes: [Ingress]
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels: {kubernetes.io/metadata.name: ingress-nginx}
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: ingress-nginx
+          app.kubernetes.io/component: controller
+    ports: [{protocol: TCP, port: 8080}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-minio
+spec:
+  podSelector:
+    matchLabels: {app.kubernetes.io/name: minio}
+  policyTypes: [Ingress]
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels: {kubernetes.io/metadata.name: ingress-nginx}
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: ingress-nginx
+          app.kubernetes.io/component: controller
+    ports: [{protocol: TCP, port: 9000}]
