@@ -7,6 +7,7 @@ import com.vnshop.inventoryservice.application.ReserveStockUseCase.ReserveStockR
 import com.vnshop.proto.inventory.*;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import io.grpc.ServerInterceptors;
 import io.grpc.stub.StreamObserver;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -44,7 +45,7 @@ public class GrpcInventoryServer extends InventoryServiceGrpc.InventoryServiceIm
     @PostConstruct
     public void start() throws IOException {
         server = ServerBuilder.forPort(port)
-            .addService(this)
+            .addService(ServerInterceptors.intercept(this, new GrpcTracePropagationInterceptor()))
             .build()
             .start();
         log.info("Inventory gRPC server started on port {}", port);
