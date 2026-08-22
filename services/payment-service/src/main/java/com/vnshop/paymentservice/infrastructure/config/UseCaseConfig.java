@@ -27,8 +27,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestClient;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 
 import java.util.List;
+import java.time.Duration;
 
 @Configuration
 @EnableConfigurationProperties({
@@ -105,7 +107,10 @@ public class UseCaseConfig {
      */
     @Bean
     RestClient.Builder restClientBuilder() {
-        return RestClient.builder();
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(Duration.ofSeconds(1));
+        requestFactory.setReadTimeout(Duration.ofSeconds(2));
+        return RestClient.builder().requestFactory(requestFactory);
     }
 
     /**
