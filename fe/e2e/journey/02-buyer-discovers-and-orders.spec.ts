@@ -377,6 +377,13 @@ test.describe.serial("Chapter 2 — Buyer discovers and orders", () => {
                 district: "101",
                 city: "Ho Chi Minh",
               },
+              shippingDetails: {
+                recipientName: "Journey Buyer",
+                recipientPhone: "0901234569",
+                wardCode: "1442",
+                districtCode: "101",
+                provinceCode: "79",
+              },
               items: [{ productId, quantity: 1 }],
               paymentMethod: "COD",
             },
