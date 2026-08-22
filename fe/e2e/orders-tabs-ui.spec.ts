@@ -1,14 +1,9 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
 
+import { readJson, type AuthResponse, type OrderListResponse, type OrderResponse } from "./_api";
 import { loginViaOidc, uniqueTestId } from "./_auth";
-import {
-  readJson,
-  type AuthResponse,
-  type OrderListResponse,
-  type OrderResponse,
-  type ProductListResponse,
-} from "./_api";
 import { expectNoGlobalError } from "./_helpers";
+import { clearBuyerCart, createTrustedSellerProduct } from "./_commerce";
 
 /**
  * UI-driven QA spec for the /orders tab filter.
@@ -50,14 +45,12 @@ async function seedBuyer(request: APIRequestContext): Promise<SeededBuyer> {
 
 async function placePendingOrder(request: APIRequestContext, buyer: SeededBuyer): Promise<string> {
   const headers = { Authorization: `Bearer ${buyer.accessToken}` };
-  const products = await request.get(`${apiURL}/products?size=1`);
-  const productId = (await readJson<ProductListResponse>(products)).data?.content?.[0]?.id;
-  expect(productId).toBeTruthy();
-  if (!productId) throw new Error("expected a seeded product");
+  const product = await createTrustedSellerProduct(request);
+  await clearBuyerCart(request, buyer.accessToken);
 
   await request.post(`${apiURL}/cart/items`, {
     headers,
-    data: { productId, quantity: 1 },
+    data: { productId: product.id, quantity: 1 },
   });
 
   const address = {
@@ -76,7 +69,14 @@ async function placePendingOrder(request: APIRequestContext, buyer: SeededBuyer)
     headers: { ...headers, "Idempotency-Key": idem },
     data: {
       shippingAddress: address,
-      items: [{ productId, quantity: 1 }],
+      shippingDetails: {
+        recipientName: "QA Tabs",
+        recipientPhone: "0901234570",
+        wardCode: "1442",
+        districtCode: "101",
+        provinceCode: "79",
+      },
+      items: [{ productId: product.id, variantSku: product.sku, quantity: 1 }],
       paymentMethod: "COD",
     },
   });
@@ -104,6 +104,7 @@ test.describe("orders tab filter UI", () => {
     const orderId = await placePendingOrder(page.request, buyer);
     const idShort = orderId.slice(0, 8);
 
+    await page.context().clearCookies();
     await loginViaOidc(page, buyer.email, PASSWORD);
     await page.goto("/orders");
     await expect(page.getByRole("heading", { name: /My Orders|Đơn hàng của tôi/i })).toBeVisible({
@@ -128,6 +129,7 @@ test.describe("orders tab filter UI", () => {
     const buyer = await seedBuyer(page.request);
     await placePendingOrder(page.request, buyer);
 
+    await page.context().clearCookies();
     await loginViaOidc(page, buyer.email, PASSWORD);
     await page.goto("/orders");
     await expect(page.getByRole("heading", { name: /My Orders|Đơn hàng của tôi/i })).toBeVisible({

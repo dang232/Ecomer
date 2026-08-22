@@ -1,13 +1,8 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
 
-import {
-  readJson,
-  type AuthResponse,
-  type OrderListResponse,
-  type OrderResponse,
-  type ProductListResponse,
-} from "./_api";
+import { readJson, type AuthResponse, type OrderListResponse, type OrderResponse } from "./_api";
 import { loginViaOidc, uniqueTestId } from "./_auth";
+import { clearBuyerCart, createTrustedSellerProduct } from "./_commerce";
 
 /**
  * UI-driven QA spec for the buyer orders flow.
@@ -68,17 +63,13 @@ async function placePendingCodOrder(
 ): Promise<string> {
   const headers = { Authorization: `Bearer ${buyer.accessToken}` };
 
-  // Pull a real product so the order has something to reference.
-  const products = await request.get(`${apiURL}/products?size=1`);
-  expect(products.ok(), `products: ${products.status()}`).toBeTruthy();
-  const productId = (await readJson<ProductListResponse>(products)).data?.content?.[0]?.id;
-  expect(productId, "expected a seeded product").toBeTruthy();
-  if (!productId) throw new Error("expected a seeded product");
+  const product = await createTrustedSellerProduct(request);
+  await clearBuyerCart(request, buyer.accessToken);
 
   // Add to cart so the order has a server-side line item record.
   const add = await request.post(`${apiURL}/cart/items`, {
     headers,
-    data: { productId, quantity: 1 },
+    data: { productId: product.id, quantity: 1 },
   });
   expect(add.ok(), `cart add: ${add.status()} ${await add.text()}`).toBeTruthy();
 
@@ -102,7 +93,14 @@ async function placePendingCodOrder(
     headers: { ...headers, "Idempotency-Key": idem },
     data: {
       shippingAddress: address,
-      items: [{ productId, quantity: 1 }],
+      shippingDetails: {
+        recipientName: "QA Orders",
+        recipientPhone: "0901234571",
+        wardCode: "1442",
+        districtCode: "101",
+        provinceCode: "79",
+      },
+      items: [{ productId: product.id, variantSku: product.sku, quantity: 1 }],
       paymentMethod: "COD",
     },
   });
@@ -125,13 +123,12 @@ async function placePendingCodOrder(
 }
 
 async function loadOrdersAuthenticated(page: Page, email: string): Promise<void> {
+  await page.context().clearCookies();
   await loginViaOidc(page, email, PASSWORD);
   await page.goto("/orders");
-  // Wait for the orders list to render (or the login prompt — either is a real
-  // signal of what happened).
-  await expect(
-    page.getByText(/Order ID|Mã đơn|Log in to view your orders|Đăng nhập để xem/i),
-  ).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("heading", { name: /My Orders|Đơn hàng của tôi/i })).toBeVisible({
+    timeout: 20_000,
+  });
 }
 
 test.describe("orders page UI — cancel flow", () => {
