@@ -110,6 +110,9 @@ test.describe("dark-mode toggle UI", () => {
     // text-foreground after the codemod). Computed color in dark mode should
     // be a near-white token (#e6e9ef → rgb(230, 233, 239)), NOT one of the
     // light-mode dark grays (rgb(15, 23, 42) / rgb(31, 41, 55)).
+    await expect(page.locator("main h1, main h2, main h3").first()).toBeVisible({
+      timeout: 20_000,
+    });
     const fgColor = await page.evaluate(() => {
       const headings = document.querySelectorAll("h1, h2, h3");
       for (const h of Array.from(headings)) {
