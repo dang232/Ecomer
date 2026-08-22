@@ -14,6 +14,7 @@ const GATEWAY = process.env.GATEWAY ?? "http://localhost:8080";
 const SELLER_USER = process.env.SELLER_USER ?? "seller1";
 const SELLER_PASS = process.env.SELLER_PASS ?? "test";
 const FORCE = process.env.FORCE === "1";
+const TARGET_BACKFILL_SKUS = new Set(["SKU-IPH16-PM-256", "SKU-MBA-M4-13"]);
 
 const products = [
   // electronics
@@ -97,6 +98,9 @@ async function main() {
     };
     const existing = existingBySku.get(sku);
     if (existing) {
+      if (!TARGET_BACKFILL_SKUS.has(sku)) {
+        continue;
+      }
       if (existing.variant.parcel) {
         continue;
       }
