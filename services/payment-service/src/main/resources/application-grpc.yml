@@ -1,3 +1,6 @@
 grpc:
   server:
     port: 9094
+    auth:
+      service-id: ${GRPC_SERVER_AUTH_SERVICE_ID:order-service}
+      token: ${GRPC_SERVER_AUTH_TOKEN:}

@@ -8,6 +8,8 @@ import com.vnshop.paymentservice.domain.Payment;
 import com.vnshop.proto.payment.*;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import io.grpc.ServerInterceptors;
+import io.grpc.ServerServiceDefinition;
 import io.grpc.stub.StreamObserver;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -32,6 +34,12 @@ public class GrpcPaymentServer extends PaymentServiceGrpc.PaymentServiceImplBase
     @Value("${grpc.server.port:9094}")
     int port;
 
+    @Value("${grpc.server.auth.service-id:order-service}")
+    String expectedServiceId;
+
+    @Value("${grpc.server.auth.token:}")
+    String expectedServiceToken;
+
     public GrpcPaymentServer(ProcessPaymentUseCase processPaymentUseCase,
                              GetPaymentStatusUseCase getPaymentStatusUseCase) {
         this.processPaymentUseCase = processPaymentUseCase;
@@ -41,10 +49,17 @@ public class GrpcPaymentServer extends PaymentServiceGrpc.PaymentServiceImplBase
     @PostConstruct
     public void start() throws IOException {
         server = ServerBuilder.forPort(port)
-                .addService(this)
+                .addService(authenticatedService())
                 .build()
                 .start();
         log.info("Payment gRPC server started on port {}", port);
+    }
+
+    ServerServiceDefinition authenticatedService() {
+        return ServerInterceptors.intercept(
+                this,
+                new GrpcServiceAuthInterceptor(expectedServiceId, expectedServiceToken),
+                new GrpcTracePropagationInterceptor());
     }
 
     @PreDestroy
