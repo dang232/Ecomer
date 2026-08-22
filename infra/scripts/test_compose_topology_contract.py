@@ -1,6 +1,8 @@
 """Fail-closed contracts for the secure root Compose topology."""
 
 from pathlib import Path
+import os
+import re
 import subprocess
 import unittest
 
@@ -18,7 +20,18 @@ class ComposeTopologyContractTest(unittest.TestCase):
         for file in files:
             command.extend(["-f", str(file)])
         command.extend(["config", "--format", "json"])
-        result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, check=False)
+        environment = os.environ.copy()
+        for file in files:
+            for name in re.findall(r"\$\{([A-Z0-9_]+):\?[^}]*}", file.read_text(encoding="utf-8")):
+                environment.setdefault(name, f"compose-contract-{name.lower()}")
+        result = subprocess.run(
+            command,
+            cwd=ROOT,
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
         self.assertEqual(result.returncode, 0, result.stderr)
         return __import__("json").loads(result.stdout)
 
