@@ -1,6 +1,5 @@
 package com.vnshop.orderservice.infrastructure.outbox;
 
-import io.opentelemetry.api.trace.Span;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.annotation.PostConstruct;
@@ -96,9 +95,8 @@ public class OutboxPublisher {
     private void publishEvent(KafkaTemplate<String, Object> kafkaTemplate, OutboxEventJpaEntity event) {
         try {
             String topic = topicFor(event.getEventType());
-            ProducerRecord<String, Object> record = new ProducerRecord<>(topic,
+            ProducerRecord<String, Object> record = propagatedRecord(topic,
                     keyFor(event.getEventType(), event.getAggregateId(), event.getPayload()), event.toDomain());
-            record.headers().add("traceparent", ("00-" + Span.current().getSpanContext().getTraceId() + "-" + Span.current().getSpanContext().getSpanId() + "-01").getBytes());
             kafkaTemplate.send(record).get(sendTimeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS);
             event.markPublished();
             LOGGER.debug("Outbox event {} published to {}", event.getId(), topic);
@@ -127,5 +125,10 @@ public class OutboxPublisher {
             LOGGER.error("Outbox event {} moved to DEAD after {} attempts. aggregate={} type={}",
                     event.getId(), event.getAttemptCount(), event.getAggregateId(), event.getEventType());
         }
+    }
+
+    static <K, V> ProducerRecord<K, V> propagatedRecord(String topic, K key, V value) {
+        return com.vnshop.orderservice.infrastructure.observability.KafkaTracePropagation.inject(
+                new ProducerRecord<>(topic, key, value));
     }
 }
