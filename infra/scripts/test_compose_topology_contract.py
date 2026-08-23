@@ -57,7 +57,7 @@ class ComposeTopologyContractTest(unittest.TestCase):
             if isinstance(options, list):
                 options = dict(item.split("=", 1) for item in options if "=" in item)
             if "JAVA_TOOL_OPTIONS" in options:
-                self.assertIn("address=127.0.0.1:", options["JAVA_TOOL_OPTIONS"])
+                self.assertIn("address=*:", options["JAVA_TOOL_OPTIONS"])
 
     def test_staging_harness_is_not_named_staging(self) -> None:
         staging = yaml.safe_load((ROOT / "infra/compose/staging/docker-compose.staging.yml").read_text(encoding="utf-8"))

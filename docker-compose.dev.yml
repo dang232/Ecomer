@@ -1,28 +1,28 @@
 # Explicit local development overlay. This file is never auto-loaded.
 # Use: docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile apps up -d
-# Debug ports are loopback-only and must not be copied to shared environments.
+# Host debug ports are loopback-only; the JVM listeners bind the container interface.
 services:
   order-service:
     environment:
-      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=127.0.0.1:5005
+      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
     ports:
       - "127.0.0.1:5005:5005"
 
   payment-service:
     environment:
-      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=127.0.0.1:5006
+      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5006
     ports:
       - "127.0.0.1:5006:5006"
 
   product-service:
     environment:
-      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=127.0.0.1:5007
+      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5007
     ports:
       - "127.0.0.1:5007:5007"
 
   api-gateway:
     environment:
-      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=127.0.0.1:5008
+      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5008
     ports:
       - "127.0.0.1:5008:5008"
 
