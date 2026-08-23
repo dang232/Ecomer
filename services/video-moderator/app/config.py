@@ -14,10 +14,14 @@ class Settings(BaseSettings):
     kafka_topic_moderation_completed: str = "video.moderation.completed"
     kafka_topic_rejected: str = "video.rejected"
     kafka_topic_dlt: str = "video.moderation.dlt"
-    kafka_security_protocol: str = "PLAINTEXT"
+    kafka_security_protocol: str = "SASL_SSL"
     kafka_sasl_mechanism: str = "PLAIN"
     kafka_sasl_username: str = ""
     kafka_sasl_password: str = ""
+    kafka_ssl_cafile: str = "/etc/kafka/tls/ca.crt"
+    kafka_ssl_certfile: str = "/etc/kafka/tls/client.crt"
+    kafka_ssl_keyfile: str = "/etc/kafka/tls/client.key"
+    kafka_ssl_check_hostname: bool = True
 
     # Retry back-off delays in seconds between attempts.
     # Spec section 10: 3 attempts total, backoff 30s then 120s.

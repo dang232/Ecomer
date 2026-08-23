@@ -13,6 +13,7 @@ KafkaServer {
     user_svc-recommendations="${KAFKA_RECOMMENDATIONS_PASSWORD}"
     user_svc-invoice="${KAFKA_INVOICE_PASSWORD}"
     user_svc-messaging="${KAFKA_MESSAGING_PASSWORD}"
+    user_svc-notification="${KAFKA_NOTIFICATION_PASSWORD}"
     user_svc-user="${KAFKA_USER_PASSWORD}"
     user_svc-video-transcoder="${KAFKA_VIDEO_TRANSCODER_PASSWORD}"
     user_svc-video-moderator="${KAFKA_VIDEO_MODERATOR_PASSWORD}";

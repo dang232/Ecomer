@@ -30,6 +30,10 @@ def _build_producer(settings: Settings) -> KafkaProducer:
                 "sasl_mechanism": settings.kafka_sasl_mechanism,
                 "sasl_plain_username": settings.kafka_sasl_username,
                 "sasl_plain_password": settings.kafka_sasl_password,
+                "ssl_cafile": settings.kafka_ssl_cafile,
+                "ssl_certfile": settings.kafka_ssl_certfile,
+                "ssl_keyfile": settings.kafka_ssl_keyfile,
+                "ssl_check_hostname": settings.kafka_ssl_check_hostname,
             }
         )
     return KafkaProducer(**kwargs)

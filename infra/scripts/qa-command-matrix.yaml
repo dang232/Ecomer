@@ -1,0 +1,128 @@
+schema_version: qa-command-matrix.v1
+cases:
+  task-1-happy:
+    - id: python-version
+      command: [python, --version]
+      cwd: .
+    - id: workload-contract
+      command: [python, -c, "import re; x=open('infra/load-tests/workload-contract.yaml').read(); assert sum(map(int,re.findall(r'logical_count: (\\d+)',x))) == 20000000"]
+      cwd: .
+    - id: baseline
+      command: [python, infra/scripts/create-readiness-baseline.py, --commit, HEAD, --tree-sha, 'HEAD^{tree}', --target, isolated-fixture, --manifest, infra/load-tests/workload-contract.yaml, --output, baseline-task-1.json]
+      cwd: .
+  task-1-negative:
+    - id: all-target-rejections
+      command: [python, -c, "import subprocess,sys; base=[sys.executable,'infra/scripts/create-readiness-baseline.py','--commit','HEAD','--tree-sha','HEAD^{tree}','--manifest','infra/load-tests/workload-contract.yaml']; codes=[subprocess.run(base+['--target',t],capture_output=True).returncode for t in ['production','','mystery']]; assert all(code != 0 for code in codes)"]
+      cwd: .
+  task-2-happy:
+    - id: release-policy
+      command: [python, -m, pytest, -q, infra/scripts/test_validate_k8s_release.py]
+      cwd: .
+    - id: release-helper-contract
+      command: [python, -m, pytest, -q, infra/scripts/test_validate_k8s_release.py, infra/scripts/validate-k8s-release.test.py]
+      cwd: .
+  task-2-negative:
+    - id: release-policy-negative
+      command: [python, infra/scripts/validate-k8s-release.py, --environment, prod]
+      cwd: .
+      expect_failure: true
+  task-3-happy:
+    - id: kafka-contract
+      command: [python, -m, pytest, -q, infra/scripts/test_todo3_contracts.py]
+      cwd: .
+    - id: kafka-inventory
+      command: [python, infra/scripts/kafka-inventory-contract.py, --inventory, infra/kafka/topic-inventory.yaml]
+      cwd: .
+  task-3-negative:
+    - id: kafka-drill-negative
+      command: [python, -m, pytest, -q, infra/scripts/test_todo3_contracts.py, -k, "negative or reject or plaintext or production"]
+      cwd: .
+  task-4-happy:
+    - id: elasticsearch-contract
+      command: [python, -m, pytest, -q, infra/scripts/test_todo4_contracts.py]
+      cwd: .
+    - id: elasticsearch-topology
+      command: [python, infra/scripts/render-inventory.py, --overlay, infra/k8s/overlays/prod, --output, production-render-inventory.json]
+      cwd: .
+    - id: elasticsearch-topology
+      command: [python, infra/scripts/k8s-topology-contract.py, --inventory, production-render-inventory.json]
+      cwd: .
+  task-4-negative:
+    - id: elasticsearch-drill-negative
+      command: [python, -m, pytest, -q, infra/scripts/test_todo4_contracts.py, -k, "negative or reject or single or anonymous"]
+      cwd: .
+  task-5-happy:
+    - id: restore-contract
+      command: [python, -m, pytest, -q, infra/scripts/test_todo5_contracts.py]
+      cwd: .
+  task-5-negative:
+    - id: restore-negative
+      command: [python, infra/scripts/restore-drill.py, --target, production]
+      cwd: .
+      expect_failure: true
+  task-6-happy:
+    - id: dataset-contract
+      command: [python, -m, pytest, -q, infra/load-tests/dataset/test_generate.py]
+      cwd: .
+  task-6-negative:
+    - id: dataset-negative
+      command: [python, infra/load-tests/dataset/generate.py, --manifest, infra/load-tests/dataset/manifest.yaml, --target, production]
+      cwd: .
+      expect_failure: true
+  task-7-happy:
+    - id: k6-contract
+      command: [node, --test, infra/load-tests/k6-10k-dau.test.js]
+      cwd: .
+    - id: provider-preflight
+      command: [python, infra/load-tests/provider-isolation-preflight.py, --target, isolated-fixture]
+      cwd: .
+    - id: k6-inspect
+      command: [k6, inspect, infra/load-tests/k6-10k-dau.js]
+      cwd: .
+  task-7-negative:
+    - id: provider-negative
+      command: [python, infra/load-tests/provider-isolation-preflight.py, --target, production]
+      cwd: .
+      expect_failure: true
+  F3:
+    - id: api-runtime
+      command: [node, infra/scripts/e2e-day.mjs]
+      cwd: .
+      allow_blocked_external: true
+    - id: browser-runtime
+      command: [pnpm, --dir, fe, exec, playwright, test, --project=chromium]
+      cwd: .
+    - id: production-render
+      command: [kubectl, kustomize, infra/k8s/overlays/prod, --load-restrictor, LoadRestrictionsNone]
+      cwd: .
+    - id: release-runtime
+      command: [python, infra/scripts/validate-k8s-release.py, --environment, prod]
+      cwd: .
+    - id: dataset-runtime
+      command: [python, infra/load-tests/dataset/generate.py, --manifest, infra/load-tests/dataset/manifest.yaml, --target, isolated-fixture]
+      cwd: .
+    - id: provider-runtime
+      command: [python, infra/load-tests/provider-isolation-preflight.py, --target, isolated-fixture]
+      cwd: .
+    - id: k6-runtime
+      command: [k6, run, infra/load-tests/k6-10k-dau.js]
+      cwd: .
+    - id: restore-runtime
+      command: [python, infra/scripts/restore-drill.py, --target, isolated-fixture]
+      cwd: .
+  F4:
+    - id: scope-check
+      command: [git, diff, --check]
+      cwd: .
+    - id: allowed-path-contract
+      command: [python, -c, "import importlib.util; s=importlib.util.spec_from_file_location('e','infra/scripts/evidence_session.py'); e=importlib.util.module_from_spec(s); s.loader.exec_module(e); assert len(e.ALLOWED_PATHS) >= 30 and '*' not in '\\n'.join(e.ALLOWED_PATHS)"]
+      cwd: .
+    - id: scope-gate
+      command: [python, infra/scripts/scope_gate.py, --workspace-manifest, C:\\Users\\dangq\\AppData\\Local\\Temp\\vnshop-evidence\\prechange\\workspace\\file-manifest.json, --detached-manifest, C:\\Users\\dangq\\AppData\\Local\\Temp\\vnshop-evidence\\prechange\\detached\\file-manifest.json, --allowed-path-set, C:\\Users\\dangq\\AppData\\Local\\Temp\\vnshop-evidence\\prechange\\allowed-paths.txt]
+      cwd: .
+    - id: generator-safety
+      command: [python, -c, "import subprocess,sys; base=[sys.executable,'infra/load-tests/dataset/generate.py','--manifest','infra/load-tests/dataset/manifest.yaml']; targets=['production','provider-egress','','unknown','production-credential','same-cluster']; codes=[subprocess.run(base+['--target',t],capture_output=True).returncode for t in targets]; assert all(code != 0 for code in codes)"]
+      cwd: .
+    - id: diff-stat
+      command: [git, diff, --stat]
+      cwd: .

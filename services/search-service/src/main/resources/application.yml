@@ -37,23 +37,36 @@ spring:
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     properties:
-      security.protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_PLAINTEXT}
+      security.protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_SSL}
       sasl.mechanism: PLAIN
       sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_SASL_USERNAME}" password="${KAFKA_SASL_PASSWORD}";
       ssl.endpoint.identification.algorithm: https
+      ssl.truststore.location: ${KAFKA_SSL_TRUSTSTORE_LOCATION:}
+      ssl.truststore.password: ${KAFKA_SSL_TRUSTSTORE_PASSWORD:}
+      ssl.keystore.location: ${KAFKA_SSL_KEYSTORE_LOCATION:}
+      ssl.keystore.password: ${KAFKA_SSL_KEYSTORE_PASSWORD:}
     admin:
       properties:
-        security.protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_PLAINTEXT}
+        security.protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_SSL}
         sasl.mechanism: PLAIN
         sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_SASL_USERNAME}" password="${KAFKA_SASL_PASSWORD}";
+        ssl.truststore.location: ${KAFKA_SSL_TRUSTSTORE_LOCATION}
+        ssl.truststore.password: ${KAFKA_SSL_TRUSTSTORE_PASSWORD}
+        ssl.keystore.location: ${KAFKA_SSL_KEYSTORE_LOCATION}
+        ssl.keystore.password: ${KAFKA_SSL_KEYSTORE_PASSWORD}
+        ssl.client.auth: required
+        ssl.endpoint.identification.algorithm: https
     listener:
       observation-enabled: true
     template:
       observation-enabled: true
   elasticsearch:
-    uris: http://${ELASTICSEARCH_HOST:elasticsearch}:${ELASTICSEARCH_PORT:9200}
-    username: elastic
-    password: ${ELASTIC_PASSWORD}
+    uris: ${ELASTICSEARCH_URL:https://elasticsearch:9200}
+    username: ${ELASTICSEARCH_USERNAME:search-service}
+    password: ${ELASTICSEARCH_PASSWORD}
+    restclient:
+      ssl:
+        bundle: ${ELASTICSEARCH_SSL_BUNDLE:elasticsearch}
   security:
     oauth2:
       resourceserver:
@@ -89,7 +102,7 @@ management:
       validate-group-membership: false
       group:
         readiness:
-          include: readinessState,db
+          include: readinessState,db,elasticsearch
         liveness:
           include: livenessState
   tracing:
@@ -102,6 +115,17 @@ management:
 otel:
   traces:
     exporter: jaeger
+---
+spring:
+  config:
+    activate:
+      on-profile: "!local"
+  ssl:
+    bundle:
+      pem:
+        elasticsearch:
+          truststore:
+            certificate: ${ELASTICSEARCH_CA_CERTIFICATE:/etc/elasticsearch/tls/ca.crt}
   exporter:
     jaeger:
       endpoint: http://localhost:14250

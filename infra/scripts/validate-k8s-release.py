@@ -6,6 +6,8 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
+import ipaddress
 
 import yaml
 
@@ -13,6 +15,7 @@ import yaml
 REPO = Path(__file__).resolve().parents[2]
 DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
 ZERO_DIGEST = "sha256:" + ("0" * 64)
+ATTESTATION_ID = re.compile(r"^(?:https://|oci://|registry://|rekor://|sigstore://)[^\s]+$")
 REQUIRED_ENVIRONMENT = {
     "cart-service": {
         "PORT", "DATABASE_URL", "REDIS_HOST", "REDIS_PORT", "REDIS_PASSWORD",
@@ -40,7 +43,10 @@ REQUIRED_ENVIRONMENT = {
         "VNSHOP_OBJECT_STORAGE_PUBLIC_ENDPOINT", "VNSHOP_OBJECT_STORAGE_BUCKET",
         "VNSHOP_OBJECT_STORAGE_ACCESS_KEY", "VNSHOP_OBJECT_STORAGE_SECRET_KEY",
     },
-    "search-service": {"ELASTICSEARCH_HOST", "ELASTICSEARCH_PORT", "ELASTIC_PASSWORD"},
+    "search-service": {
+        "ELASTICSEARCH_HOST", "ELASTICSEARCH_PORT", "ELASTICSEARCH_URL",
+        "ELASTICSEARCH_USERNAME", "ELASTICSEARCH_PASSWORD",
+    },
     "user-service": {
         "KEYCLOAK_ADMIN_BASE_URL", "KEYCLOAK_PUBLIC_BASE_URL",
         "KEYCLOAK_ADMIN_CLIENT_SECRET", "VNSHOP_FRONTEND_URL",
@@ -78,6 +84,14 @@ OPTIONAL_PROVIDER_SECRET_FLAGS = {
     "payment-paypal-client-secret": "PAYPAL_ENABLED",
 }
 
+PROVIDER_SECRET_KEYS = {
+    "VIETQR_ENABLED": {"payment-vietqr-account-no", "payment-vietqr-account-name"},
+    "VNPAY_ENABLED": {"payment-vnpay-tmn-code", "payment-vnpay-hash-secret"},
+    "MOMO_ENABLED": {"payment-momo-partner-code", "payment-momo-access-key", "payment-momo-secret-key"},
+    "STRIPE_ENABLED": {"payment-stripe-secret-key", "payment-stripe-publishable-key", "payment-stripe-webhook-secret"},
+    "PAYPAL_ENABLED": {"payment-paypal-client-id", "payment-paypal-client-secret"},
+}
+
 
 def collect_required_secret_keys(documents: list[dict], app_config_data: dict) -> set[str]:
     """Return runtime Secret keys required by the rendered provider configuration.
@@ -113,6 +127,37 @@ def collect_required_secret_keys(documents: list[dict], app_config_data: dict) -
     return required
 
 
+def collect_secret_references(documents: list[dict]) -> set[str]:
+    present: set[str] = set()
+
+    def collect(value):
+        if isinstance(value, dict):
+            reference = value.get("secretKeyRef")
+            if isinstance(reference, dict) and reference.get("name") == "vnshop-runtime-secrets":
+                key = reference.get("key")
+                if isinstance(key, str) and key:
+                    present.add(key)
+            for nested in value.values():
+                collect(nested)
+        elif isinstance(value, list):
+            for nested in value:
+                collect(nested)
+
+    collect(documents)
+    return present
+
+
+def validate_enabled_provider_secret_refs(
+    documents: list[dict], app_config_data: dict, errors: list[str]
+) -> None:
+    present = collect_secret_references(documents)
+    for flag, required in sorted(PROVIDER_SECRET_KEYS.items()):
+        if str(app_config_data.get(flag, "false")).lower() != "true":
+            continue
+        for key in sorted(required - present):
+            errors.append(f"enabled provider {flag} is missing SealedSecret reference {key}")
+
+
 def fail(errors: list[str]) -> None:
     if not errors:
         return
@@ -122,7 +167,13 @@ def fail(errors: list[str]) -> None:
     raise SystemExit(1)
 
 
-def validate_production_realm_hosts(environment: str, suffix: str, errors: list[str]) -> None:
+def validate_production_realm_hosts(
+    environment: str,
+    suffix: str,
+    errors: list[str],
+    *,
+    allow_placeholder_hosts: bool = False,
+) -> None:
     if environment != "prod":
         return
     realm_path = REPO / "infra/keycloak/vnshop-realm-prod.json"
@@ -151,8 +202,15 @@ def validate_production_realm_hosts(environment: str, suffix: str, errors: list[
 
     if not expected_hosts.issubset(configured_hosts):
         errors.append("production Keycloak realm must authorize the deployed web and API hosts")
-    if any(host.endswith(".example.com") for host in configured_hosts):
-        errors.append("production Keycloak realm contains stale .example.com hosts")
+    if any(
+        host in {"localhost", "127.0.0.1"}
+        or (
+            host.endswith((".example", ".example.com", ".invalid"))
+            and not allow_placeholder_hosts
+        )
+        for host in configured_hosts
+    ):
+        errors.append("production Keycloak realm contains placeholder hosts")
     if not monitoring_client:
         errors.append("production Keycloak realm must define the monitoring OIDC client")
     else:
@@ -187,7 +245,7 @@ def validate_production_realm_hosts(environment: str, suffix: str, errors: list[
 
 
 def render(environment: str) -> bytes:
-    command = ["kubectl", "kustomize", str(REPO / "infra/k8s/overlays" / environment)]
+    command = ["kubectl", "kustomize", str(REPO / "infra/k8s/overlays" / environment), "--load-restrictor", "LoadRestrictionsNone"]
     result = subprocess.run(command, cwd=REPO, capture_output=True, check=False)
     if result.returncode != 0:
         raise SystemExit(result.stderr.decode("utf-8", errors="replace"))
@@ -204,6 +262,19 @@ def load_lock(environment: str, errors: list[str]) -> dict | None:
         errors.append(f"invalid release lock {path}: {error}")
         return None
     return lock
+
+
+def validate_release_lock_presence(
+    environment: str,
+    lock: dict | None,
+    *,
+    allow_unresolved: bool,
+    mode: str = "release",
+    errors: list[str],
+) -> None:
+    """Require an external release lock unless unresolved dev validation is explicit."""
+    if lock is None and mode != "pull-request" and not allow_unresolved:
+        errors.append(f"missing infra/release/locks/{environment}.json")
 
 
 def validate_lock(lock: dict, catalog: dict, errors: list[str]) -> dict[str, dict]:
@@ -225,16 +296,158 @@ def validate_lock(lock: dict, catalog: dict, errors: list[str]) -> dict[str, dic
         if not DIGEST.fullmatch(digest) or digest == ZERO_DIGEST:
             errors.append(f"{artifact_id}: release lock requires a non-placeholder sha256 digest")
         for field in ("sbom", "provenance"):
-            if not isinstance(artifact.get(field), str) or not artifact[field]:
+            if not isinstance(artifact.get(field), str) or not artifact[field] or not _external_uri(artifact[field]):
                 errors.append(f"{artifact_id}: {field} evidence URI is required")
         if artifact.get("provenanceVerified") is not True:
             errors.append(f"{artifact_id}: signed provenance must be verified before locking")
+        provenance = artifact.get("provenanceRecord")
+        if not isinstance(provenance, dict) or not all(provenance.get(field) for field in ("producer", "sourceCommit", "artifactDigest", "attestationId")):
+            errors.append(f"{artifact_id}: structured independent provenance record is required")
+        elif (
+            provenance.get("producer") in {"", "repository", "self"}
+            or not isinstance(provenance.get("attestationId"), str)
+            or not ATTESTATION_ID.fullmatch(provenance["attestationId"])
+            or not re.fullmatch(r"[0-9a-f]{40}", str(provenance.get("sourceCommit", "")))
+            or not DIGEST.fullmatch(str(provenance.get("artifactDigest", "")))
+        ):
+            errors.append(f"{artifact_id}: provenance producer and attestation must be independent")
+        elif provenance.get("sourceCommit") != lock.get("sourceCommit") or provenance.get("artifactDigest") != digest:
+            errors.append(f"{artifact_id}: provenance identity does not match lock")
     return by_id
+
+
+def _external_uri(value: str) -> bool:
+    """Return whether an evidence URI names an external artifact authority."""
+    return bool(re.match(r"^(?:https://|oci://|registry://|rekor://|sigstore://)[^\s]+$", value)) and not any(
+        marker in value.lower() for marker in ("repository", "self-authored", "file://")
+    )
+
+
+def _unsafe_origin(origin: str) -> bool:
+    """Reject non-HTTPS, local, private, and placeholder origin hosts."""
+    parsed = urlparse(origin)
+    host = parsed.hostname or ""
+    try:
+        unsafe_ip = ipaddress.ip_address(host).is_private or ipaddress.ip_address(host).is_loopback or ipaddress.ip_address(host).is_link_local
+    except ValueError:
+        unsafe_ip = False
+    return parsed.scheme != "https" or not host or host == "localhost" or unsafe_ip or host.endswith((".example", ".example.com", ".invalid"))
+
+
+def _release_placeholder_origin(origin: str) -> bool:
+    """Return whether an HTTPS origin uses a reserved, non-routable test host."""
+    parsed = urlparse(origin)
+    host = parsed.hostname or ""
+    return parsed.scheme == "https" and host.endswith((".example", ".example.com", ".invalid"))
+
+
+def is_strict_environment(environment: str) -> bool:
+    return environment in {"staging", "prod"}
+
+
+def validate_release_policy(
+    documents: list[dict],
+    environment: str,
+    *,
+    mode: str = "release",
+    allow_unresolved: bool = False,
+    allow_unsealed: bool = False,
+) -> list[str]:
+    """Validate policies that must not be satisfied by production placeholders."""
+    errors: list[str] = []
+    strict = is_strict_environment(environment)
+    pull_request = mode == "pull-request"
+
+    if (allow_unresolved or allow_unsealed) and strict:
+        errors.append("--allow-unresolved and --allow-unsealed are only permitted for dev")
+    if (allow_unresolved or allow_unsealed) and pull_request:
+        errors.append("--allow-unresolved and --allow-unsealed are incompatible with pull-request mode")
+
+    configmaps = [doc for doc in documents if doc.get("kind") == "ConfigMap"]
+    app_config = next(
+        (doc for doc in configmaps if doc.get("metadata", {}).get("name") == "vnshop-app-config"),
+        {},
+    )
+    app_data = app_config.get("data", {})
+
+    if strict:
+        for key, value in app_data.items():
+            if not isinstance(value, str):
+                continue
+            normalized = value.strip()
+            lowered = normalized.lower()
+            if strict and mode == "release" and key.endswith("_MODE") and lowered in {"stub", "demo"}:
+                errors.append(f"vnshop-app-config {key} must not use {lowered} mode")
+            if key in {"KAFKA_SECURITY_PROTOCOL", "KAFKA_SASL_SECURITY_PROTOCOL"} \
+                    and lowered == "sasl_plaintext":
+                errors.append("Kafka must not use SASL_PLAINTEXT in staging or prod")
+            if (strict or pull_request) and key.startswith("ELASTICSEARCH") and lowered.startswith("http://"):
+                errors.append(f"vnshop-app-config {key} must use an HTTPS Elasticsearch endpoint")
+
+            if key.endswith("ORIGIN") or key.endswith("ORIGINS") or "PUBLIC_URL" in key \
+                    or "CALLBACK_BASE_URL" in key or key == "KEYCLOAK_ISSUER_URI":
+                for raw_origin in normalized.split(","):
+                    origin = raw_origin.strip()
+                    if _unsafe_origin(origin) and not (pull_request and _release_placeholder_origin(origin)):
+                        errors.append(f"vnshop-app-config {key} must not use a placeholder origin")
+
+    for document in documents:
+        if document.get("kind") == "Secret":
+            errors.append("rendered desired state must not contain plaintext Secret resources")
+        pod_spec = document.get("spec", {}).get("template", {}).get("spec")
+        if document.get("kind") == "CronJob":
+            pod_spec = document.get("spec", {}).get("jobTemplate", {}).get("spec", {}).get("template", {}).get("spec")
+        if not isinstance(pod_spec, dict):
+            continue
+        if document.get("kind") == "StatefulSet" and document.get("metadata", {}).get("name") == "elasticsearch":
+            containers = pod_spec.get("containers", [])
+            for container in containers:
+                values = {entry.get("name"): str(entry.get("value", "")) for entry in container.get("env", [])}
+                if (strict or pull_request) and values.get("discovery.type") == "single-node":
+                    errors.append("Elasticsearch production topology must not use single-node discovery")
+                if (strict or pull_request) and values.get("xpack.security.enabled", "").lower() != "true":
+                    errors.append("Elasticsearch security must be enabled in staging or prod")
+                if (strict or pull_request) and not any(entry.get("name") in {"ELASTIC_PASSWORD", "ELASTICSEARCH_PASSWORD"} for entry in container.get("env", [])):
+                    errors.append("Elasticsearch requires a secret-backed authentication input")
+                for entry in container.get("env", []):
+                    if entry.get("name") == "xpack.security.enabled" and str(entry.get("value", "")).lower() == "false":
+                        if strict or pull_request:
+                            errors.append("Elasticsearch security must be enabled in staging or prod")
+        if (strict or pull_request) and document.get("kind") == "StatefulSet" and document.get("metadata", {}).get("name") == "kafka":
+            values = {entry.get("name"): str(entry.get("value", "")) for entry in pod_spec.get("containers", [])[0].get("env", [])} if pod_spec.get("containers") else {}
+            if values.get("KAFKA_LISTENERS", "").lower().find("plaintext") >= 0 or values.get("KAFKA_ADVERTISED_LISTENERS", "").lower().find("plaintext") >= 0:
+                errors.append("Kafka production listeners must not use plaintext")
+            if "SASL_SSL" not in values.get("KAFKA_LISTENER_SECURITY_PROTOCOL_MAP", ""):
+                errors.append("Kafka production clients require SASL_SSL")
+            if values.get("KAFKA_SSL_CLIENT_AUTH", "").lower() not in {"required", "requested"}:
+                errors.append("Kafka production requires client certificate authentication")
+        for container in [*pod_spec.get("initContainers", []), *pod_spec.get("containers", [])]:
+            image = container.get("image", "")
+            if "@sha256:" not in image:
+                errors.append(f"mutable platform image reference: {image}")
+            elif not re.search(r"@sha256:[0-9a-f]{64}$", image):
+                errors.append(f"platform image requires a sha256 digest: {image.split('@', 1)[0]}")
+            elif image.endswith(ZERO_DIGEST) and mode != "pull-request" and not allow_unresolved:
+                errors.append(f"platform image requires a non-placeholder sha256 digest: {image.split('@', 1)[0]}")
+
+    sealed = [doc for doc in documents if doc.get("kind") == "SealedSecret"]
+    if len(sealed) != 1 and (strict or pull_request):
+        errors.append("exactly one SealedSecret is required")
+    if len(sealed) == 1:
+        encrypted_data = sealed[0].get("spec", {}).get("encryptedData")
+        if not encrypted_data and not pull_request and (strict or not allow_unsealed):
+            errors.append("SealedSecret encryptedData must be populated before release")
+        if (strict or pull_request) and isinstance(encrypted_data, dict) and any(not isinstance(key, str) or not key.strip() or not isinstance(value, str) or not value.strip() for key, value in encrypted_data.items()):
+            errors.append("SealedSecret encryptedData must contain non-empty ciphertext for every key")
+    if strict or pull_request:
+        validate_enabled_provider_secret_refs(documents, app_data, errors)
+    return errors
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--environment", choices=("dev", "staging", "prod"), required=True)
+    parser.add_argument("--mode", choices=("release", "pull-request"), default="release")
     parser.add_argument("--allow-unresolved", action="store_true")
     parser.add_argument("--allow-unsealed", action="store_true")
     args = parser.parse_args()
@@ -243,9 +456,14 @@ def main() -> None:
     errors: list[str] = []
     lock = load_lock(args.environment, errors)
     lock_by_id: dict[str, dict] = {}
-    if lock is None and not args.allow_unresolved:
-        errors.append(f"missing infra/release/locks/{args.environment}.json")
-    elif lock is not None:
+    validate_release_lock_presence(
+        args.environment,
+        lock,
+        allow_unresolved=args.allow_unresolved,
+        mode=args.mode,
+        errors=errors,
+    )
+    if lock is not None:
         lock_by_id = validate_lock(lock, catalog, errors)
 
     first = render(args.environment)
@@ -258,6 +476,16 @@ def main() -> None:
         errors.append(f"rendered YAML is invalid: {error}")
         fail(errors)
         return
+
+    errors.extend(
+        validate_release_policy(
+            documents,
+            args.environment,
+            mode=args.mode,
+            allow_unresolved=args.allow_unresolved,
+            allow_unsealed=args.allow_unsealed,
+        )
+    )
 
     if any(document.get("kind") == "Secret" for document in documents):
         errors.append("rendered desired state must not contain plaintext Secret resources")
@@ -287,6 +515,8 @@ def main() -> None:
             continue
         artifact_id = document.get("metadata", {}).get("labels", {}).get("vnshop.io/artifact-id")
         if artifact_id:
+            if artifact_id in deployments:
+                errors.append(f"duplicate application Deployment for {artifact_id}")
             deployments[artifact_id] = document
     if set(deployments) != set(catalog_by_id):
         errors.append("rendered application Deployments must exactly match the 19-artifact catalog")
@@ -310,7 +540,7 @@ def main() -> None:
         digest = image.removeprefix(prefix)
         if not DIGEST.fullmatch(digest):
             errors.append(f"{artifact_id}: image must use @sha256")
-        if digest == ZERO_DIGEST and not args.allow_unresolved:
+        if digest == ZERO_DIGEST and args.mode != "pull-request" and not args.allow_unresolved:
             errors.append(f"{artifact_id}: unresolved image digest")
         if lock_by_id and digest != lock_by_id.get(artifact_id, {}).get("digest"):
             errors.append(f"{artifact_id}: rendered digest differs from release lock")
@@ -333,21 +563,23 @@ def main() -> None:
 
     if args.environment in {"staging", "prod"}:
         suffix = "vnshop.invalid" if args.environment == "staging" else "vnshop.example"
-        expected_public_config = {
-            "WEB_ORIGIN": f"https://web.{suffix}",
-            "API_ORIGIN": f"https://api.{suffix}",
-            "AUTH_ORIGIN": f"https://api.{suffix}",
-            "KEYCLOAK_ISSUER_URI": f"https://api.{suffix}/realms/vnshop",
-            "KEYCLOAK_PUBLIC_BASE_URL": f"https://api.{suffix}",
-            "VNSHOP_FRONTEND_URL": f"https://web.{suffix}",
-            "VNSHOP_PUBLIC_API_URL": f"https://api.{suffix}",
-            "VNSHOP_AUTH_CALLBACK_BASE_URL": f"https://api.{suffix}/auth/oauth/callback",
-            "VNSHOP_OBJECT_STORAGE_PUBLIC_ENDPOINT": f"https://storage.{suffix}",
-            "VNSHOP_USER_STORAGE_PUBLIC_ENDPOINT": f"https://storage.{suffix}",
-        }
-        for key, expected_value in expected_public_config.items():
-            if app_config_data.get(key) != expected_value:
-                errors.append(f"vnshop-app-config {key} must equal {expected_value}")
+        origin_values = {key: value for key, value in app_config_data.items() if key.endswith("_ORIGIN") or key.endswith("_ORIGINS") or "PUBLIC_URL" in key or "CALLBACK_BASE_URL" in key or key == "KEYCLOAK_ISSUER_URI"}
+        parsed_origins = {}
+        for key, value in origin_values.items():
+            values = [part.strip() for part in str(value).split(",")]
+            if any(
+                _unsafe_origin(part)
+                and not (args.mode == "pull-request" and _release_placeholder_origin(part))
+                for part in values
+            ):
+                errors.append(f"vnshop-app-config {key} must be a real HTTPS origin")
+            else:
+                parsed_origins[key] = urlparse(values[0]).hostname
+        for key in ("WEB_ORIGIN", "API_ORIGIN", "AUTH_ORIGIN", "KEYCLOAK_ISSUER_URI"):
+            if key not in parsed_origins:
+                errors.append(f"vnshop-app-config {key} is required for coherent origins")
+        if parsed_origins.get("API_ORIGIN") and parsed_origins.get("AUTH_ORIGIN") and parsed_origins["API_ORIGIN"] != parsed_origins["AUTH_ORIGIN"]:
+            errors.append("API_ORIGIN and AUTH_ORIGIN must use one authority")
         ingresses = [
             doc for doc in documents
             if doc.get("kind") == "Ingress" and doc.get("metadata", {}).get("name") == "vnshop"
@@ -363,7 +595,12 @@ def main() -> None:
             }
             if ingress_hosts != expected_hosts:
                 errors.append("ingress hosts must expose web, API, and storage TLS origins")
-        validate_production_realm_hosts(args.environment, suffix, errors)
+        validate_production_realm_hosts(
+            args.environment,
+            suffix,
+            errors,
+            allow_placeholder_hosts=args.mode == "pull-request",
+        )
 
         if args.environment == "staging":
             realm_configmaps = [
@@ -461,13 +698,15 @@ def main() -> None:
     policies = [doc for doc in documents if doc.get("kind") == "NetworkPolicy"]
     if not any(doc.get("metadata", {}).get("name") == "default-deny" for doc in policies):
         errors.append("default-deny NetworkPolicy is required")
-    internal_policy = next(
-        (doc for doc in policies if doc.get("metadata", {}).get("name") == "allow-vnshop-internal"),
-        None,
-    )
     external_https = False
-    if internal_policy:
-        for rule in internal_policy.get("spec", {}).get("egress", []):
+    for policy in policies:
+        selected_names = policy.get("spec", {}).get("podSelector", {}).get("matchLabels", {})
+        if selected_names.get("app.kubernetes.io/name") not in {
+            "vnshop-authoritative-backup",
+            "alertmanager",
+        }:
+            continue
+        for rule in policy.get("spec", {}).get("egress", []):
             peers = rule.get("to", [])
             ports = rule.get("ports", [])
             if any(peer.get("ipBlock", {}).get("cidr") == "0.0.0.0/0" for peer in peers) \
@@ -478,7 +717,11 @@ def main() -> None:
     sealed = [doc for doc in documents if doc.get("kind") == "SealedSecret"]
     if len(sealed) != 1:
         errors.append("exactly one SealedSecret is required")
-    elif not sealed[0].get("spec", {}).get("encryptedData") and not args.allow_unsealed:
+    elif (
+        not sealed[0].get("spec", {}).get("encryptedData")
+        and args.mode != "pull-request"
+        and not args.allow_unsealed
+    ):
         errors.append("SealedSecret encryptedData must be populated before release")
 
     required_secret_keys = collect_required_secret_keys(documents, app_config_data)

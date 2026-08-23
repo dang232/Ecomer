@@ -54,6 +54,7 @@ def workload_documents(item: dict) -> str:
         server_variable = "PORT"
     else:
         server_variable = "SERVER_PORT"
+    data_names: set[str] = set()
     if service_id == "frontend":
         env = ""
         env_from = ""
@@ -109,9 +110,17 @@ def workload_documents(item: dict) -> str:
                 env_entries.append(f'''        - name: MODERATOR_KAFKA_BOOTSTRAP_SERVERS
           value: kafka:9092
         - name: MODERATOR_KAFKA_SECURITY_PROTOCOL
-          value: SASL_PLAINTEXT
+          value: SASL_SSL
         - name: MODERATOR_KAFKA_SASL_MECHANISM
           value: PLAIN
+        - name: MODERATOR_KAFKA_SSL_CA_FILE
+          value: /etc/kafka/tls/ca.crt
+        - name: MODERATOR_KAFKA_SSL_CERT_FILE
+          value: /etc/kafka/tls/client.crt
+        - name: MODERATOR_KAFKA_SSL_KEY_FILE
+          value: /etc/kafka/tls/client.key
+        - name: MODERATOR_KAFKA_SSL_CHECK_HOSTNAME
+          value: "true"
         - name: MODERATOR_KAFKA_SASL_USERNAME
           valueFrom:
             secretKeyRef: {{name: vnshop-runtime-secrets, key: {service_id}-kafka-username}}
@@ -125,6 +134,32 @@ def workload_documents(item: dict) -> str:
         - name: KAFKA_SASL_PASSWORD
           valueFrom:
             secretKeyRef: {{name: vnshop-runtime-secrets, key: {service_id}-kafka-password}}''')
+                if runtime == "spring":
+                    env_entries.append(f'''        - name: KAFKA_SSL_TRUSTSTORE_LOCATION
+          value: /etc/kafka/tls/ca.truststore.jks
+        - name: KAFKA_SSL_KEYSTORE_LOCATION
+          value: /etc/kafka/tls/client.keystore.jks
+        - name: KAFKA_SSL_TRUSTSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {{name: vnshop-runtime-secrets, key: {service_id}-kafka-truststore-password}}
+        - name: KAFKA_SSL_KEYSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {{name: vnshop-runtime-secrets, key: {service_id}-kafka-keystore-password}}''')
+                elif runtime == "node":
+                    env_entries.append('''        - name: KAFKA_SSL_CA_FILE
+          value: /etc/kafka/tls/ca.crt
+        - name: KAFKA_SSL_CERT_FILE
+          value: /etc/kafka/tls/client.crt
+        - name: KAFKA_SSL_KEY_FILE
+          value: /etc/kafka/tls/client.key''')
+        if service_id == "order-service":
+            env_entries.append('''        - name: GRPC_CLIENT_PAYMENT_SERVICE_TOKEN
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: payment-grpc-service-token}''')
+        if service_id == "payment-service":
+            env_entries.append('''        - name: GRPC_SERVER_AUTH_TOKEN
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: payment-grpc-service-token}''')
         if service_id == "shipping-service":
             env_entries.append('''        - name: GHN_WEBHOOK_TOKEN
           valueFrom:
@@ -207,9 +242,18 @@ def workload_documents(item: dict) -> str:
           value: elasticsearch
         - name: ELASTICSEARCH_PORT
           value: "9200"
-        - name: ELASTIC_PASSWORD
+        - name: ELASTICSEARCH_URL
+          value: https://elasticsearch:9200
+        - name: ELASTICSEARCH_USERNAME
           valueFrom:
-            secretKeyRef: {name: vnshop-runtime-secrets, key: platform-elasticsearch-password}''')
+            secretKeyRef: {name: vnshop-runtime-secrets, key: search-service-elasticsearch-username}
+        - name: ELASTICSEARCH_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: search-service-elasticsearch-password}
+        - name: ELASTICSEARCH_CA_CERTIFICATE
+          value: /etc/elasticsearch/tls/ca.crt
+        - name: ELASTICSEARCH_SSL_BUNDLE
+          value: elasticsearch''')
         if service_id == "user-service":
             env_entries.append('''        - name: KEYCLOAK_ADMIN_CLIENT_SECRET
           valueFrom:
@@ -247,6 +291,63 @@ def workload_documents(item: dict) -> str:
           medium: Memory
           sizeLimit: {scratch_limit}
 '''
+    tls_mount = ""
+    tls_volume = ""
+    if "kafka" in data_names:
+        if service_id == "video-moderator":
+            tls_mount = '''        - name: kafka-client-tls
+          mountPath: /etc/kafka/tls
+          readOnly: true
+'''
+            tls_volume = '''      - name: kafka-client-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {key: video-moderator-kafka-ca, path: ca.crt}
+          - {key: video-moderator-kafka-client-cert, path: client.crt}
+          - {key: video-moderator-kafka-client-key, path: client.key}
+'''
+        elif runtime == "spring":
+            tls_mount = '''        - name: kafka-tls
+          mountPath: /etc/kafka/tls
+          readOnly: true
+'''
+            tls_volume = f'''      - name: kafka-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {{key: {service_id}-kafka-truststore, path: ca.truststore.jks}}
+          - {{key: {service_id}-kafka-keystore, path: client.keystore.jks}}
+'''
+        elif runtime == "node":
+            tls_mount = '''        - name: kafka-tls
+          mountPath: /etc/kafka/tls
+          readOnly: true
+'''
+            tls_volume = f'''      - name: kafka-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {{key: {service_id}-kafka-ca, path: ca.crt}}
+          - {{key: {service_id}-kafka-client-cert, path: client.crt}}
+          - {{key: {service_id}-kafka-client-key, path: client.key}}
+'''
+    elasticsearch_mount = ""
+    elasticsearch_volume = ""
+    if service_id == "search-service":
+        elasticsearch_mount = '''        - name: elasticsearch-ca
+          mountPath: /etc/elasticsearch/tls
+          readOnly: true
+'''
+        elasticsearch_volume = '''      - name: elasticsearch-ca
+        secret:
+          secretName: elasticsearch-http-transport-tls
+          items:
+          - key: ca.crt
+            path: ca.crt
+'''
+    tmp_mount += tls_mount + elasticsearch_mount
+    tmp_volume += tls_volume + elasticsearch_volume
     if service_id == "frontend":
         run_as_user = 101
     elif service_id == "video-moderator":
@@ -1003,6 +1104,7 @@ spec:
 
 def kafka_bootstrap_job() -> str:
     script = (REPO / "infra/scripts/init-kafka-topics.sh").read_text(encoding="utf-8")
+    inventory = (REPO / "infra/kafka/topic-inventory.yaml").read_text(encoding="utf-8")
     return f'''apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -1018,6 +1120,8 @@ metadata:
 data:
   init-kafka-topics.sh: |
 {indent(script, 4)}
+  topic-inventory.yaml: |
+{indent(inventory, 4)}
 ---
 apiVersion: batch/v1
 kind: Job
@@ -1042,20 +1146,40 @@ spec:
       - name: bootstrap
         image: confluentinc/cp-kafka@sha256:acbbf674f2ed40e5d0a8ca51beb0f00692c866fc22b5ce06f8cadbdc54cd4436
         command: [bash, /opt/vnshop/init-kafka-topics.sh]
+        workingDir: /opt/vnshop
         env:
         - name: KAFKA_ADMIN_PASSWORD
           valueFrom:
             secretKeyRef: {{name: vnshop-runtime-secrets, key: platform-kafka-admin-password}}
+        - name: KAFKA_SSL_TRUSTSTORE_LOCATION
+          value: /etc/kafka/tls/ca.truststore.jks
+        - name: KAFKA_SSL_KEYSTORE_LOCATION
+          value: /etc/kafka/tls/admin.keystore.jks
+        - name: KAFKA_SSL_TRUSTSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {{name: vnshop-runtime-secrets, key: platform-kafka-truststore-password}}
+        - name: KAFKA_SSL_KEYSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {{name: vnshop-runtime-secrets, key: platform-kafka-admin-keystore-password}}
         resources:
           requests: {{cpu: 25m, memory: 128Mi}}
           limits: {{cpu: 500m, memory: 512Mi}}
         securityContext: {{allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {{drop: [ALL]}}}}
         volumeMounts:
         - {{name: script, mountPath: /opt/vnshop/init-kafka-topics.sh, subPath: init-kafka-topics.sh, readOnly: true}}
+        - {{name: inventory, mountPath: /opt/vnshop/infra/kafka/topic-inventory.yaml, subPath: topic-inventory.yaml, readOnly: true}}
         - {{name: tmp, mountPath: /tmp}}
+        - {{name: kafka-tls, mountPath: /etc/kafka/tls, readOnly: true}}
       volumes:
-      - {{name: script, configMap: {{name: vnshop-kafka-bootstrap, defaultMode: 0555}}}}
+      - {{name: script, configMap: {{name: vnshop-kafka-bootstrap, defaultMode: 0555, items: [{{key: init-kafka-topics.sh, path: init-kafka-topics.sh}}]}}}}
+      - {{name: inventory, configMap: {{name: vnshop-kafka-bootstrap, items: [{{key: topic-inventory.yaml, path: topic-inventory.yaml}}]}}}}
       - {{name: tmp, emptyDir: {{}}}}
+      - name: kafka-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {{key: platform-kafka-admin-keystore, path: admin.keystore.jks}}
+          - {{key: platform-kafka-truststore, path: ca.truststore.jks}}
 '''
 
 

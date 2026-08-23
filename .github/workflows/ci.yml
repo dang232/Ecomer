@@ -269,8 +269,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python infra/scripts/validate-k8s-release.py --environment staging --allow-unresolved --allow-unsealed
-          python infra/scripts/validate-k8s-release.py --environment prod --allow-unresolved --allow-unsealed
+          python infra/scripts/validate-k8s-release.py --environment staging --mode pull-request
+          python infra/scripts/validate-k8s-release.py --environment prod --mode pull-request
 
       - name: Enforce immutable release state when locks exist
         shell: bash

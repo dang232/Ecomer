@@ -4,8 +4,10 @@ import com.vnshop.invoiceservice.application.InvoiceService;
 import com.vnshop.invoiceservice.application.gdt.InvoiceSubmissionService;
 import com.vnshop.invoiceservice.domain.entity.Invoice;
 import com.vnshop.invoiceservice.domain.entity.InvoiceStatus;
+import com.vnshop.invoiceservice.infrastructure.config.JwtPrincipalUtil;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
@@ -30,9 +32,9 @@ public class InvoiceController {
      * Returns the invoice for the given orderId.
      */
     @GetMapping("/{orderId}")
-    @PreAuthorize("hasAnyRole('SELLER','ADMIN')")
+    @PreAuthorize("hasAnyRole('BUYER','SELLER','ADMIN')")
     public ResponseEntity<Invoice> getByOrderId(@PathVariable UUID orderId) {
-        return invoiceService.findByOrderId(orderId)
+        return authorizedInvoice(orderId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -45,6 +47,9 @@ public class InvoiceController {
     public ResponseEntity<List<Invoice>> list(
             @RequestParam String sellerId,
             @RequestParam(required = false) InvoiceStatus status) {
+        if (!JwtPrincipalUtil.hasRole("ADMIN") && !sellerId.equals(JwtPrincipalUtil.currentSellerId())) {
+            throw forbidden();
+        }
         List<Invoice> invoices = invoiceService.findBySeller(sellerId, status);
         return ResponseEntity.ok(invoices);
     }
@@ -58,6 +63,7 @@ public class InvoiceController {
     @PostMapping(value = "/{orderId}/xml", produces = MediaType.APPLICATION_XML_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> generateXml(@PathVariable UUID orderId) {
+        requireAdmin();
         String xml = invoiceService.generateXml(orderId);
         return ResponseEntity.ok(xml);
     }
@@ -71,6 +77,7 @@ public class InvoiceController {
     @PostMapping("/{orderId}/submit")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Invoice> submit(@PathVariable UUID orderId) {
+        requireAdmin();
         Invoice invoice = invoiceSubmissionService.submitToGdt(orderId);
         return ResponseEntity.ok(invoice);
     }
@@ -81,9 +88,9 @@ public class InvoiceController {
      * GET /api/v1/invoices/{orderId}/gdt-status
      */
     @GetMapping("/{orderId}/gdt-status")
-    @PreAuthorize("hasAnyRole('SELLER','ADMIN')")
+    @PreAuthorize("hasAnyRole('BUYER','SELLER','ADMIN')")
     public ResponseEntity<Map<String, Object>> gdtStatus(@PathVariable UUID orderId) {
-        return invoiceService.findByOrderId(orderId)
+        return authorizedInvoice(orderId)
                 .map(inv -> ResponseEntity.ok(Map.<String, Object>of(
                         "orderId", inv.getOrderId(),
                         "status", inv.getStatus(),
@@ -103,7 +110,33 @@ public class InvoiceController {
     @PostMapping("/{orderId}/resubmit")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Invoice> resubmit(@PathVariable UUID orderId) {
+        requireAdmin();
         Invoice invoice = invoiceSubmissionService.resubmitToGdt(orderId);
         return ResponseEntity.ok(invoice);
+    }
+
+    private Optional<Invoice> authorizedInvoice(UUID orderId) {
+        Optional<Invoice> invoice = invoiceService.findByOrderId(orderId);
+        if (invoice.isPresent() && !isCurrentOwner(invoice.get())) {
+            throw forbidden();
+        }
+        return invoice;
+    }
+
+    private boolean isCurrentOwner(Invoice invoice) {
+        return JwtPrincipalUtil.hasRole("ADMIN")
+                || invoice.getSellerId().equals(JwtPrincipalUtil.currentUserId())
+                || invoice.getBuyerId().equals(JwtPrincipalUtil.currentUserId());
+    }
+
+    private void requireAdmin() {
+        if (!JwtPrincipalUtil.hasRole("ADMIN")) {
+            throw forbidden();
+        }
+    }
+
+    private static org.springframework.web.server.ResponseStatusException forbidden() {
+        return new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.FORBIDDEN, "Invoice access denied");
     }
 }

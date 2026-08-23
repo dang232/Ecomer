@@ -30,10 +30,13 @@ spring:
       security.protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_SSL}
       sasl.mechanism: PLAIN
       sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_SASL_USERNAME}" password="${KAFKA_SASL_PASSWORD}";
-      ssl.truststore.location: ${KAFKA_SSL_TRUSTSTORE_LOCATION:/etc/kafka/secrets/kafka.truststore.jks}
-      ssl.truststore.password: ${KAFKA_SSL_TRUSTSTORE_PASSWORD}
+      ssl.truststore.location: ${KAFKA_SSL_TRUSTSTORE_LOCATION:}
+      ssl.truststore.password: ${KAFKA_SSL_TRUSTSTORE_PASSWORD:}
+      ssl.keystore.location: ${KAFKA_SSL_KEYSTORE_LOCATION:}
+      ssl.keystore.password: ${KAFKA_SSL_KEYSTORE_PASSWORD:}
       ssl.endpoint.identification.algorithm: https
     producer:
+      acks: all
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       # JsonSerializer (Spring) is what every other producer in the platform
       # uses; matches the format order-service / seller-finance-service expect
@@ -41,6 +44,8 @@ spring:
       # bind to a value class without needing a __TypeId__ header.
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       properties:
+        enable.idempotence: true
+        max.in.flight.requests.per.connection: 5
         spring.json.add.type.headers: false
     consumer:
       # PayPalRefundListener consumes payment.refund_requested as raw JSON and

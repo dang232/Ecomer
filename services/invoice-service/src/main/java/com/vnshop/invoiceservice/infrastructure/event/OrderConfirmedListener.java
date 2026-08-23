@@ -66,6 +66,7 @@ public class OrderConfirmedListener {
         }
 
         String sellerId = text(payload, "sellerId");
+        String buyerId = text(payload, "buyerId");
         String items = extractJsonField(payload, "items");
         String vatBreakdown = extractJsonField(payload, "vatBreakdown");
         String buyerTaxCode = text(payload, "buyerTaxCode");
@@ -76,7 +77,8 @@ public class OrderConfirmedListener {
 
         if (authorized) {
             BigDecimal taxDeductionAmount = calculateTaxDeduction(payload, authOpt.get().getTaxDeductionPercent());
-            invoiceService.createDraftInvoice(orderId, sellerId, items, vatBreakdown, buyerTaxCode, taxDeductionAmount);
+            invoiceService.createDraftInvoice(orderId, sellerId, buyerId, items, vatBreakdown, buyerTaxCode,
+                    taxDeductionAmount);
         } else {
             publishSellerInvoiceRequired(orderId, sellerId, eventJson);
         }

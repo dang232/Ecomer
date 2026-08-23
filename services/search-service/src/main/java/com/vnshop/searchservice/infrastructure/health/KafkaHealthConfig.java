@@ -3,6 +3,7 @@ package com.vnshop.searchservice.infrastructure.health;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.core.KafkaAdmin;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -16,7 +17,7 @@ import java.util.Map;
 public class KafkaHealthConfig {
 
     @Bean
-    public AdminClient kafkaAdminClient(@Value("${spring.kafka.bootstrap-servers}") String bootstrapServers) {
-        return AdminClient.create(Map.of(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers));
+    public AdminClient kafkaAdminClient(KafkaAdmin kafkaAdmin) {
+        return AdminClient.create(kafkaAdmin.getConfigurationProperties());
     }
 }

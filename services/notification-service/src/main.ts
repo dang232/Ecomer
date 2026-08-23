@@ -3,8 +3,11 @@ import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { AppModule } from './app.module';
+import { createKafkaClientConfig } from './kafka-client.config';
+import { startTracing } from './tracing';
 
-async function bootstrap() {
+export async function bootstrap(): Promise<void> {
+  startTracing();
   const app = await NestFactory.create(AppModule);
 
   if (process.env.OPENAPI_ENABLED !== 'false') {
@@ -24,28 +27,13 @@ async function bootstrap() {
   app.useWebSocketAdapter(new IoAdapter(app));
 
   // Kafka microservice transport
-  const brokers = (process.env.KAFKA_BOOTSTRAP_SERVERS ?? 'localhost:9092')
-    .split(',')
-    .map((b: string) => b.trim())
-    .filter((b: string) => b.length > 0);
-
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.KAFKA,
     options: {
-      client: {
-        clientId: 'notification-service',
-        brokers,
-        ...(process.env.KAFKA_SASL_USERNAME && {
-          sasl: {
-            mechanism: 'plain',
-            username: process.env.KAFKA_SASL_USERNAME,
-            password: process.env.KAFKA_SASL_PASSWORD ?? '',
-          },
-        }),
-      },
+        client: createKafkaClientConfig('notification-service'),
       consumer: {
         groupId: process.env.KAFKA_CONSUMER_GROUP ?? 'notification-service',
-        allowAutoTopicCreation: true,
+        allowAutoTopicCreation: false,
       },
     },
   });
@@ -57,4 +45,6 @@ async function bootstrap() {
   console.log(`Notification service running on port ${port}`);
 }
 
-void bootstrap();
+if (process.env.NODE_ENV !== 'test') {
+  void bootstrap();
+}

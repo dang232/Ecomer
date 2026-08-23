@@ -1,12 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
-import {
-  readJson,
-  type AuthResponse,
-  type OrderListResponse,
-  type OrderResponse,
-  type ProductListResponse,
-} from "./_api";
+import { readJson, type AuthResponse, type OrderListResponse, type OrderResponse } from "./_api";
+import { createTrustedSellerProduct } from "./_commerce";
 import {
   copyArtifacts,
   expectNoGlobalError,
@@ -82,6 +77,7 @@ test.describe.serial("Workday — buyer (guest → register → shop → order)"
       const email = `e2e_workday_${stamp}@vnshop.local`;
       let productName = "";
       let productId = "";
+      let productSku = "";
       let accessToken = "";
 
       await step(page, "buyer", "Cold-load home page", async () => {
@@ -131,13 +127,10 @@ test.describe.serial("Workday — buyer (guest → register → shop → order)"
       });
 
       await step(page, "buyer", "Pull a real seeded product for the journey", async () => {
-        const r = await page.request.get(`${apiURL}/products?size=1`);
-        expect(r.ok(), `products: ${r.status()}`).toBeTruthy();
-        const p = (await readJson<ProductListResponse>(r)).data?.content?.[0];
-        expect(p?.id, "expected at least one seeded product").toBeTruthy();
-        if (!p) throw new Error("expected at least one seeded product");
-        productId = p.id;
-        productName = p.name;
+        const product = await createTrustedSellerProduct(page.request);
+        productId = product.id;
+        productName = product.name;
+        productSku = product.sku;
       });
 
       await step(page, "buyer", "Open product detail from URL", async () => {
@@ -316,7 +309,14 @@ test.describe.serial("Workday — buyer (guest → register → shop → order)"
                 district: "101",
                 city: "Ho Chi Minh",
               },
-              items: [{ productId, quantity: 1 }],
+              shippingDetails: {
+                recipientName: "Workday Buyer",
+                recipientPhone: "0901234568",
+                wardCode: "1442",
+                districtCode: "101",
+                provinceCode: "79",
+              },
+              items: [{ productId, variantSku: productSku, quantity: 1 }],
               paymentMethod: "COD",
             },
           });

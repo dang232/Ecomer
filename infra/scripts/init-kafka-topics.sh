@@ -1,14 +1,28 @@
 #!/bin/bash
 set -e
 
+case "${VNSHOP_KAFKA_TARGET:-local}" in
+  local) ;;
+  *) echo "refusing non-local Kafka bootstrap target" >&2; exit 64 ;;
+esac
+
+INVENTORY_AUTHORITY=infra/kafka/topic-inventory.yaml
+test -f "$INVENTORY_AUTHORITY" || { echo "Kafka inventory authority is required: $INVENTORY_AUTHORITY" >&2; exit 65; }
+
 BROKER="kafka:9092"
 ADMIN_CONFIG="/tmp/admin.properties"
 
 # Create admin client config for SASL authentication
 cat > $ADMIN_CONFIG <<EOF
-security.protocol=SASL_PLAINTEXT
+security.protocol=SASL_SSL
 sasl.mechanism=PLAIN
-sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="admin" password="${KAFKA_ADMIN_PASSWORD:?KAFKA_ADMIN_PASSWORD is required}";
+ssl.endpoint.identification.algorithm=HTTPS
+ssl.client.auth=required
+ssl.truststore.location=${KAFKA_SSL_TRUSTSTORE_LOCATION:?KAFKA_SSL_TRUSTSTORE_LOCATION is required}
+ssl.keystore.location=${KAFKA_SSL_KEYSTORE_LOCATION:?KAFKA_SSL_KEYSTORE_LOCATION is required}
+ssl.truststore.password=${KAFKA_SSL_TRUSTSTORE_PASSWORD:?KAFKA_SSL_TRUSTSTORE_PASSWORD is required}
+ssl.keystore.password=${KAFKA_SSL_KEYSTORE_PASSWORD:?KAFKA_SSL_KEYSTORE_PASSWORD is required}
+sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="kafka-admin" password="${KAFKA_ADMIN_PASSWORD:?KAFKA_ADMIN_PASSWORD is required}";
 EOF
 
 echo "Waiting for Kafka to be ready..."
@@ -66,7 +80,7 @@ TOPICS=(
 for entry in "${TOPICS[@]}"; do
   IFS=':' read -r topic partitions <<< "$entry"
   kafka-topics --bootstrap-server $BROKER --command-config $ADMIN_CONFIG \
-    --create --if-not-exists --topic "$topic" --partitions "$partitions" --replication-factor 1
+    --create --if-not-exists --topic "$topic" --partitions "$partitions" --replication-factor 3 --config min.insync.replicas=2
 done
 echo "All topics created."
 

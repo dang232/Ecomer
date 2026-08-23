@@ -29,7 +29,7 @@ public class InvoiceService {
      * @param taxDeductionAmount pre-calculated deduction amount for authorized sellers; null otherwise
      */
     @Transactional
-    public Invoice createDraftInvoice(UUID orderId, String sellerId, String items, String vatBreakdown,
+    public Invoice createDraftInvoice(UUID orderId, String sellerId, String buyerId, String items, String vatBreakdown,
             String buyerTaxCode, BigDecimal taxDeductionAmount) {
         Optional<Invoice> existing = invoiceRepository.findByOrderId(orderId);
         if (existing.isPresent()) {
@@ -41,6 +41,7 @@ public class InvoiceService {
         Invoice invoice = Invoice.builder()
                 .orderId(orderId)
                 .sellerId(sellerId)
+                .buyerId(buyerId)
                 .buyerTaxCode(buyerTaxCode)
                 .items(items)
                 .vatBreakdown(vatBreakdown)
