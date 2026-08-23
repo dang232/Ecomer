@@ -21,6 +21,7 @@
 		<netty.version>4.2.16.Final</netty.version>
 		<spring-kafka.version>4.0.6</spring-kafka.version>
 		<aws.sdk.version>2.48.3</aws.sdk.version>
+		<httpcomponents-core5.version>5.4.3</httpcomponents-core5.version>
 	</properties>
 
 	<dependencies>
@@ -132,6 +133,16 @@
 				<version>1.20.4</version>
 				<type>pom</type>
 				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.httpcomponents.core5</groupId>
+				<artifactId>httpcore5</artifactId>
+				<version>${httpcomponents-core5.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.httpcomponents.core5</groupId>
+				<artifactId>httpcore5-h2</artifactId>
+				<version>${httpcomponents-core5.version}</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
