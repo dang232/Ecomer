@@ -12,10 +12,10 @@ const SEED_MJS_PATH = fileURLToPath(SEED_MJS);
 
 const TRUSTED_PARCEL = { weightGrams: 1000, lengthCm: 30, widthCm: 20, heightCm: 10 };
 
-function runDemoSeeder(gateway) {
+function runDemoSeeder(gateway, force = "1") {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [SEED_MJS_PATH], {
-      env: { ...process.env, GATEWAY: gateway, FORCE: "1" },
+      env: { ...process.env, GATEWAY: gateway, FORCE: force },
       stdio: ["ignore", "pipe", "pipe"],
     });
     let stdout = "";
@@ -29,7 +29,7 @@ function runDemoSeeder(gateway) {
   });
 }
 
-function startCatalogGateway() {
+function startCatalogGateway(options = {}) {
   const products = new Map([
     ["iphone-id", {
       id: "iphone-id",
@@ -116,16 +116,60 @@ function startCatalogGateway() {
   ]);
   const creates = [];
   const writes = [];
+  const publishes = [];
+  const sellerPageRequests = [];
+  const sellerProducts = [
+    ...Array.from({ length: 50 }, (_, index) => ({
+      id: `filler-${index}`,
+      name: `Filler ${index}`,
+      description: "Filler",
+      categoryId: "other",
+      brand: "Other",
+      tags: [],
+      variants: [{ sku: `SKU-FILLER-${index}`, name: "Default", priceAmount: 100, priceCurrency: "VND", imageUrl: "https://example.test/filler.webp", stockQuantity: 1, parcel: TRUSTED_PARCEL }],
+      images: [],
+    })),
+    products.get("iphone-id"),
+    products.get("macbook-id"),
+    products.get("unchanged-id"),
+  ];
+  const foreignProduct = {
+    id: "foreign-id",
+    name: "Foreign Seller Duplicate",
+    description: "Foreign",
+    categoryId: "other",
+    brand: "Other",
+    tags: [],
+    variants: [{ sku: "SKU-IPH16-PM-256", name: "Default", priceAmount: 1, priceCurrency: "VND", imageUrl: "https://example.test/foreign.webp", stockQuantity: 1, parcel: null }],
+    images: [],
+  };
   const server = createServer(async (request, response) => {
     const url = new URL(request.url, "http://localhost");
     if (request.method === "GET" && url.pathname === "/products") {
       response.setHeader("Content-Type", "application/json");
-      response.end(JSON.stringify({ data: { totalElements: products.size, content: [...products.values()] } }));
+      response.end(JSON.stringify({ data: { totalElements: products.size + 1, content: [...products.values(), foreignProduct] } }));
       return;
     }
     if (request.method === "POST" && url.pathname === "/auth/login") {
       response.setHeader("Content-Type", "application/json");
       response.end(JSON.stringify({ data: { accessToken: "seed-token" } }));
+      return;
+    }
+    if (request.method === "GET" && url.pathname === "/sellers/me/products") {
+      sellerPageRequests.push({ authorization: request.headers.authorization, page: url.searchParams.get("page"), size: url.searchParams.get("size") });
+      if (request.headers.authorization !== "Bearer seed-token") {
+        response.statusCode = 401;
+        response.end();
+        return;
+      }
+      const page = Number(url.searchParams.get("page") ?? "0");
+      const size = Number(url.searchParams.get("size") ?? "50");
+      const content = sellerProducts.slice(page * size, (page + 1) * size);
+      response.setHeader("Content-Type", "application/json");
+      const metadata = options.malformedPagination
+        ? { content, totalElements: sellerProducts.length }
+        : { content, totalElements: sellerProducts.length, totalPages: Math.ceil(sellerProducts.length / size), number: page, size, first: page === 0, last: page + 1 >= Math.ceil(sellerProducts.length / size) };
+      response.end(JSON.stringify({ data: metadata }));
       return;
     }
     if (request.method === "POST" && url.pathname === "/sellers/me/products") {
@@ -134,11 +178,13 @@ function startCatalogGateway() {
       const payload = JSON.parse(body);
       const variant = payload.variants?.[0];
       creates.push(payload);
+      sellerProducts.push({ id: `${variant.sku}-id`, ...payload });
       response.setHeader("Content-Type", "application/json");
       response.end(JSON.stringify({ data: { id: `${variant.sku}-id` } }));
       return;
     }
     if (request.method === "PUT" && url.pathname.endsWith("/publish")) {
+      publishes.push({ productId: url.pathname.split("/").at(-2), authorization: request.headers.authorization });
       response.setHeader("Content-Type", "application/json");
       response.end(JSON.stringify({ data: {} }));
       return;
@@ -152,6 +198,10 @@ function startCatalogGateway() {
       if (products.has(productId)) {
         products.set(productId, { id: productId, ...payload });
       }
+      const sellerIndex = sellerProducts.findIndex((product) => product.id === productId);
+      if (sellerIndex >= 0) {
+        sellerProducts[sellerIndex] = { id: productId, ...payload };
+      }
       response.setHeader("Content-Type", "application/json");
       response.end(JSON.stringify({ data: { id: productId } }));
       return;
@@ -159,7 +209,7 @@ function startCatalogGateway() {
     response.statusCode = 404;
     response.end();
   });
-  return { creates, products, server, writes };
+  return { creates, products, publishes, server, writes, sellerPageRequests, sellerProducts };
 }
 
 test("day gate uses the fresh buyer phone for profile upsert", async () => {
@@ -187,6 +237,8 @@ test("demo seeders create variants with complete parcel metadata", async () => {
 
   assert.match(mjsSource, /parcel:\s*\{\s*weightGrams:\s*1000,\s*lengthCm:\s*30,\s*widthCm:\s*20,\s*heightCm:\s*10\s*\}/s);
   assert.match(shSource, /parcel:\s*\{\s*weightGrams:\s*1000,\s*lengthCm:\s*30,\s*widthCm:\s*20,\s*heightCm:\s*10\s*\}/s);
+  assert.match(shSource, /created_id=.*\.data\.id/);
+  assert.match(shSource, /sellers\/me\/products\/\$\{created_id\}\/publish/);
 });
 
 test("rerunning the demo catalog backfills affected existing SKUs idempotently", async (t) => {
@@ -198,6 +250,7 @@ test("rerunning the demo catalog backfills affected existing SKUs idempotently",
   const baseUrl = `http://127.0.0.1:${address.port}`;
 
   const firstRun = await runDemoSeeder(baseUrl);
+  const firstCreateCount = gateway.creates.length;
   const secondRun = await runDemoSeeder(baseUrl);
 
   assert.equal(firstRun.code, 0, `${firstRun.stdout}\n${firstRun.stderr}`);
@@ -252,7 +305,11 @@ test("rerunning the demo catalog backfills affected existing SKUs idempotently",
     widthCm: 33,
     heightCm: 22,
   });
-  assert.equal(gateway.creates.length, 0);
+  assert.ok(firstCreateCount > 0);
+  assert.equal(gateway.creates.length, firstCreateCount);
+  assert.equal(gateway.publishes.length, firstCreateCount);
+  assert.ok(gateway.publishes.every(({ authorization }) => authorization === "Bearer seed-token"));
+  assert.deepEqual(gateway.publishes.map(({ productId }) => productId), gateway.creates.map((payload) => `${payload.variants[0].sku}-id`));
   assert.equal(gateway.writes.some(({ productId }) => productId === "unchanged-id"), false);
   assert.equal(gateway.writes.some(({ payload }) => payload.variants?.[0]?.parcel === null), false);
   assert.equal(gateway.writes.length, 2);
@@ -260,4 +317,63 @@ test("rerunning the demo catalog backfills affected existing SKUs idempotently",
     TRUSTED_PARCEL,
     TRUSTED_PARCEL,
   ]);
+  assert.deepEqual(gateway.sellerPageRequests, [
+    { authorization: "Bearer seed-token", page: "0", size: "50" },
+    { authorization: "Bearer seed-token", page: "1", size: "50" },
+    { authorization: "Bearer seed-token", page: "0", size: "50" },
+    { authorization: "Bearer seed-token", page: "1", size: "50" },
+  ]);
+});
+
+test("FORCE creates missing demo SKUs in a partially populated seller catalog", async (t) => {
+  const gateway = startCatalogGateway();
+  gateway.sellerProducts.splice(0, gateway.sellerProducts.length, gateway.products.get("iphone-id"));
+  t.after(() => gateway.server.close());
+  await new Promise((resolve) => gateway.server.listen(0, "127.0.0.1", resolve));
+  const address = gateway.server.address();
+  assert.ok(address && typeof address === "object");
+
+  const result = await runDemoSeeder(`http://127.0.0.1:${address.port}`);
+
+  assert.equal(result.code, 0, `${result.stdout}\n${result.stderr}`);
+  assert.equal(gateway.creates.length, 12);
+  assert.equal(gateway.writes.length, 1);
+  assert.equal(gateway.writes[0].productId, "iphone-id");
+  assert.equal(gateway.creates.some((payload) => payload.variants[0].sku === "SKU-IPH16-PM-256"), false);
+  assert.equal(gateway.creates.some((payload) => payload.variants[0].sku === "SKU-SONY-WH-XM5"), true);
+  assert.deepEqual(gateway.sellerPageRequests, [
+    { authorization: "Bearer seed-token", page: "0", size: "50" },
+  ]);
+});
+
+test("non-FORCE skips a non-empty seller catalog after authenticated lookup", async (t) => {
+  const gateway = startCatalogGateway();
+  gateway.sellerProducts.splice(0, gateway.sellerProducts.length, gateway.products.get("iphone-id"));
+  t.after(() => gateway.server.close());
+  await new Promise((resolve) => gateway.server.listen(0, "127.0.0.1", resolve));
+  const address = gateway.server.address();
+  assert.ok(address && typeof address === "object");
+
+  const result = await runDemoSeeder(`http://127.0.0.1:${address.port}`, "0");
+
+  assert.equal(result.code, 0, `${result.stdout}\n${result.stderr}`);
+  assert.equal(gateway.creates.length, 0);
+  assert.equal(gateway.writes.length, 0);
+  assert.deepEqual(gateway.sellerPageRequests, [
+    { authorization: "Bearer seed-token", page: "0", size: "50" },
+  ]);
+});
+
+test("malformed seller pagination fails closed after one request", async (t) => {
+  const gateway = startCatalogGateway({ malformedPagination: true });
+  t.after(() => gateway.server.close());
+  await new Promise((resolve) => gateway.server.listen(0, "127.0.0.1", resolve));
+  const address = gateway.server.address();
+  assert.ok(address && typeof address === "object");
+
+  const result = await runDemoSeeder(`http://127.0.0.1:${address.port}`);
+
+  assert.notEqual(result.code, 0);
+  assert.match(result.stderr, /seller pagination metadata/i);
+  assert.equal(gateway.sellerPageRequests.length, 1);
 });

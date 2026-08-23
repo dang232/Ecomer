@@ -13,6 +13,7 @@ set -euo pipefail
 GATEWAY="${GATEWAY:-http://localhost:8080}"
 SELLER_USER="${SELLER_USER:-seller1}"
 SELLER_PASS="${SELLER_PASS:-test}"
+MAX_SELLER_PAGES=10000
 
 need() { command -v "$1" >/dev/null 2>&1 || { echo "missing dependency: $1" >&2; exit 1; }; }
 need curl
@@ -23,13 +24,6 @@ curl -fsS -o /dev/null "${GATEWAY}/products?size=1" || {
   echo "gateway not reachable at ${GATEWAY}" >&2
   exit 1
 }
-
-catalog_json=$(curl -fsS "${GATEWAY}/products?size=100")
-current_count=$(jq -r '.data.totalElements // (.data.content | length) // 0' <<<"${catalog_json}")
-if [ "${current_count}" != "0" ] && [ "${FORCE:-0}" != "1" ]; then
-  echo "catalog already has ${current_count} products. Set FORCE=1 to seed anyway."
-  exit 0
-fi
 
 echo "==> requesting token for ${SELLER_USER}"
 TOKEN=$(curl -fsS \
@@ -42,13 +36,57 @@ if [ -z "${TOKEN}" ] || [ "${TOKEN}" = "null" ]; then
   exit 1
 fi
 
+seller_catalog=$(mktemp)
+trap 'rm -f "${seller_catalog}" "${seller_catalog}.next"' EXIT
+page=0
+while [ "${page}" -lt "${MAX_SELLER_PAGES}" ]; do
+  page_json=$(curl -fsS \
+    -H "Authorization: Bearer ${TOKEN}" \
+    "${GATEWAY}/sellers/me/products?size=50&page=${page}")
+  content_type=$(jq -r 'if (.data.content | type) == "array" then "array" else "invalid" end' <<<"${page_json}")
+  last_type=$(jq -r 'if (.data.last | type) == "boolean" then "boolean" else "invalid" end' <<<"${page_json}")
+  total_pages_type=$(jq -r 'if (.data.totalPages | type) == "number" and (.data.totalPages | floor) == .data.totalPages and .data.totalPages >= 0 then "integer" else "invalid" end' <<<"${page_json}")
+  total_pages=$(jq -r '.data.totalPages // -1' <<<"${page_json}")
+  last=$(jq -r '.data.last // false' <<<"${page_json}")
+  content_count=$(jq -r '.data.content | length' <<<"${page_json}")
+  if [ "${content_type}" != "array" ] || [ "${last_type}" != "boolean" ] || [ "${total_pages_type}" != "integer" ] || { [ "${total_pages}" -gt 0 ] && [ "${page}" -ge "${total_pages}" ]; } || { [ "${total_pages}" -eq 0 ] && [ "${content_count}" -gt 0 ]; } || { [ "${total_pages}" -gt 0 ] && [ "${last}" = "true" ] && [ "${page}" -ne $((total_pages - 1)) ]; } || { [ "${total_pages}" -gt 0 ] && [ "${last}" = "false" ] && [ "${page}" -ge $((total_pages - 1)) ]; }; then
+    echo "seller pagination metadata is invalid on page ${page}" >&2
+    exit 1
+  fi
+  if [ "${page}" = "0" ]; then
+    jq -c '.data.content' <<<"${page_json}" >"${seller_catalog}"
+  else
+    jq -c '.data.content // []' <<<"${page_json}" | jq -s '.[0] + .[1]' "${seller_catalog}" - >"${seller_catalog}.next"
+    mv "${seller_catalog}.next" "${seller_catalog}"
+  fi
+  if { [ "${total_pages}" -eq 0 ] && [ "${content_count}" -eq 0 ]; } || { [ "${last}" = "true" ] && [ "${page}" -eq $((total_pages - 1)) ]; }; then
+    break
+  fi
+  if [ "${content_count}" -eq 0 ]; then
+    echo "seller pagination made no progress on page ${page}" >&2
+    exit 1
+  fi
+  page=$((page + 1))
+done
+
+if [ "${page}" -ge "${MAX_SELLER_PAGES}" ]; then
+  echo "seller pagination exceeded maximum page bound of ${MAX_SELLER_PAGES}" >&2
+  exit 1
+fi
+
+current_count=$(jq 'length' "${seller_catalog}")
+if [ "${current_count}" != "0" ] && [ "${FORCE:-0}" != "1" ]; then
+  echo "catalog already has ${current_count} products. Set FORCE=1 to seed anyway."
+  exit 0
+fi
+
 create_product() {
   local name="$1" desc="$2" category="$3" brand="$4" sku="$5" price="$6" stock="$7" image="$8"
   local body
   local existing
   existing=$(jq -c --arg sku "${sku}" '
-    [.data.content[]? | select(any(.variants[]?; .sku == $sku))] | .[0] // empty
-  ' <<<"${catalog_json}")
+    [.[]? | select(any(.variants[]?; .sku == $sku))] | .[0] // empty
+  ' "${seller_catalog}")
   body=$(jq -n \
     --arg name "${name}" \
     --arg desc "${desc}" \
@@ -112,10 +150,18 @@ create_product() {
     fi
     return 0
   fi
-  curl -fsS -X POST "${GATEWAY}/sellers/me/products" \
+  local response created_id
+  response=$(curl -fsS -X POST "${GATEWAY}/sellers/me/products" \
     -H "Authorization: Bearer ${TOKEN}" \
     -H "Content-Type: application/json" \
-    -d "${body}" >/dev/null
+    -d "${body}")
+  created_id=$(jq -r '.data.id // empty' <<<"${response}")
+  if [ -z "${created_id}" ]; then
+    echo "  ! ${name}: create response did not include a product id" >&2
+    return 1
+  fi
+  curl -fsS -X PUT "${GATEWAY}/sellers/me/products/${created_id}/publish" \
+    -H "Authorization: Bearer ${TOKEN}" >/dev/null
   printf '  + %s\n' "${name}"
 }
 
