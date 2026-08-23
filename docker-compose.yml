@@ -354,9 +354,13 @@ services:
         condition: service_healthy
     environment:
       KAFKA_ADMIN_PASSWORD: ${KAFKA_ADMIN_PASSWORD:?KAFKA_ADMIN_PASSWORD must be set}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      VNSHOP_KAFKA_TARGET: local
     volumes:
-      - ./infra/scripts/init-kafka-topics.sh:/init-kafka-topics.sh:ro
-    command: ["bash", "/init-kafka-topics.sh"]
+      - ./infra/scripts/init-kafka-topics-local.sh:/opt/vnshop/init-kafka-topics-local.sh:ro
+      - ./infra/kafka/topic-inventory.yaml:/opt/vnshop/infra/kafka/topic-inventory.yaml:ro
+    working_dir: /opt/vnshop
+    command: ["bash", "/opt/vnshop/init-kafka-topics-local.sh"]
     restart: "no"
 
   keycloak:
@@ -1006,7 +1010,11 @@ services:
       REDIS_HOST: redis
       REDIS_PASSWORD: ${REDIS_PASSWORD:-vnshop123}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:?ELASTIC_PASSWORD must be set}
+      SPRING_PROFILES_ACTIVE: local
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      ELASTICSEARCH_USERNAME: elastic
+      ELASTICSEARCH_PASSWORD: ${ELASTIC_PASSWORD:?ELASTIC_PASSWORD must be set}
+      ELASTICSEARCH_SSL_BUNDLE: ""
       KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
