@@ -38,7 +38,7 @@ public class SecurityConfig {
                         // permits the same paths; in local dev `stripe listen` forwards
                         // straight to this service, so the permit must live here too.
                         .requestMatchers("/payment/*/ipn", "/payment/*/return", "/payment/*/webhook",
-                                "/payment/stripe/chargeback-webhook").permitAll()
+                                "/payment/stripe/chargeback-webhook", "/payment/paypal/chargeback-webhook").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
                 .build();

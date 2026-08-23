@@ -6,6 +6,8 @@ grpc:
     payment:
       host: ${GRPC_CLIENT_PAYMENT_HOST:localhost}
       port: ${GRPC_CLIENT_PAYMENT_PORT:9094}
+      service-id: ${GRPC_CLIENT_PAYMENT_SERVICE_ID:order-service}
+      service-token: ${GRPC_CLIENT_PAYMENT_SERVICE_TOKEN:}
     shipping:
       host: ${GRPC_CLIENT_SHIPPING_HOST:localhost}
       port: ${GRPC_CLIENT_SHIPPING_PORT:9095}

@@ -1,0 +1,91 @@
+schema_version: production-gates.v1
+authority:
+  rendered_manifest: kubectl-kustomize:infra/k8s/overlays/prod
+  deployment: argocd-application:vnshop-prod
+  protected_ref: production
+statuses:
+  repository: [PASS, FAIL, BLOCKED_EXTERNAL, INCONCLUSIVE, NO-GO]
+  production: [GO, NO-GO]
+precedence: [FAIL, INCONCLUSIVE, BLOCKED_EXTERNAL, PASS]
+mandatory:
+  - image_identity
+  - registry_provenance
+  - sealedsecret_coverage
+  - origins
+  - provider_modes
+  - kafka_security
+  - elasticsearch_security
+  - backup_authority
+  - argo_revision
+  - rendered_manifest_digest
+  - live_cluster_uid
+provenance:
+  required: [producer_identity, owner, environment_identity, command_binding, artifact_digest, signature_or_provider_id]
+  repository_signature: repository-commit
+gates:
+  image_identity:
+    owner: release-engineering-owner
+    producing_system: registry-attestation
+    authority: registry-release-lock
+    verification: exact image repository and digest match against the immutable release lock
+    failure_action: NO-GO
+  registry_provenance:
+    owner: release-engineering-owner
+    producing_system: registry-attestation
+    authority: registry-attestation-bundle
+    verification: provider-issued attestation and SBOM bind source commit and artifact digest
+    failure_action: NO-GO
+  sealedsecret_coverage:
+    owner: platform-operations-owner
+    producing_system: secret-manager-certificate-authority
+    authority: sealedsecret-controller
+    verification: ciphertext coverage and certificate material are independently attributable
+    failure_action: NO-GO
+  origins:
+    owner: platform-operations-owner
+    producing_system: certificate-authority
+    authority: production-ingress-and-keycloak
+    verification: every configured origin and certificate hostname is current HTTPS production data
+    failure_action: NO-GO
+  provider_modes:
+    owner: payments-shipping-operations-owner
+    producing_system: provider-sandbox-and-egress-telemetry
+    authority: isolated-provider-preflight
+    verification: enabled providers and egress endpoints match the approved production mode
+    failure_action: NO-GO
+  kafka_security:
+    owner: platform-operations-owner
+    producing_system: authenticated-cluster-drill-runner
+    authority: argocd-application:vnshop-prod
+    verification: rendered authority plus authenticated HA/security failure evidence
+    failure_action: NO-GO
+  elasticsearch_security:
+    owner: platform-operations-owner
+    producing_system: authenticated-cluster-drill-runner
+    authority: argocd-application:vnshop-prod
+    verification: rendered authority plus authenticated HA/security failure evidence
+    failure_action: NO-GO
+  backup_authority:
+    owner: disaster-recovery-owner
+    producing_system: canonical-backup-producer-and-isolated-restore-runner
+    authority: vnshop-authoritative-backup
+    verification: immutable fence-bound backup and isolated restore evidence
+    failure_action: NO-GO
+  argo_revision:
+    owner: platform-operations-owner
+    producing_system: argocd-kubernetes-audit
+    authority: argocd-application:vnshop-prod
+    verification: desired targetRevision equals resolved sync revision on protected production ref
+    failure_action: NO-GO
+  rendered_manifest_digest:
+    owner: release-engineering-owner
+    producing_system: repository-render-and-argocd
+    authority: kubectl-kustomize:infra/k8s/overlays/prod
+    verification: byte-identical canonical production render digest
+    failure_action: NO-GO
+  live_cluster_uid:
+    owner: platform-operations-owner
+    producing_system: kubernetes-audit
+    authority: argocd-application:vnshop-prod
+    verification: live cluster UID and environment identity match the approved deployment
+    failure_action: NO-GO

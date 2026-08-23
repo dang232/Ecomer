@@ -15,14 +15,28 @@ data:
     #!/bin/bash
     set -e
 
+    case "${VNSHOP_KAFKA_TARGET:-local}" in
+      local) ;;
+      *) echo "refusing non-local Kafka bootstrap target" >&2; exit 64 ;;
+    esac
+
+    INVENTORY_AUTHORITY=infra/kafka/topic-inventory.yaml
+    test -f "$INVENTORY_AUTHORITY" || { echo "Kafka inventory authority is required: $INVENTORY_AUTHORITY" >&2; exit 65; }
+
     BROKER="kafka:9092"
     ADMIN_CONFIG="/tmp/admin.properties"
 
     # Create admin client config for SASL authentication
     cat > $ADMIN_CONFIG <<EOF
-    security.protocol=SASL_PLAINTEXT
+    security.protocol=SASL_SSL
     sasl.mechanism=PLAIN
-    sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="admin" password="${KAFKA_ADMIN_PASSWORD:?KAFKA_ADMIN_PASSWORD is required}";
+    ssl.endpoint.identification.algorithm=HTTPS
+    ssl.client.auth=required
+    ssl.truststore.location=${KAFKA_SSL_TRUSTSTORE_LOCATION:?KAFKA_SSL_TRUSTSTORE_LOCATION is required}
+    ssl.keystore.location=${KAFKA_SSL_KEYSTORE_LOCATION:?KAFKA_SSL_KEYSTORE_LOCATION is required}
+    ssl.truststore.password=${KAFKA_SSL_TRUSTSTORE_PASSWORD:?KAFKA_SSL_TRUSTSTORE_PASSWORD is required}
+    ssl.keystore.password=${KAFKA_SSL_KEYSTORE_PASSWORD:?KAFKA_SSL_KEYSTORE_PASSWORD is required}
+    sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="kafka-admin" password="${KAFKA_ADMIN_PASSWORD:?KAFKA_ADMIN_PASSWORD is required}";
     EOF
 
     echo "Waiting for Kafka to be ready..."
@@ -80,7 +94,7 @@ data:
     for entry in "${TOPICS[@]}"; do
       IFS=':' read -r topic partitions <<< "$entry"
       kafka-topics --bootstrap-server $BROKER --command-config $ADMIN_CONFIG \
-        --create --if-not-exists --topic "$topic" --partitions "$partitions" --replication-factor 1
+        --create --if-not-exists --topic "$topic" --partitions "$partitions" --replication-factor 3 --config min.insync.replicas=2
     done
     echo "All topics created."
 
@@ -232,6 +246,1007 @@ data:
 
     echo "All ACLs configured."
     rm -f $ADMIN_CONFIG
+  topic-inventory.yaml: |
+    schema_version: kafka-topic-inventory.v1
+    authority: infra/kafka/topic-inventory.yaml
+    bootstrap:
+      dns: kafka:9092
+      listener: CLIENT
+      protocol: SASL_SSL
+      sasl_mechanism: PLAIN
+      hostname_verification: HTTPS
+      ca_secret_key: platform-kafka-truststore
+      client_certificate_secret_key: platform-kafka-admin-keystore
+      admin_principal: kafka-admin
+      admin_password_secret_key: platform-kafka-admin-password
+      auto_topic_creation: false
+    topics:
+    - name: messaging.message.sent
+      partitions: 1
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: product-events
+      partitions: 12
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: order.created
+      partitions: 6
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: order.updated
+      partitions: 6
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: order.paid
+      partitions: 6
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: order.shipped
+      partitions: 6
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: order.cancelled
+      partitions: 6
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: payment.completed
+      partitions: 6
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: payment.refund.requested
+      partitions: 6
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: payment.refunded
+      partitions: 6
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: inventory.released
+      partitions: 6
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: shipping.cancelled
+      partitions: 6
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: shipping.cancel-requested
+      partitions: 6
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: shipping.status.updated
+      partitions: 6
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: order.confirmed
+      partitions: 6
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: order.confirmed.retry
+      partitions: 6
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: order.confirmed.DLT
+      partitions: 6
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: order.delivered
+      partitions: 6
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: notification.events
+      partitions: 6
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: product.approved
+      partitions: 3
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: product.rejected
+      partitions: 3
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: review.replied
+      partitions: 3
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: return.requested
+      partitions: 3
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: payout.completed
+      partitions: 3
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: user.registered
+      partitions: 3
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: user.password-reset
+      partitions: 3
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: video.upload.completed
+      partitions: 3
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: video.transcode.completed
+      partitions: 3
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: video.transcode.failed
+      partitions: 3
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: video.moderation.completed
+      partitions: 3
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: video.published
+      partitions: 3
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: video.rejected
+      partitions: 3
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: video.moderation.dlt
+      partitions: 3
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: video.upload.completed.DLT
+      partitions: 3
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: video.transcode.completed.DLT
+      partitions: 3
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: gdpr.export-requested
+      partitions: 1
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: gdpr.export-fragment
+      partitions: 3
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: gdpr.deletion-requested
+      partitions: 1
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    - name: gdpr.deletion-completed
+      partitions: 3
+      replication_factor: 3
+      min_insync_replicas: 2
+      config_version: v1
+    clients:
+    - service: order-service
+      principal: svc-order
+      bootstrap: kafka:9092
+      protocol: SASL_SSL
+      mechanism: PLAIN
+      ca_secret: order-service-kafka-ca
+      client_cert_secret: order-service-kafka-client-cert
+      client_key_secret: order-service-kafka-client-key
+      username_secret: order-service-kafka-username
+      password_secret: order-service-kafka-password
+      hostname_verification: HTTPS
+      groups:
+      - order-service-payment
+      - order-service-refund
+      - order-service-projection
+      - order-service-finance
+      - order-service-saga-compensation
+      - order-service-gdpr
+      fallback: fail-closed
+      tls_format: JKS
+    - service: payment-service
+      principal: svc-payment
+      bootstrap: kafka:9092
+      protocol: SASL_SSL
+      mechanism: PLAIN
+      ca_secret: payment-service-kafka-ca
+      client_cert_secret: payment-service-kafka-client-cert
+      client_key_secret: payment-service-kafka-client-key
+      username_secret: payment-service-kafka-username
+      password_secret: payment-service-kafka-password
+      hostname_verification: HTTPS
+      groups:
+      - payment-service-paypal-refund
+      - payment-service-gdpr
+      fallback: fail-closed
+      tls_format: JKS
+    - service: inventory-service
+      principal: svc-inventory
+      bootstrap: kafka:9092
+      protocol: SASL_SSL
+      mechanism: PLAIN
+      ca_secret: inventory-service-kafka-ca
+      client_cert_secret: inventory-service-kafka-client-cert
+      client_key_secret: inventory-service-kafka-client-key
+      username_secret: inventory-service-kafka-username
+      password_secret: inventory-service-kafka-password
+      hostname_verification: HTTPS
+      groups:
+      - inventory-service-gdpr
+      fallback: fail-closed
+      tls_format: JKS
+    - service: product-service
+      principal: svc-product
+      bootstrap: kafka:9092
+      protocol: SASL_SSL
+      mechanism: PLAIN
+      ca_secret: product-service-kafka-ca
+      client_cert_secret: product-service-kafka-client-cert
+      client_key_secret: product-service-kafka-client-key
+      username_secret: product-service-kafka-username
+      password_secret: product-service-kafka-password
+      hostname_verification: HTTPS
+      groups:
+      - product-service-review-purchases
+      - product-service-video-transcode-failures
+      fallback: fail-closed
+      tls_format: JKS
+    - service: shipping-service
+      principal: svc-shipping
+      bootstrap: kafka:9092
+      protocol: SASL_SSL
+      mechanism: PLAIN
+      ca_secret: shipping-service-kafka-ca
+      client_cert_secret: shipping-service-kafka-client-cert
+      client_key_secret: shipping-service-kafka-client-key
+      username_secret: shipping-service-kafka-username
+      password_secret: shipping-service-kafka-password
+      hostname_verification: HTTPS
+      groups:
+      - shipping-svc-cancel
+      - shipping-service-gdpr
+      fallback: fail-closed
+      tls_format: JKS
+    - service: search-service
+      principal: svc-search
+      bootstrap: kafka:9092
+      protocol: SASL_SSL
+      mechanism: PLAIN
+      ca_secret: search-service-kafka-ca
+      client_cert_secret: search-service-kafka-client-cert
+      client_key_secret: search-service-kafka-client-key
+      username_secret: search-service-kafka-username
+      password_secret: search-service-kafka-password
+      hostname_verification: HTTPS
+      groups:
+      - search-service
+      fallback: fail-closed
+      tls_format: JKS
+    - service: recommendations-service
+      principal: svc-recommendations
+      bootstrap: kafka:9092
+      protocol: SASL_SSL
+      mechanism: PLAIN
+      ca_secret: recommendations-service-kafka-ca
+      client_cert_secret: recommendations-service-kafka-client-cert
+      client_key_secret: recommendations-service-kafka-client-key
+      username_secret: recommendations-service-kafka-username
+      password_secret: recommendations-service-kafka-password
+      hostname_verification: HTTPS
+      groups:
+      - recommendations-service
+      fallback: fail-closed
+      tls_format: JKS
+    - service: seller-finance-service
+      principal: svc-finance
+      bootstrap: kafka:9092
+      protocol: SASL_SSL
+      mechanism: PLAIN
+      ca_secret: seller-finance-service-kafka-ca
+      client_cert_secret: seller-finance-service-kafka-client-cert
+      client_key_secret: seller-finance-service-kafka-client-key
+      username_secret: seller-finance-service-kafka-username
+      password_secret: seller-finance-service-kafka-password
+      hostname_verification: HTTPS
+      groups:
+      - seller-finance-service
+      - seller-finance-service-refund
+      fallback: fail-closed
+      tls_format: JKS
+    - service: notification-service
+      principal: svc-notification
+      bootstrap: kafka:9092
+      protocol: SASL_SSL
+      mechanism: PLAIN
+      ca_secret: notification-service-kafka-ca
+      client_cert_secret: notification-service-kafka-client-cert
+      client_key_secret: notification-service-kafka-client-key
+      username_secret: notification-service-kafka-username
+      password_secret: notification-service-kafka-password
+      hostname_verification: HTTPS
+      groups:
+      - notification-service-server
+      fallback: fail-closed
+      tls_format: PEM
+    - service: messaging-service
+      principal: svc-messaging
+      bootstrap: kafka:9092
+      protocol: SASL_SSL
+      mechanism: PLAIN
+      ca_secret: messaging-service-kafka-ca
+      client_cert_secret: messaging-service-kafka-client-cert
+      client_key_secret: messaging-service-kafka-client-key
+      username_secret: messaging-service-kafka-username
+      password_secret: messaging-service-kafka-password
+      hostname_verification: HTTPS
+      groups:
+      - messaging-service
+      fallback: fail-closed
+      tls_format: PEM
+    - service: invoice-service
+      principal: svc-invoice
+      bootstrap: kafka:9092
+      protocol: SASL_SSL
+      mechanism: PLAIN
+      ca_secret: invoice-service-kafka-ca
+      client_cert_secret: invoice-service-kafka-client-cert
+      client_key_secret: invoice-service-kafka-client-key
+      username_secret: invoice-service-kafka-username
+      password_secret: invoice-service-kafka-password
+      hostname_verification: HTTPS
+      groups:
+      - invoice-service
+      fallback: fail-closed
+      tls_format: JKS
+    - service: user-service
+      principal: svc-user
+      bootstrap: kafka:9092
+      protocol: SASL_SSL
+      mechanism: PLAIN
+      ca_secret: user-service-kafka-ca
+      client_cert_secret: user-service-kafka-client-cert
+      client_key_secret: user-service-kafka-client-key
+      username_secret: user-service-kafka-username
+      password_secret: user-service-kafka-password
+      hostname_verification: HTTPS
+      groups:
+      - user-service-gdpr-export
+      fallback: fail-closed
+      tls_format: JKS
+    - service: video-transcoder
+      principal: svc-video-transcoder
+      bootstrap: kafka:9092
+      protocol: SASL_SSL
+      mechanism: PLAIN
+      ca_secret: video-transcoder-kafka-ca
+      client_cert_secret: video-transcoder-kafka-client-cert
+      client_key_secret: video-transcoder-kafka-client-key
+      username_secret: video-transcoder-kafka-username
+      password_secret: video-transcoder-kafka-password
+      hostname_verification: HTTPS
+      groups:
+      - transcoder-worker
+      fallback: fail-closed
+      tls_format: JKS
+    - service: video-moderator
+      principal: svc-video-moderator
+      bootstrap: kafka:9092
+      protocol: SASL_SSL
+      mechanism: PLAIN
+      ca_secret: video-moderator-kafka-ca
+      client_cert_secret: video-moderator-kafka-client-cert
+      client_key_secret: video-moderator-kafka-client-key
+      username_secret: video-moderator-kafka-username
+      password_secret: video-moderator-kafka-password
+      hostname_verification: HTTPS
+      groups:
+      - moderator-worker
+      fallback: fail-closed
+      tls_format: PEM
+    - service: kafka-admin-bootstrap
+      principal: kafka-admin
+      bootstrap: kafka:9092
+      protocol: SASL_SSL
+      mechanism: PLAIN
+      ca_secret: platform-kafka-truststore
+      client_cert_secret: platform-kafka-admin-keystore
+      client_key_secret: platform-kafka-admin-keystore-password
+      username_secret: platform-kafka-admin-username
+      password_secret: platform-kafka-admin-password
+      hostname_verification: HTTPS
+      groups: []
+      fallback: refuse-production-on-missing-secret
+      tls_format: JKS
+    java_tls:
+    - service: order-service
+      truststore_secret: order-service-kafka-truststore
+      keystore_secret: order-service-kafka-keystore
+      truststore_password_secret: order-service-kafka-truststore-password
+      keystore_password_secret: order-service-kafka-keystore-password
+    - service: payment-service
+      truststore_secret: payment-service-kafka-truststore
+      keystore_secret: payment-service-kafka-keystore
+      truststore_password_secret: payment-service-kafka-truststore-password
+      keystore_password_secret: payment-service-kafka-keystore-password
+    - service: inventory-service
+      truststore_secret: inventory-service-kafka-truststore
+      keystore_secret: inventory-service-kafka-keystore
+      truststore_password_secret: inventory-service-kafka-truststore-password
+      keystore_password_secret: inventory-service-kafka-keystore-password
+    - service: product-service
+      truststore_secret: product-service-kafka-truststore
+      keystore_secret: product-service-kafka-keystore
+      truststore_password_secret: product-service-kafka-truststore-password
+      keystore_password_secret: product-service-kafka-keystore-password
+    - service: shipping-service
+      truststore_secret: shipping-service-kafka-truststore
+      keystore_secret: shipping-service-kafka-keystore
+      truststore_password_secret: shipping-service-kafka-truststore-password
+      keystore_password_secret: shipping-service-kafka-keystore-password
+    - service: search-service
+      truststore_secret: search-service-kafka-truststore
+      keystore_secret: search-service-kafka-keystore
+      truststore_password_secret: search-service-kafka-truststore-password
+      keystore_password_secret: search-service-kafka-keystore-password
+    - service: recommendations-service
+      truststore_secret: recommendations-service-kafka-truststore
+      keystore_secret: recommendations-service-kafka-keystore
+      truststore_password_secret: recommendations-service-kafka-truststore-password
+      keystore_password_secret: recommendations-service-kafka-keystore-password
+    - service: seller-finance-service
+      truststore_secret: seller-finance-service-kafka-truststore
+      keystore_secret: seller-finance-service-kafka-keystore
+      truststore_password_secret: seller-finance-service-kafka-truststore-password
+      keystore_password_secret: seller-finance-service-kafka-keystore-password
+    - service: invoice-service
+      truststore_secret: invoice-service-kafka-truststore
+      keystore_secret: invoice-service-kafka-keystore
+      truststore_password_secret: invoice-service-kafka-truststore-password
+      keystore_password_secret: invoice-service-kafka-keystore-password
+    - service: user-service
+      truststore_secret: user-service-kafka-truststore
+      keystore_secret: user-service-kafka-keystore
+      truststore_password_secret: user-service-kafka-truststore-password
+      keystore_password_secret: user-service-kafka-keystore-password
+    - service: video-transcoder
+      truststore_secret: video-transcoder-kafka-truststore
+      keystore_secret: video-transcoder-kafka-keystore
+      truststore_password_secret: video-transcoder-kafka-truststore-password
+      keystore_password_secret: video-transcoder-kafka-keystore-password
+    acl_entries:
+    - operation: Write
+      pattern_type: prefixed
+      principal: User:svc-order
+      resource_name: order
+      resource_type: topic
+    - operation: Write
+      pattern_type: literal
+      principal: User:svc-order
+      resource_name: payment.refund.requested
+      resource_type: topic
+    - operation: Write
+      pattern_type: literal
+      principal: User:svc-order
+      resource_name: shipping.cancel-requested
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-order
+      resource_name: payment.completed
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-order
+      resource_name: payment.refunded
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-order
+      resource_name: inventory.released
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-order
+      resource_name: shipping.cancelled
+      resource_type: topic
+    - operation: Read
+      pattern_type: prefixed
+      principal: User:svc-order
+      resource_name: order
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-order
+      resource_name: order-service-payment
+      resource_type: group
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-order
+      resource_name: order-service-refund
+      resource_type: group
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-order
+      resource_name: order-service-projection
+      resource_type: group
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-order
+      resource_name: order-service-finance
+      resource_type: group
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-order
+      resource_name: order-service-saga-compensation
+      resource_type: group
+    - operation: Write
+      pattern_type: literal
+      principal: User:svc-payment
+      resource_name: payment.completed
+      resource_type: topic
+    - operation: Write
+      pattern_type: literal
+      principal: User:svc-payment
+      resource_name: payment.refunded
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-payment
+      resource_name: payment.refund.requested
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-payment
+      resource_name: payment-service-paypal-refund
+      resource_type: group
+    - operation: Write
+      pattern_type: literal
+      principal: User:svc-inventory
+      resource_name: inventory.released
+      resource_type: topic
+    - operation: Write
+      pattern_type: literal
+      principal: User:svc-product
+      resource_name: product-events
+      resource_type: topic
+    - operation: Write
+      pattern_type: literal
+      principal: User:svc-product
+      resource_name: video.upload.completed
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-product
+      resource_name: order.delivered
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-product
+      resource_name: product-service-review-purchases
+      resource_type: group
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-product
+      resource_name: video.transcode.failed
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-product
+      resource_name: product-service-video-transcode-failures
+      resource_type: group
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-shipping
+      resource_name: shipping.cancel-requested
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-shipping
+      resource_name: shipping-svc-cancel
+      resource_type: group
+    - operation: Write
+      pattern_type: literal
+      principal: User:svc-shipping
+      resource_name: shipping.cancelled
+      resource_type: topic
+    - operation: Write
+      pattern_type: literal
+      principal: User:svc-shipping
+      resource_name: shipping.status.updated
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-finance
+      resource_name: order.created
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-finance
+      resource_name: order.paid
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-finance
+      resource_name: payment.refunded
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-finance
+      resource_name: seller-finance-service
+      resource_type: group
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-finance
+      resource_name: seller-finance-service-refund
+      resource_type: group
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-search
+      resource_name: product-events
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-search
+      resource_name: search-service
+      resource_type: group
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-recommendations
+      resource_name: order.created
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-recommendations
+      resource_name: recommendations-service
+      resource_type: group
+    - operation: Write
+      pattern_type: literal
+      principal: User:svc-user
+      resource_name: gdpr.export-requested
+      resource_type: topic
+    - operation: Write
+      pattern_type: literal
+      principal: User:svc-user
+      resource_name: gdpr.deletion-requested
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-user
+      resource_name: gdpr.export-fragment
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-user
+      resource_name: gdpr.deletion-completed
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-user
+      resource_name: user-service-gdpr-export
+      resource_type: group
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-invoice
+      resource_name: order.confirmed
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-invoice
+      resource_name: order.confirmed.retry
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-invoice
+      resource_name: order.confirmed.DLT
+      resource_type: topic
+    - operation: Write
+      pattern_type: literal
+      principal: User:svc-invoice
+      resource_name: order.confirmed.retry
+      resource_type: topic
+    - operation: Write
+      pattern_type: literal
+      principal: User:svc-invoice
+      resource_name: order.confirmed.DLT
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-invoice
+      resource_name: invoice-service
+      resource_type: group
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-order
+      resource_name: notification.events
+      resource_type: topic
+    - operation: Write
+      pattern_type: literal
+      principal: User:svc-order
+      resource_name: notification.events
+      resource_type: topic
+    - operation: Read
+      pattern_type: prefixed
+      principal: User:svc-notification
+      resource_name: notification-service
+      resource_type: group
+    - operation: Write
+      pattern_type: literal
+      principal: User:svc-messaging
+      resource_name: messaging.message.sent
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-messaging
+      resource_name: messaging.message.sent
+      resource_type: topic
+    - operation: Read
+      pattern_type: prefixed
+      principal: User:svc-messaging
+      resource_name: messaging-service
+      resource_type: group
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-order
+      resource_name: gdpr.export-requested
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-order
+      resource_name: gdpr.deletion-requested
+      resource_type: topic
+    - operation: Write
+      pattern_type: literal
+      principal: User:svc-order
+      resource_name: gdpr.export-fragment
+      resource_type: topic
+    - operation: Write
+      pattern_type: literal
+      principal: User:svc-order
+      resource_name: gdpr.deletion-completed
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-order
+      resource_name: order-service-gdpr
+      resource_type: group
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-payment
+      resource_name: gdpr.export-requested
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-payment
+      resource_name: gdpr.deletion-requested
+      resource_type: topic
+    - operation: Write
+      pattern_type: literal
+      principal: User:svc-payment
+      resource_name: gdpr.export-fragment
+      resource_type: topic
+    - operation: Write
+      pattern_type: literal
+      principal: User:svc-payment
+      resource_name: gdpr.deletion-completed
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-payment
+      resource_name: payment-service-gdpr
+      resource_type: group
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-shipping
+      resource_name: gdpr.export-requested
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-shipping
+      resource_name: gdpr.deletion-requested
+      resource_type: topic
+    - operation: Write
+      pattern_type: literal
+      principal: User:svc-shipping
+      resource_name: gdpr.export-fragment
+      resource_type: topic
+    - operation: Write
+      pattern_type: literal
+      principal: User:svc-shipping
+      resource_name: gdpr.deletion-completed
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-shipping
+      resource_name: shipping-service-gdpr
+      resource_type: group
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-video-transcoder
+      resource_name: video.upload.completed
+      resource_type: topic
+    - operation: Write
+      pattern_type: literal
+      principal: User:svc-video-transcoder
+      resource_name: video.transcode.completed
+      resource_type: topic
+    - operation: Write
+      pattern_type: literal
+      principal: User:svc-video-transcoder
+      resource_name: video.transcode.failed
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-video-transcoder
+      resource_name: video.transcode.completed.DLT
+      resource_type: topic
+    - operation: Write
+      pattern_type: literal
+      principal: User:svc-video-transcoder
+      resource_name: video.transcode.completed.DLT
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-video-moderator
+      resource_name: video.transcode.completed
+      resource_type: topic
+    - operation: Read
+      pattern_type: literal
+      principal: User:svc-video-moderator
+      resource_name: moderator-worker
+      resource_type: group
+    - operation: Write
+      pattern_type: literal
+      principal: User:svc-video-moderator
+      resource_name: video.moderation.completed
+      resource_type: topic
+    - operation: Write
+      pattern_type: literal
+      principal: User:svc-video-moderator
+      resource_name: video.published
+      resource_type: topic
+    - operation: Write
+      pattern_type: literal
+      principal: User:svc-video-moderator
+      resource_name: video.rejected
+      resource_type: topic
+    - operation: Write
+      pattern_type: literal
+      principal: User:svc-video-moderator
+      resource_name: video.moderation.dlt
+      resource_type: topic
+    - principal: User:svc-notification
+      operation: Read
+      resource_type: topic
+      resource_name: order.cancelled
+      pattern_type: literal
+    - principal: User:svc-notification
+      operation: Read
+      resource_type: topic
+      resource_name: order.created
+      pattern_type: literal
+    - principal: User:svc-notification
+      operation: Read
+      resource_type: topic
+      resource_name: order.delivered
+      pattern_type: literal
+    - principal: User:svc-notification
+      operation: Read
+      resource_type: topic
+      resource_name: order.shipped
+      pattern_type: literal
+    - principal: User:svc-notification
+      operation: Read
+      resource_type: topic
+      resource_name: payment.completed
+      pattern_type: literal
+    - principal: User:svc-notification
+      operation: Read
+      resource_type: topic
+      resource_name: payment.refunded
+      pattern_type: literal
+    - principal: User:svc-notification
+      operation: Read
+      resource_type: topic
+      resource_name: payout.completed
+      pattern_type: literal
+    - principal: User:svc-notification
+      operation: Read
+      resource_type: topic
+      resource_name: product.approved
+      pattern_type: literal
+    - principal: User:svc-notification
+      operation: Read
+      resource_type: topic
+      resource_name: product.rejected
+      pattern_type: literal
+    - principal: User:svc-notification
+      operation: Read
+      resource_type: topic
+      resource_name: return.requested
+      pattern_type: literal
+    - principal: User:svc-notification
+      operation: Read
+      resource_type: topic
+      resource_name: review.replied
+      pattern_type: literal
+    - principal: User:svc-notification
+      operation: Read
+      resource_type: topic
+      resource_name: user.password-reset
+      pattern_type: literal
+    - principal: User:svc-notification
+      operation: Read
+      resource_type: topic
+      resource_name: user.registered
+      pattern_type: literal
+    - principal: User:svc-notification
+      operation: Read
+      resource_type: topic
+      resource_name: video.published
+      pattern_type: literal
+    - principal: User:svc-notification
+      operation: Read
+      resource_type: topic
+      resource_name: video.rejected
+      pattern_type: literal
+    acl_contract:
+      application_super_users_forbidden:
+      - svc-order
+      - svc-payment
+      - svc-inventory
+      - svc-product
+      - svc-shipping
+      - svc-finance
+      - svc-search
+      - svc-recommendations
+      - svc-invoice
+      - svc-messaging
+      - svc-user
+      - svc-video-transcoder
+      - svc-video-moderator
+      unauthorized_acl_probe:
+        principal: svc-unauthorized
+        topic: product-events
+        operation: Read
+        expected: DENIED
+      bootstrap_order: reassignment-verified-before-acl-bootstrap
+      transactional_id_policy: none-used
+      transactional_ids: []
+      topic_acl_source: infra/k8s/base/kafka-bootstrap-job.yaml
+      local_bootstrap_source: infra/scripts/init-kafka-topics.sh
 ---
 apiVersion: batch/v1
 kind: Job
@@ -256,17 +1271,37 @@ spec:
       - name: bootstrap
         image: confluentinc/cp-kafka@sha256:acbbf674f2ed40e5d0a8ca51beb0f00692c866fc22b5ce06f8cadbdc54cd4436
         command: [bash, /opt/vnshop/init-kafka-topics.sh]
+        workingDir: /opt/vnshop
         env:
         - name: KAFKA_ADMIN_PASSWORD
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: platform-kafka-admin-password}
+        - name: KAFKA_SSL_TRUSTSTORE_LOCATION
+          value: /etc/kafka/tls/ca.truststore.jks
+        - name: KAFKA_SSL_KEYSTORE_LOCATION
+          value: /etc/kafka/tls/admin.keystore.jks
+        - name: KAFKA_SSL_TRUSTSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: platform-kafka-truststore-password}
+        - name: KAFKA_SSL_KEYSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: platform-kafka-admin-keystore-password}
         resources:
           requests: {cpu: 25m, memory: 128Mi}
           limits: {cpu: 500m, memory: 512Mi}
         securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
         volumeMounts:
         - {name: script, mountPath: /opt/vnshop/init-kafka-topics.sh, subPath: init-kafka-topics.sh, readOnly: true}
+        - {name: inventory, mountPath: /opt/vnshop/infra/kafka/topic-inventory.yaml, subPath: topic-inventory.yaml, readOnly: true}
         - {name: tmp, mountPath: /tmp}
+        - {name: kafka-tls, mountPath: /etc/kafka/tls, readOnly: true}
       volumes:
-      - {name: script, configMap: {name: vnshop-kafka-bootstrap, defaultMode: 0555}}
+      - {name: script, configMap: {name: vnshop-kafka-bootstrap, defaultMode: 0555, items: [{key: init-kafka-topics.sh, path: init-kafka-topics.sh}]}}
+      - {name: inventory, configMap: {name: vnshop-kafka-bootstrap, items: [{key: topic-inventory.yaml, path: topic-inventory.yaml}]}}
       - {name: tmp, emptyDir: {}}
+      - name: kafka-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {key: platform-kafka-admin-keystore, path: admin.keystore.jks}
+          - {key: platform-kafka-truststore, path: ca.truststore.jks}

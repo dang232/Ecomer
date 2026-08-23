@@ -4,6 +4,7 @@ import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.kafka.autoconfigure.KafkaProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -21,20 +22,10 @@ public class KafkaAdminConfig {
 
     @Bean
     @Primary
-    public KafkaAdmin kafkaAdmin(
-            @Value("${spring.kafka.bootstrap-servers}") String bootstrapServers,
-            @Value("${KAFKA_SASL_USERNAME}") String username,
-            @Value("${KAFKA_SASL_PASSWORD}") String password) {
-        Map<String, Object> configs = new HashMap<>();
-        configs.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        configs.put("security.protocol", "SASL_PLAINTEXT");
-        configs.put("sasl.mechanism", "PLAIN");
-        configs.put("sasl.jaas.config",
-                "org.apache.kafka.common.security.plain.PlainLoginModule required "
-                + "username=\"" + username + "\" "
-                + "password=\"" + password + "\";");
+    public KafkaAdmin kafkaAdmin(KafkaProperties kafkaProperties) {
+        Map<String, Object> configs = new HashMap<>(kafkaProperties.buildAdminProperties());
         KafkaAdmin admin = new KafkaAdmin(configs);
-        admin.setFatalIfBrokerNotAvailable(false);
+        admin.setFatalIfBrokerNotAvailable(true);
         return admin;
     }
 

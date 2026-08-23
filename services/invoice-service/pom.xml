@@ -16,6 +16,7 @@
 
 	<properties>
 		<java.version>21</java.version>
+		<opentelemetry.javaagent.version>2.30.0</opentelemetry.javaagent.version>
 		<postgresql.version>42.7.13</postgresql.version>
 	</properties>
 
@@ -145,6 +146,7 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 				<configuration>
+					<jvmArguments>-javaagent:${project.build.directory}/opentelemetry-javaagent.jar</jvmArguments>
 					<excludes>
 						<exclude>
 							<groupId>org.projectlombok</groupId>
@@ -152,6 +154,30 @@
 						</exclude>
 					</excludes>
 				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>copy-opentelemetry-javaagent</id>
+						<phase>generate-resources</phase>
+						<goals>
+							<goal>copy</goal>
+						</goals>
+						<configuration>
+							<artifactItems>
+								<artifactItem>
+									<groupId>io.opentelemetry.javaagent</groupId>
+									<artifactId>opentelemetry-javaagent</artifactId>
+									<version>${opentelemetry.javaagent.version}</version>
+									<outputDirectory>${project.build.directory}</outputDirectory>
+									<destFileName>opentelemetry-javaagent.jar</destFileName>
+								</artifactItem>
+							</artifactItems>
+						</configuration>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 	</build>

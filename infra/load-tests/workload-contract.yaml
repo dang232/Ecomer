@@ -1,0 +1,106 @@
+schema_version: workload-contract.v1
+logical_total: 20000000
+count_formula: "sum(entity.logical_count for entity in entities)"
+entities:
+  - id: buyers
+    domain: identity
+    owner: user-service
+    logical_count: 1500000
+    derived_artifacts: [addresses, wishlist_rows]
+  - id: sellers
+    domain: identity
+    owner: user-service
+    logical_count: 500000
+    derived_artifacts: [seller_profiles]
+  - id: products
+    domain: catalog
+    owner: product-service
+    logical_count: 500000
+    derived_artifacts: [variants, images, search_projections]
+  - id: reviews
+    domain: catalog
+    owner: product-service
+    logical_count: 1000000
+    derived_artifacts: [helpful_votes, review_media]
+  - id: carts
+    domain: commerce
+    owner: cart-service
+    logical_count: 500000
+    derived_artifacts: [cart_items]
+  - id: orders
+    domain: commerce
+    owner: order-service
+    logical_count: 2500000
+    derived_artifacts: [order_items, sub_orders, order_projections, outbox_rows]
+  - id: payments
+    domain: money
+    owner: payment-service
+    logical_count: 2000000
+    derived_artifacts: [ledger_rows, webhooks]
+  - id: shipments
+    domain: fulfillment
+    owner: shipping-service
+    logical_count: 1000000
+    derived_artifacts: [shipping_labels, tracking_events]
+  - id: messages
+    domain: communication
+    owner: messaging-service
+    logical_count: 1500000
+    derived_artifacts: [threads, message_attachments]
+  - id: notifications
+    domain: communication
+    owner: notification-service
+    logical_count: 500000
+    derived_artifacts: [delivery_attempts]
+  - id: inventory_items
+    domain: inventory
+    owner: inventory-service
+    logical_count: 1500000
+    derived_artifacts: [reservations, stock_events]
+  - id: seller_finance_accounts
+    domain: finance
+    owner: seller-finance-service
+    logical_count: 500000
+    derived_artifacts: [payouts, wallet_transactions]
+  - id: recommendations
+    domain: discovery
+    owner: recommendations-service
+    logical_count: 1000000
+    derived_artifacts: [co_purchase_projections]
+  - id: invoices
+    domain: finance
+    owner: invoice-service
+    logical_count: 1000000
+    derived_artifacts: [invoice_documents]
+  - id: configurations
+    domain: platform
+    owner: configuration-service
+    logical_count: 500000
+    derived_artifacts: [configuration_versions]
+  - id: video_assets
+    domain: media
+    owner: video-transcoder
+    logical_count: 500000
+    derived_artifacts: [video_objects, posters, moderation_events]
+  - id: questions
+    domain: catalog
+    owner: product-service
+    logical_count: 1500000
+    derived_artifacts: [answers, helpful_votes]
+  - id: flash_sale_inventory
+    domain: inventory
+    owner: inventory-service
+    logical_count: 1000000
+    derived_artifacts: [flash_sale_reservations]
+  - id: audit_events
+    domain: platform
+    owner: api-gateway
+    logical_count: 1000000
+    derived_artifacts: [trace_spans, metrics_samples]
+derived_artifacts:
+  excluded_from_logical_total: true
+  categories: [child, projection, outbox, image, webhook, ledger, replay]
+assumptions:
+  seed: 20260820
+  traffic_mix: {browse: 0.70, cart: 0.15, checkout: 0.10, account: 0.05}
+  slo: {gateway_p95_ms: 2000, error_rate_max: 0.05}

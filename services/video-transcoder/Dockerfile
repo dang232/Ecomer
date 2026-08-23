@@ -19,6 +19,7 @@ WORKDIR /app
 RUN mkdir -p /tmp/transcoder && chown vnshop:vnshop /tmp/transcoder
 
 COPY --from=builder /workspace/target/app.jar app.jar
+COPY --from=builder /workspace/target/opentelemetry-javaagent.jar /app/opentelemetry-javaagent.jar
 RUN chown -R vnshop:vnshop /app
 
 USER vnshop
@@ -30,7 +31,4 @@ HEALTHCHECK --interval=30s --timeout=20s --start-period=45s --retries=3 \
 
 # Security hardening: no-new-privileges enforced via Docker/k8s securityContext.
 # cap_drop ALL and read-only rootfs are applied at the compose/k8s layer.
-ENTRYPOINT ["java", \
-    "-XX:+UseContainerSupport", \
-    "-XX:MaxRAMPercentage=75.0", \
-    "-jar", "app.jar"]
+ENTRYPOINT ["sh", "-c", "export JAVA_TOOL_OPTIONS=\"-javaagent:/app/opentelemetry-javaagent.jar ${JAVA_TOOL_OPTIONS:-}\"; exec java -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -jar app.jar"]

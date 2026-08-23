@@ -7,6 +7,8 @@ import {
 } from "@nestjs/microservices";
 import { MessagingWsGateway } from "../infrastructure/messaging-ws.gateway";
 import { MESSAGING_TOPIC } from "./kafka-message.publisher";
+import { context } from "@opentelemetry/api";
+import { extractKafkaContext } from "../infrastructure/kafka-trace-propagation";
 
 interface MessageEventPayload {
   threadId: string;
@@ -33,11 +35,11 @@ export class KafkaMessageConsumer {
     @Payload() payload: MessageEventPayload,
     @Ctx() _ctx: KafkaContext,
   ): Promise<void> {
-    void _ctx;
-    if (!payload?.threadId || !payload.recipientId) return;
-    this.gateway.dispatch(payload.recipientId, payload);
-    // Also echo back to the sender's other devices.
-    this.gateway.dispatch(payload.senderId, payload);
-    return Promise.resolve();
+    const extracted = extractKafkaContext(_ctx.getMessage());
+    return context.with(extracted, () => {
+      if (!payload?.threadId || !payload.recipientId) return;
+      this.gateway.dispatch(payload.recipientId, payload);
+      this.gateway.dispatch(payload.senderId, payload);
+    });
   }
 }

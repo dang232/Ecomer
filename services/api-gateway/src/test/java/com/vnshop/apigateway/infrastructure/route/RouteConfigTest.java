@@ -15,6 +15,8 @@ import org.springframework.cloud.gateway.filter.factory.RequestRateLimiterGatewa
 import org.springframework.cloud.gateway.filter.factory.SpringCloudCircuitBreakerFilterFactory;
 import org.springframework.cloud.gateway.filter.factory.StripPrefixGatewayFilterFactory;
 import org.springframework.cloud.gateway.filter.factory.AddRequestHeaderGatewayFilterFactory;
+import org.springframework.cloud.gateway.filter.factory.DedupeResponseHeaderGatewayFilterFactory;
+import org.springframework.cloud.gateway.filter.factory.PreserveHostHeaderGatewayFilterFactory;
 import org.springframework.cloud.gateway.handler.predicate.PathRoutePredicateFactory;
 import org.springframework.cloud.gateway.handler.predicate.PathRoutePredicateFactory.Config;
 import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
@@ -44,11 +46,13 @@ class RouteConfigTest {
         when(context.getBean(SpringCloudCircuitBreakerFilterFactory.class)).thenReturn(circuitFactory);
         when(context.getBean(StripPrefixGatewayFilterFactory.class)).thenReturn(new StripPrefixGatewayFilterFactory());
         when(context.getBean(AddRequestHeaderGatewayFilterFactory.class)).thenReturn(new AddRequestHeaderGatewayFilterFactory());
+        when(context.getBean(DedupeResponseHeaderGatewayFilterFactory.class)).thenReturn(new DedupeResponseHeaderGatewayFilterFactory());
+        when(context.getBean(PreserveHostHeaderGatewayFilterFactory.class)).thenReturn(new PreserveHostHeaderGatewayFilterFactory());
 
         RouteConfig config = new RouteConfig(
                 "http://product", "http://user", "http://search", "http://inventory", "http://cart",
                 "http://order", "http://payment", "http://shipping", "http://notification",
-                 "http://finance", "http://recommendations", "http://messaging", "http://monitoring", "http://configuration", "http://coupon", "http://keycloak", "internal-secret");
+                 "http://finance", "http://recommendations", "http://messaging", "http://monitoring", "http://configuration", "http://coupon", "http://keycloak", "http://minio", "internal-secret");
         TieredRateLimiter limiter = new TieredRateLimiter(mock(org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter.class),
                 mock(org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter.class));
         RouteLocator locator = config.gatewayRoutes(new RouteLocatorBuilder(context), limiter, limiter, limiter, limiter,
@@ -95,6 +99,39 @@ class RouteConfigTest {
         assertThat(route(routes, "coupons").getUri()).isEqualTo(URI.create("http://coupon:80"));
         assertThat(matches(route(routes, "coupons"), "/coupons/validate")).isTrue();
         assertThat(route(routes, "admin-coupons").getUri()).isEqualTo(URI.create("http://coupon:80"));
+    }
+
+    @Test
+    void minioRouteOnlyMatchesApprovedPublicBuckets() {
+        ConfigurableApplicationContext context = mock(ConfigurableApplicationContext.class);
+        PathRoutePredicateFactory pathFactory = new PathRoutePredicateFactory(new WebFluxProperties());
+        when(context.getBean(PathRoutePredicateFactory.class)).thenReturn(pathFactory);
+        when(context.getBean(StripPrefixGatewayFilterFactory.class)).thenReturn(new StripPrefixGatewayFilterFactory());
+        when(context.getBean(AddRequestHeaderGatewayFilterFactory.class)).thenReturn(new AddRequestHeaderGatewayFilterFactory());
+        when(context.getBean(DedupeResponseHeaderGatewayFilterFactory.class)).thenReturn(new DedupeResponseHeaderGatewayFilterFactory());
+        when(context.getBean(PreserveHostHeaderGatewayFilterFactory.class)).thenReturn(new PreserveHostHeaderGatewayFilterFactory());
+        when(context.getBean(RequestRateLimiterGatewayFilterFactory.class)).thenReturn(
+                new RequestRateLimiterGatewayFilterFactory(mock(RateLimiter.class), mock(KeyResolver.class)));
+        when(context.getBean(SpringCloudCircuitBreakerFilterFactory.class)).thenReturn(mock(SpringCloudCircuitBreakerFilterFactory.class));
+        RouteConfig config = new RouteConfig("http://product", "http://user", "http://search", "http://inventory", "http://cart",
+                "http://order", "http://payment", "http://shipping", "http://notification", "http://finance", "http://recommendations",
+                "http://messaging", "http://monitoring", "http://configuration", "http://coupon", "http://keycloak", "http://minio", "secret");
+        TieredRateLimiter limiter = new TieredRateLimiter(mock(org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter.class),
+                mock(org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter.class));
+        List<Route> routes = config.gatewayRoutes(new RouteLocatorBuilder(context), limiter, limiter, limiter, limiter, limiter, limiter, limiter, limiter,
+                mock(KeyResolver.class)).getRoutes().collectList().block();
+        Route minio = route(routes, "minio-public");
+        assertThat(minio.getUri()).isEqualTo(URI.create("http://minio:80"));
+        assertThat(minio.getFilters()).anyMatch(filter -> filter.toString().contains("PreserveHostHeader"));
+        assertThat(minio.getFilters()).anyMatch(filter -> filter.toString().contains("DedupeResponseHeader"));
+        assertThat(minio.getFilters()).anyMatch(filter -> filter.toString().contains(
+                "Access-Control-Allow-Credentials Access-Control-Allow-Origin"));
+        for (String bucket : List.of("vnshop-avatars", "vnshop-products", "vnshop-reviews", "vnshop-videos")) {
+            assertThat(matches(minio, "/" + bucket + "/nested/object.jpg")).isTrue();
+        }
+        for (String path : List.of("/invoices/a.pdf", "/vnshop-videos-staging/a.mp4", "/admin/console", "/health/ready")) {
+            assertThat(matches(minio, path)).isFalse();
+        }
     }
 
     private static Route route(List<Route> routes, String id) {

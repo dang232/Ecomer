@@ -20,8 +20,6 @@ services:
       POSTGRES_DB: vnshop
       POSTGRES_USER: ${POSTGRES_USER:-vnshop}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
-    ports:
-      - "5432:5432"
     volumes:
       - postgres-legacy-data:/var/lib/postgresql/data
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -63,8 +61,6 @@ services:
       POSTGRES_DB: vnshop_user
       POSTGRES_USER: ${POSTGRES_USER:-vnshop}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
-    ports:
-      - "5433:5432"
     volumes:
       - postgres-user-data:/var/lib/postgresql/data
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -86,8 +82,6 @@ services:
       POSTGRES_DB: vnshop_product
       POSTGRES_USER: ${POSTGRES_USER:-vnshop}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
-    ports:
-      - "5434:5432"
     volumes:
       - postgres-product-data:/var/lib/postgresql/data
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -109,8 +103,6 @@ services:
       POSTGRES_DB: vnshop_order
       POSTGRES_USER: ${POSTGRES_USER:-vnshop}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
-    ports:
-      - "5435:5432"
     volumes:
       - postgres-order-data:/var/lib/postgresql/data
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -132,8 +124,6 @@ services:
       POSTGRES_DB: vnshop_payment
       POSTGRES_USER: ${POSTGRES_USER:-vnshop}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
-    ports:
-      - "5436:5432"
     volumes:
       - postgres-payment-data:/var/lib/postgresql/data
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -155,8 +145,6 @@ services:
       POSTGRES_DB: vnshop_inventory
       POSTGRES_USER: ${POSTGRES_USER:-vnshop}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
-    ports:
-      - "5437:5432"
     volumes:
       - postgres-inventory-data:/var/lib/postgresql/data
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -178,8 +166,6 @@ services:
       POSTGRES_DB: vnshop_search
       POSTGRES_USER: vnshop
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
-    ports:
-      - "5438:5432"
     volumes:
       - postgres-search-data:/var/lib/postgresql/data
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -201,8 +187,6 @@ services:
       POSTGRES_DB: vnshop_shipping
       POSTGRES_USER: vnshop
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
-    ports:
-      - "5439:5432"
     volumes:
       - postgres-shipping-data:/var/lib/postgresql/data
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -224,8 +208,6 @@ services:
       POSTGRES_DB: vnshop_cart
       POSTGRES_USER: vnshop
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
-    ports:
-      - "5442:5432"
     volumes:
       - postgres-cart-data:/var/lib/postgresql/data
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -246,8 +228,6 @@ services:
       POSTGRES_DB: monitoring
       POSTGRES_USER: monitoring
       POSTGRES_PASSWORD: ${MONITORING_DB_PASSWORD:-monitoring}
-    ports:
-      - "5440:5432"
     volumes:
       - timescaledb-data:/var/lib/postgresql/data
       - ./infra/timescaledb/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -308,9 +288,6 @@ services:
   kafka:
     image: confluentinc/cp-kafka:8.2.0
     container_name: vnshop-kafka
-    ports:
-      - "9092:9092"
-      - "29092:29092"
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
@@ -345,20 +322,21 @@ services:
       KAFKA_RECOMMENDATIONS_PASSWORD: ${KAFKA_RECOMMENDATIONS_PASSWORD:?KAFKA_RECOMMENDATIONS_PASSWORD must be set}
       KAFKA_INVOICE_PASSWORD: ${KAFKA_INVOICE_PASSWORD:?KAFKA_INVOICE_PASSWORD must be set}
       KAFKA_MESSAGING_PASSWORD: ${KAFKA_MESSAGING_PASSWORD:?KAFKA_MESSAGING_PASSWORD must be set}
+      KAFKA_NOTIFICATION_PASSWORD: ${KAFKA_SVC_NOTIFICATION_PASSWORD:-kafka-notification}
       KAFKA_USER_PASSWORD: ${KAFKA_USER_PASSWORD:?KAFKA_USER_PASSWORD must be set}
       KAFKA_VIDEO_TRANSCODER_PASSWORD: ${KAFKA_VIDEO_TRANSCODER_PASSWORD:?KAFKA_VIDEO_TRANSCODER_PASSWORD must be set}
       KAFKA_VIDEO_MODERATOR_PASSWORD: ${KAFKA_VIDEO_MODERATOR_PASSWORD:?KAFKA_VIDEO_MODERATOR_PASSWORD must be set}
       KAFKA_SSL_CLIENT_AUTH: none
-    entrypoint: ["/bin/sh", "-c", "sed -e \"s/\\$${KAFKA_ADMIN_PASSWORD}/$KAFKA_ADMIN_PASSWORD/g\" -e \"s/\\$${KAFKA_ORDER_PASSWORD}/$KAFKA_ORDER_PASSWORD/g\" -e \"s/\\$${KAFKA_PAYMENT_PASSWORD}/$KAFKA_PAYMENT_PASSWORD/g\" -e \"s/\\$${KAFKA_INVENTORY_PASSWORD}/$KAFKA_INVENTORY_PASSWORD/g\" -e \"s/\\$${KAFKA_PRODUCT_PASSWORD}/$KAFKA_PRODUCT_PASSWORD/g\" -e \"s/\\$${KAFKA_SHIPPING_PASSWORD}/$KAFKA_SHIPPING_PASSWORD/g\" -e \"s/\\$${KAFKA_FINANCE_PASSWORD}/$KAFKA_FINANCE_PASSWORD/g\" -e \"s/\\$${KAFKA_SEARCH_PASSWORD}/$KAFKA_SEARCH_PASSWORD/g\" -e \"s/\\$${KAFKA_RECOMMENDATIONS_PASSWORD}/$KAFKA_RECOMMENDATIONS_PASSWORD/g\" -e \"s/\\$${KAFKA_INVOICE_PASSWORD}/$KAFKA_INVOICE_PASSWORD/g\" -e \"s/\\$${KAFKA_MESSAGING_PASSWORD}/$KAFKA_MESSAGING_PASSWORD/g\" -e \"s/\\$${KAFKA_USER_PASSWORD}/$KAFKA_USER_PASSWORD/g\" -e \"s/\\$${KAFKA_VIDEO_TRANSCODER_PASSWORD}/$KAFKA_VIDEO_TRANSCODER_PASSWORD/g\" -e \"s/\\$${KAFKA_VIDEO_MODERATOR_PASSWORD}/$KAFKA_VIDEO_MODERATOR_PASSWORD/g\" /etc/kafka/kafka_server_jaas.conf.template > /etc/kafka/kafka_server_jaas.conf && exec /etc/confluent/docker/run"]
+    entrypoint: ["/bin/sh", "-c", "sed -e \"s/\\$${KAFKA_ADMIN_PASSWORD}/$KAFKA_ADMIN_PASSWORD/g\" -e \"s/\\$${KAFKA_ORDER_PASSWORD}/$KAFKA_ORDER_PASSWORD/g\" -e \"s/\\$${KAFKA_PAYMENT_PASSWORD}/$KAFKA_PAYMENT_PASSWORD/g\" -e \"s/\\$${KAFKA_INVENTORY_PASSWORD}/$KAFKA_INVENTORY_PASSWORD/g\" -e \"s/\\$${KAFKA_PRODUCT_PASSWORD}/$KAFKA_PRODUCT_PASSWORD/g\" -e \"s/\\$${KAFKA_SHIPPING_PASSWORD}/$KAFKA_SHIPPING_PASSWORD/g\" -e \"s/\\$${KAFKA_FINANCE_PASSWORD}/$KAFKA_FINANCE_PASSWORD/g\" -e \"s/\\$${KAFKA_SEARCH_PASSWORD}/$KAFKA_SEARCH_PASSWORD/g\" -e \"s/\\$${KAFKA_RECOMMENDATIONS_PASSWORD}/$KAFKA_RECOMMENDATIONS_PASSWORD/g\" -e \"s/\\$${KAFKA_INVOICE_PASSWORD}/$KAFKA_INVOICE_PASSWORD/g\" -e \"s/\\$${KAFKA_MESSAGING_PASSWORD}/$KAFKA_MESSAGING_PASSWORD/g\" -e \"s/\\$${KAFKA_NOTIFICATION_PASSWORD}/$${KAFKA_NOTIFICATION_PASSWORD}/g\" -e \"s/\\$${KAFKA_USER_PASSWORD}/$KAFKA_USER_PASSWORD/g\" -e \"s/\\$${KAFKA_VIDEO_TRANSCODER_PASSWORD}/$KAFKA_VIDEO_TRANSCODER_PASSWORD/g\" -e \"s/\\$${KAFKA_VIDEO_MODERATOR_PASSWORD}/$KAFKA_VIDEO_MODERATOR_PASSWORD/g\" /etc/kafka/kafka_server_jaas.conf.template > /etc/kafka/kafka_server_jaas.conf && exec /etc/confluent/docker/run"]
     volumes:
       - kafka-data:/var/lib/kafka/data
       - ./infra/kafka/kafka_server_jaas.conf.template:/etc/kafka/kafka_server_jaas.conf.template:ro
-    # TCP probe on the CONTROLLER port (PLAINTEXT, no auth required).
-    # Verifies the broker process is up and accepting connections without
-    # needing SASL credentials. replication.factor=1 (single broker — see
-    # comment above the service definition for the production trade-off).
+    # Probe the client-facing broker listener rather than the controller port.
+    # The controller can accept connections before the SASL broker listener is
+    # ready, which lets dependent services start too early and exhaust retries.
+    # replication.factor=1 remains a local-only trade-off (see above).
     healthcheck:
-      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/9093' 2>/dev/null && echo OK"]
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/9092' 2>/dev/null && echo OK"]
       interval: 15s
       timeout: 10s
       retries: 10
@@ -376,9 +354,13 @@ services:
         condition: service_healthy
     environment:
       KAFKA_ADMIN_PASSWORD: ${KAFKA_ADMIN_PASSWORD:?KAFKA_ADMIN_PASSWORD must be set}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      VNSHOP_KAFKA_TARGET: local
     volumes:
-      - ./infra/scripts/init-kafka-topics.sh:/init-kafka-topics.sh:ro
-    command: ["bash", "/init-kafka-topics.sh"]
+      - ./infra/scripts/init-kafka-topics-local.sh:/opt/vnshop/init-kafka-topics-local.sh:ro
+      - ./infra/kafka/topic-inventory.yaml:/opt/vnshop/infra/kafka/topic-inventory.yaml:ro
+    working_dir: /opt/vnshop
+    command: ["bash", "/opt/vnshop/init-kafka-topics-local.sh"]
     restart: "no"
 
   keycloak:
@@ -466,9 +448,6 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-vnshop}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-vnshop123}
       MINIO_API_CORS_ALLOW_ORIGIN: ${MINIO_API_CORS_ALLOW_ORIGIN:-http://localhost:3000,http://localhost:5173}
-    ports:
-      - "9000:9000"   # S3 API
-      - "9001:9001"   # MinIO console
     volumes:
       - minio-data:/data
     healthcheck:
@@ -588,10 +567,6 @@ services:
   jaeger:
     image: jaegertracing/all-in-one:1.71.0
     container_name: vnshop-jaeger
-    ports:
-      - "16686:16686"
-      - "14250:14250"
-      - "4318:4318"
     environment:
       COLLECTOR_OTLP_ENABLED: "true"
     healthcheck:
@@ -625,8 +600,6 @@ services:
   grafana:
     image: grafana/grafana:11.1.0
     container_name: vnshop-grafana
-    ports:
-      - "3001:3000"
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-vnshop123}
@@ -648,8 +621,6 @@ services:
   loki:
     image: grafana/loki:3.1.0
     container_name: vnshop-loki
-    ports:
-      - "3100:3100"
     volumes:
       - ./infra/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
       - loki-data:/loki
@@ -675,8 +646,6 @@ services:
   alertmanager:
     image: prom/alertmanager:latest
     container_name: vnshop-alertmanager
-    ports:
-      - "9093:9093"
     volumes:
       - ./infra/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - ./infra/alertmanager/rules.yml:/etc/alertmanager/rules.yml:ro
@@ -696,7 +665,7 @@ services:
     container_name: vnshop-api-gateway
     restart: on-failure:5
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     depends_on:
       redis:
         condition: service_healthy
@@ -714,6 +683,7 @@ services:
       OTEL_TRACES_SAMPLER: parentbased_traceidratio
       OTEL_TRACES_SAMPLER_ARG: "1.0"
       GATEWAY_CORS_ALLOWED_ORIGINS: ${GATEWAY_CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      VNSHOP_ROUTES_MINIO: ${VNSHOP_ROUTES_MINIO:-http://minio:9000}
       CONFIG_SERVICE_INTERNAL_TOKEN: ${CONFIG_SERVICE_INTERNAL_TOKEN:?CONFIG_SERVICE_INTERNAL_TOKEN must be set}
     deploy:
       resources:
@@ -744,7 +714,7 @@ services:
         VITE_ALLOW_INSECURE_RUNTIME_CONFIG: ${VITE_ALLOW_INSECURE_RUNTIME_CONFIG:-true}
     container_name: vnshop-frontend
     ports:
-      - "3000:8080"
+      - "127.0.0.1:3000:8080"
     depends_on:
       api-gateway:
         condition: service_healthy
@@ -799,7 +769,7 @@ services:
       VNSHOP_USER_STORAGE_ENABLED: ${VNSHOP_USER_STORAGE_ENABLED:-true}
       VNSHOP_USER_STORAGE_PROFILE: ${VNSHOP_USER_STORAGE_PROFILE:-MINIO}
       VNSHOP_USER_STORAGE_ENDPOINT: ${VNSHOP_USER_STORAGE_ENDPOINT:-http://minio:9000}
-      VNSHOP_USER_STORAGE_PUBLIC_ENDPOINT: ${VNSHOP_USER_STORAGE_PUBLIC_ENDPOINT:-http://localhost:9000}
+      VNSHOP_USER_STORAGE_PUBLIC_ENDPOINT: ${VNSHOP_USER_STORAGE_PUBLIC_ENDPOINT:-http://localhost:8080}
       VNSHOP_USER_STORAGE_BUCKET: ${VNSHOP_USER_STORAGE_BUCKET:-vnshop-avatars}
       VNSHOP_USER_STORAGE_REGION: ${VNSHOP_USER_STORAGE_REGION:-auto}
       VNSHOP_USER_STORAGE_ACCESS_KEY: ${VNSHOP_USER_STORAGE_ACCESS_KEY:-${MINIO_ROOT_USER:-vnshop}}
@@ -865,7 +835,7 @@ services:
       S3_BUCKET_VIDEO_STAGING: ${S3_BUCKET_VIDEO_STAGING:-vnshop-videos-staging}
       S3_BUCKET_PUBLIC: ${S3_BUCKET_PUBLIC:-vnshop-videos}
       VNSHOP_OBJECT_STORAGE_ENDPOINT: ${OBJECT_STORAGE_ENDPOINT:-http://minio:9000}
-      VNSHOP_OBJECT_STORAGE_PUBLIC_ENDPOINT: ${OBJECT_STORAGE_PUBLIC_ENDPOINT:-http://localhost:9000}
+      VNSHOP_OBJECT_STORAGE_PUBLIC_ENDPOINT: ${OBJECT_STORAGE_PUBLIC_ENDPOINT:-http://localhost:8080}
       VNSHOP_OBJECT_STORAGE_REGION: ${OBJECT_STORAGE_REGION:-auto}
       VNSHOP_OBJECT_STORAGE_ACCESS_KEY: ${OBJECT_STORAGE_ACCESS_KEY:-vnshop}
       VNSHOP_OBJECT_STORAGE_SECRET_KEY: ${OBJECT_STORAGE_SECRET_KEY:-vnshop123}
@@ -946,8 +916,6 @@ services:
     # profiles removed for full deployment
     build: ./services/cart-service
     container_name: vnshop-cart-service
-    ports:
-      - "8084:8084"
     depends_on:
       redis:
         condition: service_healthy
@@ -1042,7 +1010,11 @@ services:
       REDIS_HOST: redis
       REDIS_PASSWORD: ${REDIS_PASSWORD:-vnshop123}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:?ELASTIC_PASSWORD must be set}
+      SPRING_PROFILES_ACTIVE: local
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      ELASTICSEARCH_USERNAME: elastic
+      ELASTICSEARCH_PASSWORD: ${ELASTIC_PASSWORD:?ELASTIC_PASSWORD must be set}
+      ELASTICSEARCH_SSL_BUNDLE: ""
       KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
@@ -1071,8 +1043,6 @@ services:
     # profiles removed for full deployment
     build: ./services/notification-service
     container_name: vnshop-notification-service
-    ports:
-      - "8087:8087"
     depends_on:
       mongo:
         condition: service_healthy
@@ -1089,8 +1059,9 @@ services:
       OTEL_TRACES_SAMPLER: parentbased_traceidratio
       OTEL_TRACES_SAMPLER_ARG: "1.0"
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      KAFKA_SASL_USERNAME: svc-order
-      KAFKA_SASL_PASSWORD: ${KAFKA_SVC_ORDER_PASSWORD:-kafka-order}
+      KAFKA_SASL_USERNAME: svc-notification
+      KAFKA_SASL_PASSWORD: ${KAFKA_SVC_NOTIFICATION_PASSWORD:-kafka-notification}
+      KAFKA_LOCAL_MODE: plaintext
       KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
       # Email channel (SES). Set EMAIL_ENABLED=true + AWS creds to activate.
@@ -1296,6 +1267,7 @@ services:
       GRPC_CLIENT_INVENTORY_PORT: 9093
       GRPC_CLIENT_PAYMENT_HOST: payment-service
       GRPC_CLIENT_PAYMENT_PORT: 9094
+      GRPC_CLIENT_PAYMENT_SERVICE_TOKEN: ${GRPC_PAYMENT_SERVICE_TOKEN:-local-payment-grpc-token}
       GRPC_CLIENT_SHIPPING_HOST: shipping-service
       GRPC_CLIENT_SHIPPING_PORT: 9095
     volumes:
@@ -1371,6 +1343,7 @@ services:
       STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
       CONFIG_SERVICE_INTERNAL_TOKEN: ${CONFIG_SERVICE_INTERNAL_TOKEN:?CONFIG_SERVICE_INTERNAL_TOKEN must be set}
+      GRPC_SERVER_AUTH_TOKEN: ${GRPC_PAYMENT_SERVICE_TOKEN:-local-payment-grpc-token}
       # PayPal v2 Checkout REST credentials (sandbox creds at developer.paypal.com).
       PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID:-}
       PAYPAL_CLIENT_SECRET: ${PAYPAL_CLIENT_SECRET:-}
@@ -1467,8 +1440,6 @@ services:
     # profiles removed for full deployment
     build: ./services/messaging-service
     container_name: vnshop-messaging-service
-    ports:
-      - "8095:8095"
     depends_on:
       postgres-legacy:
         condition: service_healthy
@@ -1489,6 +1460,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_SASL_USERNAME: svc-messaging
       KAFKA_SASL_PASSWORD: ${KAFKA_SVC_MESSAGING_PASSWORD:-kafka-messaging}
+      KAFKA_LOCAL_MODE: plaintext
       KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
     healthcheck:
@@ -1547,8 +1519,6 @@ services:
   unleash:
     image: unleashorg/unleash-server:6.1
     container_name: vnshop-unleash
-    ports:
-      - "4242:4242"
     environment:
       DATABASE_URL: postgres://unleash:${UNLEASH_DB_PASSWORD:-unleash123}@postgres-unleash:5432/unleash
       DATABASE_SSL: "false"
@@ -1571,8 +1541,6 @@ services:
       POSTGRES_DB: vnshop_invoice
       POSTGRES_USER: vnshop
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
-    ports:
-      - "5441:5432"
     volumes:
       - postgres-invoice-data:/var/lib/postgresql/data
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -1592,8 +1560,8 @@ services:
       context: ./services/invoice-service
       dockerfile: Dockerfile
     container_name: vnshop-invoice-service
-    ports:
-      - "8098:8098"
+    # Internal-only tax/invoice API; access through an explicit gateway route
+    # only after a product/operator contract is approved.
     depends_on:
       postgres-invoice:
         condition: service_healthy

@@ -141,9 +141,7 @@ test.describe("a11y — seller dashboard", () => {
     await page.goto("/seller");
     await installCsrfPatch(page);
 
-    await expect(
-      page.getByRole("heading", { name: /^(Dashboard|Tổng quan)$/i }).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId("seller-dashboard")).toBeVisible({ timeout: 20_000 });
 
     await expectNoGlobalError(page);
     await assertNoSeriousOrCritical(page, "/seller");

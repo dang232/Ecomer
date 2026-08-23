@@ -9,14 +9,24 @@ export interface AuthResponse {
 }
 
 export interface ProductVariant {
+  sku?: string;
   priceAmount?: number;
+  stockQuantity?: number;
+  parcel?: ParcelDimensions | null;
+}
+
+export interface ParcelDimensions {
+  weightGrams: number;
+  lengthCm: number;
+  widthCm: number;
+  heightCm: number;
 }
 
 export interface ProductSummary {
   id: string;
   name: string;
   sellerId?: string;
-  seller?: { id?: string };
+  seller?: { id?: string; shopName?: string } | null;
   variants?: ProductVariant[];
 }
 

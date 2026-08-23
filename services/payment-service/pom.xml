@@ -317,9 +317,16 @@
 							<goal>copy</goal>
 						</goals>
 						<configuration>
-							<artifact>io.opentelemetry.javaagent:opentelemetry-javaagent:${opentelemetry.javaagent.version}</artifact>
+							<artifactItems>
+								<artifactItem>
+									<groupId>io.opentelemetry.javaagent</groupId>
+									<artifactId>opentelemetry-javaagent</artifactId>
+									<version>${opentelemetry.javaagent.version}</version>
+									<outputDirectory>${project.build.directory}</outputDirectory>
+									<destFileName>opentelemetry-javaagent.jar</destFileName>
+								</artifactItem>
+							</artifactItems>
 							<outputDirectory>${project.build.directory}</outputDirectory>
-							<destFileName>opentelemetry-javaagent.jar</destFileName>
 						</configuration>
 					</execution>
 				</executions>

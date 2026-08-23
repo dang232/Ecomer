@@ -24,7 +24,8 @@ curl -fsS -o /dev/null "${GATEWAY}/products?size=1" || {
   exit 1
 }
 
-current_count=$(curl -fsS "${GATEWAY}/products?size=1" | jq -r '.data.totalElements // (.data.content | length) // 0')
+catalog_json=$(curl -fsS "${GATEWAY}/products?size=100")
+current_count=$(jq -r '.data.totalElements // (.data.content | length) // 0' <<<"${catalog_json}")
 if [ "${current_count}" != "0" ] && [ "${FORCE:-0}" != "1" ]; then
   echo "catalog already has ${current_count} products. Set FORCE=1 to seed anyway."
   exit 0
@@ -44,6 +45,11 @@ fi
 create_product() {
   local name="$1" desc="$2" category="$3" brand="$4" sku="$5" price="$6" stock="$7" image="$8"
   local body
+  local existing
+  existing=$(jq -c --arg sku "${sku}" '
+    [.data.content[]? as $product | $product.variants[]? | select(.sku == $sku) |
+      {productId: $product.id, parcel: .parcel}] | .[0] // empty
+  ' <<<"${catalog_json}")
   body=$(jq -n \
     --arg name "${name}" \
     --arg desc "${desc}" \
@@ -69,8 +75,22 @@ create_product() {
       }],
       images: [
         { url: $img, alt: $name, sortOrder: 0 }
-      ]
-    }')
+       ]
+     }')
+  if [ -n "${existing}" ]; then
+    if [ "${sku}" = "SKU-IPH16-PM-256" ] || [ "${sku}" = "SKU-MBA-M4-13" ]; then
+      local parcel
+      parcel=$(jq -c '.parcel' <<<"${existing}")
+      if [ "${parcel}" = "null" ]; then
+        curl -fsS -X PUT "${GATEWAY}/sellers/me/products/$(jq -r '.productId' <<<"${existing}")" \
+          -H "Authorization: Bearer ${TOKEN}" \
+          -H "Content-Type: application/json" \
+          -d "${body}" >/dev/null
+        printf '  ~ %s (parcel metadata backfilled)\n' "${name}"
+      fi
+    fi
+    return 0
+  fi
   curl -fsS -X POST "${GATEWAY}/sellers/me/products" \
     -H "Authorization: Bearer ${TOKEN}" \
     -H "Content-Type: application/json" \

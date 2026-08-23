@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: elasticsearch-security-contract
+  annotations:
+    vnshop.io/contract: security-index-role-mapping-reindex
+data:
+  roles.yml: |
+    search_service:
+      cluster: [monitor]
+      indices:
+      - names: [products]
+        privileges: [read, view_index_metadata]
+    operator:
+      cluster: [all]
+      indices: [{names: ["*"], privileges: [all]}]
+  role-mappings.yml: |
+    search_service:
+      users: [search-service]
+    operator:
+      users: [operator]
+  bootstrap-lifecycle.yml: |
+    mode: bootstrap-only
+    initial_master_nodes: [elasticsearch-0, elasticsearch-1, elasticsearch-2]
+    existing_pvc: preserve-ordinal-pvc-and-cluster-uuid
+    replacement: verify-cluster-uuid-before-rejoin
+    mismatch: fail-closed-on-cluster-uuid-or-pvc-identity-mismatch
+    recovery: operator-confirmed-new-cluster-only
+  tls-contract.yml: |
+    secret: elasticsearch-http-transport-tls
+    ca_key: ca.crt
+    certificate_key: tls.crt
+    private_key: tls.key
+    required_sans: [elasticsearch, elasticsearch-headless, elasticsearch-0.elasticsearch-headless, elasticsearch-1.elasticsearch-headless, elasticsearch-2.elasticsearch-headless]
+    required_eku: [serverAuth, clientAuth]
+    hostname_verification: full
+    missing_or_invalid_material: fail-closed
+  restore-security-index.md: |
+    Restore procedure is operator-only and must use authenticated HTTPS with the operator principal.
+    Restore the `.security-7` index before application indices; verify role mappings and authenticate
+    both principals before reopening search-service traffic. Never restore security state into the
+    source cluster or overwrite a live security index.
+  reindex.md: |
+    Reindex procedure is operator-only: pause product projection consumers, create a versioned index,
+    apply the product mapping/settings, reindex from the PostgreSQL read model, verify document counts,
+    aliases and sample queries, then atomically switch the alias and resume consumers. HTTP fallback
+    is not a production path.

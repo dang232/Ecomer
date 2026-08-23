@@ -39,6 +39,9 @@ public class Invoice {
     @Column(name = "seller_id", nullable = false)
     private String sellerId;
 
+    @Column(name = "buyer_id", nullable = false)
+    private String buyerId;
+
     @Column(name = "buyer_tax_code")
     private String buyerTaxCode;
 

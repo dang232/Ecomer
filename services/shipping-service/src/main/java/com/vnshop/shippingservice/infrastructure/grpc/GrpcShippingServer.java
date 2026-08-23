@@ -13,6 +13,7 @@ import com.vnshop.shippingservice.domain.Parcel;
 import com.vnshop.shippingservice.infrastructure.config.ShippingCheckoutProperties;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import io.grpc.ServerInterceptors;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import jakarta.annotation.PostConstruct;
@@ -50,7 +51,7 @@ public class GrpcShippingServer extends ShippingServiceGrpc.ShippingServiceImplB
     @PostConstruct
     public void start() throws IOException {
         server = ServerBuilder.forPort(port)
-                .addService(this)
+                .addService(ServerInterceptors.intercept(this, new GrpcTracePropagationInterceptor()))
                 .build()
                 .start();
         log.info("Shipping gRPC server started on port {}", port);

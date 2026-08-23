@@ -28,6 +28,7 @@ class ShippingServiceApplicationTests {
 		CarrierHttpClient carrierHttpClient() {
 			return Mockito.mock(CarrierHttpClient.class);
 		}
+
 	}
 
 	@Test

@@ -14,6 +14,7 @@ const GATEWAY = process.env.GATEWAY ?? "http://localhost:8080";
 const SELLER_USER = process.env.SELLER_USER ?? "seller1";
 const SELLER_PASS = process.env.SELLER_PASS ?? "test";
 const FORCE = process.env.FORCE === "1";
+const TARGET_BACKFILL_SKUS = new Set(["SKU-IPH16-PM-256", "SKU-MBA-M4-13"]);
 
 const products = [
   // electronics
@@ -37,13 +38,18 @@ const products = [
 ];
 
 async function main() {
-  const ping = await fetch(`${GATEWAY}/products?size=1`).catch(() => null);
+  const ping = await fetch(`${GATEWAY}/products?size=100`).catch(() => null);
   if (!ping || !ping.ok) {
     console.error(`gateway not reachable at ${GATEWAY}`);
     process.exit(1);
   }
   const pingBody = await ping.json();
   const currentCount = pingBody?.data?.totalElements ?? pingBody?.data?.content?.length ?? 0;
+  const existingBySku = new Map(
+    (pingBody?.data?.content ?? []).flatMap((product) =>
+      (product.variants ?? []).map((variant) => [variant.sku, { product, variant }]),
+    ),
+  );
   if (currentCount > 0 && !FORCE) {
     console.log(`catalog already has ${currentCount} products. Set FORCE=1 to seed anyway.`);
     return;
@@ -90,6 +96,31 @@ async function main() {
       ],
       images: [{ url: imageUrl, alt: name, sortOrder: 0 }],
     };
+    const existing = existingBySku.get(sku);
+    if (existing) {
+      if (!TARGET_BACKFILL_SKUS.has(sku)) {
+        continue;
+      }
+      if (existing.variant.parcel) {
+        continue;
+      }
+      const updateRes = await fetch(`${GATEWAY}/sellers/me/products/${existing.product.id}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+      if (!updateRes.ok) {
+        console.error(`  ! ${name}: parcel backfill failed: ${updateRes.status} ${await updateRes.text()}`);
+        fail++;
+        continue;
+      }
+      console.log(`  ~ ${name} (parcel metadata backfilled)`);
+      ok++;
+      continue;
+    }
     const res = await fetch(`${GATEWAY}/sellers/me/products`, {
       method: "POST",
       headers: {

@@ -222,7 +222,10 @@ test("29 — Seller: Products tab", async ({ page }) => {
   await loginAs(page, "seller");
   await page.goto("/seller");
   await page.waitForLoadState("networkidle");
-  await page.getByRole("button", { name: /^Products$/i }).click();
+  await page
+    .getByRole("link", { name: /^(Products|Sản phẩm)$/i })
+    .first()
+    .click();
   await page.waitForTimeout(2000);
   await snap(page, "29-seller-products-tab");
 });
@@ -231,7 +234,10 @@ test("30 — Seller: Orders tab", async ({ page }) => {
   await loginAs(page, "seller");
   await page.goto("/seller");
   await page.waitForLoadState("networkidle");
-  await page.getByRole("button", { name: /^Orders$/i }).click();
+  await page
+    .getByRole("link", { name: /^(Orders|Đơn hàng)/i })
+    .first()
+    .click();
   await page.waitForTimeout(2000);
   await snap(page, "30-seller-orders-tab");
 });
@@ -240,7 +246,10 @@ test("31 — Seller: Reviews tab", async ({ page }) => {
   await loginAs(page, "seller");
   await page.goto("/seller");
   await page.waitForLoadState("networkidle");
-  await page.getByRole("button", { name: /^Reviews$/i }).click();
+  await page
+    .getByRole("link", { name: /^(Reviews|Đánh giá)$/i })
+    .first()
+    .click();
   await page.waitForTimeout(2000);
   await snap(page, "31-seller-reviews-tab");
 });
@@ -249,7 +258,10 @@ test("32 — Seller: Wallet tab", async ({ page }) => {
   await loginAs(page, "seller");
   await page.goto("/seller");
   await page.waitForLoadState("networkidle");
-  await page.getByRole("button", { name: /^Wallet$/i }).click();
+  await page
+    .getByRole("link", { name: /^(Wallet|Ví tiền)$/i })
+    .first()
+    .click();
   await page.waitForTimeout(2000);
   await snap(page, "32-seller-wallet-tab");
 });
@@ -258,7 +270,10 @@ test("33 — Seller: Settings tab", async ({ page }) => {
   await loginAs(page, "seller");
   await page.goto("/seller");
   await page.waitForLoadState("networkidle");
-  await page.getByRole("button", { name: /^Settings$/i }).click();
+  await page
+    .getByRole("link", { name: /^(Settings|Cài đặt)$/i })
+    .first()
+    .click();
   await page.waitForTimeout(2000);
   await snap(page, "33-seller-settings-tab");
 });
@@ -275,7 +290,10 @@ test("35 — Admin: Approve Sellers", async ({ page }) => {
   await loginAs(page, "admin");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
-  await page.getByRole("button", { name: /Approve Sellers/i }).click();
+  await page
+    .getByRole("link", { name: /^(Approve Sellers|Duyệt Seller)/i })
+    .first()
+    .click();
   await page.waitForTimeout(2000);
   await snap(page, "35-admin-approve-sellers");
 });
@@ -284,7 +302,10 @@ test("36 — Admin: Moderation", async ({ page }) => {
   await loginAs(page, "admin");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
-  await page.getByRole("button", { name: /^Moderation(?:,|$)/i }).click();
+  await page
+    .getByRole("link", { name: /^(Reviews|Moderation|Video Moderation|Kiểm duyệt)/i })
+    .first()
+    .click();
   await page.waitForTimeout(2000);
   await snap(page, "36-admin-moderation");
 });
@@ -293,7 +314,10 @@ test("37 — Admin: Coupons", async ({ page }) => {
   await loginAs(page, "admin");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
-  await page.getByRole("button", { name: /^Coupons$/i }).click();
+  await page
+    .getByRole("link", { name: /^(Coupons|Coupon)$/i })
+    .first()
+    .click();
   await page.waitForTimeout(2000);
   await snap(page, "37-admin-coupons");
 });
@@ -302,7 +326,10 @@ test("38 — Admin: Disputes", async ({ page }) => {
   await loginAs(page, "admin");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
-  await page.getByRole("button", { name: /^Disputes$/i }).click();
+  await page
+    .getByRole("link", { name: /^(Disputes|Khiếu nại)$/i })
+    .first()
+    .click();
   await page.waitForTimeout(2000);
   await snap(page, "38-admin-disputes");
 });
@@ -311,7 +338,10 @@ test("39 — Admin: Payouts", async ({ page }) => {
   await loginAs(page, "admin");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
-  await page.getByRole("button", { name: /^Payouts$/i }).click();
+  await page
+    .getByRole("link", { name: /^(Payouts|Rút tiền)$/i })
+    .first()
+    .click();
   await page.waitForTimeout(2000);
   await snap(page, "39-admin-payouts");
 });
@@ -320,7 +350,10 @@ test("40 — Admin: Users tab", async ({ page }) => {
   await loginAs(page, "admin");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
-  await page.getByRole("button", { name: /^Users$/i }).click();
+  await page
+    .getByRole("link", { name: /^(Users|Người dùng)/i })
+    .first()
+    .click();
   await page.waitForTimeout(2000);
   await snap(page, "40-admin-users-tab");
 });
@@ -329,7 +362,10 @@ test("41 — Admin: Orders tab", async ({ page }) => {
   await loginAs(page, "admin");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
-  await page.getByRole("button", { name: /^Orders$/i }).click();
+  await page
+    .getByRole("link", { name: /^(Orders|Đơn hàng)$/i })
+    .first()
+    .click();
   await page.waitForTimeout(2000);
   await snap(page, "41-admin-orders-tab");
 });
@@ -338,7 +374,10 @@ test("42 — Admin: Health tab", async ({ page }) => {
   await loginAs(page, "admin");
   await page.goto("/admin");
   await page.waitForLoadState("networkidle");
-  await page.getByRole("button", { name: /^System Health$/i }).click();
+  await page
+    .getByRole("link", { name: /^(System Health|Health|Tình trạng)/i })
+    .first()
+    .click();
   await page.waitForTimeout(2000);
   await snap(page, "42-admin-health-tab");
 });

@@ -259,11 +259,22 @@ flowchart TB
 
 ## Quick Start
 
-Stand up everything (infrastructure + 18 app services + frontend):
+Stand up the secure local base (frontend + gateway are the host entry points):
 
 ```bash
 docker compose --profile apps up -d
 ```
+
+For explicit workstation debugging and direct infrastructure inspection, opt in
+to the loopback-only development overlay:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile apps up -d
+```
+
+The development overlay is never auto-loaded. It publishes developer-only ports
+on `127.0.0.1` and enables loopback JDWP for selected Java services. Do not use
+it for shared staging or production.
 
 One-time post-import setup for the internal Keycloak admin client (idempotent; no host port is published):
 
@@ -300,13 +311,17 @@ If you see 503s on either suite, Spring Cloud Gateway's Resilience4j breaker has
 | `http://localhost:5173` | Storefront SPA (Vite dev server, optional alternative) |
 | `http://localhost:8080` | API gateway |
 | Docker network only | Keycloak 26.6 identity provider; the admin console is not host-exposed |
-| `http://localhost:9200` | Elasticsearch |
-| `http://localhost:16686` | Jaeger UI |
-| `http://localhost:9000` | MinIO console |
-| `http://localhost:9093` | Alertmanager |
+| Docker network only | Elasticsearch |
+| `http://localhost:16686` | Jaeger UI (explicit dev overlay only) |
+| `http://localhost:9000` | MinIO console (explicit dev overlay only) |
+| `http://localhost:9093` | Alertmanager (explicit dev overlay only) |
 | Mobile (Flutter) | `cd vnshop_mobile && flutter run` — connects to API gateway at `localhost:8080` |
 
-### Default credentials
+### Local development credentials
+
+The values below are local-only examples. They are available only when the
+explicit development environment/overlay is selected and must not be copied to
+shared staging or production.
 
 | System | Username | Password |
 | --- | --- | --- |

@@ -40,15 +40,18 @@ test.describe("seller products UI", () => {
     await page.locator("#product-offer-price").fill("159000");
     await page.locator("#product-offer-stock").fill("4");
 
-    await page.locator('input[type="file"]').setInputFiles({
-      name: "e2e-product.png",
-      mimeType: "image/png",
-      // Valid 1x1 PNG. The production upload flow calculates its checksum and dimensions.
-      buffer: Buffer.from(
-        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Jr6sAAAAASUVORK5CYII=",
-        "base64",
-      ),
-    });
+    await page
+      .getByRole("group", { name: "Product media" })
+      .locator('input[type="file"]')
+      .setInputFiles({
+        name: "e2e-product.png",
+        mimeType: "image/png",
+        // Valid 1x1 PNG. The production upload flow calculates its checksum and dimensions.
+        buffer: Buffer.from(
+          "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Jr6sAAAAASUVORK5CYII=",
+          "base64",
+        ),
+      });
     await expect(page.getByRole("img", { name: "e2e-product.png" })).toBeVisible();
 
     const createResponse = page.waitForResponse(

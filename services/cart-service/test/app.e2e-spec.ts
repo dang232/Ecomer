@@ -6,6 +6,7 @@ import { AppModule } from '../src/app.module';
 import { CartResponse } from '../src/cart/application/cart.response';
 import { REDIS_CLIENT } from '../src/cart/cart.module';
 import { ApiResponse } from '../src/cart/infrastructure/api-response';
+import { JwtAuthGuard } from '../src/cart/infrastructure/auth/jwt-auth.guard';
 
 class InMemoryRedis {
   private readonly values = new Map<string, string>();
@@ -40,6 +41,17 @@ describe('CartController (e2e)', () => {
     })
       .overrideProvider(REDIS_CLIENT)
       .useValue(new InMemoryRedis())
+      .overrideGuard(JwtAuthGuard)
+      .useValue({
+        canActivate: (context: { switchToHttp: () => { getRequest: () => { headers: { authorization?: string }; user: { sub: string } } } }) => {
+          const request = context.switchToHttp().getRequest();
+          if (!request.headers.authorization) {
+            return false;
+          }
+          request.user = { sub: 'user-1' };
+          return true;
+        },
+      })
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -53,7 +65,7 @@ describe('CartController (e2e)', () => {
   it('drives cart HTTP surface', async () => {
     await request(app.getHttpServer())
       .get('/cart')
-      .set('x-user-id', 'user-1')
+      .set('Authorization', 'Bearer gateway-authenticated-test-token')
       .expect(200)
       .expect(({ body }: SupertestBody<ApiResponse<CartResponse>>) => {
         expect(body.success).toBe(true);
@@ -62,7 +74,7 @@ describe('CartController (e2e)', () => {
 
     await request(app.getHttpServer())
       .post('/cart/items')
-      .set('x-user-id', 'user-1')
+      .set('Authorization', 'Bearer gateway-authenticated-test-token')
       .send({ productId: 'product-1', quantity: 2 })
       .expect(201)
       .expect(({ body }: SupertestBody<ApiResponse<CartResponse>>) => {
@@ -74,7 +86,7 @@ describe('CartController (e2e)', () => {
 
     await request(app.getHttpServer())
       .put('/cart/items/product-1')
-      .set('x-user-id', 'user-1')
+      .set('Authorization', 'Bearer gateway-authenticated-test-token')
       .send({ quantity: 3 })
       .expect(200)
       .expect(({ body }: SupertestBody<ApiResponse<CartResponse>>) => {
@@ -84,7 +96,7 @@ describe('CartController (e2e)', () => {
 
     await request(app.getHttpServer())
       .delete('/cart/items/product-1')
-      .set('x-user-id', 'user-1')
+      .set('Authorization', 'Bearer gateway-authenticated-test-token')
       .expect(200)
       .expect(({ body }: SupertestBody<ApiResponse<CartResponse>>) => {
         expect(body.success).toBe(true);
@@ -98,7 +110,7 @@ describe('CartController (e2e)', () => {
     };
     await request(app.getHttpServer())
       .post('/cart/merge')
-      .set('x-user-id', 'user-1')
+      .set('Authorization', 'Bearer gateway-authenticated-test-token')
       .send(mergeRequest)
       .expect(201)
       .expect(({ body }: SupertestBody<ApiResponse<CartResponse>>) => {
@@ -107,7 +119,7 @@ describe('CartController (e2e)', () => {
 
     await request(app.getHttpServer())
       .post('/cart/merge')
-      .set('x-user-id', 'user-1')
+      .set('Authorization', 'Bearer gateway-authenticated-test-token')
       .send(mergeRequest)
       .expect(201)
       .expect(({ body }: SupertestBody<ApiResponse<CartResponse>>) => {
@@ -115,14 +127,9 @@ describe('CartController (e2e)', () => {
       });
   });
 
-  it('returns ApiResponse error for missing user header', async () => {
+  it('rejects requests without a validated principal', async () => {
     await request(app.getHttpServer())
       .get('/cart')
-      .expect(400)
-      .expect(({ body }: SupertestBody<ApiResponse<null>>) => {
-        expect(body.success).toBe(false);
-        expect(body.errorCode).toBe('BAD_REQUEST');
-        expect(body.data).toBeNull();
-      });
+      .expect(401);
   });
 });

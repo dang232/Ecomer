@@ -650,6 +650,16 @@ spec:
         - name: KAFKA_SASL_PASSWORD
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: inventory-service-kafka-password}
+        - name: KAFKA_SSL_TRUSTSTORE_LOCATION
+          value: /etc/kafka/tls/ca.truststore.jks
+        - name: KAFKA_SSL_KEYSTORE_LOCATION
+          value: /etc/kafka/tls/client.keystore.jks
+        - name: KAFKA_SSL_TRUSTSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: inventory-service-kafka-truststore-password}
+        - name: KAFKA_SSL_KEYSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: inventory-service-kafka-keystore-password}
         - name: REDIS_PASSWORD
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: platform-redis-password}
@@ -692,11 +702,20 @@ spec:
         volumeMounts:
         - name: scratch
           mountPath: /tmp
+        - name: kafka-tls
+          mountPath: /etc/kafka/tls
+          readOnly: true
       volumes:
       - name: scratch
         emptyDir:
           medium: Memory
           sizeLimit: 256Mi
+      - name: kafka-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {key: inventory-service-kafka-truststore, path: ca.truststore.jks}
+          - {key: inventory-service-kafka-keystore, path: client.keystore.jks}
 ---
 apiVersion: v1
 kind: Service
@@ -817,6 +836,16 @@ spec:
         - name: KAFKA_SASL_PASSWORD
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: invoice-service-kafka-password}
+        - name: KAFKA_SSL_TRUSTSTORE_LOCATION
+          value: /etc/kafka/tls/ca.truststore.jks
+        - name: KAFKA_SSL_KEYSTORE_LOCATION
+          value: /etc/kafka/tls/client.keystore.jks
+        - name: KAFKA_SSL_TRUSTSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: invoice-service-kafka-truststore-password}
+        - name: KAFKA_SSL_KEYSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: invoice-service-kafka-keystore-password}
         envFrom:
         - configMapRef:
             name: vnshop-app-config
@@ -856,11 +885,20 @@ spec:
         volumeMounts:
         - name: scratch
           mountPath: /tmp
+        - name: kafka-tls
+          mountPath: /etc/kafka/tls
+          readOnly: true
       volumes:
       - name: scratch
         emptyDir:
           medium: Memory
           sizeLimit: 256Mi
+      - name: kafka-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {key: invoice-service-kafka-truststore, path: ca.truststore.jks}
+          - {key: invoice-service-kafka-keystore, path: client.keystore.jks}
 ---
 apiVersion: v1
 kind: Service
@@ -979,6 +1017,12 @@ spec:
         - name: KAFKA_SASL_PASSWORD
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: messaging-service-kafka-password}
+        - name: KAFKA_SSL_CA_FILE
+          value: /etc/kafka/tls/ca.crt
+        - name: KAFKA_SSL_CERT_FILE
+          value: /etc/kafka/tls/client.crt
+        - name: KAFKA_SSL_KEY_FILE
+          value: /etc/kafka/tls/client.key
         envFrom:
         - configMapRef:
             name: vnshop-app-config
@@ -1018,11 +1062,21 @@ spec:
         volumeMounts:
         - name: scratch
           mountPath: /tmp
+        - name: kafka-tls
+          mountPath: /etc/kafka/tls
+          readOnly: true
       volumes:
       - name: scratch
         emptyDir:
           medium: Memory
           sizeLimit: 256Mi
+      - name: kafka-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {key: messaging-service-kafka-ca, path: ca.crt}
+          - {key: messaging-service-kafka-client-cert, path: client.crt}
+          - {key: messaging-service-kafka-client-key, path: client.key}
 ---
 apiVersion: v1
 kind: Service
@@ -1281,6 +1335,12 @@ spec:
         - name: KAFKA_SASL_PASSWORD
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: notification-service-kafka-password}
+        - name: KAFKA_SSL_CA_FILE
+          value: /etc/kafka/tls/ca.crt
+        - name: KAFKA_SSL_CERT_FILE
+          value: /etc/kafka/tls/client.crt
+        - name: KAFKA_SSL_KEY_FILE
+          value: /etc/kafka/tls/client.key
         - name: REDIS_URL
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: notification-service-redis-url}
@@ -1326,11 +1386,21 @@ spec:
         volumeMounts:
         - name: scratch
           mountPath: /tmp
+        - name: kafka-tls
+          mountPath: /etc/kafka/tls
+          readOnly: true
       volumes:
       - name: scratch
         emptyDir:
           medium: Memory
           sizeLimit: 256Mi
+      - name: kafka-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {key: notification-service-kafka-ca, path: ca.crt}
+          - {key: notification-service-kafka-client-cert, path: client.crt}
+          - {key: notification-service-kafka-client-key, path: client.key}
 ---
 apiVersion: v1
 kind: Service
@@ -1448,6 +1518,19 @@ spec:
         - name: KAFKA_SASL_PASSWORD
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: order-service-kafka-password}
+        - name: KAFKA_SSL_TRUSTSTORE_LOCATION
+          value: /etc/kafka/tls/ca.truststore.jks
+        - name: KAFKA_SSL_KEYSTORE_LOCATION
+          value: /etc/kafka/tls/client.keystore.jks
+        - name: KAFKA_SSL_TRUSTSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: order-service-kafka-truststore-password}
+        - name: KAFKA_SSL_KEYSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: order-service-kafka-keystore-password}
+        - name: GRPC_CLIENT_PAYMENT_SERVICE_TOKEN
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: payment-grpc-service-token}
         - name: REDIS_PASSWORD
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: platform-redis-password}
@@ -1490,11 +1573,20 @@ spec:
         volumeMounts:
         - name: scratch
           mountPath: /tmp
+        - name: kafka-tls
+          mountPath: /etc/kafka/tls
+          readOnly: true
       volumes:
       - name: scratch
         emptyDir:
           medium: Memory
           sizeLimit: 256Mi
+      - name: kafka-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {key: order-service-kafka-truststore, path: ca.truststore.jks}
+          - {key: order-service-kafka-keystore, path: client.keystore.jks}
 ---
 apiVersion: v1
 kind: Service
@@ -1614,6 +1706,19 @@ spec:
         - name: KAFKA_SASL_PASSWORD
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: payment-service-kafka-password}
+        - name: KAFKA_SSL_TRUSTSTORE_LOCATION
+          value: /etc/kafka/tls/ca.truststore.jks
+        - name: KAFKA_SSL_KEYSTORE_LOCATION
+          value: /etc/kafka/tls/client.keystore.jks
+        - name: KAFKA_SSL_TRUSTSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: payment-service-kafka-truststore-password}
+        - name: KAFKA_SSL_KEYSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: payment-service-kafka-keystore-password}
+        - name: GRPC_SERVER_AUTH_TOKEN
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: payment-grpc-service-token}
         envFrom:
         - configMapRef:
             name: vnshop-app-config
@@ -1653,11 +1758,20 @@ spec:
         volumeMounts:
         - name: scratch
           mountPath: /tmp
+        - name: kafka-tls
+          mountPath: /etc/kafka/tls
+          readOnly: true
       volumes:
       - name: scratch
         emptyDir:
           medium: Memory
           sizeLimit: 256Mi
+      - name: kafka-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {key: payment-service-kafka-truststore, path: ca.truststore.jks}
+          - {key: payment-service-kafka-keystore, path: client.keystore.jks}
 ---
 apiVersion: v1
 kind: Service
@@ -1775,6 +1889,16 @@ spec:
         - name: KAFKA_SASL_PASSWORD
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: product-service-kafka-password}
+        - name: KAFKA_SSL_TRUSTSTORE_LOCATION
+          value: /etc/kafka/tls/ca.truststore.jks
+        - name: KAFKA_SSL_KEYSTORE_LOCATION
+          value: /etc/kafka/tls/client.keystore.jks
+        - name: KAFKA_SSL_TRUSTSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: product-service-kafka-truststore-password}
+        - name: KAFKA_SSL_KEYSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: product-service-kafka-keystore-password}
         - name: REDIS_PASSWORD
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: platform-redis-password}
@@ -1835,11 +1959,20 @@ spec:
         volumeMounts:
         - name: scratch
           mountPath: /tmp
+        - name: kafka-tls
+          mountPath: /etc/kafka/tls
+          readOnly: true
       volumes:
       - name: scratch
         emptyDir:
           medium: Memory
           sizeLimit: 256Mi
+      - name: kafka-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {key: product-service-kafka-truststore, path: ca.truststore.jks}
+          - {key: product-service-kafka-keystore, path: client.keystore.jks}
 ---
 apiVersion: v1
 kind: Service
@@ -1954,6 +2087,16 @@ spec:
         - name: KAFKA_SASL_PASSWORD
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: recommendations-service-kafka-password}
+        - name: KAFKA_SSL_TRUSTSTORE_LOCATION
+          value: /etc/kafka/tls/ca.truststore.jks
+        - name: KAFKA_SSL_KEYSTORE_LOCATION
+          value: /etc/kafka/tls/client.keystore.jks
+        - name: KAFKA_SSL_TRUSTSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: recommendations-service-kafka-truststore-password}
+        - name: KAFKA_SSL_KEYSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: recommendations-service-kafka-keystore-password}
         envFrom:
         - configMapRef:
             name: vnshop-app-config
@@ -1993,11 +2136,20 @@ spec:
         volumeMounts:
         - name: scratch
           mountPath: /tmp
+        - name: kafka-tls
+          mountPath: /etc/kafka/tls
+          readOnly: true
       volumes:
       - name: scratch
         emptyDir:
           medium: Memory
           sizeLimit: 256Mi
+      - name: kafka-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {key: recommendations-service-kafka-truststore, path: ca.truststore.jks}
+          - {key: recommendations-service-kafka-keystore, path: client.keystore.jks}
 ---
 apiVersion: v1
 kind: Service
@@ -2112,13 +2264,32 @@ spec:
         - name: KAFKA_SASL_PASSWORD
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: search-service-kafka-password}
+        - name: KAFKA_SSL_TRUSTSTORE_LOCATION
+          value: /etc/kafka/tls/ca.truststore.jks
+        - name: KAFKA_SSL_KEYSTORE_LOCATION
+          value: /etc/kafka/tls/client.keystore.jks
+        - name: KAFKA_SSL_TRUSTSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: search-service-kafka-truststore-password}
+        - name: KAFKA_SSL_KEYSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: search-service-kafka-keystore-password}
         - name: ELASTICSEARCH_HOST
           value: elasticsearch
         - name: ELASTICSEARCH_PORT
           value: "9200"
-        - name: ELASTIC_PASSWORD
+        - name: ELASTICSEARCH_URL
+          value: https://elasticsearch:9200
+        - name: ELASTICSEARCH_USERNAME
           valueFrom:
-            secretKeyRef: {name: vnshop-runtime-secrets, key: platform-elasticsearch-password}
+            secretKeyRef: {name: vnshop-runtime-secrets, key: search-service-elasticsearch-username}
+        - name: ELASTICSEARCH_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: search-service-elasticsearch-password}
+        - name: ELASTICSEARCH_CA_CERTIFICATE
+          value: /etc/elasticsearch/tls/ca.crt
+        - name: ELASTICSEARCH_SSL_BUNDLE
+          value: elasticsearch
         envFrom:
         - configMapRef:
             name: vnshop-app-config
@@ -2158,11 +2329,29 @@ spec:
         volumeMounts:
         - name: scratch
           mountPath: /tmp
+        - name: kafka-tls
+          mountPath: /etc/kafka/tls
+          readOnly: true
+        - name: elasticsearch-ca
+          mountPath: /etc/elasticsearch/tls
+          readOnly: true
       volumes:
       - name: scratch
         emptyDir:
           medium: Memory
           sizeLimit: 256Mi
+      - name: kafka-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {key: search-service-kafka-truststore, path: ca.truststore.jks}
+          - {key: search-service-kafka-keystore, path: client.keystore.jks}
+      - name: elasticsearch-ca
+        secret:
+          secretName: elasticsearch-http-transport-tls
+          items:
+          - key: ca.crt
+            path: ca.crt
 ---
 apiVersion: v1
 kind: Service
@@ -2277,6 +2466,16 @@ spec:
         - name: KAFKA_SASL_PASSWORD
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: seller-finance-service-kafka-password}
+        - name: KAFKA_SSL_TRUSTSTORE_LOCATION
+          value: /etc/kafka/tls/ca.truststore.jks
+        - name: KAFKA_SSL_KEYSTORE_LOCATION
+          value: /etc/kafka/tls/client.keystore.jks
+        - name: KAFKA_SSL_TRUSTSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: seller-finance-service-kafka-truststore-password}
+        - name: KAFKA_SSL_KEYSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: seller-finance-service-kafka-keystore-password}
         envFrom:
         - configMapRef:
             name: vnshop-app-config
@@ -2316,11 +2515,20 @@ spec:
         volumeMounts:
         - name: scratch
           mountPath: /tmp
+        - name: kafka-tls
+          mountPath: /etc/kafka/tls
+          readOnly: true
       volumes:
       - name: scratch
         emptyDir:
           medium: Memory
           sizeLimit: 256Mi
+      - name: kafka-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {key: seller-finance-service-kafka-truststore, path: ca.truststore.jks}
+          - {key: seller-finance-service-kafka-keystore, path: client.keystore.jks}
 ---
 apiVersion: v1
 kind: Service
@@ -2440,6 +2648,16 @@ spec:
         - name: KAFKA_SASL_PASSWORD
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: shipping-service-kafka-password}
+        - name: KAFKA_SSL_TRUSTSTORE_LOCATION
+          value: /etc/kafka/tls/ca.truststore.jks
+        - name: KAFKA_SSL_KEYSTORE_LOCATION
+          value: /etc/kafka/tls/client.keystore.jks
+        - name: KAFKA_SSL_TRUSTSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: shipping-service-kafka-truststore-password}
+        - name: KAFKA_SSL_KEYSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: shipping-service-kafka-keystore-password}
         - name: GHN_WEBHOOK_TOKEN
           valueFrom:
             secretKeyRef:
@@ -2489,11 +2707,20 @@ spec:
         volumeMounts:
         - name: scratch
           mountPath: /tmp
+        - name: kafka-tls
+          mountPath: /etc/kafka/tls
+          readOnly: true
       volumes:
       - name: scratch
         emptyDir:
           medium: Memory
           sizeLimit: 256Mi
+      - name: kafka-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {key: shipping-service-kafka-truststore, path: ca.truststore.jks}
+          - {key: shipping-service-kafka-keystore, path: client.keystore.jks}
 ---
 apiVersion: v1
 kind: Service
@@ -2611,6 +2838,16 @@ spec:
         - name: KAFKA_SASL_PASSWORD
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: user-service-kafka-password}
+        - name: KAFKA_SSL_TRUSTSTORE_LOCATION
+          value: /etc/kafka/tls/ca.truststore.jks
+        - name: KAFKA_SSL_KEYSTORE_LOCATION
+          value: /etc/kafka/tls/client.keystore.jks
+        - name: KAFKA_SSL_TRUSTSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: user-service-kafka-truststore-password}
+        - name: KAFKA_SSL_KEYSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: user-service-kafka-keystore-password}
         - name: REDIS_PASSWORD
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: platform-redis-password}
@@ -2674,11 +2911,20 @@ spec:
         volumeMounts:
         - name: scratch
           mountPath: /tmp
+        - name: kafka-tls
+          mountPath: /etc/kafka/tls
+          readOnly: true
       volumes:
       - name: scratch
         emptyDir:
           medium: Memory
           sizeLimit: 256Mi
+      - name: kafka-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {key: user-service-kafka-truststore, path: ca.truststore.jks}
+          - {key: user-service-kafka-keystore, path: client.keystore.jks}
 ---
 apiVersion: v1
 kind: Service
@@ -2785,9 +3031,17 @@ spec:
         - name: MODERATOR_KAFKA_BOOTSTRAP_SERVERS
           value: kafka:9092
         - name: MODERATOR_KAFKA_SECURITY_PROTOCOL
-          value: SASL_PLAINTEXT
+          value: SASL_SSL
         - name: MODERATOR_KAFKA_SASL_MECHANISM
           value: PLAIN
+        - name: MODERATOR_KAFKA_SSL_CA_FILE
+          value: /etc/kafka/tls/ca.crt
+        - name: MODERATOR_KAFKA_SSL_CERT_FILE
+          value: /etc/kafka/tls/client.crt
+        - name: MODERATOR_KAFKA_SSL_KEY_FILE
+          value: /etc/kafka/tls/client.key
+        - name: MODERATOR_KAFKA_SSL_CHECK_HOSTNAME
+          value: "true"
         - name: MODERATOR_KAFKA_SASL_USERNAME
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: video-moderator-kafka-username}
@@ -2841,11 +3095,21 @@ spec:
         volumeMounts:
         - name: scratch
           mountPath: /tmp
+        - name: kafka-client-tls
+          mountPath: /etc/kafka/tls
+          readOnly: true
       volumes:
       - name: scratch
         emptyDir:
           medium: Memory
           sizeLimit: 4Gi
+      - name: kafka-client-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {key: video-moderator-kafka-ca, path: ca.crt}
+          - {key: video-moderator-kafka-client-cert, path: client.crt}
+          - {key: video-moderator-kafka-client-key, path: client.key}
 ---
 apiVersion: v1
 kind: Service
@@ -2960,6 +3224,16 @@ spec:
         - name: KAFKA_SASL_PASSWORD
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: video-transcoder-kafka-password}
+        - name: KAFKA_SSL_TRUSTSTORE_LOCATION
+          value: /etc/kafka/tls/ca.truststore.jks
+        - name: KAFKA_SSL_KEYSTORE_LOCATION
+          value: /etc/kafka/tls/client.keystore.jks
+        - name: KAFKA_SSL_TRUSTSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: video-transcoder-kafka-truststore-password}
+        - name: KAFKA_SSL_KEYSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: video-transcoder-kafka-keystore-password}
         - name: S3_ENDPOINT
           value: http://minio:9000
         - name: S3_REGION
@@ -3009,11 +3283,20 @@ spec:
         volumeMounts:
         - name: scratch
           mountPath: /tmp
+        - name: kafka-tls
+          mountPath: /etc/kafka/tls
+          readOnly: true
       volumes:
       - name: scratch
         emptyDir:
           medium: Memory
           sizeLimit: 4Gi
+      - name: kafka-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {key: video-transcoder-kafka-truststore, path: ca.truststore.jks}
+          - {key: video-transcoder-kafka-keystore, path: client.keystore.jks}
 ---
 apiVersion: v1
 kind: Service
