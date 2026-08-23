@@ -27,27 +27,30 @@ public class UserController {
     private final UpsertBuyerProfileUseCase upsertBuyerProfileUseCase;
     private final ManageAddressUseCase manageAddressUseCase;
     private final AvatarUploadService avatarUploadService;
+    private final BuyerProfileResponseMapper buyerProfileResponseMapper;
 
     public UserController(ViewBuyerProfileUseCase viewBuyerProfileUseCase,
                           UpsertBuyerProfileUseCase upsertBuyerProfileUseCase,
                           ManageAddressUseCase manageAddressUseCase,
-                          AvatarUploadService avatarUploadService) {
+                          AvatarUploadService avatarUploadService,
+                          BuyerProfileResponseMapper buyerProfileResponseMapper) {
         this.viewBuyerProfileUseCase = viewBuyerProfileUseCase;
         this.upsertBuyerProfileUseCase = upsertBuyerProfileUseCase;
         this.manageAddressUseCase = manageAddressUseCase;
         this.avatarUploadService = avatarUploadService;
+        this.buyerProfileResponseMapper = buyerProfileResponseMapper;
     }
 
     @GetMapping("/me")
     @PreAuthorize("isAuthenticated()")
     public ApiResponse<BuyerProfileResponse> getMyProfile() {
-        return ApiResponse.ok(BuyerProfileResponse.fromDomain(viewBuyerProfileUseCase.view(JwtPrincipalUtil.currentUserId())));
+        return ApiResponse.ok(buyerProfileResponseMapper.fromDomain(viewBuyerProfileUseCase.view(JwtPrincipalUtil.currentUserId())));
     }
 
     @PutMapping("/me")
     @PreAuthorize("isAuthenticated()")
     public ApiResponse<BuyerProfileResponse> upsertMyProfile(@RequestBody BuyerProfileRequest request) {
-        return ApiResponse.ok(BuyerProfileResponse.fromDomain(upsertBuyerProfileUseCase.upsert(new UpsertBuyerProfileCommand(JwtPrincipalUtil.currentUserId(), request.name(), request.phone(), request.avatarUrl()))));
+        return ApiResponse.ok(buyerProfileResponseMapper.fromDomain(upsertBuyerProfileUseCase.upsert(new UpsertBuyerProfileCommand(JwtPrincipalUtil.currentUserId(), request.name(), request.phone(), request.avatarUrl()))));
     }
 
     @PostMapping("/me/avatar/upload")
@@ -61,13 +64,13 @@ public class UserController {
     @PreAuthorize("isAuthenticated()")
     public ApiResponse<BuyerProfileResponse> activateAvatar(@RequestBody AvatarActivationRequest request) {
         AvatarActivationResponse response = avatarUploadService.activate(JwtPrincipalUtil.currentUserId(), request);
-        return ApiResponse.ok(BuyerProfileResponse.fromDomain(response.profile()));
+        return ApiResponse.ok(buyerProfileResponseMapper.fromDomain(response.profile()));
     }
 
     @PostMapping("/me/addresses")
     @PreAuthorize("isAuthenticated()")
     public ApiResponse<BuyerProfileResponse> addAddress(@RequestBody AddressRequest request) {
-        return ApiResponse.ok(BuyerProfileResponse.fromDomain(manageAddressUseCase.addAddress(JwtPrincipalUtil.currentUserId(), request.toDomain())));
+        return ApiResponse.ok(buyerProfileResponseMapper.fromDomain(manageAddressUseCase.addAddress(JwtPrincipalUtil.currentUserId(), request.toDomain())));
     }
 
     @PutMapping("/me/addresses/{index}")
@@ -75,20 +78,20 @@ public class UserController {
     public ApiResponse<BuyerProfileResponse> updateAddress(
             @PathVariable int index,
             @RequestBody AddressRequest request) {
-        return ApiResponse.ok(BuyerProfileResponse.fromDomain(
+        return ApiResponse.ok(buyerProfileResponseMapper.fromDomain(
                 manageAddressUseCase.updateAddress(JwtPrincipalUtil.currentUserId(), index, request.toDomain())));
     }
 
     @DeleteMapping("/me/addresses/{index}")
     @PreAuthorize("isAuthenticated()")
     public ApiResponse<BuyerProfileResponse> removeAddress(@PathVariable int index) {
-        return ApiResponse.ok(BuyerProfileResponse.fromDomain(manageAddressUseCase.removeAddress(JwtPrincipalUtil.currentUserId(), index)));
+        return ApiResponse.ok(buyerProfileResponseMapper.fromDomain(manageAddressUseCase.removeAddress(JwtPrincipalUtil.currentUserId(), index)));
     }
 
     @PutMapping("/me/addresses/{index}/default")
     @PreAuthorize("isAuthenticated()")
     public ApiResponse<BuyerProfileResponse> setDefaultAddress(@PathVariable int index) {
-        return ApiResponse.ok(BuyerProfileResponse.fromDomain(manageAddressUseCase.setDefaultAddress(JwtPrincipalUtil.currentUserId(), index)));
+        return ApiResponse.ok(buyerProfileResponseMapper.fromDomain(manageAddressUseCase.setDefaultAddress(JwtPrincipalUtil.currentUserId(), index)));
     }
 
 }

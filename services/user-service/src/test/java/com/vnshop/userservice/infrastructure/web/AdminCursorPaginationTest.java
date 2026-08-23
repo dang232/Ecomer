@@ -22,6 +22,7 @@ import com.vnshop.userservice.domain.port.out.AdminBuyerCursor;
 import com.vnshop.userservice.domain.port.out.AdminSellerCursor;
 import com.vnshop.userservice.infrastructure.web.pagination.AdminCursorCodec;
 import com.vnshop.userservice.infrastructure.web.pagination.AdminCursorFilterHash;
+import com.vnshop.userservice.infrastructure.storage.ObjectStorageProperties;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -153,7 +154,7 @@ class AdminCursorPaginationTest {
     }
 
     private static MockMvc usersMvc(AdminUserUseCase useCase) {
-        return MockMvcBuilders.standaloneSetup(new AdminUserController(useCase, codec()))
+        return MockMvcBuilders.standaloneSetup(new AdminUserController(useCase, codec(), responseMapper()))
                 .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
                 .setControllerAdvice(new ApiExceptionHandler()).build();
     }
@@ -166,6 +167,13 @@ class AdminCursorPaginationTest {
 
     private static AdminCursorCodec codec() {
         return new AdminCursorCodec("test-secret", Duration.ofHours(1), CLOCK);
+    }
+
+    private static BuyerProfileResponseMapper responseMapper() {
+        ObjectStorageProperties properties = new ObjectStorageProperties();
+        properties.setEndpoint("http://localhost:8080");
+        properties.setBucket("vnshop-avatars");
+        return new BuyerProfileResponseMapper(properties);
     }
 
     private static BuyerProfile buyer(String id, String name) {
