@@ -22,7 +22,7 @@ class SecurityConfigWebSocketAuthorizationTest {
         ServerHttpSecurity http = ServerHttpSecurity.http();
         http.oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwt -> jwt.jwtDecoder(token -> Mono.empty())));
-        SecurityWebFilterChain chain = new SecurityConfig().securityWebFilterChain(http);
+        SecurityWebFilterChain chain = new SecurityConfig(PublicBucketProperties.defaults()).securityWebFilterChain(http);
 
         client = WebTestClient.bindToWebHandler(exchange -> {
                     exchange.getResponse().setStatusCode(HttpStatus.NO_CONTENT);
@@ -73,7 +73,7 @@ class SecurityConfigWebSocketAuthorizationTest {
 
     @Test
     void exposesTusUploadHeadersToBrowserClients() {
-        var source = new SecurityConfig().corsConfigurationSource("http://localhost:3000");
+        var source = new SecurityConfig(PublicBucketProperties.defaults()).corsConfigurationSource("http://localhost:3000");
         var exchange = MockServerWebExchange.from(
                 MockServerHttpRequest.options("/videos/upload")
                         .header("Origin", "http://localhost:3000"));

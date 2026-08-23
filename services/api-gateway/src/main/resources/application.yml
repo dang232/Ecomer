@@ -34,6 +34,14 @@ spring:
             allow-credentials: false
             max-age: 3600
 
+vnshop:
+  gateway:
+    public-buckets:
+      avatar: ${VNSHOP_GATEWAY_PUBLIC_BUCKET_AVATAR:vnshop-avatars}
+      product: ${VNSHOP_GATEWAY_PUBLIC_BUCKET_PRODUCT:vnshop-products}
+      review: ${VNSHOP_GATEWAY_PUBLIC_BUCKET_REVIEW:vnshop-reviews}
+      video: ${VNSHOP_GATEWAY_PUBLIC_BUCKET_VIDEO:vnshop-videos}
+
 management:
   endpoints:
     web:

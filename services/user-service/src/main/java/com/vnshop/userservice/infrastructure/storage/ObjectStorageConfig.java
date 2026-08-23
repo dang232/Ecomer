@@ -1,7 +1,6 @@
 package com.vnshop.userservice.infrastructure.storage;
 
 import java.net.URI;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,7 +12,6 @@ import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 @Configuration
-@EnableConfigurationProperties(ObjectStorageProperties.class)
 @ConditionalOnProperty(prefix = "vnshop.user-storage", name = "enabled", havingValue = "true")
 public class ObjectStorageConfig {
     @Bean

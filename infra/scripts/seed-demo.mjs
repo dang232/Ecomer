@@ -15,6 +15,7 @@ const SELLER_USER = process.env.SELLER_USER ?? "seller1";
 const SELLER_PASS = process.env.SELLER_PASS ?? "test";
 const FORCE = process.env.FORCE === "1";
 const TARGET_BACKFILL_SKUS = new Set(["SKU-IPH16-PM-256", "SKU-MBA-M4-13"]);
+const MAX_SELLER_PAGES = 10000;
 
 const products = [
   // electronics
@@ -38,23 +39,6 @@ const products = [
 ];
 
 async function main() {
-  const ping = await fetch(`${GATEWAY}/products?size=100`).catch(() => null);
-  if (!ping || !ping.ok) {
-    console.error(`gateway not reachable at ${GATEWAY}`);
-    process.exit(1);
-  }
-  const pingBody = await ping.json();
-  const currentCount = pingBody?.data?.totalElements ?? pingBody?.data?.content?.length ?? 0;
-  const existingBySku = new Map(
-    (pingBody?.data?.content ?? []).flatMap((product) =>
-      (product.variants ?? []).map((variant) => [variant.sku, { product, variant }]),
-    ),
-  );
-  if (currentCount > 0 && !FORCE) {
-    console.log(`catalog already has ${currentCount} products. Set FORCE=1 to seed anyway.`);
-    return;
-  }
-
   console.log(`==> requesting token for ${SELLER_USER}`);
   const tokenRes = await fetch(`${GATEWAY}/auth/login`, {
     method: "POST",
@@ -72,6 +56,50 @@ async function main() {
   if (!token) {
     console.error("token response did not contain an access token");
     process.exit(1);
+  }
+
+  const sellerProducts = [];
+  let paginationComplete = false;
+  for (let page = 0; page < MAX_SELLER_PAGES; page++) {
+    const sellerPage = await fetch(`${GATEWAY}/sellers/me/products?size=50&page=${page}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!sellerPage.ok) {
+      console.error(`seller catalog lookup failed: ${sellerPage.status} ${await sellerPage.text()}`);
+      process.exit(1);
+    }
+    const pageBody = await sellerPage.json();
+    const pageData = pageBody?.data ?? {};
+    const content = pageData.content;
+    const totalPages = pageData.totalPages;
+    const last = pageData.last;
+    if (!Array.isArray(content) || typeof last !== "boolean" || !Number.isInteger(totalPages) || totalPages < 0 || (totalPages > 0 && page >= totalPages) || (totalPages === 0 && content.length > 0) || (totalPages > 0 && last && page !== totalPages - 1) || (totalPages > 0 && !last && page >= totalPages - 1)) {
+      console.error(`seller pagination metadata is invalid on page ${page}`);
+      process.exit(1);
+    }
+    sellerProducts.push(...content);
+    if ((totalPages === 0 && content.length === 0) || (last && page === totalPages - 1)) {
+      paginationComplete = true;
+      break;
+    }
+    if (content.length === 0) {
+      console.error(`seller pagination made no progress on page ${page}`);
+      process.exit(1);
+    }
+  }
+  if (!paginationComplete) {
+    console.error(`seller pagination exceeded maximum page bound of ${MAX_SELLER_PAGES}`);
+    process.exit(1);
+  }
+  const currentCount = sellerProducts.length;
+  const existingBySku = new Map(
+    sellerProducts.flatMap((product) =>
+      (product.variants ?? []).map((variant) => [variant.sku, { product, variant }]),
+    ),
+  );
+  if (currentCount > 0 && !FORCE) {
+    console.log(`catalog already has ${currentCount} products. Set FORCE=1 to seed anyway.`);
+    return;
   }
 
   console.log("==> seeding products");
@@ -104,13 +132,32 @@ async function main() {
       if (existing.variant.parcel) {
         continue;
       }
+      const updateBody = {
+        name: existing.product.name,
+        description: existing.product.description,
+        categoryId: existing.product.categoryId,
+        brand: existing.product.brand,
+        variants: existing.product.variants.map((variant) => ({
+          sku: variant.sku,
+          name: variant.name,
+          priceAmount: variant.priceAmount,
+          priceCurrency: variant.priceCurrency,
+          imageUrl: variant.imageUrl,
+          stockQuantity: variant.stockQuantity,
+          parcel: variant.sku === sku && variant.parcel === null
+            ? { weightGrams: 1000, lengthCm: 30, widthCm: 20, heightCm: 10 }
+            : variant.parcel,
+        })),
+        images: existing.product.images,
+        tags: existing.product.tags,
+      };
       const updateRes = await fetch(`${GATEWAY}/sellers/me/products/${existing.product.id}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(updateBody),
       });
       if (!updateRes.ok) {
         console.error(`  ! ${name}: parcel backfill failed: ${updateRes.status} ${await updateRes.text()}`);

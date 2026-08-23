@@ -6,8 +6,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.vnshop.apigateway.infrastructure.config.TieredRateLimiter;
+import com.vnshop.apigateway.infrastructure.config.PublicBucketProperties;
 import java.net.URI;
 import java.util.List;
+import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.webflux.autoconfigure.WebFluxProperties;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
@@ -52,7 +54,8 @@ class RouteConfigTest {
         RouteConfig config = new RouteConfig(
                 "http://product", "http://user", "http://search", "http://inventory", "http://cart",
                 "http://order", "http://payment", "http://shipping", "http://notification",
-                 "http://finance", "http://recommendations", "http://messaging", "http://monitoring", "http://configuration", "http://coupon", "http://keycloak", "http://minio", "internal-secret");
+                 "http://finance", "http://recommendations", "http://messaging", "http://monitoring", "http://configuration", "http://coupon", "http://keycloak", "http://minio", "internal-secret",
+                 PublicBucketProperties.defaults());
         TieredRateLimiter limiter = new TieredRateLimiter(mock(org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter.class),
                 mock(org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter.class));
         RouteLocator locator = config.gatewayRoutes(new RouteLocatorBuilder(context), limiter, limiter, limiter, limiter,
@@ -112,10 +115,15 @@ class RouteConfigTest {
         when(context.getBean(PreserveHostHeaderGatewayFilterFactory.class)).thenReturn(new PreserveHostHeaderGatewayFilterFactory());
         when(context.getBean(RequestRateLimiterGatewayFilterFactory.class)).thenReturn(
                 new RequestRateLimiterGatewayFilterFactory(mock(RateLimiter.class), mock(KeyResolver.class)));
-        when(context.getBean(SpringCloudCircuitBreakerFilterFactory.class)).thenReturn(mock(SpringCloudCircuitBreakerFilterFactory.class));
+        SpringCloudCircuitBreakerFilterFactory circuitFactory = mock(SpringCloudCircuitBreakerFilterFactory.class);
+        GatewayFilter noop = (exchange, chain) -> chain.filter(exchange);
+        when(circuitFactory.apply(any(SpringCloudCircuitBreakerFilterFactory.Config.class))).thenReturn(noop);
+        when(circuitFactory.apply(any(String.class), any(Consumer.class))).thenReturn(noop);
+        when(context.getBean(SpringCloudCircuitBreakerFilterFactory.class)).thenReturn(circuitFactory);
         RouteConfig config = new RouteConfig("http://product", "http://user", "http://search", "http://inventory", "http://cart",
                 "http://order", "http://payment", "http://shipping", "http://notification", "http://finance", "http://recommendations",
-                "http://messaging", "http://monitoring", "http://configuration", "http://coupon", "http://keycloak", "http://minio", "secret");
+                 "http://messaging", "http://monitoring", "http://configuration", "http://coupon", "http://keycloak", "http://minio", "secret",
+                 PublicBucketProperties.defaults());
         TieredRateLimiter limiter = new TieredRateLimiter(mock(org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter.class),
                 mock(org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter.class));
         List<Route> routes = config.gatewayRoutes(new RouteLocatorBuilder(context), limiter, limiter, limiter, limiter, limiter, limiter, limiter, limiter,
@@ -131,6 +139,49 @@ class RouteConfigTest {
         }
         for (String path : List.of("/invoices/a.pdf", "/vnshop-videos-staging/a.mp4", "/admin/console", "/health/ready")) {
             assertThat(matches(minio, path)).isFalse();
+        }
+    }
+
+    @Test
+    void minioRouteUsesExactlyConfiguredPublicBucketNames() {
+        ConfigurableApplicationContext context = mock(ConfigurableApplicationContext.class);
+        PathRoutePredicateFactory pathFactory = new PathRoutePredicateFactory(new WebFluxProperties());
+        when(context.getBean(PathRoutePredicateFactory.class)).thenReturn(pathFactory);
+        when(context.getBean(StripPrefixGatewayFilterFactory.class)).thenReturn(new StripPrefixGatewayFilterFactory());
+        when(context.getBean(AddRequestHeaderGatewayFilterFactory.class)).thenReturn(new AddRequestHeaderGatewayFilterFactory());
+        when(context.getBean(DedupeResponseHeaderGatewayFilterFactory.class)).thenReturn(new DedupeResponseHeaderGatewayFilterFactory());
+        when(context.getBean(PreserveHostHeaderGatewayFilterFactory.class)).thenReturn(new PreserveHostHeaderGatewayFilterFactory());
+        when(context.getBean(RequestRateLimiterGatewayFilterFactory.class)).thenReturn(
+                new RequestRateLimiterGatewayFilterFactory(mock(RateLimiter.class), mock(KeyResolver.class)));
+        SpringCloudCircuitBreakerFilterFactory circuitFactory = mock(SpringCloudCircuitBreakerFilterFactory.class);
+        GatewayFilter noop = (exchange, chain) -> chain.filter(exchange);
+        when(circuitFactory.apply(any(SpringCloudCircuitBreakerFilterFactory.Config.class))).thenReturn(noop);
+        when(circuitFactory.apply(any(String.class), any(Consumer.class))).thenReturn(noop);
+        when(context.getBean(SpringCloudCircuitBreakerFilterFactory.class)).thenReturn(circuitFactory);
+        PublicBucketProperties buckets = new PublicBucketProperties("avatars-custom", "products-custom", "reviews-custom", "videos-custom");
+        RouteConfig config = new RouteConfig("http://product", "http://user", "http://search", "http://inventory", "http://cart",
+                "http://order", "http://payment", "http://shipping", "http://notification", "http://finance", "http://recommendations",
+                "http://messaging", "http://monitoring", "http://configuration", "http://coupon", "http://keycloak", "http://minio", "secret", buckets);
+        TieredRateLimiter limiter = new TieredRateLimiter(mock(org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter.class),
+                mock(org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter.class));
+
+        List<Route> routes = config.gatewayRoutes(new RouteLocatorBuilder(context), limiter, limiter, limiter, limiter, limiter, limiter, limiter, limiter,
+                mock(KeyResolver.class)).getRoutes().collectList().block();
+        Route minio = route(routes, "minio-public");
+
+        assertThat(matches(minio, "/avatars-custom/a.jpg")).isTrue();
+        assertThat(matches(minio, "/products-custom/p.jpg")).isTrue();
+        assertThat(matches(minio, "/reviews-custom/r.jpg")).isTrue();
+        assertThat(matches(minio, "/videos-custom/v.mp4")).isTrue();
+        assertThat(matches(minio, "/vnshop-avatars/a.jpg")).isFalse();
+        assertThat(matches(minio, "/videos-custom-staging/v.mp4")).isFalse();
+    }
+
+    @Test
+    void publicBucketConfigurationRejectsUnsafeSegments() {
+        for (String invalid : List.of("bucket/name", "bucket\\\\name", "bucket*name", "bucket?name", "bucket#name", ".", "..", "bucket..name", "Bucket")) {
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> new PublicBucketProperties(invalid, "products", "reviews", "videos"))
+                    .isInstanceOf(IllegalArgumentException.class);
         }
     }
 

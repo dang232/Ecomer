@@ -47,7 +47,7 @@ class SecurityConfigVideoUploadCsrfTest {
         return exchange -> {
             try {
                 return (reactor.core.publisher.Mono<ServerWebExchangeMatcher.MatchResult>) method.invoke(
-                        new SecurityConfig(), exchange);
+                        new SecurityConfig(PublicBucketProperties.defaults()), exchange);
             } catch (ReflectiveOperationException exception) {
                 return reactor.core.publisher.Mono.error(exception);
             }

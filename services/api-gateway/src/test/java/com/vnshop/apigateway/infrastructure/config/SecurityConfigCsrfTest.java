@@ -15,7 +15,7 @@ class SecurityConfigCsrfTest {
         ServerHttpSecurity http = ServerHttpSecurity.http();
         http.oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwt -> jwt.jwtDecoder(token -> Mono.empty())));
-        SecurityWebFilterChain chain = new SecurityConfig()
+        SecurityWebFilterChain chain = new SecurityConfig(PublicBucketProperties.defaults())
                 .securityWebFilterChain(http);
 
         assertThat(chain.getWebFilters().collectList().block())
@@ -24,7 +24,7 @@ class SecurityConfigCsrfTest {
 
     @Test
     void gatewayAcceptsTheSpaRawDoubleSubmitCsrfHeader() {
-        assertThat(new SecurityConfig().csrfTokenRequestAttributeHandler())
+        assertThat(new SecurityConfig(PublicBucketProperties.defaults()).csrfTokenRequestAttributeHandler())
                 .isInstanceOf(ServerCsrfTokenRequestAttributeHandler.class);
     }
 }

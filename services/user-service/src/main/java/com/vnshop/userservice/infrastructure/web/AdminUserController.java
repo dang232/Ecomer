@@ -30,15 +30,14 @@ public class AdminUserController {
 
     private final AdminUserUseCase adminUserUseCase;
     private final AdminCursorCodec cursorCodec;
+    private final BuyerProfileResponseMapper buyerProfileResponseMapper;
 
     @Autowired
-    public AdminUserController(AdminUserUseCase adminUserUseCase, AdminCursorCodec cursorCodec) {
+    public AdminUserController(AdminUserUseCase adminUserUseCase, AdminCursorCodec cursorCodec,
+                               BuyerProfileResponseMapper buyerProfileResponseMapper) {
         this.adminUserUseCase = adminUserUseCase;
         this.cursorCodec = cursorCodec;
-    }
-
-    public AdminUserController(AdminUserUseCase adminUserUseCase) {
-        this(adminUserUseCase, null);
+        this.buyerProfileResponseMapper = buyerProfileResponseMapper;
     }
 
     @GetMapping
@@ -50,7 +49,7 @@ public class AdminUserController {
     ) {
         if (limit != null || cursor != null) return cursorPage(query, limit, cursor);
         return ApiResponse.ok(
-                adminUserUseCase.searchUsers(query, pageable).map(BuyerProfileResponse::fromDomain)
+                adminUserUseCase.searchUsers(query, pageable).map(buyerProfileResponseMapper::fromDomain)
         );
     }
 
@@ -73,7 +72,7 @@ public class AdminUserController {
         List<BuyerProfile> items = hasMore ? rows.subList(0, limit) : rows;
         String next = hasMore ? cursorCodec.encode(new AdminCursorCodec.Cursor(RESOURCE, filterHash, SORT,
                 nameKey(items.getLast()), items.getLast().keycloakId(), null, null)) : null;
-        return ApiResponse.ok(new AdminCursorPage<>(items.stream().map(BuyerProfileResponse::fromDomain).toList(), next,
+        return ApiResponse.ok(new AdminCursorPage<>(items.stream().map(buyerProfileResponseMapper::fromDomain).toList(), next,
                 hasMore, limit, new AdminCursorPage.Sort("name,keycloakId", "asc"), null));
     }
 
@@ -84,11 +83,11 @@ public class AdminUserController {
 
     @PostMapping("/{id}/ban")
     public ApiResponse<BuyerProfileResponse> ban(@PathVariable String id) {
-        return ApiResponse.ok(BuyerProfileResponse.fromDomain(adminUserUseCase.banUser(id)));
+        return ApiResponse.ok(buyerProfileResponseMapper.fromDomain(adminUserUseCase.banUser(id)));
     }
 
     @PostMapping("/{id}/unban")
     public ApiResponse<BuyerProfileResponse> unban(@PathVariable String id) {
-        return ApiResponse.ok(BuyerProfileResponse.fromDomain(adminUserUseCase.unbanUser(id)));
+        return ApiResponse.ok(buyerProfileResponseMapper.fromDomain(adminUserUseCase.unbanUser(id)));
     }
 }
