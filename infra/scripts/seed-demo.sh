@@ -47,8 +47,7 @@ create_product() {
   local body
   local existing
   existing=$(jq -c --arg sku "${sku}" '
-    [.data.content[]? as $product | $product.variants[]? | select(.sku == $sku) |
-      {productId: $product.id, parcel: .parcel}] | .[0] // empty
+    [.data.content[]? | select(any(.variants[]?; .sku == $sku))] | .[0] // empty
   ' <<<"${catalog_json}")
   body=$(jq -n \
     --arg name "${name}" \
@@ -80,9 +79,31 @@ create_product() {
   if [ -n "${existing}" ]; then
     if [ "${sku}" = "SKU-IPH16-PM-256" ] || [ "${sku}" = "SKU-MBA-M4-13" ]; then
       local parcel
-      parcel=$(jq -c '.parcel' <<<"${existing}")
+      parcel=$(jq -c --arg sku "${sku}" '[.variants[] | select(.sku == $sku) | .parcel] | .[0]' <<<"${existing}")
       if [ "${parcel}" = "null" ]; then
-        curl -fsS -X PUT "${GATEWAY}/sellers/me/products/$(jq -r '.productId' <<<"${existing}")" \
+        body=$(jq -c --arg sku "${sku}" '
+          {
+            name: .name,
+            description: .description,
+            categoryId: .categoryId,
+            brand: .brand,
+            variants: [.variants[] | {
+              sku,
+              name,
+              priceAmount,
+              priceCurrency,
+              imageUrl,
+              stockQuantity,
+              parcel: (if .sku == $sku and .parcel == null
+                then {weightGrams: 1000, lengthCm: 30, widthCm: 20, heightCm: 10}
+                else .parcel
+                end)
+            }],
+            images: (.images // []),
+            tags: (.tags // [])
+          }
+        ' <<<"${existing}")
+        curl -fsS -X PUT "${GATEWAY}/sellers/me/products/$(jq -r '.id' <<<"${existing}")" \
           -H "Authorization: Bearer ${TOKEN}" \
           -H "Content-Type: application/json" \
           -d "${body}" >/dev/null

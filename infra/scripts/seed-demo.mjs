@@ -104,13 +104,32 @@ async function main() {
       if (existing.variant.parcel) {
         continue;
       }
+      const updateBody = {
+        name: existing.product.name,
+        description: existing.product.description,
+        categoryId: existing.product.categoryId,
+        brand: existing.product.brand,
+        variants: existing.product.variants.map((variant) => ({
+          sku: variant.sku,
+          name: variant.name,
+          priceAmount: variant.priceAmount,
+          priceCurrency: variant.priceCurrency,
+          imageUrl: variant.imageUrl,
+          stockQuantity: variant.stockQuantity,
+          parcel: variant.sku === sku && variant.parcel === null
+            ? { weightGrams: 1000, lengthCm: 30, widthCm: 20, heightCm: 10 }
+            : variant.parcel,
+        })),
+        images: existing.product.images,
+        tags: existing.product.tags,
+      };
       const updateRes = await fetch(`${GATEWAY}/sellers/me/products/${existing.product.id}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(updateBody),
       });
       if (!updateRes.ok) {
         console.error(`  ! ${name}: parcel backfill failed: ${updateRes.status} ${await updateRes.text()}`);

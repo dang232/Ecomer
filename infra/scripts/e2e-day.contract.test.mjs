@@ -31,11 +31,87 @@ function runDemoSeeder(gateway) {
 
 function startCatalogGateway() {
   const products = new Map([
-    ["SKU-IPH16-PM-256", { id: "iphone-id", parcel: null }],
-    ["SKU-MBA-M4-13", { id: "macbook-id", parcel: null }],
-    ["SKU-UNCHANGED", {
+    ["iphone-id", {
+      id: "iphone-id",
+      name: "Existing iPhone Listing",
+      description: "Seller-authored iPhone description",
+      categoryId: "phones-custom",
+      brand: "Apple Premium",
+      tags: ["featured", "seller-pick"],
+      variants: [
+        {
+          sku: "SKU-IPH16-PM-256",
+          name: "256GB Graphite",
+          priceAmount: 31990000,
+          priceCurrency: "VND",
+          imageUrl: "https://example.test/iphone-graphite.webp",
+          stockQuantity: 10,
+          parcel: null,
+        },
+        {
+          sku: "SKU-IPH16-PM-512",
+          name: "512GB Gold",
+          priceAmount: 35990000,
+          priceCurrency: "VND",
+          imageUrl: "https://example.test/iphone-gold.webp",
+          stockQuantity: 7,
+          parcel: { weightGrams: 2222, lengthCm: 44, widthCm: 33, heightCm: 22 },
+        },
+      ],
+      images: [
+        { url: "https://example.test/iphone-front.webp", alt: "Front", sortOrder: 2 },
+        { url: "https://example.test/iphone-back.webp", alt: "Back", sortOrder: 5 },
+      ],
+    }],
+    ["macbook-id", {
+      id: "macbook-id",
+      name: "Existing MacBook Listing",
+      description: "Seller-authored MacBook description",
+      categoryId: "laptops-custom",
+      brand: "Apple Studio",
+      tags: ["work", "premium"],
+      variants: [
+        {
+          sku: "SKU-MBA-M4-13",
+          name: "13-inch Silver",
+          priceAmount: 27490000,
+          priceCurrency: "VND",
+          imageUrl: "https://example.test/macbook-silver.webp",
+          stockQuantity: 8,
+          parcel: null,
+        },
+        {
+          sku: "SKU-MBA-M4-15",
+          name: "15-inch Midnight",
+          priceAmount: 32490000,
+          priceCurrency: "VND",
+          imageUrl: "https://example.test/macbook-midnight.webp",
+          stockQuantity: 4,
+          parcel: { weightGrams: 3333, lengthCm: 45, widthCm: 34, heightCm: 12 },
+        },
+      ],
+      images: [
+        { url: "https://example.test/macbook-open.webp", alt: "Open", sortOrder: 1 },
+        { url: "https://example.test/macbook-closed.webp", alt: "Closed", sortOrder: 4 },
+      ],
+    }],
+    ["unchanged-id", {
       id: "unchanged-id",
-      parcel: { weightGrams: 2222, lengthCm: 44, widthCm: 33, heightCm: 22 },
+      name: "Unchanged Product",
+      description: "Already complete",
+      categoryId: "other",
+      brand: "Other Brand",
+      tags: ["complete"],
+      variants: [{
+        sku: "SKU-UNCHANGED",
+        name: "Default",
+        priceAmount: 100,
+        priceCurrency: "VND",
+        imageUrl: "https://example.test/unchanged.webp",
+        stockQuantity: 1,
+        parcel: { weightGrams: 2222, lengthCm: 44, widthCm: 33, heightCm: 22 },
+      }],
+      images: [{ url: "https://example.test/unchanged.webp", alt: "Unchanged", sortOrder: 0 }],
     }],
   ]);
   const creates = [];
@@ -44,11 +120,7 @@ function startCatalogGateway() {
     const url = new URL(request.url, "http://localhost");
     if (request.method === "GET" && url.pathname === "/products") {
       response.setHeader("Content-Type", "application/json");
-      response.end(JSON.stringify({ data: { totalElements: products.size, content: [...products].map(([sku, product]) => ({
-        id: product.id,
-        name: sku,
-        variants: [{ sku, parcel: product.parcel }],
-      })) } }));
+      response.end(JSON.stringify({ data: { totalElements: products.size, content: [...products.values()] } }));
       return;
     }
     if (request.method === "POST" && url.pathname === "/auth/login") {
@@ -62,9 +134,8 @@ function startCatalogGateway() {
       const payload = JSON.parse(body);
       const variant = payload.variants?.[0];
       creates.push(payload);
-      const existing = products.get(variant.sku);
       response.setHeader("Content-Type", "application/json");
-      response.end(JSON.stringify({ data: { id: existing?.id ?? `${variant.sku}-id` } }));
+      response.end(JSON.stringify({ data: { id: `${variant.sku}-id` } }));
       return;
     }
     if (request.method === "PUT" && url.pathname.endsWith("/publish")) {
@@ -77,11 +148,9 @@ function startCatalogGateway() {
       let body = "";
       for await (const chunk of request) body += chunk;
       const payload = JSON.parse(body);
-      const variant = payload.variants?.[0];
       writes.push({ productId, payload });
-      const existing = [...products.entries()].find(([, product]) => product.id === productId);
-      if (existing && variant?.parcel) {
-        products.set(existing[0], { ...existing[1], parcel: variant.parcel });
+      if (products.has(productId)) {
+        products.set(productId, { id: productId, ...payload });
       }
       response.setHeader("Content-Type", "application/json");
       response.end(JSON.stringify({ data: { id: productId } }));
@@ -133,9 +202,51 @@ test("rerunning the demo catalog backfills affected existing SKUs idempotently",
 
   assert.equal(firstRun.code, 0, `${firstRun.stdout}\n${firstRun.stderr}`);
   assert.equal(secondRun.code, 0, `${secondRun.stdout}\n${secondRun.stderr}`);
-  assert.deepEqual(gateway.products.get("SKU-IPH16-PM-256")?.parcel, TRUSTED_PARCEL);
-  assert.deepEqual(gateway.products.get("SKU-MBA-M4-13")?.parcel, TRUSTED_PARCEL);
-  assert.deepEqual(gateway.products.get("SKU-UNCHANGED")?.parcel, {
+  const iphone = gateway.products.get("iphone-id");
+  const macbook = gateway.products.get("macbook-id");
+  assert.deepEqual(iphone?.variants[0].parcel, TRUSTED_PARCEL);
+  assert.deepEqual(macbook?.variants[0].parcel, TRUSTED_PARCEL);
+  assert.deepEqual(iphone?.variants[1], {
+    sku: "SKU-IPH16-PM-512",
+    name: "512GB Gold",
+    priceAmount: 35990000,
+    priceCurrency: "VND",
+    imageUrl: "https://example.test/iphone-gold.webp",
+    stockQuantity: 7,
+    parcel: { weightGrams: 2222, lengthCm: 44, widthCm: 33, heightCm: 22 },
+  });
+  assert.deepEqual(macbook?.variants[1], {
+    sku: "SKU-MBA-M4-15",
+    name: "15-inch Midnight",
+    priceAmount: 32490000,
+    priceCurrency: "VND",
+    imageUrl: "https://example.test/macbook-midnight.webp",
+    stockQuantity: 4,
+    parcel: { weightGrams: 3333, lengthCm: 45, widthCm: 34, heightCm: 12 },
+  });
+  assert.deepEqual(iphone && { name: iphone.name, description: iphone.description, categoryId: iphone.categoryId, brand: iphone.brand, images: iphone.images, tags: iphone.tags }, {
+    name: "Existing iPhone Listing",
+    description: "Seller-authored iPhone description",
+    categoryId: "phones-custom",
+    brand: "Apple Premium",
+    images: [
+      { url: "https://example.test/iphone-front.webp", alt: "Front", sortOrder: 2 },
+      { url: "https://example.test/iphone-back.webp", alt: "Back", sortOrder: 5 },
+    ],
+    tags: ["featured", "seller-pick"],
+  });
+  assert.deepEqual(macbook && { name: macbook.name, description: macbook.description, categoryId: macbook.categoryId, brand: macbook.brand, images: macbook.images, tags: macbook.tags }, {
+    name: "Existing MacBook Listing",
+    description: "Seller-authored MacBook description",
+    categoryId: "laptops-custom",
+    brand: "Apple Studio",
+    images: [
+      { url: "https://example.test/macbook-open.webp", alt: "Open", sortOrder: 1 },
+      { url: "https://example.test/macbook-closed.webp", alt: "Closed", sortOrder: 4 },
+    ],
+    tags: ["work", "premium"],
+  });
+  assert.deepEqual(gateway.products.get("unchanged-id")?.variants[0].parcel, {
     weightGrams: 2222,
     lengthCm: 44,
     widthCm: 33,
