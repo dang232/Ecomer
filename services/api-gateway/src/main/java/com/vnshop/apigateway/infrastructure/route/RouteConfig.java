@@ -1,7 +1,9 @@
 package com.vnshop.apigateway.infrastructure.route;
 
 import com.vnshop.apigateway.infrastructure.config.TieredRateLimiter;
+import com.vnshop.apigateway.infrastructure.config.PublicBucketProperties;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
 import org.springframework.cloud.gateway.route.RouteLocator;
 import org.springframework.cloud.gateway.route.builder.GatewayFilterSpec;
@@ -27,6 +29,7 @@ import org.springframework.context.annotation.Configuration;
  * key-resolution strategy.
  */
 @Configuration
+@EnableConfigurationProperties(PublicBucketProperties.class)
 public class RouteConfig {
 
     private final String productServiceUri;
@@ -47,6 +50,7 @@ public class RouteConfig {
     private final String keycloakServiceUri;
     private final String minioServiceUri;
     private final String configurationServiceToken;
+    private final PublicBucketProperties publicBuckets;
 
     public RouteConfig(
         @Value("${vnshop.routes.product-service:http://product-service:8082}") String productServiceUri,
@@ -66,7 +70,8 @@ public class RouteConfig {
         @Value("${vnshop.routes.coupon-service:http://coupon-service:8088}") String couponServiceUri,
         @Value("${vnshop.routes.keycloak:http://keycloak:8080}") String keycloakServiceUri,
         @Value("${vnshop.routes.minio:http://minio:9000}") String minioServiceUri,
-        @Value("${CONFIG_SERVICE_INTERNAL_TOKEN:}") String configurationServiceToken
+        @Value("${CONFIG_SERVICE_INTERNAL_TOKEN:}") String configurationServiceToken,
+        PublicBucketProperties publicBuckets
     ) {
         this.productServiceUri = productServiceUri;
         this.userServiceUri = userServiceUri;
@@ -86,6 +91,7 @@ public class RouteConfig {
         this.keycloakServiceUri = keycloakServiceUri;
         this.minioServiceUri = minioServiceUri;
         this.configurationServiceToken = configurationServiceToken;
+        this.publicBuckets = publicBuckets;
     }
 
     @Bean
@@ -109,7 +115,7 @@ public class RouteConfig {
                 .filters(filters -> rateLimited(filters, "keycloak", authRateLimiter, tieredKeyResolver))
                 .uri(keycloakServiceUri))
             .route("minio-public", route -> route.path(
-                    "/vnshop-avatars/**", "/vnshop-products/**", "/vnshop-reviews/**", "/vnshop-videos/**")
+                    publicBuckets.routePatterns())
                 .filters(filters -> filters
                     .preserveHostHeader()
                     .dedupeResponseHeader(
