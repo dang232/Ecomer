@@ -121,9 +121,6 @@ async function main() {
       ok++;
       continue;
     }
-    if (currentCount > 0) {
-      continue;
-    }
     const res = await fetch(`${GATEWAY}/sellers/me/products`, {
       method: "POST",
       headers: {

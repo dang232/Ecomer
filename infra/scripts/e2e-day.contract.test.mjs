@@ -63,8 +63,12 @@ function startCatalogGateway() {
       const variant = payload.variants?.[0];
       creates.push(payload);
       const existing = products.get(variant.sku);
+      const productId = existing?.id ?? `${variant.sku}-id`;
+      if (!existing) {
+        products.set(variant.sku, { id: productId, parcel: variant.parcel });
+      }
       response.setHeader("Content-Type", "application/json");
-      response.end(JSON.stringify({ data: { id: existing?.id ?? `${variant.sku}-id` } }));
+      response.end(JSON.stringify({ data: { id: productId } }));
       return;
     }
     if (request.method === "PUT" && url.pathname.endsWith("/publish")) {
@@ -141,7 +145,7 @@ test("rerunning the demo catalog backfills affected existing SKUs idempotently",
     widthCm: 33,
     heightCm: 22,
   });
-  assert.equal(gateway.creates.length, 0);
+  assert.equal(gateway.creates.length, 11);
   assert.equal(gateway.writes.some(({ productId }) => productId === "unchanged-id"), false);
   assert.equal(gateway.writes.some(({ payload }) => payload.variants?.[0]?.parcel === null), false);
   assert.equal(gateway.writes.length, 2);
