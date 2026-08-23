@@ -73,6 +73,58 @@ class Todo2ReleasePolicyTests(unittest.TestCase):
     def test_policy_rejects_prod_override_flags(self):
         self.assertTrue(any("only permitted for dev" in item for item in validator.validate_release_policy([], "prod", allow_unresolved=True)))
 
+    def test_pull_request_mode_allows_external_release_inputs(self):
+        docs = [
+            config({
+                "CARRIER_MODE": "stub",
+                "VIETQR_MODE": "demo",
+                "WEB_ORIGIN": "https://web.vnshop.invalid",
+            }),
+            {"kind": "SealedSecret", "spec": {"encryptedData": {}}},
+            {
+                "kind": "Deployment",
+                "spec": {
+                    "template": {
+                        "spec": {
+                            "containers": [
+                                {"image": "ghcr.io/vnshop/app@sha256:" + "0" * 64}
+                            ]
+                        }
+                    }
+                },
+            },
+        ]
+
+        self.assertEqual(
+            [],
+            validator.validate_release_policy(docs, "prod", mode="pull-request"),
+        )
+
+    def test_pull_request_mode_rejects_mutable_image_reference(self):
+        docs = [{
+            "kind": "Deployment",
+            "spec": {
+                "template": {
+                    "spec": {
+                        "containers": [{"image": "ghcr.io/vnshop/app:latest"}]
+                    }
+                }
+            },
+        }]
+
+        errors = validator.validate_release_policy(docs, "prod", mode="pull-request")
+
+        self.assertTrue(any("mutable platform image" in error for error in errors))
+
+    def test_pull_request_mode_still_rejects_local_origin(self):
+        errors = validator.validate_release_policy(
+            [config({"WEB_ORIGIN": "https://localhost"})],
+            "prod",
+            mode="pull-request",
+        )
+
+        self.assertTrue(any("placeholder origin" in error for error in errors))
+
     def test_policy_rejects_unsafe_secondary_origin(self):
         errors = validator.validate_release_policy([config({"CORS_ORIGINS": "https://web.acme.test,https://localhost:3000"})], "prod")
         self.assertTrue(any("placeholder origin" in error for error in errors))
@@ -94,5 +146,12 @@ class Todo2ReleasePolicyTests(unittest.TestCase):
         errors: list[str] = []
         validator.validate_release_lock_presence(
             "dev", None, allow_unresolved=True, errors=errors
+        )
+        self.assertEqual(errors, [])
+
+    def test_pull_request_mode_allows_missing_release_lock(self):
+        errors: list[str] = []
+        validator.validate_release_lock_presence(
+            "prod", None, allow_unresolved=False, mode="pull-request", errors=errors
         )
         self.assertEqual(errors, [])

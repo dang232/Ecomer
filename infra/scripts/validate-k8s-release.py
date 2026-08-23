@@ -164,7 +164,13 @@ def fail(errors: list[str]) -> None:
     raise SystemExit(1)
 
 
-def validate_production_realm_hosts(environment: str, suffix: str, errors: list[str]) -> None:
+def validate_production_realm_hosts(
+    environment: str,
+    suffix: str,
+    errors: list[str],
+    *,
+    allow_placeholder_hosts: bool = False,
+) -> None:
     if environment != "prod":
         return
     realm_path = REPO / "infra/keycloak/vnshop-realm-prod.json"
@@ -193,7 +199,14 @@ def validate_production_realm_hosts(environment: str, suffix: str, errors: list[
 
     if not expected_hosts.issubset(configured_hosts):
         errors.append("production Keycloak realm must authorize the deployed web and API hosts")
-    if any(host in {"localhost", "127.0.0.1"} or host.endswith((".example", ".example.com", ".invalid")) for host in configured_hosts):
+    if any(
+        host in {"localhost", "127.0.0.1"}
+        or (
+            host.endswith((".example", ".example.com", ".invalid"))
+            and not allow_placeholder_hosts
+        )
+        for host in configured_hosts
+    ):
         errors.append("production Keycloak realm contains placeholder hosts")
     if not monitoring_client:
         errors.append("production Keycloak realm must define the monitoring OIDC client")
@@ -253,10 +266,11 @@ def validate_release_lock_presence(
     lock: dict | None,
     *,
     allow_unresolved: bool,
+    mode: str = "release",
     errors: list[str],
 ) -> None:
     """Require an external release lock unless unresolved dev validation is explicit."""
-    if lock is None and not allow_unresolved:
+    if lock is None and mode != "pull-request" and not allow_unresolved:
         errors.append(f"missing infra/release/locks/{environment}.json")
 
 
@@ -317,6 +331,13 @@ def _unsafe_origin(origin: str) -> bool:
     return parsed.scheme != "https" or not host or host == "localhost" or unsafe_ip or host.endswith((".example", ".example.com", ".invalid"))
 
 
+def _release_placeholder_origin(origin: str) -> bool:
+    """Return whether an HTTPS origin uses a reserved, non-routable test host."""
+    parsed = urlparse(origin)
+    host = parsed.hostname or ""
+    return parsed.scheme == "https" and host.endswith((".example", ".example.com", ".invalid"))
+
+
 def is_strict_environment(environment: str) -> bool:
     return environment in {"staging", "prod"}
 
@@ -325,15 +346,19 @@ def validate_release_policy(
     documents: list[dict],
     environment: str,
     *,
+    mode: str = "release",
     allow_unresolved: bool = False,
     allow_unsealed: bool = False,
 ) -> list[str]:
     """Validate policies that must not be satisfied by production placeholders."""
     errors: list[str] = []
     strict = is_strict_environment(environment)
+    pull_request = mode == "pull-request"
 
     if (allow_unresolved or allow_unsealed) and strict:
         errors.append("--allow-unresolved and --allow-unsealed are only permitted for dev")
+    if (allow_unresolved or allow_unsealed) and pull_request:
+        errors.append("--allow-unresolved and --allow-unsealed are incompatible with pull-request mode")
 
     configmaps = [doc for doc in documents if doc.get("kind") == "ConfigMap"]
     app_config = next(
@@ -348,25 +373,24 @@ def validate_release_policy(
                 continue
             normalized = value.strip()
             lowered = normalized.lower()
-            if key.endswith("_MODE") and lowered in {"stub", "demo"}:
+            if strict and mode == "release" and key.endswith("_MODE") and lowered in {"stub", "demo"}:
                 errors.append(f"vnshop-app-config {key} must not use {lowered} mode")
             if key in {"KAFKA_SECURITY_PROTOCOL", "KAFKA_SASL_SECURITY_PROTOCOL"} \
                     and lowered == "sasl_plaintext":
                 errors.append("Kafka must not use SASL_PLAINTEXT in staging or prod")
-            if key.startswith("ELASTICSEARCH") and lowered.startswith("http://"):
+            if (strict or pull_request) and key.startswith("ELASTICSEARCH") and lowered.startswith("http://"):
                 errors.append(f"vnshop-app-config {key} must use an HTTPS Elasticsearch endpoint")
 
             if key.endswith("ORIGIN") or key.endswith("ORIGINS") or "PUBLIC_URL" in key \
                     or "CALLBACK_BASE_URL" in key or key == "KEYCLOAK_ISSUER_URI":
                 for raw_origin in normalized.split(","):
                     origin = raw_origin.strip()
-                    if _unsafe_origin(origin):
+                    if _unsafe_origin(origin) and not (pull_request and _release_placeholder_origin(origin)):
                         errors.append(f"vnshop-app-config {key} must not use a placeholder origin")
 
     for document in documents:
         if document.get("kind") == "Secret":
-            if strict or not allow_unsealed:
-                errors.append("rendered desired state must not contain plaintext Secret resources")
+            errors.append("rendered desired state must not contain plaintext Secret resources")
         pod_spec = document.get("spec", {}).get("template", {}).get("spec")
         if document.get("kind") == "CronJob":
             pod_spec = document.get("spec", {}).get("jobTemplate", {}).get("spec", {}).get("template", {}).get("spec")
@@ -376,17 +400,17 @@ def validate_release_policy(
             containers = pod_spec.get("containers", [])
             for container in containers:
                 values = {entry.get("name"): str(entry.get("value", "")) for entry in container.get("env", [])}
-                if strict and values.get("discovery.type") == "single-node":
+                if (strict or pull_request) and values.get("discovery.type") == "single-node":
                     errors.append("Elasticsearch production topology must not use single-node discovery")
-                if strict and values.get("xpack.security.enabled", "").lower() != "true":
+                if (strict or pull_request) and values.get("xpack.security.enabled", "").lower() != "true":
                     errors.append("Elasticsearch security must be enabled in staging or prod")
-                if strict and not any(entry.get("name") in {"ELASTIC_PASSWORD", "ELASTICSEARCH_PASSWORD"} for entry in container.get("env", [])):
+                if (strict or pull_request) and not any(entry.get("name") in {"ELASTIC_PASSWORD", "ELASTICSEARCH_PASSWORD"} for entry in container.get("env", [])):
                     errors.append("Elasticsearch requires a secret-backed authentication input")
                 for entry in container.get("env", []):
                     if entry.get("name") == "xpack.security.enabled" and str(entry.get("value", "")).lower() == "false":
-                        if strict:
+                        if strict or pull_request:
                             errors.append("Elasticsearch security must be enabled in staging or prod")
-        if strict and document.get("kind") == "StatefulSet" and document.get("metadata", {}).get("name") == "kafka":
+        if (strict or pull_request) and document.get("kind") == "StatefulSet" and document.get("metadata", {}).get("name") == "kafka":
             values = {entry.get("name"): str(entry.get("value", "")) for entry in pod_spec.get("containers", [])[0].get("env", [])} if pod_spec.get("containers") else {}
             if values.get("KAFKA_LISTENERS", "").lower().find("plaintext") >= 0 or values.get("KAFKA_ADVERTISED_LISTENERS", "").lower().find("plaintext") >= 0:
                 errors.append("Kafka production listeners must not use plaintext")
@@ -398,20 +422,21 @@ def validate_release_policy(
             image = container.get("image", "")
             if "@sha256:" not in image:
                 errors.append(f"mutable platform image reference: {image}")
-            elif not re.search(r"@sha256:[0-9a-f]{64}$", image) or image.endswith(ZERO_DIGEST):
-                if strict or not allow_unresolved:
-                    errors.append(f"platform image requires a non-placeholder sha256 digest: {image.split('@', 1)[0]}")
+            elif not re.search(r"@sha256:[0-9a-f]{64}$", image):
+                errors.append(f"platform image requires a sha256 digest: {image.split('@', 1)[0]}")
+            elif image.endswith(ZERO_DIGEST) and mode != "pull-request" and not allow_unresolved:
+                errors.append(f"platform image requires a non-placeholder sha256 digest: {image.split('@', 1)[0]}")
 
     sealed = [doc for doc in documents if doc.get("kind") == "SealedSecret"]
-    if len(sealed) != 1 and strict:
+    if len(sealed) != 1 and (strict or pull_request):
         errors.append("exactly one SealedSecret is required")
     if len(sealed) == 1:
         encrypted_data = sealed[0].get("spec", {}).get("encryptedData")
-        if not encrypted_data and (strict or not allow_unsealed):
+        if not encrypted_data and not pull_request and (strict or not allow_unsealed):
             errors.append("SealedSecret encryptedData must be populated before release")
-        if strict and isinstance(encrypted_data, dict) and any(not isinstance(key, str) or not key.strip() or not isinstance(value, str) or not value.strip() for key, value in encrypted_data.items()):
+        if (strict or pull_request) and isinstance(encrypted_data, dict) and any(not isinstance(key, str) or not key.strip() or not isinstance(value, str) or not value.strip() for key, value in encrypted_data.items()):
             errors.append("SealedSecret encryptedData must contain non-empty ciphertext for every key")
-    if strict:
+    if strict or pull_request:
         validate_enabled_provider_secret_refs(documents, app_data, errors)
     return errors
 
@@ -419,6 +444,7 @@ def validate_release_policy(
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--environment", choices=("dev", "staging", "prod"), required=True)
+    parser.add_argument("--mode", choices=("release", "pull-request"), default="release")
     parser.add_argument("--allow-unresolved", action="store_true")
     parser.add_argument("--allow-unsealed", action="store_true")
     args = parser.parse_args()
@@ -431,6 +457,7 @@ def main() -> None:
         args.environment,
         lock,
         allow_unresolved=args.allow_unresolved,
+        mode=args.mode,
         errors=errors,
     )
     if lock is not None:
@@ -451,6 +478,7 @@ def main() -> None:
         validate_release_policy(
             documents,
             args.environment,
+            mode=args.mode,
             allow_unresolved=args.allow_unresolved,
             allow_unsealed=args.allow_unsealed,
         )
@@ -509,7 +537,7 @@ def main() -> None:
         digest = image.removeprefix(prefix)
         if not DIGEST.fullmatch(digest):
             errors.append(f"{artifact_id}: image must use @sha256")
-        if digest == ZERO_DIGEST and not args.allow_unresolved:
+        if digest == ZERO_DIGEST and args.mode != "pull-request" and not args.allow_unresolved:
             errors.append(f"{artifact_id}: unresolved image digest")
         if lock_by_id and digest != lock_by_id.get(artifact_id, {}).get("digest"):
             errors.append(f"{artifact_id}: rendered digest differs from release lock")
@@ -536,11 +564,14 @@ def main() -> None:
         parsed_origins = {}
         for key, value in origin_values.items():
             values = [part.strip() for part in str(value).split(",")]
-            parsed_values = [urlparse(part) for part in values]
-            if any(_unsafe_origin(part) or parsed.hostname.endswith(".example.com") for part, parsed in zip(values, parsed_values, strict=True)):
+            if any(
+                _unsafe_origin(part)
+                and not (args.mode == "pull-request" and _release_placeholder_origin(part))
+                for part in values
+            ):
                 errors.append(f"vnshop-app-config {key} must be a real HTTPS origin")
             else:
-                parsed_origins[key] = parsed_values[0].hostname
+                parsed_origins[key] = urlparse(values[0]).hostname
         for key in ("WEB_ORIGIN", "API_ORIGIN", "AUTH_ORIGIN", "KEYCLOAK_ISSUER_URI"):
             if key not in parsed_origins:
                 errors.append(f"vnshop-app-config {key} is required for coherent origins")
@@ -561,7 +592,12 @@ def main() -> None:
             }
             if ingress_hosts != expected_hosts:
                 errors.append("ingress hosts must expose web, API, and storage TLS origins")
-        validate_production_realm_hosts(args.environment, suffix, errors)
+        validate_production_realm_hosts(
+            args.environment,
+            suffix,
+            errors,
+            allow_placeholder_hosts=args.mode == "pull-request",
+        )
 
         if args.environment == "staging":
             realm_configmaps = [
@@ -659,13 +695,15 @@ def main() -> None:
     policies = [doc for doc in documents if doc.get("kind") == "NetworkPolicy"]
     if not any(doc.get("metadata", {}).get("name") == "default-deny" for doc in policies):
         errors.append("default-deny NetworkPolicy is required")
-    internal_policy = next(
-        (doc for doc in policies if doc.get("metadata", {}).get("name") == "allow-vnshop-internal"),
-        None,
-    )
     external_https = False
-    if internal_policy:
-        for rule in internal_policy.get("spec", {}).get("egress", []):
+    for policy in policies:
+        selected_names = policy.get("spec", {}).get("podSelector", {}).get("matchLabels", {})
+        if selected_names.get("app.kubernetes.io/name") not in {
+            "vnshop-authoritative-backup",
+            "alertmanager",
+        }:
+            continue
+        for rule in policy.get("spec", {}).get("egress", []):
             peers = rule.get("to", [])
             ports = rule.get("ports", [])
             if any(peer.get("ipBlock", {}).get("cidr") == "0.0.0.0/0" for peer in peers) \
@@ -676,7 +714,11 @@ def main() -> None:
     sealed = [doc for doc in documents if doc.get("kind") == "SealedSecret"]
     if len(sealed) != 1:
         errors.append("exactly one SealedSecret is required")
-    elif not sealed[0].get("spec", {}).get("encryptedData") and not args.allow_unsealed:
+    elif (
+        not sealed[0].get("spec", {}).get("encryptedData")
+        and args.mode != "pull-request"
+        and not args.allow_unsealed
+    ):
         errors.append("SealedSecret encryptedData must be populated before release")
 
     required_secret_keys = collect_required_secret_keys(documents, app_config_data)
