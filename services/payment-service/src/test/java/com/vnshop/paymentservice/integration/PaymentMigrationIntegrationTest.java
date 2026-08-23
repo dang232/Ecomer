@@ -25,7 +25,8 @@ import java.util.concurrent.TimeUnit;
 @SpringBootTest(properties = {
     "vnshop.kafka.admin.enabled=false",
     "payment.kafka.listeners.enabled=false",
-    "spring.autoconfigure.exclude=org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration"
+    "spring.autoconfigure.exclude=org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration",
+    "grpc.server.auth.token=test-grpc-token"
 })
 @Testcontainers
 @Import(TestcontainersConfig.class)
