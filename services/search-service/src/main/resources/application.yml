@@ -67,12 +67,6 @@ spring:
     restclient:
       ssl:
         bundle: ${ELASTICSEARCH_SSL_BUNDLE:elasticsearch}
-  ssl:
-    bundle:
-      pem:
-        elasticsearch:
-          truststore:
-            certificate: ${ELASTICSEARCH_CA_CERTIFICATE:/etc/elasticsearch/tls/ca.crt}
   security:
     oauth2:
       resourceserver:
@@ -121,6 +115,17 @@ management:
 otel:
   traces:
     exporter: jaeger
+---
+spring:
+  config:
+    activate:
+      on-profile: "!local"
+  ssl:
+    bundle:
+      pem:
+        elasticsearch:
+          truststore:
+            certificate: ${ELASTICSEARCH_CA_CERTIFICATE:/etc/elasticsearch/tls/ca.crt}
   exporter:
     jaeger:
       endpoint: http://localhost:14250
