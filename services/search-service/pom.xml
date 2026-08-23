@@ -36,6 +36,7 @@
 		<opentelemetry.javaagent.version>2.27.0</opentelemetry.javaagent.version>
 		<postgresql.version>42.7.12</postgresql.version>
 		<tomcat.version>11.0.22</tomcat.version>
+		<httpcomponents-core5.version>5.4.3</httpcomponents-core5.version>
 	</properties>
 	<dependencyManagement>
 		<dependencies>
@@ -50,6 +51,16 @@
 				<groupId>tools.jackson.core</groupId>
 				<artifactId>jackson-databind</artifactId>
 				<version>${jackson3.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.httpcomponents.core5</groupId>
+				<artifactId>httpcore5</artifactId>
+				<version>${httpcomponents-core5.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.httpcomponents.core5</groupId>
+				<artifactId>httpcore5-h2</artifactId>
+				<version>${httpcomponents-core5.version}</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
