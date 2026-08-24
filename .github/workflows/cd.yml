@@ -41,7 +41,7 @@ jobs:
           echo "commit=$commit" >> "$GITHUB_OUTPUT"
 
       - name: Check out source
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ steps.source.outputs.commit }}
           fetch-depth: 0
@@ -75,7 +75,7 @@ jobs:
       attestations: write
     steps:
       - name: Check out immutable source
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.prepare.outputs.source_commit }}
 
@@ -193,7 +193,7 @@ jobs:
       SOURCE_COMMIT: ${{ needs.prepare.outputs.source_commit }}
     steps:
       - name: Check out protected main source
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ env.SOURCE_COMMIT }}
           fetch-depth: 0
