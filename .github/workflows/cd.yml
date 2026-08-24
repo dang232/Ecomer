@@ -146,6 +146,7 @@ jobs:
           ARTIFACT_ID: ${{ matrix.artifact.id }}
           IMAGE: ${{ matrix.artifact.image }}
           DIGEST: ${{ steps.image.outputs.digest }}
+          SOURCE_COMMIT: ${{ needs.prepare.outputs.source_commit }}
           ATTESTATION_URL: ${{ steps.attestation.outputs.attestation-url }}
         run: |
           mkdir -p release-parts
@@ -155,7 +156,11 @@ jobs:
             --arg digest "$DIGEST" \
             --arg sbom "oci://$IMAGE@$DIGEST#sbom" \
             --arg provenance "$ATTESTATION_URL" \
-            '{id:$id,image:$image,digest:$digest,sbom:$sbom,provenance:$provenance,provenanceVerified:true}' \
+            --arg producer "github-actions" \
+            --arg sourceCommit "$SOURCE_COMMIT" \
+            --arg artifactDigest "$DIGEST" \
+            --arg attestationId "$ATTESTATION_URL" \
+            '{id:$id,image:$image,digest:$digest,sbom:$sbom,provenance:$provenance,provenanceVerified:true,provenanceRecord:{producer:$producer,sourceCommit:$sourceCommit,artifactDigest:$artifactDigest,attestationId:$attestationId}}' \
             > "release-parts/$ARTIFACT_ID.json"
 
       - name: Upload artifact identity
@@ -213,7 +218,7 @@ jobs:
         run: |
           python -m pip install --disable-pip-version-check PyYAML==6.0.3
           python infra/k8s/generate.py
-          python infra/scripts/validate-k8s-release.py --environment staging
+          python infra/scripts/validate-k8s-release.py --environment staging --mode pull-request
 
       - name: Commit release evidence on a review branch
         id: branch

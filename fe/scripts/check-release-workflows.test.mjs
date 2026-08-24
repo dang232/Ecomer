@@ -24,6 +24,14 @@ test("CD builds source-labeled images and verifies OCI provenance bundles", asyn
   );
   assert.match(cd, /create-storage-record:\s*false/);
   assert.match(cd, /gh attestation verify[\s\S]*--bundle-from-oci/);
+  assert.match(
+    cd,
+    /--arg producer "github-actions"[\s\S]*--arg sourceCommit "\$SOURCE_COMMIT"[\s\S]*--arg artifactDigest "\$DIGEST"[\s\S]*--arg attestationId "\$ATTESTATION_URL"[\s\S]*provenanceRecord:\{producer:\$producer,sourceCommit:\$sourceCommit,artifactDigest:\$artifactDigest,attestationId:\$attestationId\}/,
+  );
+  assert.match(
+    cd,
+    /validate-k8s-release\.py --environment staging --mode pull-request/,
+  );
 });
 
 test("promotion uses a unique dispatch identity and gates the locked frontend image", async () => {
