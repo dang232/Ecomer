@@ -69,38 +69,41 @@ function changedConfigurationText(diff) {
   return lines.join('\n');
 }
 
-function escapedProvider(provider) {
-  return provider.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function normalizeProviderText(text, provider) {
+  const normalizedProvider = provider.toLowerCase();
+  return text
+    .split(/\r?\n/)
+    .filter((line) => !line.trimStart().startsWith('#'))
+    .join('\n')
+    .toLowerCase()
+    .split(normalizedProvider)
+    .join('provider_marker');
 }
 
 function providerIsEnabled(text, provider) {
-  const uncommentedText = text.split(/\r?\n/).filter((line) => !line.trimStart().startsWith('#')).join('\n');
-  const escaped = escapedProvider(provider);
-  const upper = provider.toUpperCase();
+  const uncommentedText = normalizeProviderText(text, provider);
   return [
-    new RegExp(`\\b${upper}_ENABLED\\s*[:=]\\s*["']?(?:true|1|yes)\\b`, 'i'),
-    new RegExp(`\\$\\{\\s*${upper}_ENABLED\\s*[:-]\\s*(?:true|1|yes)\\s*\\}`, 'i'),
-    new RegExp(`\\b${escaped}\\s*[-.]?enabled\\s*[:=]\\s*(?:true|1|yes)\\b`, 'i'),
-    new RegExp(`(?:^|[\\r\\n])\\s*${escaped}\\s*:\\s*(?:true|1|yes)\\b`, 'i'),
-    new RegExp(`(?:^|[\\r\\n])\\s*${escaped}\\s*:\\s*[\\r\\n ]{1,80}enabled\\s*:\\s*(?:true|1|yes)\\b`, 'i'),
+    /\bprovider_marker_enabled\s*[:=]\s*["']?(?:true|1|yes)\b/,
+    /\$\{\s*provider_marker_enabled\s*[:-]\s*(?:true|1|yes)\s*\}/,
+    /\bprovider_marker\s*[-.]?enabled\s*[:=]\s*(?:true|1|yes)\b/,
+    /(?:^|[\r\n])\s*provider_marker\s*:\s*(?:true|1|yes)\b/m,
+    /(?:^|[\r\n])\s*provider_marker\s*:\s*[\r\n ]{1,80}enabled\s*:\s*(?:true|1|yes)\b/m,
   ].some((pattern) => pattern.test(uncommentedText));
 }
 
 function providerIsListed(text, provider) {
-  const uncommentedText = text.split(/\r?\n/).filter((line) => !line.trimStart().startsWith('#')).join('\n');
-  const escaped = escapedProvider(provider);
+  const uncommentedText = normalizeProviderText(text, provider);
   return [
-    new RegExp(`(?:PAYMENT_PROVIDERS|paymentProviders)\\s*[:=]\\s*[^\\r\\n]*\\b${escaped}\\b`, 'i'),
-    new RegExp(`(?:providers|payment-methods|paymentMethods)[\\s\\S]{0,160}\\b${escaped}\\s*:\\s*(?:true|1|yes)\\b`, 'i'),
-    new RegExp(`(?:providers|payment-methods|paymentMethods)[\\s\\S]{0,160}[-[]\\s*["']?${escaped}["']?(?:\\s*[,\\]]|\\s*$)`, 'im'),
+    /(?:payment_providers|paymentproviders)\s*[:=]\s*[^\r\n]*\bprovider_marker\b/,
+    /(?:providers|payment-methods|paymentmethods)[\s\S]{0,160}\bprovider_marker\s*:\s*(?:true|1|yes)\b/,
+    /(?:providers|payment-methods|paymentmethods)[\s\S]{0,160}[-[]\s*["']?provider_marker["']?(?:\s*[,\]]|\s*$)/m,
   ].some((pattern) => pattern.test(uncommentedText));
 }
 
 function providerIsDefault(text, provider) {
-  const uncommentedText = text.split(/\r?\n/).filter((line) => !line.trimStart().startsWith('#')).join('\n');
-  const escaped = escapedProvider(provider);
-  return new RegExp(`(?:PAYMENT_DEFAULT|PAYMENT_METHOD_DEFAULT|default-provider|default-method|payment-default)\\s*[:=]\\s*["']?${escaped}\\b`, 'i').test(uncommentedText)
-    || new RegExp(`(?:^|[\\r\\n])\\s*default\\s*:\\s*["']?${escaped}\\b`, 'i').test(uncommentedText);
+  const uncommentedText = normalizeProviderText(text, provider);
+  return /(?:payment_default|payment_method_default|default-provider|default-method|payment-default)\s*[:=]\s*["']?provider_marker\b/.test(uncommentedText)
+    || /(?:^|[\r\n])\s*default\s*:\s*["']?provider_marker\b/m.test(uncommentedText);
 }
 
 function hasNonProductionGate(text) {

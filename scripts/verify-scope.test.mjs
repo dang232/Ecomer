@@ -78,3 +78,12 @@ test('explicitly gated changed provider list is accepted outside production', as
 
   assert.deepEqual(analyzeForbiddenProviders({ productionText: '', changedConfigText: text }), []);
 });
+
+test('provider names are treated as literal text', () => {
+  const text = 'MOMO_ENABLED=true';
+
+  assert.deepEqual(
+    analyzeForbiddenProviders({ productionText: text, changedConfigText: '', providers: ['momo.*'] }),
+    [],
+  );
+});
