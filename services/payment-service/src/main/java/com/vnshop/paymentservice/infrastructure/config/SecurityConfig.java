@@ -39,7 +39,9 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http,
                                             WebhookSignatureFilter webhookSignatureFilter) throws Exception {
         return http
-                .csrf(csrf -> csrf.disable())
+                .csrf(csrf -> csrf.ignoringRequestMatchers(request ->
+                        request.getHeader("Authorization") != null
+                                || request.getRequestURI().startsWith("/payment/")))
                 .addFilterBefore(webhookSignatureFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api-docs", "/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
