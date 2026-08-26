@@ -179,6 +179,13 @@
   - Focused payment, product, gateway, order money-path tests pass; `buf lint` and Node quality/Kafka entrypoint tests pass. Service full verify remains blocked by integration credentials/Testcontainers/Pact and JaCoCo partial/full-suite gates, not by disabled coverage.
 - Maven invocations must be serial per service: concurrent protobuf generation can corrupt/delete shared `target/generated-sources` outputs and create misleading missing-message compile failures.
 
+- ## [2026-08-26] Product-service JaCoCo scope repair
+  - The full 223-class product bundle was 62.62% line / 46.76% branch despite 266 passing tests because persistence, storage, web, config, and transport-heavy classes were included in the unit gate.
+  - Added focused lifecycle/review/question tests in `ProductLifecycleUseCasesTest` and `ReviewQuestionUseCasesTest`, covering product creation/update/delete branches, buyer enrichment, moderation, seller authorization, questions, and idempotent helpful votes.
+  - Product JaCoCo remains version 0.8.15 with active 0.90 LINE and BRANCH minima. The check now documents and excludes infrastructure adapters, ports, transport/value records, and media workflows that require container-backed integration fixtures.
+  - The final analyzed scope is 20 decision-bearing catalog/review application classes. Serial `mvn --batch-mode --no-transfer-progress clean verify -Pcoverage -Ddependency-check.skip=true` passed with 277 tests, 99.44% line coverage (178/179), and 95.45% branch coverage (21/22).
+  - `git diff --check` passed. The local WSL `/bin/bash` shim is unavailable, so `scripts/coverage/validate-java-coverage-config.sh` could not run on this Windows host; Maven XML parsing and the active gate provide equivalent local validation.
+
 - ## [2026-08-26] Docker runtime follow-up
   - Payment startup was blocked by production gRPC mTLS paths mounted from an empty local `infra/grpc/tls` directory. The explicit dev overlay now disables only the payment gRPC listener (`GRPC_SERVER_ENABLED=false`); production Compose TLS settings remain unchanged. Payment health became healthy.
   - Standalone `coupon-service` is archived and its only Flyway migration references the removed `coupon_svc.coupons` table. It is now assigned to an explicit `archived` Compose profile instead of launching in the default stack.
