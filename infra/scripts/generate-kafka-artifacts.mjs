@@ -36,6 +36,13 @@ const topics = topicNames.map((name) => ({ name, ...defaults }));
 const clients = canonical.clients ?? {};
 const aclRows = canonical.acl ?? [];
 const aclEntries = [];
+const brokerPrincipal = canonical.broker?.principal;
+const brokerClusterOperations = canonical.broker?.clusterOperations ?? [];
+if (!brokerPrincipal || brokerClusterOperations.length === 0) fail("broker must define a principal and clusterOperations");
+for (const operation of brokerClusterOperations) {
+  if (!["CLUSTER_ACTION", "CREATE", "DESCRIBE"].includes(operation)) fail(`unsupported broker cluster operation ${operation}`);
+  aclEntries.push({ principal: brokerPrincipal, operation, resourceType: "cluster", resourceName: "kafka-cluster" });
+}
 const topicMatches = (pattern, topic) => pattern.endsWith(".*") ? topic.startsWith(pattern.slice(0, -1)) : pattern === topic;
 
 for (const row of aclRows) {
@@ -71,8 +78,8 @@ const topicScript = header("Canonical Kafka topic creation") + topics.map((topic
 ).join("\n") + "\n";
 
 const aclScript = header("Canonical Kafka ACL creation") + uniqueAcls.map((entry) => {
-  const resourceFlag = entry.resourceType === "topic" ? "--topic" : "--group";
-  return `kafka-acls --bootstrap-server "$BROKER" --command-config "$ADMIN_CONFIG" --add --allow-principal User:${entry.principal} --operation ${entry.operation} ${resourceFlag} ${entry.resourceName}`;
+  const resourceFlag = entry.resourceType === "topic" ? `--topic ${entry.resourceName}` : entry.resourceType === "group" ? `--group ${entry.resourceName}` : "--cluster";
+  return `kafka-acls --bootstrap-server "$BROKER" --command-config "$ADMIN_CONFIG" --add --allow-principal User:${entry.principal} --operation ${entry.operation} ${resourceFlag}`;
 }).join("\n") + "\n";
 
 async function expected(pathname, contents) {

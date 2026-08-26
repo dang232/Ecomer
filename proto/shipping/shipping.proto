@@ -1,7 +1,7 @@
 syntax = "proto3";
-package vnshop.v1;
+package vnshop.shipping;
 option java_multiple_files = true;
-option java_package = "com.vnshop.proto.v1";
+option java_package = "com.vnshop.proto.shipping";
 
 import "common/common.proto";
 
@@ -24,7 +24,7 @@ message SubOrderItem {
   string product_id = 1;
   string variant = 2;
   int32 quantity = 3;
-  vnshop.v1.Money declared_value = 4;
+  vnshop.common.Money declared_value = 4;
 }
 
 message SubOrder {
@@ -35,17 +35,8 @@ message SubOrder {
   int32 parcel_length_cm = 5;
   int32 parcel_width_cm = 6;
   int32 parcel_height_cm = 7;
-  vnshop.v1.Money cod_amount = 8;
-  vnshop.v1.Money declared_value = 9;
-  Parcel parcel = 10;
-}
-
-message Parcel {
-  int32 weight_grams = 1;
-  int32 length_cm = 2;
-  int32 width_cm = 3;
-  int32 height_cm = 4;
-  int64 declared_value_minor = 5;
+  vnshop.common.Money cod_amount = 8;
+  vnshop.common.Money declared_value = 9;
 }
 
 message ShippingRequest {

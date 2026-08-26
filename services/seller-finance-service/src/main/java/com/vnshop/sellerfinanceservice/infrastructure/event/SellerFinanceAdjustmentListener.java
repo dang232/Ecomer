@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.annotation.RetryableTopic;
@@ -31,6 +32,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
  * eventually routed to the DLT rather than being silently discarded.
  */
 @Service
+@ConditionalOnBean(DurableDltService.class)
 @ConditionalOnProperty(prefix = "seller-finance.adjustment-consumer", name = "enabled", havingValue = "true")
 public class SellerFinanceAdjustmentListener {
     private static final Logger LOGGER = LoggerFactory.getLogger(SellerFinanceAdjustmentListener.class);

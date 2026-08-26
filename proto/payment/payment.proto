@@ -1,10 +1,9 @@
 syntax = "proto3";
-package vnshop.v1;
+package vnshop.payment;
 option java_multiple_files = true;
-option java_package = "com.vnshop.proto.v1";
+option java_package = "com.vnshop.proto.payment";
 
 import "common/common.proto";
-import "google/protobuf/timestamp.proto";
 
 service PaymentService {
   rpc RequestPayment(PaymentRequest) returns (PaymentResponse);
@@ -14,20 +13,13 @@ service PaymentService {
 message PaymentRequest {
   string order_id = 1;
   string buyer_id = 2;
-  vnshop.v1.Money amount = 3;
+  vnshop.common.Money amount = 3;
   string payment_method = 4; // "COD", "VNPAY", "MOMO"
-  string idempotency_key = 5;
-  PaymentMethod method = 6;
-  IdempotencyScope idempotency_scope = 7;
 }
 
 message PaymentResponse {
   string payment_id = 1;
   string status = 2; // "PENDING", "COMPLETED", "FAILED"
-  PaymentStatus status_code = 3;
-  bool replayed = 4;
-  google.protobuf.Timestamp processed_at = 5;
-  PaymentFailureCode failure_code = 6;
 }
 
 message PaymentStatusRequest {
@@ -37,7 +29,6 @@ message PaymentStatusRequest {
 message PaymentStatusResponse {
   string payment_id = 1;
   string status = 2;
-  PaymentStatus status_code = 3;
 }
 
 enum PaymentMethod {

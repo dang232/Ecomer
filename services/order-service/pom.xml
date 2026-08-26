@@ -435,7 +435,7 @@
 						<configuration>
 							<rules>
 								<rule>
-								<element>BUNDLE</element>
+											<element>PACKAGE</element>
 									<limits>
 										<limit>
 											<counter>LINE</counter>
@@ -519,10 +519,4 @@
 			</plugin>
 		</plugins>
 	</build>
-	<profiles>
-		<profile>
-			<id>coverage</id>
-		</profile>
-	</profiles>
-
 </project>

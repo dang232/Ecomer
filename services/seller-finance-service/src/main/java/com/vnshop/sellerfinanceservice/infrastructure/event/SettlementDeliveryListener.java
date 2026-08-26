@@ -14,9 +14,11 @@ import org.springframework.transaction.annotation.Transactional;
 import com.vnshop.sellerfinanceservice.infrastructure.dlt.DurableDltService;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 
 /** Records verified delivery timestamps used by the seven-day release gate. */
 @Service
+@ConditionalOnBean(DurableDltService.class)
 public class SettlementDeliveryListener {
     private final ObjectMapper objectMapper;
     private final SettlementReleaseCandidateRepositoryPort candidateRepository;

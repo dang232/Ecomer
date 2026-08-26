@@ -6,8 +6,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 
 @RestController
+@ConditionalOnBean(DurableDltService.class)
 @RequestMapping("/admin/dlt")
 public class AdminDltController {
     private final DurableDltService service;

@@ -517,7 +517,7 @@ jobs:
 
       - name: Detect breaking changes
         working-directory: proto
-        run: buf breaking --against "../.git#branch=${{ steps.baseline.outputs.branch }},subdir=proto"
+        run: buf breaking --against "../.git#ref=refs/remotes/origin/${{ steps.baseline.outputs.branch }},subdir=proto"
 
   service_container_scan:
     name: Service container scan (${{ matrix.service }})

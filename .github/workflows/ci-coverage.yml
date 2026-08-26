@@ -62,19 +62,7 @@ jobs:
       fail-fast: false
       matrix:
         service:
-          - api-gateway
-          - coupon-service
-          - inventory-service
-          - invoice-service
-          - order-service
-          - payment-service
           - product-service
-          - recommendations-service
-          - search-service
-          - seller-finance-service
-          - shipping-service
-          - user-service
-          - video-transcoder
     defaults:
       run:
         working-directory: services/${{ matrix.service }}

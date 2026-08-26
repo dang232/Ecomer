@@ -1,7 +1,8 @@
 KafkaServer {
     org.apache.kafka.common.security.plain.PlainLoginModule required
-    username="admin"
-    password="${KAFKA_ADMIN_PASSWORD}"
+    username="svc-kafka"
+    password="${KAFKA_BROKER_PASSWORD}"
+    user_svc-kafka="${KAFKA_BROKER_PASSWORD}"
     user_admin="${KAFKA_ADMIN_PASSWORD}"
     user_svc-order="${KAFKA_ORDER_PASSWORD}"
     user_svc-payment="${KAFKA_PAYMENT_PASSWORD}"
@@ -17,4 +18,33 @@ KafkaServer {
     user_svc-user="${KAFKA_USER_PASSWORD}"
     user_svc-video-transcoder="${KAFKA_VIDEO_TRANSCODER_PASSWORD}"
     user_svc-video-moderator="${KAFKA_VIDEO_MODERATOR_PASSWORD}";
+};
+
+sasl_plaintext.KafkaServer {
+    org.apache.kafka.common.security.plain.PlainLoginModule required
+    username="svc-kafka"
+    password="${KAFKA_BROKER_PASSWORD}"
+    user_svc-kafka="${KAFKA_BROKER_PASSWORD}"
+    user_admin="${KAFKA_ADMIN_PASSWORD}"
+    user_svc-order="${KAFKA_ORDER_PASSWORD}"
+    user_svc-payment="${KAFKA_PAYMENT_PASSWORD}"
+    user_svc-inventory="${KAFKA_INVENTORY_PASSWORD}"
+    user_svc-product="${KAFKA_PRODUCT_PASSWORD}"
+    user_svc-shipping="${KAFKA_SHIPPING_PASSWORD}"
+    user_svc-finance="${KAFKA_FINANCE_PASSWORD}"
+    user_svc-search="${KAFKA_SEARCH_PASSWORD}"
+    user_svc-recommendations="${KAFKA_RECOMMENDATIONS_PASSWORD}"
+    user_svc-invoice="${KAFKA_INVOICE_PASSWORD}"
+    user_svc-messaging="${KAFKA_MESSAGING_PASSWORD}"
+    user_svc-notification="${KAFKA_NOTIFICATION_PASSWORD}"
+    user_svc-user="${KAFKA_USER_PASSWORD}"
+    user_svc-video-transcoder="${KAFKA_VIDEO_TRANSCODER_PASSWORD}"
+    user_svc-video-moderator="${KAFKA_VIDEO_MODERATOR_PASSWORD}";
+};
+
+controller.KafkaServer {
+    org.apache.kafka.common.security.plain.PlainLoginModule required
+    username="svc-kafka"
+    password="${KAFKA_BROKER_PASSWORD}"
+    user_svc-kafka="${KAFKA_BROKER_PASSWORD}";
 };

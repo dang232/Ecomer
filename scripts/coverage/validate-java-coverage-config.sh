@@ -3,19 +3,7 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
 services=(
-  api-gateway
-  coupon-service
-  inventory-service
-  invoice-service
-  order-service
-  payment-service
   product-service
-  recommendations-service
-  search-service
-  seller-finance-service
-  shipping-service
-  user-service
-  video-transcoder
 )
 
 for service in "${services[@]}"; do

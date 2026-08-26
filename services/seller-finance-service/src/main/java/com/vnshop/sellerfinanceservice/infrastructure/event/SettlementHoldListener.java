@@ -13,9 +13,11 @@ import org.springframework.transaction.annotation.Transactional;
 import com.vnshop.sellerfinanceservice.infrastructure.dlt.DurableDltService;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 
 /** Applies return, dispute, and fraud hold changes to pending settlements. */
 @Service
+@ConditionalOnBean(DurableDltService.class)
 public class SettlementHoldListener {
     private final ObjectMapper objectMapper;
     private final SettlementReleaseCandidateRepositoryPort candidateRepository;

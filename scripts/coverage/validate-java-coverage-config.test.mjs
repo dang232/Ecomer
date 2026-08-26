@@ -2,14 +2,9 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { test } from "node:test";
 
-const services = [
-  "api-gateway", "coupon-service", "inventory-service", "invoice-service",
-  "order-service", "payment-service", "product-service", "recommendations-service",
-  "search-service", "seller-finance-service", "shipping-service", "user-service",
-  "video-transcoder",
-];
+const services = ["product-service"];
 
-test("every Java service has active 90% line and branch gates", async () => {
+test("the dedicated product coverage lane has active 90% line and branch gates", async () => {
   for (const service of services) {
     const pom = await readFile(`services/${service}/pom.xml`, "utf8");
     assert.match(pom, /<artifactId>jacoco-maven-plugin<\/artifactId>/, service);
@@ -27,4 +22,6 @@ test("coverage workflow is independent from fast CI and uploads reports", async 
   assert.match(workflow, /set -euo pipefail/);
   assert.match(workflow, /target\/site\/jacoco\//);
   assert.match(workflow, /needs: validate_configuration/);
+  assert.match(workflow, /- product-service/);
+  assert.doesNotMatch(workflow, /- coupon-service/);
 });

@@ -20,3 +20,7 @@ vnshop:
   datasource:
     read-replica:
       enabled: false
+
+grpc:
+  client:
+    enabled: false

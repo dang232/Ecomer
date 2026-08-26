@@ -43,6 +43,9 @@ kafka-acls --bootstrap-server "$BROKER" --command-config "$ADMIN_CONFIG" --add -
 kafka-acls --bootstrap-server "$BROKER" --command-config "$ADMIN_CONFIG" --add --allow-principal User:svc-invoice --operation Read --topic order.confirmed.DLT
 kafka-acls --bootstrap-server "$BROKER" --command-config "$ADMIN_CONFIG" --add --allow-principal User:svc-invoice --operation Read --topic order.confirmed.retry
 kafka-acls --bootstrap-server "$BROKER" --command-config "$ADMIN_CONFIG" --add --allow-principal User:svc-invoice --operation Write --topic notification.seller-invoice-required
+kafka-acls --bootstrap-server "$BROKER" --command-config "$ADMIN_CONFIG" --add --allow-principal User:svc-kafka --operation CLUSTER_ACTION --cluster
+kafka-acls --bootstrap-server "$BROKER" --command-config "$ADMIN_CONFIG" --add --allow-principal User:svc-kafka --operation CREATE --cluster
+kafka-acls --bootstrap-server "$BROKER" --command-config "$ADMIN_CONFIG" --add --allow-principal User:svc-kafka --operation DESCRIBE --cluster
 kafka-acls --bootstrap-server "$BROKER" --command-config "$ADMIN_CONFIG" --add --allow-principal User:svc-messaging --operation Read --group messaging-service
 kafka-acls --bootstrap-server "$BROKER" --command-config "$ADMIN_CONFIG" --add --allow-principal User:svc-messaging --operation Read --topic messaging.message.sent
 kafka-acls --bootstrap-server "$BROKER" --command-config "$ADMIN_CONFIG" --add --allow-principal User:svc-messaging --operation Write --topic messaging.message.sent

@@ -10,10 +10,12 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@ConditionalOnBean(DurableDltRepository.class)
 public class DurableDltService {
     private final DurableDltRepository repo;
     private final MeterRegistry meterRegistry;

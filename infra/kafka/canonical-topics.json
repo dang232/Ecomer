@@ -5,6 +5,10 @@
     "replicationFactor": 3,
     "minInSyncReplicas": 2
   },
+  "broker": {
+    "principal": "svc-kafka",
+    "clusterOperations": ["CLUSTER_ACTION", "CREATE", "DESCRIBE"]
+  },
   "topics": [
     "messaging.message.sent",
     "product-events",

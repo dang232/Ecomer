@@ -70,3 +70,11 @@ awk '
 done
 
 echo "Local Kafka topics created."
+
+# The broker identity authenticates KRaft controller/inter-broker traffic.
+kafka-acls --bootstrap-server "$BROKER" --command-config "$ADMIN_CONFIG" --add \
+  --allow-principal User:svc-kafka --operation CLUSTER_ACTION --cluster
+kafka-acls --bootstrap-server "$BROKER" --command-config "$ADMIN_CONFIG" --add \
+  --allow-principal User:svc-kafka --operation CREATE --cluster
+kafka-acls --bootstrap-server "$BROKER" --command-config "$ADMIN_CONFIG" --add \
+  --allow-principal User:svc-kafka --operation DESCRIBE --cluster
