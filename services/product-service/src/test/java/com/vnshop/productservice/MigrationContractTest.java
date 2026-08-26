@@ -8,10 +8,11 @@ import org.junit.jupiter.api.Test;
 
 class MigrationContractTest {
     @Test
-    void adminQueueIndexesAreConcurrentAndNonTransactional() throws Exception {
+    void adminQueueIndexesAreTransactional() throws Exception {
         String sql = Files.readString(Path.of("src/main/resources/db/migration/V18__admin_cursor_queue_indexes.sql"));
-        assertThat(sql).contains("-- flyway:executeInTransaction=false")
-                .contains("CREATE INDEX CONCURRENTLY")
+        assertThat(sql).doesNotContain("-- flyway:executeInTransaction=false")
+                .doesNotContain("CREATE INDEX CONCURRENTLY")
+                .contains("CREATE INDEX IF NOT EXISTS")
                 .contains("idx_reviews_admin_pending_created_id")
                 .contains("idx_videos_admin_queue_created_id");
     }

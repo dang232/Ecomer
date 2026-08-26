@@ -66,6 +66,7 @@ jobs:
           KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: PLAIN
           KAFKA_HEALTH_USERNAME: ${{ secrets.RELIABILITY_KAFKA_USERNAME }}
           KAFKA_HEALTH_PASSWORD: ${{ secrets.RELIABILITY_KAFKA_PASSWORD }}
+          KAFKA_OPTS: "-Djava.awt.headless=true"
           KAFKA_LISTENER_NAME_SASL_PLAINTEXT_PLAIN_SASL_JAAS_CONFIG: org.apache.kafka.common.security.plain.PlainLoginModule required username="${{ secrets.RELIABILITY_KAFKA_USERNAME }}" password="${{ secrets.RELIABILITY_KAFKA_PASSWORD }}" user_${{ secrets.RELIABILITY_KAFKA_USERNAME }}="${{ secrets.RELIABILITY_KAFKA_PASSWORD }}";
           KAFKA_AUTHORIZER_CLASS_NAME: org.apache.kafka.metadata.authorizer.StandardAuthorizer
           KAFKA_SUPER_USERS: User:${{ secrets.RELIABILITY_KAFKA_USERNAME }}

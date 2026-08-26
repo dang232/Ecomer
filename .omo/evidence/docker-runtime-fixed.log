@@ -1,0 +1,36 @@
+API gateway ObjectMapper runtime-fix verification
+Timestamp: 2026-08-26T15:27:30+07:00
+Worktree: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr
+HEAD: 3e336848a88f06213536d160c0a3e9890768bafc
+
+Source diagnosis:
+- SecurityConfig.securityWebFilterChain requires com.fasterxml.jackson.databind.ObjectMapper.
+- ProblemDetailsWriter serializes RFC 7807 401/403 responses through mapper.writeValueAsBytes.
+- Spring Boot 4.1 default auto-configuration supplies Jackson 3 types; the gateway requires Jackson 2.
+- Added conditional Jackson 2 bean: services/api-gateway/src/main/java/com/vnshop/apigateway/infrastructure/config/JacksonConfig.java
+
+Maven package:
+Command: mvn clean package -DskipTests (from services/api-gateway)
+Result: BUILD SUCCESS
+
+Focused context test:
+Command: mvn -Dtest=SecurityConfigBindingTest test (from services/api-gateway)
+Result: Tests run: 1, Failures: 0, Errors: 0, Skipped: 0
+
+Gateway test suite:
+Command: mvn test (from services/api-gateway)
+Result: 52 tests, 1 unrelated pre-existing failure
+Failure: RouteConfigTest.v2CatalogPathsForwardToTheirOwningServicesAndFlashRoutesStaySpecific expected http://coupon:80 but was http://order:80
+
+Requested gateway image rebuild:
+Command: docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile apps up -d --build vnshop-api-gateway
+Result: BLOCKED before build: no such service: vnshop-api-gateway (Compose service is api-gateway)
+
+Compose build:
+Command: docker compose build
+Result: BLOCKED before build: failed to connect to Docker API npipe:////./pipe/dockerDesktopLinuxEngine; Docker Desktop Linux engine unavailable
+
+Runtime probes:
+- docker ps: BLOCKED by unavailable Docker Desktop Linux engine
+- curl http://localhost:8080/actuator/health: not run because Docker engine unavailable
+- docker logs vnshop-api-gateway: not run because Docker engine unavailable

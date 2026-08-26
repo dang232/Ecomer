@@ -8,6 +8,34 @@ export interface JwtUser {
   [claim: string]: unknown;
 }
 
+type JwtStrategyOptions = Extract<
+  StrategyOptions,
+  { passReqToCallback?: false | undefined }
+>;
+
+export function createJwtStrategyOptions(): JwtStrategyOptions {
+  const issuerUri =
+    process.env.KEYCLOAK_ISSUER_URI ?? "http://localhost:9090/realms/vnshop";
+  const jwksUri =
+    process.env.KEYCLOAK_JWK_SET_URI ??
+    "http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs";
+  const audience = process.env.KEYCLOAK_JWT_AUDIENCE ?? "vnshop-api";
+
+  return {
+    jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+    ignoreExpiration: false,
+    issuer: issuerUri,
+    audience,
+    algorithms: ["RS256"],
+    secretOrKeyProvider: passportJwtSecret({
+      cache: true,
+      rateLimit: true,
+      jwksRequestsPerMinute: 10,
+      jwksUri,
+    }),
+  };
+}
+
 /**
  * Validates Bearer JWTs against the same Keycloak realm the rest of the
  * platform uses. Mirrors notification-service so the FE's existing Bearer
@@ -18,30 +46,13 @@ export class JwtStrategy extends PassportStrategy(Strategy, "jwt") {
   private static readonly logger = new Logger(JwtStrategy.name);
 
   constructor() {
-    const issuerUri =
-      process.env.KEYCLOAK_ISSUER_URI ?? "http://localhost:9090/realms/vnshop";
     const jwksUri =
       process.env.KEYCLOAK_JWK_SET_URI ??
       "http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs";
-    const audience = process.env.KEYCLOAK_JWT_AUDIENCE ?? "vnshop-api";
-
-    const options: StrategyOptions = {
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      ignoreExpiration: false,
-      issuer: issuerUri,
-      audience,
-      algorithms: ["RS256"],
-      secretOrKeyProvider: passportJwtSecret({
-        cache: true,
-        rateLimit: true,
-        jwksRequestsPerMinute: 10,
-        jwksUri,
-      }),
-    };
-
+    const options = createJwtStrategyOptions();
     super(options);
     JwtStrategy.logger.log(
-      `JWT strategy initialised (issuer=${issuerUri}, jwks=${jwksUri})`,
+      `JWT strategy initialised (issuer=${options.issuer}, jwks=${jwksUri})`,
     );
   }
 

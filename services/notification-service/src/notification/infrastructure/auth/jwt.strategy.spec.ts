@@ -1,4 +1,4 @@
-import { JwtStrategy } from './jwt.strategy';
+import { createJwtStrategyOptions, JwtStrategy } from './jwt.strategy';
 
 describe('JwtStrategy', () => {
   beforeEach(() => {
@@ -18,13 +18,11 @@ describe('JwtStrategy', () => {
   });
 
   it('configures the resource audience separately from the issuer', () => {
-    const strategy = new JwtStrategy() as unknown as {
-      _options: { issuer: string; audience: string; algorithms: string[] };
-    };
+    const options = createJwtStrategyOptions();
 
-    expect(strategy._options.issuer).toBe('http://localhost:9090/realms/vnshop');
-    expect(strategy._options.audience).toBe('vnshop-api');
-    expect(strategy._options.algorithms).toEqual(['RS256']);
+    expect(options.issuer).toBe('http://localhost:9090/realms/vnshop');
+    expect(options.audience).toBe('vnshop-api');
+    expect(options.algorithms).toEqual(['RS256']);
   });
 
   it('falls back to default Keycloak issuer/jwks when env vars are unset', () => {

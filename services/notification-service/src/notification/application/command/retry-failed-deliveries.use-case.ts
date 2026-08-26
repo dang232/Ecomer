@@ -75,7 +75,10 @@ export class RetryFailedDeliveriesUseCase {
       } else {
         notification.markSent();
         await this.repo.save(notification);
-        await this.registry.enqueueOffline(notification.userId, notification.id);
+        await this.registry.enqueueOffline(
+          notification.userId,
+          notification.id,
+        );
       }
       return { retried: 1, movedToDlq: 0 };
     } catch (error) {

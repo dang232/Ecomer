@@ -1,5 +1,10 @@
 import { MikroORM } from '@mikro-orm/core';
-import { Controller, Get, Header, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Header,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { collectDefaultMetrics, register } from 'prom-client';
 import { httpServerRequestsSeconds } from './metrics';
 

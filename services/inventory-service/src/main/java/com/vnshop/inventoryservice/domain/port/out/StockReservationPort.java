@@ -1,7 +1,7 @@
 package com.vnshop.inventoryservice.domain.port.out;
 
+import com.vnshop.inventoryservice.domain.ReservationOperation;
 import com.vnshop.inventoryservice.domain.StockReservation;
-import com.vnshop.inventoryservice.application.ReservationOperation;
 import java.util.List;
 import java.util.Optional;
 

@@ -36,11 +36,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          docker run --rm -v "$PWD:/work" -w /work prom/prometheus:v2.53.0 \
-            promtool check rules infra/prometheus/rules.yml infra/prometheus/slo-rules.yml 2>&1 | tee "$RUNNER_TEMP/promtool-rules.log"
+          docker run --rm --entrypoint promtool -v "$PWD:/work" -w /work prom/prometheus:v2.53.0 \
+            check rules infra/prometheus/rules.yml infra/prometheus/slo-rules.yml 2>&1 | tee "$RUNNER_TEMP/promtool-rules.log"
       - name: Validate Alertmanager config
         shell: bash
         run: |
           set -euo pipefail
-          docker run --rm -v "$PWD:/work" -w /work prom/alertmanager:v0.28.1 \
-            amtool check-config infra/alertmanager/alertmanager.yml 2>&1 | tee "$RUNNER_TEMP/amtool-config.log"
+          docker run --rm --entrypoint amtool -v "$PWD:/work" -w /work prom/alertmanager:v0.28.1 \
+            check-config infra/alertmanager/alertmanager.yml 2>&1 | tee "$RUNNER_TEMP/amtool-config.log"

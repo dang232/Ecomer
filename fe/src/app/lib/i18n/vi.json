@@ -1504,8 +1504,8 @@
             "weightGrams": "Khối lượng (g)",
             "lengthCm": "Dài (cm)",
             "widthCm": "Rộng (cm)",
-      "heightCm": "Cao (cm)",
-      "declaredValueMinor": "Giá trị khai báo (đơn vị nhỏ nhất)"
+            "heightCm": "Cao (cm)",
+            "declaredValueMinor": "Giá trị khai báo (đơn vị nhỏ nhất)"
           }
         },
         "publication": {

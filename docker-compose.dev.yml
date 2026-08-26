@@ -14,12 +14,18 @@ services:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-vnshop123}", "ping"]
   order-service:
     environment:
+      # Local gRPC mTLS assets are not checked into the repository. The HTTP
+      # order surface remains available in this workstation-only overlay.
+      GRPC_CLIENT_ENABLED: "false"
       JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
     ports:
       - "127.0.0.1:5005:5005"
 
   payment-service:
     environment:
+      # Local gRPC mTLS assets are not checked into the repository. The HTTP
+      # payment surface remains available in this workstation-only overlay.
+      GRPC_SERVER_ENABLED: "false"
       JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5006
     ports:
       - "127.0.0.1:5006:5006"
@@ -93,6 +99,9 @@ services:
     ports:
       - "127.0.0.1:9092:9092"
       - "127.0.0.1:29092:29092"
+  elasticsearch:
+    ports:
+      - "127.0.0.1:9200:9200"
   minio:
     ports:
       - "127.0.0.1:9000:9000"

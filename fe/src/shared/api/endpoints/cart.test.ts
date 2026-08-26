@@ -40,12 +40,11 @@ describe("cart endpoint characterization", () => {
     await clearCart();
 
     expect(api.get).toHaveBeenCalledWith("/cart", expect.anything());
-    expect(api.post).toHaveBeenNthCalledWith(
-      1,
-      "/cart/items",
-      expect.anything(),
-      { productId: "product-1", quantity: 2, variantId: "BLUE-L" },
-    );
+    expect(api.post).toHaveBeenNthCalledWith(1, "/cart/items", expect.anything(), {
+      productId: "product-1",
+      quantity: 2,
+      variantId: "BLUE-L",
+    });
     expect(api.post).toHaveBeenNthCalledWith(
       2,
       "/cart/merge",
@@ -57,11 +56,9 @@ describe("cart endpoint characterization", () => {
       },
       { idempotencyKey: "merge-key-1" },
     );
-    expect(api.put).toHaveBeenCalledWith(
-      "/cart/items/product-1%3ABLUE-L",
-      expect.anything(),
-      { quantity: 3 },
-    );
+    expect(api.put).toHaveBeenCalledWith("/cart/items/product-1%3ABLUE-L", expect.anything(), {
+      quantity: 3,
+    });
     expect(api.delete).toHaveBeenNthCalledWith(
       1,
       "/cart/items/product-1%3ABLUE-L",

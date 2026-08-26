@@ -2,12 +2,14 @@ package com.vnshop.apigateway.infrastructure.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.lang.reflect.Method;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
 import org.springframework.mock.web.server.MockServerWebExchange;
 import org.springframework.http.HttpCookie;
@@ -27,6 +29,7 @@ class SecurityConfigBindingTest {
     void springCreatedSecurityConfigUsesBoundCustomBuckets() {
         contextRunner.run(context -> {
             SecurityConfig securityConfig = context.getBean(SecurityConfig.class);
+            assertThat(context.getBean(ObjectMapper.class)).isNotNull();
             Method method = SecurityConfig.class.getDeclaredMethod(
                     "requiresCsrfProtection", org.springframework.web.server.ServerWebExchange.class);
             method.setAccessible(true);
@@ -55,6 +58,7 @@ class SecurityConfigBindingTest {
 
     @Configuration(proxyBeanMethods = false)
     @EnableConfigurationProperties(PublicBucketProperties.class)
+    @Import(JacksonConfig.class)
     static class BindingConfiguration {
         @Bean
         SecurityConfig securityConfig(PublicBucketProperties publicBuckets) {

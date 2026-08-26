@@ -1,0 +1,10 @@
+COMMAND: node scripts/verify-scope.mjs "C:\Users\dangq\OneDrive\Documents\GitHub\Full-Stack-E-commerce\.omo\plans\vnshop-deep-fix.md" --todos 32 --forbid-providers momo,vnpay --require-external-secrets --forbid-retroactive-backfill
+EXIT_CODE: 0
+OUTPUT:
+PLAN_TOP_LEVEL_TODOS: 32/32
+FORBIDDEN_PROVIDERS: PASS
+EXTERNAL_SECRETS: PASS
+RETROACTIVE_ORDER_BACKFILL: PASS
+FORBIDDEN_IMPLEMENTATION: PASS
+PASS: requested scope constraints hold for the inspected plan, production configuration, and changed lines
+NOTE: Git emitted pre-existing CRLF normalization warnings while inspecting the dirty worktree diff.

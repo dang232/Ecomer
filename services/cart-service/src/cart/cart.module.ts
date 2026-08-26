@@ -39,7 +39,8 @@ export { REDIS_CLIENT } from './redis-client.token';
           ?.split(',')
           .map((node) => node.trim())
           .filter(Boolean);
-        const password = configService.get<string>('REDIS_PASSWORD') || undefined;
+        const password =
+          configService.get<string>('REDIS_PASSWORD') || undefined;
         const commonOptions = {
           password,
           lazyConnect: true,
@@ -54,7 +55,9 @@ export { REDIS_CLIENT } from './redis-client.token';
               const [host, port = '26379'] = node.split(':');
               return { host, port: Number(port) };
             }),
-            name: configService.get<string>('REDIS_SENTINEL_MASTER') ?? 'redis-cart',
+            name:
+              configService.get<string>('REDIS_SENTINEL_MASTER') ??
+              'redis-cart',
           });
         }
 

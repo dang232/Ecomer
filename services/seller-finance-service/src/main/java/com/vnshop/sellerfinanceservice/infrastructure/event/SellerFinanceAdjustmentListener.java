@@ -173,7 +173,11 @@ public class SellerFinanceAdjustmentListener {
     }
 
     @DltHandler
-    public void handleDlt(ConsumerRecord<String, String> record) {
+    public void handleDlt(String record) {
+        handleDlt(new ConsumerRecord<>("seller.finance.adjustment.DLT", 0, 0L, null, record));
+    }
+
+    private void handleDlt(ConsumerRecord<String, String> record) {
         durableDltService.store(record, "seller.finance.adjustment DLT payload received", 3);
     }
 

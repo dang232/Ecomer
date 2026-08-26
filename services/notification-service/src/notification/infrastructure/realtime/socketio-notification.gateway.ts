@@ -59,8 +59,14 @@ export class SocketioNotificationGateway
       cache: true,
       rateLimit: true,
     });
-    this.issuer = this.configService.get<string>('KEYCLOAK_ISSUER_URI', 'http://localhost:9090/realms/vnshop');
-    this.audience = this.configService.get<string>('KEYCLOAK_JWT_AUDIENCE', 'vnshop-api');
+    this.issuer = this.configService.get<string>(
+      'KEYCLOAK_ISSUER_URI',
+      'http://localhost:9090/realms/vnshop',
+    );
+    this.audience = this.configService.get<string>(
+      'KEYCLOAK_JWT_AUDIENCE',
+      'vnshop-api',
+    );
   }
 
   async handleConnection(client: Socket): Promise<void> {
@@ -188,7 +194,9 @@ export class SocketioNotificationGateway
             return;
           }
           const subject = (decoded as jwt.JwtPayload).sub;
-          resolve(typeof subject === 'string' && subject.length > 0 ? subject : null);
+          resolve(
+            typeof subject === 'string' && subject.length > 0 ? subject : null,
+          );
         },
       );
     });

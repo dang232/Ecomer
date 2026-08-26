@@ -116,6 +116,13 @@ management:
 otel:
   traces:
     exporter: jaeger
+
+search:
+  cursor:
+    secret: ${VNSHOP_SEARCH_CURSOR_SECRET:local-search-cursor-secret}
+  facets:
+    max-buckets: ${SEARCH_FACETS_MAX_BUCKETS:100}
+
 ---
 spring:
   config:
@@ -136,12 +143,6 @@ kafka:
       enabled: false
       lag-threshold: 1000
       group-id: search-service
-
-search:
-  cursor:
-    secret: ${VNSHOP_SEARCH_CURSOR_SECRET}
-  facets:
-    max-buckets: ${SEARCH_FACETS_MAX_BUCKETS:100}
 
 logging:
   level:

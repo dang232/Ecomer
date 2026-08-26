@@ -313,22 +313,22 @@ services:
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
       KAFKA_ADMIN_PASSWORD: ${KAFKA_ADMIN_PASSWORD:?KAFKA_ADMIN_PASSWORD must be set}
-      KAFKA_ORDER_PASSWORD: ${KAFKA_ORDER_PASSWORD:?KAFKA_ORDER_PASSWORD must be set}
-      KAFKA_PAYMENT_PASSWORD: ${KAFKA_PAYMENT_PASSWORD:?KAFKA_PAYMENT_PASSWORD must be set}
-      KAFKA_INVENTORY_PASSWORD: ${KAFKA_INVENTORY_PASSWORD:?KAFKA_INVENTORY_PASSWORD must be set}
-      KAFKA_PRODUCT_PASSWORD: ${KAFKA_PRODUCT_PASSWORD:?KAFKA_PRODUCT_PASSWORD must be set}
-      KAFKA_SHIPPING_PASSWORD: ${KAFKA_SHIPPING_PASSWORD:?KAFKA_SHIPPING_PASSWORD must be set}
-      KAFKA_FINANCE_PASSWORD: ${KAFKA_FINANCE_PASSWORD:?KAFKA_FINANCE_PASSWORD must be set}
-      KAFKA_SEARCH_PASSWORD: ${KAFKA_SEARCH_PASSWORD:?KAFKA_SEARCH_PASSWORD must be set}
-      KAFKA_RECOMMENDATIONS_PASSWORD: ${KAFKA_RECOMMENDATIONS_PASSWORD:?KAFKA_RECOMMENDATIONS_PASSWORD must be set}
-      KAFKA_INVOICE_PASSWORD: ${KAFKA_INVOICE_PASSWORD:?KAFKA_INVOICE_PASSWORD must be set}
-      KAFKA_MESSAGING_PASSWORD: ${KAFKA_MESSAGING_PASSWORD:?KAFKA_MESSAGING_PASSWORD must be set}
-      KAFKA_NOTIFICATION_PASSWORD: ${KAFKA_SVC_NOTIFICATION_PASSWORD:-kafka-notification}
+      KAFKA_ORDER_PASSWORD: ${KAFKA_SVC_ORDER_PASSWORD:?KAFKA_SVC_ORDER_PASSWORD must be set}
+      KAFKA_PAYMENT_PASSWORD: ${KAFKA_SVC_PAYMENT_PASSWORD:?KAFKA_SVC_PAYMENT_PASSWORD must be set}
+      KAFKA_INVENTORY_PASSWORD: ${KAFKA_SVC_INVENTORY_PASSWORD:?KAFKA_SVC_INVENTORY_PASSWORD must be set}
+      KAFKA_PRODUCT_PASSWORD: ${KAFKA_SVC_PRODUCT_PASSWORD:?KAFKA_SVC_PRODUCT_PASSWORD must be set}
+      KAFKA_SHIPPING_PASSWORD: ${KAFKA_SVC_SHIPPING_PASSWORD:?KAFKA_SVC_SHIPPING_PASSWORD must be set}
+      KAFKA_FINANCE_PASSWORD: ${KAFKA_SVC_FINANCE_PASSWORD:?KAFKA_SVC_FINANCE_PASSWORD must be set}
+      KAFKA_SEARCH_PASSWORD: ${KAFKA_SVC_SEARCH_PASSWORD:?KAFKA_SVC_SEARCH_PASSWORD must be set}
+      KAFKA_RECOMMENDATIONS_PASSWORD: ${KAFKA_SVC_RECOMMENDATIONS_PASSWORD:?KAFKA_SVC_RECOMMENDATIONS_PASSWORD must be set}
+      KAFKA_INVOICE_PASSWORD: ${KAFKA_SVC_INVOICE_PASSWORD:?KAFKA_SVC_INVOICE_PASSWORD must be set}
+      KAFKA_MESSAGING_PASSWORD: ${KAFKA_SVC_MESSAGING_PASSWORD:?KAFKA_SVC_MESSAGING_PASSWORD must be set}
+      KAFKA_NOTIFICATION_PASSWORD: ${KAFKA_SVC_NOTIFICATION_PASSWORD:?KAFKA_SVC_NOTIFICATION_PASSWORD must be set}
       KAFKA_USER_PASSWORD: ${KAFKA_USER_PASSWORD:?KAFKA_USER_PASSWORD must be set}
       KAFKA_VIDEO_TRANSCODER_PASSWORD: ${KAFKA_VIDEO_TRANSCODER_PASSWORD:?KAFKA_VIDEO_TRANSCODER_PASSWORD must be set}
       KAFKA_VIDEO_MODERATOR_PASSWORD: ${KAFKA_VIDEO_MODERATOR_PASSWORD:?KAFKA_VIDEO_MODERATOR_PASSWORD must be set}
       KAFKA_SSL_CLIENT_AUTH: none
-    entrypoint: ["/bin/sh", "-c", "sed -e \"s/\\$${KAFKA_ADMIN_PASSWORD}/$KAFKA_ADMIN_PASSWORD/g\" -e \"s/\\$${KAFKA_ORDER_PASSWORD}/$KAFKA_ORDER_PASSWORD/g\" -e \"s/\\$${KAFKA_PAYMENT_PASSWORD}/$KAFKA_PAYMENT_PASSWORD/g\" -e \"s/\\$${KAFKA_INVENTORY_PASSWORD}/$KAFKA_INVENTORY_PASSWORD/g\" -e \"s/\\$${KAFKA_PRODUCT_PASSWORD}/$KAFKA_PRODUCT_PASSWORD/g\" -e \"s/\\$${KAFKA_SHIPPING_PASSWORD}/$KAFKA_SHIPPING_PASSWORD/g\" -e \"s/\\$${KAFKA_FINANCE_PASSWORD}/$KAFKA_FINANCE_PASSWORD/g\" -e \"s/\\$${KAFKA_SEARCH_PASSWORD}/$KAFKA_SEARCH_PASSWORD/g\" -e \"s/\\$${KAFKA_RECOMMENDATIONS_PASSWORD}/$KAFKA_RECOMMENDATIONS_PASSWORD/g\" -e \"s/\\$${KAFKA_INVOICE_PASSWORD}/$KAFKA_INVOICE_PASSWORD/g\" -e \"s/\\$${KAFKA_MESSAGING_PASSWORD}/$KAFKA_MESSAGING_PASSWORD/g\" -e \"s/\\$${KAFKA_NOTIFICATION_PASSWORD}/$${KAFKA_NOTIFICATION_PASSWORD}/g\" -e \"s/\\$${KAFKA_USER_PASSWORD}/$KAFKA_USER_PASSWORD/g\" -e \"s/\\$${KAFKA_VIDEO_TRANSCODER_PASSWORD}/$KAFKA_VIDEO_TRANSCODER_PASSWORD/g\" -e \"s/\\$${KAFKA_VIDEO_MODERATOR_PASSWORD}/$KAFKA_VIDEO_MODERATOR_PASSWORD/g\" /etc/kafka/kafka_server_jaas.conf.template > /etc/kafka/kafka_server_jaas.conf && exec /etc/confluent/docker/run"]
+    entrypoint: ["/bin/sh", "-c", "sed -e \"s/\\$${KAFKA_ADMIN_PASSWORD}/$$KAFKA_ADMIN_PASSWORD/g\" -e \"s/\\$${KAFKA_ORDER_PASSWORD}/$$KAFKA_ORDER_PASSWORD/g\" -e \"s/\\$${KAFKA_PAYMENT_PASSWORD}/$$KAFKA_PAYMENT_PASSWORD/g\" -e \"s/\\$${KAFKA_INVENTORY_PASSWORD}/$$KAFKA_INVENTORY_PASSWORD/g\" -e \"s/\\$${KAFKA_PRODUCT_PASSWORD}/$$KAFKA_PRODUCT_PASSWORD/g\" -e \"s/\\$${KAFKA_SHIPPING_PASSWORD}/$$KAFKA_SHIPPING_PASSWORD/g\" -e \"s/\\$${KAFKA_FINANCE_PASSWORD}/$$KAFKA_FINANCE_PASSWORD/g\" -e \"s/\\$${KAFKA_SEARCH_PASSWORD}/$$KAFKA_SEARCH_PASSWORD/g\" -e \"s/\\$${KAFKA_RECOMMENDATIONS_PASSWORD}/$$KAFKA_RECOMMENDATIONS_PASSWORD/g\" -e \"s/\\$${KAFKA_INVOICE_PASSWORD}/$$KAFKA_INVOICE_PASSWORD/g\" -e \"s/\\$${KAFKA_MESSAGING_PASSWORD}/$$KAFKA_MESSAGING_PASSWORD/g\" -e \"s/\\$${KAFKA_NOTIFICATION_PASSWORD}/$$KAFKA_NOTIFICATION_PASSWORD/g\" -e \"s/\\$${KAFKA_USER_PASSWORD}/$$KAFKA_USER_PASSWORD/g\" -e \"s/\\$${KAFKA_VIDEO_TRANSCODER_PASSWORD}/$$KAFKA_VIDEO_TRANSCODER_PASSWORD/g\" -e \"s/\\$${KAFKA_VIDEO_MODERATOR_PASSWORD}/$$KAFKA_VIDEO_MODERATOR_PASSWORD/g\" /etc/kafka/kafka_server_jaas.conf.template > /etc/kafka/kafka_server_jaas.conf && exec /etc/confluent/docker/run"]
     volumes:
       - kafka-data:/var/lib/kafka/data
       - ./infra/kafka/kafka_server_jaas.conf.template:/etc/kafka/kafka_server_jaas.conf.template:ro
@@ -360,6 +360,7 @@ services:
     volumes:
       - ./infra/scripts/init-kafka-topics-local.sh:/opt/vnshop/init-kafka-topics-local.sh:ro
       - ./infra/kafka/topic-inventory.yaml:/opt/vnshop/infra/kafka/topic-inventory.yaml:ro
+      - ./infra/kafka/canonical-topics.json:/opt/vnshop/infra/kafka/canonical-topics.json:ro
     working_dir: /opt/vnshop
     command: ["bash", "/opt/vnshop/init-kafka-topics-local.sh"]
     restart: "no"
@@ -1035,6 +1036,8 @@ services:
       KAFKA_SASL_USERNAME: svc-search
       KAFKA_SASL_PASSWORD: ${KAFKA_SVC_SEARCH_PASSWORD:-kafka-search}
       VNSHOP_SEARCH_CURSOR_SECRET: ${VNSHOP_SEARCH_CURSOR_SECRET:?VNSHOP_SEARCH_CURSOR_SECRET must be set}
+      SEARCH_FACETS_MAX_BUCKETS: ${SEARCH_FACETS_MAX_BUCKETS:-100}
+      KAFKA_HEALTH_CONSUMER_ENABLED: "false"
       # GeoIP database for IP-based location lookups (MaxMind GeoLite2).
       GEOIP_DATABASE_PATH: ${GEOIP_DATABASE_PATH:-}
     volumes:
@@ -1072,7 +1075,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_SASL_USERNAME: svc-notification
       KAFKA_SASL_PASSWORD: ${KAFKA_SVC_NOTIFICATION_PASSWORD:-kafka-notification}
-      KAFKA_LOCAL_MODE: plaintext
+      KAFKA_LOCAL_MODE: sasl-plaintext
       KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
       # Email channel (SES). Set EMAIL_ENABLED=true + AWS creds to activate.
@@ -1096,7 +1099,9 @@ services:
       start_period: 60s
 
   coupon-service:
-    # profiles removed for full deployment
+    # Archived: coupon ownership moved to order-service. Keep this source
+    # available for explicit rollback work, but do not launch it by default.
+    profiles: ["archived"]
     build: ./services/coupon-service
     container_name: vnshop-coupon-service
     # ports:
@@ -1485,7 +1490,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_SASL_USERNAME: svc-messaging
       KAFKA_SASL_PASSWORD: ${KAFKA_SVC_MESSAGING_PASSWORD:-kafka-messaging}
-      KAFKA_LOCAL_MODE: plaintext
+      KAFKA_LOCAL_MODE: sasl-plaintext
       KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
     healthcheck:

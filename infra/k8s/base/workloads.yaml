@@ -193,10 +193,6 @@ spec:
         - name: REDIS_PASSWORD
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: platform-redis-password}
-        - name: REDIS_SENTINEL_MASTER
-          valueFrom: {configMapKeyRef: {name: redis-ha-contract, key: REDIS_CART_SENTINEL_MASTER}}
-        - name: REDIS_SENTINEL_NODES
-          valueFrom: {configMapKeyRef: {name: redis-ha-contract, key: REDIS_CART_SENTINEL_NODES}}
         envFrom:
         - configMapRef:
             name: vnshop-app-config
@@ -1367,13 +1363,6 @@ spec:
         - name: REDIS_URL
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: notification-service-redis-url}
-        - name: REDIS_SENTINEL_MASTER
-          valueFrom: {configMapKeyRef: {name: redis-ha-contract, key: REDIS_DEDUP_SENTINEL_MASTER}}
-        - name: REDIS_SENTINEL_NODES
-          valueFrom: {configMapKeyRef: {name: redis-ha-contract, key: REDIS_DEDUP_SENTINEL_NODES}}
-        - name: REDIS_PASSWORD
-          valueFrom:
-            secretKeyRef: {name: vnshop-runtime-secrets, key: platform-redis-password}
         - name: MONGO_URI
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: notification-service-mongodb-uri}

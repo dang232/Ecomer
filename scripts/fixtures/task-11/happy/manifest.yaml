@@ -38,10 +38,10 @@ metadata:
   name: vnshop-runtime-secrets
 spec:
   encryptedData:
-    product-cursor-secret: cHJvZHVjdC1jdXJzb3ItZml4dHVyZS0wMDAwMDAwMDAwMDAwMDAwMDA=
-    search-cursor-secret: c2VhcmNoLWN1cnNvci1maXh0dXJlLTAwMDAwMDAwMDAwMDAwMDAwMDA=
-    admin-cursor-secret: YWRtaW4tY3Vyc29yLWZpeHR1cmUtMDAwMDAwMDAwMDAwMDAwMDAw
-    seller-finance-admin-cursor-secret: c2VsbGVyLWZpbmFuY2UtYWRtaW4tY3Vyc29yLWZpeHR1cmUwMDAw
+    product-cursor-secret: cHJvZHVjdC1jdXJzb3ItZml4dHVyZS0wMDAwMDAwMDAwMDAwMDAwMDA= # gitleaks:allow synthetic fixture ciphertext
+    search-cursor-secret: c2VhcmNoLWN1cnNvci1maXh0dXJlLTAwMDAwMDAwMDAwMDAwMDAwMDA= # gitleaks:allow synthetic fixture ciphertext
+    admin-cursor-secret: YWRtaW4tY3Vyc29yLWZpeHR1cmUtMDAwMDAwMDAwMDAwMDAwMDAw # gitleaks:allow synthetic fixture ciphertext
+    seller-finance-admin-cursor-secret: c2VsbGVyLWZpbmFuY2UtYWRtaW4tY3Vyc29yLWZpeHR1cmUwMDAw # gitleaks:allow synthetic fixture ciphertext
   template:
     metadata:
       name: vnshop-runtime-secrets

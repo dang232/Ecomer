@@ -73,11 +73,26 @@ export class CartController {
     @Req() requestContext: AuthenticatedRequest,
     @Body() request: MergeCartRequest,
   ): Promise<ApiResponse<CartResponse>> {
-    if (!request.sessionId || !request.idempotencyKey || !Array.isArray(request.items)) {
-      throw new BadRequestException('sessionId, idempotencyKey, and items are required');
+    if (
+      !request.sessionId ||
+      !request.idempotencyKey ||
+      !Array.isArray(request.items)
+    ) {
+      throw new BadRequestException(
+        'sessionId, idempotencyKey, and items are required',
+      );
     }
-    if (request.items.some((item) => !item.productId || !Number.isInteger(item.quantity) || item.quantity < 1)) {
-      throw new BadRequestException('merge items must have a productId and positive integer quantity');
+    if (
+      request.items.some(
+        (item) =>
+          !item.productId ||
+          !Number.isInteger(item.quantity) ||
+          item.quantity < 1,
+      )
+    ) {
+      throw new BadRequestException(
+        'merge items must have a productId and positive integer quantity',
+      );
     }
 
     return ApiResponse.ok(

@@ -1,7 +1,7 @@
 import { Migration } from '@mikro-orm/migrations';
 
 export class Migration20240101000000 extends Migration {
-  async up(): Promise<void> {
+  up(): void {
     this.addSql(`
       CREATE TABLE IF NOT EXISTS "carts" (
         "user_id"    VARCHAR(255) NOT NULL,
@@ -13,7 +13,7 @@ export class Migration20240101000000 extends Migration {
     `);
   }
 
-  async down(): Promise<void> {
+  down(): void {
     this.addSql(`DROP TABLE IF EXISTS "carts";`);
   }
 }

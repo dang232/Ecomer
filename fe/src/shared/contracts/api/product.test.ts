@@ -39,7 +39,9 @@ describe("productSummarySchema", () => {
     const result = productSummarySchema.parse({
       id: "2ff65816-fa6d-4bb2-beaf-47d5fffa0445",
       name: "Parcel product",
-      variants: [{ sku: "SKU-1", parcel: { weightGrams: 1, lengthCm: 1, widthCm: 1, heightCm: 1 } }],
+      variants: [
+        { sku: "SKU-1", parcel: { weightGrams: 1, lengthCm: 1, widthCm: 1, heightCm: 1 } },
+      ],
     });
 
     expect(result.variants?.[0]?.parcel?.declaredValueMinor).toBe(0);

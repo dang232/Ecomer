@@ -53,7 +53,9 @@ export class ErrorBoundary extends Component<Props, State> {
     const apiError = this.state.error instanceof ApiError ? this.state.error : null;
     const message = apiError
       ? getErrorLabel(apiError)
-      : i18n.t("errorBoundary.description", { defaultValue: "An unexpected error occurred. Please try again." });
+      : i18n.t("errorBoundary.description", {
+          defaultValue: "An unexpected error occurred. Please try again.",
+        });
 
     const isPermanent = retryCount >= 3;
 

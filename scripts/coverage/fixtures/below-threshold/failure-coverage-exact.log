@@ -1,0 +1,66 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------< com.vnshop.coverage:below-threshold-fixture >-------------
+[INFO] Building below-threshold-fixture 1.0.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.2.0:clean (default-clean) @ below-threshold-fixture ---
+[INFO] Deleting C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\scripts\coverage\fixtures\below-threshold\target
+[INFO] 
+[INFO] --- jacoco:0.8.15:prepare-agent (default) @ below-threshold-fixture ---
+[INFO] argLine set to -javaagent:C:\\Users\\dangq\\.m2\\repository\\org\\jacoco\\org.jacoco.agent\\0.8.15\\org.jacoco.agent-0.8.15-runtime.jar=destfile=C:\\Users\\dangq\\AppData\\Local\\Temp\\opencode\\vnshop-deep-fix-pr\\scripts\\coverage\\fixtures\\below-threshold\\target\\jacoco.exec
+[INFO] 
+[INFO] --- resources:3.4.0:resources (default-resources) @ below-threshold-fixture ---
+[INFO] skip non existing resourceDirectory C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\scripts\coverage\fixtures\below-threshold\src\main\resources
+[INFO] 
+[INFO] --- compiler:3.15.0:compile (default-compile) @ below-threshold-fixture ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 1 source file with javac [debug release 25] to target\classes
+[INFO] 
+[INFO] --- resources:3.4.0:testResources (default-testResources) @ below-threshold-fixture ---
+[INFO] skip non existing resourceDirectory C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\scripts\coverage\fixtures\below-threshold\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.15.0:testCompile (default-testCompile) @ below-threshold-fixture ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 1 source file with javac [debug release 25] to target\test-classes
+[INFO] 
+[INFO] --- surefire:3.5.3:test (default-test) @ below-threshold-fixture ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.vnshop.coverage.BranchFixtureTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.195 s -- in com.vnshop.coverage.BranchFixtureTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] 
+[INFO] --- jacoco:0.8.15:report (report) @ below-threshold-fixture ---
+[INFO] Loading execution data file C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\scripts\coverage\fixtures\below-threshold\target\jacoco.exec
+[INFO] Analyzed bundle 'below-threshold-fixture' with 1 classes
+[INFO] 
+[INFO] --- jar:3.5.0:jar (default-jar) @ below-threshold-fixture ---
+[INFO] Building jar: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\scripts\coverage\fixtures\below-threshold\target\below-threshold-fixture-1.0.0.jar
+[INFO] 
+[INFO] --- jacoco:0.8.15:check (check) @ below-threshold-fixture ---
+[INFO] Loading execution data file C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\scripts\coverage\fixtures\below-threshold\target\jacoco.exec
+[INFO] Analyzed bundle 'below-threshold-fixture' with 1 classes
+[WARNING] Rule violated for bundle below-threshold-fixture: lines covered ratio is 0.66, but expected minimum is 0.90
+[WARNING] Rule violated for bundle below-threshold-fixture: branches covered ratio is 0.50, but expected minimum is 0.90
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  11.521 s
+[INFO] Finished at: 2026-08-25T14:17:23+07:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.jacoco:jacoco-maven-plugin:0.8.15:check (check) on project below-threshold-fixture: Coverage checks have not been met. See log for details. -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoExecutionException

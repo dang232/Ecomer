@@ -59,7 +59,7 @@ export class MessagingWsGateway
       );
     } catch (err) {
       if (err instanceof TokenExpiredError) {
-        this.verifier.logRejection(clientIp, (err as Error).message);
+        this.verifier.logRejection(clientIp, err.message);
         this.refuse(client, 4001, "token_expired");
       } else {
         this.verifier.logRejection(clientIp, (err as Error).message);

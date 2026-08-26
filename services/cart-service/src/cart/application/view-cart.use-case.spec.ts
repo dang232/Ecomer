@@ -67,25 +67,20 @@ describe('ViewCartUseCase', () => {
   it('refreshes a null parcel from the exact product variant snapshot', async () => {
     const cart = cartWithItem(null);
     const cartRepository = repository(cart);
-    const productClient: ProductClientPort = {
-      getSnapshot: jest.fn().mockResolvedValue({
-        productId: 'product-1',
-        productName: 'Keyboard',
-        productImage: 'keyboard.png',
-        unitPrice: Money.of(1000),
-        parcel: completeParcel,
-      }),
-    };
+    const getSnapshot = jest.fn().mockResolvedValue({
+      productId: 'product-1',
+      productName: 'Keyboard',
+      productImage: 'keyboard.png',
+      unitPrice: Money.of(1000),
+      parcel: completeParcel,
+    });
+    const productClient: ProductClientPort = { getSnapshot };
 
     const result = await new ViewCartUseCase(
       cartRepository,
       productClient,
     ).execute('user-1');
-
-    expect(productClient.getSnapshot).toHaveBeenCalledWith(
-      'product-1',
-      'sku-large',
-    );
+    expect(getSnapshot).toHaveBeenCalledWith('product-1', 'sku-large');
     expect(result.items[0]?.parcel).toEqual(completeParcel);
     expect(cartRepository.refreshParcels).toHaveBeenCalledWith('user-1', [
       { itemKey: 'product-1:sku-large', parcel: completeParcel },
@@ -219,12 +214,13 @@ describe('ViewCartUseCase', () => {
     const secondSnapshot = new Promise<ProductSnapshot>((_, reject) => {
       rejectSecond = reject;
     });
+    const getSnapshot = jest.fn((productId: string) => {
+      if (productId === 'product-1') return firstSnapshot;
+      resolveSecondStarted?.();
+      return secondSnapshot;
+    });
     const productClient: ProductClientPort = {
-      getSnapshot: jest.fn((productId: string) => {
-        if (productId === 'product-1') return firstSnapshot;
-        resolveSecondStarted?.();
-        return secondSnapshot;
-      }),
+      getSnapshot,
     };
 
     const execution = new ViewCartUseCase(
@@ -232,7 +228,7 @@ describe('ViewCartUseCase', () => {
       productClient,
     ).execute('user-1');
     await secondStarted;
-    expect(productClient.getSnapshot).toHaveBeenCalledTimes(2);
+    expect(getSnapshot).toHaveBeenCalledTimes(2);
 
     resolveFirst?.({
       productId: 'product-1',

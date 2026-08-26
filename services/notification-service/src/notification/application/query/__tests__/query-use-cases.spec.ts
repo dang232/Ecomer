@@ -123,9 +123,9 @@ describe('Query Use Cases', () => {
       });
       mockRepo.findByIdAndUserId.mockResolvedValue(notification);
 
-      await expect(getNotification.execute(notification.id, 'u1')).resolves.toBe(
-        notification,
-      );
+      await expect(
+        getNotification.execute(notification.id, 'u1'),
+      ).resolves.toBe(notification);
       expect(mockRepo.findByIdAndUserId).toHaveBeenCalledWith(
         notification.id,
         'u1',
@@ -135,9 +135,9 @@ describe('Query Use Cases', () => {
     it('returns not found for a notification owned by another user', async () => {
       mockRepo.findByIdAndUserId.mockResolvedValue(null);
 
-      await expect(getNotification.execute('notification-1', 'u2')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        getNotification.execute('notification-1', 'u2'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 

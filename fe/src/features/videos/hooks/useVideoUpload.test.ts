@@ -87,7 +87,7 @@ async function receiveCreationLocation(
   )(
     {
       getMethod: () => "POST",
-       getURL: () => "http://localhost:8080/api/v1/videos/upload",
+      getURL: () => "http://localhost:8080/api/v1/videos/upload",
     },
     {
       getStatus: () => 201,
@@ -356,7 +356,7 @@ describe("useVideoUpload", () => {
     await expect(
       receiveCreationLocation(
         tusMockInstances[0],
-      "https://other.example/api/v1/videos/upload/foreign-id",
+        "https://other.example/api/v1/videos/upload/foreign-id",
       ),
     ).rejects.toThrow("video:invalid-upload-location");
   });

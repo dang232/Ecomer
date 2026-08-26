@@ -370,6 +370,7 @@ async function main() {
       token: ctx.buyerToken,
       body: {
         address: { street: "1 Test Way", district: "Q1", city: "HCMC" },
+        parcel: { weightGrams: 1000, lengthCm: 30, widthCm: 20, heightCm: 10 },
       },
       expect: [200, 201],
     });

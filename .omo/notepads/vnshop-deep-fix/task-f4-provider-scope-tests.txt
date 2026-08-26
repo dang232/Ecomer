@@ -1,0 +1,17 @@
+COMMAND: node --test scripts/verify-scope.test.mjs
+EXIT_CODE: 0
+OUTPUT:
+PASS disabled provider policy mentions are not enablement
+PASS explicit enabled environment values are rejected
+PASS nested enabled provider configuration is rejected
+PASS comment-only provider policy text is not enablement
+PASS live provider lists are rejected
+PASS provider arrays are treated as live provider lists
+PASS disabled provider entries in a provider map are not rejected
+PASS forbidden default provider selection is rejected
+PASS changed non-production provider configuration requires a gate
+PASS explicitly gated non-production provider configuration is accepted
+PASS explicitly gated changed provider list is accepted outside production
+TESTS: 11
+PASSED: 11
+FAILED: 0

@@ -32,7 +32,9 @@ final class SingleFlightRedisCache extends RedisCache {
             created.completeExceptionally(failure);
             throw failure;
         } finally {
-            loads.remove(key, created);
+            if (created.isCompletedExceptionally()) {
+                loads.remove(key, created);
+            }
         }
     }
 

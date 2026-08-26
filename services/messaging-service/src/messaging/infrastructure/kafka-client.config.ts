@@ -10,11 +10,14 @@ function required(name: string): string {
 }
 
 function brokers(): string[] {
-  const values = (process.env.KAFKA_BOOTSTRAP_SERVERS ?? (production ? "" : "localhost:9092"))
+  const values = (
+    process.env.KAFKA_BOOTSTRAP_SERVERS ?? (production ? "" : "localhost:9092")
+  )
     .split(",")
     .map((value) => value.trim())
     .filter((value) => value.length > 0);
-  if (values.length === 0) throw new Error("KAFKA_BOOTSTRAP_SERVERS must contain a broker");
+  if (values.length === 0)
+    throw new Error("KAFKA_BOOTSTRAP_SERVERS must contain a broker");
   return values;
 }
 
@@ -26,12 +29,13 @@ function tlsOptions(): KafkaConfig["ssl"] {
 }
 
 export function createKafkaClientConfig(clientId: string): KafkaConfig {
-  const localPlaintext = !production && process.env.KAFKA_LOCAL_MODE === "plaintext";
+  const localSaslPlaintext =
+    !production && process.env.KAFKA_LOCAL_MODE === "sasl-plaintext";
   const config: KafkaConfig = {
     clientId,
     brokers: brokers(),
-    ssl: localPlaintext ? false : tlsOptions(),
-    sasl: localPlaintext ? undefined : {
+    ssl: localSaslPlaintext ? false : tlsOptions(),
+    sasl: {
       mechanism: "plain",
       username: required("KAFKA_SASL_USERNAME"),
       password: required("KAFKA_SASL_PASSWORD"),
@@ -41,5 +45,9 @@ export function createKafkaClientConfig(clientId: string): KafkaConfig {
 }
 
 export function createKafkaProducerConfig(): ProducerConfig {
-  return { allowAutoTopicCreation: false, idempotent: true, maxInFlightRequests: 5 };
+  return {
+    allowAutoTopicCreation: false,
+    idempotent: true,
+    maxInFlightRequests: 5,
+  };
 }

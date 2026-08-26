@@ -15,7 +15,13 @@ describe("hasTrustedParcelMetadata", () => {
         quantity: 2,
         variantId: "small",
         sellerId: undefined,
-        parcel: { weightGrams: 500, lengthCm: 10, widthCm: 8, heightCm: 4, declaredValueMinor: 100 },
+        parcel: {
+          weightGrams: 500,
+          lengthCm: 10,
+          widthCm: 8,
+          heightCm: 4,
+          declaredValueMinor: 100,
+        },
       },
       {
         productId: productIdSchema.parse("product-2"),
@@ -25,7 +31,13 @@ describe("hasTrustedParcelMetadata", () => {
         quantity: 1,
         variantId: "large",
         sellerId: undefined,
-        parcel: { weightGrams: 1500, lengthCm: 30, widthCm: 20, heightCm: 10, declaredValueMinor: 200 },
+        parcel: {
+          weightGrams: 1500,
+          lengthCm: 30,
+          widthCm: 20,
+          heightCm: 10,
+          declaredValueMinor: 200,
+        },
       },
     ]);
 

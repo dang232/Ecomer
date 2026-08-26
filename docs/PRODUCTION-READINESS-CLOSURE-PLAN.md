@@ -1,11 +1,26 @@
 # Production Readiness Closure Plan
 
-Status: Active release-closure plan; backend live-shipping contract merged in PR #314 (`1cd5495f`), browser and deployment proof still pending.
+Status: PR #320 repository-owned closure approved. Final Wave is **APPROVE** for the 32-task scope;
+production promotion remains blocked by external deployment, provider, broker, and browser evidence.
 
 This plan closes repository-owned correctness and safety gaps while keeping local stubs
 explicitly local. The existing [`PRODUCTION-READINESS-REVIEW.md`](PRODUCTION-READINESS-REVIEW.md)
 remains the release ledger for PR-000 through PR-015 and the code-owned backlog PR-016 through
 PR-023.
+
+## PR #320 Final Wave
+
+The completed wave is recorded in `.omo/evidence/vnshop-deep-fix/*.log` and the current handover.
+It adds authoritative parcel variants, durable saga/outbox and DLT replay, principal-scoped idempotency,
+HMAC/JWT and mTLS boundaries, fail-closed Compose passwords, the canonical Kafka manifest, HA and
+Prometheus/Grafana alert contracts, `/api/v1` plus 90-day `Sunset`, RFC 7807 `problem+json` with
+`traceId`, cache jitter/negative TTL/single-flight, Java 25 class splits, FE contract boundaries,
+Flutter six-route and COD/VietQR/SePay parity, synchronized language resources, ARIA and contrast
+coverage, and responsive immutable image/CDN policy.
+
+The approval is repository-scoped. GHCR fixtures are not published, SealedSecret values are external,
+live Compose requires an environment file, and broker/browser runtime proof is gated. MoMo and VNPay
+remain disabled. No retroactive parcel or order backfill is included.
 
 ## Execution Order
 

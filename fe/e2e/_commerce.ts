@@ -10,8 +10,8 @@ const TRUSTED_PARCEL: ParcelDimensions = {
   weightGrams: 1000,
   lengthCm: 30,
   widthCm: 20,
-    heightCm: 10,
-    declaredValueMinor: 125000,
+  heightCm: 10,
+  declaredValueMinor: 125000,
 };
 
 export interface TrustedSellerProduct {
@@ -37,8 +37,8 @@ function productFromResponse(payload: ProductResponse, operation: string): Trust
     parcel?.weightGrams !== TRUSTED_PARCEL.weightGrams ||
     parcel?.lengthCm !== TRUSTED_PARCEL.lengthCm ||
     parcel?.widthCm !== TRUSTED_PARCEL.widthCm ||
-    parcel?.heightCm !== TRUSTED_PARCEL.heightCm
-    || parcel?.declaredValueMinor !== TRUSTED_PARCEL.declaredValueMinor
+    parcel?.heightCm !== TRUSTED_PARCEL.heightCm ||
+    parcel?.declaredValueMinor !== TRUSTED_PARCEL.declaredValueMinor
   ) {
     throw new Error(`${operation} response did not contain the expected trusted parcel product`);
   }

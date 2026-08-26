@@ -1,22 +1,21 @@
 # Handoff
 
-> **Current status:** Read [`docs/SESSION-HANDOVER-2026-08-18.md`](docs/SESSION-HANDOVER-2026-08-18.md) first. This file remains a compatibility entry point and was refreshed after PR #314.
+> **Current status:** Read [`docs/SESSION-HANDOVER-2026-08-26-DEEP-FIX.md`](docs/SESSION-HANDOVER-2026-08-26-DEEP-FIX.md) first. This file remains a compatibility entry point and was refreshed for PR #320.
 
-**Last updated:** 2026-08-18 (HEAD `1cd5495f`)
+**Last updated:** 2026-08-26 (PR #320, HEAD `3e33684`)
 **Read this first if you're picking up this codebase.** It replaces the need to walk all 29 SESSION-HANDOVER files for the common pickup case.
 
 ---
 
 ## Current Pickup
 
-The latest merged work is PR #314, which completes the backend live-shipping checkout contract. The remaining
-browser blocker is trusted parcel metadata: `fe/src/app/pages/checkout/CheckoutPage.tsx` intentionally refuses
-to submit when product/cart data cannot provide authoritative dimensions. Do not replace that guard with guessed
-browser values; implement the product/variant parcel-data contract first.
+The latest deep-fix wave is PR #320. Trusted parcel metadata now travels from product variants through
+cart, checkout, order, and shipping. The browser still fails closed when that authoritative data is absent.
+Do not replace that guard with guessed browser values.
 
-Production readiness is still blocked by Kubernetes and provider evidence: all-zero application image digests,
-an empty SealedSecret, placeholder public origins, stub/demo provider modes, local server fallbacks, provider
-credentials, Kafka topology/TLS, and Elasticsearch security. See `docs/PRODUCTION-READINESS-REVIEW.md`.
+Production readiness remains blocked by external Kubernetes and provider evidence: real GHCR image publication
+and digests, SealedSecret ciphertext, public origins, live provider credentials, broker/browser access, HA Kafka
+with TLS and replication, and secured Elasticsearch. See `docs/PRODUCTION-READINESS-REVIEW.md`.
 
 ## What this codebase is
 

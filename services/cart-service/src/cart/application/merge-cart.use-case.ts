@@ -14,12 +14,18 @@ export class MergeCartUseCase {
   async execute(
     userId: string,
     guestSessionId: string,
-    items: readonly { productId: string; quantity: number; variantId?: string }[],
+    items: readonly {
+      productId: string;
+      quantity: number;
+      variantId?: string;
+    }[],
     idempotencyKey: string,
   ): Promise<CartResponse> {
     const guestKey = `guest:${guestSessionId}`;
     const snapshots = await Promise.all(
-      items.map((item) => this.productClient.getSnapshot(item.productId, item.variantId)),
+      items.map((item) =>
+        this.productClient.getSnapshot(item.productId, item.variantId),
+      ),
     );
     const guestCart = Cart.create(guestKey);
     for (let index = 0; index < items.length; index += 1) {

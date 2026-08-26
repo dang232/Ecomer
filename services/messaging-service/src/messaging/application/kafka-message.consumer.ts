@@ -31,10 +31,10 @@ export class KafkaMessageConsumer {
   constructor(private readonly gateway: MessagingWsGateway) {}
 
   @MessagePattern(MESSAGING_TOPIC)
-  async handleMessageSent(
+  handleMessageSent(
     @Payload() payload: MessageEventPayload,
     @Ctx() _ctx: KafkaContext,
-  ): Promise<void> {
+  ): void {
     const extracted = extractKafkaContext(_ctx.getMessage());
     return context.with(extracted, () => {
       if (!payload?.threadId || !payload.recipientId) return;

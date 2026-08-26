@@ -239,7 +239,7 @@ services:
         limits:
           memory: "1073741824"
     environment:
-      ELASTIC_PASSWORD: task14-elastic
+       ELASTIC_PASSWORD: $ELASTIC_PASSWORD
       ES_JAVA_OPTS: -Xms512m -Xmx512m
       discovery.type: single-node
       xpack.security.enabled: "true"
@@ -247,7 +247,7 @@ services:
     healthcheck:
       test:
         - CMD-SHELL
-        - curl -fsS -u elastic:task14-elastic http://localhost:9200/_cluster/health
+         - curl -fsS -u elastic:$ELASTIC_PASSWORD http://localhost:9200/_cluster/health
           >/dev/null
       timeout: 10s
       interval: 15s
@@ -1761,7 +1761,7 @@ services:
         limits:
           memory: "805306368"
     environment:
-      ELASTICSEARCH_PASSWORD: task14-elastic
+       ELASTICSEARCH_PASSWORD: $ELASTIC_PASSWORD
       ELASTICSEARCH_SSL_BUNDLE: ""
       ELASTICSEARCH_URL: http://elasticsearch:9200
       ELASTICSEARCH_USERNAME: elastic

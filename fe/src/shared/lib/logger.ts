@@ -3,18 +3,29 @@ type LogFields = Readonly<Record<string, unknown>>;
 
 const levels: Readonly<Record<LogLevel, number>> = { debug: 10, info: 20, warn: 30, error: 40 };
 const configuredLevel: string | undefined = import.meta.env.VITE_LOG_LEVEL;
-const minimumLevel: LogLevel = configuredLevel === "debug" || configuredLevel === "info"
-  || configuredLevel === "warn" || configuredLevel === "error"
-  ? configuredLevel
-  : import.meta.env.DEV ? "debug" : "info";
-const sensitiveKey = /(authorization|cookie|token|password|secret|email|phone|address|body|payload|query|search|message|stack|componentstack)/i;
+const minimumLevel: LogLevel =
+  configuredLevel === "debug" ||
+  configuredLevel === "info" ||
+  configuredLevel === "warn" ||
+  configuredLevel === "error"
+    ? configuredLevel
+    : import.meta.env.DEV
+      ? "debug"
+      : "info";
+const sensitiveKey =
+  /(authorization|cookie|token|password|secret|email|phone|address|body|payload|query|search|message|stack|componentstack)/i;
 
 function redact(value: unknown, key = ""): unknown {
   if (sensitiveKey.test(key)) return "[REDACTED]";
   if (value instanceof Error) return { name: value.name, message: "[REDACTED]" };
   if (Array.isArray(value)) return value.map((entry) => redact(entry));
   if (value && typeof value === "object") {
-    return Object.fromEntries(Object.entries(value).map(([entryKey, entryValue]) => [entryKey, redact(entryValue, entryKey)]));
+    return Object.fromEntries(
+      Object.entries(value).map(([entryKey, entryValue]) => [
+        entryKey,
+        redact(entryValue, entryKey),
+      ]),
+    );
   }
   return value;
 }

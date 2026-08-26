@@ -253,7 +253,13 @@ describe('Cart', () => {
     });
 
     it('itemKey is productId when variant absent', () => {
-      const item = CartItem.create('product-1', 'T-Shirt', '', Money.of(200), 1);
+      const item = CartItem.create(
+        'product-1',
+        'T-Shirt',
+        '',
+        Money.of(200),
+        1,
+      );
       expect(item.itemKey).toBe('product-1');
     });
   });

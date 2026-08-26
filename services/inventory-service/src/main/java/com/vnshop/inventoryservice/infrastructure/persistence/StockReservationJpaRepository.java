@@ -1,7 +1,7 @@
 package com.vnshop.inventoryservice.infrastructure.persistence;
 
 import com.vnshop.inventoryservice.domain.StockReservation;
-import com.vnshop.inventoryservice.application.ReservationOperation;
+import com.vnshop.inventoryservice.domain.ReservationOperation;
 import com.vnshop.inventoryservice.domain.port.out.StockReservationPort;
 import java.time.Instant;
 import java.util.List;

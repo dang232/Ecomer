@@ -8,7 +8,7 @@ import { startTracing } from './tracing';
 import { httpServerRequestsSeconds } from './metrics';
 
 async function bootstrap() {
-  await startTracing();
+  startTracing();
   const app = await NestFactory.create(AppModule);
   app.use((request: Request, response: Response, next: NextFunction) => {
     const stopTimer = httpServerRequestsSeconds.startTimer();
@@ -16,7 +16,7 @@ async function bootstrap() {
       stopTimer({
         method: request.method,
         status: String(response.statusCode),
-        route: request.route?.path ?? 'unknown',
+        route: request.path,
       });
     });
     next();

@@ -1,5 +1,6 @@
 package com.vnshop.inventoryservice.application;
 
+import com.vnshop.inventoryservice.domain.ReservationOperation;
 import com.vnshop.inventoryservice.domain.StockReservation;
 import com.vnshop.inventoryservice.domain.port.out.StockReservationPort;
 import com.vnshop.inventoryservice.domain.port.out.StockReservationPort.DecrementOutcome;

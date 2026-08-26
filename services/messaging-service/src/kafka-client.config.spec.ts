@@ -4,9 +4,9 @@ import { join } from "node:path";
 
 const originalEnvironment = { ...process.env };
 
-function loadConfig() {
+function loadConfig(): typeof import("./messaging/infrastructure/kafka-client.config") {
   jest.resetModules();
-  return require("./messaging/infrastructure/kafka-client.config") as typeof import("./messaging/infrastructure/kafka-client.config");
+  return jest.requireActual("./messaging/infrastructure/kafka-client.config");
 }
 
 function setSecureEnvironment(directory: string): void {
@@ -34,10 +34,18 @@ it("builds a hostname-verified SASL TLS client from real PEM files", () => {
     expect(config).toMatchObject({
       clientId: "messaging-test",
       brokers: ["kafka-0:9092", "kafka-1:9092"],
-      sasl: { mechanism: "plain", username: "svc-messaging", password: "password" },
+      sasl: {
+        mechanism: "plain",
+        username: "svc-messaging",
+        password: "password",
+      },
       ssl: { rejectUnauthorized: true },
     });
-    expect(config.ssl).toMatchObject({ ca: [Buffer.from("ca")], cert: Buffer.from("cert"), key: Buffer.from("key") });
+    expect(config.ssl).toMatchObject({
+      ca: [Buffer.from("ca")],
+      cert: Buffer.from("cert"),
+      key: Buffer.from("key"),
+    });
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
@@ -54,7 +62,10 @@ it.each([
   try {
     setSecureEnvironment(directory);
     delete process.env[name];
-    expect(() => loadConfig().createKafkaClientConfig("messaging-test")).toThrow(name);
+    const config = loadConfig();
+    expect(() => config.createKafkaClientConfig("messaging-test")).toThrow(
+      name,
+    );
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
@@ -65,7 +76,10 @@ it("fails closed when the broker list is empty", () => {
   try {
     setSecureEnvironment(directory);
     process.env.KAFKA_BOOTSTRAP_SERVERS = " , ";
-    expect(() => loadConfig().createKafkaClientConfig("messaging-test")).toThrow("KAFKA_BOOTSTRAP_SERVERS");
+    const config = loadConfig();
+    expect(() => config.createKafkaClientConfig("messaging-test")).toThrow(
+      "KAFKA_BOOTSTRAP_SERVERS",
+    );
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
@@ -73,8 +87,18 @@ it("fails closed when the broker list is empty", () => {
 
 it("permits explicit non-production plaintext mode", () => {
   process.env.NODE_ENV = "test";
-  process.env.KAFKA_LOCAL_MODE = "plaintext";
+  process.env.KAFKA_LOCAL_MODE = "sasl-plaintext";
   process.env.KAFKA_BOOTSTRAP_SERVERS = "localhost:9092";
+  process.env.KAFKA_SASL_USERNAME = "local-user";
+  process.env.KAFKA_SASL_PASSWORD = "local-password";
   const config = loadConfig().createKafkaClientConfig("messaging-local");
-  expect(config).toMatchObject({ brokers: ["localhost:9092"], ssl: false, sasl: undefined });
+  expect(config).toMatchObject({
+    brokers: ["localhost:9092"],
+    ssl: false,
+    sasl: {
+      mechanism: "plain",
+      username: "local-user",
+      password: "local-password",
+    },
+  });
 });

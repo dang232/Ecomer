@@ -64,7 +64,7 @@ export function ImageWithFallback({
     <img
       {...rest}
       src={optimizedSrc}
-      srcSet={srcSet ?? optimizedSrcSet ?? undefined}
+      srcSet={usingFallback ? undefined : (srcSet ?? optimizedSrcSet ?? undefined)}
       sizes={sizes}
       alt={alt}
       className={className}

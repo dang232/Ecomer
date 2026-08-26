@@ -1,5 +1,7 @@
 package com.vnshop.inventoryservice.application;
 
+import com.vnshop.inventoryservice.domain.ReservationOperation;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 

@@ -138,8 +138,8 @@ test.describe("a11y — seller dashboard", () => {
     page,
   }) => {
     await loginAsPersona(page, "seller");
-    await page.goto("/seller");
     await installCsrfPatch(page);
+    await page.goto("/seller");
 
     await expect(page.getByTestId("seller-dashboard")).toBeVisible({ timeout: 20_000 });
 
@@ -153,8 +153,8 @@ test.describe("a11y — seller dashboard", () => {
 test.describe("a11y — admin panel", () => {
   test("Admin panel passes axe-core wcag2a + wcag2aa (no serious/critical)", async ({ page }) => {
     await loginAsPersona(page, "admin");
-    await page.goto("/admin");
     await installCsrfPatch(page);
+    await page.goto("/admin");
 
     await expect(page.getByText(/Admin Dashboard|Tổng quan|Admin Console/i).first()).toBeVisible({
       timeout: 20_000,

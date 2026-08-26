@@ -20,7 +20,13 @@ const stockQuantitySchema = z.number().int().min(0, "Stock cannot be negative");
 const sellerProductParcelSchema = parcelDimensionsSchema
   .partial()
   .superRefine((parcel, context) => {
-    const fields = ["weightGrams", "lengthCm", "widthCm", "heightCm", "declaredValueMinor"] as const;
+    const fields = [
+      "weightGrams",
+      "lengthCm",
+      "widthCm",
+      "heightCm",
+      "declaredValueMinor",
+    ] as const;
     const hasAnyValue = fields.some((field) => parcel[field] !== undefined);
     if (!hasAnyValue) return;
 
@@ -261,9 +267,9 @@ function completeParcel(
     return {
       weightGrams,
       lengthCm,
-    widthCm,
-    heightCm,
-    declaredValueMinor: declaredValueMinor ?? 0,
+      widthCm,
+      heightCm,
+      declaredValueMinor: declaredValueMinor ?? 0,
     };
   }
   return undefined;

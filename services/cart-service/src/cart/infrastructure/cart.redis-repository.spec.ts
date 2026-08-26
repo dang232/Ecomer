@@ -57,7 +57,12 @@ describe('CartRedisRepository', () => {
 
     await new CartRedisRepository(redis).save(cart, 3600);
 
-    const payload = JSON.parse(setex.mock.calls[0]?.[2] as string) as {
+    const calls = setex.mock.calls as readonly (readonly [
+      string,
+      number,
+      string,
+    ])[];
+    const payload = JSON.parse(calls[0]?.[2] ?? '') as {
       version: number;
       processedMergeKeys: string[];
     };

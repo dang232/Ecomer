@@ -1,6 +1,7 @@
 package com.vnshop.orderservice.infrastructure.web;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -10,6 +11,16 @@ public record ProblemDetails(
         String type, String title, int status, String detail, String instance, String code,
         String requestId, String traceId, boolean retryable, Map<String, List<String>> fields,
         @Deprecated String errorCode) {
+    @JsonProperty("success")
+    public boolean success() {
+        return false;
+    }
+
+    @JsonProperty("message")
+    public String message() {
+        return detail;
+    }
+
     public static ProblemDetails of(String type, String title, int status, String detail, String instance,
                                     String code, String requestId, String traceId, boolean retryable,
                                     Map<String, List<String>> fields) {

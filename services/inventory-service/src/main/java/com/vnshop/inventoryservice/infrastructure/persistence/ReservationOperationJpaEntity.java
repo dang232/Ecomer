@@ -1,6 +1,6 @@
 package com.vnshop.inventoryservice.infrastructure.persistence;
 
-import com.vnshop.inventoryservice.application.ReservationOperation;
+import com.vnshop.inventoryservice.domain.ReservationOperation;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

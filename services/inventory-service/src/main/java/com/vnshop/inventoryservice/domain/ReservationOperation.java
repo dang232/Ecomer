@@ -1,4 +1,4 @@
-package com.vnshop.inventoryservice.application;
+package com.vnshop.inventoryservice.domain;
 
 import java.time.Instant;
 

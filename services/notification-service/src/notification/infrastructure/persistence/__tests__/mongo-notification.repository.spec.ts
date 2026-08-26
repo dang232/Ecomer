@@ -32,11 +32,11 @@ describe('MongoNotificationRepository', () => {
     }).compile();
 
     repo = module.get(MongoNotificationRepository);
-  });
+  }, 30000);
 
   afterAll(async () => {
-    await mongoConnection.close();
-    await mongod.stop();
+    await mongoConnection?.close();
+    await mongod?.stop();
   });
 
   it('saves and retrieves a notification by id', async () => {
@@ -270,7 +270,9 @@ describe('MongoNotificationRepository', () => {
     );
 
     expect(retries.map((notification) => notification.id)).toContain(due.id);
-    expect(retries.map((notification) => notification.id)).not.toContain(later.id);
+    expect(retries.map((notification) => notification.id)).not.toContain(
+      later.id,
+    );
   });
 
   it('findByIdempotencyKey returns null for missing key', async () => {

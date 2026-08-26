@@ -53,6 +53,24 @@ describe("ImageWithFallback", () => {
     expect(screen.getByLabelText("Product")).toBeInTheDocument();
   });
 
+  it("drops the original srcSet when switching to a fallback image", () => {
+    render(
+      <ImageWithFallback
+        src="https://cdn/missing.jpg"
+        fallbackSrc="https://cdn/fallback.jpg"
+        alt="Product"
+        srcSet="https://cdn/missing-320.jpg 320w"
+      />,
+    );
+
+    const img = screen.getByAltText<HTMLImageElement>("Product");
+    expect(img.srcset).toBe("https://cdn/missing-320.jpg 320w");
+
+    fireEvent.error(img);
+
+    expect(screen.getByAltText<HTMLImageElement>("Product").srcset).toBe("");
+  });
+
   it("goes straight to placeholder on error when no fallbackSrc is provided", () => {
     render(<ImageWithFallback src="https://cdn/missing.jpg" alt="Product" />);
     const img = screen.getByAltText("Product");

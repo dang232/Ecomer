@@ -52,12 +52,10 @@ describe('CartPersistenceService', () => {
     } as CartMikroOrmEntity;
     const redisGet = jest.fn().mockResolvedValue(null);
     const events: string[] = [];
-    const redisSetex = jest.fn(
-      async (_key: string, _ttl: number, _value: string) => {
-        events.push('redis-set');
-        return 'OK';
-      },
-    );
+    const redisSetex = jest.fn(() => {
+      events.push('redis-set');
+      return 'OK';
+    });
     const execute = jest.fn().mockResolvedValue([]);
     const findOne = jest.fn().mockResolvedValue(entity);
     const transactional = jest
@@ -91,7 +89,12 @@ describe('CartPersistenceService', () => {
       'user-1',
     );
 
-    const payload = JSON.parse(redisSetex.mock.calls[0]?.[2] as string) as {
+    const redisSetexCalls = redisSetex.mock.calls as readonly (readonly [
+      string,
+      number,
+      string,
+    ])[];
+    const payload = JSON.parse(redisSetexCalls[0]?.[2] ?? '') as {
       items: Array<{ parcel?: typeof parcel }>;
       version: number;
     };
@@ -371,7 +374,12 @@ describe('CartPersistenceService', () => {
     const result = await service.findByUserId('user-1');
 
     expect(result?.generationId).toBe(newGeneration);
-    const refreshed = JSON.parse(redisSetex.mock.calls[0]?.[2] as string) as {
+    const redisSetexCalls = redisSetex.mock.calls as readonly (readonly [
+      string,
+      number,
+      string,
+    ])[];
+    const refreshed = JSON.parse(redisSetexCalls[0]?.[2] ?? '') as {
       generationId: string;
     };
     expect(refreshed.generationId).toBe(newGeneration);
@@ -465,7 +473,12 @@ describe('CartPersistenceService', () => {
       { userId: 'user-1' },
       { lockMode: LockMode.PESSIMISTIC_WRITE },
     );
-    const payload = JSON.parse(redisSetex.mock.calls[0]?.[2] as string) as {
+    const redisSetexCalls = redisSetex.mock.calls as readonly (readonly [
+      string,
+      number,
+      string,
+    ])[];
+    const payload = JSON.parse(redisSetexCalls[0]?.[2] ?? '') as {
       version: number;
     };
     expect(payload.version).toBe(3);
@@ -676,25 +689,28 @@ describe('CartPersistenceService', () => {
     } as CartMikroOrmEntity;
     const execute = jest.fn().mockResolvedValue([]);
     const findOne = jest.fn().mockResolvedValue(entity);
-    const removeAndFlush = jest.fn().mockResolvedValue(undefined);
+    const removeAndFlush = jest
+      .fn<(value: CartMikroOrmEntity) => Promise<void>>()
+      .mockResolvedValue(undefined);
     const events: string[] = [];
     const transactional = jest.fn(
       async (callback: (em: EntityManager) => Promise<void>) =>
         callback({
           findOne,
-          removeAndFlush: jest.fn(async (value: CartMikroOrmEntity) => {
+          removeAndFlush: jest.fn((value: CartMikroOrmEntity) => {
             expect(value).toBe(entity);
             events.push('removed');
-            return removeAndFlush(value);
+            void removeAndFlush(value);
+            return Promise.resolve();
           }),
           getConnection: () => ({ execute }),
         } as unknown as EntityManager).then(() => {
           events.push('committed');
         }),
     );
-    const redisDel = jest.fn(async () => {
+    const redisDel = jest.fn(() => {
       events.push('redis-invalidated');
-      return 1;
+      return Promise.resolve(1);
     });
 
     await new CartPersistenceService(

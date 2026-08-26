@@ -22,7 +22,7 @@ describe('notification bootstrap', () => {
     startTracing.mockImplementation(() => {
       callOrder.push('tracing');
     });
-    createApp.mockImplementation(async () => {
+    createApp.mockImplementation(() => {
       callOrder.push('nest');
       return {
         connectMicroservice: jest.fn(),

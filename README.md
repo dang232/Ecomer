@@ -2,7 +2,7 @@
 
 A polyglot microservices e-commerce platform demonstrating DDD, CQRS, hexagonal architecture, and event-driven sagas, with a React SPA and Flutter mobile app.
 
-VNShop is a portfolio full-stack project for a Vietnamese multi-seller marketplace inspired by Shopee, Lazada, and Tiki. It ships with: 19 services (Spring Boot + NestJS), per-service Postgres, Kafka (SASL-authenticated + per-service ACLs) + saga + outbox, Keycloak-backed httpOnly-cookie auth, a React + Vite SPA, and a Flutter mobile app with OneSignal push notifications and VietQR/MoMo payment integration. The current branch is `main` at merge `1cd5495f` (PR #314, 2026-08-17), which completes the backend live-shipping checkout contract. The latest documented local Docker evidence is `e2e-day.mjs` (66/66 API checks) and Playwright (202 passed, 2 skipped, 204 total); rerun both after the shipping-contract merge before treating those counts as fresh release evidence.
+VNShop is a portfolio full-stack project for a Vietnamese multi-seller marketplace inspired by Shopee, Lazada, and Tiki. It ships with: 19 services (Spring Boot + NestJS), per-service Postgres, Kafka (SASL-authenticated + per-service ACLs) + saga + outbox, Keycloak-backed httpOnly-cookie auth, a React + Vite SPA, and a Flutter mobile app with OneSignal push notifications and VietQR/MoMo payment integration. PR #320 (`3e33684`, 2026-08-26) is the deep-fix wave covering 32 reliability, security, contract, infrastructure, frontend, mobile, accessibility, and media tasks. It preserves local-only provider stubs and does not enable MoMo or VNPay.
 
 ## System Requirements
 
@@ -26,7 +26,7 @@ VNShop is a portfolio full-stack project for a Vietnamese multi-seller marketpla
 | [Status reality](docs/STATUS-REALITY-2026-05-14.md) | Historical reconciliation of service health, feature coverage, and known gaps |
 | [Audit summary 2026-05-21](docs/AUDIT-SUMMARY-2026-05-21.md) | Consolidated security audit ledger (pt12 → pt23) — 18 findings closed across 7 services |
 | [E2E audit 2026-05-18](docs/E2E-AUDIT-2026-05-18.md) | What `e2e-day.mjs` and Playwright cover, plus the bugs fixed during the buildout |
-| [Current session handover](docs/SESSION-HANDOVER-2026-08-18.md) | Post-PR #314 status, blockers, and next steps |
+| [Current session handover](docs/SESSION-HANDOVER-2026-08-26-DEEP-FIX.md) | PR #320 scope, evidence, approval, and external blockers |
 | [Historical session handover](docs/SESSION-HANDOVER-2026-07-10.md) | July implementation handover |
 | [Penetration test report](docs/PENETRATION-TESTING-REPORT-2026-07-11.md) | Security verification results and remaining findings |
 | [Release and recovery runbook](docs/operations/release-and-recovery.md) | Release, rollback, and recovery operating procedure |
@@ -38,27 +38,26 @@ For a chronological view of what shipped, walk the handover series in `docs/SESS
 
 ## Current Production Readiness
 
-The repository has a working local integration topology and substantial domain/test coverage. The
-2026-07-22 closure round completed the main repository-owned reliability fixes: carrier webhook
-authentication and durable acceptance, Kafka acknowledgement handling, product event delivery and
-search repair, atomic authenticated cart merge, fail-closed inventory reservation, and notification
-retry persistence. The detailed implementation evidence is maintained in
+The repository has a working local integration topology and substantial domain/test coverage. PR #320
+completed the 32-task deep-fix wave: trusted parcel variants, durable saga and outbox delivery,
+principal-scoped idempotency, HMAC/JWT and mTLS boundaries, canonical Kafka topics and DLT replay,
+cache jitter and single-flight loading, RFC 7807 errors, API version compatibility, HA and observability
+contracts, Java 25 class splits, frontend and Flutter contract consolidation, i18n/a11y, and immutable
+responsive image delivery. The detailed implementation evidence is maintained in
 [`docs/PRODUCTION-READINESS-REVIEW.md`](docs/PRODUCTION-READINESS-REVIEW.md).
 
 The Kubernetes promotion artifacts are still **not production-ready**. Before treating a deployment as
-live, resolve the empty SealedSecret, replace all-zero image digests, select live carrier/payment modes,
-provide independent provider secrets, secure the shared Kafka and Elasticsearch topology, and remove or
-gate server-side localhost/stub/demo fallbacks. PR #314 now carries carrier contact, address-code, parcel,
-declared-value, and COD fields through the order-to-shipping gRPC contract. The remaining browser checkout
-gap is that the React storefront intentionally fails closed because product/cart responses do not yet expose
-trusted parcel dimensions; the API harness can provide those fields, but the real browser checkout cannot
-submit until an authoritative product/variant parcel-data contract is added. The execution order and proof gates are in
+live, resolve the external SealedSecret values, publish and verify real GHCR image digests, select live
+carrier/payment modes, provide independent provider secrets, secure the HA Kafka and Elasticsearch
+topology, and remove or gate server-side localhost/stub/demo fallbacks. The parcel variant schema is now
+authoritative across product, cart, checkout, and shipping, so browser checkout does not invent dimensions.
+The execution order and proof gates are in
 [`docs/PRODUCTION-READINESS-CLOSURE-PLAN.md`](docs/PRODUCTION-READINESS-CLOSURE-PLAN.md).
 
-The immediate engineering sequence is: add trusted parcel metadata to the product/cart/checkout contract,
-run live-shipping and compensation verification, then close Kubernetes and provider evidence gates. The
-August admin cursor-pagination plan is the next feature backlog after these release-blocking checks; the
-older May-July handover and roadmap files are historical archives.
+Final Wave status is **APPROVE for the repository-owned PR #320 scope**. This is not production approval.
+Evidence is recorded under `.omo/evidence/vnshop-deep-fix/*.log`; live broker/browser proof and external
+deployment values remain release gates. The August admin cursor-pagination plan remains the next feature
+backlog after those gates.
 
 Local-only values are intentional in `.env.example` and `infra/compose/staging/docker-compose.staging.yml`.
 They are documented for developer setup and must never be copied into shared staging or production. The
@@ -145,7 +144,9 @@ Historical baseline unit tests (2026-06-21):
 | FE vitest | 169/169 |
 | FE typecheck | 0 errors |
 
-### Recent shipped (2026-07-10 through 2026-07-22)
+### Recent shipped (2026-07-10 through 2026-08-26)
+
+- **PR #320 deep-fix wave** (2026-08-25 to 2026-08-26). Parcel variants now carry authoritative dimensions and declared-value inputs. Saga and outbox paths wait for broker acknowledgement, idempotency is principal and body-hash scoped, webhook and gRPC boundaries use HMAC/JWT or mTLS, Kafka topics and DLT replay are canonical and durable, and Prometheus/Grafana cover RED, saga, outbox, DLT, cache, and provider latency signals. The gateway supports `/api/v1` compatibility with a 90-day `Sunset`, RFC 7807 `problem+json` responses carry `traceId`, cache reads use jitter, negative TTLs, and same-JVM single-flight, and large Java classes were split below the 250 pure-LOC target. FE and Flutter contracts are consolidated, Flutter covers six scoped routes plus truthful COD/VietQR/SePay configuration, i18n is synchronized, ARIA and keyboard behavior are documented, text contrast reaches 4.97:1, and versioned media uses responsive `srcSet` plus immutable CDN cache policy. See [`docs/SESSION-HANDOVER-2026-08-26-DEEP-FIX.md`](docs/SESSION-HANDOVER-2026-08-26-DEEP-FIX.md).
 
 - **Flutter mobile app** (2026-07-10). VNShop mobile app with VietQR/MoMo payment integration, OneSignal push notifications, BLoC state management, Vietnamese/English localization, and Material 3 design system.
 - **Production-readiness reliability closure** (2026-07-22). Payment callbacks, shipping webhooks, product events, and search projection repair now use durable delivery boundaries; Kafka failures remain retryable instead of being acknowledged early. Missing inventory projections reject reservation, and notification retries persist retry/DLQ state.

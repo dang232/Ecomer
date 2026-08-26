@@ -13,7 +13,13 @@ describe("cart contract characterization", () => {
       quantity: 2,
       sellerId: "seller-1",
       variantSku: "BLUE-L",
-       parcel: { weightGrams: 500, lengthCm: 20, widthCm: 15, heightCm: 10, declaredValueMinor: 125000 },
+      parcel: {
+        weightGrams: 500,
+        lengthCm: 20,
+        widthCm: 15,
+        heightCm: 10,
+        declaredValueMinor: 125000,
+      },
       upstreamOnly: "accepted then normalized away",
     });
 
@@ -25,7 +31,13 @@ describe("cart contract characterization", () => {
       quantity: 2,
       sellerId: "seller-1",
       variantId: "BLUE-L",
-       parcel: { weightGrams: 500, lengthCm: 20, widthCm: 15, heightCm: 10, declaredValueMinor: 125000 },
+      parcel: {
+        weightGrams: 500,
+        lengthCm: 20,
+        widthCm: 15,
+        heightCm: 10,
+        declaredValueMinor: 125000,
+      },
     });
     expect(parsed.productId).toBe("product-1");
   });
@@ -40,7 +52,13 @@ describe("cart contract characterization", () => {
       quantity: 1,
       subtotal: { amount: 1, currency: "VND" },
       parcel: { weightGrams: 1, lengthCm: 1, widthCm: 1, heightCm: 1, declaredValueMinor: 1 },
-      parcelSnapshot: { weightGrams: 2, lengthCm: 2, widthCm: 2, heightCm: 2, declaredValueMinor: 2 },
+      parcelSnapshot: {
+        weightGrams: 2,
+        lengthCm: 2,
+        widthCm: 2,
+        heightCm: 2,
+        declaredValueMinor: 2,
+      },
       addedAt: "2026-08-18T09:00:00.000Z",
     });
 
@@ -72,9 +90,10 @@ describe("cart contract characterization", () => {
   });
 
   it("defaults a missing cart item list and normalizes total money", () => {
-    expect(
-      cartSchema.parse({ totalAmount: { amount: 250_000, currency: "VND" } }),
-    ).toMatchObject({ items: [], totalAmount: 250_000 });
+    expect(cartSchema.parse({ totalAmount: { amount: 250_000, currency: "VND" } })).toMatchObject({
+      items: [],
+      totalAmount: 250_000,
+    });
   });
 
   it("rejects non-string branded product ids", () => {

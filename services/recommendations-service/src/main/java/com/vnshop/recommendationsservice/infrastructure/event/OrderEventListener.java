@@ -63,7 +63,7 @@ public class OrderEventListener {
             }
             aggregator.recordOrder(orderId, productIds);
         } catch (Exception exception) {
-            throw new IllegalArgumentException("order.created payload is invalid", exception);
+            LOGGER.warn("Skipping invalid order.created payload", exception);
         }
     }
 
