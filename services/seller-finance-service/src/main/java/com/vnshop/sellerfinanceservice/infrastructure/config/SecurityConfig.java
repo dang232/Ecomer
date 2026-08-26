@@ -16,17 +16,22 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
+    private static final String REFRESH_TOKEN_COOKIE = "vnshop_rt";
+
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
-                .csrf(csrf -> csrf.ignoringRequestMatchers(request ->
-                        request.getHeader("Authorization") != null))
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(csrfTokenRepository())
+                        .requireCsrfProtectionMatcher(cookieAuthenticatedRequestMatcher()))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api-docs", "/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
@@ -34,6 +39,25 @@ public class SecurityConfig {
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
                 .build();
+    }
+
+    private CookieCsrfTokenRepository csrfTokenRepository() {
+        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        repository.setCookieName("vnshop_csrf");
+        repository.setHeaderName("X-CSRF-Token");
+        repository.setCookiePath("/");
+        return repository;
+    }
+
+    private RequestMatcher cookieAuthenticatedRequestMatcher() {
+        return request -> {
+            if (List.of("GET", "HEAD", "OPTIONS", "TRACE").contains(request.getMethod())) {
+                return false;
+            }
+            return request.getCookies() != null
+                    && List.of(request.getCookies()).stream()
+                    .anyMatch(cookie -> REFRESH_TOKEN_COOKIE.equals(cookie.getName()));
+        };
     }
 
     private JwtAuthenticationConverter jwtAuthenticationConverter() {
