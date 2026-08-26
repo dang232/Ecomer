@@ -35,6 +35,12 @@
   - The verifier intentionally does not claim live registry, runtime, secret-material, or unrelated service-test health; this change is limited to semantic provider-scope detection.
 
 - ## [2026-08-26] Final FE/mobile verification continuation
-  - Repository-owned frontend and mobile gates pass: FE typecheck, Vitest, build, scoped lint/format checks, ImageWithFallback regression, Flutter analyze, and Flutter tests.
-  - Playwright discovery passes and the checkout provider-bearing selector resolves 3 tests, but live Chromium execution remains blocked because no Docker services are running and both `localhost:3000` and `localhost:8080` refuse connections.
-  - No live browser, accessibility, checkout-provider, or gateway result is claimed until the stack is started successfully.
+   - Repository-owned frontend and mobile gates pass: FE typecheck, Vitest, build, scoped lint/format checks, ImageWithFallback regression, Flutter analyze, and Flutter tests.
+   - Playwright discovery passes and the checkout provider-bearing selector resolves 3 tests, but live Chromium execution remains blocked because no Docker services are running and both `localhost:3000` and `localhost:8080` refuse connections.
+   - No live browser, accessibility, checkout-provider, or gateway result is claimed until the stack is started successfully.
+
+ - ## [2026-08-26] CI continuation
+   - `VNShop CI`, `CodeQL`, and `Observability validation` passed for `f4d29355`.
+   - `VNShop Broker Reliability` reached the focused suites and failed because Maven used JDK 17 while all Java services enforce Java 25. The Python fixtures and datastore checks passed before Maven started.
+   - Added an uncommitted `actions/setup-java` Temurin 25 step to `.github/workflows/ci-reliability.yml`, matching the Java coverage and CodeQL workflows. YAML LSP diagnostics and `git diff --check` pass.
+   - `VNShop Java Coverage` executed all 266 tests but correctly rejected the unchanged 90% line/branch policy at 62% line and 46% branch coverage. The JaCoCo CSV shows broad deficits across adapters, controllers, repositories, configuration, and video/review paths; no coverage gate was weakened.
