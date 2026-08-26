@@ -112,7 +112,7 @@ jobs:
             [[ "$attempt" = 30 ]] && { docker logs reliability-kafka; exit 1; }
             sleep 2
           done
-          docker exec -e KAFKA_USERNAME="$KAFKA_USERNAME" -e KAFKA_PASSWORD="$KAFKA_PASSWORD" reliability-kafka bash -ec 'printf "security.protocol=SASL_PLAINTEXT\nsasl.mechanism=PLAIN\nsasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username=\"$KAFKA_USERNAME\" password=\"$KAFKA_PASSWORD\";\n" > /tmp/admin.properties; for operation in CLUSTER_ACTION DESCRIBE; do kafka-acls --bootstrap-server 127.0.0.1:9092 --command-config /tmp/admin.properties --add --allow-principal User:$KAFKA_USERNAME --operation "$operation" --cluster; done'
+          docker exec -e KAFKA_USERNAME="$KAFKA_USERNAME" -e KAFKA_PASSWORD="$KAFKA_PASSWORD" reliability-kafka bash -ec 'printf "security.protocol=SASL_PLAINTEXT\nsasl.mechanism=PLAIN\nsasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username=\"$KAFKA_USERNAME\" password=\"$KAFKA_PASSWORD\";\n" > /tmp/admin.properties; for operation in ClusterAction Describe; do kafka-acls --bootstrap-server 127.0.0.1:9092 --command-config /tmp/admin.properties --add --allow-principal User:$KAFKA_USERNAME --operation "$operation" --cluster; done'
 
       - name: Validate required reliability secrets
         shell: bash
