@@ -1,0 +1,5 @@
+Task 30 verification 2026-08-26T00:06:49.4872787+07:00
+FE: focused i18n/accessibility Vitest 11 passed; lint:i18n passed (640 files, 1227 keys); typecheck:app passed; build passed.
+Flutter: gen-l10n completed; flutter analyze passed; focused account destination/router tests 8 passed.
+Static: mojibake scan passed for vnshop_mobile/lib; scoped checkout English aria labels removed. Full FE hardcoded English aria scan still reports out-of-scope existing labels.
+Blockers: ast-grep unavailable in environment; TypeScript LSP not installed; Playwright/live browser unavailable (no running localhost app); exact bash pipefail unavailable on Windows/WSL.

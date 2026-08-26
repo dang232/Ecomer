@@ -5,6 +5,9 @@ import com.vnshop.orderservice.application.CheckoutOrderUseCase;
 import com.vnshop.orderservice.domain.InvoiceAccessDeniedException;
 import com.vnshop.orderservice.infrastructure.cart.CartUnavailableException;
 import com.vnshop.orderservice.infrastructure.product.ProductCatalogUnavailableException;
+import com.vnshop.orderservice.infrastructure.grpc.PaymentException;
+import com.vnshop.orderservice.infrastructure.shipping.ShippingException;
+import com.vnshop.orderservice.infrastructure.dlt.DurableDltReplayConflictException;
 import io.opentelemetry.api.trace.Span;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
@@ -24,10 +27,15 @@ import java.util.List;
  *
  * traceId is pulled from the active OTEL span so callers can correlate with traces.
  */
-@RestControllerAdvice
+@org.springframework.web.bind.annotation.RestControllerAdvice
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(DurableDltReplayConflictException.class)
+    public ResponseEntity<ErrorResponse> dltReplayConflict(DurableDltReplayConflictException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of("DLT_REPLAY_CONFLICT", ex.getMessage(), traceId()));
+    }
 
     // --- 400 Bad Request -------------------------------------------------------
 
@@ -104,6 +112,20 @@ public class GlobalExceptionHandler {
         log.warn("cart-unavailable: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
             .body(ErrorResponse.of("CART_UNAVAILABLE", "Cart service is temporarily unavailable", traceId()));
+    }
+
+    @ExceptionHandler(ShippingException.class)
+    public ResponseEntity<ErrorResponse> shippingUnavailable(ShippingException ex) {
+        log.warn("shipping-quote-failed code={} traceId={}", ex.code(), traceId(), ex);
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+            .body(ErrorResponse.of(ex.code(), "Shipping service is temporarily unavailable", traceId()));
+    }
+
+    @ExceptionHandler(PaymentException.class)
+    public ResponseEntity<ErrorResponse> paymentFailure(PaymentException ex) {
+        log.error("payment-request-failed code={} traceId={}", ex.code(), traceId(), ex);
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+            .body(ErrorResponse.of(ex.code(), "Payment service is temporarily unavailable", traceId()));
     }
 
     // --- 500 Internal Server Error ---------------------------------------------

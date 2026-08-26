@@ -11,7 +11,7 @@ Workflow per message:
    - score > 0.7  → AUTO_REJECTED  : keep in staging 7 days, emit video.rejected
 6. Update DB record with nsfw_score + moderation_verdict.
 
-Retry policy: 3 attempts with back-off [10s, 30s, 120s], then DLT.
+Retry policy: 3 attempts with back-off [30s, 120s], then DLT.
 """
 
 import asyncio
@@ -19,7 +19,6 @@ import json
 import logging
 import os
 import tempfile
-import time
 import uuid
 from typing import Any
 
@@ -83,7 +82,7 @@ class ModerationConsumer:
             self._settings.kafka_topic_consume,
             self._settings.kafka_consumer_group,
         )
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             while self._running:
                 # Poll is blocking — run in executor to avoid blocking the event loop.
@@ -92,13 +91,12 @@ class ModerationConsumer:
                 )
                 for _tp, messages in records.items():
                     for message in messages:
-                        await loop.run_in_executor(
-                            None, self._handle_with_retry, message
-                        )
-                        self._consumer.commit()
+                        await self._handle_with_retry_async(message)
+                        await loop.run_in_executor(None, self._consumer.commit)
         except asyncio.CancelledError:
             logger.info("Consumer task cancelled")
         finally:
+            self._running = False
             if self._consumer:
                 self._consumer.close()
             self._producer.close()
@@ -110,7 +108,8 @@ class ModerationConsumer:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _handle_with_retry(self, message) -> None:
+    async def _handle_with_retry_async(self, message) -> None:
+        loop = asyncio.get_running_loop()
         payload: dict = message.value or {}
         # Spec: 3 attempts total with backoff [30s, 120s] between attempts.
         # First attempt runs immediately; the delays list is applied between attempts
@@ -121,7 +120,7 @@ class ModerationConsumer:
 
         for attempt in range(max_attempts):
             try:
-                self._process_message(payload)
+                await loop.run_in_executor(None, self._process_message, payload)
                 return
             except Exception as exc:
                 last_exc = exc
@@ -135,7 +134,7 @@ class ModerationConsumer:
                         wait,
                         exc,
                     )
-                    time.sleep(wait)
+                    await asyncio.sleep(wait)
                 else:
                     logger.error(
                         "All %d attempts exhausted for videoId=%s — sending to DLT",
@@ -146,8 +145,12 @@ class ModerationConsumer:
                     self._producer.send_to_dlt(
                         original_key=(str(message.key) if message.key is not None else ""),
                         payload=payload,
-                        error=str(last_exc),
+                     error=str(last_exc),
                     )
+
+    def _handle_with_retry(self, message) -> None:
+        """Compatibility driver for synchronous unit tests."""
+        asyncio.run(self._handle_with_retry_async(message))
 
     def _process_message(self, payload: dict) -> None:
         video_id: str = payload["videoId"]

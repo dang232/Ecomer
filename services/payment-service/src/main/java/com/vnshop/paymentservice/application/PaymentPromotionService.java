@@ -66,6 +66,10 @@ public class PaymentPromotionService {
         if (payment.status() == PaymentStatus.COMPLETED) {
             return PromotionResult.alreadyCompleted(payment);
         }
+        if (payment.status() != PaymentStatus.PENDING
+                && payment.status() != PaymentStatus.AWAITING_COLLECTION) {
+            throw new IllegalStateException("Only pending payments can be promoted");
+        }
 
         Payment saved = paymentRepository.save(payment.withResult(PaymentStatus.COMPLETED, command.providerRef()));
         ledgerService.recordPayment(saved);

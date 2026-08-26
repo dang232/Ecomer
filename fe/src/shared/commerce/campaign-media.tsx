@@ -31,6 +31,8 @@ export function CampaignMedia({
           src={imageUrl ?? ""}
           alt={imageAlt}
           className="h-full w-full object-cover transition-transform duration-[var(--duration-base)] motion-reduce:transform-none group-hover:scale-105"
+          imagePreset="detail"
+          sizes="(min-width: 640px) 50vw, 100vw"
         />
       </div>
       <div className="flex min-h-52 flex-col justify-center p-6">

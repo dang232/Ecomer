@@ -23,14 +23,14 @@ function configureDevRuntimeEndpoints(template: Record<string, unknown>, origin:
   const socketOrigin = origin.replace(/^http/, "ws");
   template.runtimeConfigUri = `${origin}/runtime-config.json`;
   template.webUri = `${origin}/`;
-  template.apiUri = `${origin}/api/`;
+  template.apiUri = `${origin}/api/v1/`;
   Object.assign(auth, {
     callbackUri: `${origin}/auth/callback`,
     logoutUri: `${origin}/`,
   });
   Object.assign(websocket, {
-    notificationsUri: `${socketOrigin}/api/ws/notifications`,
-    messagingUri: `${socketOrigin}/api/ws/messaging`,
+    notificationsUri: `${socketOrigin}/ws/notifications`,
+    messagingUri: `${socketOrigin}/ws/messaging`,
   });
 }
 
@@ -106,7 +106,11 @@ export default defineConfig({
         target: "http://127.0.0.1:8080",
         changeOrigin: true,
         ws: true,
-        rewrite: (requestPath) => requestPath.replace(/^\/api/, ""),
+      },
+      "/ws": {
+        target: "ws://127.0.0.1:8080",
+        changeOrigin: true,
+        ws: true,
       },
     },
   },

@@ -24,6 +24,7 @@ describe('AddToCartUseCase', () => {
       lengthCm: 30,
       widthCm: 20,
       heightCm: 10,
+      declaredValueMinor: 777000,
     };
     const productClient: ProductClientPort = {
       getSnapshot: jest.fn().mockResolvedValue({
@@ -47,6 +48,7 @@ describe('AddToCartUseCase', () => {
 
     expect(result.items[0]?.quantity).toBe(5);
     expect(result.items[0]?.parcel).toEqual(parcel);
+    expect(result.items[0]?.parcelSnapshot).toEqual(parcel);
     expect(save).toHaveBeenCalledWith(existingCart, expect.any(Number));
     expect(existingCart.items[0]?.quantity).toBe(5);
     expect(existingCart.items[0]?.parcel).toEqual(parcel);

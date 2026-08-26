@@ -7,6 +7,7 @@ import {
   type CheckoutProvider,
   type PaymentMethodOption,
 } from "@/shared/contracts/api";
+import { logger } from "@/shared/lib";
 
 export type Step = "address" | "shipping" | "payment" | "review" | "success";
 
@@ -85,7 +86,7 @@ export function toPaymentOptions(
       if (!parsed.success || !CHECKOUT_IMPLEMENTED_METHODS.includes(parsed.data)) {
         if (import.meta.env.DEV && !warnedUnsupportedProviders.has(provider)) {
           warnedUnsupportedProviders.add(provider);
-          console.warn(`[CheckoutPage] Unsupported checkout provider "${provider}" was omitted.`);
+          logger.warn("checkout.unsupported_provider", { provider });
         }
         return [];
       }

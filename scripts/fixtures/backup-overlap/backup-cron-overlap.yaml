@@ -1,0 +1,8 @@
+fixture: backup-cron-overlap
+script: infra/scripts/backup-cron.sh
+lock: atomic-directory
+expected:
+  first_run: allowed
+  overlapping_run: rejected
+  rejection_exit_code: 75
+  lock_path: BACKUP_LOCK_DIR

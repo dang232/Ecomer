@@ -27,6 +27,7 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 
 @RequiredArgsConstructor
 public class S3ObjectStorageAdapter implements ObjectStoragePort {
+    static final String IMMUTABLE_IMAGE_CACHE_CONTROL = "public, max-age=31536000, immutable";
     static final String METADATA_STORAGE_CLASS = "storage-class";
     static final String METADATA_SHA256 = "sha256";
     static final String METADATA_QUARANTINE_STATE = "quarantine-state";
@@ -121,6 +122,7 @@ public class S3ObjectStorageAdapter implements ObjectStoragePort {
                 .key(object.key())
                 .contentType(metadata.getContentType())
                 .contentLength(metadata.getContentLength())
+                .cacheControl(IMMUTABLE_IMAGE_CACHE_CONTROL)
                 .metadata(toS3Metadata(metadata));
     }
 

@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>4.0.7</version>
+		<version>4.1.0</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.vnshop</groupId>
@@ -28,17 +28,18 @@
 	</scm>
 	<properties>
 		<jackson.version>2.22.1</jackson.version>
-		<jackson.annotations.version>2.22</jackson.annotations.version>
+		<jackson.annotations.version>2.21</jackson.annotations.version>
 		<jackson3.version>3.1.4</jackson3.version>
 		<java.version>25</java.version>
 		<opentelemetry.javaagent.version>2.27.0</opentelemetry.javaagent.version>
 		<opentelemetry.version>1.64.0</opentelemetry.version>
 		<tomcat.version>11.0.22</tomcat.version>
 		<grpc.version>1.83.0</grpc.version>
-		<protobuf.version>4.35.1</protobuf.version>
+		<protobuf.version>4.34.2</protobuf.version>
 		<postgresql.version>42.7.12</postgresql.version>
 		<netty.version>4.2.16.Final</netty.version>
 		<spring-kafka.version>4.0.6</spring-kafka.version>
+		<resilience4j.version>2.4.0</resilience4j.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -61,12 +62,17 @@
 		<dependency>
 			<groupId>io.github.resilience4j</groupId>
 			<artifactId>resilience4j-circuitbreaker</artifactId>
-			<version>2.4.0</version>
+			<version>${resilience4j.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>io.github.resilience4j</groupId>
 			<artifactId>resilience4j-micrometer</artifactId>
-			<version>2.2.0</version>
+			<version>${resilience4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>io.github.resilience4j</groupId>
+			<artifactId>resilience4j-bulkhead</artifactId>
+			<version>${resilience4j.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -276,6 +282,26 @@
 				<artifactId>jackson-databind</artifactId>
 				<version>${jackson3.version}</version>
 			</dependency>
+			<dependency>
+				<groupId>com.google.protobuf</groupId>
+				<artifactId>protobuf-java</artifactId>
+				<version>${protobuf.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.google.errorprone</groupId>
+				<artifactId>error_prone_annotations</artifactId>
+				<version>2.50.0</version>
+			</dependency>
+			<dependency>
+				<groupId>io.github.resilience4j</groupId>
+				<artifactId>resilience4j-core</artifactId>
+				<version>${resilience4j.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>io.github.resilience4j</groupId>
+				<artifactId>resilience4j-circuitbreaker</artifactId>
+				<version>${resilience4j.version}</version>
+			</dependency>
 		</dependencies>
 	</dependencyManagement>
 
@@ -288,6 +314,28 @@
 			</extension>
 		</extensions>
 		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-enforcer-plugin</artifactId>
+				<version>3.6.3</version>
+				<configuration>
+					<rules>
+						<requireJavaVersion>
+							<version>[25,)</version>
+						</requireJavaVersion>
+						<dependencyConvergence />
+					</rules>
+				</configuration>
+				<executions>
+					<execution>
+						<id>enforce-java-and-dependency-convergence</id>
+						<phase>validate</phase>
+						<goals>
+							<goal>enforce</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 			<plugin>
 				<groupId>org.xolstice.maven.plugins</groupId>
 				<artifactId>protobuf-maven-plugin</artifactId>
@@ -359,7 +407,7 @@
 			<plugin>
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>
-				<version>0.8.14</version>
+								<version>0.8.15</version>
 				<configuration>
 					<excludes>
 						<exclude>**/*Application.class</exclude>
@@ -387,7 +435,7 @@
 						<configuration>
 							<rules>
 								<rule>
-									<element>PACKAGE</element>
+								<element>BUNDLE</element>
 									<limits>
 										<limit>
 											<counter>LINE</counter>
@@ -471,5 +519,10 @@
 			</plugin>
 		</plugins>
 	</build>
+	<profiles>
+		<profile>
+			<id>coverage</id>
+		</profile>
+	</profiles>
 
 </project>

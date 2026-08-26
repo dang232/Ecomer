@@ -1,0 +1,12 @@
+kind: StatefulSet
+name: postgres
+replicas: 1
+name: redis
+replicas: 1
+maxmemory-policy: volatile-lru
+name: mongodb
+replicas: 1
+name: minio
+replicas: 1
+name: keycloak
+replicas: 1

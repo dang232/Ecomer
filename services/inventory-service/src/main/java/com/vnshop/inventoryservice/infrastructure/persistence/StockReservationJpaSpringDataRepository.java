@@ -8,10 +8,13 @@ import org.springframework.data.repository.query.Param;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 
 public interface StockReservationJpaSpringDataRepository
         extends JpaRepository<StockReservationJpaEntity, UUID> {
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     List<StockReservationJpaEntity> findByOrderIdAndStatus(String orderId, StockReservation.Status status);
 
     @Modifying
@@ -26,8 +29,9 @@ public interface StockReservationJpaSpringDataRepository
      */
     @Modifying
     @Query("update StockReservationJpaEntity r set r.status = :status, r.releasedAt = :releasedAt "
-           + "where r.reservationId in :ids")
+           + "where r.reservationId in :ids and r.status = :reservedStatus")
     int batchUpdateStatus(@Param("ids") List<UUID> ids,
                           @Param("status") StockReservation.Status status,
-                          @Param("releasedAt") Instant releasedAt);
+                          @Param("releasedAt") Instant releasedAt,
+                          @Param("reservedStatus") StockReservation.Status reservedStatus);
 }

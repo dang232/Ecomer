@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+export const initiatePaymentSchema = z
+  .object({
+    orderId: z.string(),
+    redirectUrl: z.string().url().nullable(),
+    transactionId: z.string().optional(),
+  })
+  .passthrough();
+
 /** Wire values emitted by payment-service PaymentStatus.name() */
 export const PAYMENT_STATUS_VALUES = [
   "PENDING",

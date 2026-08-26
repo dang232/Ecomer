@@ -60,10 +60,12 @@ class WebhookSecurityMockMvcTest {
 
     @Test
     void ghnWebhookUsesTheRealValidatorAndIsPermittedBySecurityFilterChain() throws Exception {
+        String updatedAt = java.time.Instant.now().toString();
+        GhnWebhookPayload payload = new GhnWebhookPayload("GHN-1", "Delivered", "8", updatedAt, null, null, null, null);
         mockMvc.perform(post("/webhooks/ghn")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .header("X-GHN-Token", "ghn-webhook-token")
-                        .content("{\"OrderCode\":\"GHN-1\",\"Status\":\"Delivered\",\"StatusCode\":\"8\"}"))
+                        .header("X-GHN-Signature", hmacBase64(canonicalGhn(payload), "ghn-webhook-secret"))
+                        .content("{\"OrderCode\":\"GHN-1\",\"Status\":\"Delivered\",\"StatusCode\":\"8\",\"UpdatedDate\":\"" + updatedAt + "\"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("ok"));
 
         verify(receiveWebhook).receive(any());
@@ -71,10 +73,11 @@ class WebhookSecurityMockMvcTest {
 
     @Test
     void ghtkWebhookUsesTheRealValidatorAndIsPermittedBySecurityFilterChain() throws Exception {
-        String updatedAt = "2026-07-21T10:30:00Z";
+        String updatedAt = java.time.Instant.now().toString();
+        GhtkWebhookPayload payload = new GhtkWebhookPayload("GHTK-1", "delivering", null, updatedAt, null);
         mockMvc.perform(post("/webhooks/ghtk")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .header("X-GHTK-Signature", hmac("GHTK-1delivering" + updatedAt, "ghtk-webhook-token"))
+                        .header("X-GHTK-Signature", hmacBase64(canonicalGhtk(payload), "ghtk-webhook-secret"))
                         .content("{\"label_id\":\"GHTK-1\",\"status\":\"delivering\",\"updated_at\":\"" + updatedAt + "\"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("ok"));
 
@@ -107,11 +110,11 @@ class WebhookSecurityMockMvcTest {
             return useCase;
         }
         @Bean GhnWebhookSignatureService ghnWebhookSignatureService() {
-            return new GhnWebhookSignatureService(new GhnProperties("https://ghn.test", "token", "123", "2", "ghn-webhook-token"),
+             return new GhnWebhookSignatureService(new GhnProperties("https://ghn.test", "token", "123", "2", "ghn-webhook-secret"),
                     new WebhookSecurityProperties(false), new StandardEnvironment());
         }
         @Bean GhtkWebhookSignatureService ghtkWebhookSignatureService() {
-            return new GhtkWebhookSignatureService(new GhtkProperties("https://ghtk.test", "token", "partner", "ghtk-webhook-token"),
+             return new GhtkWebhookSignatureService(new GhtkProperties("https://ghtk.test", "token", "partner", "ghtk-webhook-secret"),
                     new WebhookSecurityProperties(false), new StandardEnvironment());
         }
         @Bean GhnWebhookMapper ghnWebhookMapper() { return new GhnWebhookMapper(); }
@@ -129,9 +132,35 @@ class WebhookSecurityMockMvcTest {
         }
     }
 
-    private static String hmac(String data, String secret) throws Exception {
+    private static String hmacBase64(String data, String secret) throws Exception {
         Mac mac = Mac.getInstance("HmacSHA256");
         mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
-        return java.util.HexFormat.of().formatHex(mac.doFinal(data.getBytes(StandardCharsets.UTF_8)));
+        return java.util.Base64.getEncoder().encodeToString(mac.doFinal(data.getBytes(StandardCharsets.UTF_8)));
+    }
+
+    private static String canonicalGhn(GhnWebhookPayload payload) {
+        return canonical("vnshop-ghn-webhook-v1", new String[][]{
+                {"order_code", payload.orderCode()}, {"status", payload.status()},
+                {"status_code", payload.statusCode()}, {"updated_date", payload.updatedDate()},
+                {"client_order_code", payload.clientOrderCode()}, {"cod_collected_amount", null},
+                {"collection_id", null}, {"currency", null}});
+    }
+
+    private static String canonicalGhtk(GhtkWebhookPayload payload) {
+        return canonical("vnshop-ghtk-webhook-v1", new String[][]{
+                {"label_id", payload.labelId()}, {"status", payload.status()},
+                {"status_text", payload.statusText()}, {"updated_at", payload.updatedAt()},
+                {"order_id", payload.orderId()}, {"cod_collected_amount", null},
+                {"collection_id", null}, {"currency", null}});
+    }
+
+    private static String canonical(String prefix, String[][] fields) {
+        StringBuilder result = new StringBuilder(prefix).append('|');
+        for (String[] field : fields) {
+            String value = field[1] == null ? "" : field[1];
+            result.append(field[0].getBytes(StandardCharsets.UTF_8).length).append(':').append(field[0]);
+            result.append(value.getBytes(StandardCharsets.UTF_8).length).append(':').append(value).append(';');
+        }
+        return result.toString();
     }
 }

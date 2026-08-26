@@ -1,8 +1,8 @@
 package com.vnshop.shippingservice.infrastructure.grpc;
 
-import com.vnshop.proto.shipping.ShippingRequest;
-import com.vnshop.proto.shipping.ShippingResponse;
-import com.vnshop.proto.shipping.ShippingServiceGrpc;
+import com.vnshop.proto.v1.ShippingRequest;
+import com.vnshop.proto.v1.ShippingResponse;
+import com.vnshop.proto.v1.ShippingServiceGrpc;
 import com.vnshop.shippingservice.application.CreateLabelUseCase;
 import com.vnshop.shippingservice.domain.CarrierCode;
 import com.vnshop.shippingservice.domain.ShippingAddress;
@@ -90,7 +90,7 @@ class GrpcShippingServerTest {
                 () -> stub.requestShipping(validRequest()));
 
         assertEquals(io.grpc.Status.Code.FAILED_PRECONDITION, exception.getStatus().getCode());
-        assertTrue(exception.getStatus().getDescription().contains("carrier unavailable"));
+        assertEquals("Carrier label creation failed", exception.getStatus().getDescription());
     }
 
     @Test
@@ -112,18 +112,18 @@ class GrpcShippingServerTest {
     private static ShippingRequest validRequest() {
         return ShippingRequest.newBuilder()
                 .setOrderId("ord-1001")
-                .addSubOrders(com.vnshop.proto.shipping.SubOrder.newBuilder()
+                .addSubOrders(com.vnshop.proto.v1.SubOrder.newBuilder()
                         .setSellerId("seller-1")
-                        .addItems(com.vnshop.proto.shipping.SubOrderItem.newBuilder()
+                        .addItems(com.vnshop.proto.v1.SubOrderItem.newBuilder()
                                 .setProductId("prod-1").setVariant("red").setQuantity(2).build())
-                        .setShippingAddress(com.vnshop.proto.shipping.ShippingAddress.newBuilder()
+                        .setShippingAddress(com.vnshop.proto.v1.ShippingAddress.newBuilder()
                         .setFullName("Nguyen Van A").setPhone("0901234567")
                                 .setStreet("123 Le Loi").setCity("Ho Chi Minh").setProvince("Ho Chi Minh")
                                 .setWardCode("W1").setDistrictCode("D1").setProvinceCode("P1")
                                 .build())
                         .setParcelWeightGrams(2500).setParcelLengthCm(20).setParcelWidthCm(15).setParcelHeightCm(10)
-                        .setCodAmount(com.vnshop.proto.common.Money.newBuilder().setAmount("120000").setCurrency("VND"))
-                        .setDeclaredValue(com.vnshop.proto.common.Money.newBuilder().setAmount("120000").setCurrency("VND"))
+                        .setCodAmount(com.vnshop.proto.v1.Money.newBuilder().setAmount("120000").setCurrency("VND"))
+                        .setDeclaredValue(com.vnshop.proto.v1.Money.newBuilder().setAmount("120000").setCurrency("VND"))
                         .build())
                 .build();
     }

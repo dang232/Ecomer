@@ -11,6 +11,10 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import lombok.Getter;
 import lombok.Setter;
 import java.time.Instant;
@@ -40,6 +44,10 @@ public class SagaStateJpaEntity {
     @Column(name = "version", nullable = false)
     private Long version;
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "required_steps", columnDefinition = "jsonb", nullable = false)
+    private Map<String, String> requiredSteps = new LinkedHashMap<>();
+
     @PrePersist
     protected void onCreate() {
         Instant now = Instant.now();
@@ -55,7 +63,11 @@ public class SagaStateJpaEntity {
     protected SagaStateJpaEntity() {}
 
     public SagaState toDomain() {
-        return new SagaState(sagaId, orderId, currentStep, createdAt, updatedAt);
+        Map<String, com.vnshop.orderservice.domain.saga.SagaStepStatus> steps = requiredSteps.entrySet().stream()
+                .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey,
+                        entry -> com.vnshop.orderservice.domain.saga.SagaStepStatus.valueOf(entry.getValue()),
+                        (left, right) -> right, LinkedHashMap::new));
+        return new SagaState(sagaId, orderId, currentStep, createdAt, updatedAt, steps);
     }
 
     public static SagaStateJpaEntity fromDomain(SagaState state) {
@@ -65,6 +77,7 @@ public class SagaStateJpaEntity {
         entity.setCurrentStep(state.currentStep());
         entity.setCreatedAt(state.createdAt());
         entity.setUpdatedAt(state.updatedAt());
+        entity.setRequiredSteps(toPersistenceSteps(state.requiredSteps()));
         return entity;
     }
 
@@ -72,5 +85,11 @@ public class SagaStateJpaEntity {
         this.orderId = state.orderId();
         this.currentStep = state.currentStep();
         this.updatedAt = state.updatedAt();
+        this.requiredSteps = toPersistenceSteps(state.requiredSteps());
+    }
+
+    private static Map<String, String> toPersistenceSteps(Map<String, com.vnshop.orderservice.domain.saga.SagaStepStatus> steps) {
+        return steps.entrySet().stream().collect(java.util.stream.Collectors.toMap(
+                Map.Entry::getKey, entry -> entry.getValue().name(), (left, right) -> right, LinkedHashMap::new));
     }
 }

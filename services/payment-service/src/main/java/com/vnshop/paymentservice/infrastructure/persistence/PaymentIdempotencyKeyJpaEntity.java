@@ -8,6 +8,7 @@ import jakarta.persistence.Table;
 
 import java.time.Instant;
 import java.util.UUID;
+import java.time.Duration;
 
 @Entity
 @Table(schema = "payment_svc", name = "payment_idempotency_keys")
@@ -16,8 +17,17 @@ public class PaymentIdempotencyKeyJpaEntity {
     @Column(name = "idempotency_key", nullable = false, length = 255)
     private String idempotencyKey;
 
-    @Column(name = "payment_id", nullable = false, columnDefinition = "uuid")
+    @Column(name = "payment_id", nullable = true, columnDefinition = "uuid")
     private UUID paymentId;
+
+    @Column(name = "claim_status", nullable = false, length = 32)
+    private String claimStatus;
+
+    @Column(name = "claimed_at", nullable = false)
+    private Instant claimedAt;
+
+    @Column(name = "lease_until")
+    private Instant leaseUntil;
 
     @Column(name = "request_hash", nullable = false, length = 64)
     private String requestHash;
@@ -34,6 +44,9 @@ public class PaymentIdempotencyKeyJpaEntity {
         entity.paymentId = domain.paymentId();
         entity.requestHash = domain.requestHash();
         entity.createdAt = domain.createdAt();
+        entity.claimStatus = "CLAIMED";
+        entity.claimedAt = domain.createdAt();
+        entity.leaseUntil = domain.createdAt().plus(Duration.ofMinutes(15));
         return entity;
     }
 

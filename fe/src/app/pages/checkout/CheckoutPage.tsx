@@ -7,7 +7,7 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { ApiError } from "@/shared/api";
+import { ApiError, getErrorLabel } from "@/shared/api";
 import {
   calculateCheckout,
   paymentMethods as fetchPaymentMethods,
@@ -423,7 +423,7 @@ export function CheckoutPage() {
       });
     } catch (error) {
       toast.error(
-        error instanceof ApiError ? error.message : t("checkout.payment.placeOrderFailed"),
+        error instanceof ApiError ? getErrorLabel(error) : t("checkout.payment.placeOrderFailed"),
       );
       return;
     }

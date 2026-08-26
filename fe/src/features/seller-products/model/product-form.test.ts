@@ -23,6 +23,7 @@ const completeParcel = {
   lengthCm: 30,
   widthCm: 20,
   heightCm: 10,
+  declaredValueMinor: 0,
 };
 
 describe("sellerProductFormSchema", () => {

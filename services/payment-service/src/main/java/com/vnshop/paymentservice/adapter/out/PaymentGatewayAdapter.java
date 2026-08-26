@@ -8,6 +8,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
+import com.vnshop.paymentservice.infrastructure.metrics.PaymentMetrics;
+import io.micrometer.core.instrument.Timer;
 
 /**
  * Primary {@link PaymentGatewayPort} implementation that wraps {@link CompositePaymentGateway}.
@@ -19,16 +21,23 @@ public class PaymentGatewayAdapter implements PaymentGatewayPort {
     private static final Logger log = LoggerFactory.getLogger(PaymentGatewayAdapter.class);
 
     private final CompositePaymentGateway delegate;
+    private final PaymentMetrics metrics;
 
-    public PaymentGatewayAdapter(CompositePaymentGateway delegate) {
+    public PaymentGatewayAdapter(CompositePaymentGateway delegate, PaymentMetrics metrics) {
         this.delegate = delegate;
+        this.metrics = metrics;
     }
 
     @Override
     public GatewayPaymentResult processPayment(Payment payment) {
         log.debug("Processing payment via gateway: paymentId={}, method={}",
                 payment.paymentId(), payment.method());
-        return delegate.processPayment(payment);
+        Timer.Sample sample = metrics.startProviderTimer();
+        try {
+            return delegate.processPayment(payment);
+        } finally {
+            metrics.stopProviderTimer(sample);
+        }
     }
 
     @Override

@@ -20,6 +20,35 @@ public class PaymentIdempotencyKeyJpaRepository implements PaymentIdempotencyKey
     }
 
     @Override
+    public void deleteByKey(String key) {
+        springDataRepository.deleteById(key);
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public boolean claim(PaymentIdempotencyKey key) {
+        return springDataRepository.claim(key.key(), key.paymentId(), key.requestHash(), key.createdAt()) == 1;
+    }
+
+    @Override
+    public boolean supportsAtomicClaim() {
+        return true;
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public void markCompleted(String key) {
+        springDataRepository.markCompleted(key);
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public int deleteAbandonedClaims(java.time.Instant before) {
+        return springDataRepository.deleteAbandonedClaims(before);
+    }
+
+
+    @Override
     public PaymentIdempotencyKey save(PaymentIdempotencyKey key) {
         return springDataRepository.save(PaymentIdempotencyKeyJpaEntity.fromDomain(key)).toDomain();
     }

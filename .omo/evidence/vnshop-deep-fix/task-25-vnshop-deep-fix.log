@@ -1,0 +1,15 @@
+# Task 25: split God classes
+# Provenance: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\task-25.log (uncommitted worktree artifact)
+
+STATUS: PASS_FOCUSED / FAIL_FULL_VERIFY
+
+Exact focused results:
+- Product service `./mvnw.cmd -q "-Dtest=VideoUploadServiceTest,VideoControllerTest,TranscodeFailureConsumerTest" test` -> PASS.
+- Payment service `./mvnw.cmd -q -Dtest=PaymentControllerHeaderTest test` -> PASS.
+- API gateway `./mvnw.cmd -q -Dtest=RouteConfigTest test` -> PASS.
+- Order service `./mvnw.cmd -q "-Dtest=CreateOrderUseCaseFinancialAllocationTest,CheckoutOrderUseCaseTest" test` -> PASS.
+- Four service `-DskipTests compile` commands -> PASS.
+- `fe: pnpm lint:boundaries` -> PASS.
+- `git diff --check` -> PASS as recorded.
+
+Full verify: attempted for all four services but not green due to coverage thresholds, missing Pact files, and existing `${GRPC_SERVER_AUTH_TOKEN:? ...}` integration YAML parsing failures. LOC report says modified/new refactor classes are below 250 pure LOC. No full-regression PASS is claimed.

@@ -35,6 +35,8 @@ function SellerProductCard({ product }: { product: Product }) {
           src={image}
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          imagePreset="card"
+          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
         />
       </div>
       <div className="p-3">
@@ -99,10 +101,12 @@ export function SellerDetailPage() {
         }
       >
         {seller.bannerUrl ? (
-          <img
+          <ImageWithFallback
             src={seller.bannerUrl}
             alt={seller.shopName}
             className="w-full h-full object-cover"
+            imagePreset="detail"
+            sizes="(min-width: 768px) 1152px, 100vw"
           />
         ) : null}
       </div>
@@ -113,10 +117,12 @@ export function SellerDetailPage() {
           {/* Logo */}
           <div className="w-24 h-24 rounded-2xl border-4 border-white shadow-md overflow-hidden shrink-0 bg-muted flex items-center justify-center -mt-8">
             {seller.logoUrl ? (
-              <img
+              <ImageWithFallback
                 src={seller.logoUrl}
                 alt={seller.shopName}
                 className="w-full h-full object-cover"
+                imagePreset="avatar"
+                sizes="96px"
               />
             ) : (
               <span

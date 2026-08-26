@@ -465,6 +465,8 @@ function RecommendationGrid({
               src={item.image ?? ""}
               alt=""
               className="aspect-square w-full object-cover"
+              imagePreset="card"
+              sizes="(min-width: 768px) 25vw, 50vw"
             />
             <div className="p-3">
               <p className="line-clamp-2 min-h-10 text-sm font-medium text-foreground">

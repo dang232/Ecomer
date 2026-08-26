@@ -36,8 +36,10 @@ class PaymentMethodValidatorTest {
         ReflectionTestUtils.setField(v, "vietqrEnabled", vietqrEnabled);
         ReflectionTestUtils.setField(v, "vietqrAccountNo", vietqrAccountNo);
         ReflectionTestUtils.setField(v, "vietqrAccountName", vietqrAccountName);
-        ReflectionTestUtils.setField(v, "vnpayEnabled", vnpayEnabled);
-        ReflectionTestUtils.setField(v, "momoEnabled", momoEnabled);
+        ReflectionTestUtils.setField(v, "deferredGatewayAEnabled", vnpayEnabled);
+        ReflectionTestUtils.setField(v, "deferredGatewayBEnabled", momoEnabled);
+        ReflectionTestUtils.setField(v, "nonProductionGate", true);
+        ReflectionTestUtils.setField(v, "activeProfiles", "");
         ReflectionTestUtils.setField(v, "publicApiUrl", publicApiUrl);
         ReflectionTestUtils.setField(v, "frontendUrl", frontendUrl);
         return v;
@@ -118,6 +120,33 @@ class PaymentMethodValidatorTest {
                 ).validate())
                 .withMessageContaining("VNPAY_TMN_CODE")
                 .withMessageContaining("VNPAY_HASH_SECRET");
+    }
+
+    @Test
+    void deferred_gateway_a_requires_explicit_nonProduction_gate() {
+        PaymentMethodValidator candidate = validator(
+                false, false, null, null,
+                true, vnpay(true, "TMN", "SECRET"),
+                false, momo(false), stripe(false), paypal(false), sepay(false),
+                "https://api.test", "https://shop.test");
+        ReflectionTestUtils.setField(candidate, "nonProductionGate", false);
+        assertThatIllegalStateException()
+                .isThrownBy(candidate::validate)
+                .withMessageContaining("PAYMENT_NON_PRODUCTION_GATE");
+    }
+
+    @Test
+    void deferred_gateway_b_requires_explicit_nonProduction_gate() {
+        PaymentMethodValidator candidate = validator(
+                        false, false, null, null,
+                        false, vnpay(false),
+                        true, momo(true, "PARTNER", "ACCESS", "SECRET"),
+                        stripe(false), paypal(false), sepay(false),
+                        "https://api.test", "https://shop.test");
+        ReflectionTestUtils.setField(candidate, "nonProductionGate", false);
+        assertThatIllegalStateException()
+                .isThrownBy(candidate::validate)
+                .withMessageContaining("PAYMENT_NON_PRODUCTION_GATE");
     }
 
     @Test

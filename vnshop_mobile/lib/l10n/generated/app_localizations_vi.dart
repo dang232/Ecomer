@@ -914,6 +914,281 @@ class AppLocalizationsVi extends AppLocalizations {
       'Thông tin sản phẩm của đơn hàng này hiện không khả dụng.';
 
   @override
+  String get categories => 'Danh mục';
+
+  @override
+  String get languageVietnamese => 'Tiếng Việt';
+
+  @override
+  String get languageEnglish => 'English';
+
+  @override
+  String get settingsTitle => 'Cài đặt';
+
+  @override
+  String get settingsNotificationsSection => 'Thông báo';
+
+  @override
+  String get settingsEnableNotifications => 'Bật thông báo';
+
+  @override
+  String get settingsNotificationsHelp => 'Nhận thông báo từ ứng dụng';
+
+  @override
+  String get settingsOrderUpdates => 'Cập nhật đơn hàng';
+
+  @override
+  String get settingsOrderUpdatesHelp => 'Thông báo trạng thái đơn hàng';
+
+  @override
+  String get settingsPromotions => 'Khuyến mãi';
+
+  @override
+  String get settingsPromotionsHelp => 'Mã giảm giá, ưu đãi đặc biệt';
+
+  @override
+  String get settingsAppearanceSection => 'Giao diện';
+
+  @override
+  String get settingsDarkMode => 'Chế độ tối';
+
+  @override
+  String get settingsDarkModeHelp => 'Giao diện tối cho mắt dễ chịu';
+
+  @override
+  String get settingsLanguage => 'Ngôn ngữ';
+
+  @override
+  String get settingsOtherSection => 'Khác';
+
+  @override
+  String get privacyPolicy => 'Chính sách bảo mật';
+
+  @override
+  String get termsOfUse => 'Điều khoản sử dụng';
+
+  @override
+  String get deleteAccount => 'Xóa tài khoản';
+
+  @override
+  String get deleteAccountHelp => 'Xóa vĩnh viễn tài khoản và dữ liệu';
+
+  @override
+  String get madeWithLove => 'Made with ❤️ in Vietnam';
+
+  @override
+  String get chooseLanguage => 'Chọn ngôn ngữ';
+
+  @override
+  String get darkModeEnabled => 'Đã bật chế độ tối';
+
+  @override
+  String get darkModeDisabled => 'Đã tắt chế độ tối';
+
+  @override
+  String languageChanged(Object language) {
+    return 'Ngôn ngữ đã được đổi sang $language';
+  }
+
+  @override
+  String get deleteAccountQuestion =>
+      'Bạn có chắc chắn muốn xóa tài khoản không?';
+
+  @override
+  String get deleteAccountWarning => '⚠️ Lưu ý:';
+
+  @override
+  String get deleteAccountConsequences =>
+      '• Tất cả dữ liệu của bạn sẽ bị xóa vĩnh viễn\n• Không thể khôi phục lại sau khi xóa\n• Bạn sẽ mất quyền truy cập vào đơn hàng cũ';
+
+  @override
+  String get deleteAccountRequested =>
+      'Yêu cầu xóa tài khoản đã được gửi. Vui lòng xác nhận qua email.';
+
+  @override
+  String get aboutVersion => 'Phiên bản: 1.0.0';
+
+  @override
+  String get aboutDescription =>
+      'Ứng dụng mua sắm trực tuyến hàng đầu Việt Nam.';
+
+  @override
+  String get close => 'Đóng';
+
+  @override
+  String get logoutQuestion => 'Bạn có chắc chắn muốn đăng xuất không?';
+
+  @override
+  String get accountAddressesTitle => 'Địa chỉ giao hàng';
+
+  @override
+  String get accountAddressesMessage =>
+      'Địa chỉ của bạn được chọn và chỉnh sửa trực tiếp trong quy trình thanh toán.';
+
+  @override
+  String get accountPaymentMethodsTitle => 'Phương thức thanh toán';
+
+  @override
+  String get accountPaymentMethodsMessage =>
+      'VNShop hiện hỗ trợ COD, VietQR và SePay trong checkout.';
+
+  @override
+  String get accountNotificationsTitle => 'Thông báo';
+
+  @override
+  String get accountNotificationsMessage =>
+      'Bạn sẽ nhận cập nhật đơn hàng và thanh toán từ VNShop tại đây.';
+
+  @override
+  String get accountHelpTitle => 'Trợ giúp';
+
+  @override
+  String get accountHelpMessage =>
+      'Câu hỏi thường gặp và hỗ trợ checkout sẽ được cập nhật tại đây.';
+
+  @override
+  String get loginContinue => 'Đăng nhập để tiếp tục';
+
+  @override
+  String get rememberLogin => 'Ghi nhớ đăng nhập';
+
+  @override
+  String get forgotPassword => 'Quên mật khẩu?';
+
+  @override
+  String get noAccount => 'Chưa có tài khoản?';
+
+  @override
+  String get registerNow => 'Đăng ký ngay';
+
+  @override
+  String get or => 'Hoặc';
+
+  @override
+  String get send => 'Gửi';
+
+  @override
+  String get forgotPasswordTitle => 'Quên mật khẩu';
+
+  @override
+  String get forgotPasswordHelp =>
+      'Nhập địa chỉ email của bạn để nhận hướng dẫn đặt lại mật khẩu.';
+
+  @override
+  String get emailHint => 'Nhập email của bạn';
+
+  @override
+  String get passwordHintLogin => 'Nhập mật khẩu của bạn';
+
+  @override
+  String get resetEmailSent => 'Đã gửi email đặt lại mật khẩu';
+
+  @override
+  String socialLoginUnavailable(Object provider) {
+    return 'Đăng nhập bằng $provider (sắp ra mắt)';
+  }
+
+  @override
+  String get registerTitle => 'Tạo tài khoản mới';
+
+  @override
+  String get registerSubtitle => 'Điền thông tin bên dưới để đăng ký';
+
+  @override
+  String get fullName => 'Họ và tên';
+
+  @override
+  String get fullNameHint => 'Nhập họ và tên của bạn';
+
+  @override
+  String get phoneOptional => 'Số điện thoại (tùy chọn)';
+
+  @override
+  String get phoneHint => 'Nhập số điện thoại';
+
+  @override
+  String get createPassword => 'Tạo mật khẩu';
+
+  @override
+  String get passwordRequirements =>
+      'Tối thiểu 8 ký tự, gồm chữ hoa, chữ thường và số';
+
+  @override
+  String get confirmPassword => 'Xác nhận mật khẩu';
+
+  @override
+  String get confirmPasswordHint => 'Nhập lại mật khẩu';
+
+  @override
+  String get agreeTermsPrefix => 'Tôi đồng ý với ';
+
+  @override
+  String get privacyAnd => ' và ';
+
+  @override
+  String get registrationSuccess =>
+      'Đăng ký thành công. Hãy xác thực email trước khi đăng nhập.';
+
+  @override
+  String get agreeTermsRequired => 'Vui lòng đồng ý với điều khoản sử dụng';
+
+  @override
+  String activeOrders(Object count) {
+    return '$count đơn đang xử lý';
+  }
+
+  @override
+  String get orderStatusPendingShort => 'Chờ xác nhận';
+
+  @override
+  String get orderStatusProcessingShort => 'Đang xử lý';
+
+  @override
+  String get orderStatusShippedShort => 'Đang giao';
+
+  @override
+  String get orderStatusDeliveredShort => 'Đã giao';
+
+  @override
+  String get viewAllOrders => 'Xem tất cả đơn hàng';
+
+  @override
+  String get favoriteProducts => 'Sản phẩm yêu thích';
+
+  @override
+  String get addressBook => 'Sổ địa chỉ';
+
+  @override
+  String get addressBookHelp => 'Quản lý địa chỉ giao hàng';
+
+  @override
+  String get paymentMethods => 'Phương thức thanh toán';
+
+  @override
+  String get paymentMethodsHelp => 'Thẻ, ví điện tử';
+
+  @override
+  String get notificationsSettings => 'Thông báo';
+
+  @override
+  String get notificationsSettingsHelp => 'Cài đặt thông báo';
+
+  @override
+  String get help => 'Trợ giúp';
+
+  @override
+  String get helpDescription => 'Câu hỏi thường gặp, liên hệ hỗ trợ';
+
+  @override
+  String get about => 'Giới thiệu';
+
+  @override
+  String get aboutSubtitle => 'Phiên bản 1.0.0';
+
+  @override
+  String get account => 'Tài khoản';
+
+  @override
   String quantityShort(int count) {
     return 'SL $count';
   }

@@ -1,0 +1,14 @@
+Task 28 verification evidence
+
+2026-08-25
+- RED: the old `init-kafka-topics-local.sh` readiness loop stayed alive until an external `timeout 3s` killed it against `127.0.0.1:1`; observed exit 124 after printing only `Waiting for local Kafka to be ready...`.
+- RED: a two-thread backup overlap fixture reached `old-backup-peak-overlap=2`, demonstrating the unlocked wrapper could run concurrent backups.
+- PASS: `python -m pytest -q services/video-moderator/tests/test_consumer.py services/video-moderator/tests/test_db.py infra/scripts/test_video_moderator_infrastructure_contract.py` -> 20 passed.
+- PASS: Git Bash `bash -n infra/scripts/init-kafka-topics-local.sh infra/scripts/backup-cron.sh`.
+- PASS: `python -m py_compile infra/scripts/reliability-fixture.py services/video-moderator/app/config.py services/video-moderator/app/consumer.py`.
+- PASS: workflow YAML parsed with PyYAML; reliability fixture `--help`, broker-down fixture, video static contract, secret scan, and `git diff --check` passed.
+- PASS: bounded readiness test with `KAFKA_READINESS_TIMEOUT_SECONDS=2` against `127.0.0.1:1` exited 70 in approximately 4 seconds and emitted a clear timeout error.
+- BLOCKED_EXTERNAL: live duplicate-delivery/malformed-DLT Kafka fixture was not claimed as passed; no dedicated authenticated broker/database/cache stack was started in this Windows worktree.
+- BLOCKED_EXTERNAL: `flock` is unavailable in Git Bash on this Windows host, so the lock-held runtime test exited 127 with the documented WSL/Linux limitation. The script fails closed rather than running without overlap protection.
+- BLOCKED_EXTERNAL: exact `/bin/bash` wrapper remains unavailable under WSL (`execvpe(/bin/bash) failed`).
+- BLOCKED_EXTERNAL: LSP diagnostics initially timed out while the daemon was busy; subsequent diagnostics for `config.py` and `consumer.py` returned no diagnostics.

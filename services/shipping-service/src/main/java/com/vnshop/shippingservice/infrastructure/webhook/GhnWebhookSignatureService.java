@@ -2,73 +2,87 @@ package com.vnshop.shippingservice.infrastructure.webhook;
 
 import com.vnshop.shippingservice.infrastructure.carrier.GhnProperties;
 import com.vnshop.shippingservice.infrastructure.config.WebhookSecurityProperties;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.StandardEnvironment;
 import org.springframework.stereotype.Component;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.DateTimeException;
+import java.util.Base64;
+import java.util.LinkedHashMap;
 
-/**
- * Service to verify GHN webhook signatures/tokens.
- * GHN uses token-based verification via headers.
- */
 @Component
 public class GhnWebhookSignatureService {
-    private static final Logger LOG = LoggerFactory.getLogger(GhnWebhookSignatureService.class);
+    private static final String HMAC_SHA256 = "HmacSHA256";
+    private static final String PREFIX = "vnshop-ghn-webhook-v1";
 
     private final GhnProperties properties;
-    private final WebhookSecurityProperties webhookSecurityProperties;
-    private final Environment environment;
+    private final WebhookSecurityProperties securityProperties;
+    private final Clock clock;
 
     @Autowired
     public GhnWebhookSignatureService(
             GhnProperties properties,
-            WebhookSecurityProperties webhookSecurityProperties,
+            WebhookSecurityProperties securityProperties,
             Environment environment) {
+        this(properties, securityProperties, Clock.systemUTC());
+    }
+
+    GhnWebhookSignatureService(
+            GhnProperties properties,
+            WebhookSecurityProperties securityProperties,
+            Clock clock) {
         this.properties = properties;
-        this.webhookSecurityProperties = webhookSecurityProperties;
-        this.environment = environment;
+        this.securityProperties = securityProperties;
+        this.clock = clock;
     }
 
     public GhnWebhookSignatureService(GhnProperties properties) {
         this(properties, new WebhookSecurityProperties(false), new StandardEnvironment());
     }
 
-    /**
-     * Validates the GHN webhook signature/token.
-     * GHN validates via X-GHN-Token header matching their configured token.
-     */
-    public boolean isValid(GhnWebhookPayload payload, String signature, String token) {
-        String configuredToken = properties.webhookToken();
-        if (configuredToken == null || configuredToken.isBlank()) {
-            if (isInsecureLocalMode()) {
-                LOG.warn("Accepting GHN webhook without credentials because explicit local-only opt-in is enabled");
-                return true;
+    public boolean isValid(GhnWebhookPayload payload, String signature, String ignoredToken) {
+        String secret = properties.webhookSecret();
+        if (payload == null || secret == null || secret.isBlank() || signature == null || signature.isBlank()) {
+            return false;
+        }
+        try {
+            Instant timestamp = Instant.parse(payload.updatedDate());
+            long age = Math.abs(Duration.between(timestamp, clock.instant()).getSeconds());
+            if (age > securityProperties.replayWindowSeconds()) {
+                return false;
             }
-            LOG.error("GHN webhook token is not configured");
+            LinkedHashMap<String, String> fields = new LinkedHashMap<>();
+            fields.put("order_code", payload.orderCode());
+            fields.put("status", payload.status());
+            fields.put("status_code", payload.statusCode());
+            fields.put("updated_date", payload.updatedDate());
+            fields.put("client_order_code", payload.clientOrderCode());
+            fields.put("cod_collected_amount", payload.codCollectedAmount() == null
+                    ? null : payload.codCollectedAmount().stripTrailingZeros().toPlainString());
+            fields.put("collection_id", payload.collectionId());
+            fields.put("currency", payload.currency());
+            byte[] expected = hmac(WebhookCanonicalizer.serialize(PREFIX, fields), secret);
+            return MessageDigest.isEqual(expected, Base64.getDecoder().decode(signature));
+        } catch (DateTimeException | IllegalArgumentException exception) {
             return false;
         }
-
-        if (token == null || token.isBlank()) {
-            LOG.warn("GHN webhook token is missing");
-            return false;
-        }
-
-        boolean valid = MessageDigest.isEqual(
-                configuredToken.getBytes(StandardCharsets.UTF_8),
-                token.getBytes(StandardCharsets.UTF_8));
-        if (!valid) {
-            LOG.warn("Invalid GHN token");
-        }
-        return valid;
     }
 
-    private boolean isInsecureLocalMode() {
-        return webhookSecurityProperties.allowInsecureLocal()
-                && environment.matchesProfiles("local", "dev");
+    private static byte[] hmac(String value, String secret) {
+        try {
+            Mac mac = Mac.getInstance(HMAC_SHA256);
+            mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), HMAC_SHA256));
+            return mac.doFinal(value.getBytes(StandardCharsets.UTF_8));
+        } catch (java.security.GeneralSecurityException exception) {
+            throw new IllegalStateException("Failed to compute webhook signature", exception);
+        }
     }
 }

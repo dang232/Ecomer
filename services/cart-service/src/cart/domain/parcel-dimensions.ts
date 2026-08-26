@@ -3,4 +3,5 @@ export interface ParcelDimensions {
   readonly lengthCm: number;
   readonly widthCm: number;
   readonly heightCm: number;
+  readonly declaredValueMinor: number;
 }

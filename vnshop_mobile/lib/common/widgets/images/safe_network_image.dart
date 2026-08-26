@@ -1,5 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../../../core/utils/validators.dart';
+
+class _ProductImageCache {
+  static final instance = CacheManager(
+    Config(
+      'vnshop-images',
+      stalePeriod: const Duration(days: 30),
+      maxNrOfCacheObjects: 500,
+    ),
+  );
+}
 
 /// A safe network image widget that validates and sanitizes URLs before loading.
 ///
@@ -17,6 +29,7 @@ class SafeNetworkImage extends StatelessWidget {
     this.placeholder,
     this.errorWidget,
     this.borderRadius,
+    this.semanticLabel,
   });
 
   final String? url;
@@ -26,6 +39,7 @@ class SafeNetworkImage extends StatelessWidget {
   final Widget? placeholder;
   final Widget? errorWidget;
   final BorderRadius? borderRadius;
+  final String? semanticLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -37,38 +51,27 @@ class SafeNetworkImage extends StatelessWidget {
     if (sanitizedUrl == null) {
       imageWidget = _buildPlaceholder(theme);
     } else {
-      imageWidget = Image.network(
-        sanitizedUrl,
+      imageWidget = CachedNetworkImage(
+        imageUrl: sanitizedUrl,
+        cacheManager: _ProductImageCache.instance,
         fit: fit,
         width: width,
         height: height,
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return _buildLoadingIndicator(theme);
-        },
-        errorBuilder: (context, error, stackTrace) {
-          debugPrint('SafeNetworkImage: Failed to load URL: $sanitizedUrl\nError: $error');
-          return errorWidget ?? _buildPlaceholder(theme);
-        },
+        placeholder: (context, url) => _buildLoadingIndicator(theme),
+        errorWidget: (context, url, error) =>
+            errorWidget ?? _buildPlaceholder(theme),
       );
     }
 
-    if (borderRadius != null) {
-      return ClipRRect(
-        borderRadius: borderRadius!,
-        child: SizedBox(
-          width: width,
-          height: height,
-          child: imageWidget,
-        ),
-      );
-    }
+    Widget result = borderRadius != null
+        ? ClipRRect(
+            borderRadius: borderRadius!,
+            child: SizedBox(width: width, height: height, child: imageWidget),
+          )
+        : SizedBox(width: width, height: height, child: imageWidget);
 
-    return SizedBox(
-      width: width,
-      height: height,
-      child: imageWidget,
-    );
+    if (semanticLabel == null || semanticLabel!.isEmpty) return result;
+    return Semantics(label: semanticLabel, image: true, child: result);
   }
 
   Widget _buildLoadingIndicator(ThemeData theme) {

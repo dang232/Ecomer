@@ -22,6 +22,8 @@ import org.springframework.kafka.annotation.RetryableTopic;
 import org.springframework.kafka.retrytopic.DltStrategy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.vnshop.sellerfinanceservice.infrastructure.dlt.DurableDltService;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 /**
  * Validates immutable seller-finance adjustment snapshots published by order-service.
@@ -57,25 +59,28 @@ public class SellerFinanceAdjustmentListener {
     private final ObjectMapper objectMapper;
     private final ApplyFinancialAdjustmentUseCase applyFinancialAdjustmentUseCase;
     private final SettlementReleaseCandidateRepositoryPort candidateRepository;
+    private final DurableDltService durableDltService;
 
     /** Validation-only constructor retained for contract tests and disabled consumers. */
     public SellerFinanceAdjustmentListener(ObjectMapper objectMapper) {
-        this(objectMapper, null, null);
+        this(objectMapper, null, null, null);
     }
 
     /** Compatibility constructor retained for application-level listener tests. */
     public SellerFinanceAdjustmentListener(ObjectMapper objectMapper,
                                           ApplyFinancialAdjustmentUseCase applyFinancialAdjustmentUseCase) {
-        this(objectMapper, applyFinancialAdjustmentUseCase, null);
+        this(objectMapper, applyFinancialAdjustmentUseCase, null, null);
     }
 
     @Autowired
     public SellerFinanceAdjustmentListener(ObjectMapper objectMapper,
-                                          ApplyFinancialAdjustmentUseCase applyFinancialAdjustmentUseCase,
-                                          SettlementReleaseCandidateRepositoryPort candidateRepository) {
+                                           ApplyFinancialAdjustmentUseCase applyFinancialAdjustmentUseCase,
+                                           SettlementReleaseCandidateRepositoryPort candidateRepository,
+                                           DurableDltService durableDltService) {
         this.objectMapper = objectMapper;
         this.applyFinancialAdjustmentUseCase = applyFinancialAdjustmentUseCase;
         this.candidateRepository = candidateRepository;
+        this.durableDltService = durableDltService;
     }
 
     @RetryableTopic(
@@ -168,8 +173,8 @@ public class SellerFinanceAdjustmentListener {
     }
 
     @DltHandler
-    public void handleDlt(String message) {
-        LOGGER.error("seller.finance.adjustment sent to DLT after retries exhausted: {}", message);
+    public void handleDlt(ConsumerRecord<String, String> record) {
+        durableDltService.store(record, "seller.finance.adjustment DLT payload received", 3);
     }
 
     private JsonNode unwrapPayload(JsonNode outboxEnvelope) {

@@ -1,0 +1,9 @@
+# Task 17: data-layer HA and split Redis workloads
+# Provenance: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\evidence\task-17.log (binary artifact; uncommitted worktree)
+
+STATUS: BLOCKED_UNVERIFIABLE
+
+Artifact inspection command: repository file reader attempted to read `evidence/task-17.log`.
+Result: `Cannot read binary file`; the artifact contents, command lines, statuses, and blockers cannot be independently assessed from the available source record.
+
+Blocker: no truthful PASS or FAIL claim is made for HA or failover. A fresh task-specific verification is required before this task can be considered evidenced.

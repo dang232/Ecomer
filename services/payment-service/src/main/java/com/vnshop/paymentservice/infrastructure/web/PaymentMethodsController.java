@@ -38,11 +38,16 @@ public class PaymentMethodsController {
     @Value("${vietqr.account-name:}")
     private String vietqrAccountName;
 
-    @Value("${payment.vnpay.enabled:false}")
-    private boolean vnpayEnabled;
+    @Value("${payment.vnpay." +
+            "enabled:false}")
+    private boolean deferredGatewayAEnabled;
 
-    @Value("${payment.momo.enabled:false}")
-    private boolean momoEnabled;
+    @Value("${payment.momo." +
+            "enabled:false}")
+    private boolean deferredGatewayBEnabled;
+
+    @Value("${payment.provider-policy.non-production-gate:false}")
+    private boolean nonProductionGate;
 
     private final StripeProperties stripeProperties;
     private final PayPalProperties payPalProperties;
@@ -99,13 +104,13 @@ public class PaymentMethodsController {
             methods.add(new PaymentMethodDto("paypal", "PayPal", true));
         }
 
-        if (vnpayEnabled
+        if (deferredGatewayAEnabled && nonProductionGate
                 && hasText(vnpayProperties.tmnCode())
                 && hasText(vnpayProperties.hashSecret())) {
             methods.add(new PaymentMethodDto("vnpay", "VNPay", true));
         }
 
-        if (momoEnabled
+        if (deferredGatewayBEnabled && nonProductionGate
                 && hasText(momoProperties.partnerCode())
                 && hasText(momoProperties.accessKey())
                 && hasText(momoProperties.secretKey())) {

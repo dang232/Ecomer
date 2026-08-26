@@ -13,6 +13,7 @@ import {
   type WishlistResponse,
 } from "@/shared/api/endpoints/wishlist";
 import { productIdSchema, type ProductId } from "@/shared/contracts/api/branded-ids";
+import { logger } from "@/shared/lib";
 
 import { readJsonText } from "../../shared/api/read-json";
 
@@ -72,8 +73,8 @@ export function useWishlist() {
       for (const id of missing) {
         try {
           await addWishlistItem(id);
-        } catch (err) {
-          console.warn("wishlist migration: failed to add", id, err);
+        } catch (error) {
+          logger.warn("wishlist.migration_failed", { productId: id, error });
           failedIds.push(id);
         }
       }

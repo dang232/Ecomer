@@ -7,7 +7,12 @@ package com.vnshop.orderservice.infrastructure.product;
  * pricing.
  */
 public class ProductCatalogUnavailableException extends RuntimeException {
+    private final String code = "PRODUCT_CATALOG_UNAVAILABLE";
     public ProductCatalogUnavailableException(String message, Throwable cause) {
         super(message, cause);
+    }
+
+    public String code() {
+        return code;
     }
 }

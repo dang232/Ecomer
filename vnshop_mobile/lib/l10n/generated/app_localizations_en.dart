@@ -147,7 +147,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get register => 'Register';
 
   @override
-  String get logout => 'Logout';
+  String get logout => 'Log out';
 
   @override
   String get email => 'Email';
@@ -952,6 +952,283 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get orderProductsUnavailable =>
       'Product details are unavailable for this order.';
+
+  @override
+  String get categories => 'Categories';
+
+  @override
+  String get languageVietnamese => 'Vietnamese';
+
+  @override
+  String get languageEnglish => 'English';
+
+  @override
+  String get settingsTitle => 'Settings';
+
+  @override
+  String get settingsNotificationsSection => 'Notifications';
+
+  @override
+  String get settingsEnableNotifications => 'Enable notifications';
+
+  @override
+  String get settingsNotificationsHelp => 'Receive notifications from the app';
+
+  @override
+  String get settingsOrderUpdates => 'Order updates';
+
+  @override
+  String get settingsOrderUpdatesHelp => 'Get order status notifications';
+
+  @override
+  String get settingsPromotions => 'Promotions';
+
+  @override
+  String get settingsPromotionsHelp => 'Coupons and special offers';
+
+  @override
+  String get settingsAppearanceSection => 'Appearance';
+
+  @override
+  String get settingsDarkMode => 'Dark mode';
+
+  @override
+  String get settingsDarkModeHelp =>
+      'A darker interface that is easier on the eyes';
+
+  @override
+  String get settingsLanguage => 'Language';
+
+  @override
+  String get settingsOtherSection => 'Other';
+
+  @override
+  String get privacyPolicy => 'Privacy policy';
+
+  @override
+  String get termsOfUse => 'Terms of use';
+
+  @override
+  String get deleteAccount => 'Delete account';
+
+  @override
+  String get deleteAccountHelp => 'Permanently delete your account and data';
+
+  @override
+  String get madeWithLove => 'Made with ❤️ in Vietnam';
+
+  @override
+  String get chooseLanguage => 'Choose language';
+
+  @override
+  String get darkModeEnabled => 'Dark mode enabled';
+
+  @override
+  String get darkModeDisabled => 'Dark mode disabled';
+
+  @override
+  String languageChanged(Object language) {
+    return 'Language changed to $language';
+  }
+
+  @override
+  String get deleteAccountQuestion =>
+      'Are you sure you want to delete your account?';
+
+  @override
+  String get deleteAccountWarning => '⚠️ Warning:';
+
+  @override
+  String get deleteAccountConsequences =>
+      '• All your data will be permanently deleted\n• This cannot be undone\n• You will lose access to previous orders';
+
+  @override
+  String get deleteAccountRequested =>
+      'Your account deletion request was sent. Confirm it by email.';
+
+  @override
+  String get aboutVersion => 'Version: 1.0.0';
+
+  @override
+  String get aboutDescription =>
+      'Vietnam\'s leading online shopping application.';
+
+  @override
+  String get close => 'Close';
+
+  @override
+  String get logoutQuestion => 'Are you sure you want to log out?';
+
+  @override
+  String get accountAddressesTitle => 'Delivery address';
+
+  @override
+  String get accountAddressesMessage =>
+      'Choose and edit your address directly during checkout.';
+
+  @override
+  String get accountPaymentMethodsTitle => 'Payment methods';
+
+  @override
+  String get accountPaymentMethodsMessage =>
+      'VNShop currently supports COD, VietQR, and SePay at checkout.';
+
+  @override
+  String get accountNotificationsTitle => 'Notifications';
+
+  @override
+  String get accountNotificationsMessage =>
+      'Order and payment updates from VNShop will appear here.';
+
+  @override
+  String get accountHelpTitle => 'Help';
+
+  @override
+  String get accountHelpMessage =>
+      'Frequently asked questions and checkout support will appear here.';
+
+  @override
+  String get loginContinue => 'Sign in to continue';
+
+  @override
+  String get rememberLogin => 'Remember me';
+
+  @override
+  String get forgotPassword => 'Forgot password?';
+
+  @override
+  String get noAccount => 'Don\'t have an account?';
+
+  @override
+  String get registerNow => 'Register now';
+
+  @override
+  String get or => 'Or';
+
+  @override
+  String get send => 'Send';
+
+  @override
+  String get forgotPasswordTitle => 'Forgot password';
+
+  @override
+  String get forgotPasswordHelp =>
+      'Enter your email address to receive password reset instructions.';
+
+  @override
+  String get emailHint => 'Enter your email';
+
+  @override
+  String get passwordHintLogin => 'Enter your password';
+
+  @override
+  String get resetEmailSent => 'Password reset email sent';
+
+  @override
+  String socialLoginUnavailable(Object provider) {
+    return 'Sign in with $provider (coming soon)';
+  }
+
+  @override
+  String get registerTitle => 'Create a new account';
+
+  @override
+  String get registerSubtitle => 'Fill in the details below to register';
+
+  @override
+  String get fullName => 'Full name';
+
+  @override
+  String get fullNameHint => 'Enter your full name';
+
+  @override
+  String get phoneOptional => 'Phone (optional)';
+
+  @override
+  String get phoneHint => 'Enter your phone number';
+
+  @override
+  String get createPassword => 'Create a password';
+
+  @override
+  String get passwordRequirements =>
+      'At least 8 characters, including uppercase, lowercase, and a number';
+
+  @override
+  String get confirmPassword => 'Confirm password';
+
+  @override
+  String get confirmPasswordHint => 'Enter your password again';
+
+  @override
+  String get agreeTermsPrefix => 'I agree to the ';
+
+  @override
+  String get privacyAnd => ' and ';
+
+  @override
+  String get registrationSuccess =>
+      'Registration successful. Verify your email before signing in.';
+
+  @override
+  String get agreeTermsRequired => 'Please agree to the terms of use';
+
+  @override
+  String activeOrders(Object count) {
+    return '$count active orders';
+  }
+
+  @override
+  String get orderStatusPendingShort => 'Pending';
+
+  @override
+  String get orderStatusProcessingShort => 'Processing';
+
+  @override
+  String get orderStatusShippedShort => 'Shipping';
+
+  @override
+  String get orderStatusDeliveredShort => 'Delivered';
+
+  @override
+  String get viewAllOrders => 'View all orders';
+
+  @override
+  String get favoriteProducts => 'Favorite products';
+
+  @override
+  String get addressBook => 'Address book';
+
+  @override
+  String get addressBookHelp => 'Manage delivery addresses';
+
+  @override
+  String get paymentMethods => 'Payment methods';
+
+  @override
+  String get paymentMethodsHelp => 'Cards and digital wallets';
+
+  @override
+  String get notificationsSettings => 'Notifications';
+
+  @override
+  String get notificationsSettingsHelp => 'Notification settings';
+
+  @override
+  String get help => 'Help';
+
+  @override
+  String get helpDescription =>
+      'Frequently asked questions and support contacts';
+
+  @override
+  String get about => 'About';
+
+  @override
+  String get aboutSubtitle => 'Version 1.0.0';
+
+  @override
+  String get account => 'Account';
 
   @override
   String quantityShort(int count) {

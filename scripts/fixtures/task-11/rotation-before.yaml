@@ -1,0 +1,14 @@
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: vnshop-runtime-secrets
+spec:
+  encryptedData:
+    product-cursor-secret: cHJvZHVjdC1jdXJzb3Itb2xkLWZpeHR1cmUtMDAwMDAwMDAwMDAwMDAwMDAw
+    search-cursor-secret: c2VhcmNoLWN1cnNvci1vbGQtZml4dHVyZS0wMDAwMDAwMDAwMDAwMDAwMDA=
+    admin-cursor-secret: YWRtaW4tY3Vyc29yLW9sZC1maXh0dXJlLTAwMDAwMDAwMDAwMDAwMDAwMDA=
+    seller-finance-admin-cursor-secret: c2VsbGVyLWZpbmFuY2UtYWRtaW4tb2xkLWZpeHR1cmUtMDAwMDAwMDAw
+  template:
+    metadata:
+      name: vnshop-runtime-secrets
+    type: Opaque

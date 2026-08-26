@@ -17,6 +17,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.Instant;
+import java.time.Clock;
+import java.time.ZoneOffset;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -39,11 +45,11 @@ class WebhookControllerTest {
         outbox = new InMemoryOutbox();
         ReceiveCarrierWebhookUseCase useCase = new ReceiveCarrierWebhookUseCase(outbox);
 
-        GhtkProperties ghtkProps = new GhtkProperties("https://test.ghtk.vn", null, "test", null);
+        GhtkProperties ghtkProps = new GhtkProperties("https://test.ghtk.vn", null, "test", "test-secret");
         ghtkMockMvc = MockMvcBuilders.standaloneSetup(new GhtkWebhookController(
                 useCase, ghtkValidator(ghtkProps), new GhtkWebhookMapper())).build();
 
-        GhnProperties ghnProps = new GhnProperties("https://test.ghn.vn", null, "12345", "2", null);
+        GhnProperties ghnProps = new GhnProperties("https://test.ghn.vn", null, "12345", "2", "ghn-secret");
         ghnMockMvc = MockMvcBuilders.standaloneSetup(new GhnWebhookController(
                 useCase, ghnValidator(ghnProps), new GhnWebhookMapper())).build();
     }
@@ -54,7 +60,10 @@ class WebhookControllerTest {
 
         ghtkMockMvc.perform(post("/webhooks/ghtk")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(payload))
+                        .content(payload)
+                        .header("X-GHTK-Signature", ghtkSignature(new GhtkWebhookPayload(
+                                "GHTK123456", "delivering", "Dang giao hang", "2026-07-21T10:30:00Z",
+                                "ORD-12345", null, null, null), "test-secret")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ok"));
 
@@ -86,10 +95,15 @@ class WebhookControllerTest {
     void ghtk_duplicateEvent_isIdempotent() throws Exception {
         String payload = "{\"label_id\":\"GHTK123456\",\"status\":\"delivering\",\"status_text\":\"Dang giao hang\",\"updated_at\":\"2026-07-21T10:30:00Z\",\"order_id\":\"ORD-12345\"}";
 
-        ghtkMockMvc.perform(post("/webhooks/ghtk").contentType(MediaType.APPLICATION_JSON).content(payload))
+        GhtkWebhookPayload duplicatePayload = new GhtkWebhookPayload(
+                "GHTK123456", "delivering", "Dang giao hang", "2026-07-21T10:30:00Z",
+                "ORD-12345", null, null, null);
+        ghtkMockMvc.perform(post("/webhooks/ghtk").contentType(MediaType.APPLICATION_JSON).content(payload)
+                        .header("X-GHTK-Signature", ghtkSignature(duplicatePayload, "test-secret")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("ok"));
 
-        ghtkMockMvc.perform(post("/webhooks/ghtk").contentType(MediaType.APPLICATION_JSON).content(payload))
+        ghtkMockMvc.perform(post("/webhooks/ghtk").contentType(MediaType.APPLICATION_JSON).content(payload)
+                        .header("X-GHTK-Signature", ghtkSignature(duplicatePayload, "test-secret")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("duplicate"));
     }
 
@@ -99,7 +113,10 @@ class WebhookControllerTest {
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .param("label_id", "GHTK-FORM")
                         .param("status_id", "8")
-                        .param("action_time", "2026-07-21T10:30:00Z"))
+                        .param("action_time", "2026-07-21T10:30:00Z")
+                        .header("X-GHTK-Signature", ghtkSignature(new GhtkWebhookPayload(
+                                "GHTK-FORM", "8", null, "2026-07-21T10:30:00Z", null,
+                                null, null, null), "test-secret")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ok"));
 
@@ -112,7 +129,10 @@ class WebhookControllerTest {
 
         ghnMockMvc.perform(post("/webhooks/ghn")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(payload))
+                        .content(payload)
+                        .header("X-GHN-Signature", ghnSignature(new GhnWebhookPayload(
+                                "GHN123456", "Delivered", "8", "2026-07-21T10:30:00Z", "ORD-12345",
+                                null, null, null), "ghn-secret")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ok"));
 
@@ -126,7 +146,10 @@ class WebhookControllerTest {
 
         ghnMockMvc.perform(post("/webhooks/ghn")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(payload))
+                        .content(payload)
+                        .header("X-GHN-Signature", ghnSignature(new GhnWebhookPayload(
+                                "GHN-TIME", "Delivered", null, "2026-07-21T10:30:00Z", null,
+                                null, null, null), "ghn-secret")))
                 .andExpect(status().isOk());
 
         assertEquals("DELIVERED", outbox.lastEvent().status());
@@ -154,10 +177,15 @@ class WebhookControllerTest {
     void ghn_duplicateEvent_isIdempotent() throws Exception {
         String payload = "{\"OrderCode\":\"GHN123456\",\"Status\":\"Delivered\",\"StatusCode\":\"8\",\"UpdatedDate\":\"2026-07-21T10:30:00Z\",\"ClientOrderCode\":\"ORD-12345\"}";
 
-        ghnMockMvc.perform(post("/webhooks/ghn").contentType(MediaType.APPLICATION_JSON).content(payload))
+        GhnWebhookPayload duplicatePayload = new GhnWebhookPayload(
+                "GHN123456", "Delivered", "8", "2026-07-21T10:30:00Z", "ORD-12345",
+                null, null, null);
+        ghnMockMvc.perform(post("/webhooks/ghn").contentType(MediaType.APPLICATION_JSON).content(payload)
+                        .header("X-GHN-Signature", ghnSignature(duplicatePayload, "ghn-secret")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("ok"));
 
-        ghnMockMvc.perform(post("/webhooks/ghn").contentType(MediaType.APPLICATION_JSON).content(payload))
+        ghnMockMvc.perform(post("/webhooks/ghn").contentType(MediaType.APPLICATION_JSON).content(payload)
+                        .header("X-GHN-Signature", ghnSignature(duplicatePayload, "ghn-secret")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("duplicate"));
     }
 
@@ -166,12 +194,15 @@ class WebhookControllerTest {
         ReceiveCarrierWebhookUseCase useCase = new ReceiveCarrierWebhookUseCase(new FailingOutbox());
         GhtkWebhookController controller = new GhtkWebhookController(
                 useCase,
-                ghtkValidator(new GhtkProperties("https://test.ghtk.vn", null, "test", null)),
+                ghtkValidator(new GhtkProperties("https://test.ghtk.vn", null, "test", "test-secret")),
                 new GhtkWebhookMapper());
 
         MockMvcBuilders.standaloneSetup(controller).build().perform(post("/webhooks/ghtk")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"label_id\":\"GHTK-FAIL\",\"status\":\"delivering\"}"))
+                        .content("{\"label_id\":\"GHTK-FAIL\",\"status\":\"delivering\",\"updated_at\":\"2026-07-21T10:30:00Z\"}")
+                        .header("X-GHTK-Signature", ghtkSignature(new GhtkWebhookPayload(
+                                "GHTK-FAIL", "delivering", null, "2026-07-21T10:30:00Z", null,
+                                null, null, null), "test-secret")))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.status").value("error"));
     }
@@ -190,17 +221,54 @@ class WebhookControllerTest {
     }
 
     private static GhnWebhookSignatureService ghnValidator(GhnProperties properties) {
-        return new GhnWebhookSignatureService(properties, new WebhookSecurityProperties(true), localEnvironment());
+        return new GhnWebhookSignatureService(properties, new WebhookSecurityProperties(true),
+                Clock.fixed(Instant.parse("2026-07-21T10:35:00Z"), ZoneOffset.UTC));
     }
 
     private static GhtkWebhookSignatureService ghtkValidator(GhtkProperties properties) {
-        return new GhtkWebhookSignatureService(properties, new WebhookSecurityProperties(true), localEnvironment());
+        return new GhtkWebhookSignatureService(properties, new WebhookSecurityProperties(true),
+                Clock.fixed(Instant.parse("2026-07-21T10:35:00Z"), ZoneOffset.UTC));
     }
 
     private static StandardEnvironment localEnvironment() {
         StandardEnvironment environment = new StandardEnvironment();
         environment.setActiveProfiles("local");
         return environment;
+    }
+
+    private static String ghtkSignature(GhtkWebhookPayload payload, String secret) throws Exception {
+        return sign(canonical("vnshop-ghtk-webhook-v1", new String[][]{
+                {"label_id", payload.labelId()}, {"status", payload.status()}, {"status_text", payload.statusText()},
+                {"updated_at", payload.updatedAt()}, {"order_id", payload.orderId()}, {"cod_collected_amount", null},
+                {"collection_id", null}, {"currency", null}}), secret);
+    }
+
+    private static String ghnSignature(GhnWebhookPayload payload, String secret) throws Exception {
+        return sign(canonical("vnshop-ghn-webhook-v1", new String[][]{
+                {"order_code", payload.orderCode()}, {"status", payload.status()}, {"status_code", payload.statusCode()},
+                {"updated_date", payload.updatedDate()}, {"client_order_code", payload.clientOrderCode()},
+                {"cod_collected_amount", null}, {"collection_id", null}, {"currency", null}}), secret);
+    }
+
+    private static String canonical(String prefix, String[][] fields) {
+        StringBuilder result = new StringBuilder(prefix).append('|');
+        for (String[] field : fields) {
+            append(result, field[0]);
+            append(result, field[1]);
+            result.append(';');
+        }
+        return result.toString();
+    }
+
+    private static void append(StringBuilder result, String value) {
+        String normalized = value == null ? "" : value;
+        result.append(normalized.getBytes(StandardCharsets.UTF_8).length).append(':').append(normalized);
+    }
+
+    private static String sign(String value, String secret) throws Exception {
+        Mac mac = Mac.getInstance("HmacSHA256");
+        mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+        return Base64.getEncoder().encodeToString(mac.doFinal(value.getBytes(StandardCharsets.UTF_8)));
     }
 
     private static class InMemoryOutbox implements CarrierWebhookOutboxPort {

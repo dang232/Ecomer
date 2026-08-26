@@ -219,6 +219,14 @@ jobs:
           find scripts infra/scripts -type f -name '*.sh' -print0 | xargs -0 -r -n1 bash -n
           find scripts infra/scripts -type f \( -name '*.mjs' -o -name '*.cjs' \) -print0 | xargs -0 -r -n1 node --check
 
+      - name: Validate canonical Kafka topics and ACL usage
+        run: |
+          node infra/scripts/generate-kafka-artifacts.mjs --check
+          node infra/scripts/scan-kafka-usage.mjs
+
+      - name: Reject production local password defaults
+        run: node scripts/check-prod-defaults.mjs
+
       - name: Run repository tooling tests
         run: node --test scripts/ci_monitor.test.cjs scripts/generate-design-tokens.test.mjs
 
@@ -574,6 +582,145 @@ jobs:
           scanners: vuln
           exit-code: "1"
           trivyignores: .trivyignore.yaml
+
+  build-and-push:
+    name: Build and push immutable images (${{ matrix.artifact.id }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    if: github.event_name != 'pull_request'
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        artifact:
+          - frontend
+          - api-gateway
+          - cart-service
+          - configuration-service
+          - inventory-service
+          - invoice-service
+          - messaging-service
+          - monitoring-service-v2
+          - notification-service
+          - order-service
+          - payment-service
+          - product-service
+          - recommendations-service
+          - search-service
+          - seller-finance-service
+          - shipping-service
+          - user-service
+          - video-moderator
+          - video-transcoder
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Log in to GHCR
+        uses: docker/login-action@abd2ef45e78c5afb21d64d4ca52ee8550d9572c7 # v4.5.1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - name: Install crane
+        run: |
+          set -euo pipefail
+          go install github.com/google/go-containerregistry/cmd/crane@v0.20.6
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Build and push
+        id: image
+        env:
+          SERVICE: ${{ matrix.artifact }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$SERVICE" == "frontend" ]]; then
+            context=fe
+          else
+            context="services/$SERVICE"
+          fi
+          image="ghcr.io/dang232/vnshop-$SERVICE"
+          docker buildx build \
+            --platform linux/amd64 \
+            --file "$context/Dockerfile" \
+            --tag "$image:$SHA" \
+            --cache-from "type=gha,scope=$SERVICE" \
+            --cache-to "type=gha,mode=max,scope=$SERVICE" \
+            --push "$context"
+          digest="$(docker buildx imagetools inspect "$image:$SHA" --format '{{json .Manifest}}' | jq -r '.digest')"
+          zero_digest="sha256:$(printf '%064d' 0)"
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ && "$digest" != "$zero_digest" ]]
+          printf '%s\n' "$digest" > "$RUNNER_TEMP/$SERVICE.digest"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
+      - name: Verify registry digest exists with crane
+        env:
+          SERVICE: ${{ matrix.artifact }}
+          SHA: ${{ github.sha }}
+          DIGEST: ${{ steps.image.outputs.digest }}
+        run: |
+          set -euo pipefail
+          crane digest "ghcr.io/dang232/vnshop-$SERVICE@$DIGEST" | grep -Fx "$DIGEST"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: image-digest-${{ matrix.artifact }}
+          path: ${{ runner.temp }}/${{ matrix.artifact }}.digest
+          if-no-files-found: error
+          retention-days: 14
+
+  promote-prod:
+    name: Promote prod immutable image references
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install kustomize, yq, and crane
+        run: |
+          set -euo pipefail
+          go install sigs.k8s.io/kustomize/kustomize/v5@v5.7.1
+          go install github.com/google/go-containerregistry/cmd/crane@v0.20.6
+          sudo curl -fsSL -o /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.45.4/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Download image digests and promote kustomization
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: image-digest-*
+          path: image-digests
+          merge-multiple: true
+
+      - name: Set immutable prod images and validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          pushd infra/k8s/overlays/prod >/dev/null
+          for digest_file in "$GITHUB_WORKSPACE"/image-digests/*.digest; do
+            service="$(basename "$digest_file" .digest)"
+            image="ghcr.io/dang232/vnshop-$service"
+            digest="$(cat "$digest_file")"
+            kustomize edit set image "$image=$image@$digest"
+          done
+          popd >/dev/null
+          test "$(yq '[.images[] | select(.digest | test("0000"))] | length' infra/k8s/overlays/prod/kustomization.yaml)" -eq 0
+          node scripts/verify-image-promotion.mjs --overlay infra/k8s/overlays/prod
+          kubectl kustomize infra/k8s/overlays/prod >/dev/null
 
   secret_scan:
     name: Secret scan

@@ -1,41 +1,42 @@
-import {
-  ArgumentsHost,
-  Catch,
-  ExceptionFilter,
-  HttpException,
-  HttpStatus,
-} from '@nestjs/common';
-import { Response } from 'express';
+import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common';
+import type { Request, Response } from 'express';
+import { randomUUID } from 'node:crypto';
 import { CartDomainException } from '../domain/cart-domain.exception';
 
-/**
- * Standard VNShop error response shape.
- * { code, message, details, timestamp, traceId }
- */
-interface ErrorResponse {
-  code: string;
-  message: string;
-  details: string[];
-  timestamp: string;
-  traceId: string | null;
+interface ProblemDetails {
+  readonly type: string;
+  readonly title: string;
+  readonly status: number;
+  readonly detail: string;
+  readonly instance: string;
+  readonly code: string;
+  readonly requestId: string;
+  readonly traceId: string;
+  readonly retryable: boolean;
+  readonly fields: Record<string, readonly string[]>;
+  readonly errorCode: string;
 }
 
-function buildError(
-  code: string,
-  message: string,
-  details: string[] = [],
-  traceId: string | null = null,
-): ErrorResponse {
-  return { code, message, details, timestamp: new Date().toISOString(), traceId };
+function requestId(request: Request): string {
+  const value = request.header('x-request-id');
+  return value && value.length <= 128 ? value : randomUUID();
 }
 
-/** Extract OTEL traceId from `traceparent` header injected by the OTEL SDK, if present. */
-function resolveTraceId(request: { headers?: Record<string, string | string[] | undefined> }): string | null {
-  const traceparent = request.headers?.['traceparent'];
-  if (typeof traceparent !== 'string') return null;
-  // traceparent format: 00-<traceId>-<spanId>-<flags>
-  const parts = traceparent.split('-');
-  return parts.length >= 2 ? (parts[1] ?? null) : null;
+function problem(code: string, detail: string, status: number, request: Request, fields: Record<string, readonly string[]> = {}): ProblemDetails {
+  const id = requestId(request);
+  return {
+    type: `https://api.vnshop.com/problems/${code.toLowerCase()}`,
+    title: HttpStatus[status] ?? 'Request failed',
+    status,
+    detail,
+    instance: request.originalUrl ?? request.url ?? '/',
+    code,
+    requestId: id,
+    traceId: id,
+    retryable: status === 425 || status === 429 || status >= 500,
+    fields,
+    errorCode: code,
+  };
 }
 
 @Catch()
@@ -43,60 +44,39 @@ export class CartExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
-    const request = ctx.getRequest<{ headers?: Record<string, string | string[] | undefined> }>();
-    const traceId = resolveTraceId(request);
-
-    if (
-      exception instanceof Error &&
-      (exception as NodeJS.ErrnoException).code === 'CART_VERSION_CONFLICT'
-    ) {
-      response
-        .status(HttpStatus.CONFLICT)
-        .json(buildError('CART_VERSION_CONFLICT', exception.message, [], traceId));
-      return;
-    }
+    const request = ctx.getRequest<Request>();
+    let status = HttpStatus.INTERNAL_SERVER_ERROR;
+    let code = 'INTERNAL_SERVER_ERROR';
+    let detail = 'Internal server error';
+    let fields: Record<string, readonly string[]> = {};
 
     if (exception instanceof CartDomainException) {
-      response
-        .status(this.resolveStatus(exception))
-        .json(buildError(exception.errorCode, exception.message, [], traceId));
-      return;
-    }
-
-    if (exception instanceof HttpException) {
-      const status = exception.getStatus();
+      status = this.resolveStatus(exception);
+      code = exception.errorCode;
+      detail = exception.message;
+    } else if (exception instanceof HttpException) {
+      status = exception.getStatus();
+      code = HttpStatus[status] ?? 'HTTP_ERROR';
+      detail = status >= 500 ? 'Internal server error' : exception.message;
       const body = exception.getResponse();
-      const details: string[] =
-        body && typeof body === 'object' && 'message' in body && Array.isArray((body as Record<string, unknown>).message)
-          ? ((body as Record<string, unknown>).message as string[])
-          : [];
-      response
-        .status(status)
-        .json(
-          buildError(
-            HttpStatus[status] ?? 'HTTP_ERROR',
-            exception.message,
-            details,
-            traceId,
-          ),
-        );
-      return;
+      if (typeof body === 'object' && body !== null && 'message' in body && Array.isArray(body.message)) {
+        fields = { _global: body.message.filter((message): message is string => typeof message === 'string') };
+      }
     }
 
-    response
-      .status(HttpStatus.INTERNAL_SERVER_ERROR)
-      .json(buildError('INTERNAL_SERVER_ERROR', 'Internal server error', [], traceId));
+    if (status === HttpStatus.TOO_MANY_REQUESTS || status === HttpStatus.TOO_EARLY) response.setHeader('Retry-After', '1');
+    response.status(status).type('application/problem+json').json(problem(code, detail, status, request, fields));
   }
 
   private resolveStatus(exception: CartDomainException): number {
     switch (exception.errorCode) {
-      case 'CART_FULL': return 422;
+      case 'CART_FULL':
       case 'CART_ITEM_LIMIT_EXCEEDED': return 422;
-      case 'CART_ITEM_NOT_FOUND': return 404;
+      case 'CART_ITEM_NOT_FOUND':
+      case 'PRODUCT_NOT_FOUND':
+      case 'VARIANT_NOT_FOUND': return 404;
       case 'INVALID_CART_OPERATION': return 400;
       case 'CURRENCY_MISMATCH': return 500;
-      case 'PRODUCT_NOT_FOUND': return 404;
-      case 'VARIANT_NOT_FOUND': return 404;
       default: return 500;
     }
   }

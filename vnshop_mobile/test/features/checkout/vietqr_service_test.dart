@@ -9,7 +9,9 @@ void main() {
       service = VietQRService(
         merchantId: 'VNshop123',
         merchantName: 'VNShop Store',
-        mode: VietQRMode.test,
+        configuration: const VietQRConfiguration(
+          bankBin: '970436', accountNumber: '1234567890', accountName: 'VNShop Store',
+        ),
       );
     });
 
@@ -74,7 +76,9 @@ void main() {
         final productionService = VietQRService(
           merchantId: 'MERCHANT_PROD',
           merchantName: 'Production Store',
-          mode: VietQRMode.production,
+          configuration: const VietQRConfiguration(
+            bankBin: '970407', accountNumber: '0123456789', accountName: 'Production Store',
+          ),
         );
 
         final payment = await productionService.generatePayment(
@@ -82,8 +86,8 @@ void main() {
           orderId: 'ORD_PROD_001',
         );
 
-        expect(payment.bankId, 'YOUR_BANK_ID');
-        expect(payment.accountNumber, 'YOUR_ACCOUNT');
+        expect(payment.bankId, '970407');
+        expect(payment.accountNumber, '0123456789');
       });
     });
   });
@@ -108,10 +112,4 @@ void main() {
     });
   });
 
-  group('VietQRMode', () {
-    test('should have test and production modes', () {
-      expect(VietQRMode.values, contains(VietQRMode.test));
-      expect(VietQRMode.values, contains(VietQRMode.production));
-    });
-  });
 }

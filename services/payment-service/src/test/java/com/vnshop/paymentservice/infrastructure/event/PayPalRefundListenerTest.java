@@ -7,6 +7,7 @@ import com.vnshop.paymentservice.domain.PaymentStatus;
 import com.vnshop.paymentservice.domain.port.out.FxRatePort;
 import com.vnshop.paymentservice.domain.port.out.PaymentRepositoryPort;
 import com.vnshop.paymentservice.infrastructure.paypal.PayPalGateway;
+import com.vnshop.paymentservice.infrastructure.dlt.DurableDltService;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Optional;
@@ -52,7 +53,7 @@ class PayPalRefundListenerTest {
                 .thenReturn(CompletableFuture.completedFuture(mock(SendResult.class)));
 
         PayPalRefundListener listener = new PayPalRefundListener(
-                paymentRepository, gateway, fxRatePort, objectMapper, providerOf(kafkaTemplate));
+                paymentRepository, gateway, fxRatePort, objectMapper, providerOf(kafkaTemplate), mock(DurableDltService.class));
 
         listener.onRefundRequested(envelope("100000", "VND"));
 
@@ -78,7 +79,7 @@ class PayPalRefundListenerTest {
                 .thenReturn(CompletableFuture.completedFuture(mock(SendResult.class)));
 
         PayPalRefundListener listener = new PayPalRefundListener(
-                paymentRepository, gateway, fxRatePort, objectMapper, providerOf(kafkaTemplate));
+                paymentRepository, gateway, fxRatePort, objectMapper, providerOf(kafkaTemplate), mock(DurableDltService.class));
 
         // Bare event payload (no outbox envelope)
         String flat = "{\"returnId\":\"" + RETURN_ID + "\",\"orderId\":\"" + ORDER_ID
@@ -99,7 +100,7 @@ class PayPalRefundListenerTest {
         KafkaTemplate<String, Object> kafkaTemplate = mock(KafkaTemplate.class);
 
         PayPalRefundListener listener = new PayPalRefundListener(
-                paymentRepository, gateway, fxRatePort, objectMapper, providerOf(kafkaTemplate));
+                paymentRepository, gateway, fxRatePort, objectMapper, providerOf(kafkaTemplate), mock(DurableDltService.class));
 
         listener.onRefundRequested(envelope("100000", "VND"));
 
@@ -115,7 +116,7 @@ class PayPalRefundListenerTest {
         KafkaTemplate<String, Object> kafkaTemplate = mock(KafkaTemplate.class);
 
         PayPalRefundListener listener = new PayPalRefundListener(
-                paymentRepository, gateway, fxRatePort, objectMapper, providerOf(kafkaTemplate));
+                paymentRepository, gateway, fxRatePort, objectMapper, providerOf(kafkaTemplate), mock(DurableDltService.class));
 
         listener.onRefundRequested(envelope("100000", "VND"));
 
@@ -133,7 +134,7 @@ class PayPalRefundListenerTest {
         KafkaTemplate<String, Object> kafkaTemplate = mock(KafkaTemplate.class);
 
         PayPalRefundListener listener = new PayPalRefundListener(
-                paymentRepository, gateway, fxRatePort, objectMapper, providerOf(kafkaTemplate));
+                paymentRepository, gateway, fxRatePort, objectMapper, providerOf(kafkaTemplate), mock(DurableDltService.class));
 
         listener.onRefundRequested(envelope("100000", "VND"));
 

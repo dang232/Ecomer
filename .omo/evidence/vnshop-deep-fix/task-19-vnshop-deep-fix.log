@@ -1,0 +1,41 @@
+Task 19 API versioning evidence
+===============================
+
+Gateway implementation:
+- Canonical route predicates include /api/v1 via RoutePaths.versioned and rewrite only the canonical prefix before proxying.
+- Legacy safe methods return 308 Permanent Redirect; mutations return 307 Temporary Redirect.
+- Legacy redirects preserve query strings and emit Deprecation: true, Sunset as RFC 1123 HTTP-date, and successor-version Link.
+- Default Sunset is computed as now + 90 days; VNSHOP_API_SUNSET can pin a deployment date.
+
+Focused verification:
+- `mvn -q -DskipTests compile` in services/api-gateway: PASS
+- `mvn -q -Dtest=LegacyApiVersioningFilterTest test` in services/api-gateway: PASS
+- `buf lint` in proto: PASS
+- `buf build` in proto: PASS
+- `npm run typecheck` in fe: PASS
+- `flutter analyze` in vnshop_mobile: BLOCKED before analysis by Windows Developer Mode/symlink support requirement
+
+Buf breaking/generation:
+- `buf breaking --against .git#branch=main` from repository root: timed out in this environment.
+- `buf generate` in proto: BLOCKED by remote plugin v36.0 rejecting configured `paths` option.
+- All canonical and service mirror proto contracts currently declare package vnshop.v1 and java package com.vnshop.proto.v1; idempotency field numbers remain unchanged.
+
+Live probes against the already-running gateway process:
+- `curl.exe -sS -i http://localhost:8080/api/v1/products`: HTTP 401 from pre-change process.
+- `curl.exe -sS -i http://localhost:8080/products`: HTTP 503 from pre-change process; no migration headers.
+- Legacy POST probe could not be completed with bash on this Windows host because WSL bash is unavailable; focused unit test covers POST /orders method-preserving 307 and body-bearing request.
+- The running process was not rebuilt/restarted, so these live responses are not evidence against the worktree implementation.
+
+Follow-up implementation and verification:
+- Added failing-first POST contract coverage, observed the impossible downstream-callback assertion, then corrected the test to assert client-visible 307 semantics with the original POST/body-bearing request.
+- Added canonical seller-review authorization parity: `/api/v1/reviews/seller/me` remains SELLER-only while public canonical product reviews remain anonymous.
+- Vite dev runtime now emits `/api/v1/` HTTP API URLs, preserves `/api/v1` through the proxy, and proxies WebSockets on `/ws/*` without the old `/api/ws/*` aliases.
+- Flutter API version is pinned to `/api/v1`; it can no longer be redirected to an arbitrary `API_VERSION` through environment configuration.
+- Compatibility matrix now declares supported methods `GET, HEAD, OPTIONS, POST, PUT, PATCH, DELETE` and a concrete successor Link template.
+- Corrected task-19 summary wording to distinguish safe-method 308 from mutation-method 307.
+- Focused gateway tests: PASS (`LegacyApiVersioningFilterTest`, `SecurityConfigWebSocketAuthorizationTest`).
+- FE `pnpm run typecheck`: PASS (app, test, e2e, node).
+- Flutter `flutter analyze --no-fatal-infos --no-fatal-warnings`: PASS, no issues found.
+- Proto `buf lint`: PASS.
+- `git diff --check`: PASS with pre-existing CRLF normalization warnings only.
+- Live runtime/browser proof remains blocked by stale process/Docker restart not performed; no live success claim is made.

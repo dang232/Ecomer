@@ -20,6 +20,7 @@ import '../../features/products/presentation/pages/product_list_page.dart';
 import '../../features/products/presentation/pages/product_detail_route_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile/presentation/pages/settings_page.dart';
+import '../../features/profile/presentation/pages/account_destination_page.dart';
 import '../../features/wishlist/presentation/pages/favorites_page.dart';
 import '../../features/checkout/presentation/pages/checkout_page.dart';
 import '../../features/checkout/presentation/pages/address_form_page.dart';
@@ -27,6 +28,7 @@ import '../../features/checkout/presentation/bloc/checkout_bloc.dart';
 import '../../features/checkout/domain/repositories/checkout_repository.dart';
 import '../../core/notifications/onesignal_handler.dart';
 import '../shell/main_shell.dart';
+import '../../l10n/generated/app_localizations.dart';
 import 'app_routes.dart';
 import 'checkout_route_args.dart';
 
@@ -112,7 +114,7 @@ GoRouter buildAppRouter(BuildContext context) {
                 name: 'categories',
                 pageBuilder: (context, state) => CustomTransitionPage(
                   key: state.pageKey,
-                  child: const PlaceholderPage(title: 'Danh mục'),
+                   child: const ProductListPage(),
                   transitionsBuilder:
                       (context, animation, secondaryAnimation, child) {
                         return FadeTransition(opacity: animation, child: child);
@@ -176,7 +178,8 @@ GoRouter buildAppRouter(BuildContext context) {
           return BlocProvider(
             create: (context) {
               final checkoutRepository = context.read<CheckoutRepository>();
-              return CheckoutBloc(repository: checkoutRepository);
+               final user = context.read<AuthBloc>().state.user;
+               return CheckoutBloc(repository: checkoutRepository, userId: user?.id);
             },
             child: CheckoutPage(
               routeArgs: extra is CheckoutRouteArgs ? extra : null,
@@ -232,7 +235,7 @@ GoRouter buildAppRouter(BuildContext context) {
       GoRoute(
         path: '/promotions',
         name: 'promotions',
-        builder: (context, state) => const PlaceholderPage(title: 'Khuyến mãi'),
+         builder: (context, state) => const ProductListPage(),
       ),
       // Product routes (non-shell for deep links)
       GoRoute(
@@ -262,25 +265,37 @@ GoRouter buildAppRouter(BuildContext context) {
       GoRoute(
         path: '/addresses',
         name: 'addresses',
-        builder: (context, state) => const PlaceholderPage(title: 'Địa chỉ'),
+          builder: (context, state) => AccountDestinationPage(
+            title: AppLocalizations.of(context).accountAddressesTitle, icon: Icons.location_on_outlined,
+            message: AppLocalizations.of(context).accountAddressesMessage,
+          ),
       ),
       // Payment methods route
       GoRoute(
         path: '/payment-methods',
         name: 'paymentMethods',
-        builder: (context, state) => const PlaceholderPage(title: 'Thanh toán'),
+          builder: (context, state) => AccountDestinationPage(
+            title: AppLocalizations.of(context).accountPaymentMethodsTitle, icon: Icons.payment_outlined,
+            message: AppLocalizations.of(context).accountPaymentMethodsMessage,
+          ),
       ),
       // Notifications route
       GoRoute(
         path: '/notifications',
         name: 'notifications',
-        builder: (context, state) => const PlaceholderPage(title: 'Thông báo'),
+          builder: (context, state) => AccountDestinationPage(
+            title: AppLocalizations.of(context).accountNotificationsTitle, icon: Icons.notifications_outlined,
+            message: AppLocalizations.of(context).accountNotificationsMessage,
+          ),
       ),
       // Help route
       GoRoute(
         path: '/help',
         name: 'help',
-        builder: (context, state) => const PlaceholderPage(title: 'Trợ giúp'),
+          builder: (context, state) => AccountDestinationPage(
+            title: AppLocalizations.of(context).accountHelpTitle, icon: Icons.help_outline,
+            message: AppLocalizations.of(context).accountHelpMessage,
+          ),
       ),
     ],
   );
@@ -297,32 +312,4 @@ void setupOneSignalDeepLinking(GoRouter router) {
       router.go(deepLink);
     }
   };
-}
-
-class PlaceholderPage extends StatelessWidget {
-  const PlaceholderPage({required this.title, super.key});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(title, style: Theme.of(context).textTheme.headlineSmall),
-            if (title == 'Đơn hàng của tôi') ...[
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => context.push('/orders'),
-                child: const Text('Xem danh sách đơn hàng'),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
 }

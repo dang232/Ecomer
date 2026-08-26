@@ -14,12 +14,26 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.oauth2.core.*;
+import org.springframework.security.oauth2.jwt.*;
 
 import java.util.Optional;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    @Bean
+    JwtDecoder jwtDecoder(@Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}") String jwkSetUri,
+                          @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}") String issuer,
+                          @Value("${spring.security.oauth2.resourceserver.jwt.audiences}") String audience) {
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
+        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(JwtValidators.createDefaultWithIssuer(issuer),
+                token -> token.getAudience().contains(audience) ? OAuth2TokenValidatorResult.success()
+                        : OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", "Missing required audience", null))));
+        return decoder;
+    }
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http,

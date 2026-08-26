@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { cn } from "../lib/cn";
 
 import { IconButton } from "./icon-button";
+import { useBodyScrollLock } from "./use-body-scroll-lock";
 
 export interface DialogProps {
   open: boolean;
@@ -58,6 +59,8 @@ export function Dialog({
   const panelRef = useRef<HTMLDivElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
 
+  useBodyScrollLock(open);
+
   useEffect(() => {
     if (!open) return;
 
@@ -76,7 +79,7 @@ export function Dialog({
 
     return () => {
       cancelAnimationFrame(frame);
-      restoreFocusRef.current?.focus();
+      if (restoreFocusRef.current?.isConnected) restoreFocusRef.current.focus();
     };
   }, [open, triggerRef]);
 

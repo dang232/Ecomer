@@ -38,6 +38,7 @@ extension PaymentMethodPresentation on PaymentMethod {
     return switch (this) {
       PaymentMethod.cod => localizations.paymentCodName,
       PaymentMethod.vietqr => localizations.paymentVietqrName,
+      PaymentMethod.sepay => 'SePay',
       PaymentMethod.vnpay => localizations.paymentVnpayName,
       PaymentMethod.momo => localizations.paymentMomoName,
       PaymentMethod.bankTransfer => localizations.paymentBankTransferName,
@@ -48,6 +49,7 @@ extension PaymentMethodPresentation on PaymentMethod {
     return switch (this) {
       PaymentMethod.cod => localizations.paymentCodDescription,
       PaymentMethod.vietqr => localizations.paymentVietqrDescription,
+      PaymentMethod.sepay => 'Chuyển khoản tự động và theo dõi trạng thái qua SePay',
       PaymentMethod.vnpay => localizations.paymentVnpayDescription,
       PaymentMethod.momo => localizations.paymentMomoDescription,
       PaymentMethod.bankTransfer =>
@@ -59,6 +61,7 @@ extension PaymentMethodPresentation on PaymentMethod {
     return switch (this) {
       PaymentMethod.cod => Icons.local_shipping_outlined,
       PaymentMethod.vietqr => Icons.qr_code_2,
+      PaymentMethod.sepay => Icons.account_balance_outlined,
       PaymentMethod.vnpay => Icons.account_balance_outlined,
       PaymentMethod.momo => Icons.phone_android_outlined,
       PaymentMethod.bankTransfer => Icons.account_balance_wallet_outlined,
@@ -69,6 +72,7 @@ extension PaymentMethodPresentation on PaymentMethod {
     return switch (this) {
       PaymentMethod.cod => AppColors.codOrange,
       PaymentMethod.vietqr => AppColors.vietqrBlue,
+      PaymentMethod.sepay => AppColors.vietqrBlue,
       PaymentMethod.vnpay => AppColors.vnpayBlue,
       PaymentMethod.momo => AppColors.momoPink,
       PaymentMethod.bankTransfer => AppColors.bankGreen,

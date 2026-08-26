@@ -1,0 +1,18 @@
+# Task 3: durable saga compensation outbox
+# Provenance: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\.sisyphus\evidence\task-3-saga-compensation-outbox.txt (2026-08-25, uncommitted worktree)
+
+STATUS: PARTIAL_PASS / BLOCKED_EXTERNAL
+
+Exact focused command:
+`./mvnw.cmd "-Dtest=KafkaSagaCompensationPublisherTest,CompensationOutboxRelayTest,CompensationOutboxMigrationContractTest" test`
+Result: PASS, 4 tests, 0 failures, 0 errors, before the later repository contract test was added.
+
+Exact structural command:
+`ast-grep run -p 'kafkaTemplate.send($$$ARGS)' --lang java src/main/java/com/vnshop/orderservice/infrastructure/event/saga src/main/java/com/vnshop/orderservice/infrastructure/outbox`
+Result: no direct sends remain in the compensation publisher; relay send is acknowledgement-gated.
+
+Exact rerun:
+`./mvnw.cmd "-Dtest=KafkaSagaCompensationPublisherTest,CompensationOutboxRelayTest,CompensationOutboxMigrationContractTest,CompensationOutboxRepositoryContractTest" test`
+Result: BLOCKED_EXTERNAL before test execution by the Maven protobuf plugin Windows temporary-directory cleanup race.
+
+Blocker: Docker/Kafka availability was not established. No broker-backed proof is claimed. Saga baseline rerun also hit the same Windows protobuf cleanup race.

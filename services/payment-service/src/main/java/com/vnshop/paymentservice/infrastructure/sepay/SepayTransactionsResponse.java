@@ -16,6 +16,12 @@ public record SepayTransactionsResponse(
     public record SepayTransaction(
             String id,
             String amount_in,
-            String transaction_content) {
+            String transaction_content,
+            String account_number,
+            String currency,
+            String transfer_type) {
+        public SepayTransaction(String id, String amount_in, String transaction_content) {
+            this(id, amount_in, transaction_content, "ACCT-1", "VND", "CREDIT");
+        }
     }
 }

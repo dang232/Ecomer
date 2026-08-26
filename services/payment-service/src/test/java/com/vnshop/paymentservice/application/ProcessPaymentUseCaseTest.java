@@ -85,6 +85,26 @@ class ProcessPaymentUseCaseTest {
     }
 
     @Test
+    void reportsReplayOutcomeWithoutInvokingGatewayAgain() {
+        InMemoryPayments payments = new InMemoryPayments();
+        CountingGateway gateway = new CountingGateway();
+        InMemoryIdempotencyKeys keys = new InMemoryIdempotencyKeys();
+        InMemoryOrderCatalog catalog = new InMemoryOrderCatalog()
+                .add("ORDER-REPLAY", "BUYER-1", new BigDecimal("100000.00"));
+        ProcessPaymentUseCase useCase = newUseCase(payments, gateway, keys, catalog);
+        ProcessPaymentCommand command = new ProcessPaymentCommand(
+                "ORDER-REPLAY", "BUYER-1", PaymentMethodInput.VNPAY, "payment-operation-1");
+
+        PaymentProcessingResult first = useCase.processInternalResult(command, new BigDecimal("100000.00"));
+        PaymentProcessingResult replay = useCase.processInternalResult(command, new BigDecimal("100000.00"));
+
+        assertThat(first.replayed()).isFalse();
+        assertThat(replay.replayed()).isTrue();
+        assertThat(replay.payment().paymentId()).isEqualTo(first.payment().paymentId());
+        assertThat(gateway.calls).isEqualTo(1);
+    }
+
+    @Test
     void treatsDistinctKeysAsIndependentRequests() {
         InMemoryPayments payments = new InMemoryPayments();
         CountingGateway gateway = new CountingGateway();

@@ -53,6 +53,40 @@ class ReserveStockUseCaseTest {
     }
 
     @Test
+    void sameOperationReplaysStoredFailureWithoutChangingStock() {
+        InMemoryStockReservationPort port = new InMemoryStockReservationPort();
+        port.seed("prod-1", 1);
+        ReserveStockUseCase useCase = new ReserveStockUseCase(port, fixedClock);
+        List<ReserveItem> items = List.of(new ReserveItem("prod-1", "default", 5));
+
+        ReserveStockResult first = useCase.reserve("operation-1", "ord-replay", items);
+        ReserveStockResult replay = useCase.reserve("operation-1", "ord-replay", items);
+
+        assertThat(first.success()).isFalse();
+        assertThat(first.replayed()).isFalse();
+        assertThat(first.failureCode()).isEqualTo(ReservationOperation.ReservationFailureCode.INSUFFICIENT_STOCK);
+        assertThat(replay.replayed()).isTrue();
+        assertThat(replay.failureCode()).isEqualTo(first.failureCode());
+        assertThat(port.stockOf("prod-1")).isEqualTo(1);
+    }
+
+    @Test
+    void sameOperationWithDifferentBodyIsRejectedAsTypedConflict() {
+        InMemoryStockReservationPort port = new InMemoryStockReservationPort();
+        port.seed("prod-1", 5);
+        ReserveStockUseCase useCase = new ReserveStockUseCase(port, fixedClock);
+
+        useCase.reserve("operation-2", "ord-conflict", List.of(new ReserveItem("prod-1", "default", 2)));
+
+        try {
+            useCase.reserve("operation-2", "ord-conflict", List.of(new ReserveItem("prod-1", "default", 3)));
+        } catch (ReservationOperationConflictException expected) {
+            return;
+        }
+        throw new AssertionError("Expected ReservationOperationConflictException");
+    }
+
+    @Test
     void reserveRejectsWhenProductHasNoProjectedStockRow() {
         InMemoryStockReservationPort port = new InMemoryStockReservationPort();
         ReserveStockUseCase useCase = new ReserveStockUseCase(port, fixedClock);
@@ -121,6 +155,7 @@ class ReserveStockUseCaseTest {
     private static final class InMemoryStockReservationPort implements StockReservationPort {
         private final ConcurrentHashMap<String, AtomicInteger> levels = new ConcurrentHashMap<>();
         private final List<StockReservation> reservations = new ArrayList<>();
+        private final java.util.Map<String, ReservationOperation> operations = new java.util.HashMap<>();
 
         void seed(String productId, int qty) {
             levels.put(productId, new AtomicInteger(qty));
@@ -189,6 +224,16 @@ class ReserveStockUseCaseTest {
                     }
                 }
             }
+        }
+
+        @Override
+        public synchronized java.util.Optional<ReservationOperation> findOperation(String operationId) {
+            return java.util.Optional.ofNullable(operations.get(operationId));
+        }
+
+        @Override
+        public synchronized void saveOperation(ReservationOperation operation) {
+            operations.put(operation.operationId(), operation);
         }
     }
 }

@@ -4,6 +4,8 @@ import com.vnshop.orderservice.application.CalculateCheckoutUseCase;
 import com.vnshop.orderservice.application.shipping.ShippingOption;
 import com.vnshop.orderservice.application.shipping.ShippingQuotePort;
 import com.vnshop.orderservice.application.shipping.ShippingQuoteRequest;
+import com.vnshop.orderservice.application.shipping.ShippingQuoteResult;
+import com.vnshop.orderservice.infrastructure.shipping.ShippingException;
 import com.vnshop.orderservice.infrastructure.config.JwtPrincipalUtil;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -22,11 +24,14 @@ public class CheckoutController {
     @Value("${checkout.payment-methods.cod.enabled:true}")
     private boolean codEnabled = true;
 
-    @Value("${checkout.payment-methods.vnpay.enabled:true}")
-    private boolean vnpayEnabled = true;
+    @Value("${checkout.payment-methods.vietqr.enabled:true}")
+    private boolean vietqrEnabled = true;
 
-    @Value("${checkout.payment-methods.momo.enabled:true}")
-    private boolean momoEnabled = true;
+    @Value("${checkout.payment-methods.deferred-gateway-a:false}")
+    private boolean deferredGatewayAEnabled = false;
+
+    @Value("${checkout.payment-methods.deferred-gateway-b:false}")
+    private boolean deferredGatewayBEnabled = false;
 
     private final CalculateCheckoutUseCase calculateCheckoutUseCase;
     private final ShippingQuotePort shippingQuotePort;
@@ -92,40 +97,40 @@ public class CheckoutController {
                 "Pay with cash when the order is delivered",
                 codEnabled));
         methods.add(new PaymentMethodResponse(
+                "VIETQR",
+                "VietQR",
+                "Pay by scanning a VietQR bank-transfer code",
+                vietqrEnabled));
+        methods.add(new PaymentMethodResponse(
                 "VNPAY",
                 "VNPay",
                 "Pay online via VNPay (ATM, QR, internet banking)",
-                vnpayEnabled));
+                deferredGatewayAEnabled));
         methods.add(new PaymentMethodResponse(
                 "MOMO",
                 "MoMo",
                 "Pay with the MoMo e-wallet",
-                momoEnabled));
+                deferredGatewayBEnabled));
         return ApiResponse.ok(java.util.Collections.unmodifiableList(methods));
     }
 
     @PostMapping("/shipping-options")
     public ApiResponse<List<ShippingOptionResponse>> shippingOptions(@Valid @RequestBody ShippingOptionsRequest request) {
-        // Live carrier rates from shipping-service. The adapter degrades to
-        // an empty list on transport failure; we surface the legacy static
-        // option in that case so the buyer can still check out — losing the
-        // EXPRESS choice is the only visible cost.
-        List<ShippingOption> live = shippingQuotePort.quote(toQuoteRequest(request));
-        if (live.isEmpty()) {
-            return ApiResponse.ok(List.of(new ShippingOptionResponse(
-                    "STANDARD",
-                    calculateCheckoutUseCase.standardShippingCost(),
-                    "3-5 days")));
-        }
-        List<ShippingOptionResponse> options = live.stream()
-                .map(o -> new ShippingOptionResponse(o.method(), o.cost(), o.estimate()))
-                .toList();
-        return ApiResponse.ok(options);
+        ShippingQuoteResult result = shippingQuotePort.quote(toQuoteRequest(request));
+        return switch (result) {
+            case ShippingQuoteResult.Success success -> ApiResponse.ok(success.options().stream()
+                    .map(o -> new ShippingOptionResponse(o.method(), o.cost(), o.estimate()))
+                    .toList());
+            case ShippingQuoteResult.NoOptions ignored -> ApiResponse.ok(List.of());
+            case ShippingQuoteResult.DependencyUnavailable unavailable -> throw new ShippingException(
+                    "SHIPPING_QUOTE_UNAVAILABLE", unavailable.reason(), null);
+            case ShippingQuoteResult.InvalidParcelMetadata invalid -> throw new IllegalArgumentException(
+                    invalid.reason());
+        };
     }
 
     private static ShippingQuoteRequest toQuoteRequest(ShippingOptionsRequest request) {
         AddressRequest addr = request.address();
-        return new ShippingQuoteRequest(addr.street(), addr.ward(), addr.district(), addr.city());
+        return new ShippingQuoteRequest(addr.street(), addr.ward(), addr.district(), addr.city(), request.parcel().toDomain());
     }
 }
-

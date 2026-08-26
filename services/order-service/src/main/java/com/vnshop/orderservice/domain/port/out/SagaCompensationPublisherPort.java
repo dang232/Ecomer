@@ -3,10 +3,9 @@ package com.vnshop.orderservice.domain.port.out;
 /**
  * Publishes saga compensation request events to downstream services.
  *
- * <p>Compensation requests are published directly to Kafka (not via outbox) so the
- * topic names with hyphens (e.g. {@code inventory.release-requested}) are preserved
- * exactly. The outbox {@code topicFor()} helper only maps underscores to dots, which
- * would produce the wrong topic name for these events.
+ * <p>Compensation requests are staged in a dedicated outbox so exact topic names with
+ * hyphens (e.g. {@code inventory.release-requested}) are preserved and broker failure
+ * remains retryable.
  */
 public interface SagaCompensationPublisherPort {
 

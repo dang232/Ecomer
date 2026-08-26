@@ -1,0 +1,47 @@
+Task 20 RFC7807 error contract evidence
+Date: 2026-08-25
+
+Changed task-owned paths:
+- services/api-gateway/src/main/java/com/vnshop/apigateway/infrastructure/web/ErrorResponse.java
+- services/api-gateway/src/main/java/com/vnshop/apigateway/infrastructure/web/FallbackController.java
+- services/api-gateway/src/main/java/com/vnshop/apigateway/infrastructure/filter/CorrelationIdFilter.java
+- services/api-gateway/src/test/java/com/vnshop/apigateway/infrastructure/web/FallbackControllerTest.java
+- services/order-service/src/main/java/com/vnshop/orderservice/infrastructure/web/ErrorResponse.java
+- services/order-service/src/main/java/com/vnshop/orderservice/infrastructure/web/ProblemDetails.java
+- services/order-service/src/main/java/com/vnshop/orderservice/infrastructure/web/ApiExceptionHandler.java
+- services/order-service/src/main/java/com/vnshop/orderservice/infrastructure/idempotency/IdempotencyFilter.java
+- services/order-service/src/test/java/com/vnshop/orderservice/infrastructure/web/ProblemDetailsContractTest.java
+- services/payment-service/src/main/java/com/vnshop/paymentservice/infrastructure/web/ErrorResponse.java
+- services/payment-service/src/main/java/com/vnshop/paymentservice/infrastructure/web/ProblemDetails.java
+- services/cart-service/src/cart/infrastructure/cart.exception-filter.ts
+- services/cart-service/src/cart/infrastructure/cart.exception-filter.spec.ts
+
+Verification:
+- RED: cart RFC7807 test failed before implementation because response media type/fields were legacy.
+- GREEN: cart exception filter and controller tests: 3 passed.
+- api-gateway compile: passed; FallbackControllerTest: passed after contract assertion update.
+- payment-service compile: passed.
+- order-service compile: passed after task-owned changes; focused full test was blocked by pre-existing CacheConfig override compilation failure.
+- git diff --check: passed (CRLF warnings only in unrelated pre-existing files).
+- static scan: order idempotency filter has no success:false/application/json/errorCode raw writer; cart emits application/problem+json.
+- LSP: TypeScript server unavailable; Maven compiler used for Java validation.
+
+Blockers/risks:
+- Full Spring handler normalization across every service and auth/rate-limit filter could not be completed safely within this bounded pass because the worktree contains broad unrelated changes and duplicate legacy handler paths.
+- Live Docker/curl runtime was not run; no claim is made for deployed gateway/security filter behavior.
+- Deprecated errorCode is retained as a response alias but a runtime 90-day removal mechanism is not yet wired.
+
+Cleanup receipt: no commits, reset, checkout, or push performed; evidence and notepad writes were append-only.
+
+Continuation verification 2026-08-25:
+- Re-audit found and addressed gateway security 401/403 handlers, gateway rate-limit request ID header, user-service CSRF raw JSON, order/payment duplicate ApiExceptionHandler legacy responses, product ApiExceptionHandler legacy responses, order idempotency raw writers, and cart filter.
+- Added gateway ProblemDetailsWriter and docs/error-contract-rfc7807.md documenting the 90-day deprecated errorCode alias policy.
+- Maven compile passed: api-gateway, order-service, payment-service, user-service.
+- Order ApiExceptionHandlerTest passed; cart focused controller/filter tests passed 3/3.
+- Product compile/test blocked by pre-existing CacheConfig missing Cache type and missing OpenTelemetry dependency in the worktree.
+- Order ProblemDetailsContractTest was blocked once by protobuf temporary-directory cleanup; order handler test passed.
+- RateLimitHeadersFilterTest and gateway compile passed.
+- Static scan over scoped gateway/order/payment/product/cart/user sources found no raw success:false, application/json error writers, or ApiResponse.error calls in affected handler sources.
+- docker compose ps failed before startup because VNSHOP_SEARCH_CURSOR_SECRET is required and unset. No live curl/manual HTTP claim is made.
+- CodeGraph unavailable: PR worktree has no .codegraph index. TypeScript LSP unavailable. ast-grep unavailable; scoped grep scan used.
+- Cleanup: no commit, reset, checkout, or push. Evidence/notepad writes append-only.

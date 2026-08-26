@@ -63,7 +63,7 @@ const appConfigSchema = z
     const api = secureUrl(
       config.apiUri,
       "https:",
-      allowDevelopmentApiProxy ? ["/", "/api/"] : ["/"],
+       allowDevelopmentApiProxy ? ["/", "/api/v1/"] : ["/"],
       allowInsecureLocalRuntimeConfig,
     );
     const issuer = secureUrl(
@@ -87,15 +87,13 @@ const appConfigSchema = z
     const notifications = secureUrl(
       config.websocket.notificationsUri,
       "wss:",
-      allowDevelopmentApiProxy
-        ? ["/ws/notifications", "/api/ws/notifications"]
-        : ["/ws/notifications"],
+       ["/ws/notifications"],
       allowInsecureLocalRuntimeConfig,
     );
     const messaging = secureUrl(
       config.websocket.messagingUri,
       "wss:",
-      allowDevelopmentApiProxy ? ["/ws/messaging", "/api/ws/messaging"] : ["/ws/messaging"],
+       ["/ws/messaging"],
       allowInsecureLocalRuntimeConfig,
     );
     const runtimeConfig = secureUrl(

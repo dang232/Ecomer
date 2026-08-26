@@ -28,6 +28,7 @@ export class WsJwtVerifier {
   private static readonly logger = new Logger(WsJwtVerifier.name);
   private readonly jwks: JwksClient;
   private readonly issuer: string;
+  private readonly audience: string;
 
   /** Tracks last log timestamp per client IP to throttle repeated warnings. */
   private readonly logThrottleMap = new Map<string, number>();
@@ -35,6 +36,7 @@ export class WsJwtVerifier {
   constructor() {
     this.issuer =
       process.env.KEYCLOAK_ISSUER_URI ?? "http://localhost:9090/realms/vnshop";
+    this.audience = process.env.KEYCLOAK_JWT_AUDIENCE ?? "vnshop-api";
     const jwksUri =
       process.env.KEYCLOAK_JWK_SET_URI ??
       "http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs";
@@ -62,7 +64,7 @@ export class WsJwtVerifier {
               callback(err instanceof Error ? err : new Error("JWKS failure")),
             );
         },
-        { algorithms: ["RS256"], issuer: this.issuer },
+        { algorithms: ["RS256"], issuer: this.issuer, audience: this.audience },
         (err, decoded) => {
           if (err || !decoded || typeof decoded === "string") {
             const message = err?.message ?? "malformed payload";

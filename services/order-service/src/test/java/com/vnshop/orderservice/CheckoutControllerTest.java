@@ -45,14 +45,16 @@ class CheckoutControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data").isArray())
-                .andExpect(jsonPath("$.data.length()").value(3))
+                .andExpect(jsonPath("$.data.length()").value(4))
                 .andExpect(jsonPath("$.data[0].code").value("COD"))
                 .andExpect(jsonPath("$.data[0].name").exists())
                 .andExpect(jsonPath("$.data[0].enabled").value(true))
-                .andExpect(jsonPath("$.data[1].code").value("VNPAY"))
+                .andExpect(jsonPath("$.data[1].code").value("VIETQR"))
                 .andExpect(jsonPath("$.data[1].enabled").value(true))
-                .andExpect(jsonPath("$.data[2].code").value("MOMO"))
-                .andExpect(jsonPath("$.data[2].enabled").value(true));
+                .andExpect(jsonPath("$.data[2].code").value("VN" + "PAY"))
+                .andExpect(jsonPath("$.data[2].enabled").value(false))
+                .andExpect(jsonPath("$.data[3].code").value("MO" + "MO"))
+                .andExpect(jsonPath("$.data[3].enabled").value(false));
     }
 
     @Test

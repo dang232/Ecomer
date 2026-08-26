@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../../common/widgets/images/safe_network_image.dart';
+import '../../../../l10n/generated/app_localizations.dart';
+
 /// Profile header widget with avatar and user info
 class ProfileHeader extends StatelessWidget {
   final String? avatarUrl;
@@ -19,6 +22,7 @@ class ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -39,33 +43,43 @@ class ProfileHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Avatar
-                GestureDetector(
-                  onTap: onAvatarTap,
-                  child: Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white,
-                        width: 3,
+                Semantics(
+                  button: onAvatarTap != null,
+                  label: l10n.edit,
+                  child: GestureDetector(
+                    onTap: onAvatarTap,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        minWidth: 48,
+                        minHeight: 48,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
+                      child: Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 3),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.2),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: ClipOval(
-                      child: avatarUrl != null && avatarUrl!.isNotEmpty
-                          ? Image.network(
-                              avatarUrl!,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => _buildPlaceholderAvatar(),
-                            )
-                          : _buildPlaceholderAvatar(),
+                        child: ClipOval(
+                          child: avatarUrl != null && avatarUrl!.isNotEmpty
+                              ? SafeNetworkImage(
+                                  url: avatarUrl,
+                                  fit: BoxFit.cover,
+                                  width: 80,
+                                  height: 80,
+                                  semanticLabel: name ?? l10n.customerReviews,
+                                  errorWidget: _buildPlaceholderAvatar(),
+                                )
+                              : _buildPlaceholderAvatar(),
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -76,7 +90,7 @@ class ProfileHeader extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        name ?? 'Khách hàng',
+                        name ?? l10n.customerReviews,
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 20,
@@ -116,12 +130,16 @@ class ProfileHeader extends StatelessWidget {
                     child: InkWell(
                       onTap: onEditTap,
                       borderRadius: BorderRadius.circular(8),
-                      child: const Padding(
-                        padding: EdgeInsets.all(8),
-                        child: Icon(
-                          Icons.edit_outlined,
-                          color: Colors.white,
-                          size: 20,
+                      child: const SizedBox(
+                        width: 48,
+                        height: 48,
+                        child: Padding(
+                          padding: EdgeInsets.all(14),
+                          child: Icon(
+                            Icons.edit_outlined,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                         ),
                       ),
                     ),
@@ -138,11 +156,7 @@ class ProfileHeader extends StatelessWidget {
     return Container(
       color: Colors.grey.shade300,
       child: const Center(
-        child: Icon(
-          Icons.person,
-          size: 40,
-          color: Colors.grey,
-        ),
+        child: Icon(Icons.person, size: 40, color: Colors.grey),
       ),
     );
   }
@@ -165,6 +179,7 @@ class ProfileHeaderCompact extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Row(
       children: [
         // Avatar
@@ -174,16 +189,20 @@ class ProfileHeaderCompact extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+              color: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: 0.3),
               width: 2,
             ),
           ),
           child: ClipOval(
             child: avatarUrl != null && avatarUrl!.isNotEmpty
-                ? Image.network(
-                    avatarUrl!,
+                ? SafeNetworkImage(
+                    url: avatarUrl,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => _buildPlaceholderAvatar(),
+                    width: 60,
+                    height: 60,
+                    errorWidget: _buildPlaceholderAvatar(),
                   )
                 : _buildPlaceholderAvatar(),
           ),
@@ -195,7 +214,7 @@ class ProfileHeaderCompact extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                name ?? 'Khách hàng',
+                name ?? l10n.customerReviews,
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -208,7 +227,9 @@ class ProfileHeaderCompact extends StatelessWidget {
                 Text(
                   email!,
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.6),
                     fontSize: 14,
                   ),
                   maxLines: 1,
@@ -235,11 +256,7 @@ class ProfileHeaderCompact extends StatelessWidget {
     return Container(
       color: Colors.grey.shade200,
       child: Center(
-        child: Icon(
-          Icons.person,
-          size: 30,
-          color: Colors.grey.shade400,
-        ),
+        child: Icon(Icons.person, size: 30, color: Colors.grey.shade400),
       ),
     );
   }

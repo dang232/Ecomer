@@ -118,7 +118,7 @@ class ProductResponseTest {
                 new Money(new BigDecimal("100")),
                 null,
                 1,
-                new ParcelDimensions(1500, 30, 20, 10));
+                new ParcelDimensions(1500, 300, 200, 100, 777000));
 
         Product product = new Product(
                 UUID.randomUUID(), "seller-parcel", "Parcelled product", null, null, null,
@@ -128,7 +128,7 @@ class ProductResponseTest {
                 .variants()
                 .getFirst();
 
-        assertThat(response.parcel()).isEqualTo(new ProductResponse.ParcelResponse(1500, 30, 20, 10));
+        assertThat(response.parcel()).isEqualTo(new ProductResponse.ParcelResponse(1500, 30, 20, 10, 777000));
     }
 
     @Test

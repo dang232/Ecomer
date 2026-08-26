@@ -7,9 +7,10 @@ import com.vnshop.orderservice.domain.ShippingDetails;
 import com.vnshop.orderservice.domain.Money;
 import com.vnshop.orderservice.domain.ParcelDimensions;
 import com.vnshop.orderservice.domain.port.out.ShippingRequestPort;
-import com.vnshop.proto.shipping.ShippingServiceGrpc;
-import com.vnshop.proto.shipping.ShippingRequest;
-import com.vnshop.proto.shipping.ShippingResponse;
+import com.vnshop.orderservice.infrastructure.shipping.ShippingException;
+import com.vnshop.proto.v1.ShippingServiceGrpc;
+import com.vnshop.proto.v1.ShippingRequest;
+import com.vnshop.proto.v1.ShippingResponse;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.grpc.StatusRuntimeException;
@@ -41,7 +42,7 @@ public class GrpcShippingRequestAdapter implements ShippingRequestPort {
     public void requestShipping(String orderId, SubOrder subOrder, Address shippingAddress) {
         ShippingRequest request = ShippingRequest.newBuilder()
                 .setOrderId(orderId)
-                .addSubOrders(com.vnshop.proto.shipping.SubOrder.newBuilder()
+                .addSubOrders(com.vnshop.proto.v1.SubOrder.newBuilder()
                         .setSellerId(subOrder.sellerId())
                         .addAllItems(subOrder.items().stream().map(GrpcShippingRequestAdapter::toProtoItem).toList())
                         .setShippingAddress(toLegacyProtoAddress(shippingAddress))
@@ -62,16 +63,19 @@ public class GrpcShippingRequestAdapter implements ShippingRequestPort {
     public void requestShipping(String orderId, SubOrder subOrder, Address shippingAddress,
                                 ShippingDetails shippingDetails, Money codAmount, Money declaredValue) {
         if (shippingDetails == null) {
-            throw new IllegalStateException("carrier shipping details are required for live labels");
+            throw new ShippingException("SHIPPING_DETAILS_REQUIRED", "carrier shipping details are required", null);
         }
-        ParcelDimensions parcel = ParcelDimensions.aggregate(subOrder.items(), subOrder.sellerId());
+        ParcelDimensions parcel = subOrder.parcel();
+        if (parcel == null) {
+            throw new ShippingException("SHIPPING_PARCEL_REQUIRED", "trusted parcel metadata is required", null);
+        }
         ShippingDetails parcelDetails = new ShippingDetails(
                 shippingDetails.recipientName(), shippingDetails.recipientPhone(), shippingDetails.wardCode(),
                 shippingDetails.districtCode(), shippingDetails.provinceCode(), parcel.weightGrams(),
                 parcel.lengthCm(), parcel.widthCm(), parcel.heightCm());
         ShippingRequest request = ShippingRequest.newBuilder()
                 .setOrderId(orderId)
-                .addSubOrders(com.vnshop.proto.shipping.SubOrder.newBuilder()
+                .addSubOrders(com.vnshop.proto.v1.SubOrder.newBuilder()
                         .setSellerId(subOrder.sellerId())
                         .addAllItems(subOrder.items().stream()
                                 .map(GrpcShippingRequestAdapter::toProtoItem)
@@ -80,7 +84,14 @@ public class GrpcShippingRequestAdapter implements ShippingRequestPort {
                         .setParcelWeightGrams(parcelDetails.weightGrams())
                         .setParcelLengthCm(parcelDetails.lengthCm())
                         .setParcelWidthCm(parcelDetails.widthCm())
-                        .setParcelHeightCm(parcelDetails.heightCm())
+                         .setParcelHeightCm(parcelDetails.heightCm())
+                         .setParcel(com.vnshop.proto.v1.Parcel.newBuilder()
+                                 .setWeightGrams(parcel.weightGrams())
+                                 .setLengthCm(parcel.lengthCm())
+                                 .setWidthCm(parcel.widthCm())
+                                 .setHeightCm(parcel.heightCm())
+                                 .setDeclaredValueMinor(parcel.declaredValueMinor())
+                                 .build())
                         .setDeclaredValue(toProtoMoney(declaredValue))
                         .setCodAmount(toProtoMoney(codAmount))
                         .build())
@@ -92,31 +103,33 @@ public class GrpcShippingRequestAdapter implements ShippingRequestPort {
     private void executeShipping(String orderId, SubOrder subOrder, ShippingRequest request) {
         try {
             ShippingResponse response = circuitBreaker.executeSupplier(() ->
-                    shippingStub.withDeadlineAfter(5, TimeUnit.SECONDS).requestShipping(request));
+                    shippingStub.withDeadlineAfter(2500, TimeUnit.MILLISECONDS).requestShipping(request));
 
             if (!response.getSuccess()) {
                 LOGGER.warn("Shipping request failed for order {} seller {}", orderId, subOrder.sellerId());
-                throw new IllegalStateException("Shipping service did not create labels for order " + orderId);
+                throw new ShippingException("SHIPPING_LABEL_CREATION_FAILED", "shipping label creation failed", null);
             } else {
                 LOGGER.info("Shipping request submitted for order {} seller {} — {} label(s)",
                         orderId, subOrder.sellerId(), response.getLabelsCount());
             }
             if (response.getLabelsCount() != 1) {
-                throw new IllegalStateException("Shipping service returned " + response.getLabelsCount()
-                        + " labels for seller " + subOrder.sellerId());
+                throw new ShippingException("SHIPPING_LABEL_COUNT_INVALID", "shipping service returned an invalid label count", null);
             }
         } catch (CallNotPermittedException e) {
-            LOGGER.error("Circuit breaker OPEN for shipping-service: {}", e.getMessage());
-            throw new RuntimeException("Shipping service unavailable (circuit open)", e);
+            LOGGER.error("Circuit breaker OPEN for shipping-service orderId={} sellerId={} exceptionType={}",
+                    orderId, subOrder.sellerId(), e.getClass().getSimpleName());
+            throw new ShippingException("SHIPPING_SERVICE_UNAVAILABLE", "shipping service unavailable", e);
         } catch (StatusRuntimeException e) {
-            LOGGER.error("gRPC shipping request failed: orderId={}, code={}, message={}",
-                    orderId, e.getStatus().getCode(), e.getStatus().getDescription(), e);
-            throw new RuntimeException("Shipping request failed for order " + orderId, e);
+            LOGGER.error("gRPC shipping request failed: orderId={} sellerId={} code={} exceptionType={}",
+                    orderId, subOrder.sellerId(), e.getStatus().getCode(), e.getClass().getSimpleName());
+            throw new ShippingException("SHIPPING_REQUEST_FAILED", "shipping request failed", e);
+        } catch (ShippingException e) {
+            throw e;
         }
     }
 
-    private static com.vnshop.proto.shipping.SubOrderItem toProtoItem(OrderItem item) {
-        return com.vnshop.proto.shipping.SubOrderItem.newBuilder()
+    private static com.vnshop.proto.v1.SubOrderItem toProtoItem(OrderItem item) {
+        return com.vnshop.proto.v1.SubOrderItem.newBuilder()
                 .setProductId(item.productId())
                 .setVariant(item.variantSku())
                 .setQuantity(item.quantity())
@@ -124,8 +137,8 @@ public class GrpcShippingRequestAdapter implements ShippingRequestPort {
                 .build();
     }
 
-    private static com.vnshop.proto.shipping.ShippingAddress toProtoAddress(Address address, ShippingDetails details) {
-        return com.vnshop.proto.shipping.ShippingAddress.newBuilder()
+    private static com.vnshop.proto.v1.ShippingAddress toProtoAddress(Address address, ShippingDetails details) {
+        return com.vnshop.proto.v1.ShippingAddress.newBuilder()
                 .setFullName(details.recipientName())
                 .setPhone(details.recipientPhone())
                 .setStreet(address.street())
@@ -137,8 +150,8 @@ public class GrpcShippingRequestAdapter implements ShippingRequestPort {
                 .build();
     }
 
-    private static com.vnshop.proto.shipping.ShippingAddress toLegacyProtoAddress(Address address) {
-        return com.vnshop.proto.shipping.ShippingAddress.newBuilder()
+    private static com.vnshop.proto.v1.ShippingAddress toLegacyProtoAddress(Address address) {
+        return com.vnshop.proto.v1.ShippingAddress.newBuilder()
                 .setStreet(address.street())
                 .setWardCode(address.ward() == null ? "" : address.ward())
                 .setDistrictCode(address.district())
@@ -148,8 +161,8 @@ public class GrpcShippingRequestAdapter implements ShippingRequestPort {
                 .build();
     }
 
-    private static com.vnshop.proto.common.Money toProtoMoney(com.vnshop.orderservice.domain.Money money) {
-        return com.vnshop.proto.common.Money.newBuilder()
+    private static com.vnshop.proto.v1.Money toProtoMoney(com.vnshop.orderservice.domain.Money money) {
+        return com.vnshop.proto.v1.Money.newBuilder()
                 .setAmount(money.amount().toPlainString())
                 .setCurrency(money.currency())
                 .build();

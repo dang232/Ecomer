@@ -3,6 +3,7 @@ package com.vnshop.orderservice.infrastructure.product;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.vnshop.orderservice.domain.catalog.CatalogProduct;
 import com.vnshop.orderservice.domain.Money;
 import com.vnshop.orderservice.domain.ParcelDimensions;
@@ -80,7 +81,7 @@ public class ProductCatalogAdapter implements ProductCatalogPort {
         } catch (ResourceAccessException e) {
             throw new ProductCatalogUnavailableException(
                     "product-service unreachable or timed out: " + e.getMessage(), e);
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
             throw new ProductCatalogUnavailableException("failed to read product-service response: " + e.getMessage(), e);
         }
     }
@@ -103,10 +104,12 @@ public class ProductCatalogAdapter implements ProductCatalogPort {
         if (parcel.weightGrams == null || parcel.lengthCm == null
                 || parcel.widthCm == null || parcel.heightCm == null
                 || parcel.weightGrams <= 0 || parcel.lengthCm <= 0
-                || parcel.widthCm <= 0 || parcel.heightCm <= 0) {
+                || parcel.widthCm <= 0 || parcel.heightCm <= 0
+                || (parcel.declaredValueMinor != null && parcel.declaredValueMinor < 0)) {
             return null;
         }
-        return new ParcelDimensions(parcel.weightGrams, parcel.lengthCm, parcel.widthCm, parcel.heightCm);
+        return new ParcelDimensions(parcel.weightGrams, parcel.lengthCm, parcel.widthCm, parcel.heightCm,
+                parcel.declaredValueMinor == null ? 0L : parcel.declaredValueMinor);
     }
 
     // --- DTOs mirroring product-service ApiResponse<ProductResponse> wire shape ---
@@ -163,6 +166,9 @@ public class ProductCatalogAdapter implements ProductCatalogPort {
 
         @JsonProperty("heightCm")
         public Integer heightCm;
+
+        @JsonProperty("declaredValueMinor")
+        public Long declaredValueMinor;
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

@@ -22,6 +22,8 @@ import org.springframework.kafka.annotation.RetryableTopic;
 import org.springframework.kafka.retrytopic.DltStrategy;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import com.vnshop.paymentservice.infrastructure.dlt.DurableDltService;
 
 /**
  * Closes the saga compensation loop for PayPal-backed orders. Order-service
@@ -56,25 +58,28 @@ public class PayPalRefundListener {
     private final FxRatePort fxRatePort;
     private final ObjectMapper objectMapper;
     private final ObjectProvider<KafkaTemplate<String, Object>> kafkaTemplateProvider;
+    private final DurableDltService durableDltService;
 
     public PayPalRefundListener(
             PaymentRepositoryPort paymentRepository,
             PayPalGateway gateway,
             FxRatePort fxRatePort,
             ObjectMapper objectMapper,
-            ObjectProvider<KafkaTemplate<String, Object>> kafkaTemplateProvider) {
+            ObjectProvider<KafkaTemplate<String, Object>> kafkaTemplateProvider,
+            DurableDltService durableDltService) {
         this.paymentRepository = paymentRepository;
         this.gateway = gateway;
         this.fxRatePort = fxRatePort;
         this.objectMapper = objectMapper;
         this.kafkaTemplateProvider = kafkaTemplateProvider;
+        this.durableDltService = durableDltService;
     }
 
     @RetryableTopic(
             attempts = "3",
             backOff = @BackOff(delay = 1000, multiplier = 2.0, maxDelay = 10000),
             dltStrategy = DltStrategy.FAIL_ON_ERROR,
-            dltTopicSuffix = ".DLT",
+             dltTopicSuffix = ".dlt",
             retryTopicSuffix = ".retry"
     )
     @KafkaListener(topics = REFUND_REQUESTED_TOPIC, groupId = "payment-service-paypal-refund", concurrency = "6")
@@ -171,7 +176,8 @@ public class PayPalRefundListener {
     }
 
     @DltHandler
-    public void handleDlt(String message) {
-        LOGGER.error("Message sent to DLT after retries exhausted: {}", message);
+    public void handleDlt(ConsumerRecord<String, String> record) {
+        durableDltService.store(record, "paypal-refund-listener DLT payload received", 3);
+        LOGGER.error("Message sent to DLT after retries exhausted: {}", record.value());
     }
 }

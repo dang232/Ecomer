@@ -1,0 +1,46 @@
+name: Observability validation
+
+on:
+  pull_request:
+    paths:
+      - 'infra/alertmanager/**'
+      - 'infra/loki/**'
+      - 'infra/prometheus/**'
+      - 'infra/promtail/**'
+      - 'infra/k8s/**'
+      - 'scripts/check-alertmanager-config.*'
+      - 'services/cart-service/**'
+      - 'services/video-moderator/**'
+      - '.github/workflows/observability.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - name: Alertmanager policy tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test scripts/check-alertmanager-config.test.mjs 2>&1 | tee "$RUNNER_TEMP/alertmanager-policy.log"
+      - name: Reject production dev-null receiver
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/check-alertmanager-config.mjs infra/k8s/overlays/prod 2>&1 | tee "$RUNNER_TEMP/alertmanager-prod.log"
+      - name: Validate Prometheus rules
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm -v "$PWD:/work" -w /work prom/prometheus:v2.53.0 \
+            promtool check rules infra/prometheus/rules.yml infra/prometheus/slo-rules.yml 2>&1 | tee "$RUNNER_TEMP/promtool-rules.log"
+      - name: Validate Alertmanager config
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm -v "$PWD:/work" -w /work prom/alertmanager:v0.28.1 \
+            amtool check-config infra/alertmanager/alertmanager.yml 2>&1 | tee "$RUNNER_TEMP/amtool-config.log"

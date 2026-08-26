@@ -12,6 +12,7 @@ import java.util.UUID;
 public interface PaymentRepositoryPort {
     Payment save(Payment payment);
 
+
     Optional<Payment> findById(UUID paymentId);
 
     /**

@@ -49,16 +49,15 @@ public class OutboxPublisher {
     }
 
     @Scheduled(fixedDelayString = "${outbox.publisher.poll-interval-ms:1000}")
-    @Transactional
     public void publishPendingEvents() {
         KafkaTemplate<String, Object> kafkaTemplate = kafkaTemplateProvider.getIfAvailable();
         if (kafkaTemplate == null) {
             return;
         }
 
-        List<OutboxEventJpaEntity> events = repository.findAndLockPendingEvents(
+        List<OutboxEventJpaEntity> events = repository.findDuePendingEvents(
                 Instant.now(),
-                batchSize
+                PageRequest.of(0, batchSize)
         );
         for (OutboxEventJpaEntity event : events) {
             publishEvent(kafkaTemplate, event);

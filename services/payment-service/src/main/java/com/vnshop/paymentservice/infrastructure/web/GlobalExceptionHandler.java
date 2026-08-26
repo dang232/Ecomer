@@ -1,6 +1,7 @@
 package com.vnshop.paymentservice.infrastructure.web;
 
 import com.vnshop.paymentservice.application.IdempotencyKeyConflictException;
+import com.vnshop.paymentservice.application.DurableDltReplayConflictException;
 import com.vnshop.paymentservice.application.OrderAccessDeniedException;
 import com.vnshop.paymentservice.application.OrderNotFoundException;
 import com.vnshop.paymentservice.application.OrderNotPayableException;
@@ -25,7 +26,6 @@ import java.util.List;
  *
  * traceId is pulled from the active OTEL span so callers can correlate with traces.
  */
-@RestControllerAdvice
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
@@ -84,6 +84,12 @@ public class GlobalExceptionHandler {
     }
 
     // --- 409 Conflict ----------------------------------------------------------
+
+    @ExceptionHandler(DurableDltReplayConflictException.class)
+    public ResponseEntity<ErrorResponse> dltReplayConflict(DurableDltReplayConflictException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+            .body(ErrorResponse.of("DLT_REPLAY_CONFLICT", ex.getMessage(), traceId()));
+    }
 
     @ExceptionHandler(IdempotencyKeyConflictException.class)
     public ResponseEntity<ErrorResponse> idempotencyKeyConflict(IdempotencyKeyConflictException ex) {

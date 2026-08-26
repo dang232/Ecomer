@@ -17,6 +17,7 @@ import java.util.UUID;
 import java.util.List;
 import java.util.Map;
 import java.time.Instant;
+import java.sql.Timestamp;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -25,8 +26,12 @@ import java.util.concurrent.TimeUnit;
 @SpringBootTest(properties = {
     "vnshop.kafka.admin.enabled=false",
     "payment.kafka.listeners.enabled=false",
-    "spring.autoconfigure.exclude=org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration",
-    "grpc.server.auth.token=test-grpc-token"
+    "spring.config.import=",
+    "grpc.server.enabled=false",
+    "grpc.server.auth.token=test-grpc-token",
+    "grpc.server.tls.cert-chain=",
+    "grpc.server.tls.private-key=",
+    "grpc.server.tls.client-ca="
 })
 @Testcontainers
 @Import(TestcontainersConfig.class)
@@ -48,7 +53,22 @@ class PaymentMigrationIntegrationTest {
             String.class
         );
 
-        assertThat(version).isEqualTo("22");
+         assertThat(version).isEqualTo("24");
+
+         Integer dltStoreTable = jdbcTemplate.queryForObject(
+             "select count(*) from information_schema.tables "
+                 + "where table_schema = 'payment_svc' and table_name = 'dlt_store'",
+             Integer.class
+         );
+         assertThat(dltStoreTable).isEqualTo(1);
+
+         Integer dltReplayColumns = jdbcTemplate.queryForObject(
+             "select count(*) from information_schema.columns "
+                 + "where table_schema = 'payment_svc' and table_name = 'dlt_store' "
+                 + "and column_name in ('replayed_at', 'replay_claimed_at', 'replay_claimed_until')",
+             Integer.class
+         );
+         assertThat(dltReplayColumns).isEqualTo(3);
 
         Integer matchingColumns = jdbcTemplate.queryForObject(
             "select count(*) from information_schema.columns "
@@ -131,5 +151,24 @@ class PaymentMigrationIntegrationTest {
         assertThat(row).containsEntry("status", "PENDING")
                 .containsEntry("attempts", 0)
                 .containsEntry("payload", "fresh-payload");
+    }
+
+    @Test
+    void allowsReplayClaimAfterLeaseExpiryButRejectsAnActiveLease() {
+        UUID id = UUID.randomUUID();
+        jdbcTemplate.update("insert into payment_svc.dlt_store "
+                + "(id, topic, partition, kafka_offset, record_key, payload, payload_hash, reason, attempts, first_seen, replay_claimed_at, replay_claimed_until) "
+                + "values (?, 'payment.webhooks.dlt', 0, ?, 'key', 'payload', ?, 'reason', 3, now(), now() - interval '2 minutes', now() - interval '1 minute')",
+                id, System.nanoTime(), UUID.randomUUID().toString().replace("-", ""));
+
+        int reclaimed = jdbcTemplate.update("update payment_svc.dlt_store set replay_claimed_at = ?, replay_claimed_until = ? "
+                + "where id = ? and replayed_at is null and (replay_claimed_until is null or replay_claimed_until < ?)",
+                Timestamp.from(Instant.now()), Timestamp.from(Instant.now().plusSeconds(60)), id, Timestamp.from(Instant.now()));
+        assertThat(reclaimed).isEqualTo(1);
+
+        int blocked = jdbcTemplate.update("update payment_svc.dlt_store set replay_claimed_at = ?, replay_claimed_until = ? "
+                + "where id = ? and replayed_at is null and (replay_claimed_until is null or replay_claimed_until < ?)",
+                Timestamp.from(Instant.now()), Timestamp.from(Instant.now().plusSeconds(60)), id, Timestamp.from(Instant.now()));
+        assertThat(blocked).isEqualTo(0);
     }
 }

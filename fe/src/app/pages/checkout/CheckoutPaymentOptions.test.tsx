@@ -34,6 +34,16 @@ describe("toPaymentOptions", () => {
     expect(toPaymentOptions(undefined, t)).toEqual([]);
   });
 
+  it("keeps COD available when the server advertises it", () => {
+    expect(toPaymentOptions([{ id: "cod", name: "Cash", enabled: true }], t)).toEqual([
+      expect.objectContaining({ id: "COD" }),
+    ]);
+  });
+
+  it("does not advertise SePay as a frontend checkout method", () => {
+    expect(toPaymentOptions([{ id: "sepay", name: "SePay", enabled: true }], t)).toEqual([]);
+  });
+
   it("shows a blocking alert with no radios when capability loading fails", () => {
     render(
       <CheckoutPaymentStep

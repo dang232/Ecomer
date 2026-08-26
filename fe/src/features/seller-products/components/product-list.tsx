@@ -43,6 +43,8 @@ function renderProductCell(row: ProductListRow) {
           src={row.image}
           alt={row.name}
           className="h-10 w-10 shrink-0 rounded-[var(--radius-md)] object-cover"
+          imagePreset="thumbnail"
+          sizes="40px"
         />
       ) : (
         <div

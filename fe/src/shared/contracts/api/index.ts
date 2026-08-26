@@ -1,7 +1,7 @@
 /**
  * Barrel for the FE zod schema layer. Re-exports every domain module so
- * existing callers `import { ... } from "../../../types/api"` keep working
- * after the file → folder split.
+ * Domain contracts are consumed from this shared barrel; app-local contract
+ * copies are intentionally not supported.
  */
 
 export * from "@/shared/contracts/api/branded-ids";
@@ -16,6 +16,8 @@ export * from "@/shared/contracts/api/notification";
 export * from "@/shared/contracts/api/checkout";
 export * from "@/shared/contracts/api/coupon";
 export * from "@/shared/contracts/api/payment";
+export * from "@/shared/contracts/api/notification-preferences";
+export * from "@/shared/contracts/api/video";
 export * from "@/shared/contracts/api/flash-sale";
 export * from "@/shared/contracts/api/wishlist";
 export * from "@/shared/contracts/api/shipping";

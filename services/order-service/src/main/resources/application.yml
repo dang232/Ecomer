@@ -68,6 +68,7 @@ spring:
         jwt:
           issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:9090/realms/vnshop}
           jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs}
+          audiences: ${KEYCLOAK_JWT_AUDIENCE:vnshop-api}
 
 vnshop:
   user-service:
@@ -86,6 +87,17 @@ vnshop:
     secret: ${ADMIN_CURSOR_SECRET}
     ttl: ${ADMIN_CURSOR_TTL:PT1H}
 
+checkout:
+  payment-methods:
+    cod:
+      enabled: ${COD_ENABLED:true}
+    vietqr:
+      enabled: ${VIETQR_ENABLED:true}
+    vnpay:
+      enabled: ${VNPAY_ENABLED:false}
+    momo:
+      enabled: ${MOMO_ENABLED:false}
+
 seller-finance:
   event-mode: ${SELLER_FINANCE_EVENT_MODE:OFF}
   adjustments:
@@ -99,7 +111,7 @@ config-service:
   url: ${CONFIG_SERVICE_URL:http://configuration-service:8097}
   enabled: ${CONFIG_SERVICE_ENABLED:true}
   timeout-ms: 3000
-  token: ${CONFIG_SERVICE_INTERNAL_TOKEN:}
+  token: ${CONFIG_SERVICE_INTERNAL_TOKEN:?CONFIG_SERVICE_INTERNAL_TOKEN is required}
 
 springdoc:
   api-docs:
@@ -119,8 +131,24 @@ outbox:
 saga:
   compensation-timeout-ms: 300000
   compensation-finalizer-interval-ms: 60000
+  compensation-outbox:
+    poll-interval-ms: 1000
+    batch-size: 50
+    max-attempts: 8
+    send-timeout-ms: 5000
 
 resilience4j:
+  bulkhead:
+    instances:
+      inventoryOrder:
+        max-concurrent-calls: ${ORDER_INVENTORY_BULKHEAD_SIZE:32}
+        max-wait-duration: ${ORDER_INVENTORY_BULKHEAD_WAIT:0ms}
+      paymentOrder:
+        max-concurrent-calls: ${ORDER_PAYMENT_BULKHEAD_SIZE:32}
+        max-wait-duration: ${ORDER_PAYMENT_BULKHEAD_WAIT:0ms}
+      shippingOrder:
+        max-concurrent-calls: ${ORDER_SHIPPING_BULKHEAD_SIZE:32}
+        max-wait-duration: ${ORDER_SHIPPING_BULKHEAD_WAIT:0ms}
   circuitbreaker:
     configs:
       grpcDefault:

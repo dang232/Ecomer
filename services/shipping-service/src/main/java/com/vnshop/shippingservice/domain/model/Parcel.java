@@ -4,5 +4,9 @@ public record Parcel(
         int weightGrams,
         int lengthCm,
         int widthCm,
-        int heightCm) {
+        int heightCm,
+        long declaredValueMinor) {
+    public Parcel(int weightGrams, int lengthCm, int widthCm, int heightCm) {
+        this(weightGrams, lengthCm, widthCm, heightCm, 0L);
+    }
 }

@@ -9,7 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vnshop.proto.inventory.InventoryServiceGrpc;
+import com.vnshop.proto.v1.InventoryServiceGrpc;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.BeforeEach;

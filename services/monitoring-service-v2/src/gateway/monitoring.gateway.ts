@@ -27,6 +27,8 @@ export class MonitoringGateway implements OnGatewayConnection, OnGatewayDisconne
   private readonly logger = new Logger(MonitoringGateway.name);
   private readonly jwksClient: jwksRsa.JwksClient;
   private readonly adminRole: string;
+  private readonly issuer: string;
+  private readonly audience: string;
 
   constructor(private readonly config: ConfigService) {
     const jwkSetUri = this.config.get<string>(
@@ -34,6 +36,8 @@ export class MonitoringGateway implements OnGatewayConnection, OnGatewayDisconne
       'http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs',
     );
     this.adminRole = this.config.get<string>('app.keycloak.adminRole', 'ADMIN');
+    this.issuer = this.config.get<string>('app.keycloak.issuerUri', 'http://localhost:9090/realms/vnshop');
+    this.audience = this.config.get<string>('app.keycloak.audience', 'vnshop-api');
 
     this.jwksClient = jwksRsa({
       jwksUri: jwkSetUri,
@@ -111,8 +115,11 @@ export class MonitoringGateway implements OnGatewayConnection, OnGatewayDisconne
         });
       };
 
-      jwt.verify(token, getKey, { algorithms: ['RS256'] }, (err, decoded) => {
+      jwt.verify(token, getKey, { algorithms: ['RS256'], issuer: this.issuer, audience: this.audience }, (err, decoded) => {
         if (err) return resolve(null);
+        if (!decoded || typeof decoded !== 'object' || typeof decoded.sub !== 'string' || decoded.sub.trim() === '') {
+          return resolve(null);
+        }
         resolve(decoded as Record<string, unknown>);
       });
     });

@@ -15,8 +15,17 @@ public record ProcessPaymentCommand(
         String orderId,
         String buyerId,
         PaymentMethodInput method,
-        String idempotencyKey
+        String idempotencyKey,
+        String currency,
+        String idempotencyScope
 ) {
+    private static final String DEFAULT_CURRENCY = "VND";
+    private static final String DEFAULT_IDEMPOTENCY_SCOPE = "ORDER_PAYMENT";
+
+    public ProcessPaymentCommand(String orderId, String buyerId, PaymentMethodInput method, String idempotencyKey) {
+        this(orderId, buyerId, method, idempotencyKey, DEFAULT_CURRENCY, DEFAULT_IDEMPOTENCY_SCOPE);
+    }
+
     public ProcessPaymentCommand(String orderId, String buyerId, PaymentMethodInput method) {
         this(orderId, buyerId, method, null);
     }

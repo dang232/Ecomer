@@ -1,10 +1,11 @@
 ﻿name: vnshop
 
-# Dev-only secrets warning
+# Shared compose secrets warning
 # -----------------------------------------------------------------
-# The `:-vnshop123` fallbacks on MINIO_ROOT_PASSWORD, KAFKA_SVC_*_PASSWORD,
-# KAFKA_VIDEO_*_PASSWORD, and POSTGRES_PASSWORD are LOCAL DEV DEFAULTS.
-# They must be overridden via .env in any non-local environment. The
+# POSTGRES_PASSWORD and REDIS_PASSWORD are required for this shared compose
+# file. The explicit docker-compose.dev.yml overlay supplies local-only
+# defaults. Other local-only credentials remain documented below and must be
+# overridden via .env in any non-local environment. The
 # `${VAR:?must be set}` syntax on KAFKA_VIDEO_TRANSCODER_PASSWORD /
 # KAFKA_VIDEO_MODERATOR_PASSWORD forces an explicit value (no default) for
 # the most-privileged video pipeline credentials. Search for "vnshop123"
@@ -19,7 +20,7 @@ services:
     environment:
       POSTGRES_DB: vnshop
       POSTGRES_USER: ${POSTGRES_USER:-vnshop}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?must be set}
     volumes:
       - postgres-legacy-data:/var/lib/postgresql/data
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -39,7 +40,7 @@ services:
     environment:
       POSTGRES_DB: vnshop_keycloak
       POSTGRES_USER: ${POSTGRES_USER:-vnshop}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?must be set}
     volumes:
       - postgres-keycloak-data:/var/lib/postgresql/data
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -60,7 +61,7 @@ services:
     environment:
       POSTGRES_DB: vnshop_user
       POSTGRES_USER: ${POSTGRES_USER:-vnshop}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?must be set}
     volumes:
       - postgres-user-data:/var/lib/postgresql/data
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -81,7 +82,7 @@ services:
     environment:
       POSTGRES_DB: vnshop_product
       POSTGRES_USER: ${POSTGRES_USER:-vnshop}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?must be set}
     volumes:
       - postgres-product-data:/var/lib/postgresql/data
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -102,7 +103,7 @@ services:
     environment:
       POSTGRES_DB: vnshop_order
       POSTGRES_USER: ${POSTGRES_USER:-vnshop}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?must be set}
     volumes:
       - postgres-order-data:/var/lib/postgresql/data
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -123,7 +124,7 @@ services:
     environment:
       POSTGRES_DB: vnshop_payment
       POSTGRES_USER: ${POSTGRES_USER:-vnshop}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?must be set}
     volumes:
       - postgres-payment-data:/var/lib/postgresql/data
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -144,7 +145,7 @@ services:
     environment:
       POSTGRES_DB: vnshop_inventory
       POSTGRES_USER: ${POSTGRES_USER:-vnshop}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?must be set}
     volumes:
       - postgres-inventory-data:/var/lib/postgresql/data
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -165,7 +166,7 @@ services:
     environment:
       POSTGRES_DB: vnshop_search
       POSTGRES_USER: vnshop
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?must be set}
     volumes:
       - postgres-search-data:/var/lib/postgresql/data
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -186,7 +187,7 @@ services:
     environment:
       POSTGRES_DB: vnshop_shipping
       POSTGRES_USER: vnshop
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?must be set}
     volumes:
       - postgres-shipping-data:/var/lib/postgresql/data
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -207,7 +208,7 @@ services:
     environment:
       POSTGRES_DB: vnshop_cart
       POSTGRES_USER: vnshop
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?must be set}
     volumes:
       - postgres-cart-data:/var/lib/postgresql/data
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -240,13 +241,13 @@ services:
   redis:
     image: redis:8.6-alpine
     container_name: vnshop-redis
-    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "512mb", "--maxmemory-policy", "volatile-lru", "--requirepass", "${REDIS_PASSWORD:-vnshop123}"]
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "512mb", "--maxmemory-policy", "volatile-lru", "--requirepass", "${REDIS_PASSWORD:?must be set}"]
     # ports:
       # - "6379:6379"  # internal only
     volumes:
       - redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-vnshop123}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?must be set}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -374,7 +375,7 @@ services:
       KC_DB_URL: jdbc:postgresql://postgres-keycloak:5432/vnshop_keycloak
       KC_DB_SCHEMA: keycloak
       KC_DB_USERNAME: vnshop
-      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:?must be set}
       # Exposes /health/{started,live,ready} on management port 9000 (per Keycloak 26 docs).
       # The image has no curl/wget, so the healthcheck below uses bash's /dev/tcp.
       KC_HEALTH_ENABLED: "true"
@@ -545,7 +546,7 @@ services:
       MODERATOR_STORAGE_ENDPOINT: http://minio:9000
       MODERATOR_STORAGE_ACCESS_KEY: ${MINIO_ROOT_USER:-vnshop}
       MODERATOR_STORAGE_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-vnshop123}
-      MODERATOR_DATABASE_URL: postgresql://vnshop:${POSTGRES_PASSWORD:-vnshop}@postgres-product:5432/vnshop_product
+      MODERATOR_DATABASE_URL: postgresql://vnshop:${POSTGRES_PASSWORD:?must be set}@postgres-product:5432/vnshop_product
     depends_on:
       kafka:
         condition: service_healthy
@@ -649,6 +650,7 @@ services:
     volumes:
       - ./infra/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - ./infra/alertmanager/rules.yml:/etc/alertmanager/rules.yml:ro
+      - ${ALERTMANAGER_WEBHOOK_URL_FILE:?ALERTMANAGER_WEBHOOK_URL_FILE must point to a secret file}:/etc/alertmanager/secrets/webhook-url:ro
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'
     healthcheck:
@@ -676,13 +678,13 @@ services:
     environment:
       SERVER_PORT: 8080
       REDIS_HOST: redis
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-vnshop123}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?must be set}
       KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
       OTEL_TRACES_SAMPLER: parentbased_traceidratio
       OTEL_TRACES_SAMPLER_ARG: "1.0"
-      GATEWAY_CORS_ALLOWED_ORIGINS: ${GATEWAY_CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      GATEWAY_CORS_ALLOWED_ORIGINS: ${GATEWAY_CORS_ALLOWED_ORIGINS:-https://*.vnshop.example}
       VNSHOP_ROUTES_MINIO: ${VNSHOP_ROUTES_MINIO:-http://minio:9000}
       VNSHOP_GATEWAY_PUBLIC_BUCKET_AVATAR: ${VNSHOP_USER_STORAGE_BUCKET:-vnshop-avatars}
       VNSHOP_GATEWAY_PUBLIC_BUCKET_PRODUCT: ${OBJECT_STORAGE_BUCKET_PRODUCTS:-vnshop-products}
@@ -745,9 +747,9 @@ services:
       SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-user:5432/vnshop_user?currentSchema=user_svc
       SPRING_DATASOURCE_USERNAME: vnshop
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?must be set}
       REDIS_HOST: redis
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-vnshop123}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?must be set}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
       KAFKA_SASL_USERNAME: svc-user
@@ -812,10 +814,10 @@ services:
       SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-product:5432/vnshop_product?currentSchema=product_svc
       SPRING_DATASOURCE_USERNAME: vnshop
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?must be set}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
-      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-vnshop123}
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:?must be set}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       REDIS_HOST: redis
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
@@ -823,6 +825,10 @@ services:
       KAFKA_SASL_USERNAME: svc-product
       KAFKA_SASL_PASSWORD: ${KAFKA_SVC_PRODUCT_PASSWORD:-kafka-product}
       KAFKA_SSL_TRUSTSTORE_PASSWORD: ${KAFKA_SSL_TRUSTSTORE_PASSWORD:?KAFKA_SSL_TRUSTSTORE_PASSWORD must be set}
+      GRPC_SERVER_AUTH_TOKEN: ${GRPC_INVENTORY_SERVICE_TOKEN:?GRPC_INVENTORY_SERVICE_TOKEN must be set}
+      GRPC_SERVER_TLS_CERT_CHAIN: /etc/grpc/tls/inventory-server.crt
+      GRPC_SERVER_TLS_PRIVATE_KEY: /etc/grpc/tls/inventory-server.key
+      GRPC_SERVER_TLS_CLIENT_CA: /etc/grpc/tls/ca.crt
       VNSHOP_PRODUCT_CURSOR_SECRET: ${VNSHOP_PRODUCT_CURSOR_SECRET:?VNSHOP_PRODUCT_CURSOR_SECRET must be set}
       KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
@@ -848,6 +854,7 @@ services:
       # until finalise, then PUT to S3 in a single object).
       VIDEO_UPLOAD_LOCAL_STAGING_DIR: /tmp/video-uploads
     volumes:
+      - ./infra/grpc/tls:/etc/grpc/tls:ro
       - ./infra/kafka/certs/kafka.truststore.jks:/etc/kafka/secrets/kafka.truststore.jks:ro
     tmpfs:
       # 6 GB tmpfs holds 1 × 500 MB upload in progress + ~5 GB headroom for concurrent sessions
@@ -887,10 +894,10 @@ services:
       SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-inventory:5432/vnshop_inventory?currentSchema=inventory_svc
       SPRING_DATASOURCE_USERNAME: vnshop
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?must be set}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
-      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-vnshop123}
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:?must be set}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       REDIS_HOST: redis
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
@@ -929,8 +936,8 @@ services:
       SERVER_PORT: 8084
       OPENAPI_ENABLED: ${SWAGGER_ENABLED:-true}
       REDIS_HOST: redis
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-vnshop123}
-      DATABASE_URL: postgresql://vnshop:${POSTGRES_PASSWORD:-vnshop}@postgres-cart:5432/vnshop_cart
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?must be set}
+      DATABASE_URL: postgresql://vnshop:${POSTGRES_PASSWORD:?must be set}@postgres-cart:5432/vnshop_cart
       KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
@@ -1010,9 +1017,9 @@ services:
       SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-search:5432/vnshop_search?currentSchema=search_svc
       SPRING_DATASOURCE_USERNAME: vnshop
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?must be set}
       REDIS_HOST: redis
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-vnshop123}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?must be set}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPRING_PROFILES_ACTIVE: local
       ELASTICSEARCH_URL: http://elasticsearch:9200
@@ -1056,7 +1063,7 @@ services:
         condition: service_healthy
     environment:
       MONGO_URI: mongodb://vnshop:${MONGO_ROOT_PASSWORD:-vnshop123}@mongo:27017/notification_db?authSource=admin
-      REDIS_URL: redis://:${REDIS_PASSWORD:-vnshop123}@redis:6379
+      REDIS_URL: redis://:${REDIS_PASSWORD:?must be set}@redis:6379
       PORT: 8087
       OPENAPI_ENABLED: ${SWAGGER_ENABLED:-true}
       OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://jaeger:4318/v1/traces
@@ -1108,9 +1115,9 @@ services:
       SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-legacy:5432/vnshop?currentSchema=coupon_svc
       SPRING_DATASOURCE_USERNAME: vnshop
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?must be set}
       REDIS_HOST: redis
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-vnshop123}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?must be set}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
@@ -1149,7 +1156,7 @@ services:
       SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-legacy:5432/vnshop?currentSchema=seller_finance_svc
       SPRING_DATASOURCE_USERNAME: vnshop
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?must be set}
       REDIS_HOST: redis
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
@@ -1198,7 +1205,7 @@ services:
       SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-legacy:5432/vnshop?currentSchema=recommendations_svc
       SPRING_DATASOURCE_USERNAME: vnshop
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?must be set}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       PRODUCT_SERVICE_URL: http://product-service:8082
       KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
@@ -1239,13 +1246,13 @@ services:
       SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-order:5432/vnshop_order?currentSchema=order_svc
       SPRING_DATASOURCE_USERNAME: vnshop
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?must be set}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
-      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-vnshop123}
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:?must be set}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       REDIS_HOST: redis
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-vnshop123}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?must be set}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
@@ -1269,11 +1276,16 @@ services:
       CONFIG_SERVICE_INTERNAL_TOKEN: ${CONFIG_SERVICE_INTERNAL_TOKEN:?CONFIG_SERVICE_INTERNAL_TOKEN must be set}
       GRPC_CLIENT_INVENTORY_HOST: inventory-service
       GRPC_CLIENT_INVENTORY_PORT: 9093
+      GRPC_CLIENT_INVENTORY_SERVICE_TOKEN: ${GRPC_INVENTORY_SERVICE_TOKEN:?GRPC_INVENTORY_SERVICE_TOKEN must be set}
       GRPC_CLIENT_PAYMENT_HOST: payment-service
       GRPC_CLIENT_PAYMENT_PORT: 9094
       GRPC_CLIENT_PAYMENT_SERVICE_TOKEN: ${GRPC_PAYMENT_SERVICE_TOKEN:-local-payment-grpc-token}
       GRPC_CLIENT_SHIPPING_HOST: shipping-service
       GRPC_CLIENT_SHIPPING_PORT: 9095
+      GRPC_CLIENT_SHIPPING_SERVICE_TOKEN: ${GRPC_SHIPPING_SERVICE_TOKEN:?GRPC_SHIPPING_SERVICE_TOKEN must be set}
+      GRPC_CLIENT_TLS_CA_CERT: /etc/grpc/tls/ca.crt
+      GRPC_CLIENT_TLS_CLIENT_CERT: /etc/grpc/tls/order-client.crt
+      GRPC_CLIENT_TLS_CLIENT_KEY: /etc/grpc/tls/order-client.key
     volumes:
       - ./infra/kafka/certs/kafka.truststore.jks:/etc/kafka/secrets/kafka.truststore.jks:ro
     deploy:
@@ -1309,7 +1321,7 @@ services:
       SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-payment:5432/vnshop_payment?currentSchema=payment_svc
       SPRING_DATASOURCE_USERNAME: vnshop
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?must be set}
       REDIS_HOST: redis
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
@@ -1321,7 +1333,7 @@ services:
       # destination or browser credentials stays disabled until configured.
       # Flip the matching env var to "true" once the provider's creds land in .env.
       COD_ENABLED: ${COD_ENABLED:-true}
-      VIETQR_ENABLED: ${VIETQR_ENABLED:-false}
+      VIETQR_ENABLED: ${VIETQR_ENABLED:-true}
       VNPAY_ENABLED: ${VNPAY_ENABLED:-false}
       VNPAY_TMN_CODE: ${VNPAY_TMN_CODE:-}
       VNPAY_HASH_SECRET: ${VNPAY_HASH_SECRET:-}
@@ -1348,6 +1360,9 @@ services:
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
       CONFIG_SERVICE_INTERNAL_TOKEN: ${CONFIG_SERVICE_INTERNAL_TOKEN:?CONFIG_SERVICE_INTERNAL_TOKEN must be set}
       GRPC_SERVER_AUTH_TOKEN: ${GRPC_PAYMENT_SERVICE_TOKEN:-local-payment-grpc-token}
+      GRPC_SERVER_TLS_CERT_CHAIN: /etc/grpc/tls/payment-server.crt
+      GRPC_SERVER_TLS_PRIVATE_KEY: /etc/grpc/tls/payment-server.key
+      GRPC_SERVER_TLS_CLIENT_CA: /etc/grpc/tls/ca.crt
       # PayPal v2 Checkout REST credentials (sandbox creds at developer.paypal.com).
       PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID:-}
       PAYPAL_CLIENT_SECRET: ${PAYPAL_CLIENT_SECRET:-}
@@ -1358,7 +1373,7 @@ services:
       # SePay outbound polling for VietQR auto-confirm.
       SEPAY_API_KEY: ${SEPAY_API_KEY:-}
       SEPAY_ACCOUNT_ID: ${SEPAY_ACCOUNT_ID:-}
-      SEPAY_ENABLED: ${SEPAY_ENABLED:-false}
+      SEPAY_ENABLED: ${SEPAY_ENABLED:-true}
       # FX provider for Stripe/PayPal (USD conversion).
       FX_FALLBACK_RATE: ${FX_FALLBACK_RATE:-25500}
       # Kafka SASL/PLAIN credentials for payment-service.
@@ -1367,6 +1382,7 @@ services:
       KAFKA_SASL_PASSWORD: ${KAFKA_SVC_PAYMENT_PASSWORD:-kafka-payment}
       KAFKA_SSL_TRUSTSTORE_PASSWORD: ${KAFKA_SSL_TRUSTSTORE_PASSWORD:?KAFKA_SSL_TRUSTSTORE_PASSWORD must be set}
     volumes:
+      - ./infra/grpc/tls:/etc/grpc/tls:ro
       - ./infra/kafka/certs/kafka.truststore.jks:/etc/kafka/secrets/kafka.truststore.jks:ro
     deploy:
       resources:
@@ -1401,7 +1417,7 @@ services:
       SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-shipping:5432/vnshop_shipping?currentSchema=shipping_svc
       SPRING_DATASOURCE_USERNAME: vnshop
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?must be set}
       REDIS_HOST: redis
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
@@ -1418,16 +1434,21 @@ services:
       # GHN (Giao Hàng Nhanh) credentials — https://dev.ghn.vn
       GHN_BASE_URL: ${GHN_BASE_URL:-https://dev-online-gateway.ghn.vn}
       GHN_TOKEN: ${GHN_TOKEN:-}
-      GHN_WEBHOOK_TOKEN: ${GHN_WEBHOOK_TOKEN:-}
+      GHN_WEBHOOK_SECRET: ${GHN_WEBHOOK_SECRET:-}
       GHN_SHOP_ID: ${GHN_SHOP_ID:-}
       GHN_SERVICE_TYPE_ID: ${GHN_SERVICE_TYPE_ID:-2}
       # GHTK (Giao Hàng Tiết Kiệm) credentials — https://giaohangtietkiem.vn
       GHTK_BASE_URL: ${GHTK_BASE_URL:-https://services.giaohangtietkiem.vn}
       GHTK_TOKEN: ${GHTK_TOKEN:-}
-      GHTK_WEBHOOK_TOKEN: ${GHTK_WEBHOOK_TOKEN:-}
+      GHTK_WEBHOOK_SECRET: ${GHTK_WEBHOOK_SECRET:-}
       GHTK_PARTNER_CODE: ${GHTK_PARTNER_CODE:-}
       CONFIG_SERVICE_INTERNAL_TOKEN: ${CONFIG_SERVICE_INTERNAL_TOKEN:?CONFIG_SERVICE_INTERNAL_TOKEN must be set}
+      GRPC_SERVER_AUTH_TOKEN: ${GRPC_SHIPPING_SERVICE_TOKEN:?GRPC_SHIPPING_SERVICE_TOKEN must be set}
+      GRPC_SERVER_TLS_CERT_CHAIN: /etc/grpc/tls/shipping-server.crt
+      GRPC_SERVER_TLS_PRIVATE_KEY: /etc/grpc/tls/shipping-server.key
+      GRPC_SERVER_TLS_CLIENT_CA: /etc/grpc/tls/ca.crt
     volumes:
+      - ./infra/grpc/tls:/etc/grpc/tls:ro
       - ./infra/kafka/certs/kafka.truststore.jks:/etc/kafka/secrets/kafka.truststore.jks:ro
     deploy:
       resources:
@@ -1453,9 +1474,9 @@ services:
       DB_HOST: postgres-legacy
       DB_PORT: 5432
       DB_USERNAME: vnshop
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?must be set}
       DB_DATABASE: vnshop
-      DATABASE_URL: postgresql://vnshop:${POSTGRES_PASSWORD:-vnshop}@postgres-legacy:5432/vnshop?currentSchema=messaging_svc
+      DATABASE_URL: postgresql://vnshop:${POSTGRES_PASSWORD:?must be set}@postgres-legacy:5432/vnshop?currentSchema=messaging_svc
       PORT: 8095
       OPENAPI_ENABLED: ${SWAGGER_ENABLED:-true}
       OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://jaeger:4318/v1/traces
@@ -1544,7 +1565,7 @@ services:
     environment:
       POSTGRES_DB: vnshop_invoice
       POSTGRES_USER: vnshop
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?must be set}
     volumes:
       - postgres-invoice-data:/var/lib/postgresql/data
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -1577,7 +1598,7 @@ services:
       SERVER_PORT: 8098
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-invoice:5432/vnshop_invoice?currentSchema=invoice_svc
       SPRING_DATASOURCE_USERNAME: vnshop
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?must be set}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT

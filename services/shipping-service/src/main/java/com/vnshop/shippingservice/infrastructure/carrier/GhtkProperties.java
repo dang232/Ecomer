@@ -7,6 +7,6 @@ public record GhtkProperties(
         String baseUrl,
         String token,
         String partnerCode,
-        String webhookToken
+        String webhookSecret
 ) {
 }

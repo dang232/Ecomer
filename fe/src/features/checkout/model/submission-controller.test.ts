@@ -112,6 +112,34 @@ describe("checkout submission controller", () => {
     expect(codConfirm).toHaveBeenCalledTimes(2);
   });
 
+  it("keeps one order when payment initialization fails and is retried", async () => {
+    const placeOrder = vi.fn().mockResolvedValue({ id: "order-1", total: 125000 });
+    const codConfirm = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("temporary provider error"))
+      .mockResolvedValueOnce({
+        paymentId: "payment-1",
+        orderId: "order-1",
+        amount: 125000,
+        method: "COD",
+        status: "AWAITING_COLLECTION",
+        transactionRef: null,
+        redirectUrl: null,
+      });
+    const controller = createCheckoutSubmissionController(
+      dependencies({ placeOrder, codConfirm }),
+      "cart-a",
+    );
+
+    const first = await controller.submit(input);
+    const second = await controller.submit(input);
+
+    expect(first.state.status).toBe("failed");
+    expect(second.state.status).toBe("completed");
+    expect(placeOrder).toHaveBeenCalledTimes(1);
+    expect(codConfirm).toHaveBeenCalledTimes(2);
+  });
+
   it("keeps the terminal payment state visible until the next explicit checkout", async () => {
     const controller = createCheckoutSubmissionController(dependencies(), "cart-a");
 

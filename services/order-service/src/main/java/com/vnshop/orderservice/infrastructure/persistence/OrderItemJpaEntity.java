@@ -70,6 +70,9 @@ public class OrderItemJpaEntity extends BaseJpaEntity {
     @Column(name = "parcel_height_cm")
     private Integer parcelHeightCm;
 
+    @Column(name = "parcel_declared_value_minor")
+    private Long parcelDeclaredValueMinor;
+
     @Column(name = "tax_rate", precision = 5, scale = 4)
     private BigDecimal taxRate;
 
@@ -94,6 +97,7 @@ public class OrderItemJpaEntity extends BaseJpaEntity {
             entity.parcelLengthCm = item.parcel().lengthCm();
             entity.parcelWidthCm = item.parcel().widthCm();
             entity.parcelHeightCm = item.parcel().heightCm();
+            entity.parcelDeclaredValueMinor = item.parcel().declaredValueMinor();
         }
         entity.taxRate = item.taxRate();
         entity.taxAmount = item.taxAmount();
@@ -116,6 +120,7 @@ public class OrderItemJpaEntity extends BaseJpaEntity {
                 || parcelWidthCm == null || parcelHeightCm == null) {
             throw new IllegalStateException("stored parcel metadata must be complete");
         }
-        return new ParcelDimensions(parcelWeightGrams, parcelLengthCm, parcelWidthCm, parcelHeightCm);
+        return new ParcelDimensions(parcelWeightGrams, parcelLengthCm, parcelWidthCm, parcelHeightCm,
+                parcelDeclaredValueMinor == null ? 0L : parcelDeclaredValueMinor);
     }
 }

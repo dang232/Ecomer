@@ -5,6 +5,7 @@ metadata:
 data:
   SPRING_PROFILES_ACTIVE: prod
   NODE_ENV: production
+  OTEL_TRACES_SAMPLER: parentbased_traceidratio
   OTEL_TRACES_SAMPLER_ARG: "0.01"
   WEB_ORIGIN: https://web.vnshop.example
   API_ORIGIN: https://api.vnshop.example

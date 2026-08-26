@@ -3,6 +3,8 @@ kind: ConfigMap
 metadata:
   name: vnshop-app-config
 data:
+  # Shared staging may retain plaintext native gRPC for compatibility.
+  # Production uses the SealedSecret-backed /etc/grpc/tls mount and Istio STRICT mTLS.
   SPRING_PROFILES_ACTIVE: staging
   NODE_ENV: production
   OTEL_TRACES_SAMPLER_ARG: "0.1"

@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.springframework.cache.annotation.CacheEvict;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -57,6 +58,16 @@ class CouponManagementServiceTest {
         exhausted.recordUsage();
 
         assertThat(service.active()).containsExactly(active);
+    }
+
+    @Test
+    void couponMutationsAreMarkedForCacheEviction() throws Exception {
+        assertThat(CouponManagementService.class.getDeclaredMethod("create", CouponTerms.class)
+                .isAnnotationPresent(CacheEvict.class)).isTrue();
+        assertThat(CouponManagementService.class.getDeclaredMethod("update", String.class, CouponTerms.class)
+                .isAnnotationPresent(CacheEvict.class)).isTrue();
+        assertThat(CouponManagementService.class.getDeclaredMethod("deactivate", String.class)
+                .isAnnotationPresent(CacheEvict.class)).isTrue();
     }
 
     private static Coupon coupon(String code) {

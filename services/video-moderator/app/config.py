@@ -1,5 +1,6 @@
 """Environment-based configuration for the video-moderator service."""
 
+import os
 from functools import lru_cache
 
 from pydantic import ConfigDict
@@ -27,6 +28,7 @@ class Settings(BaseSettings):
     # Spec section 10: 3 attempts total, backoff 30s then 120s.
     # delays.len = max_attempts - 1 (delays applied BETWEEN attempts, not after the last).
     retry_delays: list[int] = [30, 120]
+    worker_count: int = 4
 
     # Object storage (MinIO / R2)
     storage_endpoint: str = "http://minio:9000"
@@ -59,6 +61,16 @@ class Settings(BaseSettings):
     model_config = ConfigDict(env_prefix="MODERATOR_", env_file=".env", env_file_encoding="utf-8")
 
 
+
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    settings = Settings()
+    if settings.kafka_security_protocol != "PLAINTEXT":
+        if not settings.kafka_sasl_username or not settings.kafka_sasl_password:
+            raise ValueError("KAFKA_VIDEO_MODERATOR_PASSWORD and username are required")
+        configured_password = os.environ.get("KAFKA_VIDEO_MODERATOR_PASSWORD")
+        if configured_password is not None and not configured_password.strip():
+            raise ValueError("KAFKA_VIDEO_MODERATOR_PASSWORD must not be empty")
+    if settings.worker_count < 1:
+        raise ValueError("worker_count must be positive")
+    return settings

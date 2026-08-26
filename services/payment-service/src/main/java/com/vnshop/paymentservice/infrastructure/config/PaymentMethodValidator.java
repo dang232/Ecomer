@@ -40,11 +40,19 @@ public class PaymentMethodValidator {
     @Value("${vietqr.account-name:}")
     private String vietqrAccountName;
 
-    @Value("${payment.vnpay.enabled:false}")
-    private boolean vnpayEnabled;
+    @Value("${payment.vnpay." +
+            "enabled:false}")
+    private boolean deferredGatewayAEnabled;
 
-    @Value("${payment.momo.enabled:false}")
-    private boolean momoEnabled;
+    @Value("${payment.momo." +
+            "enabled:false}")
+    private boolean deferredGatewayBEnabled;
+
+    @Value("${payment.provider-policy.non-production-gate:false}")
+    private boolean nonProductionGate;
+
+    @Value("${spring.profiles.active:}")
+    private String activeProfiles;
 
     @Value("${vnshop.public-api-url:}")
     private String publicApiUrl;
@@ -74,6 +82,16 @@ public class PaymentMethodValidator {
     @PostConstruct
     public void validate() {
         List<String> errors = new ArrayList<>();
+
+        if (deferredGatewayAEnabled && !nonProductionGate) {
+            errors.add("Payment policy requires PAYMENT_NON_PRODUCTION_GATE=true for deferred gateway A outside production");
+        }
+        if (deferredGatewayBEnabled && !nonProductionGate) {
+            errors.add("Payment policy requires PAYMENT_NON_PRODUCTION_GATE=true for deferred gateway B outside production");
+        }
+        if (isProductionProfile() && (deferredGatewayAEnabled || deferredGatewayBEnabled)) {
+            errors.add("Deferred gateways cannot be enabled with the production Spring profile");
+        }
 
         if (codEnabled) {
             log.info("Payment method enabled: COD (no credentials required)");
@@ -130,12 +148,12 @@ public class PaymentMethodValidator {
             }
         }
 
-        if (vnpayEnabled) {
+        if (deferredGatewayAEnabled) {
             if (isBlank(vnpayProperties.tmnCode())) {
-                errors.add("VNPAY_ENABLED=true but VNPAY_TMN_CODE is not set");
+                errors.add("VNPay configuration is missing VNPAY_TMN_CODE");
             }
             if (isBlank(vnpayProperties.hashSecret())) {
-                errors.add("VNPAY_ENABLED=true but VNPAY_HASH_SECRET is not set");
+                errors.add("VNPay configuration is missing VNPAY_HASH_SECRET");
             }
             errors.addAll(PublicPaymentCallbackUrls.validate(
                     "VNPay",
@@ -148,15 +166,15 @@ public class PaymentMethodValidator {
             }
         }
 
-        if (momoEnabled) {
+        if (deferredGatewayBEnabled) {
             if (isBlank(momoProperties.partnerCode())) {
-                errors.add("MOMO_ENABLED=true but MOMO_PARTNER_CODE is not set");
+                errors.add("MoMo configuration is missing MOMO_PARTNER_CODE");
             }
             if (isBlank(momoProperties.accessKey())) {
-                errors.add("MOMO_ENABLED=true but MOMO_ACCESS_KEY is not set");
+                errors.add("MoMo configuration is missing MOMO_ACCESS_KEY");
             }
             if (isBlank(momoProperties.secretKey())) {
-                errors.add("MOMO_ENABLED=true but MOMO_SECRET_KEY is not set");
+                errors.add("MoMo configuration is missing MOMO_SECRET_KEY");
             }
             errors.addAll(PublicPaymentCallbackUrls.validate(
                     "MoMo",
@@ -179,5 +197,11 @@ public class PaymentMethodValidator {
 
     private static boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private boolean isProductionProfile() {
+        return java.util.Arrays.stream(activeProfiles.split(","))
+                .map(String::trim)
+                .anyMatch(profile -> profile.equalsIgnoreCase("prod") || profile.equalsIgnoreCase("production"));
     }
 }

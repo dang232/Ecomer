@@ -1,13 +1,26 @@
 grpc:
   client:
+    connect-timeout: 1s
+    deadline: 2500ms
+    keepalive-time: 30s
+    keepalive-timeout: 5s
+    keepalive-without-calls: true
+    tls:
+      ca-cert: ${GRPC_CLIENT_TLS_CA_CERT:?GRPC_CLIENT_TLS_CA_CERT is required}
+      client-cert: ${GRPC_CLIENT_TLS_CLIENT_CERT:?GRPC_CLIENT_TLS_CLIENT_CERT is required}
+      client-key: ${GRPC_CLIENT_TLS_CLIENT_KEY:?GRPC_CLIENT_TLS_CLIENT_KEY is required}
     inventory:
       host: ${GRPC_CLIENT_INVENTORY_HOST:localhost}
       port: ${GRPC_CLIENT_INVENTORY_PORT:9093}
+      service-id: ${GRPC_CLIENT_INVENTORY_SERVICE_ID:order-service}
+      service-token: ${GRPC_CLIENT_INVENTORY_SERVICE_TOKEN:?GRPC_CLIENT_INVENTORY_SERVICE_TOKEN is required}
     payment:
       host: ${GRPC_CLIENT_PAYMENT_HOST:localhost}
       port: ${GRPC_CLIENT_PAYMENT_PORT:9094}
       service-id: ${GRPC_CLIENT_PAYMENT_SERVICE_ID:order-service}
-      service-token: ${GRPC_CLIENT_PAYMENT_SERVICE_TOKEN:}
+      service-token: ${GRPC_CLIENT_PAYMENT_SERVICE_TOKEN:?GRPC_CLIENT_PAYMENT_SERVICE_TOKEN is required}
     shipping:
       host: ${GRPC_CLIENT_SHIPPING_HOST:localhost}
       port: ${GRPC_CLIENT_SHIPPING_PORT:9095}
+      service-id: ${GRPC_CLIENT_SHIPPING_SERVICE_ID:order-service}
+      service-token: ${GRPC_CLIENT_SHIPPING_SERVICE_TOKEN:?GRPC_CLIENT_SHIPPING_SERVICE_TOKEN is required}

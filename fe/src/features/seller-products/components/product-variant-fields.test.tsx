@@ -26,6 +26,7 @@ describe("ProductVariantFields", () => {
     expect(screen.getByLabelText("seller.products.editor.variants.parcel.lengthCm")).toBeVisible();
     expect(screen.getByLabelText("seller.products.editor.variants.parcel.widthCm")).toBeVisible();
     expect(screen.getByLabelText("seller.products.editor.variants.parcel.heightCm")).toBeVisible();
+    expect(screen.getByLabelText("seller.products.editor.variants.parcel.declaredValueMinor")).toBeVisible();
     expect(
       screen.queryByLabelText("seller.products.editor.variants.name *"),
     ).not.toBeInTheDocument();

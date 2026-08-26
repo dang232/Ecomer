@@ -1,0 +1,20 @@
+Task 8 verification evidence - 2026-08-25
+
+PASS: services/order-service/mvnw.cmd -q -Dtest=IdempotencyFilterTest test
+PASS: services/payment-service/mvnw.cmd -q -Dtest=SepayTransactionValidatorTest,SepayWebhookPollerParityTest,SepayPollerTest test
+PASS: services/order-service/mvnw.cmd -q -DskipTests compile
+PASS: services/payment-service/mvnw.cmd -q -DskipTests compile
+PASS: git diff --check
+
+Covered behaviors:
+- Same idempotency key with a different stored body hash returns 409.
+- __PROCESSING__ claims return 425 with Retry-After.
+- Redis failure returns 503 and increments idempotency_failures_total.
+- Idempotency claim body hash, principal, route, request ID, and owner-token cleanup paths are exercised.
+- SePay validator rejects underpayment, fractional minor units, wrong currency, wrong direction, wrong beneficiary, malformed memo, and never promotes overpayment.
+- SePay HOLD policy classifies overpayment for reconciliation.
+- Webhook and poller use shared durable transaction identity claiming and canonical payload hashing.
+- Poller cursor is written only after successful promotion or duplicate acceptance.
+
+Environment limitation:
+- The requested bash/PIPESTATUS wrapper could not run on this Windows host because WSL reports /bin/bash missing. Maven wrapper commands above are the equivalent focused evidence.

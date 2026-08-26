@@ -1,0 +1,15 @@
+# Task 5: payment and inventory gRPC idempotency contracts
+# Provenance: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\docs\task-5-idempotency-evidence.md (uncommitted worktree artifact)
+
+STATUS: PASS_FOCUSED / BLOCKED_EXTERNAL
+
+Exact commands and statuses:
+- `services/payment-service: ./mvnw.cmd -q "-Dtest=ProcessPaymentUseCaseTest,GrpcPaymentServerTest" test` -> PASS.
+- `services/inventory-service: ./mvnw.cmd -q "-Dtest=GrpcInventoryServerTest,ReserveStockUseCaseTest" test` -> PASS.
+- `services/payment-service: ./mvnw.cmd -q -DskipTests compile` -> PASS.
+- `services/inventory-service: ./mvnw.cmd -q -DskipTests compile` -> PASS.
+- `services/order-service: ./mvnw.cmd -q -DskipTests compile` -> PASS after generated call-site updates.
+- `buf lint` from `proto/` -> PASS.
+- `buf build` from `proto/` -> PASS.
+
+Blockers: `buf generate` was blocked by the checked-in remote Java plugin rejecting the `paths` option; `buf breaking --against '.git#branch=main'` was blocked because the isolated temp worktree `proto/.git` path is not a git repository. No live PostgreSQL, Kafka, or Testcontainers proof is claimed.

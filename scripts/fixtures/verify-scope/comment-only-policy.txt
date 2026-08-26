@@ -1,0 +1,4 @@
+# MOMO_ENABLED=true is forbidden in production.
+# payment:
+#   providers:
+#     vnpay: true

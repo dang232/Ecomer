@@ -12,6 +12,7 @@ const completeParcel = {
   lengthCm: 30,
   widthCm: 20,
   heightCm: 10,
+  declaredValueMinor: 100000,
 };
 
 function cartWithItem(parcel: typeof completeParcel | null): Cart {
@@ -123,6 +124,27 @@ describe('ViewCartUseCase', () => {
       { itemKey: 'product-1:sku-large', parcel: completeParcel },
     ]);
     expect(cartRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('refreshes when only declared value changes', async () => {
+    const oldParcel = { ...completeParcel, declaredValueMinor: 90000 };
+    const cart = cartWithItem(oldParcel);
+    const cartRepository = repository(cart);
+    const productClient: ProductClientPort = {
+      getSnapshot: jest.fn().mockResolvedValue({
+        productId: 'product-1',
+        productName: 'Keyboard',
+        productImage: 'keyboard.png',
+        unitPrice: Money.of(1000),
+        parcel: completeParcel,
+      }),
+    };
+
+    await new ViewCartUseCase(cartRepository, productClient).execute('user-1');
+
+    expect(cartRepository.refreshParcels).toHaveBeenCalledWith('user-1', [
+      { itemKey: 'product-1:sku-large', parcel: completeParcel },
+    ]);
   });
 
   it('preserves trusted parcel metadata when the product snapshot is unavailable', async () => {

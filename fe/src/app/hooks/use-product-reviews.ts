@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { reviewsByProduct } from "../lib/api/endpoints/reviews";
-import type { ReviewPage } from "../types/api";
+import { reviewsByProduct } from "@/shared/api/endpoints/reviews";
+import type { ReviewPage } from "@/shared/contracts/api";
 
 export const productReviewsQueryKey = (productId: string, page?: number, size?: number) =>
   page === undefined

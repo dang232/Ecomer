@@ -1,6 +1,8 @@
 import { ImageOff } from "lucide-react";
 import { useState, type ImgHTMLAttributes } from "react";
 
+import { imageSrcSet, imageUrl, type ImagePreset } from "@/shared/lib/image-url";
+
 type ImageFallbackProps = ImgHTMLAttributes<HTMLImageElement> & {
   /** Optional alternate URL to try before showing the placeholder. */
   fallbackSrc?: string;
@@ -8,6 +10,10 @@ type ImageFallbackProps = ImgHTMLAttributes<HTMLImageElement> & {
   placeholder?: React.ReactNode;
   /** Prioritizes above-the-fold images to improve loading/LCP; dimensions prevent CLS. */
   priority?: boolean;
+  /** Named CDN transform used to generate responsive image candidates. */
+  imagePreset?: ImagePreset;
+  /** CDN quality override for this rendered surface. */
+  imageQuality?: number;
 };
 
 /**
@@ -23,6 +29,10 @@ export function ImageWithFallback({
   loading = "lazy",
   decoding = "async",
   priority = false,
+  imagePreset = "original",
+  imageQuality,
+  sizes,
+  srcSet,
   onError,
   ...rest
 }: ImageFallbackProps) {
@@ -45,11 +55,17 @@ export function ImageWithFallback({
   }
 
   const currentSrc = usingFallback ? fallbackSrc : src;
+  const optimizedSrc = imageUrl(currentSrc, imagePreset, 1, undefined, imageQuality);
+  const optimizedSrcSet = usingFallback
+    ? undefined
+    : imageSrcSet(src, imagePreset, undefined, imageQuality);
 
   return (
     <img
       {...rest}
-      src={currentSrc}
+      src={optimizedSrc}
+      srcSet={srcSet ?? optimizedSrcSet ?? undefined}
+      sizes={sizes}
       alt={alt}
       className={className}
       loading={imageLoading}

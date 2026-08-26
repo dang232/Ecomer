@@ -9,6 +9,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Set;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Double-submit cookie CSRF protection for cookie-authenticated endpoints.
@@ -40,6 +41,7 @@ public class CsrfProtectionFilter extends OncePerRequestFilter {
     public static final String CSRF_COOKIE_NAME = "vnshop_csrf";
     /** Header the SPA must include on state-changing auth requests. */
     public static final String CSRF_HEADER_NAME = "X-CSRF-Token";
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * Paths under {@code /auth} that require the CSRF token. Login is excluded
@@ -66,11 +68,23 @@ public class CsrfProtectionFilter extends OncePerRequestFilter {
             if (cookieToken == null || cookieToken.isBlank()
                     || !cookieToken.equals(headerToken)) {
                 response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                response.setContentType("application/json;charset=UTF-8");
-                response.getWriter().write(
-                        "{\"success\":false,\"message\":\"CSRF token missing or invalid\"," +
-                        "\"data\":null,\"errorCode\":\"csrf_invalid\",\"timestamp\":\"" +
-                        java.time.LocalDateTime.now() + "\"}");
+                response.setContentType("application/problem+json");
+                String requestId = request.getHeader("X-Request-ID");
+                if (requestId == null || requestId.isBlank()) requestId = java.util.UUID.randomUUID().toString();
+                response.setHeader("X-Request-ID", requestId);
+                java.util.Map<String, Object> problem = new java.util.LinkedHashMap<>();
+                problem.put("type", "https://api.vnshop.com/problems/csrf-invalid");
+                problem.put("title", "Forbidden");
+                problem.put("status", 403);
+                problem.put("detail", "CSRF token missing or invalid");
+                problem.put("instance", request.getRequestURI());
+                problem.put("code", "CSRF_INVALID");
+                problem.put("requestId", requestId);
+                problem.put("traceId", requestId);
+                problem.put("retryable", false);
+                problem.put("fields", java.util.Map.of());
+                problem.put("errorCode", "CSRF_INVALID");
+                response.getWriter().write(objectMapper.writeValueAsString(problem));
                 return;
             }
         }

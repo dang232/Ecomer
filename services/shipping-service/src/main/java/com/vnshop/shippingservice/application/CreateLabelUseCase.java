@@ -101,7 +101,8 @@ public class CreateLabelUseCase {
     }
 
     private static Parcel toGatewayParcel(com.vnshop.shippingservice.domain.Parcel parcel) {
-        return parcel == null ? null : new Parcel(parcel.weightGrams(), parcel.lengthCm(), parcel.widthCm(), parcel.heightCm());
+        return parcel == null ? null : new Parcel(parcel.weightGrams(), parcel.lengthCm(), parcel.widthCm(), parcel.heightCm(),
+                parcel.declaredValueMinor());
     }
 
     private static long toVnd(Money money) {

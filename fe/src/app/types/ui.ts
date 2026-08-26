@@ -1,12 +1,12 @@
 /**
- * UI-side shapes that diverge from the BE schemas in `types/api/`.
+ * UI-side shapes that diverge from the BE schemas in `shared/contracts/api/`.
  *
  * `Product` is wider than `ProductSummary`/`ProductDetail` because the UI
  * renders fields the API does not expose (categoryLabel, shipping copy,
  * location). `useProducts.fromServer` maps the BE shape into this one.
  *
  * `UIOrder` is the flattened render shape used by `OrdersPage`; the BE
- * `Order` lives in `types/api/order.ts` and is mapped to `UIOrder` at the
+ * `Order` lives in `shared/contracts/api/order.ts` and is mapped to `UIOrder` at the
  * page boundary.
  */
 

@@ -26,11 +26,13 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     const jwksUri =
       process.env.KEYCLOAK_JWK_SET_URI ??
       'http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs';
+    const audience = process.env.KEYCLOAK_JWT_AUDIENCE ?? 'vnshop-api';
 
     const options: StrategyOptions = {
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
       issuer: issuerUri,
+      audience,
       algorithms: ['RS256'],
       secretOrKeyProvider: passportJwtSecret({
         cache: true,

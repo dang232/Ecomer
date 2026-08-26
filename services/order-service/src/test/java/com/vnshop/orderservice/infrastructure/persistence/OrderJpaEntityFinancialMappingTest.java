@@ -20,7 +20,7 @@ class OrderJpaEntityFinancialMappingTest {
     void roundTripsOrderTaxTotalAndItemTaxFields() {
         OrderItem item = new OrderItem("product", "sku", "seller", "Product", 1,
                 new Money(new BigDecimal("100000")), null,
-                new ParcelDimensions(1200, 30, 20, 10),
+                new ParcelDimensions(1200, 30, 20, 10, 777000),
                 new BigDecimal("0.10"), new BigDecimal("10000"));
         Order order = new Order(UUID.randomUUID(), "buyer", new Address("street", null, "district", "city"),
                 List.of(new SubOrder("seller", List.of(item))), "idempotency-" + UUID.randomUUID());
@@ -32,7 +32,7 @@ class OrderJpaEntityFinancialMappingTest {
         OrderItem restoredItem = restored.subOrders().getFirst().items().getFirst();
         assertThat(restoredItem.taxRate()).isEqualByComparingTo("0.10");
         assertThat(restoredItem.taxAmount()).isEqualByComparingTo("10000");
-        assertThat(restoredItem.parcel()).isEqualTo(new ParcelDimensions(1200, 30, 20, 10));
+        assertThat(restoredItem.parcel()).isEqualTo(new ParcelDimensions(1200, 30, 20, 10, 777000));
     }
 
     @Test

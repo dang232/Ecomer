@@ -6,6 +6,7 @@ import {
   toHomeMarketplaceView,
   type HomeProductSource,
 } from "@/features/storefront";
+import { cdnUrl } from "@/shared/lib/image-url";
 import { AsyncState, InlineAlert } from "@/shared/ui";
 
 import { useCategories } from "../hooks/use-categories";
@@ -13,7 +14,6 @@ import { useFlashSaleWithProducts } from "../hooks/use-flash-sale";
 import { useProducts } from "../hooks/use-products";
 import { useRecentlyViewed } from "../hooks/use-recently-viewed";
 import { useSellerShowcase } from "../hooks/use-sellers";
-import { cdnUrl } from "../lib/image-url";
 
 function toRecentProduct(item: {
   productId: string;

@@ -173,7 +173,8 @@ export class Cart {
         current.weightGrams === parcel.weightGrams &&
         current.lengthCm === parcel.lengthCm &&
         current.widthCm === parcel.widthCm &&
-        current.heightCm === parcel.heightCm);
+        current.heightCm === parcel.heightCm &&
+        current.declaredValueMinor === parcel.declaredValueMinor);
     if (unchanged) {
       return false;
     }

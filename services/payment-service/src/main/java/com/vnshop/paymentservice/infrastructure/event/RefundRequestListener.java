@@ -17,6 +17,8 @@ import org.springframework.kafka.annotation.RetryableTopic;
 import org.springframework.kafka.retrytopic.DltStrategy;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import com.vnshop.paymentservice.infrastructure.dlt.DurableDltService;
 
 import java.util.Objects;
 import java.math.BigDecimal;
@@ -50,21 +52,24 @@ public class RefundRequestListener {
     private final RefundPaymentUseCase refundPaymentUseCase;
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final ObjectMapper objectMapper;
+    private final DurableDltService durableDltService;
 
     public RefundRequestListener(
             RefundPaymentUseCase refundPaymentUseCase,
             KafkaTemplate<String, Object> kafkaTemplate,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            DurableDltService durableDltService) {
         this.refundPaymentUseCase = Objects.requireNonNull(refundPaymentUseCase, "refundPaymentUseCase is required");
         this.kafkaTemplate = Objects.requireNonNull(kafkaTemplate, "kafkaTemplate is required");
         this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper is required");
+        this.durableDltService = Objects.requireNonNull(durableDltService, "durableDltService is required");
     }
 
     @RetryableTopic(
             attempts = "3",
             backOff = @BackOff(delay = 1000, multiplier = 2.0, maxDelay = 10000),
             dltStrategy = DltStrategy.FAIL_ON_ERROR,
-            dltTopicSuffix = ".DLT",
+             dltTopicSuffix = ".dlt",
             retryTopicSuffix = ".retry"
     )
     @KafkaListener(
@@ -161,7 +166,8 @@ public class RefundRequestListener {
     }
 
     @DltHandler
-    public void handleDlt(String message) {
-        log.error("refund-listener message sent to DLT after retries exhausted: {}", message);
+    public void handleDlt(ConsumerRecord<String, String> record) {
+        durableDltService.store(record, "refund-listener DLT payload received", 3);
+        log.error("refund-listener message sent to DLT after retries exhausted: {}", record.value());
     }
 }

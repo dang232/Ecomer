@@ -10,6 +10,8 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.annotation.RetryableTopic;
 import org.springframework.kafka.retrytopic.DltStrategy;
 import org.springframework.stereotype.Service;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import com.vnshop.paymentservice.infrastructure.dlt.DurableDltService;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -24,14 +26,18 @@ public class CodCollectedListener {
 
     private final ConfirmCodCollectionUseCase confirmCodCollection;
     private final ObjectMapper objectMapper;
+    private final DurableDltService durableDltService;
 
-    public CodCollectedListener(ConfirmCodCollectionUseCase confirmCodCollection, ObjectMapper objectMapper) {
+    public CodCollectedListener(ConfirmCodCollectionUseCase confirmCodCollection, ObjectMapper objectMapper,
+                                DurableDltService durableDltService) {
         this.confirmCodCollection = Objects.requireNonNull(confirmCodCollection, "confirmCodCollection is required");
         this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper is required");
+        this.durableDltService = Objects.requireNonNull(durableDltService, "durableDltService is required");
     }
 
+
     @RetryableTopic(attempts = "3", dltStrategy = DltStrategy.FAIL_ON_ERROR,
-            dltTopicSuffix = ".DLT", retryTopicSuffix = ".retry")
+            dltTopicSuffix = ".dlt", retryTopicSuffix = ".retry")
     @KafkaListener(topics = TOPIC, groupId = "payment-service-cod-collection", concurrency = "3")
     public void onCodCollected(String eventJson) {
         JsonNode envelope;
@@ -65,8 +71,9 @@ public class CodCollectedListener {
     }
 
     @DltHandler
-    public void handleDlt(String eventJson) {
-        LOG.error("shipping.cod.collected event sent to DLT: {}", eventJson);
+    public void handleDlt(ConsumerRecord<String, String> record) {
+        durableDltService.store(record, "cod-collected-listener DLT payload received", 3);
+        LOG.error("shipping.cod.collected event sent to DLT: {}", record.value());
     }
 
     private static String required(JsonNode node, String field) {

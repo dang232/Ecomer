@@ -52,12 +52,12 @@ class EnvConfig {
         defaultValue: 'http://host.docker.internal:8080',
       );
 
-  /// API Version prefix
-  static String get apiVersion => get('API_VERSION', defaultValue: 'v1');
+  /// Canonical API version prefix. This client is intentionally pinned to v1.
+  static const String apiVersion = 'v1';
 
   /// Full base URL with version
   static String get apiBaseUrlWithVersion =>
-      '$apiBaseUrl/$apiVersion';
+      '${apiBaseUrl.replaceAll(RegExp(r'/$'), '')}/api/v1';
 
   // =========================================================================
   // Keycloak Configuration

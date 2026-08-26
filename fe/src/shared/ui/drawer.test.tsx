@@ -36,5 +36,15 @@ describe("Drawer", () => {
 
     expect(screen.queryByRole("dialog", { name: "Order details" })).not.toBeInTheDocument();
     await waitFor(() => expect(opener).toHaveFocus());
+    expect(document.body.style.overflow).toBe("");
+  });
+
+  it("closes from the backdrop and locks body scrolling while open", () => {
+    render(<Harness />);
+    fireEvent.click(screen.getByRole("button", { name: "Open order" }));
+    expect(document.body.style.overflow).toBe("hidden");
+    fireEvent.mouseDown(screen.getByRole("presentation"));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(document.body.style.overflow).toBe("");
   });
 });

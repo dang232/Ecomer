@@ -1,0 +1,13 @@
+# Task 23: JaCoCo 90% line/branch coverage gates
+# Provenance: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\.sisyphus\evidence\task-23-java-coverage.txt (2026-08-25, uncommitted worktree)
+
+STATUS: PASS_FOCUSED / BLOCKED_EXTERNAL
+
+Exact commands recorded:
+- `mvn --batch-mode --no-transfer-progress clean verify -DskipTests=false -Djacoco.skip=false -Dfixture.coverAll=true` in the coverage fixture -> BUILD SUCCESS; coverage checks met.
+- Same fixture without `-Dfixture.coverAll=true` -> expected non-zero; 0.66 line and 0.50 branch ratios rejected against 0.90.
+- `node --test scripts/coverage/validate-java-coverage-config.test.mjs` -> 2 tests passed.
+- Python YAML load of `.github/workflows/ci-coverage.yml` -> PASS.
+- `mvn --batch-mode --no-transfer-progress -f services/<each>/pom.xml validate` -> all 13 POMs validate.
+
+Blocker/non-claim: source artifact records an uncommitted working tree and warns that the full Java matrix may expose genuine below-90% service coverage or require backing services. No production coverage claim is made.

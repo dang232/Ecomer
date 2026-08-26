@@ -26,13 +26,13 @@ class CorsConfigurationTest {
     /** Build a CorsConfiguration that mirrors the SecurityConfig bean for the given origins string. */
     private static CorsConfiguration buildConfig(String allowedOriginsEnvValue) {
         CorsConfiguration cfg = new CorsConfiguration();
-        cfg.setAllowedOrigins(Arrays.stream(allowedOriginsEnvValue.split(","))
+        cfg.setAllowedOriginPatterns(Arrays.stream(allowedOriginsEnvValue.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .toList());
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         cfg.setAllowedHeaders(List.of("*"));
-        cfg.setExposedHeaders(List.of("X-Correlation-Id"));
+        cfg.setExposedHeaders(List.of("X-Correlation-Id", "RateLimit-Limit", "RateLimit-Remaining", "RateLimit-Reset"));
         cfg.setAllowCredentials(true);
         cfg.setMaxAge(3600L);
         return cfg;
@@ -76,23 +76,22 @@ class CorsConfigurationTest {
         assertThat(cfg.checkOrigin("http://localhost:5173")).isNull();
     }
 
-    // --- Default fallback behaviour (documented risk) ---
+    // --- Default fallback behaviour ---
 
     @Test
-    void defaultFallbackConfig_allowsLocalhost_documentedRisk() {
-        // The fallback value when GATEWAY_CORS_ALLOWED_ORIGINS is not set:
-        //   http://localhost:3000,http://localhost:5173
-        // If this env var is absent in production, localhost origins are accepted.
-        // See docs/api/cors-configuration.md for the production risk note.
-        CorsConfiguration cfg = buildConfig("http://localhost:3000,http://localhost:5173");
+    void defaultFallbackConfig_rejectsLocalhost() {
+        CorsConfiguration cfg = buildConfig("https://*.vnshop.example");
 
         assertThat(cfg.checkOrigin("http://localhost:5173"))
-                .as("Default fallback allows localhost:5173 — MUST override GATEWAY_CORS_ALLOWED_ORIGINS in production")
-                .isEqualTo("http://localhost:5173");
+                .as("Default fallback must reject localhost:5173")
+                .isNull();
 
         assertThat(cfg.checkOrigin("http://localhost:3000"))
-                .as("Default fallback allows localhost:3000 — MUST override GATEWAY_CORS_ALLOWED_ORIGINS in production")
-                .isEqualTo("http://localhost:3000");
+                .as("Default fallback must reject localhost:3000")
+                .isNull();
+
+        assertThat(cfg.checkOrigin("https://shop.vnshop.example"))
+                .isEqualTo("https://shop.vnshop.example");
     }
 
     // --- Allowed methods ---
@@ -109,6 +108,7 @@ class CorsConfigurationTest {
     void corsConfig_exposesCorrelationIdHeader() {
         CorsConfiguration cfg = buildConfig("https://vnshop.vn");
 
-        assertThat(cfg.getExposedHeaders()).contains("X-Correlation-Id");
+        assertThat(cfg.getExposedHeaders()).containsExactlyInAnyOrder(
+                "X-Correlation-Id", "RateLimit-Limit", "RateLimit-Remaining", "RateLimit-Reset");
     }
 }

@@ -17,6 +17,16 @@ describe('JwtStrategy', () => {
     expect(result.sub).toBe('user-1');
   });
 
+  it('configures the resource audience separately from the issuer', () => {
+    const strategy = new JwtStrategy() as unknown as {
+      _options: { issuer: string; audience: string; algorithms: string[] };
+    };
+
+    expect(strategy._options.issuer).toBe('http://localhost:9090/realms/vnshop');
+    expect(strategy._options.audience).toBe('vnshop-api');
+    expect(strategy._options.algorithms).toEqual(['RS256']);
+  });
+
   it('falls back to default Keycloak issuer/jwks when env vars are unset', () => {
     delete process.env.KEYCLOAK_ISSUER_URI;
     delete process.env.KEYCLOAK_JWK_SET_URI;

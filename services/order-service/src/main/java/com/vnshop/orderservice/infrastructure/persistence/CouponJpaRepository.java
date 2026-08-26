@@ -6,6 +6,8 @@ import com.vnshop.orderservice.domain.coupon.CouponRepository;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 
 @Repository
 public class CouponJpaRepository implements CouponRepository {
@@ -16,6 +18,7 @@ public class CouponJpaRepository implements CouponRepository {
     }
 
     @Override
+    @Cacheable(value = "coupon", key = "#root.target.cacheKey(#code)")
     public Optional<Coupon> findByCode(String code) {
         return repository.findByCode(normalize(code)).map(CouponJpaEntity::toDomain);
     }
@@ -41,6 +44,7 @@ public class CouponJpaRepository implements CouponRepository {
     }
 
     @Override
+    @CacheEvict(value = "coupon", allEntries = true)
     public Coupon save(Coupon coupon) {
         CouponJpaEntity existing = repository.findById(coupon.id().value()).orElse(null);
         return repository.save(CouponJpaEntity.fromDomain(coupon, existing)).toDomain();
@@ -53,5 +57,10 @@ public class CouponJpaRepository implements CouponRepository {
 
     private static String normalize(String code) {
         return code == null ? "" : code.trim().toUpperCase().replaceAll("\\s+", "");
+    }
+
+    public String cacheKey(String code) {
+        String normalized = normalize(code);
+        return normalized.length() <= 128 ? normalized : normalized.substring(0, 128);
     }
 }

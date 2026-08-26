@@ -81,12 +81,12 @@ describe('ProductHttpClientAdapter', () => {
         {
           sku: 'small',
           priceAmount: 100,
-          parcel: { weightGrams: 500, lengthCm: 10, widthCm: 10, heightCm: 5 },
+          parcel: { weightGrams: 500, lengthCm: 10, widthCm: 10, heightCm: 5, declaredValueMinor: 100 },
         },
         {
           sku: 'large',
           priceAmount: 200,
-          parcel: { weightGrams: 1500, lengthCm: 30, widthCm: 20, heightCm: 10 },
+          parcel: { weightGrams: 1500, lengthCm: 30, widthCm: 20, heightCm: 10, declaredValueMinor: 200 },
         },
       ],
     });
@@ -98,6 +98,7 @@ describe('ProductHttpClientAdapter', () => {
       lengthCm: 30,
       widthCm: 20,
       heightCm: 10,
+      declaredValueMinor: 200,
     });
   });
 

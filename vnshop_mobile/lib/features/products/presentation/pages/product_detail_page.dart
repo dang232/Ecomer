@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/router/app_routes.dart';
+import '../../../../common/widgets/images/safe_network_image.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../cart/presentation/bloc/cart_bloc.dart';
@@ -125,6 +126,43 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     _showSnackBar(
       AppLocalizations.of(context).productLinkCopied,
       icon: Icons.link,
+    );
+  }
+
+  Future<void> _showImageZoom(BuildContext context, String url) {
+    return showDialog<void>(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: Stack(
+          children: [
+            InteractiveViewer(
+              minScale: 1,
+              maxScale: 5,
+              child: SafeNetworkImage(
+                url: url,
+                fit: BoxFit.contain,
+                semanticLabel: widget.product.name,
+              ),
+            ),
+            Positioned(
+              right: 0,
+              top: 0,
+              child: IconButton(
+                tooltip: AppLocalizations.of(context).close,
+                constraints: const BoxConstraints.tightFor(
+                  width: 48,
+                  height: 48,
+                ),
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                icon: const Icon(Icons.close, color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -274,6 +312,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   }
 
   Widget _buildImageCarousel(List<String> allImages) {
+    final localizations = AppLocalizations.of(context);
     return Stack(
       children: [
         // Image page view
@@ -296,32 +335,27 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 ),
               );
             }
-            return Image.network(
-              allImages[index],
-              fit: BoxFit.contain,
-              semanticLabel: widget.product.name,
-              errorBuilder: (context, error, stackTrace) => Container(
-                color: Colors.grey[200],
-                child: Icon(
-                  Icons.image_not_supported_outlined,
-                  size: 80,
-                  color: Colors.grey[400],
-                ),
-              ),
-              loadingBuilder: (context, child, loadingProgress) {
-                if (loadingProgress == null) return child;
-                return Container(
-                  color: Colors.grey[200],
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      value: loadingProgress.expectedTotalBytes != null
-                          ? loadingProgress.cumulativeBytesLoaded /
-                                loadingProgress.expectedTotalBytes!
-                          : null,
+            return Semantics(
+              button: true,
+              label: '${localizations.productDescription} ${index + 1}',
+              child: GestureDetector(
+                onTap: () => _showImageZoom(context, allImages[index]),
+                child: InteractiveViewer(
+                  minScale: 1,
+                  maxScale: 4,
+                  child: SafeNetworkImage(
+                    url: allImages[index],
+                    fit: BoxFit.contain,
+                    semanticLabel: '${widget.product.name} ${index + 1}',
+                    placeholder: const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                    errorWidget: const Center(
+                      child: Icon(Icons.image_not_supported_outlined, size: 80),
                     ),
                   ),
-                );
-              },
+                ),
+              ),
             );
           },
         ),

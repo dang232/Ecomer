@@ -13,87 +13,92 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.util.HexFormat;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.DateTimeException;
+import java.util.Base64;
+import java.util.LinkedHashMap;
 
-/**
- * Service to verify GHTK webhook signatures.
- * GHTK uses HMAC-SHA256 for signature verification.
- */
 @Component
 public class GhtkWebhookSignatureService {
     private static final Logger LOG = LoggerFactory.getLogger(GhtkWebhookSignatureService.class);
     private static final String HMAC_SHA256 = "HmacSHA256";
+    private static final String PREFIX = "vnshop-ghtk-webhook-v1";
 
     private final GhtkProperties properties;
-    private final WebhookSecurityProperties webhookSecurityProperties;
-    private final Environment environment;
+    private final WebhookSecurityProperties securityProperties;
+    private final Clock clock;
 
     @Autowired
     public GhtkWebhookSignatureService(
             GhtkProperties properties,
-            WebhookSecurityProperties webhookSecurityProperties,
+            WebhookSecurityProperties securityProperties,
             Environment environment) {
+        this(properties, securityProperties, Clock.systemUTC());
+    }
+
+    GhtkWebhookSignatureService(
+            GhtkProperties properties,
+            WebhookSecurityProperties securityProperties,
+            Clock clock) {
         this.properties = properties;
-        this.webhookSecurityProperties = webhookSecurityProperties;
-        this.environment = environment;
+        this.securityProperties = securityProperties;
+        this.clock = clock;
     }
 
     public GhtkWebhookSignatureService(GhtkProperties properties) {
         this(properties, new WebhookSecurityProperties(false), new StandardEnvironment());
     }
 
-    /**
-     * Validates the GHTK webhook signature.
-     * Credentials are required unless the local-only opt-in is enabled in a local/dev profile.
-     */
     public boolean isValid(GhtkWebhookPayload payload, String signature) {
-        String configuredToken = properties.webhookToken();
-        if (configuredToken == null || configuredToken.isBlank()) {
-            if (isInsecureLocalMode()) {
-                LOG.warn("Accepting GHTK webhook without credentials because explicit local-only opt-in is enabled");
-                return true;
-            }
-            LOG.error("GHTK webhook token is not configured");
+        String secret = properties.webhookSecret();
+        if (payload == null || secret == null || secret.isBlank()) {
+            LOG.error("GHTK webhook secret is not configured or payload is missing");
             return false;
         }
-
         if (signature == null || signature.isBlank()) {
             LOG.warn("GHTK webhook signature is missing");
             return false;
         }
 
         try {
-            String expectedSignature = computeSignature(payload);
-            byte[] supplied = HexFormat.of().parseHex(signature);
-            boolean valid = MessageDigest.isEqual(
-                    HexFormat.of().parseHex(expectedSignature), supplied);
-            if (!valid) {
-                LOG.warn("Invalid GHTK signature");
+            Instant timestamp = Instant.parse(payload.updatedAt());
+            long age = Math.abs(Duration.between(timestamp, clock.instant()).getSeconds());
+            if (age > securityProperties.replayWindowSeconds()) {
+                LOG.warn("GHTK webhook timestamp is outside replay window");
+                return false;
             }
-            return valid;
-        } catch (Exception e) {
-            LOG.warn("Malformed GHTK webhook signature");
+            byte[] supplied = Base64.getDecoder().decode(signature);
+            byte[] expected = hmac(canonical(payload), secret);
+            return MessageDigest.isEqual(expected, supplied);
+        } catch (DateTimeException | IllegalArgumentException exception) {
+            LOG.warn("Malformed GHTK webhook signature or timestamp");
             return false;
         }
     }
 
-    private String computeSignature(GhtkWebhookPayload payload) {
-        try {
-            String data = payload.labelId() + payload.status() + payload.updatedAt();
-            Mac mac = Mac.getInstance(HMAC_SHA256);
-            SecretKeySpec secretKey = new SecretKeySpec(
-                    properties.webhookToken().getBytes(StandardCharsets.UTF_8),
-                    HMAC_SHA256);
-            mac.init(secretKey);
-            byte[] hash = mac.doFinal(data.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(hash);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to compute signature", e);
-        }
+    private String canonical(GhtkWebhookPayload payload) {
+        LinkedHashMap<String, String> fields = new LinkedHashMap<>();
+        fields.put("label_id", payload.labelId());
+        fields.put("status", payload.status());
+        fields.put("status_text", payload.statusText());
+        fields.put("updated_at", Instant.parse(payload.updatedAt()).toString());
+        fields.put("order_id", payload.orderId());
+        fields.put("cod_collected_amount", payload.codCollectedAmount() == null
+                ? null : payload.codCollectedAmount().stripTrailingZeros().toPlainString());
+        fields.put("collection_id", payload.collectionId());
+        fields.put("currency", payload.currency());
+        return WebhookCanonicalizer.serialize(PREFIX, fields);
     }
 
-    private boolean isInsecureLocalMode() {
-        return webhookSecurityProperties.allowInsecureLocal()
-                && environment.matchesProfiles("local", "dev");
+    private static byte[] hmac(String value, String secret) {
+        try {
+            Mac mac = Mac.getInstance(HMAC_SHA256);
+            mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), HMAC_SHA256));
+            return mac.doFinal(value.getBytes(StandardCharsets.UTF_8));
+        } catch (java.security.GeneralSecurityException exception) {
+            throw new IllegalStateException("Failed to compute webhook signature", exception);
+        }
     }
 }

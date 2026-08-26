@@ -1,0 +1,12 @@
+# Task 13: CORS/CSRF/rate-limit and public bucket PUT hardening
+# Provenance: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\task-13.log (uncommitted worktree artifact)
+
+STATUS: PASS_FOCUSED / BLOCKED_EXTERNAL
+
+Exact focused command:
+`./mvnw.cmd -q "-Dtest=CorsConfigurationTest,SecurityConfigMinioTest,SecurityConfigWebSocketAuthorizationTest,SecurityConfigCsrfTest,SecurityConfigBindingTest,RateLimitHeadersFilterTest,TieredRateLimiterTest" test`
+Result: PASS, exit 0. Existing Redis-degradation ERROR logs were asserted behavior.
+
+Exact hygiene command: `git diff --check` -> PASS as recorded; only pre-existing CRLF normalization warnings were reported.
+
+Runtime probes: localhost:8080 health returned 503 and bucket probes returned 500; healthy gateway behavior could not be observed. Docker Compose loading was blocked by a pre-existing parse error near line 1423. No live CORS or bucket authorization claim is made.

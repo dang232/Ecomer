@@ -72,8 +72,12 @@ describe('ConfigurationService public runtime contract', () => {
     expect(providers.paypal).toMatchObject({ status: 'disabled', mode: 'sandbox' });
     expect(providers.vnpay).toMatchObject({ status: 'disabled', mode: 'disabled' });
     expect(providers.momo).toMatchObject({ status: 'disabled', mode: 'disabled' });
-    expect(providers.sepay).toMatchObject({ status: 'disabled', mode: 'disabled' });
-    expect(config.payment).toEqual({ providers: ['COD', 'VietQR'], defaultMethod: 'COD' });
+    expect(providers.sepay).toMatchObject({ status: 'enabled', mode: 'demo' });
+    expect(config.payment).toMatchObject({
+      providers: ['COD', 'VietQR', 'SePay'],
+      defaultMethod: 'COD',
+      vietqr: { bankBin: '', accountNo: '', accountName: '' },
+    });
   });
 
   it('enables optional sandbox providers only when their public credential exists', () => {

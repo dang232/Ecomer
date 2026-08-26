@@ -189,6 +189,23 @@ describe("ProfilePage — address mutations (spec U-9)", () => {
 });
 
 describe("ProfilePage — account information", () => {
+  it("uses roving profile tabs with keyboard relationships", async () => {
+    const { Wrapper } = makeWrapper(PROFILE);
+    render(<ProfilePage />, { wrapper: Wrapper });
+    const infoTab = await screen.findByRole("tab", { name: "profile.tabs.info" });
+    const addressesTab = screen.getByRole("tab", { name: "profile.tabs.addresses" });
+    expect(infoTab).toHaveAttribute("tabindex", "0");
+    expect(addressesTab).toHaveAttribute("tabindex", "-1");
+    fireEvent.keyDown(infoTab, { key: "ArrowRight" });
+    expect(addressesTab).toHaveFocus();
+    expect(addressesTab).toHaveAttribute("aria-controls", "profile-tabpanel-addresses");
+    expect(addressesTab).toHaveAttribute("tabindex", "0");
+    expect(screen.getByRole("tabpanel")).toHaveAttribute(
+      "aria-labelledby",
+      "profile-tab-addresses",
+    );
+  });
+
   it("renders the account email from the user profile and keeps one edit action row", async () => {
     useAuthMock.mockReturnValue({
       ready: true,

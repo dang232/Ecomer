@@ -45,6 +45,9 @@ public class ConfigServiceClient implements ApplicationRunner {
             log.info("Config service client disabled, using local defaults");
             return;
         }
+        if (properties.token() == null || properties.token().isBlank()) {
+            throw new IllegalStateException("CONFIG_SERVICE_INTERNAL_TOKEN is required when config service is enabled");
+        }
 
         try {
             String url = properties.url() + "/api/config/services/" + properties.serviceName();
@@ -57,7 +60,7 @@ public class ConfigServiceClient implements ApplicationRunner {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .timeout(Duration.ofMillis(properties.timeoutMs()))
-                    .header("x-config-service-token", properties.token() == null ? "" : properties.token())
+                    .header("x-config-service-token", properties.token())
                     .GET()
                     .build();
 

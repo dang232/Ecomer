@@ -101,4 +101,13 @@ describe("Dialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Close dialog" }));
     expect(onClose).toHaveBeenCalledOnce();
   });
+
+  it("locks and restores body scrolling", () => {
+    render(
+      <Dialog open onClose={vi.fn()} title="Details">
+        Content
+      </Dialog>,
+    );
+    expect(document.body.style.overflow).toBe("hidden");
+  });
 });

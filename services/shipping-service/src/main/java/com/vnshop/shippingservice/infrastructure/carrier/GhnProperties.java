@@ -8,6 +8,6 @@ public record GhnProperties(
         String token,
         String shopId,
         String serviceTypeId,
-        String webhookToken
+        String webhookSecret
 ) {
 }

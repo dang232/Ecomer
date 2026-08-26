@@ -17,6 +17,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -24,6 +25,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -35,6 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PaymentControllerHeaderTest {
     private final ObjectMapper mapper = new ObjectMapper();
     private ProcessPaymentUseCase processPaymentUseCase;
+    private PaymentController controller;
     private MockMvc mockMvc;
 
     @BeforeEach
@@ -55,7 +58,7 @@ class PaymentControllerHeaderTest {
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(jwt, "test-token"));
 
-        PaymentController controller = new PaymentController(
+        controller = new PaymentController(
                 processPaymentUseCase,
                 mock(GetPaymentStatusUseCase.class),
                 Optional.empty(),
@@ -69,6 +72,8 @@ class PaymentControllerHeaderTest {
                 mock(com.vnshop.paymentservice.application.ProviderInitializationService.class),
                 mock(com.vnshop.paymentservice.infrastructure.gateway.PaymentCallbackEventStore.class)
         );
+        ReflectionTestUtils.setField(controller, "deferredGatewayAEnabled", true);
+        ReflectionTestUtils.setField(controller, "deferredGatewayBEnabled", true);
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
 
@@ -123,4 +128,25 @@ class PaymentControllerHeaderTest {
         assertThat(captor.getValue().idempotencyKey()).isEqualTo("cod-key-9");
         assertThat(captor.getValue().method()).isEqualTo(PaymentMethodInput.COD);
     }
+
+    @Test
+    void rejectsDisabledDeferredGatewayABeforePaymentProcessing() {
+        ReflectionTestUtils.setField(controller, "deferredGatewayAEnabled", false);
+
+        assertThatThrownBy(() -> controller.createVnpay(
+                "key-4", new PaymentRequest("ORDER-4")))
+                .isInstanceOf(com.vnshop.paymentservice.application.UnsupportedPaymentMethodException.class)
+                .hasMessage("deferred gateway A gateway is not enabled");
+    }
+
+    @Test
+    void rejectsDisabledDeferredGatewayBBeforePaymentProcessing() {
+        ReflectionTestUtils.setField(controller, "deferredGatewayBEnabled", false);
+
+        assertThatThrownBy(() -> controller.createMomo(
+                "key-5", new PaymentRequest("ORDER-5")))
+                .isInstanceOf(com.vnshop.paymentservice.application.UnsupportedPaymentMethodException.class)
+                .hasMessage("deferred gateway B gateway is not enabled");
+    }
+
 }

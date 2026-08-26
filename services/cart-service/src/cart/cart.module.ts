@@ -33,16 +33,38 @@ export { REDIS_CLIENT } from './redis-client.token';
     JwtStrategy,
     {
       provide: REDIS_CLIENT,
-      useFactory: (configService: ConfigService): Redis =>
-        new Redis({
-          host: configService.get<string>('REDIS_HOST') ?? 'localhost',
-          port: Number(configService.get<string>('REDIS_PORT') ?? 6379),
-          password: configService.get<string>('REDIS_PASSWORD') || undefined,
-          db: Number(configService.get<string>('REDIS_DB') ?? 0),
+      useFactory: (configService: ConfigService): Redis => {
+        const sentinelNodes = configService
+          .get<string>('REDIS_SENTINEL_NODES')
+          ?.split(',')
+          .map((node) => node.trim())
+          .filter(Boolean);
+        const password = configService.get<string>('REDIS_PASSWORD') || undefined;
+        const commonOptions = {
+          password,
           lazyConnect: true,
           enableOfflineQueue: false,
           maxRetriesPerRequest: 1,
-        }),
+        };
+
+        if (sentinelNodes?.length) {
+          return new Redis({
+            ...commonOptions,
+            sentinels: sentinelNodes.map((node) => {
+              const [host, port = '26379'] = node.split(':');
+              return { host, port: Number(port) };
+            }),
+            name: configService.get<string>('REDIS_SENTINEL_MASTER') ?? 'redis-cart',
+          });
+        }
+
+        return new Redis({
+          ...commonOptions,
+          host: configService.get<string>('REDIS_HOST') ?? 'localhost',
+          port: Number(configService.get<string>('REDIS_PORT') ?? 6379),
+          db: Number(configService.get<string>('REDIS_DB') ?? 0),
+        });
+      },
       inject: [ConfigService],
     },
     {

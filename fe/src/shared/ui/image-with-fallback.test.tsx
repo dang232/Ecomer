@@ -12,6 +12,21 @@ describe("ImageWithFallback", () => {
     expect(img.loading).toBe("lazy");
   });
 
+  it("forwards responsive sizes and an explicit srcSet without changing alt semantics", () => {
+    render(
+      <ImageWithFallback
+        src="https://cdn/x.jpg"
+        alt="Product"
+        sizes="(min-width: 768px) 25vw, 50vw"
+        srcSet="https://cdn/x-320.jpg 320w, https://cdn/x-640.jpg 640w"
+      />,
+    );
+
+    const img = screen.getByAltText<HTMLImageElement>("Product");
+    expect(img.sizes).toBe("(min-width: 768px) 25vw, 50vw");
+    expect(img.srcset).toBe("https://cdn/x-320.jpg 320w, https://cdn/x-640.jpg 640w");
+  });
+
   it("renders the placeholder when src is empty", () => {
     const { container } = render(<ImageWithFallback src="" alt="placeholder" />);
     expect(container.querySelector("img")).toBeNull();

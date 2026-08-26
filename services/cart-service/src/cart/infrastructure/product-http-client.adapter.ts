@@ -24,6 +24,7 @@ interface ProductServiceParcel {
   lengthCm?: number;
   widthCm?: number;
   heightCm?: number;
+  declaredValueMinor?: number;
 }
 
 interface ProductServiceImage {
@@ -126,6 +127,8 @@ function parseParcel(parcel: ProductServiceParcel | null | undefined): ParcelDim
     parcel.lengthCm <= 0 ||
     parcel.widthCm <= 0 ||
     parcel.heightCm <= 0
+    || (parcel.declaredValueMinor !== undefined &&
+      (!Number.isInteger(parcel.declaredValueMinor) || parcel.declaredValueMinor < 0))
   ) {
     return null;
   }
@@ -135,6 +138,7 @@ function parseParcel(parcel: ProductServiceParcel | null | undefined): ParcelDim
     lengthCm: parcel.lengthCm,
     widthCm: parcel.widthCm,
     heightCm: parcel.heightCm,
+    declaredValueMinor: parcel.declaredValueMinor ?? 0,
   };
 }
 

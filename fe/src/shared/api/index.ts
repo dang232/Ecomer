@@ -7,6 +7,7 @@ export {
   apiResponseSchema,
 } from "@/shared/api/envelope";
 export { clearTelemetry, getTelemetry, recordTelemetry } from "@/shared/api/telemetry-store";
+export { getErrorLabel, getUserFacingMessage, parseApiError } from "@/shared/api/error-parser";
 export type { TelemetryRecord } from "@/shared/api/telemetry-store";
 export type { RequestOptions } from "@/shared/api/client";
 export type { ApiResult } from "@/shared/api/client";

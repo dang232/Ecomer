@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: task-11-missing-admin-cursor
+spec:
+  template:
+    spec:
+      containers:
+      - name: fixture
+        image: example.invalid/task-11-fixture:1
+        env:
+        - name: VNSHOP_PRODUCT_CURSOR_SECRET
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: product-cursor-secret}
+        - name: VNSHOP_SEARCH_CURSOR_SECRET
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: search-cursor-secret}
+        - name: VNSHOP_SELLER_FINANCE_ADMIN_CURSOR_SECRET
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: seller-finance-admin-cursor-secret}
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: vnshop-runtime-secrets
+spec:
+  encryptedData:
+    product-cursor-secret: cHJvZHVjdC1jdXJzb3ItZml4dHVyZS0wMDAwMDAwMDAwMDAwMDAwMDA=
+    search-cursor-secret: c2VhcmNoLWN1cnNvci1maXh0dXJlLTAwMDAwMDAwMDAwMDAwMDAwMDA=
+    seller-finance-admin-cursor-secret: c2VsbGVyLWZpbmFuY2UtYWRtaW4tY3Vyc29yLWZpeHR1cmUwMDAw
+  template:
+    metadata:
+      name: vnshop-runtime-secrets
+    type: Opaque

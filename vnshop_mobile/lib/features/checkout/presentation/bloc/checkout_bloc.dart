@@ -9,7 +9,7 @@ import 'checkout_event.dart';
 import 'checkout_state.dart';
 
 class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
-  CheckoutBloc({required this._repository, Uuid? uuid})
+  CheckoutBloc({required this._repository, this.userId, Uuid? uuid})
     : _uuid = uuid ?? const Uuid(),
       super(const CheckoutState()) {
     on<CheckoutStarted>(_onCheckoutStarted);
@@ -30,9 +30,8 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     on<CheckoutReset>(_onReset);
   }
 
-  static const _guestUserId = 'guest';
-
   final CheckoutRepository _repository;
+  final String? userId;
   final Uuid _uuid;
 
   Future<void> _onCheckoutStarted(
@@ -40,6 +39,12 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     Emitter<CheckoutState> emit,
   ) async {
     emit(state.copyWith(status: CheckoutStatus.loading, clearFailure: true));
+
+    final authenticatedUserId = userId;
+    if (authenticatedUserId == null || authenticatedUserId.isEmpty) {
+      emit(state.copyWith(status: CheckoutStatus.error, failure: CheckoutFailure.initialize));
+      return;
+    }
 
     try {
       final lineItems = event.lineItems
@@ -52,7 +57,7 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
           )
           .toList(growable: false);
       final session = await _repository.createSession(
-        userId: _guestUserId,
+        userId: authenticatedUserId,
         lineItems: lineItems,
         subtotal: event.subtotal,
         discountAmount: event.discountAmount,

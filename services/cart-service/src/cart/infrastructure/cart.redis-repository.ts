@@ -21,6 +21,7 @@ interface PersistedCartItem {
   sellerId?: string;
   sellerName?: string;
   parcel?: ParcelDimensions | null;
+  parcelSnapshot?: ParcelDimensions | null;
 }
 
 interface PersistedCart {
@@ -280,6 +281,7 @@ export class CartRedisRepository implements CartRepository {
         sellerId: item.sellerId,
         sellerName: item.sellerName,
         parcel: item.parcel,
+        parcelSnapshot: item.parcel,
       })),
       updatedAt: cart.updatedAt.toISOString(),
       version,

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/app.dart';
+import '../../../../l10n/generated/app_localizations.dart';
+
 import '../widgets/profile_header.dart';
 import '../widgets/profile_menu_item.dart';
 
@@ -16,15 +19,11 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _orderUpdates = true;
   bool _promotions = false;
   bool _darkMode = false;
-  String _selectedLanguage = 'Tiếng Việt';
-
-  final List<Map<String, String>> _languages = [
-    {'code': 'vi', 'name': 'Tiếng Việt'},
-    {'code': 'en', 'name': 'English'},
-  ];
+  Locale _selectedLocale = const Locale('vi');
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     // Mock user data
     const avatarUrl = 'https://i.pravatar.cc/150?img=1';
     const name = 'Nguyễn Văn A';
@@ -32,7 +31,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Cài đặt'),
+        title: Text(l10n.settingsTitle),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -60,7 +59,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
 
-            const ProfileMenuSection(title: 'Thông báo'),
+            ProfileMenuSection(title: l10n.settingsNotificationsSection),
 
             // Notification Settings
             Container(
@@ -80,8 +79,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 children: [
                   ProfileMenuToggle(
                     icon: Icons.notifications_outlined,
-                    title: 'Bật thông báo',
-                    subtitle: 'Nhận thông báo từ ứng dụng',
+                    title: l10n.settingsEnableNotifications,
+                    subtitle: l10n.settingsNotificationsHelp,
                     value: _notificationsEnabled,
                     onChanged: (value) {
                       setState(() => _notificationsEnabled = value);
@@ -90,8 +89,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                   ProfileMenuToggle(
                     icon: Icons.local_shipping_outlined,
-                    title: 'Cập nhật đơn hàng',
-                    subtitle: 'Thông báo trạng thái đơn hàng',
+                    title: l10n.settingsOrderUpdates,
+                    subtitle: l10n.settingsOrderUpdatesHelp,
                     value: _orderUpdates,
                     onChanged: _notificationsEnabled
                         ? (value) {
@@ -102,8 +101,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                   ProfileMenuToggle(
                     icon: Icons.campaign_outlined,
-                    title: 'Khuyến mãi',
-                    subtitle: 'Mã giảm giá, ưu đãi đặc biệt',
+                    title: l10n.settingsPromotions,
+                    subtitle: l10n.settingsPromotionsHelp,
                     value: _promotions,
                     onChanged: _notificationsEnabled
                         ? (value) {
@@ -116,7 +115,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
 
-            const ProfileMenuSection(title: 'Giao diện'),
+            ProfileMenuSection(title: l10n.settingsAppearanceSection),
 
             // Appearance Settings
             Container(
@@ -136,8 +135,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 children: [
                   ProfileMenuToggle(
                     icon: Icons.dark_mode_outlined,
-                    title: 'Chế độ tối',
-                    subtitle: 'Giao diện tối cho mắt dễ chịu',
+                    title: l10n.settingsDarkMode,
+                    subtitle: l10n.settingsDarkModeHelp,
                     value: _darkMode,
                     onChanged: (value) {
                       setState(() => _darkMode = value);
@@ -148,15 +147,15 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                   ProfileMenuItem(
                     icon: Icons.language_outlined,
-                    title: 'Ngôn ngữ',
-                    subtitle: _selectedLanguage,
+                    title: l10n.settingsLanguage,
+                    subtitle: _selectedLocale.languageCode == 'vi' ? l10n.languageVietnamese : l10n.languageEnglish,
                     iconColor: Colors.teal,
                     onTap: () => _showLanguageBottomSheet(context),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          _selectedLanguage,
+                           _selectedLocale.languageCode == 'vi' ? l10n.languageVietnamese : l10n.languageEnglish,
                           style: TextStyle(
                             color: Theme.of(context)
                                 .colorScheme
@@ -180,7 +179,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
 
-            const ProfileMenuSection(title: 'Khác'),
+            ProfileMenuSection(title: l10n.settingsOtherSection),
 
             // Other Settings
             Container(
@@ -200,20 +199,20 @@ class _SettingsPageState extends State<SettingsPage> {
                 children: [
                   ProfileMenuItem(
                     icon: Icons.privacy_tip_outlined,
-                    title: 'Chính sách bảo mật',
+                    title: l10n.privacyPolicy,
                     iconColor: Colors.blueGrey,
                     onTap: () => context.push('/privacy-policy'),
                   ),
                   ProfileMenuItem(
                     icon: Icons.description_outlined,
-                    title: 'Điều khoản sử dụng',
+                    title: l10n.termsOfUse,
                     iconColor: Colors.grey.shade700,
                     onTap: () => context.push('/terms'),
                   ),
                   ProfileMenuItem(
                     icon: Icons.delete_outline,
-                    title: 'Xóa tài khoản',
-                    subtitle: 'Xóa vĩnh viễn tài khoản và dữ liệu',
+                    title: l10n.deleteAccount,
+                    subtitle: l10n.deleteAccountHelp,
                     iconColor: Colors.red,
                     onTap: () => _showDeleteAccountDialog(context),
                     showDivider: false,
@@ -229,7 +228,7 @@ class _SettingsPageState extends State<SettingsPage> {
               child: Column(
                 children: [
                   Text(
-                    'VNShop v1.0.0',
+                    l10n.aboutSubtitle,
                     style: TextStyle(
                       color: Theme.of(context)
                           .colorScheme
@@ -240,7 +239,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Made with ❤️ in Vietnam',
+                    l10n.madeWithLove,
                     style: TextStyle(
                       color: Theme.of(context)
                           .colorScheme
@@ -261,6 +260,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _showLanguageBottomSheet(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -281,14 +281,14 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               ),
               const SizedBox(height: 16),
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   children: [
                     Icon(Icons.language_outlined),
                     SizedBox(width: 8),
                     Text(
-                      'Chọn ngôn ngữ',
+                      l10n.chooseLanguage,
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -298,9 +298,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               ),
               const SizedBox(height: 8),
-              ...List.generate(_languages.length, (index) {
-                final language = _languages[index];
-                final isSelected = language['name'] == _selectedLanguage;
+              ...[const Locale('vi'), const Locale('en')].map((locale) {
+                final name = locale.languageCode == 'vi' ? l10n.languageVietnamese : l10n.languageEnglish;
+                final isSelected = locale == _selectedLocale;
                 return ListTile(
                   leading: Icon(
                     isSelected
@@ -310,11 +310,12 @@ class _SettingsPageState extends State<SettingsPage> {
                         ? Theme.of(context).colorScheme.primary
                         : Colors.grey,
                   ),
-                  title: Text(language['name']!),
+                  title: Text(name),
                   onTap: () {
-                    setState(() => _selectedLanguage = language['name']!);
+                    setState(() => _selectedLocale = locale);
+                    VnShopApp.localeController.setLocale(locale);
                     Navigator.pop(context);
-                    _showLanguageChangeSnackbar(context, language['name']!);
+                    _showLanguageChangeSnackbar(context, name);
                   },
                 );
               }),
@@ -327,12 +328,13 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _showThemeChangeSnackbar(BuildContext context, bool enabled) {
+    final l10n = AppLocalizations.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           enabled
-              ? 'Đã bật chế độ tối'
-              : 'Đã tắt chế độ tối',
+              ? l10n.darkModeEnabled
+              : l10n.darkModeDisabled,
         ),
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
@@ -341,9 +343,10 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _showLanguageChangeSnackbar(BuildContext context, String language) {
+    final l10n = AppLocalizations.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Ngôn ngữ đã được đổi sang $language'),
+        content: Text(l10n.languageChanged(language)),
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ),
@@ -351,6 +354,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _showDeleteAccountDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -361,20 +365,20 @@ class _SettingsPageState extends State<SettingsPage> {
               color: Colors.red.shade700,
             ),
             const SizedBox(width: 8),
-            const Text('Xóa tài khoản'),
+            Text(l10n.deleteAccount),
           ],
         ),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Bạn có chắc chắn muốn xóa tài khoản không?',
+              l10n.deleteAccountQuestion,
               style: TextStyle(fontWeight: FontWeight.w500),
             ),
             SizedBox(height: 12),
             Text(
-              '⚠️ Lưu ý:',
+              l10n.deleteAccountWarning,
               style: TextStyle(
                 color: Colors.red,
                 fontWeight: FontWeight.bold,
@@ -382,9 +386,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             SizedBox(height: 4),
             Text(
-              '• Tất cả dữ liệu của bạn sẽ bị xóa vĩnh viễn\n'
-              '• Không thể khôi phục lại sau khi xóa\n'
-              '• Bạn sẽ mất quyền truy cập vào đơn hàng cũ',
+              l10n.deleteAccountConsequences,
               style: TextStyle(fontSize: 13),
             ),
           ],
@@ -392,7 +394,7 @@ class _SettingsPageState extends State<SettingsPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Hủy'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () {
@@ -401,7 +403,7 @@ class _SettingsPageState extends State<SettingsPage> {
               _showAccountDeletedSnackbar(context);
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Xóa tài khoản'),
+            child: Text(l10n.deleteAccount),
           ),
         ],
       ),
@@ -409,11 +411,10 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _showAccountDeletedSnackbar(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text(
-          'Yêu cầu xóa tài khoản đã được gửi. Vui lòng xác nhận qua email.',
-        ),
+        content: Text(l10n.deleteAccountRequested),
         behavior: SnackBarBehavior.floating,
         backgroundColor: Colors.orange,
         duration: const Duration(seconds: 4),

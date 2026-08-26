@@ -1,0 +1,11 @@
+Task 16 verification evidence
+
+2026-08-25
+- `mvn -q -DskipTests compile` passed for recommendations-service.
+- `mvn -q -DskipTests compile` passed for invoice-service.
+- `mvn -q -DskipTests compile` passed for seller-finance-service.
+- `mvn -q -DskipTests compile` passed for order-service before the required test command.
+- `python -m pytest -q tests/test_consumer.py tests/test_db.py` passed: 15 tests.
+- Required command attempted, but `/bin/bash` is unavailable in this Windows environment.
+- The requested `DurableDltReplayTest` class is not present; existing durable replay coverage is named `DurableDltServiceTest` in payment-service.
+- No `time.sleep(` remains in video-moderator. An unrelated pre-existing `FixedBackOff(1000L, 2L)` remains in search-service outside this task scope.

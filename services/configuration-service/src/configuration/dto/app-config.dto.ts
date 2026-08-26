@@ -13,6 +13,11 @@ export class AppConfigDto {
   payment!: {
     providers: string[];
     defaultMethod: string;
+    vietqr: {
+      bankBin: string;
+      accountNo: string;
+      accountName: string;
+    };
   };
   auth!: {
     oauthProviders: string[];

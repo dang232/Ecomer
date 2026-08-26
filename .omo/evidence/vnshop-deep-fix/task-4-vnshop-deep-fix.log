@@ -1,0 +1,15 @@
+# Task 4: saga completion requires all required steps
+# Provenance: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\task-4.log (uncommitted worktree artifact)
+
+STATUS: PASS_FOCUSED
+
+Exact command:
+`services/order-service/mvnw.cmd -Dtest=SagaOrchestratorTest test`
+Result: BUILD SUCCESS; 14 tests run, 0 failures, 0 errors, 0 skipped.
+
+Focused behavior observed: one-of-three compensation confirmations remains COMPENSATING; three-of-three transitions to FAILED once; duplicate confirmation does not double-count or republish failure.
+
+Exact hygiene command: `git diff --check`
+Result: PASS as recorded in the source artifact.
+
+Blocker/non-claim: this is focused unit evidence only; no broker-backed or production runtime claim is made.

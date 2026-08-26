@@ -10,6 +10,7 @@ export interface CartItemResponse {
   quantity: number;
   subtotal: MoneyResponse;
   parcel: ParcelDimensions | null;
+  parcelSnapshot: ParcelDimensions | null;
   addedAt: string;
   sellerId?: string;
   sellerName?: string;

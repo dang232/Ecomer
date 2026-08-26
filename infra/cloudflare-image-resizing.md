@@ -62,6 +62,23 @@ Dashboard → Caching → Cache Rules → Create rule:
 This ensures transformed images are cached aggressively at both the edge and
 in browsers.
 
+### 3a. Immutable R2 object headers
+
+Product, review, and avatar upload flows use versioned keys and set the R2
+object metadata to:
+
+```http
+Cache-Control: public, max-age=31536000, immutable
+```
+
+Keep this policy limited to the versioned prefixes documented in
+`infra/r2-cache-policy.json`. Never overwrite an object at an immutable key;
+publish a new key when its bytes change. Verify a public object with:
+
+```bash
+curl -sS -I "https://images.vnshop.com/products/{product-id}/images/{versioned-key}.webp"
+```
+
 ### 4. Frontend environment
 
 Set the production environment variables:

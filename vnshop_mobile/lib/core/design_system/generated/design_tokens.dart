@@ -10,7 +10,7 @@ abstract final class DesignColorsLight {
   static const borderStrong = Color(0xFFAEB6C5);
   static const text = Color(0xFF17191F);
   static const textMuted = Color(0xFF596273);
-  static const textSubtle = Color(0xFF737D8F);
+  static const textSubtle = Color(0xFF667085);
   static const actionPrimary = Color(0xFF3347C7);
   static const actionPrimaryHover = Color(0xFF2738A8);
   static const onActionPrimary = Color(0xFFFFFFFF);

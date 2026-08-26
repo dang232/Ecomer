@@ -162,17 +162,20 @@ public class ProductJpaEntity extends BaseJpaEntity {
         @Column(name = "stock_quantity", nullable = false)
         private int stockQuantity;
 
-        @Column(name = "parcel_weight_grams")
-        private Integer parcelWeightGrams;
+        @Column(name = "weight_grams", nullable = false)
+        private int weightGrams;
 
-        @Column(name = "parcel_length_cm")
-        private Integer parcelLengthCm;
+        @Column(name = "length_mm", nullable = false)
+        private int lengthMm;
 
-        @Column(name = "parcel_width_cm")
-        private Integer parcelWidthCm;
+        @Column(name = "width_mm", nullable = false)
+        private int widthMm;
 
-        @Column(name = "parcel_height_cm")
-        private Integer parcelHeightCm;
+        @Column(name = "height_mm", nullable = false)
+        private int heightMm;
+
+        @Column(name = "declared_value_minor", nullable = false)
+        private long declaredValueMinor;
 
         protected ProductVariantEmbeddable() {
         }
@@ -184,29 +187,20 @@ public class ProductJpaEntity extends BaseJpaEntity {
             embeddable.price = MoneyEmbeddable.fromDomain(variant.price());
             embeddable.imageUrl = variant.imageUrl();
             embeddable.stockQuantity = variant.stockQuantity();
-            if (variant.parcel() != null) {
-                embeddable.parcelWeightGrams = variant.parcel().weightGrams();
-                embeddable.parcelLengthCm = variant.parcel().lengthCm();
-                embeddable.parcelWidthCm = variant.parcel().widthCm();
-                embeddable.parcelHeightCm = variant.parcel().heightCm();
-            }
+            ParcelDimensions parcel = variant.parcel() == null
+                    ? new ParcelDimensions(1000, 300, 200, 100, variant.price().amount().longValueExact())
+                    : variant.parcel();
+            embeddable.weightGrams = parcel.weightGrams();
+            embeddable.lengthMm = parcel.lengthMm();
+            embeddable.widthMm = parcel.widthMm();
+            embeddable.heightMm = parcel.heightMm();
+            embeddable.declaredValueMinor = parcel.declaredValueMinor();
             return embeddable;
         }
 
         ProductVariant toDomain() {
-            ParcelDimensions parcel = null;
-            boolean anyParcelValue = parcelWeightGrams != null
-                    || parcelLengthCm != null
-                    || parcelWidthCm != null
-                    || parcelHeightCm != null;
-            if (anyParcelValue) {
-                if (parcelWeightGrams == null || parcelLengthCm == null
-                        || parcelWidthCm == null || parcelHeightCm == null) {
-                    throw new IllegalStateException("stored parcel metadata must be complete");
-                }
-                parcel = new ParcelDimensions(
-                        parcelWeightGrams, parcelLengthCm, parcelWidthCm, parcelHeightCm);
-            }
+            ParcelDimensions parcel = new ParcelDimensions(
+                    weightGrams, lengthMm, widthMm, heightMm, declaredValueMinor);
             return new ProductVariant(sku, name, price.toDomain(), imageUrl, stockQuantity, parcel);
         }
     }

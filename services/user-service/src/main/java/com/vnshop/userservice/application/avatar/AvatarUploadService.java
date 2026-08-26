@@ -9,6 +9,7 @@ import com.vnshop.userservice.domain.port.out.UserRepositoryPort;
 import com.vnshop.userservice.domain.storage.AvatarObjectMetadata;
 
 import java.net.URI;
+import java.util.Map;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.Objects;
@@ -57,7 +58,13 @@ public class AvatarUploadService {
                 request.contentLength(),
                 request.sha256Hex());
         URI uploadUrl = objectStoragePort.getSignedUploadUrl(objectKey, metadata, UPLOAD_TTL);
-        return new AvatarUploadResponse(objectKey, uploadUrl, UPLOAD_TTL.toSeconds());
+        return new AvatarUploadResponse(
+                objectKey,
+                uploadUrl,
+                Map.of("Content-Type", request.contentType(),
+                        "Cache-Control", "public, max-age=31536000, immutable",
+                        "x-amz-meta-sha256", request.sha256Hex()),
+                UPLOAD_TTL.toSeconds());
     }
 
     public AvatarActivationResponse activate(String keycloakId, AvatarActivationRequest request) {

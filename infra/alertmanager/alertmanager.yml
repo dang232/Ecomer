@@ -19,12 +19,12 @@ route:
 receivers:
   - name: 'default'
     webhook_configs:
-      - url: 'http://localhost:9999/dev-null'
+      - url_file: /etc/alertmanager/secrets/webhook-url
         send_resolved: true
 
   - name: 'critical'
     webhook_configs:
-      - url: 'http://localhost:9999/dev-null'
+      - url_file: /etc/alertmanager/secrets/webhook-url
         send_resolved: true
 
 inhibit_rules:

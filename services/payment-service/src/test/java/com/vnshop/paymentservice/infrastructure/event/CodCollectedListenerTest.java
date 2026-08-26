@@ -2,6 +2,7 @@ package com.vnshop.paymentservice.infrastructure.event;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vnshop.paymentservice.application.ConfirmCodCollectionUseCase;
+import com.vnshop.paymentservice.infrastructure.dlt.DurableDltService;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -18,7 +19,7 @@ class CodCollectedListenerTest {
     @Test
     void mapsVersionOneEnvelopeIntoCollectionConfirmation() {
         ConfirmCodCollectionUseCase useCase = mock(ConfirmCodCollectionUseCase.class);
-        CodCollectedListener listener = new CodCollectedListener(useCase, new ObjectMapper());
+        CodCollectedListener listener = new CodCollectedListener(useCase, new ObjectMapper(), mock(DurableDltService.class));
         UUID collectionId = UUID.randomUUID();
         UUID shipmentId = UUID.randomUUID();
         UUID orderId = UUID.randomUUID();
@@ -44,7 +45,7 @@ class CodCollectedListenerTest {
     @Test
     void ignoresUnknownSchemaVersionWithoutMutatingPayment() {
         ConfirmCodCollectionUseCase useCase = mock(ConfirmCodCollectionUseCase.class);
-        CodCollectedListener listener = new CodCollectedListener(useCase, new ObjectMapper());
+        CodCollectedListener listener = new CodCollectedListener(useCase, new ObjectMapper(), mock(DurableDltService.class));
 
         listener.onCodCollected("""
                 {"eventType":"SHIPPING_COD_COLLECTED","schemaVersion":2,

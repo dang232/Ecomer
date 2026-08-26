@@ -25,10 +25,12 @@ services:
         clearing-account: payment_clearing
       providers:
         cod: true
-        vnpay: true
-        momo: true
-        stripe: true
-        paypal: true
+        vietqr: true
+        sepay: true
+        vnpay: false
+        momo: false
+        stripe: false
+        paypal: false
 
   shipping-service:
     shipping:
@@ -38,8 +40,7 @@ services:
   order-service:
     checkout:
       cod-enabled: true
-      vnpay-enabled: true
-      momo-enabled: true
+      vietqr-enabled: true
     commission:
       standard: "0.10"
       verified: "0.08"

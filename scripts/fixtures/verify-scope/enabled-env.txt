@@ -1,0 +1,3 @@
+# A production-like fixture with an explicitly enabled forbidden provider.
+MOMO_ENABLED=true
+VNPAY_ENABLED=false

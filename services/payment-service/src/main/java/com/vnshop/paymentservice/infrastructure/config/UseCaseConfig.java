@@ -20,6 +20,7 @@ import com.vnshop.paymentservice.infrastructure.gateway.VnpayProperties;
 import com.vnshop.paymentservice.infrastructure.paypal.PayPalProperties;
 import com.vnshop.paymentservice.infrastructure.sepay.SepayProperties;
 import com.vnshop.paymentservice.infrastructure.stripe.StripeProperties;
+import com.vnshop.paymentservice.infrastructure.metrics.PaymentMetrics;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -59,7 +60,8 @@ public class UseCaseConfig {
             LedgerService ledgerService,
             PaymentIdempotencyKeyRepositoryPort paymentIdempotencyKeyRepository,
             OrderCatalogPort orderCatalogPort,
-            PlatformTransactionManager transactionManager
+            PlatformTransactionManager transactionManager,
+            PaymentMetrics paymentMetrics
     ) {
         return new ProcessPaymentUseCase(
                 paymentRepositoryPort,
@@ -67,7 +69,7 @@ public class UseCaseConfig {
                 ledgerService,
                 paymentIdempotencyKeyRepository,
                 orderCatalogPort,
-                new TransactionTemplate(transactionManager)
+                new TransactionTemplate(transactionManager), java.time.Clock.systemUTC(), paymentMetrics
         );
     }
 

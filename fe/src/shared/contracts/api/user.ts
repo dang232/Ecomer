@@ -36,6 +36,7 @@ export const avatarUploadResponseSchema = z
   .object({
     objectKey: z.string(),
     uploadUrl: z.string(),
+    uploadHeaders: z.record(z.string(), z.string()).default({}),
     expiresInSeconds: z.number(),
   })
   .passthrough();

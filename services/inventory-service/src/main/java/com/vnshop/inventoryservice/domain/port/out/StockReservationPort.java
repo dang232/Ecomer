@@ -1,7 +1,9 @@
 package com.vnshop.inventoryservice.domain.port.out;
 
 import com.vnshop.inventoryservice.domain.StockReservation;
+import com.vnshop.inventoryservice.application.ReservationOperation;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Persistence port for the gRPC Reserve/Release workflow.
@@ -44,6 +46,13 @@ public interface StockReservationPort {
     List<StockReservation> findActiveReservationsByOrderId(String orderId);
 
     void markReleased(StockReservation reservation);
+
+    default Optional<ReservationOperation> findOperation(String operationId) {
+        return Optional.empty();
+    }
+
+    default void saveOperation(ReservationOperation operation) {
+    }
 
     enum DecrementOutcome {
         APPLIED,

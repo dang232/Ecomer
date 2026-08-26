@@ -6,9 +6,10 @@ import com.vnshop.orderservice.domain.OrderItem;
 import com.vnshop.orderservice.domain.ParcelDimensions;
 import com.vnshop.orderservice.domain.SubOrder;
 import com.vnshop.orderservice.domain.ShippingDetails;
-import com.vnshop.proto.shipping.ShippingServiceGrpc;
-import com.vnshop.proto.shipping.ShippingRequest;
-import com.vnshop.proto.shipping.ShippingResponse;
+import com.vnshop.orderservice.infrastructure.shipping.ShippingException;
+import com.vnshop.proto.v1.ShippingServiceGrpc;
+import com.vnshop.proto.v1.ShippingRequest;
+import com.vnshop.proto.v1.ShippingResponse;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -58,7 +59,7 @@ class GrpcShippingRequestAdapterTest {
 
         ShippingResponse response = ShippingResponse.newBuilder()
                 .setSuccess(true)
-                .addLabels(com.vnshop.proto.shipping.ShippingLabel.newBuilder()
+                .addLabels(com.vnshop.proto.v1.ShippingLabel.newBuilder()
                         .setTrackingCode("TRACK-001")
                         .setCarrier("GHTK")
                         .setEstimatedDelivery("2026-05-20")
@@ -73,10 +74,10 @@ class GrpcShippingRequestAdapterTest {
 
         assertEquals("order-42", sent.getOrderId());
         assertEquals(1, sent.getSubOrdersCount());
-        com.vnshop.proto.shipping.SubOrder sentSub = sent.getSubOrders(0);
+        com.vnshop.proto.v1.SubOrder sentSub = sent.getSubOrders(0);
         assertEquals("seller-1", sentSub.getSellerId());
         assertEquals(1, sentSub.getItemsCount());
-        com.vnshop.proto.shipping.SubOrderItem sentItem = sentSub.getItems(0);
+        com.vnshop.proto.v1.SubOrderItem sentItem = sentSub.getItems(0);
         assertEquals("prod-1", sentItem.getProductId());
         assertEquals("sku-red", sentItem.getVariant());
         assertEquals(2, sentItem.getQuantity());
@@ -95,7 +96,7 @@ class GrpcShippingRequestAdapterTest {
 
         ShippingResponse response = ShippingResponse.newBuilder()
                 .setSuccess(true)
-                .addLabels(com.vnshop.proto.shipping.ShippingLabel.newBuilder()
+                .addLabels(com.vnshop.proto.v1.ShippingLabel.newBuilder()
                         .setTrackingCode("TRACK-002")
                         .setCarrier("GHN")
                         .build())
@@ -107,8 +108,8 @@ class GrpcShippingRequestAdapterTest {
         verify(shippingStub).requestShipping(requestCaptor.capture());
         ShippingRequest sent = requestCaptor.getValue();
 
-        com.vnshop.proto.shipping.SubOrder sentSub = sent.getSubOrders(0);
-        com.vnshop.proto.shipping.ShippingAddress sentAddr = sentSub.getShippingAddress();
+        com.vnshop.proto.v1.SubOrder sentSub = sent.getSubOrders(0);
+        com.vnshop.proto.v1.ShippingAddress sentAddr = sentSub.getShippingAddress();
 
         assertEquals("456 Side St", sentAddr.getStreet());
         assertEquals("HCMC", sentAddr.getCity());
@@ -124,19 +125,19 @@ class GrpcShippingRequestAdapterTest {
         ShippingDetails details = new ShippingDetails(
                 "Nguyen Van A", "+84912345678", "W-001", "D-001", "P-001", 9999, 99, 98, 97);
         OrderItem item = new OrderItem("prod-live", "sku-live", "seller-live", "Jacket", 1,
-                new Money(new BigDecimal("350000")), null, new ParcelDimensions(1500, 30, 20, 10));
+                new Money(new BigDecimal("350000")), null, new ParcelDimensions(1500, 30, 20, 10, 777000));
         SubOrder subOrder = new SubOrder("seller-live", List.of(item));
 
         when(shippingStub.requestShipping(any())).thenReturn(ShippingResponse.newBuilder()
                 .setSuccess(true)
-                .addLabels(com.vnshop.proto.shipping.ShippingLabel.newBuilder().setTrackingCode("TRACK-LIVE").build())
+                .addLabels(com.vnshop.proto.v1.ShippingLabel.newBuilder().setTrackingCode("TRACK-LIVE").build())
                 .build());
 
         adapter.requestShipping("order-live", subOrder, address, details);
 
         verify(shippingStub).requestShipping(requestCaptor.capture());
-        com.vnshop.proto.shipping.SubOrder sentSub = requestCaptor.getValue().getSubOrders(0);
-        com.vnshop.proto.shipping.ShippingAddress sentAddress = sentSub.getShippingAddress();
+        com.vnshop.proto.v1.SubOrder sentSub = requestCaptor.getValue().getSubOrders(0);
+        com.vnshop.proto.v1.ShippingAddress sentAddress = sentSub.getShippingAddress();
 
         assertEquals("Nguyen Van A", sentAddress.getFullName());
         assertEquals("+84912345678", sentAddress.getPhone());
@@ -149,6 +150,11 @@ class GrpcShippingRequestAdapterTest {
         assertEquals(30, sentSub.getParcelLengthCm());
         assertEquals(20, sentSub.getParcelWidthCm());
         assertEquals(10, sentSub.getParcelHeightCm());
+        assertEquals(1500, sentSub.getParcel().getWeightGrams());
+        assertEquals(30, sentSub.getParcel().getLengthCm());
+        assertEquals(20, sentSub.getParcel().getWidthCm());
+        assertEquals(10, sentSub.getParcel().getHeightCm());
+        assertEquals(777000, sentSub.getParcel().getDeclaredValueMinor());
         assertEquals("350000", sentSub.getDeclaredValue().getAmount());
         assertEquals("350000", sentSub.getCodAmount().getAmount());
     }
@@ -160,7 +166,7 @@ class GrpcShippingRequestAdapterTest {
                 new Money(new BigDecimal("350000")), null);
         SubOrder subOrder = new SubOrder("seller-live", List.of(item));
 
-        assertThrows(IllegalStateException.class,
+        assertThrows(ShippingException.class,
                 () -> adapter.requestShipping("order-live", subOrder, address, null));
     }
 
@@ -173,7 +179,7 @@ class GrpcShippingRequestAdapterTest {
                 new Money(new BigDecimal("350000")), null);
         SubOrder subOrder = new SubOrder("seller-live", List.of(item));
 
-        assertThrows(IllegalStateException.class,
+        assertThrows(ShippingException.class,
                 () -> adapter.requestShipping("order-live", subOrder, address, details));
 
         verify(shippingStub, never()).requestShipping(any());
@@ -191,13 +197,13 @@ class GrpcShippingRequestAdapterTest {
         SubOrder subOrder = new SubOrder("seller-1", List.of(first, second));
         when(shippingStub.requestShipping(any())).thenReturn(ShippingResponse.newBuilder()
                 .setSuccess(true)
-                .addLabels(com.vnshop.proto.shipping.ShippingLabel.newBuilder().setTrackingCode("TRACK").build())
+                .addLabels(com.vnshop.proto.v1.ShippingLabel.newBuilder().setTrackingCode("TRACK").build())
                 .build());
 
         adapter.requestShipping("order-aggregate", subOrder, address, details);
 
         verify(shippingStub).requestShipping(requestCaptor.capture());
-        com.vnshop.proto.shipping.SubOrder sentSub = requestCaptor.getValue().getSubOrders(0);
+        com.vnshop.proto.v1.SubOrder sentSub = requestCaptor.getValue().getSubOrders(0);
         assertEquals(1800, sentSub.getParcelWeightGrams());
         assertEquals(45, sentSub.getParcelLengthCm());
         assertEquals(20, sentSub.getParcelWidthCm());
@@ -212,10 +218,10 @@ class GrpcShippingRequestAdapterTest {
         OrderItem item = new OrderItem("prod-overflow", "sku-overflow", "seller-overflow", "Oversized", 2,
                 new Money(new BigDecimal("100000")), null,
                 new ParcelDimensions(500, Integer.MAX_VALUE, 20, 30));
-        SubOrder subOrder = new SubOrder("seller-overflow", List.of(item));
-
-        assertThrows(ArithmeticException.class,
-                () -> adapter.requestShipping("order-overflow", subOrder, address, details));
+        assertThrows(IllegalStateException.class, () -> {
+            SubOrder subOrder = new SubOrder("seller-overflow", List.of(item));
+            adapter.requestShipping("order-overflow", subOrder, address, details);
+        });
 
         verify(shippingStub, never()).requestShipping(any());
     }
@@ -231,7 +237,7 @@ class GrpcShippingRequestAdapterTest {
                 new Money(new BigDecimal("200000")), null, new ParcelDimensions(900, 20, 21, 22));
         when(shippingStub.requestShipping(any())).thenReturn(ShippingResponse.newBuilder()
                 .setSuccess(true)
-                .addLabels(com.vnshop.proto.shipping.ShippingLabel.newBuilder().setTrackingCode("TRACK").build())
+                .addLabels(com.vnshop.proto.v1.ShippingLabel.newBuilder().setTrackingCode("TRACK").build())
                 .build());
 
         adapter.requestShipping("order-sellers", new SubOrder("seller-1", List.of(sellerOneItem)), address, details);
@@ -258,7 +264,7 @@ class GrpcShippingRequestAdapterTest {
 
         ShippingResponse response = ShippingResponse.newBuilder()
                 .setSuccess(true)
-                .addLabels(com.vnshop.proto.shipping.ShippingLabel.newBuilder()
+                .addLabels(com.vnshop.proto.v1.ShippingLabel.newBuilder()
                         .setTrackingCode("TRACK-003")
                         .setCarrier("GHN")
                         .build())
@@ -271,7 +277,7 @@ class GrpcShippingRequestAdapterTest {
         ShippingRequest sent = requestCaptor.getValue();
 
         assertEquals(1, sent.getSubOrdersCount());
-        com.vnshop.proto.shipping.SubOrder sentSub = sent.getSubOrders(0);
+        com.vnshop.proto.v1.SubOrder sentSub = sent.getSubOrders(0);
         assertEquals(2, sentSub.getItemsCount());
         assertEquals("prod-3", sentSub.getItems(0).getProductId());
         assertEquals("prod-4", sentSub.getItems(1).getProductId());
@@ -285,7 +291,7 @@ class GrpcShippingRequestAdapterTest {
         SubOrder subOrder = new SubOrder("seller-1", List.of(item));
         when(shippingStub.requestShipping(any())).thenReturn(ShippingResponse.newBuilder().setSuccess(false).build());
 
-        assertThrows(IllegalStateException.class,
+        assertThrows(ShippingException.class,
                 () -> adapter.requestShipping("order-rejected", subOrder, address));
     }
 
@@ -297,7 +303,7 @@ class GrpcShippingRequestAdapterTest {
         SubOrder subOrder = new SubOrder("seller-1", List.of(item));
         when(shippingStub.requestShipping(any())).thenReturn(ShippingResponse.newBuilder().setSuccess(true).build());
 
-        assertThrows(IllegalStateException.class,
+        assertThrows(ShippingException.class,
                 () -> adapter.requestShipping("order-no-label", subOrder, address));
     }
 }

@@ -13,7 +13,7 @@ import {
   Save,
   Store,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -29,6 +29,7 @@ import {
 } from "@/shared/api/endpoints/users";
 import type { Address, UserProfile } from "@/shared/contracts/api";
 import { addressKey } from "@/shared/lib";
+import { ImageWithFallback } from "@/shared/ui";
 
 import { useAuth } from "../hooks/auth-context";
 import { avatarUploadErrorMessage, useAvatarUpload } from "../hooks/use-avatar-upload";
@@ -54,6 +55,7 @@ export function ProfilePage() {
   const qc = useQueryClient();
   const { authenticated, ready, profile: kcProfile, roles, refresh, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<ProfileTab>("info");
+  const profileTablistRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation();
 
   const profileQuery = useSuspenseQuery(profileOptions());
@@ -246,6 +248,26 @@ export function ProfilePage() {
     { id: "security", labelKey: "profile.tabs.security", icon: Shield },
   ];
 
+  const moveProfileTab = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const enabled = NAV_ITEMS.map((item, itemIndex) => ({ item, itemIndex }));
+    const current = enabled.findIndex(({ itemIndex }) => itemIndex === index);
+    if (current < 0) return;
+    let target = current;
+    if (event.key === "ArrowDown" || event.key === "ArrowRight")
+      target = (current + 1) % enabled.length;
+    else if (event.key === "ArrowUp" || event.key === "ArrowLeft")
+      target = (current - 1 + enabled.length) % enabled.length;
+    else if (event.key === "Home") target = 0;
+    else if (event.key === "End") target = enabled.length - 1;
+    else return;
+    event.preventDefault();
+    const next = enabled[target];
+    setActiveTab(next.item.id);
+    profileTablistRef.current
+      ?.querySelector<HTMLButtonElement>(`#profile-tab-${next.item.id}`)
+      ?.focus();
+  };
+
   return (
     <div className="max-w-[1100px] mx-auto py-8 px-8">
       <AccountNav />
@@ -256,10 +278,12 @@ export function ProfilePage() {
           <div className="flex flex-col items-center mb-5">
             <div className="relative mb-3">
               {avatarUrl ? (
-                <img
+                <ImageWithFallback
                   src={avatarUrl}
                   alt={displayName}
                   className="w-20 h-20 rounded-full object-cover"
+                  imagePreset="avatar"
+                  sizes="80px"
                 />
               ) : (
                 <div className="w-20 h-20 rounded-full bg-primary-light flex items-center justify-center text-primary text-[28px] font-bold">
@@ -283,7 +307,7 @@ export function ProfilePage() {
                     ? t("profile.avatar.uploading")
                     : t("profile.avatar.uploadCta")
                 }
-                className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary flex items-center justify-center shadow disabled:opacity-50"
+                className="absolute -bottom-1 -right-1 flex min-h-[var(--target-web)] min-w-[var(--target-web)] items-center justify-center rounded-full bg-primary shadow disabled:opacity-50"
               >
                 <Camera size={13} color="white" />
               </button>
@@ -294,6 +318,7 @@ export function ProfilePage() {
 
           {/* Nav items */}
           <div
+            ref={profileTablistRef}
             role="tablist"
             aria-label={t("profile.sectionsLabel")}
             className="flex flex-col gap-0.5 mt-5"
@@ -307,14 +332,16 @@ export function ProfilePage() {
                   role="tab"
                   aria-selected={isActive}
                   aria-controls={`profile-tabpanel-${item.id}`}
+                  tabIndex={isActive ? 0 : -1}
                   onClick={() => setActiveTab(item.id)}
+                  onKeyDown={(event) => moveProfileTab(event, NAV_ITEMS.indexOf(item))}
                   className={`flex items-center gap-2.5 px-3 py-2.5 rounded-[var(--radius-md)] text-[13px] font-medium cursor-pointer transition-colors w-full text-left ${
                     isActive
                       ? "bg-primary-light text-primary"
                       : "text-text-secondary hover:bg-background hover:text-foreground"
                   }`}
                 >
-                  <item.icon size={16} />
+                  <item.icon size={16} aria-hidden="true" />
                   {t(item.labelKey)}
                 </button>
               );
