@@ -130,7 +130,7 @@ jobs:
         run: |
           set -euo pipefail
           PGPASSWORD="$RELIABILITY_POSTGRES_PASSWORD" psql -h 127.0.0.1 -U reliability -d reliability -c 'select 1' >/dev/null
-          redis-cli -h 127.0.0.1 -a "$RELIABILITY_REDIS_PASSWORD" ping | grep -Fx PONG
+          docker exec -e REDIS_PASSWORD="$RELIABILITY_REDIS_PASSWORD" "${{ job.services.redis.id }}" redis-cli -a "$RELIABILITY_REDIS_PASSWORD" ping | grep -Fx PONG
 
       - name: Run duplicate-delivery and malformed-DLT fixture
         shell: bash
