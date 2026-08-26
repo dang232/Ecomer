@@ -19,6 +19,13 @@ export function inspectImport(file, specifier) {
   if (file.startsWith("src/features/") && /^src\/app(?:\/|$)/.test(resolved)) {
     return "features must consume shared modules instead of app internals";
   }
+  const legacyContractImport = /^src\/app\/types\/api(?:\/|$)/.test(resolved);
+  const legacyClientImport = /^src\/app\/lib\/api(?:\/|$)/.test(resolved);
+  const importingLegacyContract = file.startsWith("src/app/types/api/");
+  const importingLegacyClient = file.startsWith("src/app/lib/api/");
+  if ((legacyContractImport && !importingLegacyContract) || (legacyClientImport && !importingLegacyClient)) {
+    return "app must import shared contracts and APIs";
+  }
   const owner = /^src\/features\/([^/]+)\//.exec(file)?.[1];
   const target = /^src\/features\/([^/]+)(\/.*)?$/.exec(resolved);
   if (file.startsWith("src/app/") && target?.[2]) {
@@ -31,21 +38,22 @@ export function inspectImport(file, specifier) {
 }
 
 export function importSpecifiers(source) {
-  const pattern = /(?:from\s+|import\s*(?:\(\s*)?)["']([^"']+)["']/g;
+  const pattern = /(?:from\s+|import\s*(?:\(\s*)?|require\s*\(\s*)["']([^"']+)["']/g;
   return [...source.matchAll(pattern)].map((match) => match[1]).filter(Boolean);
 }
 
-function sourceFiles(directory) {
+export function sourceFiles(directory) {
   return readdirSync(directory).flatMap((name) => {
     const target = path.join(directory, name);
     if (statSync(target).isDirectory()) return sourceFiles(target);
-    return /\.(ts|tsx)$/.test(name) ? [target] : [];
+    return /\.(js|jsx|ts|tsx)$/.test(name) ? [target] : [];
   });
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const scanDir = process.argv[2] ? path.resolve(process.argv[2]) : sourceDir;
   const findings = [];
-  for (const absoluteFile of sourceFiles(sourceDir)) {
+  for (const absoluteFile of sourceFiles(scanDir)) {
     const file = path.relative(feDir, absoluteFile).replaceAll("\\", "/");
     const source = readFileSync(absoluteFile, "utf8");
     for (const specifier of importSpecifiers(source)) {

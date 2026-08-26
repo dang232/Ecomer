@@ -1,0 +1,18 @@
+# TASK: 27 - Replace generic catches and centralize logging
+# ENVIRONMENT: local
+# GIT SHA: feat/vnshop-deep-fix worktree
+
+Baseline:
+- `mvn -pl services/order-service test -Dtest=TypedExceptionTest` failed because the prescribed test did not exist.
+- `node scripts/check-error-handling.mjs --services services --frontend fe` failed because the checker did not exist.
+- Frontend `pnpm run typecheck` was already red in task-2 parcel files before task-27 edits.
+
+Focused verification:
+- `mvn test "-Dtest=TranscodeFailureConsumerTest" "-Djacoco.skip=true"` passed: 2 tests.
+- `mvn test "-Dtest=ProductCatalogAdapterTest" "-Djacoco.skip=true" -o` passed: 2 tests.
+- `pnpm exec vitest run src/shared/lib/logger.test.ts` passed: 1 test.
+- `node scripts/check-error-handling.mjs --services services --frontend fe` passed.
+
+Notes:
+- Order-service protobuf cleanup intermittently fails on Windows when Maven cannot delete `target/protoc-dependencies`; rerunning offline succeeded for the focused product adapter test.
+- Full frontend typecheck remains blocked by pre-existing task-2 contract errors and a pre-existing `getErrorLabel` export error outside task-27 scope.

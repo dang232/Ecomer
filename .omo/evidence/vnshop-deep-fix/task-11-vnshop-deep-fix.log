@@ -1,0 +1,15 @@
+# Task 11: rotate and validate SealedSecret/cursor secrets
+# Provenance: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\task-11.log (uncommitted worktree artifact)
+
+STATUS: PASS_FAIL_CLOSED / BLOCKED_EXTERNAL
+
+Exact commands recorded:
+- `kubectl kustomize infra/k8s/overlays/prod --load-restrictor LoadRestrictionsNone > $env:TEMP\\vnshop-prod-rendered.yaml` -> rendered input for validation.
+- `node scripts/validate-prod-secrets.mjs --manifest $env:TEMP\\vnshop-prod-rendered.yaml` -> expected non-zero because production SealedSecret is intentionally empty.
+- `node scripts/validate-prod-secrets.mjs --overlay scripts/fixtures/task-11/happy` -> expected fixture PASS, 4 cursor keys checked.
+- `node scripts/validate-prod-secrets.mjs --overlay scripts/fixtures/task-11/missing-admin-cursor` -> expected non-zero with key diagnostics and no values.
+- `node scripts/rotate-credentials-check.mjs --before scripts/fixtures/task-11/rotation-before.yaml --after scripts/fixtures/task-11/rotation-after.yaml` -> expected fixture PASS, 4 cursor keys rotated.
+
+Security result: validators do not emit plaintext secret values, decoded values, or ciphertext fingerprints. Fixture values are synthetic.
+
+Blocker/non-claim: production secrets remain external and absent from source control; no production credential rotation or provider revocation is claimed.

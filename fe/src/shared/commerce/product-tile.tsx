@@ -100,6 +100,8 @@ export function ProductTile({ product, href }: ProductTileProps) {
             className={`${previewing ? "opacity-0" : "opacity-100"} h-full w-full object-cover transition-opacity duration-[var(--duration-fast)] motion-reduce:transform-none`}
             src={product.imageUrl ?? previewVideo?.thumbnailUrl ?? ""}
             alt={product.name}
+            imagePreset="card"
+            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
           />
           {previewVideo?.playbackUrl ? (
             <video

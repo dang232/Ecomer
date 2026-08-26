@@ -20,9 +20,18 @@ public class PaymentCallbackLogJpaRepository implements PaymentCallbackLogStore 
         List<String> terminalStatuses = List.of("PROCESSED", "FAILED", "IGNORED");
         Optional<PaymentCallbackLogJpaEntity> eventMatch = eventId == null || eventId.isBlank()
                 ? Optional.empty()
-                : springDataRepository.findFirstByProviderAndEventIdAndSignatureHashAndProcessingStatusIn(provider, eventId, signatureHash, terminalStatuses);
+                : springDataRepository.findFirstByProviderAndEventIdAndPayloadHashAndSignatureHashAndProcessingStatusIn(provider, eventId, payloadHash, signatureHash, terminalStatuses);
         return eventMatch.or(() -> springDataRepository.findFirstByProviderAndPayloadHashAndSignatureHashAndProcessingStatusIn(provider, payloadHash, signatureHash, terminalStatuses))
                 .map(PaymentCallbackLogJpaEntity::toAttempt);
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public boolean claim(PaymentCallbackAttempt attempt) {
+        return springDataRepository.claim(
+                attempt.callbackId(), attempt.provider(), attempt.eventId(), attempt.payloadHash(),
+                attempt.signatureHash(), attempt.headersJson(), attempt.bodyJson(), attempt.receivedAt(),
+                attempt.processingStatus(), attempt.duplicateReplay()) == 1;
     }
 
     @Override

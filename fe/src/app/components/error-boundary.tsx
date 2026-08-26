@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
-import { ApiError } from "@/shared/api";
+import { ApiError, getErrorLabel } from "@/shared/api";
+import { logger } from "@/shared/lib";
 
 import i18n from "../lib/i18n";
 
@@ -23,7 +24,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: unknown, info: ErrorInfo): void {
-    console.error("[ErrorBoundary]", error, info.componentStack);
+    logger.error("ui.error_boundary", { error, componentStack: info.componentStack });
   }
 
   componentDidUpdate(_prevProps: Props, prevState: State): void {
@@ -50,11 +51,11 @@ export class ErrorBoundary extends Component<Props, State> {
 
     const { retryCount, isRetrying } = this.state;
     const apiError = this.state.error instanceof ApiError ? this.state.error : null;
-    const message =
-      apiError?.message ??
-      (this.state.error instanceof Error
-        ? this.state.error.message
-        : i18n.t("errorBoundary.description", { defaultValue: "An unknown error occurred." }));
+    const message = apiError
+      ? getErrorLabel(apiError)
+      : i18n.t("errorBoundary.description", {
+          defaultValue: "An unexpected error occurred. Please try again.",
+        });
 
     const isPermanent = retryCount >= 3;
 

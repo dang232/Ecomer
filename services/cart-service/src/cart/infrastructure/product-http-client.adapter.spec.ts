@@ -5,12 +5,12 @@ describe('ProductHttpClientAdapter', () => {
   const URL = 'http://product-service:8082';
 
   function mockFetch(body: unknown, status = 200): void {
-    (global as { fetch: typeof fetch }).fetch = (() =>
+    (global as { fetch: typeof fetch }).fetch = () =>
       Promise.resolve({
         ok: status >= 200 && status < 300,
         status,
         json: () => Promise.resolve(body),
-      } as unknown as Response)) as typeof fetch;
+      } as unknown as Response);
   }
 
   afterEach(() => {
@@ -28,9 +28,11 @@ describe('ProductHttpClientAdapter', () => {
   });
 
   it('marks a transient fallback snapshot as degraded', async () => {
-    (global as { fetch: typeof fetch }).fetch = jest.fn().mockRejectedValue(
-      new Error('product service unavailable'),
-    ) as typeof fetch;
+    (global as { fetch: typeof fetch }).fetch = jest
+      .fn()
+      .mockRejectedValue(
+        new Error('product service unavailable'),
+      ) as typeof fetch;
 
     const snap = await new ProductHttpClientAdapter(URL).getSnapshot('p-1');
 
@@ -81,23 +83,39 @@ describe('ProductHttpClientAdapter', () => {
         {
           sku: 'small',
           priceAmount: 100,
-          parcel: { weightGrams: 500, lengthCm: 10, widthCm: 10, heightCm: 5 },
+          parcel: {
+            weightGrams: 500,
+            lengthCm: 10,
+            widthCm: 10,
+            heightCm: 5,
+            declaredValueMinor: 100,
+          },
         },
         {
           sku: 'large',
           priceAmount: 200,
-          parcel: { weightGrams: 1500, lengthCm: 30, widthCm: 20, heightCm: 10 },
+          parcel: {
+            weightGrams: 1500,
+            lengthCm: 30,
+            widthCm: 20,
+            heightCm: 10,
+            declaredValueMinor: 200,
+          },
         },
       ],
     });
 
-    const snap = await new ProductHttpClientAdapter(URL).getSnapshot('p-parcel', 'large');
+    const snap = await new ProductHttpClientAdapter(URL).getSnapshot(
+      'p-parcel',
+      'large',
+    );
 
     expect(snap.parcel).toEqual({
       weightGrams: 1500,
       lengthCm: 30,
       widthCm: 20,
       heightCm: 10,
+      declaredValueMinor: 200,
     });
   });
 

@@ -10,17 +10,29 @@ import org.springframework.kafka.annotation.RetryableTopic;
 import org.springframework.kafka.retrytopic.DltStrategy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.vnshop.sellerfinanceservice.infrastructure.dlt.DurableDltService;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 
 /** Applies return, dispute, and fraud hold changes to pending settlements. */
 @Service
+@ConditionalOnBean(DurableDltService.class)
 public class SettlementHoldListener {
     private final ObjectMapper objectMapper;
     private final SettlementReleaseCandidateRepositoryPort candidateRepository;
+    private final DurableDltService durableDltService;
 
     public SettlementHoldListener(ObjectMapper objectMapper,
-                                  SettlementReleaseCandidateRepositoryPort candidateRepository) {
+                                  SettlementReleaseCandidateRepositoryPort candidateRepository,
+                                  DurableDltService durableDltService) {
         this.objectMapper = objectMapper;
         this.candidateRepository = candidateRepository;
+        this.durableDltService = durableDltService;
+    }
+    @Autowired
+    public SettlementHoldListener(ObjectMapper objectMapper, SettlementReleaseCandidateRepositoryPort candidateRepository) {
+        this(objectMapper, candidateRepository, null);
     }
 
     @RetryableTopic(attempts = "3", dltStrategy = DltStrategy.FAIL_ON_ERROR,
@@ -39,8 +51,8 @@ public class SettlementHoldListener {
     }
 
     @DltHandler
-    public void handleDlt(String message) {
-        // Hold changes remain observable in Kafka tooling for replay.
+    public void handleDlt(ConsumerRecord<String, String> record) {
+        durableDltService.store(record, "settlement.hold DLT payload received", 3);
     }
 
     private JsonNode readTree(String json) {

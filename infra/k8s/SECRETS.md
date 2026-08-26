@@ -16,6 +16,9 @@ Required key groups:
 - Operations: `alert-webhook-url` for the durable paging/receipt endpoint.
 - Configuration: `config-service-internal-token`, shared by configuration-service
   and every Java service that fetches protected configuration.
+- Native gRPC mTLS: `grpc-ca-cert`, `order-grpc-client-cert`,
+  `order-grpc-client-key`, and service-specific server certificates and keys for
+  inventory, payment, and shipping. These are mounted at `/etc/grpc/tls`.
 - Optional payment providers: `payment-vietqr-account-no`,
   `payment-vietqr-account-name`, `payment-vnpay-tmn-code`,
   `payment-vnpay-hash-secret`, `payment-momo-partner-code`,

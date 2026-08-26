@@ -3,6 +3,8 @@ package com.vnshop.productservice.infrastructure.event;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vnshop.productservice.application.video.VideoUploadService;
+import com.vnshop.productservice.application.ValidationException;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import java.util.Objects;
 import java.util.UUID;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -25,8 +27,11 @@ public class TranscodeFailureConsumer {
             UUID videoId = UUID.fromString(event.path("videoId").asText());
             String reason = event.path("errorMessage").asText("transcoding failed");
             videoUploadService.markTranscodeFailed(videoId, reason);
-        } catch (Exception exception) {
-            throw new IllegalArgumentException("Invalid video.transcode.failed event", exception);
+        } catch (JsonProcessingException | IllegalArgumentException exception) {
+            throw new ValidationException(
+                    "VIDEO_TRANSCODE_FAILURE_EVENT_INVALID",
+                    "Invalid video.transcode.failed event",
+                    exception);
         }
     }
 }

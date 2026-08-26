@@ -87,7 +87,7 @@ export function CheckoutAddressStep({
           </div>
         </div>
       ) : null}
-      <div role="radiogroup" aria-label="Delivery address" className="space-y-3">
+      <div role="radiogroup" aria-label={t("checkout.address.groupLabel")} className="space-y-3">
         {addresses.map((addr, i) => {
           const isSelected = selectedAddressIndex === i;
           const inputId = `checkout-address-${i}`;

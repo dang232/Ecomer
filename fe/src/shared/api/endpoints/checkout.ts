@@ -33,6 +33,13 @@ export interface ShippingOptionsRequest {
     district: string;
     city: string;
   };
+  parcel: {
+    weightGrams: number;
+    lengthCm: number;
+    widthCm: number;
+    heightCm: number;
+    declaredValueMinor?: number;
+  };
 }
 
 export const shippingOptions = (body: ShippingOptionsRequest) =>

@@ -171,6 +171,8 @@ export function WishlistPage() {
                         src={p.image ?? ""}
                         alt={p.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        imagePreset="card"
+                        sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
                       />
                       {discount !== null ? (
                         <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold">

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/design_system/components/async_state_view.dart';
 import '../../../../core/design_system/generated/design_tokens.dart';
+import '../../../../common/widgets/images/safe_network_image.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../domain/entities/review.dart';
 import '../../domain/entities/review_summary.dart';
@@ -487,16 +488,19 @@ class _ReviewCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 20,
-                foregroundImage: review.userAvatarUrl == null
-                    ? null
-                    : NetworkImage(review.userAvatarUrl!),
+                foregroundImage: null,
                 child: review.userAvatarUrl == null
                     ? Text(
                         name.isEmpty
                             ? '?'
                             : name.characters.first.toUpperCase(),
                       )
-                    : null,
+                    : SafeNetworkImage(
+                        url: review.userAvatarUrl,
+                        width: 40,
+                        height: 40,
+                        borderRadius: BorderRadius.circular(40),
+                      ),
               ),
               const SizedBox(width: DesignSize.spaceMd),
               Expanded(
@@ -569,20 +573,11 @@ class _ReviewCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(
                         DesignSize.radiusControl,
                       ),
-                      child: Image.network(
-                        review.images[index],
+                      child: SafeNetworkImage(
+                        url: review.images[index],
                         width: 72,
                         height: 72,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          width: 72,
-                          height: 72,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.surfaceContainerHighest,
-                          alignment: Alignment.center,
-                          child: const Icon(Icons.broken_image_outlined),
-                        ),
                       ),
                     ),
                   ),

@@ -3,6 +3,8 @@ abstract final class AppRoutes {
   static const login = '/login';
   static const register = '/register';
   static const products = '/products';
+  static const categories = '/categories';
+  static const promotions = '/promotions';
   static const cart = '/cart';
   static const checkout = '/checkout';
   static const checkoutAddressNew = '$checkout/address/new';
@@ -13,6 +15,7 @@ abstract final class AppRoutes {
   static const addresses = '/addresses';
   static const paymentMethods = '/payment-methods';
   static const notifications = '/notifications';
+  static const help = '/help';
 
   static const _protectedRoots = <String>{
     checkout,

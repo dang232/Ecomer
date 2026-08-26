@@ -1,0 +1,12 @@
+# Task 24: Java 25 / Spring Boot 4.1.0 alignment
+# Provenance: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\task-24.log (uncommitted worktree artifact)
+
+STATUS: PASS_ENFORCER / FAIL_FULL_VERIFY
+
+Exact results recorded:
+- Payment and order enforcer reruns: Java-version rule PASS and dependency-convergence rule PASS; BUILD SUCCESS.
+- Java 21 rejection fixture: PASS; detected JDK 21.0.11 outside allowed range `[25,)`.
+- Full verify: BLOCKED/FAIL due to pre-existing test compilation and test failures, including `PAYMENT_STATUS_FAILED` symbols and 16 test errors.
+- `git diff --check`: exit 0.
+
+No claim is made that all-service full verification is green.

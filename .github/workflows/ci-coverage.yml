@@ -1,0 +1,110 @@
+name: VNShop Java Coverage
+
+on:
+  push:
+    branches: [main, production, "release/**"]
+    paths:
+      - "services/*/pom.xml"
+      - "services/*/src/**"
+      - "scripts/coverage/**"
+      - ".github/workflows/ci-coverage.yml"
+  pull_request:
+    branches: [main, production]
+    paths:
+      - "services/*/pom.xml"
+      - "services/*/src/**"
+      - "scripts/coverage/**"
+      - ".github/workflows/ci-coverage.yml"
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  JAVA_VERSION: "25"
+
+jobs:
+  validate_configuration:
+    name: Validate Java coverage configuration
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Validate JaCoCo gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/coverage/validate-java-coverage-config.sh 2>&1 | tee "$RUNNER_TEMP/java-coverage-config.log"
+
+      - name: Upload configuration log
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: java-coverage-configuration-${{ github.sha }}
+          path: ${{ runner.temp }}/java-coverage-config.log
+          if-no-files-found: warn
+          retention-days: 14
+
+  java_coverage:
+    name: Java coverage (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: validate_configuration
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - product-service
+    defaults:
+      run:
+        working-directory: services/${{ matrix.service }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Java
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
+          cache-dependency-path: services/${{ matrix.service }}/pom.xml
+
+      - name: Run Maven coverage gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          mvn --batch-mode --no-transfer-progress \
+            -DskipTests=false \
+            -Djacoco.skip=false \
+            -Pcoverage \
+            verify 2>&1 | tee "$RUNNER_TEMP/${{ matrix.service }}-coverage-maven.log"
+
+      - name: Copy product coverage evidence
+        if: matrix.service == 'product-service'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .omo/evidence/coverage
+          cp target/site/jacoco/jacoco.xml .omo/evidence/coverage/product-coverage.xml
+
+      - name: Upload JaCoCo report and Maven log
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: java-coverage-${{ matrix.service }}-${{ github.sha }}
+          path: |
+            target/site/jacoco/
+            target/jacoco.exec
+            .omo/evidence/coverage/product-coverage.xml
+            ${{ runner.temp }}/${{ matrix.service }}-coverage-maven.log
+          if-no-files-found: warn
+          retention-days: 14

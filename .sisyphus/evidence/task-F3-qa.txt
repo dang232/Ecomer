@@ -70,3 +70,37 @@ BLOCKED: No Docker/gateway runtime. The following F3 scenarios could not be exec
 
 ## Verdict
 DETAILED_FAILURE_REPORT: Build packaging passed for all 13 services, and non-infra/unit tests passed where runnable. Overall F3 QA is NOT PASS because 7 Maven test suites failed: 6 appear infrastructure/context-load dependent in this no-PostgreSQL environment, and product-service has test compilation/API drift failures independent of Docker. Gateway curl scenarios remain blocked by unavailable Docker/gateway runtime.
+
+# F3 Final Manual QA Review - 2026-08-26
+
+## Environment and cleanup
+
+- Worktree: `C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr`
+- Docker server: `29.7.2`
+- Docker Compose: `v5.3.1`
+- Temporary Compose values were process-local placeholders only; no repository `.env` or secret file was edited.
+- The disposable Compose project was stopped and removed with `docker compose down --remove-orphans`.
+- No gateway, frontend, Prometheus, or Alertmanager host ports were listening after teardown.
+
+## Fresh checks
+
+| Check | Result | Evidence and classification |
+|---|---|---|
+| Compose interpolation | PASS | `docker compose config --quiet` passed with process-local placeholders. |
+| Bounded Compose startup | BLOCKED_EXTERNAL | `docker compose --profile apps up -d --wait --wait-timeout 90` started infrastructure but timed out because Keycloak exited with PostgreSQL password authentication failure for `vnshop`; Elasticsearch remained unhealthy during the bounded wait. |
+| Runtime health probes | BLOCKED_EXTERNAL | `curl.exe` probes to gateway `:8080`, frontend `:3000`, Prometheus `:9090`, and Alertmanager `:9093` all returned connection refused after teardown; no live runtime claim is made. |
+| Playwright listing | PASS | `pnpm exec playwright test --list --project=chromium` discovered 1,903 tests in 72 files. |
+| Playwright browser smoke | BLOCKED_EXTERNAL | `e2e/smoke.spec.ts` ran 4 tests, all failed with `ERR_CONNECTION_REFUSED` to `http://localhost:3000` or `localhost:8080`; this is runtime unavailability, not a browser assertion failure. |
+| Flutter checkout tests | PASS | `flutter test test/features/checkout --coverage`: 35 tests passed. |
+| Flutter analyze | PASS_WITH_INFO | `flutter analyze` found 2 informational `prefer_adjacent_string_concatenation` lints in `checkout_repository_impl_test.dart`; no errors or warnings. Flutter exits 1 for info-level findings in this SDK. |
+| DLT replay test | PASS | `services/order-service/.\mvnw.cmd -Dtest=BrokerFailureDltReplayTest test`: 3 tests, 0 failures, 0 errors; Maven BUILD SUCCESS. |
+| Kustomize renders | PASS | `kubectl kustomize` rendered base, dev, staging, and prod overlays successfully. |
+| Kustomize server dry-run | BLOCKED_EXTERNAL | Server dry-run could not resolve absent cluster CRDs (`postgresql.acid.zalan.do`, `SealedSecret`, `PeerAuthentication`). |
+| Kustomize client dry-run | PASS_WITH_EXTERNAL_GATES | Client dry-run emitted all core resources; absent external CRDs were reported as non-resolvable mappings. No apply was performed. |
+| Production release validator | EXPECTED_NO_GO | `python infra/scripts/validate-k8s-release.py --environment prod` rejected missing release lock, placeholder origins, stub/demo modes, and empty SealedSecret data. These are documented production gates, not treated as PR code failures. |
+| Observability contracts | PASS | `python -m pytest -q infra/scripts/test_observability_contract.py`: 2 passed. `node --test scripts/check-alertmanager-config.test.mjs`: 4 passed. Production Alertmanager policy script passed. |
+| promtool/amtool | UNAVAILABLE | `promtool` and `amtool` were not installed on the host; Docker-based probes were not run after the disposable stack was torn down. |
+
+## Final assessment
+
+Repository-owned checks required for this review passed: DLT replay, Flutter checkout tests, Kustomize rendering, and alert/metrics contract checks. Full API/browser/manual runtime checks remain externally blocked by the disposable Compose environment failing Keycloak/Elasticsearch readiness, so no live-stack success is claimed.

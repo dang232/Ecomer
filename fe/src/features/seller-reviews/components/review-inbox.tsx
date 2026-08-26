@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight, MessageSquare, Search, Star } from "lucide-r
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { ImageWithFallback } from "../../../shared/ui/image-with-fallback";
 import type { SellerReviewInboxView } from "../model/review-inbox-view";
 
 const RATING_STARS = ["one", "two", "three", "four", "five"] as const;
@@ -92,11 +93,13 @@ export function ReviewInbox({ view, routeState, onRouteChange }: ReviewInboxProp
             {review.images.length > 0 ? (
               <div className="mt-3 flex gap-2">
                 {review.images.map((url, index) => (
-                  <img
+                  <ImageWithFallback
                     key={url}
                     src={url}
                     alt={t("seller.reviews.imageAlt", { count: index + 1 })}
                     className="w-16 h-16 object-cover rounded-lg"
+                    imagePreset="thumbnail"
+                    sizes="64px"
                   />
                 ))}
               </div>

@@ -24,6 +24,7 @@ interface ProductServiceParcel {
   lengthCm?: number;
   widthCm?: number;
   heightCm?: number;
+  declaredValueMinor?: number;
 }
 
 interface ProductServiceImage {
@@ -59,12 +60,18 @@ function pickPrice(
     const matched = product.variants.find((v) => v.sku === variantId);
     if (matched) {
       if (typeof matched.priceAmount === 'number') {
-        return { amount: matched.priceAmount, currency: matched.priceCurrency ?? 'VND' };
+        return {
+          amount: matched.priceAmount,
+          currency: matched.priceCurrency ?? 'VND',
+        };
       }
       return { amount: 0, currency: matched.priceCurrency ?? 'VND' };
     }
     // variantId provided but not found — reject, don't silently fall back.
-    throw new VariantNotFoundException(product.productId ?? product.id ?? '(unknown)', variantId);
+    throw new VariantNotFoundException(
+      product.productId ?? product.id ?? '(unknown)',
+      variantId,
+    );
   }
   // 2. Flat top-level price (legacy or future read-model shape).
   const flat = product.unitPrice ?? product.price;
@@ -80,12 +87,18 @@ function pickPrice(
   // 3. First variant fallback (no explicit variantId requested).
   const variant = product.variants?.[0];
   if (variant && typeof variant.priceAmount === 'number') {
-    return { amount: variant.priceAmount, currency: variant.priceCurrency ?? 'VND' };
+    return {
+      amount: variant.priceAmount,
+      currency: variant.priceCurrency ?? 'VND',
+    };
   }
   return { amount: 0, currency: product.currency ?? 'VND' };
 }
 
-function pickImage(product: ProductServiceResponse, variantId?: string | null): string {
+function pickImage(
+  product: ProductServiceResponse,
+  variantId?: string | null,
+): string {
   // 1. Variant-specific image by ID — throw only if variant is explicitly wrong.
   if (variantId && product.variants) {
     const matched = product.variants.find((v) => v.sku === variantId);
@@ -93,7 +106,10 @@ function pickImage(product: ProductServiceResponse, variantId?: string | null): 
     // Variant exists but has no image — fall back to product-level images below.
     // Only throw if the variantId doesn't exist at all.
     if (!matched) {
-      throw new VariantNotFoundException(product.productId ?? product.id ?? '(unknown)', variantId);
+      throw new VariantNotFoundException(
+        product.productId ?? product.id ?? '(unknown)',
+        variantId,
+      );
     }
   }
   // 2. Top-level legacy fields.
@@ -107,7 +123,9 @@ function pickImage(product: ProductServiceResponse, variantId?: string | null): 
   return product.variants?.[0]?.imageUrl ?? '';
 }
 
-function parseParcel(parcel: ProductServiceParcel | null | undefined): ParcelDimensions | null {
+function parseParcel(
+  parcel: ProductServiceParcel | null | undefined,
+): ParcelDimensions | null {
   if (
     parcel?.weightGrams === undefined ||
     parcel.lengthCm === undefined ||
@@ -125,7 +143,10 @@ function parseParcel(parcel: ProductServiceParcel | null | undefined): ParcelDim
     parcel.weightGrams <= 0 ||
     parcel.lengthCm <= 0 ||
     parcel.widthCm <= 0 ||
-    parcel.heightCm <= 0
+    parcel.heightCm <= 0 ||
+    (parcel.declaredValueMinor !== undefined &&
+      (!Number.isInteger(parcel.declaredValueMinor) ||
+        parcel.declaredValueMinor < 0))
   ) {
     return null;
   }
@@ -135,6 +156,7 @@ function parseParcel(parcel: ProductServiceParcel | null | undefined): ParcelDim
     lengthCm: parcel.lengthCm,
     widthCm: parcel.widthCm,
     heightCm: parcel.heightCm,
+    declaredValueMinor: parcel.declaredValueMinor ?? 0,
   };
 }
 
@@ -143,9 +165,14 @@ function pickParcel(
   variantId?: string | null,
 ): ParcelDimensions | null {
   if (variantId && product.variants) {
-    const matched = product.variants.find((variant) => variant.sku === variantId);
+    const matched = product.variants.find(
+      (variant) => variant.sku === variantId,
+    );
     if (!matched) {
-      throw new VariantNotFoundException(product.productId ?? product.id ?? '(unknown)', variantId);
+      throw new VariantNotFoundException(
+        product.productId ?? product.id ?? '(unknown)',
+        variantId,
+      );
     }
     return parseParcel(matched.parcel);
   }
@@ -159,7 +186,11 @@ export class ProductHttpClientAdapter implements ProductClientPort {
   private readonly userServiceUrl: string | undefined;
   private readonly userServiceTimeoutMs: number;
 
-  constructor(productServiceUrl?: string, userServiceUrl?: string, userServiceTimeoutMs = 2000) {
+  constructor(
+    productServiceUrl?: string,
+    userServiceUrl?: string,
+    userServiceTimeoutMs = 2000,
+  ) {
     this.productServiceUrl = productServiceUrl;
     this.userServiceUrl = userServiceUrl;
     this.userServiceTimeoutMs = userServiceTimeoutMs;
@@ -172,7 +203,9 @@ export class ProductHttpClientAdapter implements ProductClientPort {
     });
   }
 
-  private async fetchProduct(productId: string): Promise<ProductServiceResponse> {
+  private async fetchProduct(
+    productId: string,
+  ): Promise<ProductServiceResponse> {
     if (!this.productServiceUrl) {
       throw new ProductNotFoundException(productId);
     }
@@ -195,7 +228,10 @@ export class ProductHttpClientAdapter implements ProductClientPort {
     return 'data' in payload ? payload.data : payload;
   }
 
-  async getSnapshot(productId: string, variantId?: string | null): Promise<ProductSnapshot> {
+  async getSnapshot(
+    productId: string,
+    variantId?: string | null,
+  ): Promise<ProductSnapshot> {
     if (!this.productServiceUrl) {
       return {
         productId,
@@ -208,7 +244,9 @@ export class ProductHttpClientAdapter implements ProductClientPort {
     }
 
     try {
-      const product = (await this.circuitBreaker.fire(productId)) as ProductServiceResponse;
+      const product = (await this.circuitBreaker.fire(
+        productId,
+      )) as ProductServiceResponse;
       const { amount, currency } = pickPrice(product, variantId);
 
       return {
@@ -242,14 +280,21 @@ export class ProductHttpClientAdapter implements ProductClientPort {
     }
   }
 
-  private async fetchSellerName(sellerId?: string): Promise<string | undefined> {
+  private async fetchSellerName(
+    sellerId?: string,
+  ): Promise<string | undefined> {
     if (!sellerId || !this.userServiceUrl) return undefined;
     try {
-      const response = await fetch(`${this.userServiceUrl}/sellers/${encodeURIComponent(sellerId)}`, {
-        signal: AbortSignal.timeout(this.userServiceTimeoutMs),
-      });
+      const response = await fetch(
+        `${this.userServiceUrl}/sellers/${encodeURIComponent(sellerId)}`,
+        {
+          signal: AbortSignal.timeout(this.userServiceTimeoutMs),
+        },
+      );
       if (!response.ok) return undefined;
-      const payload = (await response.json()) as { data?: { shopName?: string } };
+      const payload = (await response.json()) as {
+        data?: { shopName?: string };
+      };
       return payload.data?.shopName?.trim() || undefined;
     } catch {
       return undefined;

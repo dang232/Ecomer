@@ -95,13 +95,14 @@ class RouteConfigTest {
         assertThat(matches(route(routes, "notifications-ws"), "/ws/notifications/")).isTrue();
         assertThat(matches(route(routes, "notifications-ws"), "/ws/messaging")).isFalse();
         assertThat(route(routes, "checkout").getUri()).isEqualTo(URI.create("http://order:80"));
-        assertThat(route(routes, "checkout-coupons").getUri()).isEqualTo(URI.create("http://coupon:80"));
+        // coupon-service is archived; coupon ownership and gateway routing now live in order-service.
+        assertThat(route(routes, "checkout-coupons").getUri()).isEqualTo(URI.create("http://order:80"));
         assertThat(matches(route(routes, "checkout-coupons"), "/checkout/apply-coupon")).isTrue();
         assertThat(matches(route(routes, "checkout-coupons"), "/checkout/validate-coupon")).isTrue();
         assertThat(matches(route(routes, "checkout"), "/checkout/payment-methods")).isTrue();
-        assertThat(route(routes, "coupons").getUri()).isEqualTo(URI.create("http://coupon:80"));
+        assertThat(route(routes, "coupons").getUri()).isEqualTo(URI.create("http://order:80"));
         assertThat(matches(route(routes, "coupons"), "/coupons/validate")).isTrue();
-        assertThat(route(routes, "admin-coupons").getUri()).isEqualTo(URI.create("http://coupon:80"));
+        assertThat(route(routes, "admin-coupons").getUri()).isEqualTo(URI.create("http://order:80"));
     }
 
     @Test

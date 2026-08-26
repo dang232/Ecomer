@@ -75,7 +75,7 @@
       "secret": "${KEYCLOAK_GATEWAY_CLIENT_SECRET:vnshop-gateway-secret-dev}",
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": false,
+      "directAccessGrantsEnabled": true,
       "serviceAccountsEnabled": false,
       "authorizationServicesEnabled": false,
       "frontchannelLogout": true,
@@ -98,6 +98,17 @@
         "oidc.ciba.grant.enabled": "false"
       },
       "protocolMappers": [
+        {
+          "name": "audience vnshop-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "vnshop-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
         {
           "name": "realm roles",
           "protocol": "openid-connect",
@@ -324,7 +335,23 @@
       "attributes": {
         "oauth2.device.authorization.grant.enabled": "false",
         "oidc.ciba.grant.enabled": "false"
-      }
+      },
+      "protocolMappers": [
+        {
+          "name": "client roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-client-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "resource_access.${client_id}.roles",
+            "jsonType.label": "String"
+          }
+        }
+      ]
     }
   ],
   "scopeMappings": [{"client": "vnshop-monitoring", "roles": ["ADMIN"]}],

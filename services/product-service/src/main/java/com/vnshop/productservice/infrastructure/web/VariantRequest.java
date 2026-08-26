@@ -38,13 +38,19 @@ public record VariantRequest(
             Integer weightGrams,
             Integer lengthCm,
             Integer widthCm,
-            Integer heightCm) {
+            Integer heightCm,
+            Long declaredValueMinor) {
+        public ParcelRequest(Integer weightGrams, Integer lengthCm, Integer widthCm, Integer heightCm) {
+            this(weightGrams, lengthCm, widthCm, heightCm, 0L);
+        }
+
         private com.vnshop.productservice.domain.ParcelDimensions toDomain() {
             if (weightGrams == null || lengthCm == null || widthCm == null || heightCm == null) {
                 throw new IllegalArgumentException("parcel metadata must be complete");
             }
             return new com.vnshop.productservice.domain.ParcelDimensions(
-                    weightGrams, lengthCm, widthCm, heightCm);
+                    weightGrams, lengthCm * 10, widthCm * 10, heightCm * 10,
+                    declaredValueMinor == null ? 0L : declaredValueMinor);
         }
     }
 }

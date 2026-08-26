@@ -30,7 +30,7 @@ export async function bootstrap(): Promise<void> {
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.KAFKA,
     options: {
-        client: createKafkaClientConfig('notification-service'),
+      client: createKafkaClientConfig('notification-service'),
       consumer: {
         groupId: process.env.KAFKA_CONSUMER_GROUP ?? 'notification-service',
         allowAutoTopicCreation: false,

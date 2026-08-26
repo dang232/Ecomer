@@ -1,7 +1,7 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
 
-import { loginViaOidc, uniqueTestId } from "./_auth";
 import { readJson, type AuthResponse, type ProductListResponse } from "./_api";
+import { loginViaOidc, uniqueTestId } from "./_auth";
 import { expectNoGlobalError } from "./_helpers";
 
 /**
@@ -80,7 +80,7 @@ async function addAddress(request: APIRequestContext, buyer: SeededBuyer): Promi
   expect(r.ok()).toBeTruthy();
 }
 
-test.describe("checkout flow UI", () => {
+test.describe("checkout flow UI — COD/VietQR/SePay provider coverage", () => {
   test("Empty cart on /checkout shows the empty-state CTA", async ({ page }) => {
     const buyer = await seedBuyer(page.request);
     await loginViaOidc(page, buyer.email, PASSWORD);

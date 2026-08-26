@@ -66,26 +66,31 @@ spring:
           issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:9090/realms/vnshop}
 
           jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs}
+          audiences: ${KEYCLOAK_JWT_AUDIENCE:vnshop-api}
 
 payment:
+  idempotency:
+    claim-ttl: ${PAYMENT_IDEMPOTENCY_CLAIM_TTL:15m}
+    reconciliation-interval-ms: ${PAYMENT_IDEMPOTENCY_RECONCILIATION_INTERVAL_MS:60000}
   # Per-method enable flags. Set the env var to "true" to turn the method on.
   # COD defaults on. Every provider with buyer-visible destination or browser
   # configuration defaults off until its complete configuration is supplied.
   cod:
     enabled: ${COD_ENABLED:true}
   vietqr:
-    enabled: ${VIETQR_ENABLED:false}
+    enabled: ${VIETQR_ENABLED:true}
   paypal:
     enabled: ${PAYPAL_ENABLED:false}
     client-id: ${PAYPAL_CLIENT_ID:}
     client-secret: ${PAYPAL_CLIENT_SECRET:}
     mode: ${PAYPAL_MODE:sandbox}
   sepay:
-    enabled: ${SEPAY_ENABLED:false}
+    enabled: ${SEPAY_ENABLED:true}
     api-key: ${SEPAY_API_KEY:}
     account-id: ${SEPAY_ACCOUNT_ID:}
     base-url: ${SEPAY_BASE_URL:https://my.sepay.vn/userapi}
     poll-interval-seconds: ${SEPAY_POLL_INTERVAL_SECONDS:30}
+    overpayment-policy: ${SEPAY_OVERPAYMENT_POLICY:HOLD}
     # Shared secret for SePay push-mode webhooks. SePay sends this in the
     # "Authorization: Apikey <secret>" header on each callback. Leave blank
     # to disable signature checking (dev/sandbox only — never in production).
@@ -119,6 +124,8 @@ payment:
     ipn-url: ${MOMO_IPN_URL:http://localhost:8080/payment/momo/ipn}
     request-type: ${MOMO_REQUEST_TYPE:captureWallet}
     lang: ${MOMO_LANG:vi}
+  provider-policy:
+    non-production-gate: ${PAYMENT_NON_PRODUCTION_GATE:false}
   fx:
     # FrankfurterFxAdapter — frankfurter.app is free, ECB-sourced, no API key.
     # 24h TTL because intraday FX swings are too small for sandbox to care.
@@ -153,7 +160,7 @@ config-service:
   url: ${CONFIG_SERVICE_URL:http://configuration-service:8097}
   enabled: ${CONFIG_SERVICE_ENABLED:true}
   timeout-ms: 3000
-  token: ${CONFIG_SERVICE_INTERNAL_TOKEN:}
+  token: ${CONFIG_SERVICE_INTERNAL_TOKEN:?CONFIG_SERVICE_INTERNAL_TOKEN is required}
 
 springdoc:
   api-docs:

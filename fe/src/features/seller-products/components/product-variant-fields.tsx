@@ -22,7 +22,13 @@ const newVariant = () => ({
   stockQuantity: 0,
 });
 
-const parcelFieldKeys = ["weightGrams", "lengthCm", "widthCm", "heightCm"] as const;
+const parcelFieldKeys = [
+  "weightGrams",
+  "lengthCm",
+  "widthCm",
+  "heightCm",
+  "declaredValueMinor",
+] as const;
 type ParcelFieldKey = (typeof parcelFieldKeys)[number];
 type ParcelFieldName =
   `offer.parcel.${ParcelFieldKey}` | `variants.${number}.parcel.${ParcelFieldKey}`;
@@ -149,6 +155,7 @@ function SingleOfferFields({ form }: { form: UseFormReturn<SellerProductForm> })
           lengthCm: "offer.parcel.lengthCm",
           widthCm: "offer.parcel.widthCm",
           heightCm: "offer.parcel.heightCm",
+          declaredValueMinor: "offer.parcel.declaredValueMinor",
         }}
         errors={errors.offer?.parcel}
       />
@@ -247,6 +254,7 @@ function VariantCard({
           lengthCm: `variants.${index}.parcel.lengthCm`,
           widthCm: `variants.${index}.parcel.widthCm`,
           heightCm: `variants.${index}.parcel.heightCm`,
+          declaredValueMinor: `variants.${index}.parcel.declaredValueMinor`,
         }}
         errors={variantError?.parcel}
       />
@@ -292,7 +300,7 @@ function ParcelFields({
             <input
               id={names[field]}
               type="number"
-              min={1}
+              min={field === "declaredValueMinor" ? 0 : 1}
               step={1}
               inputMode="numeric"
               placeholder={t("seller.products.editor.variants.parcelPlaceholder")}

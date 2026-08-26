@@ -117,6 +117,14 @@ patches:
 - path: configmap-env.yaml
 - path: keycloak-import-patch.yaml
 - target:
+    kind: PeerAuthentication
+    name: default
+  patch: |-
+    - op: add
+      path: /metadata/labels
+      value:
+        vnshop.io/transport-security: strict-mtls
+- target:
     kind: HorizontalPodAutoscaler
     name: vnshop-frontend
   patch: |-

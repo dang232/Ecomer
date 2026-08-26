@@ -1,13 +1,26 @@
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
+import { NextFunction, Request, Response } from 'express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { MikroORM } from '@mikro-orm/core';
 import { AppModule } from './app.module';
 import { startTracing } from './tracing';
+import { httpServerRequestsSeconds } from './metrics';
 
 async function bootstrap() {
-  await startTracing();
+  startTracing();
   const app = await NestFactory.create(AppModule);
+  app.use((request: Request, response: Response, next: NextFunction) => {
+    const stopTimer = httpServerRequestsSeconds.startTimer();
+    response.once('finish', () => {
+      stopTimer({
+        method: request.method,
+        status: String(response.statusCode),
+        route: request.path,
+      });
+    });
+    next();
+  });
   if (process.env.OPENAPI_ENABLED !== 'false') {
     const swaggerConfig = new DocumentBuilder()
       .setTitle('Cart Service')

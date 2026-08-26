@@ -11,6 +11,7 @@ import { Pagination } from "../../../shared/ui/pagination";
 import { Skeleton } from "../../../shared/ui/skeleton";
 import { StatusIndicator } from "../../../shared/ui/status-indicator";
 import { Surface } from "../../../shared/ui/surface";
+import { ImageWithFallback } from "../../../shared/ui/image-with-fallback";
 import { formatReviewDate } from "../review-view-model";
 import type { ProductReviewController } from "../use-product-review-controller";
 
@@ -197,13 +198,15 @@ function ReviewCard({
       <article>
         <header className="flex min-w-0 items-start gap-3">
           {review.userAvatarUrl ? (
-            <img
+            <ImageWithFallback
               src={review.userAvatarUrl}
               alt=""
               width={36}
               height={36}
               loading="lazy"
               className="h-9 w-9 shrink-0 rounded-full object-cover"
+              imagePreset="avatar"
+              sizes="36px"
             />
           ) : (
             <div
@@ -240,7 +243,7 @@ function ReviewCard({
 
         <div className="mt-3 flex flex-wrap gap-2">
           {review.images?.map((image, index) => (
-            <img
+            <ImageWithFallback
               key={`${review.id}-${image}`}
               src={image}
               alt={t("product.reviews.imageAlt", {
@@ -251,6 +254,8 @@ function ReviewCard({
               height={72}
               loading="lazy"
               className="h-[4.5rem] w-[4.5rem] rounded-[var(--radius-control)] border border-border object-cover"
+              imagePreset="thumbnail"
+              sizes="72px"
             />
           ))}
           <ReviewVideoDisplay reviewId={review.id} />

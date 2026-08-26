@@ -33,6 +33,8 @@ export function CartLine({
           src={line.imageUrl ?? ""}
           alt={line.name}
           className="h-full w-full object-cover"
+          imagePreset="thumbnail"
+          sizes="(min-width: 640px) 96px, 80px"
         />
       </Link>
       <div className="min-w-0">

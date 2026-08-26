@@ -156,10 +156,38 @@ def workload_documents(item: dict) -> str:
             env_entries.append('''        - name: GRPC_CLIENT_PAYMENT_SERVICE_TOKEN
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: payment-grpc-service-token}''')
+            env_entries.append('''        - name: GRPC_CLIENT_INVENTORY_SERVICE_TOKEN
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: inventory-grpc-service-token}
+        - name: GRPC_CLIENT_SHIPPING_SERVICE_TOKEN
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: shipping-grpc-service-token}
+        - name: GRPC_CLIENT_TLS_CA_CERT
+          value: /etc/grpc/tls/ca.crt
+        - name: GRPC_CLIENT_TLS_CLIENT_CERT
+          value: /etc/grpc/tls/order-client.crt
+        - name: GRPC_CLIENT_TLS_CLIENT_KEY
+          value: /etc/grpc/tls/order-client.key''')
+        if service_id == "inventory-service":
+            env_entries.append('''        - name: GRPC_SERVER_AUTH_TOKEN
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: inventory-grpc-service-token}''')
+            env_entries.append('''        - name: GRPC_SERVER_TLS_CERT_CHAIN
+          value: /etc/grpc/tls/server.crt
+        - name: GRPC_SERVER_TLS_PRIVATE_KEY
+          value: /etc/grpc/tls/server.key
+        - name: GRPC_SERVER_TLS_CLIENT_CA
+          value: /etc/grpc/tls/ca.crt''')
         if service_id == "payment-service":
             env_entries.append('''        - name: GRPC_SERVER_AUTH_TOKEN
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: payment-grpc-service-token}''')
+            env_entries.append('''        - name: GRPC_SERVER_TLS_CERT_CHAIN
+          value: /etc/grpc/tls/server.crt
+        - name: GRPC_SERVER_TLS_PRIVATE_KEY
+          value: /etc/grpc/tls/server.key
+        - name: GRPC_SERVER_TLS_CLIENT_CA
+          value: /etc/grpc/tls/ca.crt''')
         if service_id == "shipping-service":
             env_entries.append('''        - name: GHN_WEBHOOK_TOKEN
           valueFrom:
@@ -171,6 +199,15 @@ def workload_documents(item: dict) -> str:
             secretKeyRef:
               name: vnshop-runtime-secrets
               key: ghtk-webhook-token''')
+            env_entries.append('''        - name: GRPC_SERVER_AUTH_TOKEN
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: shipping-grpc-service-token}''')
+            env_entries.append('''        - name: GRPC_SERVER_TLS_CERT_CHAIN
+          value: /etc/grpc/tls/server.crt
+        - name: GRPC_SERVER_TLS_PRIVATE_KEY
+          value: /etc/grpc/tls/server.key
+        - name: GRPC_SERVER_TLS_CLIENT_CA
+          value: /etc/grpc/tls/ca.crt''')
         if "redis" in data_names:
             if service_id == "notification-service":
                 env_entries.append('''        - name: REDIS_URL
@@ -346,6 +383,33 @@ def workload_documents(item: dict) -> str:
           - key: ca.crt
             path: ca.crt
 '''
+    if service_id in {"inventory-service", "payment-service", "shipping-service"}:
+        grpc_service = service_id.removesuffix("-service")
+        tls_mount += '''        - name: grpc-tls
+          mountPath: /etc/grpc/tls
+          readOnly: true
+'''
+        tls_volume += f'''      - name: grpc-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {{key: grpc-ca-cert, path: ca.crt}}
+          - {{key: {grpc_service}-grpc-server-cert, path: server.crt}}
+          - {{key: {grpc_service}-grpc-server-key, path: server.key}}
+'''
+    if service_id == "order-service":
+        tls_mount += '''        - name: grpc-tls
+          mountPath: /etc/grpc/tls
+          readOnly: true
+'''
+        tls_volume += '''      - name: grpc-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {key: grpc-ca-cert, path: ca.crt}
+          - {key: order-grpc-client-cert, path: order-client.crt}
+          - {key: order-grpc-client-key, path: order-client.key}
+'''
     tmp_mount += tls_mount + elasticsearch_mount
     tmp_volume += tls_volume + elasticsearch_volume
     if service_id == "frontend":
@@ -507,6 +571,15 @@ def overlay(env: str, namespace: str, replicas: int, max_replicas: int) -> str:
     )
     ingress_resource = "- ingress.yaml\n" if env in {"staging", "prod"} else ""
     keycloak_patch = "- path: keycloak-import-patch.yaml\n" if env in {"staging", "prod"} else ""
+    istio_patch = '''- target:
+    kind: PeerAuthentication
+    name: default
+  patch: |-
+    - op: add
+      path: /metadata/labels
+      value:
+        vnshop.io/transport-security: strict-mtls
+''' if env == "prod" else ""
     keycloak_resources = "- keycloak-reconcile-job.yaml\n" if env in {"staging", "prod"} else ""
     realm_filename = "vnshop-realm-prod.json" if env == "prod" else "vnshop-realm.json"
     keycloak_generator = f'''configMapGenerator:
@@ -539,7 +612,7 @@ images:
 {image_entries}
 {keycloak_generator_block}patches:
 - path: configmap-env.yaml
-{keycloak_patch}{hpa_patches}
+{keycloak_patch}{istio_patch}{hpa_patches}
 '''
 
 

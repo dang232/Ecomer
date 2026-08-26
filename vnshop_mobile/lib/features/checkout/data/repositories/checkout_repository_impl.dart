@@ -4,6 +4,7 @@ import '../../domain/repositories/checkout_repository.dart';
 import '../models/address_model.dart';
 import '../models/checkout_session.dart';
 import '../models/payment_transaction.dart';
+import '../models/payment_method.dart' as payment_catalog;
 import '../models/shipping_quote.dart';
 
 class CheckoutRepositoryImpl implements CheckoutRepository {
@@ -24,7 +25,7 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
   @override
   Future<List<PaymentMethod>> getAvailablePaymentMethods() async {
     if (_useMockBackend) {
-      return const [PaymentMethod.cod, PaymentMethod.vietqr];
+      return payment_catalog.getAvailablePaymentMethods();
     }
 
     final response = await _dio.get(
@@ -34,10 +35,14 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
     final responseData = response.data as Map<String, dynamic>;
     final methods = responseData['data'] as List<dynamic>? ?? const [];
 
+    final liveMethods = payment_catalog
+        .getAvailablePaymentMethods()
+        .toSet();
     return methods
         .whereType<Map>()
         .where((method) => method['enabled'] != false)
         .map((method) => _paymentMethodFromId(method['id'] as String?))
+        .where((method) => method != null && liveMethods.contains(method))
         .whereType<PaymentMethod>()
         .toList(growable: false);
   }
@@ -46,6 +51,7 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
     return switch (id?.toLowerCase()) {
       'cod' => PaymentMethod.cod,
       'vietqr' || 'viet_qr' => PaymentMethod.vietqr,
+      'sepay' => PaymentMethod.sepay,
       'vnpay' => PaymentMethod.vnpay,
       'momo' => PaymentMethod.momo,
       'bank_transfer' => PaymentMethod.bankTransfer,
@@ -261,22 +267,17 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
     // Map PaymentMethod to backend endpoint
     final String endpoint;
     switch (method) {
-      case PaymentMethod.vnpay:
-        endpoint = '/payment/vnpay/create';
-        break;
-      case PaymentMethod.momo:
-        endpoint = '/payment/momo/create';
-        break;
       case PaymentMethod.vietqr:
+      case PaymentMethod.sepay:
         endpoint = '/payment/vietqr/create';
         break;
       case PaymentMethod.cod:
         endpoint = '/payment/cod/confirm';
         break;
+      case PaymentMethod.vnpay:
+      case PaymentMethod.momo:
       case PaymentMethod.bankTransfer:
-        // Bank transfer uses VietQR
-        endpoint = '/payment/vietqr/create';
-        break;
+        throw StateError('Payment provider is disabled');
     }
 
     final response = await _dio.post(
@@ -289,7 +290,10 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
 
     // Backend returns ApiResponse envelope: { data: { ... } }
     final responseData = response.data as Map<String, dynamic>;
-    return PaymentTransaction.fromApiResponse(responseData);
+    final transaction = PaymentTransaction.fromApiResponse(responseData);
+    return method == PaymentMethod.sepay
+        ? transaction.copyWith(method: PaymentMethod.sepay)
+        : transaction;
   }
 
   @override
@@ -325,15 +329,16 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
       case PaymentMethod.cod:
         paymentMethodString = 'COD';
         break;
-      case PaymentMethod.vnpay:
-        paymentMethodString = 'VNPAY';
-        break;
-      case PaymentMethod.momo:
-        paymentMethodString = 'MOMO';
-        break;
       case PaymentMethod.vietqr:
-      case PaymentMethod.bankTransfer:
         paymentMethodString = 'VIETQR';
+        break;
+      case PaymentMethod.sepay:
+        paymentMethodString = 'VIETQR';
+        break;
+      case PaymentMethod.vnpay:
+      case PaymentMethod.momo:
+      case PaymentMethod.bankTransfer:
+        throw StateError('Payment provider is disabled');
     }
 
     final response = await _dio.post(
@@ -484,20 +489,18 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
     String? qrCodeUrl;
 
     switch (method) {
-      case PaymentMethod.vnpay:
-        paymentUrl =
-            'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?mock=true';
-        break;
-      case PaymentMethod.momo:
-        paymentUrl = 'momo://payment?mock=true';
-        qrCodeUrl = 'https://api.vietqr.io/image/momo-mock?mock=true';
-        break;
       case PaymentMethod.vietqr:
         qrCodeUrl = 'https://api.vietqr.io/image/mock-bank?mock=true';
         break;
-      case PaymentMethod.cod:
-      case PaymentMethod.bankTransfer:
+      case PaymentMethod.sepay:
+        qrCodeUrl = 'https://api.vietqr.io/image/mock-bank?mock=true';
         break;
+      case PaymentMethod.cod:
+        break;
+      case PaymentMethod.vnpay:
+      case PaymentMethod.momo:
+      case PaymentMethod.bankTransfer:
+        throw StateError('Payment provider is disabled');
     }
 
     return PaymentTransaction(
@@ -520,7 +523,7 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
       id: transactionId,
       orderId: 'order_mock',
       idempotencyKey: 'mock_key',
-      method: PaymentMethod.vnpay,
+      method: PaymentMethod.vietqr,
       status: PaymentStatus.pending,
       amount: 100000,
       createdAt: DateTime.now(),

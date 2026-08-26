@@ -96,11 +96,11 @@ describe("fetchConfig", () => {
   it("accepts same-origin development proxy endpoints", async () => {
     const developmentConfig = {
       ...validConfig,
-      apiUri: "https://shop.vnshop.invalid/api/",
+      apiUri: "https://shop.vnshop.invalid/api/v1/",
       websocket: {
         ...validConfig.websocket,
-        notificationsUri: "wss://shop.vnshop.invalid/api/ws/notifications",
-        messagingUri: "wss://shop.vnshop.invalid/api/ws/messaging",
+        notificationsUri: "wss://shop.vnshop.invalid/ws/notifications",
+        messagingUri: "wss://shop.vnshop.invalid/ws/messaging",
       },
     };
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
@@ -108,7 +108,7 @@ describe("fetchConfig", () => {
     );
 
     await expect(fetchConfig()).resolves.toEqual(developmentConfig);
-    expect(getApiOrigin()).toBe("https://shop.vnshop.invalid/api");
+    expect(getApiOrigin()).toBe("https://shop.vnshop.invalid");
   });
 
   it("rejects unknown major schema versions", async () => {

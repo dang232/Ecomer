@@ -82,6 +82,11 @@ export class ConfigurationService {
       payment: {
         providers: enabledProviders,
         defaultMethod: enabledProviders.includes('COD') ? 'COD' : enabledProviders[0] ?? '',
+        vietqr: {
+          bankBin: process.env.VIETQR_BANK_BIN ?? '',
+          accountNo: process.env.VIETQR_ACCOUNT_NO ?? '',
+          accountName: process.env.VIETQR_ACCOUNT_NAME ?? '',
+        },
       },
       auth: {
         oauthProviders: [
@@ -188,7 +193,7 @@ export class ConfigurationService {
       ),
       { id: 'vnpay', status: 'disabled', mode: 'disabled', reasonCode: 'DISABLED_BY_POLICY' },
       { id: 'momo', status: 'disabled', mode: 'disabled', reasonCode: 'DISABLED_BY_POLICY' },
-      { id: 'sepay', status: 'disabled', mode: 'disabled', reasonCode: 'DISABLED_BY_POLICY' },
+       { id: 'sepay', status: 'enabled', mode: 'demo', reasonCode: 'PORTFOLIO_DEMO' },
     ];
   }
 

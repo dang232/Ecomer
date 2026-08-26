@@ -1,0 +1,14 @@
+syntax = "proto3";
+package vnshop.v1;
+option java_multiple_files = true;
+option java_package = "com.vnshop.proto.v1";
+import "v1/common.proto";
+import "google/protobuf/timestamp.proto";
+service InventoryService { rpc Reserve(ReserveRequest) returns (ReserveResponse); rpc Release(ReleaseRequest) returns (ReleaseResponse); }
+message OrderItem { string product_id = 1; string variant = 2; int32 quantity = 3; }
+message ReserveRequest { string order_id = 1; repeated OrderItem items = 2; string operation_id = 3; }
+message ReserveResponse { bool success = 1; int32 reserved_items = 2; ReservationStatus status = 3; bool replayed = 4; ReservationFailureCode failure_code = 5; google.protobuf.Timestamp processed_at = 6; }
+message ReleaseRequest { string order_id = 1; }
+message ReleaseResponse { bool success = 1; }
+enum ReservationStatus { RESERVATION_STATUS_UNSPECIFIED = 0; RESERVATION_STATUS_RESERVED = 1; RESERVATION_STATUS_REJECTED = 2; RESERVATION_STATUS_CONFLICT = 3; }
+enum ReservationFailureCode { RESERVATION_FAILURE_CODE_UNSPECIFIED = 0; RESERVATION_FAILURE_CODE_INSUFFICIENT_STOCK = 1; RESERVATION_FAILURE_CODE_NOT_PROJECTED = 2; RESERVATION_FAILURE_CODE_OPERATION_CONFLICT = 3; }

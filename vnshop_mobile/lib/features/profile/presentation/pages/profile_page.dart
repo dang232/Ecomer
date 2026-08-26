@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
+
 import '../../../../core/theme/app_colors.dart';
 import '../widgets/profile_header.dart';
 import '../widgets/profile_menu_item.dart';
@@ -10,6 +12,7 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     // Mock user data - in real app, get from AuthBloc
     const avatarUrl = 'https://i.pravatar.cc/150?img=1';
     const name = 'Nguyễn Văn A';
@@ -44,27 +47,27 @@ class ProfilePage extends StatelessWidget {
                   const SizedBox(height: 16),
                   
                   // Orders Section
-                  _buildOrdersSection(context, totalActiveOrders),
+                   _buildOrdersSection(context, totalActiveOrders, l10n),
                   
                   const SizedBox(height: 16),
                   
                   // Main Menu Section
-                  _buildMainMenuSection(context),
+                   _buildMainMenuSection(context, l10n),
                   
                   const SizedBox(height: 16),
                   
                   // Support Section
-                  _buildSupportSection(context),
+                   _buildSupportSection(context, l10n),
                   
                   const SizedBox(height: 16),
                   
                   // Logout Button
-                  _buildLogoutButton(context),
+                   _buildLogoutButton(context, l10n),
                   
                   const SizedBox(height: 32),
                   
                   // App Version
-                  _buildAppVersion(context),
+                   _buildAppVersion(context, l10n),
                   
                   const SizedBox(height: 16),
                 ],
@@ -76,7 +79,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildOrdersSection(BuildContext context, int activeOrders) {
+  Widget _buildOrdersSection(BuildContext context, int activeOrders, AppLocalizations l10n) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
@@ -98,8 +101,8 @@ class ProfilePage extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Đơn hàng của tôi',
+                  Text(
+                  l10n.myOrders,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -113,7 +116,7 @@ class ProfilePage extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
-                      '$activeOrders đơn đang xử lý',
+                      l10n.activeOrders(activeOrders),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 11,
@@ -134,7 +137,7 @@ class ProfilePage extends StatelessWidget {
                 _buildOrderStatusItem(
                   context,
                   icon: Icons.pending_actions_outlined,
-                  label: 'Chờ xác nhận',
+                   label: l10n.orderStatusPendingShort,
                   count: 2,
                   color: Colors.orange,
                   onTap: () => context.push('/orders?status=pending'),
@@ -142,7 +145,7 @@ class ProfilePage extends StatelessWidget {
                 _buildOrderStatusItem(
                   context,
                   icon: Icons.inventory_2_outlined,
-                  label: 'Đang xử lý',
+                   label: l10n.orderStatusProcessingShort,
                   count: 1,
                   color: Colors.blue,
                   onTap: () => context.push('/orders?status=processing'),
@@ -150,7 +153,7 @@ class ProfilePage extends StatelessWidget {
                 _buildOrderStatusItem(
                   context,
                   icon: Icons.local_shipping_outlined,
-                  label: 'Đang giao',
+                   label: l10n.orderStatusShippedShort,
                   count: 0,
                   color: Colors.purple,
                   onTap: () => context.push('/orders?status=shipped'),
@@ -158,7 +161,7 @@ class ProfilePage extends StatelessWidget {
                 _buildOrderStatusItem(
                   context,
                   icon: Icons.check_circle_outline,
-                  label: 'Đã giao',
+                   label: l10n.orderStatusDeliveredShort,
                   count: 5,
                   color: Colors.green,
                   onTap: () => context.push('/orders?status=delivered'),
@@ -178,7 +181,7 @@ class ProfilePage extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Xem tất cả đơn hàng',
+                    l10n.viewAllOrders,
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.primary,
                       fontWeight: FontWeight.w600,
@@ -270,7 +273,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildMainMenuSection(BuildContext context) {
+  Widget _buildMainMenuSection(BuildContext context, AppLocalizations l10n) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -287,28 +290,28 @@ class ProfilePage extends StatelessWidget {
         children: [
           ProfileMenuItem(
             icon: Icons.favorite_outline,
-            title: 'Sản phẩm yêu thích',
+             title: l10n.favoriteProducts,
             iconColor: Colors.pink,
             onTap: () => context.push('/favorites'),
           ),
           ProfileMenuItem(
             icon: Icons.location_on_outlined,
-            title: 'Sổ địa chỉ',
-            subtitle: 'Quản lý địa chỉ giao hàng',
+             title: l10n.addressBook,
+             subtitle: l10n.addressBookHelp,
             iconColor: Colors.green,
             onTap: () => context.push('/addresses'),
           ),
           ProfileMenuItem(
             icon: Icons.payment_outlined,
-            title: 'Phương thức thanh toán',
-            subtitle: 'Thẻ, ví điện tử',
+             title: l10n.paymentMethods,
+             subtitle: l10n.paymentMethodsHelp,
             iconColor: Colors.blue,
             onTap: () => context.push('/payment-methods'),
           ),
           ProfileMenuItem(
             icon: Icons.notifications_outlined,
-            title: 'Thông báo',
-            subtitle: 'Cài đặt thông báo',
+             title: l10n.notificationsSettings,
+             subtitle: l10n.notificationsSettingsHelp,
             badge: 3,
             iconColor: Colors.orange,
             onTap: () => context.push('/notifications'),
@@ -319,7 +322,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildSupportSection(BuildContext context) {
+  Widget _buildSupportSection(BuildContext context, AppLocalizations l10n) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -336,21 +339,21 @@ class ProfilePage extends StatelessWidget {
         children: [
           ProfileMenuItem(
             icon: Icons.settings_outlined,
-            title: 'Cài đặt',
+             title: l10n.settingsTitle,
             iconColor: Colors.grey.shade700,
             onTap: () => context.push('/settings'),
           ),
           ProfileMenuItem(
             icon: Icons.help_outline,
-            title: 'Trợ giúp',
-            subtitle: 'Câu hỏi thường gặp, liên hệ hỗ trợ',
+             title: l10n.help,
+             subtitle: l10n.helpDescription,
             iconColor: Colors.teal,
             onTap: () => context.push('/help'),
           ),
           ProfileMenuItem(
             icon: Icons.info_outline,
-            title: 'Giới thiệu',
-            subtitle: 'Phiên bản 1.0.0',
+             title: l10n.about,
+             subtitle: l10n.aboutSubtitle,
             iconColor: Colors.blueGrey,
             onTap: () => _showAboutDialog(context),
             showDivider: false,
@@ -360,7 +363,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildLogoutButton(BuildContext context) {
+  Widget _buildLogoutButton(BuildContext context, AppLocalizations l10n) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
@@ -391,7 +394,7 @@ class ProfilePage extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Đăng xuất',
+                  l10n.logout,
                   style: TextStyle(
                     color: Colors.red.shade600,
                     fontSize: 16,
@@ -406,9 +409,9 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildAppVersion(BuildContext context) {
+  Widget _buildAppVersion(BuildContext context, AppLocalizations l10n) {
     return Text(
-      'VNShop v1.0.0',
+      l10n.aboutSubtitle,
       style: TextStyle(
         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
         fontSize: 12,
@@ -417,6 +420,7 @@ class ProfilePage extends StatelessWidget {
   }
 
   void _showAboutDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -438,14 +442,14 @@ class ProfilePage extends StatelessWidget {
             const Text('VNShop'),
           ],
         ),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Phiên bản: 1.0.0'),
+            Text(l10n.aboutVersion),
             SizedBox(height: 8),
             Text(
-              'Ứng dụng mua sắm trực tuyến hàng đầu Việt Nam.',
+              l10n.aboutDescription,
               style: TextStyle(color: Colors.grey),
             ),
           ],
@@ -453,7 +457,7 @@ class ProfilePage extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Đóng'),
+            child: Text(l10n.close),
           ),
         ],
       ),
@@ -461,15 +465,16 @@ class ProfilePage extends StatelessWidget {
   }
 
   void _showLogoutDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Đăng xuất'),
-        content: const Text('Bạn có chắc chắn muốn đăng xuất không?'),
+        title: Text(l10n.logout),
+        content: Text(l10n.logoutQuestion),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Hủy'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () {
@@ -478,7 +483,7 @@ class ProfilePage extends StatelessWidget {
               context.go('/login');
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Đăng xuất'),
+            child: Text(l10n.logout),
           ),
         ],
       ),

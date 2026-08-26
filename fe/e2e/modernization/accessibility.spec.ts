@@ -4,7 +4,11 @@ import { expect, type Page } from "@playwright/test";
 // Intentionally empty .catch(() => {}) callbacks throughout for graceful timeout handling.
 /* eslint-disable @typescript-eslint/no-empty-function */
 
-import { COMMERCE_ACCEPTANCE, ACCEPTANCE_VIEWPORTS } from "../fixtures/commerce-acceptance";
+import {
+  ACCEPTANCE_VIEWPORTS,
+  COMMERCE_ACCEPTANCE,
+  resolveAcceptancePath,
+} from "../fixtures/commerce-acceptance";
 
 import { authenticateForPath } from "./_acceptance-auth";
 import { test as acceptanceTest } from "./_fixtures";
@@ -52,7 +56,7 @@ acceptanceTest.describe("accessibility — WCAG 2.1 AA commerce acceptance matri
         acceptanceTest(`${path} → no serious/critical WCAG violations`, async ({ page }) => {
           await authenticateForPath(page, path);
           await installCsrfPatch(page);
-          await page.goto(path);
+          await page.goto(await resolveAcceptancePath(page.request, path));
           await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => {
             /* no-op: networkidle timeout is acceptable for WCAG checks */
           });
@@ -97,11 +101,12 @@ acceptanceTest.describe("accessibility — error states have no additional viola
     acceptanceTest(`${path} error state → error UI passes axe`, async ({ page }) => {
       await authenticateForPath(page, path);
       await installCsrfPatch(page);
-      await page.goto(path);
+      const resolvedPath = await resolveAcceptancePath(page.request, path);
+      await page.goto(resolvedPath);
 
       const errorDriver = stateDrivers[`${path}::error`];
       if (errorDriver) {
-        await errorDriver.prepare(page, path);
+        await errorDriver.prepare(page, resolvedPath);
       }
 
       await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => {});
@@ -138,7 +143,8 @@ acceptanceTest.describe("accessibility — keyboard navigation", () => {
 
     acceptanceTest(`${path} → focus visible and not trapped outside viewport`, async ({ page }) => {
       await authenticateForPath(page, path);
-      await page.goto(path);
+      await installCsrfPatch(page);
+      await page.goto(await resolveAcceptancePath(page.request, path));
       await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => {});
 
       // Tab to the first focusable element
@@ -178,7 +184,7 @@ acceptanceTest.describe("accessibility — Vietnamese locale WCAG", () => {
         acceptanceTest(`${path} → vi locale, no serious violations`, async ({ page }) => {
           await authenticateForPath(page, path);
           await installCsrfPatch(page);
-          await page.goto(path);
+          await page.goto(await resolveAcceptancePath(page.request, path));
 
           // Switch to Vietnamese
           await page.evaluate(() => {

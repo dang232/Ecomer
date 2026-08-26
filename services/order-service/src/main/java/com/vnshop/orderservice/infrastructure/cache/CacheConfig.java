@@ -1,6 +1,9 @@
 package com.vnshop.orderservice.infrastructure.cache;
 
 import java.time.Duration;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ThreadLocalRandom;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -12,6 +15,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.cache.RedisCacheWriter;
 
 /**
  * Wires Spring's @Cacheable backed by Redis. Cache "coupon" has a 5-min TTL —
@@ -31,16 +35,32 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 public class CacheConfig implements CachingConfigurer {
 
     static final String COUPON_CACHE = "coupon";
+    static final Duration COUPON_CACHE_TTL = Duration.ofMinutes(5);
+    static final Duration NEGATIVE_CACHE_TTL = Duration.ofSeconds(30);
+    static final RedisCacheWriter.TtlFunction JITTERED_TTL = CacheConfig::ttlFor;
 
     @Bean
     public RedisCacheManager cacheManager(RedisConnectionFactory connectionFactory) {
         RedisCacheConfiguration couponConfig = RedisCacheConfiguration.defaultCacheConfig()
-                .entryTtl(Duration.ofMinutes(5))
+                .entryTtl(JITTERED_TTL)
                 .disableCachingNullValues()
                 .prefixCacheNameWith("order-svc::");
-        return RedisCacheManager.builder(connectionFactory)
-                .withCacheConfiguration(COUPON_CACHE, couponConfig)
-                .build();
+        return new RedisCacheManager(RedisCacheWriter.nonLockingRedisCacheWriter(connectionFactory),
+                RedisCacheConfiguration.defaultCacheConfig(), Map.of(COUPON_CACHE, couponConfig)) {
+            @Override
+            protected SingleFlightRedisCache createRedisCache(
+                    String cacheName, RedisCacheConfiguration cacheConfiguration) {
+                return new SingleFlightRedisCache(cacheName, getCacheWriter(), cacheConfiguration);
+            }
+        };
+    }
+
+    static Duration ttlFor(Object key, Object value) {
+        if (value instanceof Optional<?> optional && optional.isEmpty()) {
+            return NEGATIVE_CACHE_TTL;
+        }
+        long seconds = ThreadLocalRandom.current().nextLong(270, 331);
+        return Duration.ofSeconds(Math.max(1, seconds));
     }
 
     @Override

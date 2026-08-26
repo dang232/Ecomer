@@ -1,0 +1,43 @@
+Task 22 cache hardening verification
+Date: 2026-08-25
+Worktree: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr
+
+Red/static baseline:
+- ProductCacheTTLTest previously duplicated a fixed five-minute constant instead of reading the real cache configuration.
+- ProductJpaRepository used fixed Spring Redis TTL configuration and skipped Optional.empty() negative entries with `unless = "#result == null"`.
+- No coupon `@Cacheable` read path or mutation eviction annotations were present.
+- No cache-stampede or negative-flood probe existed.
+
+Implementation:
+- Product and coupon Redis cache configurations now use `RedisCacheWriter.TtlFunction`: 270-330 seconds for values and 30 seconds for empty Optional negatives.
+- Product and coupon cache managers create a per-key `SingleFlightRedisCache`; in-flight futures are removed in `finally` after success or failure.
+- Product reads retain tenant-neutral public UUID keys; coupon keys normalize and cap input to 128 characters.
+- Coupon reads are cached and create/update/deactivate plus repository saves evict the coupon cache.
+- Existing product V2 ETags and task-32 immutable versioned-media Cache-Control/storage policy are reused; no payment/order read cache was added.
+- Added `scripts/cache-stampede.js`, `scripts/cache-negative-flood.js`, and `scripts/cache-contract.test.mjs`.
+
+Commands/results:
+- `services/product-service/./mvnw.cmd -q -DskipTests compile`: PASS.
+- `services/order-service/./mvnw.cmd -q -DskipTests compile`: PASS.
+- `services/product-service/./mvnw.cmd -q -Dtest=ProductCacheTTLTest,SingleFlightRedisCacheTest,ProductCacheSerializationTest test`: PASS (4 tests).
+- `node --check scripts/cache-stampede.js; node --check scripts/cache-negative-flood.js`: PASS.
+- `node --test scripts/cache-contract.test.mjs`: PASS.
+- `rg` cache annotation scan: PASS; payment service has no `@Cacheable`/`@CachePut`, order sensitive `findById` reads are not cached.
+- `git diff --check`: PASS; pre-existing CRLF warnings only.
+- LSP diagnostics: BLOCKED, OMC LSP daemon timed out as in task-18.
+- `k6 version`: BLOCKED, k6 unavailable.
+
+Manual QA:
+- Product cache unit test sampled 200 TTLs and observed every value within 270-330 seconds; negative Optional TTL asserted at exactly 30 seconds.
+- Concurrent cache test exercised 16 same-key cold misses and observed one loader invocation with all callers receiving the same value.
+- Node probes were syntax-checked and attempted against localhost:8080; both were connection-refused because no gateway runtime was available. No live backend-call or 100-concurrent claim is made.
+- Existing product V2 controller emits ETag/304 and product image storage/upload paths emit immutable Cache-Control per prior task-32 evidence.
+
+Cleanup receipt:
+- No commits, pushes, resets, or destructive cleanup performed.
+- Append-only notepad entries added to `learnings.md`, `issues.md`, and `problems.md`.
+
+Risks/blockers:
+- Single-flight is JVM-local; cross-replica distributed lease proof remains Redis/Docker-gated.
+- Focused order-service test execution is blocked by unrelated pre-existing `ApiExceptionHandlerTest` `ProblemDetails`/`ApiResponse` compile mismatch; order main compile passes.
+- Live k6/gateway/CDN header proof remains unavailable on this host.

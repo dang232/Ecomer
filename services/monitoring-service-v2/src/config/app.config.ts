@@ -31,6 +31,7 @@ export const appConfig = registerAs("app", () => ({
   keycloak: {
     issuerUri:
       process.env.KEYCLOAK_ISSUER_URI ?? "http://localhost:9090/realms/vnshop",
+    audience: process.env.KEYCLOAK_JWT_AUDIENCE ?? "vnshop-api",
     jwkSetUri:
       process.env.KEYCLOAK_JWK_SET_URI ??
       "http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs",

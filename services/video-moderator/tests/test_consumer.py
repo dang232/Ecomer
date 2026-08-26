@@ -206,7 +206,7 @@ class TestRetryAndDlt:
 
         consumer._handle_with_retry(message)
 
-        # 4 calls total: 1 initial + 3 retries
+        # 4 calls total: the fixture intentionally supplies three retry delays.
         assert consumer._process_message.call_count == 4
         consumer._producer.send_to_dlt.assert_called_once()
         dlt_kwargs = consumer._producer.send_to_dlt.call_args
@@ -220,3 +220,17 @@ class TestRetryAndDlt:
             "posterKey": f"products/product-123/videos/{video_id}_poster.jpg",
             "durationSeconds": 42,
         }
+
+
+class TestConsumerConfiguration:
+    def test_missing_sasl_password_fails_closed(self, monkeypatch):
+        monkeypatch.setenv("MODERATOR_KAFKA_SECURITY_PROTOCOL", "SASL_PLAINTEXT")
+        monkeypatch.setenv("MODERATOR_KAFKA_SASL_USERNAME", "svc-video-moderator")
+        monkeypatch.delenv("MODERATOR_KAFKA_SASL_PASSWORD", raising=False)
+
+        from app.config import get_settings
+
+        get_settings.cache_clear()
+        with pytest.raises(ValueError, match="PASSWORD"):
+            get_settings()
+        get_settings.cache_clear()

@@ -22,8 +22,14 @@ public record SepayWebhookPayload(
         /** Bank account number that received the credit. */
         @JsonProperty("accountNumber") String accountNumber,
         /** Bank code / BIN. */
-        @JsonProperty("bankBrandName") String bankBrandName
+        @JsonProperty("bankBrandName") String bankBrandName,
+        @JsonProperty("currency") String currency,
+        @JsonProperty("transferType") String transferType
 ) {
+    public SepayWebhookPayload(String id, String transactionContent, BigDecimal transferAmount,
+                               String accountNumber, String bankBrandName) {
+        this(id, transactionContent, transferAmount, accountNumber, bankBrandName, "VND", "CREDIT");
+    }
     /**
      * Produces a stable canonical string for hashing / idempotency.
      * Uses only the fields that identify the transaction, not time-varying metadata.
@@ -32,7 +38,9 @@ public record SepayWebhookPayload(
         return "id=" + nvl(id)
                 + "&transaction_content=" + nvl(transactionContent)
                 + "&transferAmount=" + (transferAmount != null ? transferAmount.toPlainString() : "")
-                + "&accountNumber=" + nvl(accountNumber);
+                + "&accountNumber=" + nvl(accountNumber)
+                + "&currency=" + nvl(currency)
+                + "&transferType=" + nvl(transferType);
     }
 
     private static String nvl(String s) {

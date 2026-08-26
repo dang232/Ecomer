@@ -1,0 +1,10 @@
+{
+  "description": "Immutable browser cache policy for content-addressed or versioned public image objects.",
+  "objectKeyPrefixes": [
+    "products/",
+    "reviews/",
+    "avatars/"
+  ],
+  "cacheControl": "public, max-age=31536000, immutable",
+  "operationalRule": "Never overwrite a versioned key; upload a new key when image content changes."
+}

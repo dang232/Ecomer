@@ -1,4 +1,4 @@
-import { JwtStrategy } from "./jwt.strategy";
+import { createJwtStrategyOptions, JwtStrategy } from "./jwt.strategy";
 
 describe("JwtStrategy (messaging-service)", () => {
   beforeEach(() => {
@@ -11,6 +11,14 @@ describe("JwtStrategy (messaging-service)", () => {
     const strategy = new JwtStrategy();
     const payload = { sub: "user-1" };
     expect(strategy.validate(payload)).toBe(payload);
+  });
+
+  it("configures the resource audience separately from the issuer", () => {
+    const options = createJwtStrategyOptions();
+
+    expect(options.issuer).toBe("http://localhost:9090/realms/vnshop");
+    expect(options.audience).toBe("vnshop-api");
+    expect(options.algorithms).toEqual(["RS256"]);
   });
 
   it("falls back to defaults when env vars are unset", () => {

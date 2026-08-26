@@ -8,21 +8,43 @@ import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
+import java.util.UUID;
 
-/** Adds a bounded retry hint to gateway-generated 429 responses. */
+/** Emits the standard RateLimit response headers for gateway throttling. */
 @Component
 public class RateLimitHeadersFilter implements GlobalFilter, Ordered {
+
+    private static final String LIMIT = "RateLimit-Limit";
+    private static final String REMAINING = "RateLimit-Remaining";
+    private static final String RESET = "RateLimit-Reset";
 
     @Override
     public @NonNull Mono<Void> filter(ServerWebExchange exchange, @NonNull GatewayFilterChain chain) {
         exchange.getResponse().beforeCommit(() -> {
-            if (exchange.getResponse().getStatusCode() == HttpStatus.TOO_MANY_REQUESTS
-                    && exchange.getResponse().getHeaders().getFirst("Retry-After") == null) {
-                exchange.getResponse().getHeaders().set("Retry-After", "1");
+            var headers = exchange.getResponse().getHeaders();
+            copyIfPresent(headers, LIMIT, "X-RateLimit-Limit");
+            copyIfPresent(headers, REMAINING, "X-RateLimit-Remaining");
+            copyIfPresent(headers, RESET, "X-RateLimit-Reset");
+            if (exchange.getResponse().getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) {
+                headers.putIfAbsent(LIMIT, java.util.List.of("0"));
+                headers.putIfAbsent(REMAINING, java.util.List.of("0"));
+                headers.putIfAbsent(RESET, java.util.List.of("1"));
+                if (headers.getFirst("Retry-After") == null) {
+                    headers.set("Retry-After", "1");
+                }
+                String requestId = headers.getFirst("X-Request-ID");
+                if (requestId == null || requestId.isBlank()) headers.set("X-Request-ID", UUID.randomUUID().toString());
             }
             return Mono.empty();
         });
         return chain.filter(exchange);
+    }
+
+    private static void copyIfPresent(
+            org.springframework.http.HttpHeaders headers, String target, String source) {
+        if (headers.getFirst(target) == null && headers.getFirst(source) != null) {
+            headers.set(target, headers.getFirst(source));
+        }
     }
 
     @Override

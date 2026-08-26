@@ -1,0 +1,31 @@
+kind: postgresql
+numberOfInstances: 3
+synchronous_standby_names: ANY 1 (*)
+kind: StatefulSet
+name: redis-rate-limit
+replicas: 3
+serviceName: redis-rate-limit-headless
+vnshop.io/redis-policy: noeviction
+name: redis-rate-limit-sentinel
+replicas: 3
+name: redis-cart
+replicas: 3
+serviceName: redis-cart-headless
+vnshop.io/redis-policy: volatile-lru
+name: redis-cart-sentinel
+replicas: 3
+name: redis-dedup
+replicas: 3
+serviceName: redis-dedup-headless
+vnshop.io/redis-policy: volatile-ttl
+name: redis-dedup-sentinel
+replicas: 3
+name: mongodb
+replicas: 3
+--replSet, rs0
+name: minio
+replicas: 4
+vnshop.io/erasure-coding: "4+2"
+http://minio-{0...3}.minio-headless/data{1...2}
+name: keycloak
+replicas: 2

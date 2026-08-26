@@ -167,4 +167,24 @@ describe("Navbar", () => {
     expect(screen.getByRole("menuitem", { name: "Switch to light mode" })).toBeInTheDocument();
     expect(screen.queryByRole("menuitem", { name: "Light mode" })).not.toBeInTheDocument();
   });
+
+  it("moves focus through menu items and restores it on Escape", () => {
+    useVNShopMock.mockReturnValue({
+      user: { name: "Alice", avatar: "" },
+      isDark: false,
+      isLoggedIn: true,
+      logout: vi.fn(),
+      toggleTheme: vi.fn(),
+    });
+    renderNavbar();
+    const trigger = screen.getByRole("button", { name: "Account menu" });
+    fireEvent.click(trigger);
+    const items = screen.getAllByRole("menuitem");
+    expect(items[0]).toHaveFocus();
+    fireEvent.keyDown(items[0], { key: "ArrowDown" });
+    expect(items[1]).toHaveFocus();
+    fireEvent.keyDown(items[1], { key: "Escape" });
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
 });

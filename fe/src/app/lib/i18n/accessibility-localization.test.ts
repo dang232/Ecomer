@@ -25,4 +25,13 @@ describe("accessibility localization contracts", () => {
     expect(vi.nav.switchToDarkMode).toBe("Chuyển sang chế độ tối");
     expect(vi.nav.switchToLightMode).toBe("Chuyển sang chế độ sáng");
   });
+
+  it("keeps checkout radiogroup labels localized in both locales", () => {
+    expect(en.checkout.address.groupLabel).toBe("Delivery address");
+    expect(en.checkout.shipping.groupLabel).toBe("Shipping method");
+    expect(en.checkout.payment.groupLabel).toBe("Payment method");
+    expect(vi.checkout.address.groupLabel).toBe("Địa chỉ giao hàng");
+    expect(vi.checkout.shipping.groupLabel).toBe("Phương thức vận chuyển");
+    expect(vi.checkout.payment.groupLabel).toBe("Phương thức thanh toán");
+  });
 });

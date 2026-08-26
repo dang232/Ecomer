@@ -2,8 +2,10 @@ package com.vnshop.orderservice.infrastructure.cart;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.vnshop.orderservice.domain.checkout.CartItemSnapshot;
 import com.vnshop.orderservice.domain.checkout.CartSnapshot;
+import com.vnshop.orderservice.domain.ParcelDimensions;
 import com.vnshop.orderservice.domain.port.out.CartRepositoryPort;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
@@ -49,6 +51,7 @@ public class CartServiceAdapter implements CartRepositoryPort {
     public void clearCart(String userId) {
         try {
             cartHttpClient.clearCart(userId);
+        // no-excuse-ok: catch - cart cleanup is deliberately best-effort after checkout success.
         } catch (Exception e) {
             LOG.warn("Failed to clear cart for user {} — non-fatal, cart will expire via TTL", userId, e);
         }
@@ -70,10 +73,14 @@ public class CartServiceAdapter implements CartRepositoryPort {
             List<CartItemSnapshot> items = apiResponse.data.items.stream()
                     .map(dto -> new CartItemSnapshot(
                             dto.productId,
-                            "", // variantSku not provided by cart-service
+                            dto.variantId == null ? "" : dto.variantId,
                             dto.productName,
                             dto.quantity,
-                            new BigDecimal(String.valueOf(dto.unitPrice.amount))))
+                            new BigDecimal(String.valueOf(dto.unitPrice.amount)),
+                            dto.parcelSnapshot == null ? null : new ParcelDimensions(
+                                    dto.parcelSnapshot.weightGrams, dto.parcelSnapshot.lengthCm,
+                                    dto.parcelSnapshot.widthCm, dto.parcelSnapshot.heightCm,
+                                    dto.parcelSnapshot.declaredValueMinor)))
                     .collect(Collectors.toList());
 
             return new CartSnapshot(cartId, items);
@@ -88,7 +95,7 @@ public class CartServiceAdapter implements CartRepositoryPort {
         } catch (ResourceAccessException e) {
             throw new CartUnavailableException(
                     "Cart service unreachable or timed out: " + e.getMessage(), e);
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
             throw new CartUnavailableException("Failed to read cart-service response: " + e.getMessage(), e);
         }
     }
@@ -136,6 +143,9 @@ public class CartServiceAdapter implements CartRepositoryPort {
         @JsonProperty("productId")
         public String productId;
 
+        @JsonProperty("variantId")
+        public String variantId;
+
         @JsonProperty("productName")
         public String productName;
 
@@ -153,6 +163,17 @@ public class CartServiceAdapter implements CartRepositoryPort {
 
         @JsonProperty("addedAt")
         public String addedAt;
+
+        @JsonProperty("parcelSnapshot")
+        public ParcelDto parcelSnapshot;
+    }
+
+    private static class ParcelDto {
+        public int weightGrams;
+        public int lengthCm;
+        public int widthCm;
+        public int heightCm;
+        public long declaredValueMinor;
     }
 
     private static class MoneyResponseDto {

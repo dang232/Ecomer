@@ -17,11 +17,19 @@ describe("shippingOptions", () => {
       district: "District 1",
       city: "Ho Chi Minh City",
     };
+    const parcel = {
+      weightGrams: 1000,
+      lengthCm: 30,
+      widthCm: 20,
+      heightCm: 10,
+      declaredValueMinor: 100000,
+    };
     vi.mocked(api.post).mockResolvedValue(response);
 
-    await expect(shippingOptions({ address })).resolves.toBe(response);
+    await expect(shippingOptions({ address, parcel })).resolves.toBe(response);
     expect(api.post).toHaveBeenCalledWith("/checkout/shipping-options", expect.anything(), {
       address,
+      parcel,
     });
   });
 });

@@ -1,0 +1,20 @@
+RouteConfig coupon-route fix evidence
+Date: 2026-08-26
+Worktree: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr
+
+Decision:
+- coupon-service is archived and excluded from the default deployment topology.
+- docker-compose.yml assigns coupon-service to profile "archived" and states coupon ownership moved to order-service.
+- Active CommerceRouteModule routes checkout coupon, /coupons/**, and /admin/coupons/** to order-service.
+- RouteConfigTest had stale http://coupon:80 expectations; those three expectations now assert http://order:80.
+- /api/v1 path matching/rewrite and LegacyApiVersioningFilter Deprecation/Sunset/Link behavior were not changed.
+
+Verification:
+1. mvn -Dtest=RouteConfigTest test (from services/api-gateway): BUILD SUCCESS; Tests run: 4, Failures: 0, Errors: 0, Skipped: 0.
+2. mvn test (from services/api-gateway): BUILD SUCCESS; Tests run: 52, Failures: 0, Errors: 0, Skipped: 0.
+3. git diff --check: PASS (no whitespace errors).
+4. LSP diagnostics: timed out twice because the shared OMC LSP daemon did not respond; Maven compilation and tests passed.
+5. Requested reactor form, mvn -pl services/api-gateway -Dtest=RouteConfigTest test, was attempted from repository root and failed because the repository root has no Maven reactor project selecting services/api-gateway. The equivalent module-directory command above passed.
+
+Gateway bean fix:
+- Included in this worktree before this route fix: services/api-gateway/src/main/java/com/vnshop/apigateway/infrastructure/config/JacksonConfig.java is present and the full gateway Maven suite passes with it.

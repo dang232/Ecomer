@@ -9,6 +9,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.annotation.DltHandler;
+import org.springframework.kafka.annotation.RetryableTopic;
+import org.springframework.kafka.retrytopic.DltStrategy;
 import org.springframework.stereotype.Service;
 
 /**
@@ -37,6 +40,8 @@ public class OrderEventListener {
         this.objectMapper = objectMapper;
     }
 
+    @RetryableTopic(attempts = "3", dltStrategy = DltStrategy.FAIL_ON_ERROR,
+            dltTopicSuffix = ".DLT", retryTopicSuffix = ".retry")
     @KafkaListener(topics = "order.created", groupId = "recommendations-service", concurrency = "6")
     public void onOrderCreated(String eventJson) {
         try {
@@ -58,10 +63,7 @@ public class OrderEventListener {
             }
             aggregator.recordOrder(orderId, productIds);
         } catch (Exception exception) {
-            // Don't propagate — Kafka container would loop on a poison pill.
-            // The outbox publisher on the producer side guarantees redelivery,
-            // and any genuinely broken payload would just be skipped here.
-            LOGGER.warn("Failed to process order.created event: {}", exception.getMessage());
+            LOGGER.warn("Skipping invalid order.created payload", exception);
         }
     }
 

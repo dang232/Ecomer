@@ -1712,6 +1712,522 @@ abstract class AppLocalizations {
   /// **'Thông tin sản phẩm của đơn hàng này hiện không khả dụng.'**
   String get orderProductsUnavailable;
 
+  /// No description provided for @categories.
+  ///
+  /// In vi, this message translates to:
+  /// **'Danh mục'**
+  String get categories;
+
+  /// No description provided for @languageVietnamese.
+  ///
+  /// In vi, this message translates to:
+  /// **'Tiếng Việt'**
+  String get languageVietnamese;
+
+  /// No description provided for @languageEnglish.
+  ///
+  /// In vi, this message translates to:
+  /// **'English'**
+  String get languageEnglish;
+
+  /// No description provided for @settingsTitle.
+  ///
+  /// In vi, this message translates to:
+  /// **'Cài đặt'**
+  String get settingsTitle;
+
+  /// No description provided for @settingsNotificationsSection.
+  ///
+  /// In vi, this message translates to:
+  /// **'Thông báo'**
+  String get settingsNotificationsSection;
+
+  /// No description provided for @settingsEnableNotifications.
+  ///
+  /// In vi, this message translates to:
+  /// **'Bật thông báo'**
+  String get settingsEnableNotifications;
+
+  /// No description provided for @settingsNotificationsHelp.
+  ///
+  /// In vi, this message translates to:
+  /// **'Nhận thông báo từ ứng dụng'**
+  String get settingsNotificationsHelp;
+
+  /// No description provided for @settingsOrderUpdates.
+  ///
+  /// In vi, this message translates to:
+  /// **'Cập nhật đơn hàng'**
+  String get settingsOrderUpdates;
+
+  /// No description provided for @settingsOrderUpdatesHelp.
+  ///
+  /// In vi, this message translates to:
+  /// **'Thông báo trạng thái đơn hàng'**
+  String get settingsOrderUpdatesHelp;
+
+  /// No description provided for @settingsPromotions.
+  ///
+  /// In vi, this message translates to:
+  /// **'Khuyến mãi'**
+  String get settingsPromotions;
+
+  /// No description provided for @settingsPromotionsHelp.
+  ///
+  /// In vi, this message translates to:
+  /// **'Mã giảm giá, ưu đãi đặc biệt'**
+  String get settingsPromotionsHelp;
+
+  /// No description provided for @settingsAppearanceSection.
+  ///
+  /// In vi, this message translates to:
+  /// **'Giao diện'**
+  String get settingsAppearanceSection;
+
+  /// No description provided for @settingsDarkMode.
+  ///
+  /// In vi, this message translates to:
+  /// **'Chế độ tối'**
+  String get settingsDarkMode;
+
+  /// No description provided for @settingsDarkModeHelp.
+  ///
+  /// In vi, this message translates to:
+  /// **'Giao diện tối cho mắt dễ chịu'**
+  String get settingsDarkModeHelp;
+
+  /// No description provided for @settingsLanguage.
+  ///
+  /// In vi, this message translates to:
+  /// **'Ngôn ngữ'**
+  String get settingsLanguage;
+
+  /// No description provided for @settingsOtherSection.
+  ///
+  /// In vi, this message translates to:
+  /// **'Khác'**
+  String get settingsOtherSection;
+
+  /// No description provided for @privacyPolicy.
+  ///
+  /// In vi, this message translates to:
+  /// **'Chính sách bảo mật'**
+  String get privacyPolicy;
+
+  /// No description provided for @termsOfUse.
+  ///
+  /// In vi, this message translates to:
+  /// **'Điều khoản sử dụng'**
+  String get termsOfUse;
+
+  /// No description provided for @deleteAccount.
+  ///
+  /// In vi, this message translates to:
+  /// **'Xóa tài khoản'**
+  String get deleteAccount;
+
+  /// No description provided for @deleteAccountHelp.
+  ///
+  /// In vi, this message translates to:
+  /// **'Xóa vĩnh viễn tài khoản và dữ liệu'**
+  String get deleteAccountHelp;
+
+  /// No description provided for @madeWithLove.
+  ///
+  /// In vi, this message translates to:
+  /// **'Made with ❤️ in Vietnam'**
+  String get madeWithLove;
+
+  /// No description provided for @chooseLanguage.
+  ///
+  /// In vi, this message translates to:
+  /// **'Chọn ngôn ngữ'**
+  String get chooseLanguage;
+
+  /// No description provided for @darkModeEnabled.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đã bật chế độ tối'**
+  String get darkModeEnabled;
+
+  /// No description provided for @darkModeDisabled.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đã tắt chế độ tối'**
+  String get darkModeDisabled;
+
+  /// No description provided for @languageChanged.
+  ///
+  /// In vi, this message translates to:
+  /// **'Ngôn ngữ đã được đổi sang {language}'**
+  String languageChanged(Object language);
+
+  /// No description provided for @deleteAccountQuestion.
+  ///
+  /// In vi, this message translates to:
+  /// **'Bạn có chắc chắn muốn xóa tài khoản không?'**
+  String get deleteAccountQuestion;
+
+  /// No description provided for @deleteAccountWarning.
+  ///
+  /// In vi, this message translates to:
+  /// **'⚠️ Lưu ý:'**
+  String get deleteAccountWarning;
+
+  /// No description provided for @deleteAccountConsequences.
+  ///
+  /// In vi, this message translates to:
+  /// **'• Tất cả dữ liệu của bạn sẽ bị xóa vĩnh viễn\n• Không thể khôi phục lại sau khi xóa\n• Bạn sẽ mất quyền truy cập vào đơn hàng cũ'**
+  String get deleteAccountConsequences;
+
+  /// No description provided for @deleteAccountRequested.
+  ///
+  /// In vi, this message translates to:
+  /// **'Yêu cầu xóa tài khoản đã được gửi. Vui lòng xác nhận qua email.'**
+  String get deleteAccountRequested;
+
+  /// No description provided for @aboutVersion.
+  ///
+  /// In vi, this message translates to:
+  /// **'Phiên bản: 1.0.0'**
+  String get aboutVersion;
+
+  /// No description provided for @aboutDescription.
+  ///
+  /// In vi, this message translates to:
+  /// **'Ứng dụng mua sắm trực tuyến hàng đầu Việt Nam.'**
+  String get aboutDescription;
+
+  /// No description provided for @close.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đóng'**
+  String get close;
+
+  /// No description provided for @logoutQuestion.
+  ///
+  /// In vi, this message translates to:
+  /// **'Bạn có chắc chắn muốn đăng xuất không?'**
+  String get logoutQuestion;
+
+  /// No description provided for @accountAddressesTitle.
+  ///
+  /// In vi, this message translates to:
+  /// **'Địa chỉ giao hàng'**
+  String get accountAddressesTitle;
+
+  /// No description provided for @accountAddressesMessage.
+  ///
+  /// In vi, this message translates to:
+  /// **'Địa chỉ của bạn được chọn và chỉnh sửa trực tiếp trong quy trình thanh toán.'**
+  String get accountAddressesMessage;
+
+  /// No description provided for @accountPaymentMethodsTitle.
+  ///
+  /// In vi, this message translates to:
+  /// **'Phương thức thanh toán'**
+  String get accountPaymentMethodsTitle;
+
+  /// No description provided for @accountPaymentMethodsMessage.
+  ///
+  /// In vi, this message translates to:
+  /// **'VNShop hiện hỗ trợ COD, VietQR và SePay trong checkout.'**
+  String get accountPaymentMethodsMessage;
+
+  /// No description provided for @accountNotificationsTitle.
+  ///
+  /// In vi, this message translates to:
+  /// **'Thông báo'**
+  String get accountNotificationsTitle;
+
+  /// No description provided for @accountNotificationsMessage.
+  ///
+  /// In vi, this message translates to:
+  /// **'Bạn sẽ nhận cập nhật đơn hàng và thanh toán từ VNShop tại đây.'**
+  String get accountNotificationsMessage;
+
+  /// No description provided for @accountHelpTitle.
+  ///
+  /// In vi, this message translates to:
+  /// **'Trợ giúp'**
+  String get accountHelpTitle;
+
+  /// No description provided for @accountHelpMessage.
+  ///
+  /// In vi, this message translates to:
+  /// **'Câu hỏi thường gặp và hỗ trợ checkout sẽ được cập nhật tại đây.'**
+  String get accountHelpMessage;
+
+  /// No description provided for @loginContinue.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đăng nhập để tiếp tục'**
+  String get loginContinue;
+
+  /// No description provided for @rememberLogin.
+  ///
+  /// In vi, this message translates to:
+  /// **'Ghi nhớ đăng nhập'**
+  String get rememberLogin;
+
+  /// No description provided for @forgotPassword.
+  ///
+  /// In vi, this message translates to:
+  /// **'Quên mật khẩu?'**
+  String get forgotPassword;
+
+  /// No description provided for @noAccount.
+  ///
+  /// In vi, this message translates to:
+  /// **'Chưa có tài khoản?'**
+  String get noAccount;
+
+  /// No description provided for @registerNow.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đăng ký ngay'**
+  String get registerNow;
+
+  /// No description provided for @or.
+  ///
+  /// In vi, this message translates to:
+  /// **'Hoặc'**
+  String get or;
+
+  /// No description provided for @send.
+  ///
+  /// In vi, this message translates to:
+  /// **'Gửi'**
+  String get send;
+
+  /// No description provided for @forgotPasswordTitle.
+  ///
+  /// In vi, this message translates to:
+  /// **'Quên mật khẩu'**
+  String get forgotPasswordTitle;
+
+  /// No description provided for @forgotPasswordHelp.
+  ///
+  /// In vi, this message translates to:
+  /// **'Nhập địa chỉ email của bạn để nhận hướng dẫn đặt lại mật khẩu.'**
+  String get forgotPasswordHelp;
+
+  /// No description provided for @emailHint.
+  ///
+  /// In vi, this message translates to:
+  /// **'Nhập email của bạn'**
+  String get emailHint;
+
+  /// No description provided for @passwordHintLogin.
+  ///
+  /// In vi, this message translates to:
+  /// **'Nhập mật khẩu của bạn'**
+  String get passwordHintLogin;
+
+  /// No description provided for @resetEmailSent.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đã gửi email đặt lại mật khẩu'**
+  String get resetEmailSent;
+
+  /// No description provided for @socialLoginUnavailable.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đăng nhập bằng {provider} (sắp ra mắt)'**
+  String socialLoginUnavailable(Object provider);
+
+  /// No description provided for @registerTitle.
+  ///
+  /// In vi, this message translates to:
+  /// **'Tạo tài khoản mới'**
+  String get registerTitle;
+
+  /// No description provided for @registerSubtitle.
+  ///
+  /// In vi, this message translates to:
+  /// **'Điền thông tin bên dưới để đăng ký'**
+  String get registerSubtitle;
+
+  /// No description provided for @fullName.
+  ///
+  /// In vi, this message translates to:
+  /// **'Họ và tên'**
+  String get fullName;
+
+  /// No description provided for @fullNameHint.
+  ///
+  /// In vi, this message translates to:
+  /// **'Nhập họ và tên của bạn'**
+  String get fullNameHint;
+
+  /// No description provided for @phoneOptional.
+  ///
+  /// In vi, this message translates to:
+  /// **'Số điện thoại (tùy chọn)'**
+  String get phoneOptional;
+
+  /// No description provided for @phoneHint.
+  ///
+  /// In vi, this message translates to:
+  /// **'Nhập số điện thoại'**
+  String get phoneHint;
+
+  /// No description provided for @createPassword.
+  ///
+  /// In vi, this message translates to:
+  /// **'Tạo mật khẩu'**
+  String get createPassword;
+
+  /// No description provided for @passwordRequirements.
+  ///
+  /// In vi, this message translates to:
+  /// **'Tối thiểu 8 ký tự, gồm chữ hoa, chữ thường và số'**
+  String get passwordRequirements;
+
+  /// No description provided for @confirmPassword.
+  ///
+  /// In vi, this message translates to:
+  /// **'Xác nhận mật khẩu'**
+  String get confirmPassword;
+
+  /// No description provided for @confirmPasswordHint.
+  ///
+  /// In vi, this message translates to:
+  /// **'Nhập lại mật khẩu'**
+  String get confirmPasswordHint;
+
+  /// No description provided for @agreeTermsPrefix.
+  ///
+  /// In vi, this message translates to:
+  /// **'Tôi đồng ý với '**
+  String get agreeTermsPrefix;
+
+  /// No description provided for @privacyAnd.
+  ///
+  /// In vi, this message translates to:
+  /// **' và '**
+  String get privacyAnd;
+
+  /// No description provided for @registrationSuccess.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đăng ký thành công. Hãy xác thực email trước khi đăng nhập.'**
+  String get registrationSuccess;
+
+  /// No description provided for @agreeTermsRequired.
+  ///
+  /// In vi, this message translates to:
+  /// **'Vui lòng đồng ý với điều khoản sử dụng'**
+  String get agreeTermsRequired;
+
+  /// No description provided for @activeOrders.
+  ///
+  /// In vi, this message translates to:
+  /// **'{count} đơn đang xử lý'**
+  String activeOrders(Object count);
+
+  /// No description provided for @orderStatusPendingShort.
+  ///
+  /// In vi, this message translates to:
+  /// **'Chờ xác nhận'**
+  String get orderStatusPendingShort;
+
+  /// No description provided for @orderStatusProcessingShort.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đang xử lý'**
+  String get orderStatusProcessingShort;
+
+  /// No description provided for @orderStatusShippedShort.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đang giao'**
+  String get orderStatusShippedShort;
+
+  /// No description provided for @orderStatusDeliveredShort.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đã giao'**
+  String get orderStatusDeliveredShort;
+
+  /// No description provided for @viewAllOrders.
+  ///
+  /// In vi, this message translates to:
+  /// **'Xem tất cả đơn hàng'**
+  String get viewAllOrders;
+
+  /// No description provided for @favoriteProducts.
+  ///
+  /// In vi, this message translates to:
+  /// **'Sản phẩm yêu thích'**
+  String get favoriteProducts;
+
+  /// No description provided for @addressBook.
+  ///
+  /// In vi, this message translates to:
+  /// **'Sổ địa chỉ'**
+  String get addressBook;
+
+  /// No description provided for @addressBookHelp.
+  ///
+  /// In vi, this message translates to:
+  /// **'Quản lý địa chỉ giao hàng'**
+  String get addressBookHelp;
+
+  /// No description provided for @paymentMethods.
+  ///
+  /// In vi, this message translates to:
+  /// **'Phương thức thanh toán'**
+  String get paymentMethods;
+
+  /// No description provided for @paymentMethodsHelp.
+  ///
+  /// In vi, this message translates to:
+  /// **'Thẻ, ví điện tử'**
+  String get paymentMethodsHelp;
+
+  /// No description provided for @notificationsSettings.
+  ///
+  /// In vi, this message translates to:
+  /// **'Thông báo'**
+  String get notificationsSettings;
+
+  /// No description provided for @notificationsSettingsHelp.
+  ///
+  /// In vi, this message translates to:
+  /// **'Cài đặt thông báo'**
+  String get notificationsSettingsHelp;
+
+  /// No description provided for @help.
+  ///
+  /// In vi, this message translates to:
+  /// **'Trợ giúp'**
+  String get help;
+
+  /// No description provided for @helpDescription.
+  ///
+  /// In vi, this message translates to:
+  /// **'Câu hỏi thường gặp, liên hệ hỗ trợ'**
+  String get helpDescription;
+
+  /// No description provided for @about.
+  ///
+  /// In vi, this message translates to:
+  /// **'Giới thiệu'**
+  String get about;
+
+  /// No description provided for @aboutSubtitle.
+  ///
+  /// In vi, this message translates to:
+  /// **'Phiên bản 1.0.0'**
+  String get aboutSubtitle;
+
+  /// No description provided for @account.
+  ///
+  /// In vi, this message translates to:
+  /// **'Tài khoản'**
+  String get account;
+
   /// No description provided for @quantityShort.
   ///
   /// In vi, this message translates to:

@@ -1,0 +1,173 @@
+name: VNShop Broker Reliability
+
+on:
+  pull_request:
+    branches: [main, production]
+    paths:
+      - ".github/workflows/ci-reliability.yml"
+      - "infra/scripts/reliability-fixture.py"
+      - "infra/scripts/init-kafka-topics-local.sh"
+      - "infra/scripts/backup-cron.sh"
+      - "services/order-service/**"
+      - "services/payment-service/**"
+      - "services/notification-service/**"
+      - "services/search-service/**"
+      - "services/invoice-service/**"
+      - "services/video-moderator/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reliability:
+    name: Authenticated broker and datastore reliability
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      RELIABILITY_KAFKA_BROKERS: 127.0.0.1:9092
+      RELIABILITY_KAFKA_USERNAME: ${{ secrets.RELIABILITY_KAFKA_USERNAME }}
+      RELIABILITY_KAFKA_PASSWORD: ${{ secrets.RELIABILITY_KAFKA_PASSWORD }}
+      RELIABILITY_POSTGRES_PASSWORD: ${{ secrets.RELIABILITY_POSTGRES_PASSWORD }}
+      RELIABILITY_REDIS_PASSWORD: ${{ secrets.RELIABILITY_REDIS_PASSWORD }}
+    services:
+      postgres:
+        image: postgres:17.9
+        ports: ["5432:5432"]
+        env:
+          POSTGRES_USER: reliability
+          POSTGRES_PASSWORD: ${{ secrets.RELIABILITY_POSTGRES_PASSWORD }}
+          POSTGRES_DB: reliability
+        options: >-
+          --health-cmd "pg_isready -U reliability -d reliability"
+          --health-interval 2s --health-timeout 5s --health-retries 15
+      redis:
+        image: redis:8.6
+        ports: ["6379:6379"]
+        env:
+          REDIS_PASSWORD: ${{ secrets.RELIABILITY_REDIS_PASSWORD }}
+        options: >-
+          --entrypoint redis-server
+          --health-cmd "redis-cli -a $${REDIS_PASSWORD} ping"
+          --health-interval 2s --health-timeout 5s --health-retries 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Java 25
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Start authenticated Kafka broker
+        shell: bash
+        env:
+          KAFKA_USERNAME: ${{ secrets.RELIABILITY_KAFKA_USERNAME }}
+          KAFKA_PASSWORD: ${{ secrets.RELIABILITY_KAFKA_PASSWORD }}
+        run: |
+          set -euo pipefail
+          [[ -n "$KAFKA_USERNAME" && -n "$KAFKA_PASSWORD" ]] || { echo "missing required reliability Kafka credentials" >&2; exit 1; }
+          [[ "$KAFKA_USERNAME" =~ ^[A-Za-z0-9._-]+$ && "$KAFKA_PASSWORD" != *'"'* && "$KAFKA_PASSWORD" != *'\\'* ]] || { echo "reliability Kafka credentials contain unsupported JAAS characters" >&2; exit 1; }
+          jaas="$RUNNER_TEMP/kafka_server_jaas.conf"
+          cat > "$jaas" <<EOF
+          KafkaServer {
+              org.apache.kafka.common.security.plain.PlainLoginModule required
+              username="$KAFKA_USERNAME"
+              password="$KAFKA_PASSWORD"
+              user_$KAFKA_USERNAME="$KAFKA_PASSWORD";
+          };
+          sasl_plaintext.KafkaServer {
+              org.apache.kafka.common.security.plain.PlainLoginModule required
+              username="$KAFKA_USERNAME"
+              password="$KAFKA_PASSWORD"
+              user_$KAFKA_USERNAME="$KAFKA_PASSWORD";
+          };
+          sasl_plaintext_controller.KafkaServer {
+              org.apache.kafka.common.security.plain.PlainLoginModule required
+              username="$KAFKA_USERNAME"
+              password="$KAFKA_PASSWORD"
+              user_$KAFKA_USERNAME="$KAFKA_PASSWORD";
+          };
+          EOF
+          docker run -d --name reliability-kafka --network host \
+            -v "$jaas:/etc/kafka/kafka_server_jaas.conf:ro" \
+            -e KAFKA_NODE_ID=1 \
+            -e KAFKA_PROCESS_ROLES=broker,controller \
+            -e KAFKA_CONTROLLER_QUORUM_VOTERS=1@127.0.0.1:9093 \
+            -e KAFKA_LISTENERS=SASL_PLAINTEXT://0.0.0.0:9092,SASL_PLAINTEXT_CONTROLLER://0.0.0.0:9093 \
+            -e KAFKA_ADVERTISED_LISTENERS=SASL_PLAINTEXT://127.0.0.1:9092 \
+            -e KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=SASL_PLAINTEXT:SASL_PLAINTEXT,SASL_PLAINTEXT_CONTROLLER:SASL_PLAINTEXT \
+            -e KAFKA_INTER_BROKER_LISTENER_NAME=SASL_PLAINTEXT \
+            -e KAFKA_CONTROLLER_LISTENER_NAMES=SASL_PLAINTEXT_CONTROLLER \
+            -e KAFKA_SASL_ENABLED_MECHANISMS=PLAIN \
+            -e KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL=PLAIN \
+            -e KAFKA_SASL_MECHANISM_CONTROLLER_PROTOCOL=PLAIN \
+            -e KAFKA_OPTS=-Djava.security.auth.login.config=/etc/kafka/kafka_server_jaas.conf \
+            -e KAFKA_AUTHORIZER_CLASS_NAME=org.apache.kafka.metadata.authorizer.StandardAuthorizer \
+            -e KAFKA_SUPER_USERS=User:$KAFKA_USERNAME \
+            -e KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND=false \
+            -e KAFKA_AUTO_CREATE_TOPICS_ENABLE=false \
+            -e KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1 \
+            -e KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1 \
+            -e KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1 \
+            -e CLUSTER_ID=MkU3OEVBNTcwNTJENDM2Qk \
+            confluentinc/cp-kafka:8.2.0
+          for attempt in {1..30}; do
+            if docker exec -e KAFKA_USERNAME="$KAFKA_USERNAME" -e KAFKA_PASSWORD="$KAFKA_PASSWORD" reliability-kafka bash -ec 'printf "security.protocol=SASL_PLAINTEXT\\nsasl.mechanism=PLAIN\\nsasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username=\\\"$KAFKA_USERNAME\\\" password=\\\"$KAFKA_PASSWORD\\\";\\n" > /tmp/health.properties && kafka-broker-api-versions --bootstrap-server 127.0.0.1:9092 --command-config /tmp/health.properties >/dev/null' 2>/dev/null; then break; fi
+            [[ "$attempt" = 30 ]] && { docker logs reliability-kafka; exit 1; }
+            sleep 2
+          done
+          docker exec -e KAFKA_USERNAME="$KAFKA_USERNAME" -e KAFKA_PASSWORD="$KAFKA_PASSWORD" reliability-kafka bash -ec 'printf "security.protocol=SASL_PLAINTEXT\nsasl.mechanism=PLAIN\nsasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username=\"$KAFKA_USERNAME\" password=\"$KAFKA_PASSWORD\";\n" > /tmp/admin.properties; for operation in ClusterAction Describe; do kafka-acls --bootstrap-server 127.0.0.1:9092 --command-config /tmp/admin.properties --add --allow-principal User:$KAFKA_USERNAME --operation "$operation" --cluster; done'
+
+      - name: Validate required reliability secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in RELIABILITY_KAFKA_USERNAME RELIABILITY_KAFKA_PASSWORD RELIABILITY_POSTGRES_PASSWORD RELIABILITY_REDIS_PASSWORD; do
+            [[ -n "${!name}" ]] || { echo "missing required reliability secret: $name" >&2; exit 1; }
+          done
+
+      - name: Install fixture dependencies
+        run: python -m pip install --disable-pip-version-check -r services/video-moderator/requirements.txt
+
+      - name: Verify authenticated PostgreSQL and Redis
+        shell: bash
+        run: |
+          set -euo pipefail
+          PGPASSWORD="$RELIABILITY_POSTGRES_PASSWORD" psql -h 127.0.0.1 -U reliability -d reliability -c 'select 1' >/dev/null
+          docker exec -e REDIS_PASSWORD="$RELIABILITY_REDIS_PASSWORD" "${{ job.services.redis.id }}" redis-cli -a "$RELIABILITY_REDIS_PASSWORD" ping | grep -Fx PONG
+
+      - name: Run duplicate-delivery and malformed-DLT fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          python infra/scripts/reliability-fixture.py duplicate-delivery
+          python infra/scripts/reliability-fixture.py malformed-dlt
+
+      - name: Run bounded broker-down fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          RELIABILITY_BROKER_DOWN_ENDPOINT=127.0.0.1:1 python infra/scripts/reliability-fixture.py broker-down
+
+      - name: Run focused service reliability suites
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pytest -q services/video-moderator/tests/test_consumer.py services/video-moderator/tests/test_db.py
+          mvn --batch-mode --no-transfer-progress -f services/order-service/pom.xml -DskipTests=false -Djacoco.skip=true -Dtest=OrderProjectionListenerTest,PaymentCompletedListenerTest,PaymentRefundedListenerTest test
+          mvn --batch-mode --no-transfer-progress -f services/payment-service/pom.xml -DskipTests=false -Djacoco.skip=true -Dtest=DurableDltServiceTest,SepayTransactionValidatorTest,SepayWebhookPollerParityTest test
+          mvn --batch-mode --no-transfer-progress -f services/search-service/pom.xml -DskipTests=false -Djacoco.skip=true -Dtest=ProductEventConsumerTest test
+          mvn --batch-mode --no-transfer-progress -f services/invoice-service/pom.xml -DskipTests=false -Djacoco.skip=true -Dtest=InvoiceControllerTest test
+          npm --prefix services/notification-service ci --legacy-peer-deps
+          npm --prefix services/notification-service test -- --runInBand --forceExit --coverageThreshold='{}' --passWithNoTests
+
+      - name: Validate reliability scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n infra/scripts/init-kafka-topics-local.sh infra/scripts/backup-cron.sh
+          python -m py_compile infra/scripts/reliability-fixture.py services/video-moderator/app/config.py services/video-moderator/app/consumer.py
+          git diff --check

@@ -1,0 +1,5 @@
+payment:
+  providers:
+    cod: true
+    vnpay: false
+    momo: false

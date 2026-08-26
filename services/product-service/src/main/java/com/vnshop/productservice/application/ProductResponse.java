@@ -74,15 +74,17 @@ public record ProductResponse(
     ) {
     }
 
-    public record ParcelResponse(int weightGrams, int lengthCm, int widthCm, int heightCm) {
+    public record ParcelResponse(int weightGrams, int lengthCm, int widthCm, int heightCm,
+                                 long declaredValueMinor) {
         static ParcelResponse fromDomain(ParcelDimensions parcel) {
             return parcel == null
                     ? null
                     : new ParcelResponse(
                             parcel.weightGrams(),
-                            parcel.lengthCm(),
-                            parcel.widthCm(),
-                            parcel.heightCm());
+                             parcel.lengthCm(),
+                             parcel.widthCm(),
+                             parcel.heightCm(),
+                             parcel.declaredValueMinor());
         }
     }
 

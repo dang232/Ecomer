@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import { imageUrl } from "@/shared/lib/image-url";
 import { IconButton, ImageWithFallback } from "@/shared/ui";
 
 import type { ProductDetailView } from "../model/product-view";
@@ -125,6 +126,8 @@ export function ProductGallery({ media, badge }: ProductGalleryProps) {
             src={active.url}
             alt={active.alt}
             className="h-full w-full object-contain"
+            imagePreset="detail"
+            sizes="(min-width: 1024px) 50vw, 100vw"
           />
         )}
         {magnifierPosition && active.type !== "video" ? (
@@ -133,7 +136,7 @@ export function ProductGallery({ media, badge }: ProductGalleryProps) {
             aria-hidden="true"
             className="pointer-events-none absolute inset-0 hidden bg-no-repeat md:block"
             style={{
-              backgroundImage: `url(${active.url})`,
+              backgroundImage: `url(${imageUrl(active.url, "detail")})`,
               backgroundPosition: `${magnifierPosition.x}% ${magnifierPosition.y}%`,
               backgroundSize: "200%",
             }}
@@ -151,7 +154,7 @@ export function ProductGallery({ media, badge }: ProductGalleryProps) {
             setShowLightbox(true);
           }}
           aria-label={t("product.openZoom", { defaultValue: "Open zoomed view" })}
-          className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-card/90 text-foreground shadow-[var(--shadow-low)] hover:bg-card"
+          className="absolute right-3 top-3 flex min-h-[var(--target-web)] min-w-[var(--target-web)] items-center justify-center rounded-full bg-card/90 text-foreground shadow-[var(--shadow-low)] hover:bg-card"
         >
           <ZoomIn className="h-4 w-4" aria-hidden="true" />
         </button>
@@ -161,7 +164,7 @@ export function ProductGallery({ media, badge }: ProductGalleryProps) {
               type="button"
               onClick={() => move(-1)}
               aria-label={t("common.prev", { defaultValue: "Previous" })}
-              className="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-card/90 text-foreground shadow-[var(--shadow-low)] hover:bg-card"
+              className="absolute left-3 top-1/2 flex min-h-[var(--target-web)] min-w-[var(--target-web)] -translate-y-1/2 items-center justify-center rounded-full bg-card/90 text-foreground shadow-[var(--shadow-low)] hover:bg-card"
             >
               <ChevronLeft className="h-5 w-5" aria-hidden="true" />
             </button>
@@ -169,7 +172,7 @@ export function ProductGallery({ media, badge }: ProductGalleryProps) {
               type="button"
               onClick={() => move(1)}
               aria-label={t("common.next", { defaultValue: "Next" })}
-              className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-card/90 text-foreground shadow-[var(--shadow-low)] hover:bg-card"
+              className="absolute right-3 top-1/2 flex min-h-[var(--target-web)] min-w-[var(--target-web)] -translate-y-1/2 items-center justify-center rounded-full bg-card/90 text-foreground shadow-[var(--shadow-low)] hover:bg-card"
             >
               <ChevronRight className="h-5 w-5" aria-hidden="true" />
             </button>
@@ -206,7 +209,13 @@ export function ProductGallery({ media, badge }: ProductGalleryProps) {
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <ImageWithFallback src={item.url} alt="" className="h-full w-full object-cover" />
+                <ImageWithFallback
+                  src={item.url}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  imagePreset="thumbnail"
+                  sizes="72px"
+                />
               )}
             </button>
           ))}
@@ -251,6 +260,8 @@ export function ProductGallery({ media, badge }: ProductGalleryProps) {
               src={active.url}
               alt={active.alt}
               className="max-h-full max-w-full object-contain"
+              imagePreset="detail"
+              sizes="100vw"
               onClick={(event) => event.stopPropagation()}
             />
           )}

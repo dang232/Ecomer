@@ -1,8 +1,8 @@
 package com.vnshop.shippingservice.infrastructure.grpc;
 
-import com.vnshop.proto.shipping.ShippingRequest;
-import com.vnshop.proto.shipping.ShippingResponse;
-import com.vnshop.proto.shipping.ShippingServiceGrpc;
+import com.vnshop.proto.v1.ShippingRequest;
+import com.vnshop.proto.v1.ShippingResponse;
+import com.vnshop.proto.v1.ShippingServiceGrpc;
 import com.vnshop.shippingservice.application.CreateLabelCommand;
 import com.vnshop.shippingservice.application.CreateLabelResult;
 import com.vnshop.shippingservice.application.CreateLabelUseCase;
@@ -13,6 +13,8 @@ import com.vnshop.shippingservice.domain.Parcel;
 import com.vnshop.shippingservice.infrastructure.config.ShippingCheckoutProperties;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import io.grpc.netty.shaded.io.grpc.netty.GrpcSslContexts;
+import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 import io.grpc.ServerInterceptors;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
@@ -25,6 +27,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.io.File;
 import java.util.List;
 import java.util.Objects;
 
@@ -41,6 +44,19 @@ public class GrpcShippingServer extends ShippingServiceGrpc.ShippingServiceImplB
     @Value("${grpc.server.port:9095}")
     int port;
 
+    @Value("${grpc.server.auth.service-id:order-service}")
+    String expectedServiceId;
+
+    @Value("${grpc.server.auth.token:}")
+    String expectedServiceToken;
+
+    @Value("${grpc.server.tls.cert-chain:}")
+    String tlsCertChain;
+    @Value("${grpc.server.tls.private-key:}")
+    String tlsPrivateKey;
+    @Value("${grpc.server.tls.client-ca:}")
+    String tlsClientCa;
+
     public GrpcShippingServer(
             CreateLabelUseCase createLabelUseCase,
             ShippingCheckoutProperties checkoutProperties) {
@@ -50,8 +66,16 @@ public class GrpcShippingServer extends ShippingServiceGrpc.ShippingServiceImplB
 
     @PostConstruct
     public void start() throws IOException {
-        server = ServerBuilder.forPort(port)
-                .addService(ServerInterceptors.intercept(this, new GrpcTracePropagationInterceptor()))
+        if (tlsCertChain.isBlank() || tlsPrivateKey.isBlank() || tlsClientCa.isBlank()) {
+            throw new IllegalStateException("gRPC mTLS certificate configuration is required");
+        }
+        server = NettyServerBuilder.forPort(port)
+                .sslContext(GrpcSslContexts.forServer(new File(tlsCertChain), new File(tlsPrivateKey))
+                        .trustManager(new File(tlsClientCa)).clientAuth(
+                                io.grpc.netty.shaded.io.netty.handler.ssl.ClientAuth.REQUIRE).build())
+                .addService(ServerInterceptors.intercept(this,
+                        new GrpcServiceAuthInterceptor(expectedServiceId, expectedServiceToken),
+                        new GrpcTracePropagationInterceptor()))
                 .build()
                 .start();
         log.info("Shipping gRPC server started on port {}", port);
@@ -88,16 +112,23 @@ public class GrpcShippingServer extends ShippingServiceGrpc.ShippingServiceImplB
         try {
             for (var subOrder : request.getSubOrdersList()) {
                 CreateLabelResult label = createLabelUseCase.create(toCreateLabelCommand(request.getOrderId(), subOrder));
-                response.addLabels(com.vnshop.proto.shipping.ShippingLabel.newBuilder()
+                response.addLabels(com.vnshop.proto.v1.ShippingLabel.newBuilder()
                         .setTrackingCode(label.trackingCode())
                         .setCarrier(label.carrierCode().name())
                         .build());
             }
+        } catch (IllegalArgumentException exception) {
+            log.warn("Invalid shipping label request orderId={} exceptionType={}",
+                    request.getOrderId(), exception.getClass().getSimpleName());
+            responseObserver.onError(Status.INVALID_ARGUMENT
+                    .withDescription("Invalid shipping label request")
+                    .asRuntimeException());
+            return;
         } catch (RuntimeException exception) {
-            log.error("Carrier label creation failed for order {}", request.getOrderId(), exception);
+            log.error("Carrier label creation failed for order {} exceptionType={}",
+                    request.getOrderId(), exception.getClass().getSimpleName());
             responseObserver.onError(Status.FAILED_PRECONDITION
-                    .withDescription("Carrier label creation failed: " + exception.getMessage())
-                    .withCause(exception)
+                    .withDescription("Carrier label creation failed")
                     .asRuntimeException());
             return;
         }
@@ -106,7 +137,7 @@ public class GrpcShippingServer extends ShippingServiceGrpc.ShippingServiceImplB
         responseObserver.onCompleted();
     }
 
-    private CreateLabelCommand toCreateLabelCommand(String orderId, com.vnshop.proto.shipping.SubOrder subOrder) {
+    private CreateLabelCommand toCreateLabelCommand(String orderId, com.vnshop.proto.v1.SubOrder subOrder) {
         var destination = subOrder.getShippingAddress();
         List<ShippingLineItem> items = subOrder.getItemsList().stream()
                 .map(item -> new ShippingLineItem(
@@ -118,9 +149,13 @@ public class GrpcShippingServer extends ShippingServiceGrpc.ShippingServiceImplB
 
         var declaredValue = toMoney(subOrder.getDeclaredValue());
         var codAmount = toMoney(subOrder.getCodAmount());
-        var parcel = subOrder.getParcelWeightGrams() > 0
+        var parcelSnapshot = subOrder.hasParcel() ? subOrder.getParcel() : null;
+        var parcel = parcelSnapshot != null && parcelSnapshot.getWeightGrams() > 0
+                ? new Parcel(parcelSnapshot.getWeightGrams(), parcelSnapshot.getLengthCm(),
+                parcelSnapshot.getWidthCm(), parcelSnapshot.getHeightCm(), parcelSnapshot.getDeclaredValueMinor())
+                : subOrder.getParcelWeightGrams() > 0
                 ? new Parcel(subOrder.getParcelWeightGrams(), subOrder.getParcelLengthCm(),
-                subOrder.getParcelWidthCm(), subOrder.getParcelHeightCm())
+                subOrder.getParcelWidthCm(), subOrder.getParcelHeightCm(), 0L)
                 : null;
 
         return new CreateLabelCommand(
@@ -137,7 +172,7 @@ public class GrpcShippingServer extends ShippingServiceGrpc.ShippingServiceImplB
                 items);
     }
 
-    private static Money toMoney(com.vnshop.proto.common.Money money) {
+    private static Money toMoney(com.vnshop.proto.v1.Money money) {
         return money == null || money.getAmount().isBlank() ? null
                 : new Money(new java.math.BigDecimal(money.getAmount()), money.getCurrency());
     }

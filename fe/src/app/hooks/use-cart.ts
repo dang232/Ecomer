@@ -19,6 +19,7 @@ import {
 import { productById } from "@/shared/api/endpoints/products";
 import type { Cart } from "@/shared/contracts/api";
 import { productIdSchema, sellerIdSchema } from "@/shared/contracts/api/branded-ids";
+import { logger } from "@/shared/lib";
 
 import { readJsonText } from "../../shared/api/read-json";
 
@@ -430,10 +431,7 @@ export function useCart() {
     try {
       const missingVariant = guestItems.find((item) => item.variantId === undefined);
       if (missingVariant) {
-        console.warn(
-          `[cart] merge called without variantId for product ${missingVariant.productId} — ` +
-            `variant selection may be lost`,
-        );
+        logger.warn("cart.merge_missing_variant", { productId: missingVariant.productId });
       }
 
       const idempotencyKey = mergeIdempotencyKeyRef.current ?? crypto.randomUUID();
@@ -443,8 +441,8 @@ export function useCart() {
         idempotencyKey,
         items: guestItems,
       });
-    } catch (err) {
-      console.warn("cart merge: failed", err);
+    } catch (error) {
+      logger.warn("cart.merge_failed", { error });
       failedItems.push(...guestItems);
     } finally {
       setIsMerging(false);

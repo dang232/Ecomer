@@ -660,6 +660,15 @@ spec:
         - name: KAFKA_SSL_KEYSTORE_PASSWORD
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: inventory-service-kafka-keystore-password}
+        - name: GRPC_SERVER_AUTH_TOKEN
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: inventory-grpc-service-token}
+        - name: GRPC_SERVER_TLS_CERT_CHAIN
+          value: /etc/grpc/tls/server.crt
+        - name: GRPC_SERVER_TLS_PRIVATE_KEY
+          value: /etc/grpc/tls/server.key
+        - name: GRPC_SERVER_TLS_CLIENT_CA
+          value: /etc/grpc/tls/ca.crt
         - name: REDIS_PASSWORD
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: platform-redis-password}
@@ -705,6 +714,9 @@ spec:
         - name: kafka-tls
           mountPath: /etc/kafka/tls
           readOnly: true
+        - name: grpc-tls
+          mountPath: /etc/grpc/tls
+          readOnly: true
       volumes:
       - name: scratch
         emptyDir:
@@ -716,6 +728,13 @@ spec:
           items:
           - {key: inventory-service-kafka-truststore, path: ca.truststore.jks}
           - {key: inventory-service-kafka-keystore, path: client.keystore.jks}
+      - name: grpc-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {key: grpc-ca-cert, path: ca.crt}
+          - {key: inventory-grpc-server-cert, path: server.crt}
+          - {key: inventory-grpc-server-key, path: server.key}
 ---
 apiVersion: v1
 kind: Service
@@ -1531,6 +1550,18 @@ spec:
         - name: GRPC_CLIENT_PAYMENT_SERVICE_TOKEN
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: payment-grpc-service-token}
+        - name: GRPC_CLIENT_INVENTORY_SERVICE_TOKEN
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: inventory-grpc-service-token}
+        - name: GRPC_CLIENT_SHIPPING_SERVICE_TOKEN
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: shipping-grpc-service-token}
+        - name: GRPC_CLIENT_TLS_CA_CERT
+          value: /etc/grpc/tls/ca.crt
+        - name: GRPC_CLIENT_TLS_CLIENT_CERT
+          value: /etc/grpc/tls/order-client.crt
+        - name: GRPC_CLIENT_TLS_CLIENT_KEY
+          value: /etc/grpc/tls/order-client.key
         - name: REDIS_PASSWORD
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: platform-redis-password}
@@ -1576,6 +1607,9 @@ spec:
         - name: kafka-tls
           mountPath: /etc/kafka/tls
           readOnly: true
+        - name: grpc-tls
+          mountPath: /etc/grpc/tls
+          readOnly: true
       volumes:
       - name: scratch
         emptyDir:
@@ -1587,6 +1621,13 @@ spec:
           items:
           - {key: order-service-kafka-truststore, path: ca.truststore.jks}
           - {key: order-service-kafka-keystore, path: client.keystore.jks}
+      - name: grpc-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {key: grpc-ca-cert, path: ca.crt}
+          - {key: order-grpc-client-cert, path: order-client.crt}
+          - {key: order-grpc-client-key, path: order-client.key}
 ---
 apiVersion: v1
 kind: Service
@@ -1719,6 +1760,12 @@ spec:
         - name: GRPC_SERVER_AUTH_TOKEN
           valueFrom:
             secretKeyRef: {name: vnshop-runtime-secrets, key: payment-grpc-service-token}
+        - name: GRPC_SERVER_TLS_CERT_CHAIN
+          value: /etc/grpc/tls/server.crt
+        - name: GRPC_SERVER_TLS_PRIVATE_KEY
+          value: /etc/grpc/tls/server.key
+        - name: GRPC_SERVER_TLS_CLIENT_CA
+          value: /etc/grpc/tls/ca.crt
         envFrom:
         - configMapRef:
             name: vnshop-app-config
@@ -1761,6 +1808,9 @@ spec:
         - name: kafka-tls
           mountPath: /etc/kafka/tls
           readOnly: true
+        - name: grpc-tls
+          mountPath: /etc/grpc/tls
+          readOnly: true
       volumes:
       - name: scratch
         emptyDir:
@@ -1772,6 +1822,13 @@ spec:
           items:
           - {key: payment-service-kafka-truststore, path: ca.truststore.jks}
           - {key: payment-service-kafka-keystore, path: client.keystore.jks}
+      - name: grpc-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {key: grpc-ca-cert, path: ca.crt}
+          - {key: payment-grpc-server-cert, path: server.crt}
+          - {key: payment-grpc-server-key, path: server.key}
 ---
 apiVersion: v1
 kind: Service
@@ -2668,6 +2725,15 @@ spec:
             secretKeyRef:
               name: vnshop-runtime-secrets
               key: ghtk-webhook-token
+        - name: GRPC_SERVER_AUTH_TOKEN
+          valueFrom:
+            secretKeyRef: {name: vnshop-runtime-secrets, key: shipping-grpc-service-token}
+        - name: GRPC_SERVER_TLS_CERT_CHAIN
+          value: /etc/grpc/tls/server.crt
+        - name: GRPC_SERVER_TLS_PRIVATE_KEY
+          value: /etc/grpc/tls/server.key
+        - name: GRPC_SERVER_TLS_CLIENT_CA
+          value: /etc/grpc/tls/ca.crt
         envFrom:
         - configMapRef:
             name: vnshop-app-config
@@ -2710,6 +2776,9 @@ spec:
         - name: kafka-tls
           mountPath: /etc/kafka/tls
           readOnly: true
+        - name: grpc-tls
+          mountPath: /etc/grpc/tls
+          readOnly: true
       volumes:
       - name: scratch
         emptyDir:
@@ -2721,6 +2790,13 @@ spec:
           items:
           - {key: shipping-service-kafka-truststore, path: ca.truststore.jks}
           - {key: shipping-service-kafka-keystore, path: client.keystore.jks}
+      - name: grpc-tls
+        secret:
+          secretName: vnshop-runtime-secrets
+          items:
+          - {key: grpc-ca-cert, path: ca.crt}
+          - {key: shipping-grpc-server-cert, path: server.crt}
+          - {key: shipping-grpc-server-key, path: server.key}
 ---
 apiVersion: v1
 kind: Service

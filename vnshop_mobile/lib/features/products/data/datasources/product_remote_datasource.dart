@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:vnshop_mobile/core/config/env_config.dart';
+import 'package:vnshop_mobile/core/constants/api_constants.dart';
 import '../../domain/models/product_catalog_query.dart';
 import '../models/product_model.dart';
 import '../models/category_model.dart';
@@ -29,12 +29,12 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
     required this.dio,
     String? baseUrl,
     String? searchBaseUrl,
-  }) : baseUrl = baseUrl ?? '${EnvConfig.apiBaseUrl}/products',
+  }) : baseUrl = baseUrl ?? ApiConstants.products,
        searchBaseUrl =
            searchBaseUrl ??
            (baseUrl?.endsWith('/products') == true
                ? '${baseUrl!.substring(0, baseUrl.length - '/products'.length)}/search'
-               : '${EnvConfig.apiBaseUrl}/search');
+                : ApiConstants.search);
 
   List<ProductModel> _parseProducts(dynamic data) {
     if (data == null) return [];
@@ -193,7 +193,7 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
   @override
   Future<List<CategoryModel>> getCategories() async {
     try {
-      final response = await dio.get('${EnvConfig.apiBaseUrl}/categories');
+      final response = await dio.get(ApiConstants.categories);
 
       if (response.statusCode == 200) {
         return _parseCategories(response.data);
@@ -208,7 +208,7 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
   @override
   Future<CategoryModel> getCategoryById(String id) async {
     try {
-      final response = await dio.get('${EnvConfig.apiBaseUrl}/categories/$id');
+      final response = await dio.get('${ApiConstants.categories}/$id');
 
       if (response.statusCode == 200) {
         return CategoryModel.fromJson(response.data);

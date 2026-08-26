@@ -37,6 +37,8 @@ function SellerCard({ seller }: { seller: PublicSeller }) {
             src={seller.logoUrl}
             alt={seller.shopName}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            imagePreset="card"
+            sizes="(min-width: 768px) 33vw, 100vw"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-primary text-4xl font-bold text-primary-foreground">

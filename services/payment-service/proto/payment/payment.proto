@@ -1,9 +1,10 @@
 syntax = "proto3";
-package vnshop.payment;
+package vnshop.v1;
 option java_multiple_files = true;
-option java_package = "com.vnshop.proto.payment";
+option java_package = "com.vnshop.proto.v1";
 
 import "common/common.proto";
+import "google/protobuf/timestamp.proto";
 
 service PaymentService {
   rpc RequestPayment(PaymentRequest) returns (PaymentResponse);
@@ -13,13 +14,20 @@ service PaymentService {
 message PaymentRequest {
   string order_id = 1;
   string buyer_id = 2;
-  vnshop.common.Money amount = 3;
+  vnshop.v1.Money amount = 3;
   string payment_method = 4; // "COD", "VNPAY", "MOMO"
+  string idempotency_key = 5;
+  PaymentMethod method = 6;
+  IdempotencyScope idempotency_scope = 7;
 }
 
 message PaymentResponse {
   string payment_id = 1;
   string status = 2; // "PENDING", "COMPLETED", "FAILED"
+  PaymentStatus status_code = 3;
+  bool replayed = 4;
+  google.protobuf.Timestamp processed_at = 5;
+  PaymentFailureCode failure_code = 6;
 }
 
 message PaymentStatusRequest {
@@ -29,4 +37,37 @@ message PaymentStatusRequest {
 message PaymentStatusResponse {
   string payment_id = 1;
   string status = 2;
+  PaymentStatus status_code = 3;
+}
+
+enum PaymentMethod {
+  PAYMENT_METHOD_UNSPECIFIED = 0;
+  PAYMENT_METHOD_COD = 1;
+  PAYMENT_METHOD_VNPAY = 2;
+  PAYMENT_METHOD_MOMO = 3;
+  PAYMENT_METHOD_VIETQR = 4;
+  PAYMENT_METHOD_STRIPE = 5;
+  PAYMENT_METHOD_PAYPAL = 6;
+}
+
+enum PaymentStatus {
+  PAYMENT_STATUS_UNSPECIFIED = 0;
+  PAYMENT_STATUS_PENDING = 1;
+  PAYMENT_STATUS_AWAITING_COLLECTION = 2;
+  PAYMENT_STATUS_COMPLETED = 3;
+  PAYMENT_STATUS_FAILED = 4;
+  PAYMENT_STATUS_PARTIALLY_REFUNDED = 5;
+  PAYMENT_STATUS_REFUNDED = 6;
+  PAYMENT_STATUS_PAYMENT_TIMEOUT = 7;
+}
+
+enum PaymentFailureCode {
+  PAYMENT_FAILURE_CODE_UNSPECIFIED = 0;
+  PAYMENT_FAILURE_CODE_PROVIDER_FAILED = 1;
+  PAYMENT_FAILURE_CODE_IDEMPOTENCY_CONFLICT = 2;
+}
+
+enum IdempotencyScope {
+  IDEMPOTENCY_SCOPE_UNSPECIFIED = 0;
+  IDEMPOTENCY_SCOPE_ORDER_PAYMENT = 1;
 }

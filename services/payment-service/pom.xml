@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>4.0.7</version>
+		<version>4.1.0</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.vnshop</groupId>
@@ -28,15 +28,15 @@
 	</scm>
 	<properties>
 		<jackson.version>2.22.1</jackson.version>
-		<jackson.annotations.version>2.22</jackson.annotations.version>
+		<jackson.annotations.version>2.21</jackson.annotations.version>
 		<jackson3.version>3.1.4</jackson3.version>
-		<java.version>17</java.version>
+		<java.version>25</java.version>
 		<netty.version>4.2.16.Final</netty.version>
 		<spring-kafka.version>4.0.6</spring-kafka.version>
 		<opentelemetry.javaagent.version>2.27.0</opentelemetry.javaagent.version>
 		<tomcat.version>11.0.22</tomcat.version>
 		<grpc.version>1.83.0</grpc.version>
-		<protobuf.version>4.35.1</protobuf.version>
+		<protobuf.version>4.34.2</protobuf.version>
 		<postgresql.version>42.7.12</postgresql.version>
 	</properties>
 	<dependencyManagement>
@@ -66,6 +66,16 @@
 				<groupId>tools.jackson.core</groupId>
 				<artifactId>jackson-databind</artifactId>
 				<version>${jackson3.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.google.protobuf</groupId>
+				<artifactId>protobuf-java</artifactId>
+				<version>${protobuf.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.google.errorprone</groupId>
+				<artifactId>error_prone_annotations</artifactId>
+				<version>2.50.0</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
@@ -281,6 +291,28 @@
 		</extensions>
 		<plugins>
 			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-enforcer-plugin</artifactId>
+				<version>3.6.3</version>
+				<configuration>
+					<rules>
+						<requireJavaVersion>
+							<version>[25,)</version>
+						</requireJavaVersion>
+						<dependencyConvergence />
+					</rules>
+				</configuration>
+				<executions>
+					<execution>
+						<id>enforce-java-and-dependency-convergence</id>
+						<phase>validate</phase>
+						<goals>
+							<goal>enforce</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
 				<groupId>org.xolstice.maven.plugins</groupId>
 				<artifactId>protobuf-maven-plugin</artifactId>
 				<version>0.6.1</version>
@@ -360,10 +392,10 @@
 									<element>BUNDLE</element>
 									<limits>
 										<limit>
-											<counter>INSTRUCTION</counter>
-											<value>COVEREDRATIO</value>
-											<minimum>0.80</minimum>
-										</limit>
+										<counter>INSTRUCTION</counter>
+										<value>COVEREDRATIO</value>
+										<minimum>0.80</minimum>
+									</limit>
 									</limits>
 								</rule>
 							</rules>
@@ -393,5 +425,4 @@
 			</plugin>
 		</plugins>
 	</build>
-
 </project>

@@ -28,7 +28,10 @@ void main() {
             'data': [
               {'id': 'cod', 'name': 'Cash on Delivery', 'enabled': true},
               {'id': 'vietqr', 'name': 'VietQR', 'enabled': true},
-              {'id': 'momo', 'name': 'MoMo', 'enabled': false},
+              {'id': 'sepay', 'name': 'SePay', 'enabled': true},
+              {'id': 'vnpay', 'name': 'legacy-a', 'enabled': true},
+              {'id': 'momo', 'name': 'legacy-b', 'enabled': true},
+              {'id': 'bank_transfer', 'name': 'Bank transfer', 'enabled': true},
               {'id': 'stripe', 'name': 'Card', 'enabled': true},
             ],
           },
@@ -39,7 +42,7 @@ void main() {
         dio: dio,
       ).getAvailablePaymentMethods();
 
-      expect(methods, [PaymentMethod.cod, PaymentMethod.vietqr]);
+      expect(methods, [PaymentMethod.cod, PaymentMethod.vietqr, PaymentMethod.sepay]);
     },
   );
 }

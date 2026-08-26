@@ -1,17 +1,40 @@
 import 'dart:core';
 
+import '../../../../core/config/configuration_client.dart';
+
 /// VietQR payment service for Vietnam
 /// VietQR is an open standard: https://vietqr.io/
 class VietQRService {
+  static Future<VietQRService> fromConfiguration({
+    required ConfigurationClient client,
+    required String merchantId,
+    required String merchantName,
+  }) async {
+    final remote = await client.getVietQRConfiguration();
+    return VietQRService(
+      merchantId: merchantId,
+      merchantName: merchantName,
+      configuration: VietQRConfiguration(
+        bankBin: remote.bankBin,
+        accountNumber: remote.accountNumber,
+        accountName: remote.accountName,
+      ),
+    );
+  }
+
   VietQRService({
     required this.merchantId,
     required this.merchantName,
-    this.mode = VietQRMode.test,
-  });
+    required this.configuration,
+  }) {
+    if (!configuration.isComplete) {
+      throw StateError('VietQR configuration is incomplete');
+    }
+  }
 
   final String merchantId;
   final String merchantName;
-  final VietQRMode mode;
+  final VietQRConfiguration configuration;
 
   /// Generate VietQR payment URL/image
   /// amount: in VND (integer)
@@ -21,9 +44,8 @@ class VietQRService {
     required String orderId,
     String? description,
   }) async {
-    final bankId = mode == VietQRMode.production ? 'YOUR_BANK_ID' : '970436';
-    final accountNumber =
-        mode == VietQRMode.production ? 'YOUR_ACCOUNT' : '1234567890';
+    final bankId = configuration.bankBin;
+    final accountNumber = configuration.accountNumber;
 
     // VietQR format
     final qrData = _buildQRString(
@@ -83,7 +105,22 @@ class VietQRService {
   }
 }
 
-enum VietQRMode { test, production }
+class VietQRConfiguration {
+  const VietQRConfiguration({
+    required this.bankBin,
+    required this.accountNumber,
+    required this.accountName,
+  });
+
+  final String bankBin;
+  final String accountNumber;
+  final String accountName;
+
+  bool get isComplete =>
+      bankBin.trim().isNotEmpty &&
+      accountNumber.trim().isNotEmpty &&
+      accountName.trim().isNotEmpty;
+}
 
 class VietQRPayment {
   final String qrData;

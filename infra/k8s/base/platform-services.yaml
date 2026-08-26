@@ -1,48 +1,92 @@
+# VNShop production platform data plane.
+#
+# PostgreSQL is managed by the Zalando postgres-operator (Patroni), Redis is
+# split into three independent Sentinel groups, MongoDB is a replica set, and
+# MinIO uses distributed erasure coding. The operator installations and their
+# RBAC are platform prerequisites and are deliberately not hidden in this
+# application namespace manifest.
+---
+apiVersion: acid.zalan.do/v1
+kind: postgresql
+metadata:
+  name: postgres
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/part-of: vnshop
+    app.kubernetes.io/component: database
+  annotations:
+    argocd.argoproj.io/sync-wave: "-20"
+    vnshop.io/ha: patroni-postgres-operator
+spec:
+  teamId: vnshop
+  postgresql:
+    version: "17"
+    parameters:
+      synchronous_commit: "on"
+      synchronous_standby_names: "ANY 1 (*)"
+      wal_level: replica
+      max_wal_senders: "10"
+      max_replication_slots: "10"
+  numberOfInstances: 3
+  enableMasterLoadBalancer: false
+  enableReplicaLoadBalancer: false
+  volume:
+    size: 40Gi
+    storageClass: fast-ssd
+  users:
+    vnshop:
+      - superuser
+      - createdb
+  databases:
+    vnshop: vnshop
+  allowedSourceRanges: []
+  patroni:
+    pg_hba:
+      - local all all trust
+      - host all all 0.0.0.0/0 scram-sha-256
+      - host replication standby 0.0.0.0/0 scram-sha-256
+---
 apiVersion: v1
 kind: Service
 metadata:
   name: postgres
-  annotations: {argocd.argoproj.io/sync-wave: "-15"}
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/part-of: vnshop
+  annotations:
+    argocd.argoproj.io/sync-wave: "-19"
+    vnshop.io/ha-role: primary
 spec:
-  selector: {app.kubernetes.io/name: postgres}
-  ports: [{name: postgres, port: 5432, targetPort: postgres}]
----
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: postgres
-  annotations: {argocd.argoproj.io/sync-wave: "-15"}
-spec:
-  serviceName: postgres
-  replicas: 1
+  type: ClusterIP
   selector:
-    matchLabels: {app.kubernetes.io/name: postgres}
-  template:
-    metadata:
-      labels: {app.kubernetes.io/name: postgres, app.kubernetes.io/part-of: vnshop}
-    spec:
-      securityContext: {runAsNonRoot: true, fsGroup: 999, seccompProfile: {type: RuntimeDefault}}
-      containers:
-      - name: postgres
-        image: postgres@sha256:2a0d0fe14825b0939f78a8cad5cd4e6aa68bf94d0e5dd96e24b6d23af4315545
-        ports: [{name: postgres, containerPort: 5432}]
-        env:
-        - {name: POSTGRES_DB, value: vnshop}
-        - name: POSTGRES_USER
-          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-postgres-admin-username}}
-        - name: POSTGRES_PASSWORD
-          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-postgres-admin-password}}
-        readinessProbe: {exec: {command: [sh, -ec, "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"]}, periodSeconds: 10}
-        resources:
-          requests: {cpu: 250m, memory: 512Mi}
-          limits: {cpu: "2", memory: 2Gi}
-        securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
-        volumeMounts: [{name: data, mountPath: /var/lib/postgresql/data}]
-  volumeClaimTemplates:
-  - metadata: {name: data}
-    spec:
-      accessModes: [ReadWriteOnce]
-      resources: {requests: {storage: 40Gi}}
+    application: spilo
+    cluster-name: postgres
+    spilo-role: master
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-repl
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/part-of: vnshop
+  annotations:
+    argocd.argoproj.io/sync-wave: "-19"
+    vnshop.io/ha-role: replica
+spec:
+  type: ClusterIP
+  selector:
+    application: spilo
+    cluster-name: postgres
+    spilo-role: replica
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
 ---
 apiVersion: v1
 kind: Service
@@ -69,74 +113,395 @@ spec:
     spec:
       securityContext: {runAsNonRoot: true, fsGroup: 70, seccompProfile: {type: RuntimeDefault}}
       containers:
-      - name: timescaledb
-        image: timescale/timescaledb@sha256:61f891691050da6032023c01ea885730eeeba06b7c17b403e7d0b9c49c37dfe9
-        ports: [{name: postgres, containerPort: 5432}]
-        env:
-        - {name: POSTGRES_DB, value: monitoring}
-        - name: POSTGRES_USER
-          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-timescale-username}}
-        - name: POSTGRES_PASSWORD
-          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-timescale-password}}
-        resources:
-          requests: {cpu: 100m, memory: 256Mi}
-          limits: {cpu: "1", memory: 1Gi}
-        securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
-        volumeMounts: [{name: data, mountPath: /var/lib/postgresql/data}]
+        - name: timescaledb
+          image: timescale/timescaledb@sha256:61f891691050da6032023c01ea885730eeeba06b7c17b403e7d0b9c49c37dfe9
+          ports: [{name: postgres, containerPort: 5432}]
+          env:
+            - {name: POSTGRES_DB, value: monitoring}
+            - name: POSTGRES_USER
+              valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-timescale-username}}
+            - name: POSTGRES_PASSWORD
+              valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-timescale-password}}
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {cpu: "1", memory: 1Gi}
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          volumeMounts: [{name: data, mountPath: /var/lib/postgresql/data}]
   volumeClaimTemplates:
-  - metadata: {name: data}
-    spec:
-      accessModes: [ReadWriteOnce]
-      resources: {requests: {storage: 20Gi}}
+    - metadata: {name: data}
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources: {requests: {storage: 20Gi}}
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-ha-contract
+  labels: {app.kubernetes.io/part-of: vnshop}
+data:
+  REDIS_RATE_LIMIT_SENTINEL_MASTER: redis-rate-limit
+  REDIS_RATE_LIMIT_SENTINEL_NODES: redis-rate-limit-sentinel-0.redis-rate-limit-sentinel-headless:26379,redis-rate-limit-sentinel-1.redis-rate-limit-sentinel-headless:26379,redis-rate-limit-sentinel-2.redis-rate-limit-sentinel-headless:26379
+  REDIS_CART_SENTINEL_MASTER: redis-cart
+  REDIS_CART_SENTINEL_NODES: redis-cart-sentinel-0.redis-cart-sentinel-headless:26379,redis-cart-sentinel-1.redis-cart-sentinel-headless:26379,redis-cart-sentinel-2.redis-cart-sentinel-headless:26379
+  REDIS_DEDUP_SENTINEL_MASTER: redis-dedup
+  REDIS_DEDUP_SENTINEL_NODES: redis-dedup-sentinel-0.redis-dedup-sentinel-headless:26379,redis-dedup-sentinel-1.redis-dedup-sentinel-headless:26379,redis-dedup-sentinel-2.redis-dedup-sentinel-headless:26379
+  REDIS_CART_DEFAULT_TTL_SECONDS: "2592000"
+  REDIS_DEDUP_DEFAULT_TTL_SECONDS: "86400"
+---
+# The compatibility service is only a DNS alias for the rate-limit group. New
+# workloads must use one of the three explicit Sentinel contracts above.
 apiVersion: v1
 kind: Service
 metadata:
   name: redis
-  annotations: {argocd.argoproj.io/sync-wave: "-15"}
+  labels: {app.kubernetes.io/name: redis, app.kubernetes.io/part-of: vnshop}
+  annotations: {vnshop.io/deprecated: use-workload-specific-sentinel-service}
 spec:
-  selector: {app.kubernetes.io/name: redis}
+  type: ExternalName
+  externalName: redis-rate-limit-sentinel
+  ports: [{name: sentinel, port: 26379}]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-rate-limit-headless
+  labels: {app.kubernetes.io/name: redis-rate-limit, app.kubernetes.io/part-of: vnshop}
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector: {app.kubernetes.io/name: redis-rate-limit}
   ports: [{name: redis, port: 6379, targetPort: redis}]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-rate-limit-sentinel-headless
+  labels: {app.kubernetes.io/name: redis-rate-limit-sentinel, app.kubernetes.io/part-of: vnshop}
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector: {app.kubernetes.io/name: redis-rate-limit-sentinel}
+  ports: [{name: sentinel, port: 26379, targetPort: sentinel}]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-rate-limit-sentinel
+  labels: {app.kubernetes.io/name: redis-rate-limit-sentinel, app.kubernetes.io/part-of: vnshop}
+spec:
+  selector: {app.kubernetes.io/name: redis-rate-limit-sentinel}
+  ports: [{name: sentinel, port: 26379, targetPort: sentinel}]
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: redis
-  annotations: {argocd.argoproj.io/sync-wave: "-15"}
+  name: redis-rate-limit
+  labels: {app.kubernetes.io/name: redis-rate-limit, app.kubernetes.io/part-of: vnshop}
+  annotations: {argocd.argoproj.io/sync-wave: "-15", vnshop.io/redis-policy: noeviction}
 spec:
-  serviceName: redis
-  replicas: 1
-  selector:
-    matchLabels: {app.kubernetes.io/name: redis}
+  serviceName: redis-rate-limit-headless
+  replicas: 3
+  podManagementPolicy: Parallel
+  selector: {matchLabels: {app.kubernetes.io/name: redis-rate-limit}}
   template:
-    metadata:
-      labels: {app.kubernetes.io/name: redis, app.kubernetes.io/part-of: vnshop}
+    metadata: {labels: {app.kubernetes.io/name: redis-rate-limit, app.kubernetes.io/part-of: vnshop}}
     spec:
       securityContext: {runAsNonRoot: true, runAsUser: 999, fsGroup: 999, seccompProfile: {type: RuntimeDefault}}
       containers:
-      - name: redis
-        image: redis@sha256:2cc044fc5a07c9b701f8f1255a309ae9ad7856e694ac03513bf3648c01e40763
-        command: [sh, -ec, 'exec redis-server --appendonly yes --requirepass "$REDIS_PASSWORD"']
-        env:
-        - name: REDIS_PASSWORD
-          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-redis-password}}
-        ports: [{name: redis, containerPort: 6379}]
-        resources:
-          requests: {cpu: 50m, memory: 128Mi}
-          limits: {cpu: 500m, memory: 512Mi}
-        securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
-        volumeMounts: [{name: data, mountPath: /data}]
+        - name: redis
+          image: redis@sha256:2cc044fc5a07c9b701f8f1255a309ae9ad7856e694ac03513bf3648c01e40763
+          command: [sh, -ec]
+          args:
+            - |
+              ordinal="${HOSTNAME##*-}"
+              replica_args=""
+              if [ "$ordinal" != "0" ]; then replica_args="--replicaof redis-rate-limit-0.redis-rate-limit-headless 6379"; fi
+              exec redis-server --appendonly yes --protected-mode yes --maxmemory 512mb --maxmemory-policy noeviction --requirepass "$REDIS_PASSWORD" --masterauth "$REDIS_PASSWORD" $replica_args
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-redis-password}}
+          ports: [{name: redis, containerPort: 6379}]
+          readinessProbe: {exec: {command: [sh, -ec, 'redis-cli -a "$REDIS_PASSWORD" ping']}, periodSeconds: 10}
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          volumeMounts: [{name: data, mountPath: /data}]
   volumeClaimTemplates:
-  - metadata: {name: data}
+    - metadata: {name: data}
+      spec: {accessModes: [ReadWriteOnce], resources: {requests: {storage: 5Gi}}}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis-rate-limit-sentinel
+  labels: {app.kubernetes.io/name: redis-rate-limit-sentinel, app.kubernetes.io/part-of: vnshop}
+spec:
+  serviceName: redis-rate-limit-sentinel-headless
+  replicas: 3
+  podManagementPolicy: Parallel
+  selector: {matchLabels: {app.kubernetes.io/name: redis-rate-limit-sentinel}}
+  template:
+    metadata: {labels: {app.kubernetes.io/name: redis-rate-limit-sentinel, app.kubernetes.io/part-of: vnshop}}
     spec:
-      accessModes: [ReadWriteOnce]
-      resources: {requests: {storage: 5Gi}}
+      securityContext: {runAsNonRoot: true, runAsUser: 999, fsGroup: 999, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: sentinel
+          image: redis@sha256:2cc044fc5a07c9b701f8f1255a309ae9ad7856e694ac03513bf3648c01e40763
+          command: [sh, -ec]
+          args:
+            - |
+              cat > /data/sentinel.conf <<EOF
+              port 26379
+              protected-mode no
+              sentinel monitor redis-rate-limit redis-rate-limit-0.redis-rate-limit-headless 6379 2
+              sentinel down-after-milliseconds redis-rate-limit 5000
+              sentinel failover-timeout redis-rate-limit 60000
+              sentinel parallel-syncs redis-rate-limit 1
+              sentinel auth-pass redis-rate-limit $REDIS_PASSWORD
+              EOF
+              exec redis-server /data/sentinel.conf --sentinel
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-redis-password}}
+          ports: [{name: sentinel, containerPort: 26379}]
+          readinessProbe: {tcpSocket: {port: sentinel}, periodSeconds: 10}
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          volumeMounts: [{name: data, mountPath: /data}]
+  volumeClaimTemplates:
+    - metadata: {name: data}
+      spec: {accessModes: [ReadWriteOnce], resources: {requests: {storage: 1Gi}}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-cart-headless
+  labels: {app.kubernetes.io/name: redis-cart, app.kubernetes.io/part-of: vnshop}
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector: {app.kubernetes.io/name: redis-cart}
+  ports: [{name: redis, port: 6379, targetPort: redis}]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-cart-sentinel-headless
+  labels: {app.kubernetes.io/name: redis-cart-sentinel, app.kubernetes.io/part-of: vnshop}
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector: {app.kubernetes.io/name: redis-cart-sentinel}
+  ports: [{name: sentinel, port: 26379, targetPort: sentinel}]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-cart-sentinel
+  labels: {app.kubernetes.io/name: redis-cart-sentinel, app.kubernetes.io/part-of: vnshop}
+spec:
+  selector: {app.kubernetes.io/name: redis-cart-sentinel}
+  ports: [{name: sentinel, port: 26379, targetPort: sentinel}]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis-cart
+  labels: {app.kubernetes.io/name: redis-cart, app.kubernetes.io/part-of: vnshop}
+  annotations: {argocd.argoproj.io/sync-wave: "-15", vnshop.io/redis-policy: volatile-lru, vnshop.io/default-ttl-seconds: "2592000"}
+spec:
+  serviceName: redis-cart-headless
+  replicas: 3
+  podManagementPolicy: Parallel
+  selector: {matchLabels: {app.kubernetes.io/name: redis-cart}}
+  template:
+    metadata: {labels: {app.kubernetes.io/name: redis-cart, app.kubernetes.io/part-of: vnshop}}
+    spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 999, fsGroup: 999, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: redis
+          image: redis@sha256:2cc044fc5a07c9b701f8f1255a309ae9ad7856e694ac03513bf3648c01e40763
+          command: [sh, -ec]
+          args:
+            - |
+              ordinal="${HOSTNAME##*-}"
+              replica_args=""
+              if [ "$ordinal" != "0" ]; then replica_args="--replicaof redis-cart-0.redis-cart-headless 6379"; fi
+              exec redis-server --appendonly yes --protected-mode yes --maxmemory 512mb --maxmemory-policy volatile-lru --requirepass "$REDIS_PASSWORD" --masterauth "$REDIS_PASSWORD" $replica_args
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-redis-password}}
+          ports: [{name: redis, containerPort: 6379}]
+          readinessProbe: {exec: {command: [sh, -ec, 'redis-cli -a "$REDIS_PASSWORD" ping']}, periodSeconds: 10}
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          volumeMounts: [{name: data, mountPath: /data}]
+  volumeClaimTemplates:
+    - metadata: {name: data}
+      spec: {accessModes: [ReadWriteOnce], resources: {requests: {storage: 10Gi}}}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis-cart-sentinel
+  labels: {app.kubernetes.io/name: redis-cart-sentinel, app.kubernetes.io/part-of: vnshop}
+spec:
+  serviceName: redis-cart-sentinel-headless
+  replicas: 3
+  podManagementPolicy: Parallel
+  selector: {matchLabels: {app.kubernetes.io/name: redis-cart-sentinel}}
+  template:
+    metadata: {labels: {app.kubernetes.io/name: redis-cart-sentinel, app.kubernetes.io/part-of: vnshop}}
+    spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 999, fsGroup: 999, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: sentinel
+          image: redis@sha256:2cc044fc5a07c9b701f8f1255a309ae9ad7856e694ac03513bf3648c01e40763
+          command: [sh, -ec]
+          args:
+            - |
+              cat > /data/sentinel.conf <<EOF
+              port 26379
+              protected-mode no
+              sentinel monitor redis-cart redis-cart-0.redis-cart-headless 6379 2
+              sentinel down-after-milliseconds redis-cart 5000
+              sentinel failover-timeout redis-cart 60000
+              sentinel parallel-syncs redis-cart 1
+              sentinel auth-pass redis-cart $REDIS_PASSWORD
+              EOF
+              exec redis-server /data/sentinel.conf --sentinel
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-redis-password}}
+          ports: [{name: sentinel, containerPort: 26379}]
+          readinessProbe: {tcpSocket: {port: sentinel}, periodSeconds: 10}
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          volumeMounts: [{name: data, mountPath: /data}]
+  volumeClaimTemplates:
+    - metadata: {name: data}
+      spec: {accessModes: [ReadWriteOnce], resources: {requests: {storage: 1Gi}}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-dedup-headless
+  labels: {app.kubernetes.io/name: redis-dedup, app.kubernetes.io/part-of: vnshop}
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector: {app.kubernetes.io/name: redis-dedup}
+  ports: [{name: redis, port: 6379, targetPort: redis}]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-dedup-sentinel-headless
+  labels: {app.kubernetes.io/name: redis-dedup-sentinel, app.kubernetes.io/part-of: vnshop}
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector: {app.kubernetes.io/name: redis-dedup-sentinel}
+  ports: [{name: sentinel, port: 26379, targetPort: sentinel}]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-dedup-sentinel
+  labels: {app.kubernetes.io/name: redis-dedup-sentinel, app.kubernetes.io/part-of: vnshop}
+spec:
+  selector: {app.kubernetes.io/name: redis-dedup-sentinel}
+  ports: [{name: sentinel, port: 26379, targetPort: sentinel}]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis-dedup
+  labels: {app.kubernetes.io/name: redis-dedup, app.kubernetes.io/part-of: vnshop}
+  annotations: {argocd.argoproj.io/sync-wave: "-15", vnshop.io/redis-policy: volatile-ttl, vnshop.io/default-ttl-seconds: "86400"}
+spec:
+  serviceName: redis-dedup-headless
+  replicas: 3
+  podManagementPolicy: Parallel
+  selector: {matchLabels: {app.kubernetes.io/name: redis-dedup}}
+  template:
+    metadata: {labels: {app.kubernetes.io/name: redis-dedup, app.kubernetes.io/part-of: vnshop}}
+    spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 999, fsGroup: 999, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: redis
+          image: redis@sha256:2cc044fc5a07c9b701f8f1255a309ae9ad7856e694ac03513bf3648c01e40763
+          command: [sh, -ec]
+          args:
+            - |
+              ordinal="${HOSTNAME##*-}"
+              replica_args=""
+              if [ "$ordinal" != "0" ]; then replica_args="--replicaof redis-dedup-0.redis-dedup-headless 6379"; fi
+              exec redis-server --appendonly yes --protected-mode yes --maxmemory 256mb --maxmemory-policy volatile-ttl --requirepass "$REDIS_PASSWORD" --masterauth "$REDIS_PASSWORD" $replica_args
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-redis-password}}
+          ports: [{name: redis, containerPort: 6379}]
+          readinessProbe: {exec: {command: [sh, -ec, 'redis-cli -a "$REDIS_PASSWORD" ping']}, periodSeconds: 10}
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          volumeMounts: [{name: data, mountPath: /data}]
+  volumeClaimTemplates:
+    - metadata: {name: data}
+      spec: {accessModes: [ReadWriteOnce], resources: {requests: {storage: 5Gi}}}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis-dedup-sentinel
+  labels: {app.kubernetes.io/name: redis-dedup-sentinel, app.kubernetes.io/part-of: vnshop}
+spec:
+  serviceName: redis-dedup-sentinel-headless
+  replicas: 3
+  podManagementPolicy: Parallel
+  selector: {matchLabels: {app.kubernetes.io/name: redis-dedup-sentinel}}
+  template:
+    metadata: {labels: {app.kubernetes.io/name: redis-dedup-sentinel, app.kubernetes.io/part-of: vnshop}}
+    spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 999, fsGroup: 999, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: sentinel
+          image: redis@sha256:2cc044fc5a07c9b701f8f1255a309ae9ad7856e694ac03513bf3648c01e40763
+          command: [sh, -ec]
+          args:
+            - |
+              cat > /data/sentinel.conf <<EOF
+              port 26379
+              protected-mode no
+              sentinel monitor redis-dedup redis-dedup-0.redis-dedup-headless 6379 2
+              sentinel down-after-milliseconds redis-dedup 5000
+              sentinel failover-timeout redis-dedup 60000
+              sentinel parallel-syncs redis-dedup 1
+              sentinel auth-pass redis-dedup $REDIS_PASSWORD
+              EOF
+              exec redis-server /data/sentinel.conf --sentinel
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-redis-password}}
+          ports: [{name: sentinel, containerPort: 26379}]
+          readinessProbe: {tcpSocket: {port: sentinel}, periodSeconds: 10}
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          volumeMounts: [{name: data, mountPath: /data}]
+  volumeClaimTemplates:
+    - metadata: {name: data}
+      spec: {accessModes: [ReadWriteOnce], resources: {requests: {storage: 1Gi}}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-headless
+  labels: {app.kubernetes.io/name: mongodb, app.kubernetes.io/part-of: vnshop}
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector: {app.kubernetes.io/name: mongodb}
+  ports: [{name: mongodb, port: 27017, targetPort: mongodb}]
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: mongodb
-  annotations: {argocd.argoproj.io/sync-wave: "-15"}
+  labels: {app.kubernetes.io/name: mongodb, app.kubernetes.io/part-of: vnshop}
+  annotations: {vnshop.io/ha: replica-set-rs0}
 spec:
   selector: {app.kubernetes.io/name: mongodb}
   ports: [{name: mongodb, port: 27017, targetPort: mongodb}]
@@ -145,87 +510,103 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: mongodb
-  annotations: {argocd.argoproj.io/sync-wave: "-15"}
+  annotations: {argocd.argoproj.io/sync-wave: "-15", vnshop.io/replica-set: rs0}
 spec:
-  serviceName: mongodb
-  replicas: 1
-  selector:
-    matchLabels: {app.kubernetes.io/name: mongodb}
+  serviceName: mongodb-headless
+  replicas: 3
+  podManagementPolicy: Parallel
+  selector: {matchLabels: {app.kubernetes.io/name: mongodb}}
   template:
-    metadata:
-      labels: {app.kubernetes.io/name: mongodb, app.kubernetes.io/part-of: vnshop}
+    metadata: {labels: {app.kubernetes.io/name: mongodb, app.kubernetes.io/part-of: vnshop}}
     spec:
       securityContext: {runAsNonRoot: true, runAsUser: 999, fsGroup: 999, seccompProfile: {type: RuntimeDefault}}
       containers:
-      - name: mongodb
-        image: mongo@sha256:340c1c56fb10e95cf79ff547f8664b96bc6ead9909bc355238cbf865a9695a6f
-        ports: [{name: mongodb, containerPort: 27017}]
-        env:
-        - name: MONGO_INITDB_ROOT_USERNAME
-          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-mongo-admin-username}}
-        - name: MONGO_INITDB_ROOT_PASSWORD
-          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-mongo-admin-password}}
-        resources:
-          requests: {cpu: 100m, memory: 256Mi}
-          limits: {cpu: "1", memory: 1Gi}
-        securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
-        volumeMounts: [{name: data, mountPath: /data/db}]
+        - name: mongodb
+          image: mongo@sha256:340c1c56fb10e95cf79ff547f8664b96bc6ead9909bc355238cbf865a9695a6f
+          args: [mongod, --bind_ip_all, --replSet, rs0, --auth]
+          ports: [{name: mongodb, containerPort: 27017}]
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-mongo-admin-username}}
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-mongo-admin-password}}
+          readinessProbe: {tcpSocket: {port: mongodb}, periodSeconds: 10}
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {cpu: "1", memory: 1Gi}
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          volumeMounts: [{name: data, mountPath: /data/db}]
   volumeClaimTemplates:
-  - metadata: {name: data}
-    spec:
-      accessModes: [ReadWriteOnce]
-      resources: {requests: {storage: 20Gi}}
+    - metadata: {name: data}
+      spec: {accessModes: [ReadWriteOnce], resources: {requests: {storage: 20Gi}}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio-headless
+  labels: {app.kubernetes.io/name: minio, app.kubernetes.io/part-of: vnshop}
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector: {app.kubernetes.io/name: minio}
+  ports:
+    - {name: api, port: 9000, targetPort: api}
+    - {name: console, port: 9001, targetPort: console}
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: minio
-  annotations: {argocd.argoproj.io/sync-wave: "-15"}
+  labels: {app.kubernetes.io/name: minio, app.kubernetes.io/part-of: vnshop}
+  annotations: {vnshop.io/ha: erasure-coding-4-plus-2}
 spec:
   selector: {app.kubernetes.io/name: minio}
   ports:
-  - {name: api, port: 9000, targetPort: api}
-  - {name: console, port: 9001, targetPort: console}
+    - {name: api, port: 9000, targetPort: api}
+    - {name: console, port: 9001, targetPort: console}
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: minio
-  annotations: {argocd.argoproj.io/sync-wave: "-15"}
+  annotations: {argocd.argoproj.io/sync-wave: "-15", vnshop.io/erasure-coding: "4+2"}
 spec:
-  serviceName: minio
-  replicas: 1
-  selector:
-    matchLabels: {app.kubernetes.io/name: minio}
+  serviceName: minio-headless
+  replicas: 4
+  podManagementPolicy: Parallel
+  selector: {matchLabels: {app.kubernetes.io/name: minio}}
   template:
-    metadata:
-      labels: {app.kubernetes.io/name: minio, app.kubernetes.io/part-of: vnshop}
+    metadata: {labels: {app.kubernetes.io/name: minio, app.kubernetes.io/part-of: vnshop}}
     spec:
       securityContext: {runAsNonRoot: true, runAsUser: 1000, fsGroup: 1000, seccompProfile: {type: RuntimeDefault}}
       containers:
-      - name: minio
-        image: minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
-        args: [server, /data, --console-address, ':9001']
-        ports:
-        - {name: api, containerPort: 9000}
-        - {name: console, containerPort: 9001}
-        env:
-        - name: MINIO_ROOT_USER
-          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-minio-root-user}}
-        - name: MINIO_ROOT_PASSWORD
-          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-minio-root-password}}
-        - name: MINIO_API_CORS_ALLOW_ORIGIN
-          valueFrom: {configMapKeyRef: {name: vnshop-app-config, key: MINIO_API_CORS_ALLOW_ORIGIN}}
-        resources:
-          requests: {cpu: 100m, memory: 256Mi}
-          limits: {cpu: "1", memory: 1Gi}
-        securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
-        volumeMounts: [{name: data, mountPath: /data}]
+        - name: minio
+          image: minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+          args: [server, 'http://minio-{0...3}.minio-headless/data{1...2}', --console-address, ':9001']
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-minio-root-user}}
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: platform-minio-root-password}}
+            - {name: MINIO_STORAGE_CLASS_STANDARD, value: EC:2}
+            - name: MINIO_API_CORS_ALLOW_ORIGIN
+              valueFrom: {configMapKeyRef: {name: vnshop-app-config, key: MINIO_API_CORS_ALLOW_ORIGIN}}
+          ports:
+            - {name: api, containerPort: 9000}
+            - {name: console, containerPort: 9001}
+          readinessProbe: {httpGet: {path: /minio/health/ready, port: api}, periodSeconds: 10}
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {cpu: "1", memory: 1Gi}
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          volumeMounts:
+            - {name: data-1, mountPath: /data1}
+            - {name: data-2, mountPath: /data2}
   volumeClaimTemplates:
-  - metadata: {name: data}
-    spec:
-      accessModes: [ReadWriteOnce]
-      resources: {requests: {storage: 40Gi}}
+    - metadata: {name: data-1}
+      spec: {accessModes: [ReadWriteOnce], resources: {requests: {storage: 20Gi}}}
+    - metadata: {name: data-2}
+      spec: {accessModes: [ReadWriteOnce], resources: {requests: {storage: 20Gi}}}
 ---
 apiVersion: v1
 kind: Service
@@ -240,37 +621,42 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: keycloak
-  annotations: {argocd.argoproj.io/sync-wave: "-15"}
+  annotations: {argocd.argoproj.io/sync-wave: "-15", vnshop.io/ha: "2"}
 spec:
-  replicas: 1
-  selector:
-    matchLabels: {app.kubernetes.io/name: keycloak}
+  replicas: 2
+  selector: {matchLabels: {app.kubernetes.io/name: keycloak}}
   template:
-    metadata:
-      labels: {app.kubernetes.io/name: keycloak, app.kubernetes.io/part-of: vnshop}
+    metadata: {labels: {app.kubernetes.io/name: keycloak, app.kubernetes.io/part-of: vnshop}}
     spec:
       securityContext: {runAsNonRoot: true, runAsUser: 1000, fsGroup: 1000, seccompProfile: {type: RuntimeDefault}}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector: {matchLabels: {app.kubernetes.io/name: keycloak}}
+              topologyKey: kubernetes.io/hostname
       containers:
-      - name: keycloak
-        image: quay.io/keycloak/keycloak@sha256:0aae0de7fca85525f727d3354df17896092de8bb26ae4c12d89c77e5df8cbce4
-        args: [start, --http-enabled=true, --proxy-headers=xforwarded]
-        ports: [{name: http, containerPort: 8080}]
-        env:
-        - {name: KC_DB, value: postgres}
-        - {name: KC_DB_URL, value: 'jdbc:postgresql://postgres:5432/vnshop'}
-        - {name: KC_DB_SCHEMA, value: keycloak}
-        - name: KC_HOSTNAME
-          valueFrom: {configMapKeyRef: {name: vnshop-app-config, key: AUTH_ORIGIN}}
-        - name: KC_DB_USERNAME
-          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: keycloak-db-username}}
-        - name: KC_DB_PASSWORD
-          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: keycloak-db-password}}
-        - name: KC_BOOTSTRAP_ADMIN_USERNAME
-          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: keycloak-admin-username}}
-        - name: KC_BOOTSTRAP_ADMIN_PASSWORD
-          valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: keycloak-admin-password}}
-        readinessProbe: {httpGet: {path: /realms/master, port: http}, periodSeconds: 10, failureThreshold: 12}
-        resources:
-          requests: {cpu: 250m, memory: 512Mi}
-          limits: {cpu: "2", memory: 2Gi}
-        securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+        - name: keycloak
+          image: quay.io/keycloak/keycloak@sha256:0aae0de7fca85525f727d3354df17896092de8bb26ae4c12d89c77e5df8cbce4
+          args: [start, --http-enabled=true, --proxy-headers=xforwarded]
+          ports: [{name: http, containerPort: 8080}]
+          env:
+            - {name: KC_DB, value: postgres}
+            - {name: KC_DB_URL, value: 'jdbc:postgresql://postgres:5432/vnshop'}
+            - {name: KC_DB_SCHEMA, value: keycloak}
+            - {name: KC_CACHE, value: ispn}
+            - {name: KC_CACHE_STACK, value: kubernetes}
+            - name: KC_HOSTNAME
+              valueFrom: {configMapKeyRef: {name: vnshop-app-config, key: AUTH_ORIGIN}}
+            - name: KC_DB_USERNAME
+              valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: keycloak-db-username}}
+            - name: KC_DB_PASSWORD
+              valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: keycloak-db-password}}
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: keycloak-admin-username}}
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom: {secretKeyRef: {name: vnshop-runtime-secrets, key: keycloak-admin-password}}
+          readinessProbe: {httpGet: {path: /realms/master, port: http}, periodSeconds: 10, failureThreshold: 12}
+          resources:
+            requests: {cpu: 250m, memory: 512Mi}
+            limits: {cpu: "2", memory: 2Gi}
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}

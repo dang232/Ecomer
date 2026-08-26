@@ -1,0 +1,14 @@
+# Task 26: consolidate FE duplicate contract/client trees
+# Provenance: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\docs\task-26-evidence.md and .sisyphus/evidence/task-26-fe-contract-client-consolidation.txt (uncommitted artifacts)
+
+STATUS: PASS_STATIC / BLOCKED_EXTERNAL
+
+Exact commands/results from the available artifacts:
+- `pnpm run test:boundaries` -> PASS; one artifact reports 7 passed, another reports 5 passed. Counts conflict and are preserved rather than normalized.
+- `pnpm run lint:boundaries` -> PASS with no findings.
+- `pnpm run typecheck` / split app,test,e2e,node typechecks -> PASS in the available records.
+- `pnpm run build` -> PASS; one record reports 3550 modules, another 3548.
+- `rg -n --glob '*.{ts,tsx}' 'app/lib/api|app/types/api|types/api|lib/api' fe/src` -> no matches.
+- Playwright navigation to `http://localhost:5173/cart` -> `net::ERR_CONNECTION_REFUSED`; no browser/runtime claim.
+
+Blocker/non-claim: TypeScript LSP was unavailable; Bash was unavailable for the requested pipefail wrapper. Conflicting historical test/module counts are retained as an audit risk, not fabricated into a single count.

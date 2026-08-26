@@ -10,7 +10,6 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.kafka.core.KafkaAdmin;
 import org.springframework.kafka.listener.CommonErrorHandler;
 import org.springframework.kafka.listener.DefaultErrorHandler;
-import org.springframework.util.backoff.FixedBackOff;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -43,7 +42,7 @@ public class KafkaAdminConfig {
                 (record, exception) -> LOGGER.error(
                         "Kafka message exhausted retries. topic={}, partition={}, offset={}, error={}",
                         record.topic(), record.partition(), record.offset(), exception.getMessage()),
-                new FixedBackOff(1000L, 2L));
+                new BoundedExponentialJitterBackOff(1_000L, 2.0, 30_000L));
         return handler;
     }
 }

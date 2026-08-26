@@ -39,8 +39,9 @@ export function Tabs<TValue extends string>({
 
     event.preventDefault();
     const next = enabled[target];
-    const tabs =
-      event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+    const tabs = event.currentTarget
+      .closest('[role="tablist"]')
+      ?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
     tabs?.[next.itemIndex]?.focus();
     onValueChange(next.item.value);
   };

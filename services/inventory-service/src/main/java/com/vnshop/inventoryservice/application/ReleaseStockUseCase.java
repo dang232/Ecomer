@@ -37,6 +37,11 @@ public class ReleaseStockUseCase {
 
     @Transactional
     public boolean release(String orderId) {
+        return release(orderId, null);
+    }
+
+    @Transactional
+    public boolean release(String orderId, String sagaId) {
         if (orderId == null || orderId.isBlank()) {
             throw new IllegalArgumentException("orderId must not be blank");
         }
@@ -63,7 +68,7 @@ public class ReleaseStockUseCase {
                 now);
         log.info("Released {} reservations for orderId={}", active.size(), orderId);
 
-        eventPublisher.publishReleased(orderId, null, releasedItems);
+        eventPublisher.publishReleased(orderId, sagaId, releasedItems);
         return true;
     }
 }

@@ -1,6 +1,6 @@
-import { getTraceEndpoint } from './tracing';
+import { getTraceEndpoint } from "./tracing";
 
-describe('messaging tracing endpoint', () => {
+describe("messaging tracing endpoint", () => {
   const originalEndpoint = process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT;
 
   afterEach(() => {
@@ -11,10 +11,10 @@ describe('messaging tracing endpoint', () => {
     }
   });
 
-  it('uses the configured OTLP HTTP endpoint', () => {
+  it("uses the configured OTLP HTTP endpoint", () => {
     process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT =
-      'http://jaeger:4318/v1/traces';
+      "http://jaeger:4318/v1/traces";
 
-    expect(getTraceEndpoint()).toBe('http://jaeger:4318/v1/traces');
+    expect(getTraceEndpoint()).toBe("http://jaeger:4318/v1/traces");
   });
 });

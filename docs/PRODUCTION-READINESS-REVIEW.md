@@ -4,7 +4,35 @@
 > Scope: repository-wide review of local fallbacks, hardcoded local infrastructure, provider modes, and deployment placeholders.
 > Review mode: independent code-quality and architecture lanes plus repository evidence inspection.
 
-## Current Checkpoint — 2026-08-18
+## Current Checkpoint — 2026-08-26, PR #320
+
+Final Wave status: **APPROVE** for the repository-owned 32-task deep-fix scope. Evidence is indexed in
+`.omo/evidence/vnshop-deep-fix/*.log`. The approval covers parcel variant contracts, durable saga and
+outbox boundaries, idempotency, HMAC/JWT and mTLS controls, canonical Kafka/DLT handling, HA and
+observability configuration, API compatibility and RFC 7807 errors, cache hardening, Java class splits,
+frontend and Flutter contracts, i18n, a11y, and responsive immutable media policy.
+
+It is not production approval. The following remain **blocked-external**: real GHCR image publication and
+digest verification, SealedSecret ciphertext, live provider credentials and independent webhook secrets,
+production origins and certificates, broker/browser access, and operator approval for HA Kafka, TLS, and
+secured Elasticsearch/network policy. Live Compose requires an environment file. The GHCR fixture is not
+published, and SealedSecret values are intentionally external. MoMo and VNPay remain disabled, and no
+retroactive parcel/order backfill is claimed.
+
+## PR #320 Closure Summary
+
+- Parcel variants are authoritative for dimensions and declared value across product, cart, checkout, order, and shipping. Missing metadata fails closed.
+- Saga transitions, payment callbacks, shipping compensation, product lifecycle events, and search repair use durable outbox boundaries and acknowledgement-safe relays.
+- Idempotency claims are scoped by principal, route, caller key, and SHA-256 body hash. Redis failure returns a retryable service error rather than allowing duplicate money-path work.
+- Webhooks use HMAC verification, service calls use JWT or mTLS identity, and compose production-like password references fail closed.
+- The Kafka manifest is canonical at 85 topics and 228 ACLs. Exhausted records persist DLT metadata and the admin replay endpoint uses a durable lease.
+- Prometheus and Grafana cover route RED, saga, outbox, DLT age, cache behavior, and provider latency. The coverage lane targets 90% and task-owned Java splits stay below 250 pure LOC.
+- The gateway documents canonical `/api/v1` routes and legacy redirects with a 90-day `Sunset`. Error responses use RFC 7807 `application/problem+json` with `traceId` and a deprecated `errorCode` alias.
+- FE contracts are consolidated at the boundary. Flutter has six scoped routes plus truthful COD/VietQR/SePay configuration. Language resources are synchronized, scoped surfaces expose ARIA semantics, the web contrast token is 4.97:1, and versioned media uses responsive `srcSet` and immutable CDN cache headers.
+
+The detailed implementation ledger below retains the historical findings and their original evidence.
+
+## Previous Checkpoint — 2026-08-18
 
 The source tree is now at `main` merge `1cd5495f` (PR #314). The backend live-shipping checkout contract is
 implemented: order-to-shipping now carries recipient/contact data, carrier address codes, parcel dimensions,

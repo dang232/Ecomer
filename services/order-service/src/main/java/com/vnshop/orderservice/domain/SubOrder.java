@@ -10,13 +10,20 @@ public class SubOrder {
     private FulfillmentStatus fulfillmentStatus;
     private ShippingInfo shippingInfo;
     private CommissionTier commissionTier;
+    private final ParcelDimensions parcel;
 
     public SubOrder(String sellerId, List<OrderItem> items) {
-        this(null, sellerId, items, FulfillmentStatus.PENDING_ACCEPTANCE, ShippingInfo.EMPTY, null);
+        this(null, sellerId, items, FulfillmentStatus.PENDING_ACCEPTANCE, ShippingInfo.EMPTY, null,
+                items.stream().anyMatch(item -> item.parcel() == null) ? null : ParcelDimensions.aggregate(items, sellerId));
     }
 
     public SubOrder(String sellerId, List<OrderItem> items, CommissionTier commissionTier) {
-        this(null, sellerId, items, FulfillmentStatus.PENDING_ACCEPTANCE, ShippingInfo.EMPTY, commissionTier);
+        this(null, sellerId, items, FulfillmentStatus.PENDING_ACCEPTANCE, ShippingInfo.EMPTY, commissionTier,
+                items.stream().anyMatch(item -> item.parcel() == null) ? null : ParcelDimensions.aggregate(items, sellerId));
+    }
+
+    public SubOrder(String sellerId, List<OrderItem> items, CommissionTier commissionTier, ParcelDimensions parcel) {
+        this(null, sellerId, items, FulfillmentStatus.PENDING_ACCEPTANCE, ShippingInfo.EMPTY, commissionTier, parcel);
     }
 
     /** Backward-compatible 8-param constructor used by tests and legacy call sites. */
@@ -31,7 +38,8 @@ public class SubOrder {
             String trackingNumber
     ) {
         this(id, sellerId, items, fulfillmentStatus,
-                new ShippingInfo(shippingCost, shippingMethod, carrier, trackingNumber), null);
+                new ShippingInfo(shippingCost, shippingMethod, carrier, trackingNumber), null,
+                items.stream().anyMatch(item -> item.parcel() == null) ? null : ParcelDimensions.aggregate(items, sellerId));
     }
 
     /** Backward-compatible 9-param constructor used by tests and legacy call sites. */
@@ -47,7 +55,8 @@ public class SubOrder {
             CommissionTier commissionTier
     ) {
         this(id, sellerId, items, fulfillmentStatus,
-                new ShippingInfo(shippingCost, shippingMethod, carrier, trackingNumber), commissionTier);
+                new ShippingInfo(shippingCost, shippingMethod, carrier, trackingNumber), commissionTier,
+                items.stream().anyMatch(item -> item.parcel() == null) ? null : ParcelDimensions.aggregate(items, sellerId));
     }
 
     /** Canonical constructor — takes a ShippingInfo value object. */
@@ -58,6 +67,20 @@ public class SubOrder {
             FulfillmentStatus fulfillmentStatus,
             ShippingInfo shippingInfo,
             CommissionTier commissionTier
+    ) {
+        this(id, sellerId, items, fulfillmentStatus, shippingInfo, commissionTier,
+                items.stream().anyMatch(item -> item.parcel() == null) ? null : ParcelDimensions.aggregate(items, sellerId));
+    }
+
+    /** Canonical constructor with a persisted parcel snapshot. */
+    public SubOrder(
+            Long id,
+            String sellerId,
+            List<OrderItem> items,
+            FulfillmentStatus fulfillmentStatus,
+            ShippingInfo shippingInfo,
+            CommissionTier commissionTier,
+            ParcelDimensions parcel
     ) {
         requireNonBlank(sellerId, "sellerId");
         if (items == null || items.isEmpty()) {
@@ -75,6 +98,7 @@ public class SubOrder {
                 : shippingInfo;
         this.shippingInfo = normalised;
         this.commissionTier = commissionTier != null ? commissionTier : CommissionTier.STANDARD;
+        this.parcel = parcel;
     }
 
     // -------------------------------------------------------------------------
@@ -120,6 +144,10 @@ public class SubOrder {
 
     public CommissionTier commissionTier() {
         return commissionTier;
+    }
+
+    public ParcelDimensions parcel() {
+        return parcel;
     }
 
     public Money itemsTotal() {
@@ -199,4 +227,5 @@ public class SubOrder {
             throw new IllegalArgumentException(fieldName + " is required");
         }
     }
+
 }

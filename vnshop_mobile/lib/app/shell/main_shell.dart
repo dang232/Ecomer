@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../../features/cart/presentation/bloc/cart_bloc.dart';
 import '../../features/cart/presentation/bloc/cart_state.dart';
 
@@ -30,33 +31,6 @@ class MainShell extends StatelessWidget {
 
   final StatefulNavigationShell navigationShell;
 
-  static const _destinations = [
-    _NavigationDestination(
-      icon: Icons.home_outlined,
-      selectedIcon: Icons.home,
-      label: 'Trang chủ',
-      route: '/',
-    ),
-    _NavigationDestination(
-      icon: Icons.grid_view_outlined,
-      selectedIcon: Icons.grid_view,
-      label: 'Danh mục',
-      route: '/categories',
-    ),
-    _NavigationDestination(
-      icon: Icons.shopping_cart_outlined,
-      selectedIcon: Icons.shopping_cart,
-      label: 'Giỏ hàng',
-      route: '/cart',
-    ),
-    _NavigationDestination(
-      icon: Icons.person_outline,
-      selectedIcon: Icons.person,
-      label: 'Tài khoản',
-      route: '/profile',
-    ),
-  ];
-
   void _onTap(BuildContext context, int index) {
     navigationShell.goBranch(
       index,
@@ -66,6 +40,14 @@ class MainShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final destinations = [
+      const _NavigationDestination(icon: Icons.home_outlined, selectedIcon: Icons.home, label: '', route: '/'),
+      const _NavigationDestination(icon: Icons.grid_view_outlined, selectedIcon: Icons.grid_view, label: '', route: '/categories'),
+      const _NavigationDestination(icon: Icons.shopping_cart_outlined, selectedIcon: Icons.shopping_cart, label: '', route: '/cart'),
+      const _NavigationDestination(icon: Icons.person_outline, selectedIcon: Icons.person, label: '', route: '/profile'),
+    ];
+    final labels = [l10n.home, l10n.categories, l10n.cart, l10n.account];
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: Container(
@@ -84,47 +66,27 @@ class MainShell extends StatelessWidget {
           animationDuration: const Duration(milliseconds: 300),
           labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
           destinations: [
-            for (final destination in _destinations)
+            for (var index = 0; index < destinations.length; index++)
               NavigationDestination(
-                icon: destination.icon == Icons.shopping_cart_outlined
+                icon: destinations[index].icon == Icons.shopping_cart_outlined
                     ? BlocBuilder<CartBloc, CartState>(
-                        builder: (context, state) {
-                          return Badge(
-                            isLabelVisible: state.itemCount > 0,
-                            label: Text(
-                              state.itemCount > 99
-                                  ? '99+'
-                                  : state.itemCount.toString(),
-                              style: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            child: Icon(destination.icon),
-                          );
-                        },
+                        builder: (context, state) => Badge(
+                          isLabelVisible: state.itemCount > 0,
+                          label: Text(state.itemCount > 99 ? '99+' : state.itemCount.toString()),
+                          child: Icon(destinations[index].icon),
+                        ),
                       )
-                    : Icon(destination.icon),
-                selectedIcon: destination.selectedIcon == Icons.shopping_cart
+                    : Icon(destinations[index].icon),
+                selectedIcon: destinations[index].selectedIcon == Icons.shopping_cart
                     ? BlocBuilder<CartBloc, CartState>(
-                        builder: (context, state) {
-                          return Badge(
-                            isLabelVisible: state.itemCount > 0,
-                            label: Text(
-                              state.itemCount > 99
-                                  ? '99+'
-                                  : state.itemCount.toString(),
-                              style: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            child: Icon(destination.selectedIcon),
-                          );
-                        },
+                        builder: (context, state) => Badge(
+                          isLabelVisible: state.itemCount > 0,
+                          label: Text(state.itemCount > 99 ? '99+' : state.itemCount.toString()),
+                          child: Icon(destinations[index].selectedIcon),
+                        ),
                       )
-                    : Icon(destination.selectedIcon),
-                label: destination.label,
+                    : Icon(destinations[index].selectedIcon),
+                 label: labels[index],
               ),
           ],
         ),

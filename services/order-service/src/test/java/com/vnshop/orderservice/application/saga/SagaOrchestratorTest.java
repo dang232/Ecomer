@@ -4,6 +4,7 @@ import com.vnshop.orderservice.domain.port.out.OutboxPort;
 import com.vnshop.orderservice.domain.port.out.SagaCompensationPublisherPort;
 import com.vnshop.orderservice.domain.port.out.SagaStateRepository;
 import com.vnshop.orderservice.domain.saga.SagaState;
+import com.vnshop.orderservice.domain.saga.SagaStepStatus;
 import com.vnshop.orderservice.domain.saga.SagaStatus;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -143,6 +144,55 @@ class SagaOrchestratorTest {
         assertThat(compensationPublisher.paymentRefundCount).isEqualTo(1);
         assertThat(compensationPublisher.inventoryReleaseCount).isEqualTo(1);
         assertThat(compensationPublisher.shippingCancellationCount).isEqualTo(1);
+    }
+
+    @Test
+    void onCompensationCompleted_withOneOfThreeRequiredSteps_leavesSagaCompensating() {
+        SagaState started = orchestrator.startOrderSaga("order-1");
+        String sagaId = started.sagaId();
+
+        orchestrator.compensate(sagaId, "SHIPPING");
+        orchestrator.onCompensationCompleted(sagaId, "inventory.released");
+
+        SagaState result = sagaStateRepo.findBySagaId(sagaId).orElseThrow();
+        assertThat(result.currentStep()).isEqualTo(SagaStatus.COMPENSATING);
+        assertThat(result.requiredSteps()).containsEntry("INVENTORY", SagaStepStatus.COMPLETED);
+        assertThat(result.requiredSteps()).containsEntry("PAYMENT", SagaStepStatus.REQUESTED);
+        assertThat(result.requiredSteps()).containsEntry("SHIPPING", SagaStepStatus.REQUESTED);
+        assertThat(outboxPort.events).noneMatch(event -> "SAGA_FAILED".equals(event.eventType()));
+    }
+
+    @Test
+    void onCompensationCompleted_withAllThreeRequiredSteps_marksSagaFailed() {
+        SagaState started = orchestrator.startOrderSaga("order-1");
+        String sagaId = started.sagaId();
+
+        orchestrator.compensate(sagaId, "SHIPPING");
+        orchestrator.onCompensationCompleted(sagaId, "inventory.released");
+        orchestrator.onCompensationCompleted(sagaId, "payment.refunded");
+        orchestrator.onCompensationCompleted(sagaId, "shipping.cancelled");
+
+        SagaState result = sagaStateRepo.findBySagaId(sagaId).orElseThrow();
+        assertThat(result.currentStep()).isEqualTo(SagaStatus.FAILED);
+        assertThat(result.requiredSteps()).containsEntry("INVENTORY", SagaStepStatus.COMPLETED);
+        assertThat(result.requiredSteps()).containsEntry("PAYMENT", SagaStepStatus.COMPLETED);
+        assertThat(result.requiredSteps()).containsEntry("SHIPPING", SagaStepStatus.COMPLETED);
+        assertThat(outboxPort.events).filteredOn(event -> "SAGA_FAILED".equals(event.eventType())).hasSize(1);
+    }
+
+    @Test
+    void onCompensationCompleted_duplicateConfirmation_doesNotDoubleCountOrRepublishFailure() {
+        SagaState started = orchestrator.startOrderSaga("order-1");
+        String sagaId = started.sagaId();
+
+        orchestrator.compensate(sagaId, "SHIPPING");
+        orchestrator.onCompensationCompleted(sagaId, "inventory.released");
+        orchestrator.onCompensationCompleted(sagaId, "inventory.released");
+
+        SagaState result = sagaStateRepo.findBySagaId(sagaId).orElseThrow();
+        assertThat(result.currentStep()).isEqualTo(SagaStatus.COMPENSATING);
+        assertThat(result.requiredSteps()).containsEntry("INVENTORY", SagaStepStatus.COMPLETED);
+        assertThat(outboxPort.events).noneMatch(event -> "SAGA_FAILED".equals(event.eventType()));
     }
 
     @Test

@@ -11,6 +11,7 @@ import com.vnshop.orderservice.application.CancelOrderUseCase;
 import com.vnshop.orderservice.application.CheckoutOrderUseCase;
 import com.vnshop.orderservice.application.CompleteReturnUseCase;
 import com.vnshop.orderservice.application.CreateOrderUseCase;
+import com.vnshop.orderservice.application.OrderCreationPersistenceService;
 import com.vnshop.orderservice.application.FindOrderByIdempotencyKeyUseCase;
 import com.vnshop.orderservice.application.finance.AllocateOrderFinancialsUseCase;
 import com.vnshop.orderservice.application.DisputeQueryUseCase;
@@ -63,6 +64,8 @@ import com.vnshop.orderservice.domain.coupon.CouponRepository;
 import com.vnshop.orderservice.domain.coupon.CouponUsageRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Qualifier;
+import io.github.resilience4j.bulkhead.Bulkhead;
 
 @Configuration
 public class UseCaseConfig {
@@ -101,6 +104,16 @@ public class UseCaseConfig {
     }
 
     @Bean
+    OrderCreationPersistenceService orderCreationPersistenceService(
+            OrderRepositoryPort orderRepositoryPort,
+            OrderEventPublisherPort orderEventPublisherPort,
+            SagaOrchestrator sagaOrchestrator,
+            AllocateOrderFinancialsUseCase allocateOrderFinancialsUseCase) {
+        return new OrderCreationPersistenceService(orderRepositoryPort, orderEventPublisherPort,
+                sagaOrchestrator, allocateOrderFinancialsUseCase);
+    }
+
+    @Bean
     CreateOrderUseCase createOrderUseCase(
             OrderRepositoryPort orderRepositoryPort,
             InventoryReservationPort inventoryReservationPort,
@@ -113,12 +126,17 @@ public class UseCaseConfig {
             SagaOrchestrator sagaOrchestrator,
             TaxCalculationService taxCalculationService,
             CouponRedemptionService couponRedemptionService,
-            AllocateOrderFinancialsUseCase allocateOrderFinancialsUseCase
+            AllocateOrderFinancialsUseCase allocateOrderFinancialsUseCase,
+             OrderCreationPersistenceService orderCreationPersistenceService,
+             @Qualifier("inventoryOrderBulkhead") Bulkhead inventoryOrderBulkhead,
+             @Qualifier("paymentOrderBulkhead") Bulkhead paymentOrderBulkhead,
+             @Qualifier("shippingOrderBulkhead") Bulkhead shippingOrderBulkhead
     ) {
         return new CreateOrderUseCase(orderRepositoryPort, inventoryReservationPort, paymentRequestPort,
                 shippingRequestPort, orderEventPublisherPort, commissionTierLookupPort, cartRepositoryPort,
                 metricsPort, sagaOrchestrator, taxCalculationService, couponRedemptionService,
-                allocateOrderFinancialsUseCase);
+                allocateOrderFinancialsUseCase, orderCreationPersistenceService, inventoryOrderBulkhead,
+                paymentOrderBulkhead, shippingOrderBulkhead);
     }
 
     @Bean
@@ -180,147 +198,4 @@ public class UseCaseConfig {
                 cartRepositoryPort, productCatalogPort, couponValidationPort, taxCalculationService);
     }
 
-    @Bean
-    ListOpenDisputesUseCase listOpenDisputesUseCase(
-            DisputeRepositoryPort disputeRepositoryPort,
-            ReturnRepositoryPort returnRepositoryPort,
-            OrderSummaryQueryPort orderSummaryQueryPort,
-            UserDirectoryPort userDirectoryPort) {
-        return new ListOpenDisputesUseCase(disputeRepositoryPort, returnRepositoryPort,
-                orderSummaryQueryPort, userDirectoryPort);
-    }
-
-    @Bean
-    ListOrdersUseCase listOrdersUseCase(OrderRepositoryPort orderRepositoryPort) {
-        return new ListOrdersUseCase(orderRepositoryPort);
-    }
-
-    @Bean
-    ListPendingOrdersUseCase listPendingOrdersUseCase(OrderRepositoryPort orderRepositoryPort) {
-        return new ListPendingOrdersUseCase(orderRepositoryPort);
-    }
-
-    @Bean
-    ListReturnsUseCase listReturnsUseCase(ReturnRepositoryPort returnRepositoryPort) {
-        return new ListReturnsUseCase(returnRepositoryPort);
-    }
-
-    @Bean
-    ViewOrderUseCase viewOrderUseCase(OrderRepositoryPort orderRepositoryPort) {
-        return new ViewOrderUseCase(orderRepositoryPort);
-    }
-
-    @Bean
-    FindOrderByIdempotencyKeyUseCase findOrderByIdempotencyKeyUseCase(OrderRepositoryPort orderRepositoryPort) {
-        return new FindOrderByIdempotencyKeyUseCase(orderRepositoryPort);
-    }
-
-    @Bean
-    CancelOrderUseCase cancelOrderUseCase(
-            OrderRepositoryPort orderRepositoryPort,
-            InventoryReservationPort inventoryReservationPort,
-            OrderEventPublisherPort orderEventPublisherPort,
-            CouponRedemptionService couponRedemptionService
-    ) {
-        return new CancelOrderUseCase(orderRepositoryPort, inventoryReservationPort,
-                orderEventPublisherPort, couponRedemptionService);
-    }
-
-    @Bean
-    AcceptOrderUseCase acceptOrderUseCase(OrderRepositoryPort orderRepositoryPort, OrderEventPublisherPort orderEventPublisherPort) {
-        return new AcceptOrderUseCase(orderRepositoryPort, orderEventPublisherPort);
-    }
-
-    @Bean
-    ConfirmDeliveryUseCase confirmDeliveryUseCase(
-            OrderRepositoryPort orderRepositoryPort,
-            OrderEventPublisherPort orderEventPublisherPort,
-            SubOrderFinancialAllocationRepositoryPort allocationRepositoryPort,
-            SellerFinanceAdjustmentPublisherPort sellerFinanceAdjustmentPublisherPort,
-            SellerFinanceEventModeProperties sellerFinanceEventModeProperties) {
-        return new ConfirmDeliveryUseCase(orderRepositoryPort, orderEventPublisherPort, allocationRepositoryPort,
-                sellerFinanceAdjustmentPublisherPort,
-                sellerFinanceEventModeProperties.adjustments().enabled());
-    }
-
-    @Bean
-    RejectOrderUseCase rejectOrderUseCase(
-            OrderRepositoryPort orderRepositoryPort,
-            InventoryReservationPort inventoryReservationPort,
-            OrderEventPublisherPort orderEventPublisherPort
-    ) {
-        return new RejectOrderUseCase(orderRepositoryPort, inventoryReservationPort, orderEventPublisherPort);
-    }
-
-    @Bean
-    ShipOrderUseCase shipOrderUseCase(OrderRepositoryPort orderRepositoryPort, OrderEventPublisherPort orderEventPublisherPort) {
-        return new ShipOrderUseCase(orderRepositoryPort, orderEventPublisherPort);
-    }
-
-    @Bean
-    RequestReturnUseCase requestReturnUseCase(OrderRepositoryPort orderRepositoryPort, ReturnRepositoryPort returnRepositoryPort,
-                                              SettlementHoldPublisherPort settlementHoldPublisherPort) {
-        return new RequestReturnUseCase(orderRepositoryPort, returnRepositoryPort, settlementHoldPublisherPort);
-    }
-
-    @Bean
-    ApproveReturnUseCase approveReturnUseCase(ReturnRepositoryPort returnRepositoryPort, OrderRepositoryPort orderRepositoryPort) {
-        return new ApproveReturnUseCase(returnRepositoryPort, orderRepositoryPort);
-    }
-
-    @Bean
-    RejectReturnUseCase rejectReturnUseCase(ReturnRepositoryPort returnRepositoryPort, OrderRepositoryPort orderRepositoryPort,
-                                            SettlementHoldPublisherPort settlementHoldPublisherPort) {
-        return new RejectReturnUseCase(returnRepositoryPort, orderRepositoryPort, settlementHoldPublisherPort);
-    }
-
-    @Bean
-    CompleteReturnUseCase completeReturnUseCase(
-            ReturnRepositoryPort returnRepositoryPort,
-            OrderRepositoryPort orderRepositoryPort,
-            RefundRequestPort refundRequestPort,
-            SubOrderFinancialAllocationRepositoryPort allocationRepositoryPort,
-            SellerFinanceAdjustmentPublisherPort sellerFinanceAdjustmentPublisherPort,
-            FinancialReversalRepositoryPort financialReversalRepositoryPort
-    ) {
-        return new CompleteReturnUseCase(returnRepositoryPort, orderRepositoryPort, refundRequestPort,
-                allocationRepositoryPort, sellerFinanceAdjustmentPublisherPort, financialReversalRepositoryPort);
-    }
-
-    @Bean
-    AdminRefundUseCase adminRefundUseCase(
-            OrderRepositoryPort orderRepositoryPort,
-            ReturnRepositoryPort returnRepositoryPort,
-            ApproveReturnUseCase approveReturnUseCase,
-            CompleteReturnUseCase completeReturnUseCase) {
-        return new AdminRefundUseCase(orderRepositoryPort, returnRepositoryPort,
-                approveReturnUseCase, completeReturnUseCase);
-    }
-
-    @Bean
-    DashboardCsvExporter dashboardCsvExporter() {
-        return new DashboardCsvExporter();
-    }
-
-    @Bean
-    DisputeUseCase disputeUseCase(ReturnRepositoryPort returnRepositoryPort, DisputeRepositoryPort disputeRepositoryPort,
-                                  SettlementHoldPublisherPort settlementHoldPublisherPort) {
-        return new DisputeUseCase(returnRepositoryPort, disputeRepositoryPort, settlementHoldPublisherPort);
-    }
-
-    @Bean
-    InvoiceUseCase invoiceUseCase(
-            OrderRepositoryPort orderRepositoryPort,
-            InvoiceRepositoryPort invoiceRepositoryPort,
-            InvoiceStoragePort invoiceStoragePort,
-            InvoicePdfRendererPort invoicePdfRendererPort,
-            Clock clock
-    ) {
-        return new InvoiceUseCase(orderRepositoryPort, invoiceRepositoryPort, invoiceStoragePort, invoicePdfRendererPort, clock);
-    }
-
-    @Bean
-    Clock clock() {
-        return Clock.systemUTC();
-    }
 }

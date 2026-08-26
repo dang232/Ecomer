@@ -1,0 +1,32 @@
+Task 31 evidence - 2026-08-26
+
+Red checks
+- node scripts/check-contrast.mjs --foreground '#737d8f' --background '#ffffff' -> exit 1, rejected 4.15:1.
+- Pre-change focused FE tests for shared overlays/profile/menu passed baseline behavior but lacked the new regression assertions.
+
+Implementation
+- Generated `textSubtle` token changed to #667085; generated CSS and Flutter tokens refreshed.
+- Added scripts/check-contrast.mjs.
+- Added shared nested-safe body scroll locking to Dialog and Drawer; Drawer backdrop dismissal and connected-element focus restoration.
+- Added ProfilePage roving tabIndex, Arrow/Home/End navigation, aria-controls/tabpanel checks.
+- Added Navbar account-menu focus entry, arrow/Home/End movement, Escape/outside close, aria-controls, and trigger restoration.
+- Added web target classes to gallery controls and avatar upload control.
+- Added Flutter SafeNetworkImage semantics, profile avatar/edit 48dp constraints, and product gallery InteractiveViewer/full-screen zoom with 48dp close target.
+
+Verification
+- node scripts/check-contrast.mjs -> PASS; textSubtle on white 4.97:1.
+- node --test scripts/generate-design-tokens.test.mjs -> PASS, 5/5.
+- FE Vitest focused shared/profile/menu suite -> PASS, 5 files / 29 tests.
+- FE typecheck:app -> PASS.
+- FE build -> PASS, Vite production build.
+- FE lint:tokens -> PASS; no hardcoded hex colors in fe/src outside styles.
+- FE git diff --check -> PASS (pre-existing repository CRLF warnings only).
+- Flutter analyze --no-fatal-infos --no-fatal-warnings -> PASS, no issues.
+- Flutter full test -> PASS, 204 tests.
+- Playwright test:a11y was attempted but timed out while runtime-backed routes failed before usable page evidence; no live browser/Axe pass claimed.
+- TypeScript LSP and ast-grep unavailable in host; equivalent focused compiler/tests/static scans used.
+
+Cleanup receipt
+- No commit or push.
+- Append-only notepad updates written to .omo/notepads/vnshop-deep-fix/learnings.md and issues.md.
+- No task checkbox or unrelated source files intentionally modified.

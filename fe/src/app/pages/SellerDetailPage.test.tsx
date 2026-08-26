@@ -95,8 +95,10 @@ describe("SellerDetailPage", () => {
     render(<SellerDetailPage />, { wrapper: Wrapper });
 
     // useSuspenseQuery throws on error — the ErrorBoundary catches it and
-    // renders the ApiError message.
-    await waitFor(() => expect(screen.getByText("not found")).toBeInTheDocument());
+    // renders the safe user-facing error label.
+    await waitFor(() =>
+      expect(screen.getByText("Something went wrong. Please try again.")).toBeInTheDocument(),
+    );
   });
 
   it("renders empty product grid when seller has no products", async () => {

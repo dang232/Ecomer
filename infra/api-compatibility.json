@@ -1,0 +1,50 @@
+{
+  "version": "v1",
+  "sunset": "2026-11-23T00:00:00Z",
+  "methods": ["GET", "HEAD", "OPTIONS", "POST", "PUT", "PATCH", "DELETE"],
+  "legacyRedirect": {
+    "safeMethodStatus": 308,
+    "mutationStatus": 307,
+    "methodPreserving": true,
+    "headers": {
+      "Deprecation": "true",
+      "Sunset": "Mon, 23 Nov 2026 00:00:00 GMT",
+      "Link": "<{successor}>; rel=\"successor-version\""
+    }
+  },
+  "routes": [
+    { "legacy": "/products/**", "canonical": "/api/v1/products/**" },
+    { "legacy": "/videos/**", "canonical": "/api/v1/videos/**" },
+    { "legacy": "/categories/**", "canonical": "/api/v1/categories/**" },
+    { "legacy": "/search/**", "canonical": "/api/v1/search/**" },
+    { "legacy": "/flash-sale/**", "canonical": "/api/v1/flash-sale/**" },
+    { "legacy": "/questions/**", "canonical": "/api/v1/questions/**" },
+    { "legacy": "/reviews/**", "canonical": "/api/v1/reviews/**" },
+    { "legacy": "/users/**", "canonical": "/api/v1/users/**" },
+    { "legacy": "/sellers/**", "canonical": "/api/v1/sellers/**" },
+    { "legacy": "/auth/**", "canonical": "/api/v1/auth/**" },
+    { "legacy": "/cart/**", "canonical": "/api/v1/cart/**" },
+    { "legacy": "/checkout/**", "canonical": "/api/v1/checkout/**" },
+    { "legacy": "/invoices/**", "canonical": "/api/v1/invoices/**" },
+    { "legacy": "/orders/**", "canonical": "/api/v1/orders/**" },
+    { "legacy": "/seller/orders/**", "canonical": "/api/v1/seller/orders/**" },
+    { "legacy": "/returns/**", "canonical": "/api/v1/returns/**" },
+    { "legacy": "/payment/**", "canonical": "/api/v1/payment/**" },
+    { "legacy": "/shipping/**", "canonical": "/api/v1/shipping/**" },
+    { "legacy": "/notifications/**", "canonical": "/api/v1/notifications/**" },
+    { "legacy": "/messaging/**", "canonical": "/api/v1/messaging/**" },
+    { "legacy": "/coupons/**", "canonical": "/api/v1/coupons/**" },
+    { "legacy": "/seller-finance/**", "canonical": "/api/v1/seller-finance/**" },
+    { "legacy": "/recommendations/**", "canonical": "/api/v1/recommendations/**" },
+    { "legacy": "/admin/**", "canonical": "/api/v1/admin/**" }
+  ],
+  "excluded": [
+    "/api/config/**",
+    "/webhooks/**",
+    "/ws/**",
+    "/realms/**",
+    "/resources/**",
+    "/monitoring/**",
+    "/**/actuator/**"
+  ]
+}

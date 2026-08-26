@@ -171,7 +171,7 @@ describe("CheckoutAddressStep", () => {
       </Wrapper>,
     );
 
-    const group = screen.getByRole("radiogroup", { name: "Delivery address" });
+    const group = screen.getByRole("radiogroup", { name: "checkout.address.groupLabel" });
     expect(group).toBeInTheDocument();
   });
 });

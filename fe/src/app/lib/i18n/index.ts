@@ -24,4 +24,14 @@ void i18n
     },
   });
 
+function syncDocumentLanguage() {
+  const language = i18n.resolvedLanguage ?? i18n.language;
+  if (language) {
+    document.documentElement.lang = language;
+  }
+}
+
+syncDocumentLanguage();
+i18n.on("languageChanged", syncDocumentLanguage);
+
 export default i18n;

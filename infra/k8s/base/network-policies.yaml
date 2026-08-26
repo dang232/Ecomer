@@ -23,33 +23,14 @@ spec:
   - from:
     - podSelector:
         matchLabels:
-           app.kubernetes.io/part-of: vnshop
+          app.kubernetes.io/part-of: vnshop
     - namespaceSelector:
         matchLabels:
            kubernetes.io/metadata.name: ingress-nginx
     ports:
     - {protocol: TCP, port: 8080}
-    - {protocol: TCP, port: 8081}
-    - {protocol: TCP, port: 8082}
-    - {protocol: TCP, port: 8083}
-    - {protocol: TCP, port: 8084}
-    - {protocol: TCP, port: 8086}
-    - {protocol: TCP, port: 8087}
-    - {protocol: TCP, port: 8088}
-    - {protocol: TCP, port: 8090}
-    - {protocol: TCP, port: 8091}
-    - {protocol: TCP, port: 8092}
-    - {protocol: TCP, port: 8093}
-    - {protocol: TCP, port: 8094}
-    - {protocol: TCP, port: 8095}
-    - {protocol: TCP, port: 8096}
-    - {protocol: TCP, port: 8097}
-    - {protocol: TCP, port: 8098}
     - {protocol: TCP, port: 9000}
     - {protocol: TCP, port: 9092}
-    - {protocol: TCP, port: 9093}
-    - {protocol: TCP, port: 9094}
-    - {protocol: TCP, port: 9095}
     - {protocol: TCP, port: 9200}
   egress:
   - to:
@@ -58,27 +39,8 @@ spec:
           app.kubernetes.io/part-of: vnshop
     ports:
     - {protocol: TCP, port: 8080}
-    - {protocol: TCP, port: 8081}
-    - {protocol: TCP, port: 8082}
-    - {protocol: TCP, port: 8083}
-    - {protocol: TCP, port: 8084}
-    - {protocol: TCP, port: 8086}
-    - {protocol: TCP, port: 8087}
-    - {protocol: TCP, port: 8088}
-    - {protocol: TCP, port: 8090}
-    - {protocol: TCP, port: 8091}
-    - {protocol: TCP, port: 8092}
-    - {protocol: TCP, port: 8093}
-    - {protocol: TCP, port: 8094}
-    - {protocol: TCP, port: 8095}
-    - {protocol: TCP, port: 8096}
-    - {protocol: TCP, port: 8097}
-    - {protocol: TCP, port: 8098}
     - {protocol: TCP, port: 9000}
     - {protocol: TCP, port: 9092}
-    - {protocol: TCP, port: 9093}
-    - {protocol: TCP, port: 9094}
-    - {protocol: TCP, port: 9095}
     - {protocol: TCP, port: 9200}
   - to:
     - namespaceSelector:
@@ -89,6 +51,111 @@ spec:
     - {protocol: TCP, port: 53}
   # External HTTPS egress must use an approved egress gateway/CIDR policy.
   # It is intentionally not open from every workload in this base policy.
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-api-gateway-to-service-ports
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: vnshop
+  policyTypes: [Ingress]
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: vnshop-api-gateway
+    ports:
+    - {protocol: TCP, port: 8081}
+    - {protocol: TCP, port: 8082}
+    - {protocol: TCP, port: 8083}
+    - {protocol: TCP, port: 8084}
+    - {protocol: TCP, port: 8086}
+    - {protocol: TCP, port: 8087}
+    - {protocol: TCP, port: 8090}
+    - {protocol: TCP, port: 8091}
+    - {protocol: TCP, port: 8092}
+    - {protocol: TCP, port: 8093}
+    - {protocol: TCP, port: 8094}
+    - {protocol: TCP, port: 8095}
+    - {protocol: TCP, port: 8096}
+    - {protocol: TCP, port: 8097}
+    - {protocol: TCP, port: 8098}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-order-to-grpc-services
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: vnshop-order
+  policyTypes: [Egress]
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: vnshop-inventory
+    ports: [{protocol: TCP, port: 9093}]
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: vnshop-payment
+    ports: [{protocol: TCP, port: 9094}]
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: vnshop-shipping
+    ports: [{protocol: TCP, port: 9095}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-inventory-grpc-from-order
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: vnshop-inventory
+  policyTypes: [Ingress]
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: vnshop-order
+    ports: [{protocol: TCP, port: 9093}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-payment-grpc-from-order
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: vnshop-payment
+  policyTypes: [Ingress]
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: vnshop-order
+    ports: [{protocol: TCP, port: 9094}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-shipping-grpc-from-order
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: vnshop-shipping
+  policyTypes: [Ingress]
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: vnshop-order
+    ports: [{protocol: TCP, port: 9095}]
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy

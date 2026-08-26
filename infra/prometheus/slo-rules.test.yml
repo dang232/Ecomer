@@ -1,0 +1,39 @@
+rule_files:
+  - slo-rules.yml
+
+tests:
+  - interval: 30s
+    input_series:
+      - series: 'outbox_oldest_age_seconds{job="vnshop-order-service"}'
+        values: '600 600 600 600'
+      - series: 'outbox_dead_total{job="vnshop-order-service"}'
+        values: '0 0 0 0'
+      - series: 'saga_compensating_age_seconds{job="vnshop-order-service"}'
+        values: '1200 1200 1200 1200'
+      - series: 'orders_stuck_compensating{job="vnshop-order-service"}'
+        values: '1 1 1 1'
+      - series: 'dlt_age_seconds{job="vnshop-payment-service"}'
+        values: '1200 1200 1200 1200'
+      - series: 'redis_evictions_total{job="vnshop-cart-service"}'
+        values: '0 1 2 3'
+      - series: 'provider_latency_seconds_bucket{job="vnshop-payment-service",le="2"}'
+        values: '0 0 0 0'
+      - series: 'provider_latency_seconds_bucket{job="vnshop-payment-service",le="+Inf"}'
+        values: '1 2 3 4'
+    alert_rule_test:
+      - eval_time: 90s
+        alertname: OutboxStale
+        exp_alerts:
+          - exp_labels: { severity: critical, job: vnshop-order-service }
+      - eval_time: 90s
+        alertname: SagaCompensationStuck
+        exp_alerts:
+          - exp_labels: { severity: critical, job: vnshop-order-service }
+      - eval_time: 90s
+        alertname: DltStale
+        exp_alerts:
+          - exp_labels: { severity: critical, job: vnshop-payment-service }
+      - eval_time: 90s
+        alertname: RedisEvictions
+        exp_alerts:
+          - exp_labels: { severity: warning, job: vnshop-cart-service }

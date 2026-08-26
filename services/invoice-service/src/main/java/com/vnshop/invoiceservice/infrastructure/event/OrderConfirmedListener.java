@@ -19,6 +19,8 @@ import org.springframework.kafka.annotation.RetryableTopic;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.retrytopic.DltStrategy;
 import org.springframework.stereotype.Service;
+import com.vnshop.invoiceservice.infrastructure.dlt.DurableDltService;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 /**
  * Consumes {@code order.confirmed} events and creates a DRAFT Invoice record
@@ -39,6 +41,7 @@ public class OrderConfirmedListener {
     private final SellerAuthorizationService sellerAuthorizationService;
     private final ObjectMapper objectMapper;
     private final KafkaTemplate<String, String> kafkaTemplate;
+    private final DurableDltService durableDltService;
 
     @RetryableTopic(
             attempts = "3",
@@ -85,8 +88,8 @@ public class OrderConfirmedListener {
     }
 
     @DltHandler
-    public void handleDlt(String message) {
-        log.error("order.confirmed message sent to DLT after retries exhausted: {}", message);
+    public void handleDlt(ConsumerRecord<String, String> record) {
+        durableDltService.store(record, "order.confirmed DLT payload received", 3);
     }
 
     private BigDecimal calculateTaxDeduction(JsonNode payload, int taxDeductionPercent) {
@@ -122,8 +125,7 @@ public class OrderConfirmedListener {
         try {
             return objectMapper.readTree(json);
         } catch (Exception ex) {
-            log.error("order.confirmed payload is not valid JSON — skipping: {}", ex.getMessage());
-            return null;
+            throw new IllegalArgumentException("order.confirmed payload is not valid JSON", ex);
         }
     }
 

@@ -2,6 +2,8 @@ version: v2
 modules:
   - path: .
     name: buf.build/vnshop/proto
+    excludes:
+      - target
 breaking:
   use:
     - PACKAGE

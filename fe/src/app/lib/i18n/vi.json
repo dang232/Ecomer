@@ -687,6 +687,7 @@
     },
     "address": {
       "header": "Chọn địa chỉ giao hàng",
+      "groupLabel": "Địa chỉ giao hàng",
       "loading": "Đang tải địa chỉ...",
       "noAddressesTitle": "Bạn chưa có địa chỉ nào",
       "noAddressesSub": "Hãy thêm địa chỉ giao hàng trong Hồ sơ trước khi thanh toán.",
@@ -710,6 +711,7 @@
     },
     "shipping": {
       "header": "Chọn phương thức vận chuyển",
+      "groupLabel": "Phương thức vận chuyển",
       "etaPrefix": "Dự kiến: {{eta}}",
       "free": "Miễn phí",
       "noteLabel": "Ghi chú cho người bán (tùy chọn)",
@@ -737,6 +739,7 @@
     },
     "payment": {
       "header": "Phương thức thanh toán",
+      "groupLabel": "Phương thức thanh toán",
       "sslNotice": "Tất cả giao dịch được mã hóa SSL 256-bit và bảo mật tuyệt đối",
       "unavailable": "Khong the tai phuong thuc thanh toan. Hay thu lai truoc khi dat hang.",
       "retry": "Thu lai phuong thuc thanh toan",
@@ -1501,7 +1504,8 @@
             "weightGrams": "Khối lượng (g)",
             "lengthCm": "Dài (cm)",
             "widthCm": "Rộng (cm)",
-            "heightCm": "Cao (cm)"
+            "heightCm": "Cao (cm)",
+            "declaredValueMinor": "Giá trị khai báo (đơn vị nhỏ nhất)"
           }
         },
         "publication": {

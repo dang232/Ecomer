@@ -1,15 +1,31 @@
 # Explicit local development overlay. This file is never auto-loaded.
 # Use: docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile apps up -d
 # Host debug ports are loopback-only; the JVM listeners bind the container interface.
+# The password values below are local-only defaults. Never use this overlay for
+# staging or production; shared environments must provide the required values
+# consumed by docker-compose.yml through their secret manager.
 services:
+  postgres-keycloak:
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
+  redis:
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "512mb", "--maxmemory-policy", "volatile-lru", "--requirepass", "${REDIS_PASSWORD:-vnshop123}"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-vnshop123}", "ping"]
   order-service:
     environment:
+      # Local gRPC mTLS assets are not checked into the repository. The HTTP
+      # order surface remains available in this workstation-only overlay.
+      GRPC_CLIENT_ENABLED: "false"
       JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
     ports:
       - "127.0.0.1:5005:5005"
 
   payment-service:
     environment:
+      # Local gRPC mTLS assets are not checked into the repository. The HTTP
+      # payment surface remains available in this workstation-only overlay.
+      GRPC_SERVER_ENABLED: "false"
       JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5006
     ports:
       - "127.0.0.1:5006:5006"
@@ -27,33 +43,53 @@ services:
       - "127.0.0.1:5008:5008"
 
   postgres-legacy:
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
     ports:
       - "127.0.0.1:5432:5432"
   postgres-user:
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
     ports:
       - "127.0.0.1:5433:5432"
   postgres-product:
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
     ports:
       - "127.0.0.1:5434:5432"
   postgres-order:
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
     ports:
       - "127.0.0.1:5435:5432"
   postgres-payment:
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
     ports:
       - "127.0.0.1:5436:5432"
   postgres-inventory:
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
     ports:
       - "127.0.0.1:5437:5432"
   postgres-search:
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
     ports:
       - "127.0.0.1:5438:5432"
   postgres-shipping:
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
     ports:
       - "127.0.0.1:5439:5432"
   postgres-cart:
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
     ports:
       - "127.0.0.1:5442:5432"
   postgres-invoice:
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnshop}
     ports:
       - "127.0.0.1:5441:5432"
   timescaledb:
@@ -63,6 +99,9 @@ services:
     ports:
       - "127.0.0.1:9092:9092"
       - "127.0.0.1:29092:29092"
+  elasticsearch:
+    ports:
+      - "127.0.0.1:9200:9200"
   minio:
     ports:
       - "127.0.0.1:9000:9000"
@@ -79,6 +118,8 @@ services:
     ports:
       - "127.0.0.1:3100:3100"
   alertmanager:
+    volumes:
+      - ./infra/alertmanager/alertmanager.dev.yml:/etc/alertmanager/alertmanager.yml:ro
     ports:
       - "127.0.0.1:9093:9093"
   cart-service:

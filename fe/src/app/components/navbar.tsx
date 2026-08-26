@@ -1,5 +1,5 @@
 import { Heart, Moon, ShoppingBag, Sun, User, type LucideIcon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation, useNavigate } from "react-router";
 
@@ -109,6 +109,9 @@ export function Navbar() {
   const { ids: wishlist } = useWishlist();
   const [searchQ, setSearchQ] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuId = useId();
+  const menuRef = useRef<HTMLDivElement>(null);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const [cartAnnouncement, setCartAnnouncement] = useState("");
   const cartCountRef = useRef(cartCount);
   const { suggestions } = useSearchSuggestions(searchQ);
@@ -126,6 +129,49 @@ export function Navbar() {
   };
   const themeActionLabel = isDark ? t("nav.switchToLightMode") : t("nav.switchToDarkMode");
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    const first = menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]');
+    first?.focus();
+    const closeOnOutside = (event: MouseEvent) => {
+      if (
+        !menuRef.current?.contains(event.target as Node) &&
+        !menuTriggerRef.current?.contains(event.target as Node)
+      ) {
+        setMenuOpen(false);
+      }
+    };
+    const closeOnEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMenuOpen(false);
+        menuTriggerRef.current?.focus();
+      }
+    };
+    document.addEventListener("mousedown", closeOnOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [menuOpen]);
+
+  const handleMenuKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const items = Array.from(
+      menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [],
+    );
+    const current = items.indexOf(event.target as HTMLElement);
+    if (current < 0) return;
+    let target = current;
+    if (event.key === "ArrowDown") target = (current + 1) % items.length;
+    else if (event.key === "ArrowUp") target = (current - 1 + items.length) % items.length;
+    else if (event.key === "Home") target = 0;
+    else if (event.key === "End") target = items.length - 1;
+    else return;
+    event.preventDefault();
+    items[target]?.focus();
+  };
+
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-card">
       <LiveRegion message={cartAnnouncement} />
@@ -133,7 +179,7 @@ export function Navbar() {
       <div className="mx-auto grid h-14 max-w-[1440px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 md:h-16 md:gap-4 sm:px-6 lg:px-8">
         <Link
           to="/"
-          className="text-xl font-extrabold text-[var(--web-brand)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="text-xl font-extrabold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label="VNShop home"
         >
           VNShop
@@ -197,10 +243,12 @@ export function Navbar() {
             {isLoggedIn ? (
               <button
                 type="button"
+                ref={menuTriggerRef}
                 data-account-menu-trigger
                 aria-label={t("storefront.accountMenu")}
                 aria-expanded={menuOpen}
                 aria-haspopup="menu"
+                aria-controls={menuOpen ? menuId : undefined}
                 onClick={() => setMenuOpen((open) => !open)}
                 className="inline-flex min-h-[var(--target-web)] items-center gap-2 rounded-[var(--radius-control)] px-2 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
@@ -208,6 +256,8 @@ export function Navbar() {
                   src={user?.avatar ?? ""}
                   alt=""
                   className="h-7 w-7 rounded-full object-cover"
+                  imagePreset="avatar"
+                  sizes="28px"
                 />
                 <span className="hidden lg:inline">{user?.name ?? t("auth.myAccount")}</span>
               </button>
@@ -222,12 +272,17 @@ export function Navbar() {
             )}
             {menuOpen && isLoggedIn ? (
               <div
+                id={menuId}
+                ref={menuRef}
                 role="menu"
+                tabIndex={-1}
+                onKeyDown={handleMenuKeyDown}
                 className="absolute right-0 top-[calc(100%+0.5rem)] z-50 grid min-w-52 border border-border bg-card p-1 shadow-[var(--shadow-lg)]"
               >
                 <Link
                   to="/profile"
                   role="menuitem"
+                  tabIndex={0}
                   onClick={() => setMenuOpen(false)}
                   className="px-3 py-2 text-sm hover:bg-muted"
                 >
@@ -236,6 +291,7 @@ export function Navbar() {
                 <Link
                   to="/orders"
                   role="menuitem"
+                  tabIndex={0}
                   onClick={() => setMenuOpen(false)}
                   className="px-3 py-2 text-sm hover:bg-muted"
                 >
@@ -244,6 +300,7 @@ export function Navbar() {
                 <button
                   type="button"
                   role="menuitem"
+                  tabIndex={0}
                   onClick={toggleTheme}
                   className="flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted"
                 >
@@ -257,6 +314,7 @@ export function Navbar() {
                 <button
                   type="button"
                   role="menuitem"
+                  tabIndex={0}
                   onClick={() => {
                     logout("/");
                     setMenuOpen(false);

@@ -15,6 +15,10 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverterAdapter;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vnshop.apigateway.infrastructure.web.ProblemDetailsWriter;
+import org.springframework.security.web.server.ServerAuthenticationEntryPoint;
+import org.springframework.security.web.server.authorization.ServerAccessDeniedHandler;
 import org.springframework.security.web.server.csrf.CookieServerCsrfTokenRepository;
 import org.springframework.security.web.server.csrf.ServerCsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher;
@@ -41,9 +45,14 @@ public class SecurityConfig {
     private static final String REFRESH_TOKEN_COOKIE = "vnshop_rt";
     private static final String TUS_UPLOAD_PATH = "/videos/upload";
     private static final Set<String> PUBLIC_AUTH_PATHS = Set.of(
-            "/auth/login", "/auth/register", "/auth/password-reset-request", "/auth/forgot-password");
+            "/auth/login", "/auth/register", "/auth/password-reset-request", "/auth/forgot-password",
+            "/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/password-reset-request",
+            "/api/v1/auth/forgot-password");
     private static final String CSRF_COOKIE = "vnshop_csrf";
     private static final String CSRF_HEADER = "X-CSRF-Token";
+    private static final Set<String> PRESIGNED_QUERY_PARAMETERS = Set.of(
+            "X-Amz-Algorithm", "X-Amz-Credential", "X-Amz-Date", "X-Amz-Expires",
+            "X-Amz-SignedHeaders", "X-Amz-Signature");
     private final PublicBucketProperties publicBuckets;
 
     public SecurityConfig(PublicBucketProperties publicBuckets) {
@@ -59,23 +68,24 @@ public class SecurityConfig {
      */
     @Bean
     CorsConfigurationSource corsConfigurationSource(
-            @Value("${spring.cloud.gateway.globalcors.cors-configurations.[/**].allowed-origins:http://localhost:3000,http://localhost:5173}")
-                    String allowedOrigins) {
+            @Value("${GATEWAY_CORS_ALLOWED_ORIGINS:https://*.vnshop.example}")
+                    String allowedOriginPatterns) {
         CorsConfiguration cfg = new CorsConfiguration();
-        cfg.setAllowedOrigins(Arrays.stream(allowedOrigins.split(","))
+        List<String> originPatterns = Arrays.stream(allowedOriginPatterns.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
-                .toList());
+                .peek(SecurityConfig::rejectWildcardOrigin)
+                .toList();
+        cfg.setAllowedOriginPatterns(originPatterns);
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         cfg.setAllowedHeaders(List.of("*"));
         cfg.setExposedHeaders(List.of(
-                "Location", "Tus-Resumable", "Upload-Offset", "X-Correlation-Id"));
-        // Cookie-based auth (vnshop_rt refresh-token cookie issued by
-        // user-service /auth/login) requires the browser to include
-        // credentials on cross-origin requests. Concrete allowed-origins
-        // list above keeps this safe — wildcards + credentials would be
-        // rejected by the browser.
-        cfg.setAllowCredentials(true);
+                "Location", "Tus-Resumable", "Upload-Offset", "X-Correlation-Id",
+                "RateLimit-Limit", "RateLimit-Remaining", "RateLimit-Reset", "Deprecation", "Sunset", "Link"));
+        // Credentials are enabled only when a concrete origin allowlist/pattern
+        // is configured. A bare wildcard is rejected above because it cannot be
+        // combined safely with cookie authentication.
+        cfg.setAllowCredentials(!originPatterns.isEmpty());
         cfg.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", cfg);
@@ -83,7 +93,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
+    SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http, ObjectMapper objectMapper) {
         return http
             // Without an explicit .cors(...) call, Spring Security WebFlux
             // intercepts OPTIONS preflights and emits a bare 200 with no
@@ -103,22 +113,27 @@ public class SecurityConfig {
                 .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .pathMatchers(HttpMethod.GET, publicBuckets.routePatterns()).permitAll()
                 .pathMatchers(HttpMethod.HEAD, publicBuckets.routePatterns()).permitAll()
-                .pathMatchers(HttpMethod.PUT, publicBuckets.routePatterns()).permitAll()
+                .matchers(presignedPublicBucketPutMatcher()).permitAll()
+                .pathMatchers(HttpMethod.PUT, publicBuckets.routePatterns()).denyAll()
                 // Seller review management is a protected read model even
                 // though public product reviews share the /reviews prefix.
-                .pathMatchers(HttpMethod.GET, "/reviews/seller/me").hasRole("SELLER")
+                .pathMatchers(HttpMethod.GET, "/reviews/seller/me", "/api/v1/reviews/seller/me").hasRole("SELLER")
                 .pathMatchers(HttpMethod.GET, "/sellers/me").authenticated()
                 // Only the public collection is anonymous. Upload status remains owner-authenticated.
                 .pathMatchers(HttpMethod.GET, "/videos").permitAll()
                 .pathMatchers(HttpMethod.GET, "/products/**", "/categories/**", "/search/**",
                         "/reviews/**", "/questions/**", "/recommendations/**", "/health",
+                        "/api/v1/products/**", "/api/v1/categories/**", "/api/v1/search/**",
+                        "/api/v1/reviews/**", "/api/v1/questions/**", "/api/v1/recommendations/**", "/api/v1/videos",
                         "/api/config", "/api/config/public", "/sellers", "/sellers/*", "/flash-sale/active",
-                        "/payment/methods", "/coupons").permitAll()
+                        "/api/v1/sellers", "/api/v1/sellers/*", "/api/v1/flash-sale/active",
+                        "/payment/methods", "/api/v1/payment/methods", "/coupons", "/api/v1/coupons").permitAll()
                 .pathMatchers(HttpMethod.POST, "/reviews/seller-summaries", "/products/counts",
-                         "/coupons/validate", "/checkout/validate-coupon").permitAll()
+                          "/coupons/validate", "/checkout/validate-coupon", "/api/v1/reviews/seller-summaries",
+                          "/api/v1/products/counts", "/api/v1/coupons/validate", "/api/v1/checkout/validate-coupon").permitAll()
                 .pathMatchers(HttpMethod.POST, "/webhooks/ghn", "/webhooks/ghtk").permitAll()
                 .pathMatchers(HttpMethod.POST, "/api/config/reload").hasRole("ADMIN")
-                .pathMatchers("/auth/**", "/realms/**", "/resources/**", "/payment/*/callback", "/payment/*/ipn",
+                .pathMatchers("/auth/**", "/api/v1/auth/**", "/realms/**", "/resources/**", "/payment/*/callback", "/payment/*/ipn",
                         "/payment/stripe/webhook", "/payment/stripe/chargeback-webhook").permitAll()
                 // The WebSocket handshake on /ws/messaging carries the JWT through
                 // a subprotocol because browsers can't set Authorization headers on
@@ -140,7 +155,8 @@ public class SecurityConfig {
                 .pathMatchers("/monitoring/socket.io/**").permitAll()
                 .pathMatchers("/monitoring/**").hasRole("ADMIN")
                 .pathMatchers("/admin/**").hasRole("ADMIN")
-                .pathMatchers("/seller/**", "/sellers/me/**").hasRole("SELLER")
+                .pathMatchers("/seller/**", "/sellers/me/**", "/api/v1/seller/**", "/api/v1/sellers/me/**").hasRole("SELLER")
+                .pathMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .anyExchange().authenticated()
             )
             // The SPA obtains access tokens through user-service. The gateway
@@ -148,6 +164,13 @@ public class SecurityConfig {
             .oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
             )
+            .exceptionHandling(errors -> errors
+                .authenticationEntryPoint((exchange, exception) -> ProblemDetailsWriter.write(
+                    exchange, objectMapper, org.springframework.http.HttpStatus.UNAUTHORIZED,
+                    "UNAUTHORIZED", "Authentication is required", false))
+                .accessDeniedHandler((exchange, exception) -> ProblemDetailsWriter.write(
+                    exchange, objectMapper, org.springframework.http.HttpStatus.FORBIDDEN,
+                    "FORBIDDEN", "Access denied", false)))
             .headers(headers -> headers
                 .frameOptions(frame -> frame.mode(org.springframework.security.web.server.header.XFrameOptionsServerHttpHeadersWriter.Mode.DENY))
                 .contentTypeOptions(org.springframework.security.config.Customizer.withDefaults())
@@ -192,13 +215,52 @@ public class SecurityConfig {
         boolean cookieAuthenticated = request.getCookies().containsKey(REFRESH_TOKEN_COOKIE);
         String path = request.getPath().pathWithinApplication().value();
         boolean stateChanging = request.getMethod() != null && !SAFE_METHODS.contains(request.getMethod());
-        boolean tusUpload = path.equals(TUS_UPLOAD_PATH) || path.startsWith(TUS_UPLOAD_PATH + "/");
+        boolean tusUpload = path.equals(TUS_UPLOAD_PATH) || path.startsWith(TUS_UPLOAD_PATH + "/")
+                || path.equals("/api/v1" + TUS_UPLOAD_PATH) || path.startsWith("/api/v1" + TUS_UPLOAD_PATH + "/");
         boolean publicAuth = PUBLIC_AUTH_PATHS.contains(path);
         boolean proxiedKeycloak = path.startsWith("/realms/");
         boolean publicObject = publicBuckets.objectPrefixes().stream().anyMatch(path::startsWith);
-        return cookieAuthenticated && stateChanging && !tusUpload && !publicAuth && !proxiedKeycloak && !publicObject
+        boolean presignedPublicPut = isPresignedPublicBucketPut(exchange);
+        return cookieAuthenticated && stateChanging && !tusUpload && !publicAuth && !proxiedKeycloak
+                && !publicObject && !presignedPublicPut
                 ? ServerWebExchangeMatcher.MatchResult.match()
                 : ServerWebExchangeMatcher.MatchResult.notMatch();
+    }
+
+    ServerWebExchangeMatcher presignedPublicBucketPutMatcher() {
+        return new ServerWebExchangeMatcher() {
+            @Override
+            public Mono<ServerWebExchangeMatcher.MatchResult> matches(
+                    org.springframework.web.server.ServerWebExchange exchange) {
+                return isPresignedPublicBucketPut(exchange)
+                        ? ServerWebExchangeMatcher.MatchResult.match()
+                        : ServerWebExchangeMatcher.MatchResult.notMatch();
+            }
+        };
+    }
+
+    private boolean isPresignedPublicBucketPut(
+            org.springframework.web.server.ServerWebExchange exchange) {
+        var request = exchange.getRequest();
+        if (request.getMethod() != HttpMethod.PUT) {
+            return false;
+        }
+        String path = request.getPath().pathWithinApplication().value();
+        if (publicBuckets.objectPrefixes().stream().noneMatch(path::startsWith)) {
+            return false;
+        }
+        return PRESIGNED_QUERY_PARAMETERS.stream()
+                .allMatch(parameter -> {
+                    String value = request.getQueryParams().getFirst(parameter);
+                    return value != null && !value.isBlank();
+                });
+    }
+
+    private static void rejectWildcardOrigin(String originPattern) {
+        if ("*".equals(originPattern)) {
+            throw new IllegalArgumentException(
+                    "GATEWAY_CORS_ALLOWED_ORIGINS must not contain '*' when credentials are enabled");
+        }
     }
 
     @Bean

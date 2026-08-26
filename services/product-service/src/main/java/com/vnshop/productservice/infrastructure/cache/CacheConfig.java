@@ -1,6 +1,8 @@
 package com.vnshop.productservice.infrastructure.cache;
 
 import java.time.Duration;
+import java.util.Optional;
+import java.util.concurrent.ThreadLocalRandom;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -12,6 +14,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.cache.RedisCacheWriter;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 
@@ -33,18 +36,35 @@ import org.springframework.data.redis.serializer.RedisSerializationContext;
 public class CacheConfig implements CachingConfigurer {
 
     static final String PRODUCT_CACHE = "product";
+    static final Duration PRODUCT_CACHE_TTL = Duration.ofMinutes(5);
+    static final Duration NEGATIVE_CACHE_TTL = Duration.ofSeconds(30);
+    static final RedisCacheWriter.TtlFunction JITTERED_TTL = CacheConfig::ttlFor;
 
     @Bean
     public RedisCacheManager cacheManager(RedisConnectionFactory connectionFactory) {
         RedisCacheConfiguration productConfig = RedisCacheConfiguration.defaultCacheConfig()
-                .entryTtl(Duration.ofMinutes(5))
+                .entryTtl(JITTERED_TTL)
                 .disableCachingNullValues()
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(
                         new GenericJackson2JsonRedisSerializer()))
                 .prefixCacheNameWith("vnshop:cache:v2::");
-        return RedisCacheManager.builder(connectionFactory)
-                .withCacheConfiguration(PRODUCT_CACHE, productConfig)
-                .build();
+        return new RedisCacheManager(RedisCacheWriter.nonLockingRedisCacheWriter(connectionFactory),
+                RedisCacheConfiguration.defaultCacheConfig(),
+                java.util.Map.of(PRODUCT_CACHE, productConfig)) {
+            @Override
+            protected SingleFlightRedisCache createRedisCache(
+                    String cacheName, RedisCacheConfiguration cacheConfiguration) {
+                return new SingleFlightRedisCache(cacheName, getCacheWriter(), cacheConfiguration);
+            }
+        };
+    }
+
+    static Duration ttlFor(Object key, Object value) {
+        if (value instanceof Optional<?> optional && optional.isEmpty()) {
+            return NEGATIVE_CACHE_TTL;
+        }
+        long seconds = ThreadLocalRandom.current().nextLong(270, 331);
+        return Duration.ofSeconds(Math.max(1, seconds));
     }
 
     @Override

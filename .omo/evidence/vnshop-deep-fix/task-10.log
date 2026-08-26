@@ -1,0 +1,4 @@
+verified 19 immutable GHCR images in infra/k8s/overlays/prod/kustomization.yaml
+all-zero fixture rejected as expected
+prod kustomize render: zero-digest-lines=0, ghcr-pull-lines=20
+git diff --check: passed

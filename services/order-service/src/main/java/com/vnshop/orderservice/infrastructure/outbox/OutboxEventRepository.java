@@ -28,4 +28,12 @@ public class OutboxEventRepository {
     public List<OutboxEventJpaEntity> findAndLockPendingEvents(Instant now, int batchSize) {
         return springDataRepository.findAndLockPendingEvents(now, batchSize);
     }
+
+    public Instant oldestCreatedAt(OutboxEvent.Status status) {
+        return springDataRepository.findOldestCreatedAtByStatus(status).orElse(null);
+    }
+
+    public long count(OutboxEvent.Status status) {
+        return springDataRepository.countByStatus(status);
+    }
 }

@@ -67,7 +67,9 @@ export class KafkaEventConsumer {
         type: NotificationType.SELLER_NEW_ORDER,
         title: 'Đơn hàng mới',
         body: `Bạn có đơn hàng mới #${p.orderId}.`,
-        deepLink: p.orderId ? `/seller/orders?selected=${encodeURIComponent(p.orderId)}` : '/seller/orders',
+        deepLink: p.orderId
+          ? `/seller/orders?selected=${encodeURIComponent(p.orderId)}`
+          : '/seller/orders',
         priority: Priority.HIGH,
         threadId: `seller-order:${p.orderId}`,
         threadTitle: `Đơn hàng #${p.orderId}`,

@@ -20,6 +20,7 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 
 @RequiredArgsConstructor
 public class S3ObjectStorageAdapter implements ObjectStoragePort {
+    static final String IMMUTABLE_IMAGE_CACHE_CONTROL = "public, max-age=31536000, immutable";
     static final String METADATA_SHA256 = "sha256";
 
     private final S3Client s3Client;
@@ -33,6 +34,7 @@ public class S3ObjectStorageAdapter implements ObjectStoragePort {
                 .key(key)
                 .contentType(metadata.contentType())
                 .contentLength(metadata.contentLength())
+                .cacheControl(IMMUTABLE_IMAGE_CACHE_CONTROL)
                 .metadata(toS3Metadata(metadata))
                 .build();
         PutObjectPresignRequest presignRequest = PutObjectPresignRequest.builder()

@@ -11,7 +11,7 @@ Polyglot microservices marketplace (19 services, Spring Boot + NestJS + Python),
 | `README.md` | Primary project documentation — start here |
 | `AGENTS.md` | (this file) AI-readable project overview |
 | `HANDOFF.md` | Onboarding pickup doc for new contributors |
-| `docs/SESSION-HANDOVER-2026-08-18.md` | Current post-PR #314 status and next steps |
+| `docs/SESSION-HANDOVER-2026-08-26-DEEP-FIX.md` | Current PR #320 scope, evidence, approval, and blockers |
 | `docker-compose.yml` | Full stack orchestration (~60KB, all services + infra) |
 | `.env` | Local environment config (secrets — never commit) |
 | `.env.example` | Environment template (safe to commit) |
@@ -40,10 +40,10 @@ Polyglot microservices marketplace (19 services, Spring Boot + NestJS + Python),
 
 ## Current Status
 
-- `main` is at `1cd5495f` (PR #314, 2026-08-17).
-- Backend live-shipping checkout carries recipient/address codes, parcel dimensions, declared value, COD amount, recovery data, labels, and cancellation compensation.
-- React checkout remains fail-closed until trusted parcel metadata is exposed by product/cart responses; do not invent dimensions in the browser.
-- Production Kubernetes manifests remain blocked by placeholder digests, empty secrets, example origins, stub/demo modes, and unresolved Kafka/Elasticsearch/provider security gates.
+- PR #320 is the current deep-fix wave at `3e33684` and records 32 completed todos.
+- Trusted parcel variants now carry dimensions and declared value through product, cart, checkout, order, and shipping contracts; browser checkout must never invent dimensions.
+- Durable saga/outbox delivery, principal-scoped idempotency, HMAC/JWT and mTLS boundaries, canonical Kafka/DLT contracts, RFC 7807 errors, `/api/v1` compatibility, cache hardening, HA/observability, FE/mobile parity, i18n, a11y, and immutable responsive media are documented in the handover and evidence logs.
+- Final Wave is **APPROVE** for repository-owned scope only. Production Kubernetes remains blocked by external GHCR fixtures, SealedSecret values, real origins, provider credentials, broker/browser access, and HA/security approvals.
 - The next feature backlog is the unchecked August admin cursor-pagination plan after checkout and release verification.
 
 ## For AI Agents
@@ -54,6 +54,8 @@ Polyglot microservices marketplace (19 services, Spring Boot + NestJS + Python),
 - **DO NOT** use synchronous Kafka producers in user-facing hot paths
 - **MUST** use tmpfs for video transcoding staging directories
 - **KAFKA_VIDEO_TRANSPARECTOR_PASSWORD** and **KAFKA_VIDEO_MODERATOR_PASSWORD** have NO defaults — CI fails without them
+- Compose production-like paths fail closed when required passwords are absent; use the explicit development overlay for local defaults only.
+- MoMo and VNPay remain disabled. Do not add retroactive parcel/order backfills or claim live provider behavior without external evidence.
 - All Java services use **Java 25** (check `pom.xml` for version)
 - All NestJS services use **NestJS 11**
 
@@ -68,7 +70,7 @@ Polyglot microservices marketplace (19 services, Spring Boot + NestJS + Python),
 
 ### Testing
 ```bash
-# API gate (historical documented baseline; rerun after PR #314)
+# API gate (fresh counts belong in the current handover and evidence logs)
 node infra/scripts/e2e-day.mjs       # 65/65 endpoints
 # FE gate
 cd fe && npx playwright test         # 108/108 scenarios

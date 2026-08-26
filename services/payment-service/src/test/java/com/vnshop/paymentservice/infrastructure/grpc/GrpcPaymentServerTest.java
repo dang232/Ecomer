@@ -1,12 +1,14 @@
 package com.vnshop.paymentservice.infrastructure.grpc;
 
 import com.vnshop.paymentservice.application.GetPaymentStatusUseCase;
+import com.vnshop.paymentservice.application.IdempotencyKeyConflictException;
 import com.vnshop.paymentservice.application.ProcessPaymentCommand;
+import com.vnshop.paymentservice.application.PaymentProcessingResult;
 import com.vnshop.paymentservice.application.ProcessPaymentUseCase;
 import com.vnshop.paymentservice.domain.Payment;
 import com.vnshop.paymentservice.domain.PaymentStatus;
-import com.vnshop.proto.common.Money;
-import com.vnshop.proto.payment.*;
+import com.vnshop.proto.v1.Money;
+import com.vnshop.proto.v1.*;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Server;
@@ -123,16 +125,20 @@ class GrpcPaymentServerTest {
         UUID mockId = UUID.randomUUID();
         when(mockPayment.paymentId()).thenReturn(mockId);
         when(mockPayment.status()).thenReturn(PaymentStatus.PENDING);
-        when(processPaymentUseCase.processInternal(any(), any())).thenReturn(mockPayment);
+        when(processPaymentUseCase.processInternalResult(any(), any()))
+                .thenReturn(new PaymentProcessingResult(mockPayment, false,
+                        java.time.Instant.parse("2026-08-25T00:00:00Z")));
 
         PaymentResponse response = stub.requestPayment(PaymentRequest.newBuilder()
                 .setOrderId("ord-1")
                 .setBuyerId("buyer-1")
                 .setAmount(Money.newBuilder()
                         .setAmount("100000")
-                        .setCurrency("VND")
-                        .build())
+                .setCurrency("VND")
+                .build())
                 .setPaymentMethod("COD")
+                .setIdempotencyKey("ord-1")
+                .setIdempotencyScope(IdempotencyScope.IDEMPOTENCY_SCOPE_ORDER_PAYMENT)
                 .build());
 
         assertEquals(mockId.toString(), response.getPaymentId());
@@ -141,10 +147,12 @@ class GrpcPaymentServerTest {
         // Pt12: gRPC is the trusted service-to-service path. The use case's
         // processInternal entry point takes the trusted amount directly,
         // bypassing the OrderCatalogPort lookup that the HTTP path uses.
-        verify(processPaymentUseCase).processInternal(argThat(cmd ->
+        verify(processPaymentUseCase).processInternalResult(argThat(cmd ->
                 cmd.orderId().equals("ord-1")
                         && cmd.buyerId().equals("buyer-1")
-                        && cmd.method().name().equals("COD")), eq(new BigDecimal("100000")));
+                        && cmd.method().name().equals("COD")
+                        && cmd.currency().equals("VND")
+                        && cmd.idempotencyScope().equals("ORDER_PAYMENT")), eq(new BigDecimal("100000")));
     }
 
     @Test
@@ -164,15 +172,40 @@ class GrpcPaymentServerTest {
     @Test
     void requestPaymentFailsWhenGatewayReturnsFailedPayment() {
         Payment failedPayment = mock(Payment.class);
+        when(failedPayment.paymentId()).thenReturn(UUID.randomUUID());
         when(failedPayment.status()).thenReturn(PaymentStatus.FAILED);
-        when(processPaymentUseCase.processInternal(any(), any())).thenReturn(failedPayment);
+        when(processPaymentUseCase.processInternalResult(any(), any()))
+                .thenReturn(new PaymentProcessingResult(failedPayment, false,
+                        java.time.Instant.parse("2026-08-25T00:00:00Z")));
 
-        assertThrows(Exception.class, () -> stub.requestPayment(PaymentRequest.newBuilder()
+        PaymentResponse response = stub.requestPayment(PaymentRequest.newBuilder()
                 .setOrderId("ord-1")
                 .setBuyerId("buyer-1")
                 .setAmount(Money.newBuilder().setAmount("100000").setCurrency("VND").build())
                 .setPaymentMethod("VNPAY")
-                .build()));
+                .setIdempotencyScope(IdempotencyScope.IDEMPOTENCY_SCOPE_ORDER_PAYMENT)
+                .build());
+        assertEquals(com.vnshop.proto.v1.PaymentStatus.PAYMENT_STATUS_FAILED, response.getStatusCode());
+        assertEquals(PaymentFailureCode.PAYMENT_FAILURE_CODE_PROVIDER_FAILED, response.getFailureCode());
+    }
+
+    @Test
+    void requestPaymentReturnsTypedIdempotencyConflict() {
+        when(processPaymentUseCase.processInternalResult(any(), any()))
+                .thenThrow(new IdempotencyKeyConflictException("conflict"));
+
+        PaymentResponse response = stub.requestPayment(PaymentRequest.newBuilder()
+                .setOrderId("ord-1")
+                .setBuyerId("buyer-1")
+                .setAmount(Money.newBuilder().setAmount("100000").setCurrency("VND").build())
+                .setPaymentMethod("VNPAY")
+                .setIdempotencyKey("ord-1")
+                .setIdempotencyScope(IdempotencyScope.IDEMPOTENCY_SCOPE_ORDER_PAYMENT)
+                .build());
+
+        assertEquals(com.vnshop.proto.v1.PaymentStatus.PAYMENT_STATUS_FAILED, response.getStatusCode());
+        assertEquals(PaymentFailureCode.PAYMENT_FAILURE_CODE_IDEMPOTENCY_CONFLICT, response.getFailureCode());
+        assertTrue(response.getPaymentId().isEmpty());
     }
 
     @Test
@@ -203,7 +236,36 @@ class GrpcPaymentServerTest {
                                 .setCurrency("VND")
                                 .build())
                         .setPaymentMethod("COD")
+                .build()));
+    }
+
+    @Test
+    void requestPaymentRejectsUnsupportedCurrencyBeforeProcessing() {
+        StatusRuntimeException failure = assertThrows(StatusRuntimeException.class, () ->
+                stub.requestPayment(PaymentRequest.newBuilder()
+                        .setOrderId("ord-currency")
+                        .setBuyerId("buyer-1")
+                        .setAmount(Money.newBuilder().setAmount("100000").setCurrency("USD").build())
+                        .setPaymentMethod("COD")
+                        .setIdempotencyScope(IdempotencyScope.IDEMPOTENCY_SCOPE_ORDER_PAYMENT)
                         .build()));
+
+        assertEquals(Status.Code.INVALID_ARGUMENT, failure.getStatus().getCode());
+        verifyNoInteractions(processPaymentUseCase);
+    }
+
+    @Test
+    void requestPaymentRejectsUnspecifiedIdempotencyScopeBeforeProcessing() {
+        StatusRuntimeException failure = assertThrows(StatusRuntimeException.class, () ->
+                stub.requestPayment(PaymentRequest.newBuilder()
+                        .setOrderId("ord-scope")
+                        .setBuyerId("buyer-1")
+                        .setAmount(Money.newBuilder().setAmount("100000").setCurrency("VND").build())
+                        .setPaymentMethod("COD")
+                        .build()));
+
+        assertEquals(Status.Code.INVALID_ARGUMENT, failure.getStatus().getCode());
+        verifyNoInteractions(processPaymentUseCase);
     }
 
     @Test

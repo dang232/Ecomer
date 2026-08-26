@@ -38,6 +38,8 @@ export class SocketioNotificationGateway
 
   private readonly logger = new Logger(SocketioNotificationGateway.name);
   private readonly jwksClient: jwksRsa.JwksClient;
+  private readonly issuer: string;
+  private readonly audience: string;
 
   constructor(
     private readonly configService: ConfigService,
@@ -57,6 +59,14 @@ export class SocketioNotificationGateway
       cache: true,
       rateLimit: true,
     });
+    this.issuer = this.configService.get<string>(
+      'KEYCLOAK_ISSUER_URI',
+      'http://localhost:9090/realms/vnshop',
+    );
+    this.audience = this.configService.get<string>(
+      'KEYCLOAK_JWT_AUDIENCE',
+      'vnshop-api',
+    );
   }
 
   async handleConnection(client: Socket): Promise<void> {
@@ -177,13 +187,16 @@ export class SocketioNotificationGateway
             callback(null, key.getPublicKey());
           });
         },
-        { algorithms: ['RS256'] },
+        { algorithms: ['RS256'], issuer: this.issuer, audience: this.audience },
         (err, decoded) => {
           if (err || !decoded) {
             resolve(null);
             return;
           }
-          resolve((decoded as jwt.JwtPayload).sub ?? null);
+          const subject = (decoded as jwt.JwtPayload).sub;
+          resolve(
+            typeof subject === 'string' && subject.length > 0 ? subject : null,
+          );
         },
       );
     });

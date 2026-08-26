@@ -1,0 +1,17 @@
+Verification evidence for task 2 repair.
+Focused Java: CartServiceAdapterTest, OrderJpaEntityFinancialMappingTest, GrpcShippingRequestAdapterTest passed.
+Cart service: full Jest suite 10 suites, 60 tests passed.
+Frontend: pnpm run typecheck passed; parcel/product/cart Vitest suites 4 files, 31 tests passed; checkout parcel suite 3 tests passed.
+Product service: ProductResponseTest passed.
+Proto: buf lint passed; all five shipping.proto copies SHA-256 A7CEDB2933500E028F1EB3F2E5618EACD3CF0357C67A72C8F4E7D95DED122AEE.
+Repository: git diff --check passed.
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+15:31:36.170 [main] INFO com.vnshop.orderservice.infrastructure.grpc.GrpcShippingRequestAdapter -- Shipping request submitted for order order-42 seller seller-1 � 1 label(s)
+15:31:36.222 [main] INFO com.vnshop.orderservice.infrastructure.grpc.GrpcShippingRequestAdapter -- Shipping request submitted for order order-aggregate seller seller-1 � 1 label(s)
+15:31:36.229 [main] INFO com.vnshop.orderservice.infrastructure.grpc.GrpcShippingRequestAdapter -- Shipping request submitted for order order-sellers seller seller-1 � 1 label(s)
+15:31:36.229 [main] INFO com.vnshop.orderservice.infrastructure.grpc.GrpcShippingRequestAdapter -- Shipping request submitted for order order-sellers seller seller-2 � 1 label(s)
+15:31:36.234 [main] INFO com.vnshop.orderservice.infrastructure.grpc.GrpcShippingRequestAdapter -- Shipping request submitted for order order-live seller seller-live � 1 label(s)
+15:31:36.240 [main] INFO com.vnshop.orderservice.infrastructure.grpc.GrpcShippingRequestAdapter -- Shipping request submitted for order order-multi seller seller-3 � 1 label(s)
+15:31:36.248 [main] INFO com.vnshop.orderservice.infrastructure.grpc.GrpcShippingRequestAdapter -- Shipping request submitted for order order-no-label seller seller-1 � 0 label(s)
+15:31:36.265 [main] WARN com.vnshop.orderservice.infrastructure.grpc.GrpcShippingRequestAdapter -- Shipping request failed for order order-rejected seller seller-1
+15:31:36.269 [main] INFO com.vnshop.orderservice.infrastructure.grpc.GrpcShippingRequestAdapter -- Shipping request submitted for order order-99 seller seller-2 � 1 label(s)

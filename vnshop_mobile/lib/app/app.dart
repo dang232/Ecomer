@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/auth/session_controller.dart';
+import '../core/localization/locale_controller.dart';
 import '../core/theme/app_theme.dart';
 import '../features/auth/presentation/bloc/auth_bloc.dart';
 import '../features/auth/presentation/bloc/auth_event.dart';
@@ -23,6 +24,8 @@ class VnShopApp extends StatelessWidget {
 
   final SessionController sessionController;
   final AppDependencies dependencies;
+
+  static final LocaleController localeController = LocaleController();
 
   @override
   Widget build(BuildContext context) {
@@ -44,14 +47,19 @@ class VnShopApp extends StatelessWidget {
                 WishlistCubit(repository: dependencies.wishlistRepository),
           ),
         ],
-        child: const _AppView(),
+        child: ListenableBuilder(
+          listenable: localeController,
+          builder: (context, child) => _AppView(locale: localeController.locale),
+        ),
       ),
     );
   }
 }
 
 class _AppView extends StatefulWidget {
-  const _AppView();
+  const _AppView({required this.locale});
+
+  final Locale locale;
 
   @override
   State<_AppView> createState() => _AppViewState();
@@ -98,8 +106,8 @@ class _AppViewState extends State<_AppView> {
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        supportedLocales: const [Locale('vi'), Locale('en')],
-        locale: const Locale('vi'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: widget.locale,
         routerConfig: _router,
       ),
     );

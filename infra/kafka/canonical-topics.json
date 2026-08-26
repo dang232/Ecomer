@@ -1,0 +1,203 @@
+{
+  "schemaVersion": "kafka-canonical.v1",
+  "topicDefaults": {
+    "partitions": 6,
+    "replicationFactor": 3,
+    "minInSyncReplicas": 2
+  },
+  "broker": {
+    "principal": "svc-kafka",
+    "clusterOperations": ["CLUSTER_ACTION", "CREATE", "DESCRIBE"]
+  },
+  "topics": [
+    "messaging.message.sent",
+    "product-events",
+    "video-events",
+    "order.created",
+    "order.updated",
+    "order.paid",
+    "order.shipped",
+    "order.cancelled",
+    "order.confirmed",
+    "order.delivered",
+    "payment.completed",
+    "payment.refund.requested",
+    "payment.refunded",
+    "payment.chargeback.created",
+    "payment.chargeback.resolved",
+    "payment.webhooks.retry",
+    "payment.webhooks.dlt",
+    "inventory.release-requested",
+    "inventory.released",
+    "inventory.reservation-expired",
+    "shipping.cancel-requested",
+    "shipping.cancelled",
+    "shipping.status.updated",
+    "shipping.cod.collected",
+    "notification.events",
+    "notification.seller-invoice-required",
+    "notification.alert",
+    "product.approved",
+    "product.rejected",
+    "review.replied",
+    "return.requested",
+    "payout.completed",
+    "user.registered",
+    "user.password-reset",
+    "video.upload.completed",
+    "video.transcode.completed",
+    "video.transcode.failed",
+    "video.moderation.completed",
+    "video.published",
+    "video.rejected",
+    "video.moderation.dlt",
+    "gdpr.export-requested",
+    "gdpr.export-fragment",
+    "gdpr.deletion-requested",
+    "gdpr.deletion-completed",
+    "settlement.hold",
+    "seller.finance.adjustment",
+    "order.created.retry",
+    "order.created.DLT",
+    "order.updated.retry",
+    "order.updated.DLT",
+    "order.paid.retry",
+    "order.paid.DLT",
+    "order.shipped.retry",
+    "order.shipped.DLT",
+    "order.cancelled.retry",
+    "order.cancelled.DLT",
+    "order.confirmed.retry",
+    "order.confirmed.DLT",
+    "order.delivered.retry",
+    "order.delivered.DLT",
+    "payment.completed.retry",
+    "payment.completed.DLT",
+    "payment.refund.requested.retry",
+    "payment.refund.requested.DLT",
+    "payment.refunded.retry",
+    "payment.refunded.DLT",
+    "payment.chargeback.created.retry",
+    "payment.chargeback.created.DLT",
+    "payment.chargeback.resolved.retry",
+    "payment.chargeback.resolved.DLT",
+    "inventory.release-requested.retry",
+    "inventory.release-requested.DLT",
+    "inventory.released.retry",
+    "inventory.released.DLT",
+    "shipping.cancelled.retry",
+    "shipping.cancelled.DLT",
+    "shipping.cod.collected.retry",
+    "shipping.cod.collected.DLT",
+    "settlement.hold.retry",
+    "settlement.hold.DLT",
+    "seller.finance.adjustment.retry",
+    "seller.finance.adjustment.DLT",
+    "video.upload.completed.DLT",
+    "video.transcode.completed.DLT"
+  ],
+  "clients": {
+    "order-service": "svc-order",
+    "payment-service": "svc-payment",
+    "inventory-service": "svc-inventory",
+    "product-service": "svc-product",
+    "shipping-service": "svc-shipping",
+    "seller-finance-service": "svc-finance",
+    "search-service": "svc-search",
+    "recommendations-service": "svc-recommendations",
+    "notification-service": "svc-notification",
+    "messaging-service": "svc-messaging",
+    "invoice-service": "svc-invoice",
+    "user-service": "svc-user",
+    "video-transcoder": "svc-video-transcoder",
+    "video-moderator": "svc-video-moderator"
+  },
+  "acl": [
+    {
+      "service": "order-service",
+      "write": ["order.*", "payment.refund.requested", "inventory.release-requested", "shipping.cancel-requested", "notification.events", "gdpr.export-fragment", "gdpr.deletion-completed"],
+      "read": ["order.*", "payment.completed", "payment.completed.DLT", "payment.refunded", "payment.refunded.DLT", "inventory.released", "inventory.released.DLT", "shipping.cancelled", "shipping.cancelled.DLT", "payment.chargeback.created", "payment.chargeback.created.DLT", "payment.chargeback.resolved", "payment.chargeback.resolved.DLT", "gdpr.export-requested", "gdpr.deletion-requested"]
+    },
+    {
+      "service": "payment-service",
+      "write": ["payment.completed", "payment.refunded", "payment.chargeback.created", "payment.chargeback.resolved", "payment.webhooks.retry", "payment.webhooks.dlt", "notification.alert", "gdpr.export-fragment", "gdpr.deletion-completed"],
+      "read": ["payment.refund.requested", "shipping.cod.collected", "payment.webhooks.dlt", "gdpr.export-requested", "gdpr.deletion-requested"]
+    },
+    {
+      "service": "inventory-service",
+      "write": ["inventory.released", "inventory.reservation-expired"],
+      "read": ["inventory.release-requested"]
+    },
+    {
+      "service": "product-service",
+      "write": ["product-events", "video-events", "video.upload.completed", "gdpr.export-fragment", "gdpr.deletion-completed"],
+      "read": ["order.delivered", "video.transcode.failed", "gdpr.export-requested", "gdpr.deletion-requested"]
+    },
+    {
+      "service": "shipping-service",
+      "write": ["shipping.cancelled", "shipping.status.updated", "shipping.cod.collected", "gdpr.export-fragment", "gdpr.deletion-completed"],
+      "read": ["shipping.cancel-requested", "gdpr.export-requested", "gdpr.deletion-requested"]
+    },
+    {
+      "service": "seller-finance-service",
+      "write": [],
+      "read": ["order.created", "order.paid", "order.delivered", "payment.refunded", "settlement.hold", "seller.finance.adjustment"]
+    },
+    {
+      "service": "search-service",
+      "write": [],
+      "read": ["product-events"]
+    },
+    {
+      "service": "recommendations-service",
+      "write": [],
+      "read": ["order.created", "order.created.DLT"]
+    },
+    {
+      "service": "notification-service",
+      "write": [],
+      "read": ["order.created", "order.cancelled", "order.shipped", "order.delivered", "payment.completed", "payment.refunded", "product.approved", "product.rejected", "review.replied", "return.requested", "payout.completed", "user.registered", "user.password-reset", "video.published", "video.rejected"]
+    },
+    {
+      "service": "messaging-service",
+      "write": ["messaging.message.sent"],
+      "read": ["messaging.message.sent"]
+    },
+    {
+      "service": "invoice-service",
+      "write": ["notification.seller-invoice-required"],
+      "read": ["order.confirmed"]
+    },
+    {
+      "service": "user-service",
+      "write": ["gdpr.export-requested", "gdpr.deletion-requested"],
+      "read": ["gdpr.export-fragment", "gdpr.deletion-completed"]
+    },
+    {
+      "service": "video-transcoder",
+      "write": ["video.transcode.completed", "video.transcode.failed", "video.transcode.completed.DLT"],
+      "read": ["video.upload.completed"]
+    },
+    {
+      "service": "video-moderator",
+      "write": ["video.moderation.completed", "video.published", "video.rejected", "video.moderation.dlt"],
+      "read": ["video.transcode.completed"]
+    }
+  ],
+  "groups": {
+    "order-service": ["order-service-payment", "order-service-refund", "order-service-projection", "order-service-saga-compensation", "order-service-gdpr", "order-service-chargeback"],
+    "payment-service": ["payment-service-paypal-refund", "payment-service-cod-collection", "payment-service-gdpr", "payment-dlt-alerter"],
+    "inventory-service": ["inventory-svc-release"],
+    "product-service": ["product-service-review-purchases", "product-service-video-transcode-failures"],
+    "shipping-service": ["shipping-svc-cancel", "shipping-service-gdpr"],
+    "seller-finance-service": ["seller-finance-service", "seller-finance-service-refund", "seller-finance-settlement-delivery", "seller-finance-settlement-hold", "seller-finance-service-adjustment"],
+    "search-service": ["search-service"],
+    "recommendations-service": ["recommendations-service"],
+    "notification-service": ["notification-service-server"],
+    "messaging-service": ["messaging-service"],
+    "invoice-service": ["invoice-service"],
+    "user-service": ["user-service-gdpr-export", "user-service-gdpr-deletion"],
+    "video-transcoder": ["transcoder-worker"],
+    "video-moderator": ["moderator-worker"]
+  }
+}

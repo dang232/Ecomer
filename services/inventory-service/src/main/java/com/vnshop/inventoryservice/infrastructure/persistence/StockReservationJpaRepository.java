@@ -1,11 +1,13 @@
 package com.vnshop.inventoryservice.infrastructure.persistence;
 
 import com.vnshop.inventoryservice.domain.StockReservation;
+import com.vnshop.inventoryservice.domain.ReservationOperation;
 import com.vnshop.inventoryservice.domain.port.out.StockReservationPort;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.Optional;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -18,11 +20,14 @@ import org.springframework.stereotype.Repository;
 public class StockReservationJpaRepository implements StockReservationPort {
     private final StockReservationJpaSpringDataRepository reservationRepository;
     private final StockLevelJpaSpringDataRepository stockLevelRepository;
+    private final ReservationOperationJpaSpringDataRepository operationRepository;
 
     public StockReservationJpaRepository(StockReservationJpaSpringDataRepository reservationRepository,
-                                          StockLevelJpaSpringDataRepository stockLevelRepository) {
+                                          StockLevelJpaSpringDataRepository stockLevelRepository,
+                                          ReservationOperationJpaSpringDataRepository operationRepository) {
         this.reservationRepository = reservationRepository;
         this.stockLevelRepository = stockLevelRepository;
+        this.operationRepository = operationRepository;
     }
 
     @Override
@@ -76,6 +81,17 @@ public class StockReservationJpaRepository implements StockReservationPort {
         reservationRepository.batchUpdateStatus(
                 reservationIds,
                 StockReservation.Status.RELEASED,
-                releasedAt);
+                releasedAt,
+                StockReservation.Status.RESERVED);
+    }
+
+    @Override
+    public Optional<ReservationOperation> findOperation(String operationId) {
+        return operationRepository.findByOperationId(operationId).map(ReservationOperationJpaEntity::toDomain);
+    }
+
+    @Override
+    public void saveOperation(ReservationOperation operation) {
+        operationRepository.save(ReservationOperationJpaEntity.fromDomain(operation));
     }
 }

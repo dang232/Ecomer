@@ -4,8 +4,11 @@ import com.vnshop.orderservice.domain.port.out.OutboxPort;
 import com.vnshop.orderservice.domain.port.out.SagaCompensationPublisherPort;
 import com.vnshop.orderservice.domain.port.out.SagaStateRepository;
 import com.vnshop.orderservice.domain.saga.SagaState;
+import com.vnshop.orderservice.domain.saga.SagaStepStatus;
 import com.vnshop.orderservice.domain.saga.SagaStatus;
 import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -14,6 +17,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 
 @Service
 public class SagaOrchestrator {
@@ -59,7 +63,7 @@ public class SagaOrchestrator {
             return;
         }
         SagaState current = opt.get();
-        SagaState updated = new SagaState(current.sagaId(), current.orderId(), SagaStatus.INVENTORY_RESERVED, current.createdAt(), Instant.now());
+        SagaState updated = new SagaState(current.sagaId(), current.orderId(), SagaStatus.INVENTORY_RESERVED, current.createdAt(), Instant.now(), current.requiredSteps());
         sagaStateRepository.save(updated);
 
         outboxPort.publish(AGGREGATE_TYPE, sagaId, "SAGA_STEP_COMPLETED",
@@ -76,7 +80,7 @@ public class SagaOrchestrator {
             return;
         }
         SagaState current = opt.get();
-        SagaState updated = new SagaState(current.sagaId(), current.orderId(), SagaStatus.PAYMENT_CHARGED, current.createdAt(), Instant.now());
+        SagaState updated = new SagaState(current.sagaId(), current.orderId(), SagaStatus.PAYMENT_CHARGED, current.createdAt(), Instant.now(), current.requiredSteps());
         sagaStateRepository.save(updated);
 
         outboxPort.publish(AGGREGATE_TYPE, sagaId, "SAGA_STEP_COMPLETED",
@@ -93,14 +97,14 @@ public class SagaOrchestrator {
             return;
         }
         SagaState current = opt.get();
-        SagaState updated = new SagaState(current.sagaId(), current.orderId(), SagaStatus.SHIPPING_CREATED, current.createdAt(), Instant.now());
+        SagaState updated = new SagaState(current.sagaId(), current.orderId(), SagaStatus.SHIPPING_CREATED, current.createdAt(), Instant.now(), current.requiredSteps());
         sagaStateRepository.save(updated);
 
         outboxPort.publish(AGGREGATE_TYPE, sagaId, "SAGA_COMPLETED",
             "{\"orderId\":\"" + current.orderId() + "\",\"sagaId\":\"" + sagaId + "\",\"step\":\"COMPLETE\"}");
 
         // Persist terminal COMPLETED state
-        SagaState completed = new SagaState(current.sagaId(), current.orderId(), SagaStatus.COMPLETED, current.createdAt(), Instant.now());
+        SagaState completed = new SagaState(current.sagaId(), current.orderId(), SagaStatus.COMPLETED, current.createdAt(), Instant.now(), current.requiredSteps());
         sagaStateRepository.save(completed);
 
         LOG.info("Saga {} completed for order {}", sagaId, current.orderId());
@@ -114,8 +118,9 @@ public class SagaOrchestrator {
             return;
         }
         SagaState current = opt.get();
+        Map<String, SagaStepStatus> requiredSteps = SagaCompensationPolicy.requiredStepsFor(failedStep);
         SagaState compensating = new SagaState(current.sagaId(), current.orderId(),
-            SagaStatus.COMPENSATING, current.createdAt(), Instant.now());
+            SagaStatus.COMPENSATING, current.createdAt(), Instant.now(), requiredSteps);
         sagaStateRepository.save(compensating);
 
         String orderId = current.orderId();
@@ -137,11 +142,11 @@ public class SagaOrchestrator {
                 break;
             case "INVENTORY":
                 // Nothing to compensate — first step failed
-                markFailed(sagaId);
+                markFailed(sagaId, requiredSteps);
                 break;
             default:
                 LOG.error("Unknown saga step: {}", failedStep);
-                markFailed(sagaId);
+                markFailed(sagaId, requiredSteps);
         }
         LOG.warn("Saga {} compensation initiated at step: {}", sagaId, failedStep);
     }
@@ -149,11 +154,10 @@ public class SagaOrchestrator {
     @Transactional
     public void onCompensationStepCompleted(String sagaId, String step) {
         LOG.info("Saga {} compensation step completed: {}", sagaId, step);
-        // Any compensation step completing marks the saga as FAILED
-        // (meaning compensation is done, the order creation failed)
-        markFailed(sagaId);
+        onCompensationCompleted(sagaId, step);
     }
 
+    @Transactional(propagation = Propagation.MANDATORY)
     public void start(String sagaId, String orderId) {
         sagaStateRepository.save(new SagaState(sagaId, orderId, SagaStatus.STARTED, Instant.now(), null));
     }
@@ -162,7 +166,7 @@ public class SagaOrchestrator {
      * Records the last successfully completed saga step so that {@link #getLastCompletedStep}
      * can return the correct failed-step name when compensation is needed.
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void stepCompleted(String sagaId, String step) {
         sagaStateRepository.findBySagaId(sagaId).ifPresent(current -> {
             SagaStatus newStatus = switch (step) {
@@ -173,7 +177,7 @@ public class SagaOrchestrator {
             };
             if (newStatus != current.currentStep()) {
                 sagaStateRepository.save(new SagaState(
-                    current.sagaId(), current.orderId(), newStatus, current.createdAt(), Instant.now()));
+                    current.sagaId(), current.orderId(), newStatus, current.createdAt(), Instant.now(), current.requiredSteps()));
             }
         });
         LOG.debug("Saga {} step completed: {}", sagaId, step);
@@ -183,7 +187,7 @@ public class SagaOrchestrator {
     public void complete(String sagaId) {
         sagaStateRepository.findBySagaId(sagaId).ifPresent(s -> {
             sagaStateRepository.save(new SagaState(s.sagaId(), s.orderId(),
-                SagaStatus.COMPLETED, s.createdAt(), Instant.now()));
+                SagaStatus.COMPLETED, s.createdAt(), Instant.now(), s.requiredSteps()));
         });
     }
 
@@ -202,10 +206,10 @@ public class SagaOrchestrator {
             });
     }
 
-    private void markFailed(String sagaId) {
+    private void markFailed(String sagaId, Map<String, SagaStepStatus> requiredSteps) {
         sagaStateRepository.findBySagaId(sagaId).ifPresent(s -> {
             SagaState failed = new SagaState(s.sagaId(), s.orderId(),
-                SagaStatus.FAILED, s.createdAt(), Instant.now());
+                SagaStatus.FAILED, s.createdAt(), Instant.now(), requiredSteps);
             sagaStateRepository.save(failed);
         });
     }
@@ -223,7 +227,28 @@ public class SagaOrchestrator {
             LOG.warn("Saga {} not found for compensation confirmation from {}", sagaId, confirmingStep);
             return;
         }
-        markCompensationFailed(opt.get(), "COMPENSATION_CONFIRMED:" + confirmingStep);
+        SagaState current = opt.get();
+        if (current.currentStep() != SagaStatus.COMPENSATING) {
+            return;
+        }
+
+        String requiredStep = SagaCompensationPolicy.compensationStepName(confirmingStep);
+        if (requiredStep == null || !current.requiredSteps().containsKey(requiredStep)) {
+            LOG.warn("Ignoring compensation confirmation for non-required step {} in saga {}", confirmingStep, sagaId);
+            return;
+        }
+
+        Map<String, SagaStepStatus> updatedSteps = new LinkedHashMap<>(current.requiredSteps());
+        if (updatedSteps.get(requiredStep) != SagaStepStatus.COMPLETED) {
+            updatedSteps.put(requiredStep, SagaStepStatus.COMPLETED);
+            SagaState updated = new SagaState(current.sagaId(), current.orderId(), current.currentStep(),
+                    current.createdAt(), Instant.now(), updatedSteps);
+            sagaStateRepository.save(updated);
+            current = updated;
+        }
+        if (SagaCompensationPolicy.allRequiredStepsCompleted(current.requiredSteps())) {
+            markCompensationFailed(current, "COMPENSATION_CONFIRMED:" + confirmingStep);
+        }
     }
 
     @Scheduled(fixedDelayString = "${saga.compensation-finalizer-interval-ms:60000}")
@@ -231,7 +256,10 @@ public class SagaOrchestrator {
     public void failTimedOutCompensations() {
         Instant cutoff = Instant.now().minusMillis(compensationTimeoutMs);
         for (SagaState saga : sagaStateRepository.findCompensatingUpdatedBefore(cutoff)) {
-            markCompensationFailed(saga, "COMPENSATION_TIMEOUT");
+            Map<String, SagaStepStatus> timedOutSteps = new LinkedHashMap<>(saga.requiredSteps());
+            timedOutSteps.replaceAll((step, status) -> status == SagaStepStatus.REQUESTED ? SagaStepStatus.TIMED_OUT : status);
+            markCompensationFailed(new SagaState(saga.sagaId(), saga.orderId(), saga.currentStep(),
+                    saga.createdAt(), saga.updatedAt(), timedOutSteps), "COMPENSATION_TIMEOUT");
         }
     }
 
@@ -240,7 +268,8 @@ public class SagaOrchestrator {
             return;
         }
 
-        SagaState failed = new SagaState(current.sagaId(), current.orderId(), SagaStatus.FAILED, current.createdAt(), Instant.now());
+        SagaState failed = new SagaState(current.sagaId(), current.orderId(), SagaStatus.FAILED,
+                current.createdAt(), Instant.now(), current.requiredSteps());
         sagaStateRepository.save(failed);
 
         outboxPort.publish(AGGREGATE_TYPE, current.sagaId(), "SAGA_FAILED",
@@ -248,4 +277,5 @@ public class SagaOrchestrator {
 
         LOG.error("Saga {} marked FAILED after compensation: {}", current.sagaId(), reason);
     }
+
 }

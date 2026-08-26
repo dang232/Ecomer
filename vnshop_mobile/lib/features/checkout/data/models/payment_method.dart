@@ -8,10 +8,12 @@ extension PaymentMethodExtension on PaymentMethod {
         return 'Cash on Delivery';
       case PaymentMethod.vietqr:
         return 'VietQR';
-      case PaymentMethod.momo:
-        return 'MoMo';
+      case PaymentMethod.sepay:
+        return 'SePay';
       case PaymentMethod.vnpay:
         return 'VNPay';
+      case PaymentMethod.momo:
+        return 'MoMo';
       case PaymentMethod.bankTransfer:
         return 'Bank Transfer';
     }
@@ -23,10 +25,12 @@ extension PaymentMethodExtension on PaymentMethod {
         return 'Thanh toán khi nhận hàng';
       case PaymentMethod.vietqr:
         return 'Quét mã QR VietQR';
-      case PaymentMethod.momo:
-        return 'Ví MoMo';
+      case PaymentMethod.sepay:
+        return 'SePay';
       case PaymentMethod.vnpay:
         return 'Thanh toán qua VNPay';
+      case PaymentMethod.momo:
+        return 'Ví MoMo';
       case PaymentMethod.bankTransfer:
         return 'Chuyển khoản ngân hàng';
     }
@@ -35,5 +39,5 @@ extension PaymentMethodExtension on PaymentMethod {
 
 /// Returns all available payment methods
 List<PaymentMethod> getAvailablePaymentMethods() {
-  return PaymentMethod.values;
+  return const [PaymentMethod.cod, PaymentMethod.vietqr, PaymentMethod.sepay];
 }

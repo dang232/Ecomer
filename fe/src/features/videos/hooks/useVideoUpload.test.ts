@@ -75,7 +75,7 @@ function renderVideoUploadHook(overrides: Partial<Parameters<typeof useVideoUplo
 
 async function receiveCreationLocation(
   instance: (typeof tusMockInstances)[number],
-  location = `/videos/upload/${videoId}`,
+  location = `/api/v1/videos/upload/${videoId}`,
 ): Promise<void> {
   const onAfterResponse = instance.options.onAfterResponse;
   expect(onAfterResponse).toBeTypeOf("function");
@@ -87,7 +87,7 @@ async function receiveCreationLocation(
   )(
     {
       getMethod: () => "POST",
-      getURL: () => "http://localhost:8080/videos/upload",
+      getURL: () => "http://localhost:8080/api/v1/videos/upload",
     },
     {
       getStatus: () => 201,
@@ -219,7 +219,7 @@ describe("useVideoUpload", () => {
     await waitFor(() => expect(tusMockInstances).toHaveLength(1));
     const instance = tusMockInstances[0];
     expect(instance.start).toHaveBeenCalledOnce();
-    expect(instance.options.endpoint).toBe("http://localhost:8080/videos/upload");
+    expect(instance.options.endpoint).toBe("http://localhost:8080/api/v1/videos/upload");
     expect(instance.options.metadata).toMatchObject({
       ownerType: "PRODUCT",
       ownerId: "prod-1",
@@ -268,7 +268,7 @@ describe("useVideoUpload", () => {
     expect(key).toBeDefined();
     const persisted = asRecord(JSON.parse(localStorage.getItem(key ?? "") ?? "null"));
     expect(persisted.videoId).toBe(videoId);
-    expect(persisted.uploadUrl).toBe(`http://localhost:8080/videos/upload/${videoId}`);
+    expect(persisted.uploadUrl).toBe(`http://localhost:8080/api/v1/videos/upload/${videoId}`);
     expect(persisted.filename).toBe(file.name);
     expect(persisted.sizeBytes).toBe(file.size);
     expect(persisted.contentHash).toEqual(expect.stringMatching(/^[0-9a-f]{64}$/));
@@ -281,9 +281,9 @@ describe("useVideoUpload", () => {
     await waitFor(() => expect(tusMockInstances).toHaveLength(2));
 
     expect(tusMockInstances[1].options.uploadUrl).toBe(
-      `http://localhost:8080/videos/upload/${videoId}`,
+      `http://localhost:8080/api/v1/videos/upload/${videoId}`,
     );
-    expect(tusMockInstances[1].options.endpoint).toBe("http://localhost:8080/videos/upload");
+    expect(tusMockInstances[1].options.endpoint).toBe("http://localhost:8080/api/v1/videos/upload");
   });
 
   it("does not resume a failed fixture upload for a different product", async () => {
@@ -296,7 +296,7 @@ describe("useVideoUpload", () => {
     await waitFor(() => expect(tusMockInstances).toHaveLength(1));
 
     await act(async () => {
-      await receiveCreationLocation(tusMockInstances[0], "/videos/upload/video-a");
+      await receiveCreationLocation(tusMockInstances[0], "/api/v1/videos/upload/video-a");
     });
     act(() => {
       (tusMockInstances[0].options.onError as (error: Error) => void)(new Error("network-error"));
@@ -327,7 +327,7 @@ describe("useVideoUpload", () => {
       .idempotencyKey;
 
     await act(async () => {
-      await receiveCreationLocation(tusMockInstances[0], "/videos/upload/video-a");
+      await receiveCreationLocation(tusMockInstances[0], "/api/v1/videos/upload/video-a");
     });
     expect(tusMockInstances[0].options.removeFingerprintOnSuccess).toBe(true);
     act(() => {
@@ -356,7 +356,7 @@ describe("useVideoUpload", () => {
     await expect(
       receiveCreationLocation(
         tusMockInstances[0],
-        "https://other.example/videos/upload/foreign-id",
+        "https://other.example/api/v1/videos/upload/foreign-id",
       ),
     ).rejects.toThrow("video:invalid-upload-location");
   });
@@ -372,7 +372,7 @@ describe("useVideoUpload", () => {
     const firstKey = (tusMockInstances[0].options.metadata as { idempotencyKey: string })
       .idempotencyKey;
     await act(async () => {
-      await receiveCreationLocation(tusMockInstances[0], "/videos/upload/video-cancelled");
+      await receiveCreationLocation(tusMockInstances[0], "/api/v1/videos/upload/video-cancelled");
     });
 
     await act(async () => {
@@ -412,7 +412,7 @@ describe("useVideoUpload", () => {
     const firstKey = (tusMockInstances[0].options.metadata as { idempotencyKey: string })
       .idempotencyKey;
     await act(async () => {
-      await receiveCreationLocation(tusMockInstances[0], "/videos/upload/old-content");
+      await receiveCreationLocation(tusMockInstances[0], "/api/v1/videos/upload/old-content");
     });
     act(() => {
       (tusMockInstances[0].options.onError as (error: Error) => void)(new Error("network-error"));
@@ -437,7 +437,7 @@ describe("useVideoUpload", () => {
     });
     await waitFor(() => expect(tusMockInstances).toHaveLength(1));
     await act(async () => {
-      await receiveCreationLocation(tusMockInstances[0], "/videos/upload/video-cancel");
+      await receiveCreationLocation(tusMockInstances[0], "/api/v1/videos/upload/video-cancel");
     });
 
     await act(async () => {
@@ -471,7 +471,7 @@ describe("useVideoUpload", () => {
     await waitFor(() => expect(tusMockInstances).toHaveLength(1));
 
     await act(async () => {
-      await receiveCreationLocation(tusMockInstances[0], "/videos/upload/video-a");
+      await receiveCreationLocation(tusMockInstances[0], "/api/v1/videos/upload/video-a");
     });
     act(() => {
       (tusMockInstances[0].options.onSuccess as () => void)();

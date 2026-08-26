@@ -11,17 +11,29 @@ import org.springframework.kafka.annotation.RetryableTopic;
 import org.springframework.kafka.retrytopic.DltStrategy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.vnshop.sellerfinanceservice.infrastructure.dlt.DurableDltService;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 
 /** Records verified delivery timestamps used by the seven-day release gate. */
 @Service
+@ConditionalOnBean(DurableDltService.class)
 public class SettlementDeliveryListener {
     private final ObjectMapper objectMapper;
     private final SettlementReleaseCandidateRepositoryPort candidateRepository;
+    private final DurableDltService durableDltService;
 
     public SettlementDeliveryListener(ObjectMapper objectMapper,
-                                      SettlementReleaseCandidateRepositoryPort candidateRepository) {
+                                      SettlementReleaseCandidateRepositoryPort candidateRepository,
+                                      DurableDltService durableDltService) {
         this.objectMapper = objectMapper;
         this.candidateRepository = candidateRepository;
+        this.durableDltService = durableDltService;
+    }
+    @Autowired
+    public SettlementDeliveryListener(ObjectMapper objectMapper, SettlementReleaseCandidateRepositoryPort candidateRepository) {
+        this(objectMapper, candidateRepository, null);
     }
 
     @RetryableTopic(attempts = "3", dltStrategy = DltStrategy.FAIL_ON_ERROR,
@@ -43,8 +55,8 @@ public class SettlementDeliveryListener {
     }
 
     @DltHandler
-    public void handleDlt(String message) {
-        // Delivery facts remain observable in Kafka tooling for replay.
+    public void handleDlt(ConsumerRecord<String, String> record) {
+        durableDltService.store(record, "order.delivered DLT payload received", 3);
     }
 
     private JsonNode readTree(String json) {

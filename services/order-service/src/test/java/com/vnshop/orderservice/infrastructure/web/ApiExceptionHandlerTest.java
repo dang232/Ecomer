@@ -18,10 +18,10 @@ class ApiExceptionHandlerTest {
 
     @Test
     void authorizationDeniedReturnsForbiddenEnvelope() {
-        ApiResponse<Void> response = handler.authorizationDenied(new AuthorizationDeniedException("Access Denied"));
+        ProblemDetails response = handler.authorizationDenied(new AuthorizationDeniedException("Access Denied"));
 
-        assertThat(response.success()).isFalse();
-        assertThat(response.errorCode()).isEqualTo("FORBIDDEN");
+        assertThat(response.status()).isEqualTo(403);
+        assertThat(response.code()).isEqualTo("FORBIDDEN");
     }
 
     @Test
@@ -33,10 +33,10 @@ class ApiExceptionHandlerTest {
                 List.of(new FieldError("request", "address", "must not be null"))
         );
 
-        ApiResponse<Void> response = handler.validationFailure(exception);
+        ProblemDetails response = handler.validationFailure(exception);
 
-        assertThat(response.success()).isFalse();
-        assertThat(response.errorCode()).isEqualTo("VALIDATION_ERROR");
-        assertThat(response.message()).contains("address");
+        assertThat(response.status()).isEqualTo(422);
+        assertThat(response.code()).isEqualTo("VALIDATION_ERROR");
+        assertThat(response.detail()).contains("address");
     }
 }

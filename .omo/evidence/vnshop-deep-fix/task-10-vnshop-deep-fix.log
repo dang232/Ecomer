@@ -1,0 +1,28 @@
+verified 19 immutable GHCR images in C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\k8s\overlays\prod\kustomization.yaml
+node : all-zero fixture rejected as expected
+At line:1 char:411
++ ... ANE='true'; node scripts/verify-image-promotion.mjs --overlay infra/k ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (all-zero fixture rejected as expected:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+all-zero fixture rejected as expected
+
+[2026-08-26] Infrastructure gate repair rerun
+command: $env:SKIP_CRANE='true'; node scripts/verify-image-promotion.mjs --overlay infra/k8s/overlays/prod
+result: PASS - verified 19 immutable GHCR images in C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\k8s\overlays\prod\kustomization.yaml
+command: $env:SKIP_CRANE='true'; node scripts/verify-image-promotion.mjs --overlay infra/k8s/overlays/prod --fixture all-zero
+result: PASS - all-zero fixture rejected as expected (command intentionally exits non-zero)
+command: node infra/scripts/generate-kafka-artifacts.mjs --check
+result: PASS - Kafka generated artifacts are current (85 topics, 228 ACLs).
+command: node infra/scripts/scan-kafka-usage.mjs
+result: PASS - Kafka usage scan passed (53 topics, 84 references).
+command: kubectl kustomize infra/k8s/overlays/prod --load-restrictor LoadRestrictionsNone
+result: PASS - rendered 625498 bytes
+command: python infra/scripts/validate-k8s-release.py --environment prod --mode pull-request
+result: PASS - prod: 19 application images, render sha256:6603ea6a6ce90b708b7b28d5f41b259497989c5540c9cd62e85b262ef8fe192b
+command: node scripts/check-prod-defaults.mjs --overlay infra/k8s/overlays/prod
+result: PASS - Production Kustomize contains no vnshop123 or minioadmin defaults
+command: git diff --check
+result: PASS - no whitespace errors
+blocker: SKIP_CRANE=true was required because deterministic non-zero digests are repository test fixtures, not claims about currently published registry artifacts; external registry resolution remains blocked/not asserted.

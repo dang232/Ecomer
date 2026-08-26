@@ -5,6 +5,7 @@ import com.vnshop.paymentservice.domain.Payment;
 import com.vnshop.paymentservice.domain.PaymentMethod;
 import com.vnshop.paymentservice.infrastructure.sepay.SepayProperties;
 import com.vnshop.paymentservice.infrastructure.sepay.SepayWebhookPayload;
+import com.vnshop.paymentservice.infrastructure.sepay.SepayTransactionValidator;
 import com.vnshop.paymentservice.domain.PaymentStatus;
 import com.vnshop.paymentservice.domain.port.out.PaymentRepositoryPort;
 import com.vnshop.paymentservice.infrastructure.gateway.PaymentCallbackAttempt;
@@ -71,6 +72,7 @@ public class SepayWebhookController {
     private final PaymentRepositoryPort paymentRepository;
     private final PaymentCallbackLogStore callbackLogStore;
     private final PaymentPromotionService promotionService;
+    private final SepayTransactionValidator transactionValidator;
 
     public SepayWebhookController(
             SepayProperties properties,
@@ -81,6 +83,7 @@ public class SepayWebhookController {
         this.paymentRepository = paymentRepository;
         this.callbackLogStore = callbackLogStore;
         this.promotionService = promotionService;
+        this.transactionValidator = new SepayTransactionValidator(properties);
     }
 
     /**
@@ -97,6 +100,10 @@ public class SepayWebhookController {
     public ApiResponse<String> handleWebhook(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestBody SepayWebhookPayload payload) {
+
+        if (payload == null) {
+            throw new IllegalArgumentException("SePay payload is required");
+        }
 
         // --- 1. Signature verification ---
         if (!verifySignature(authHeader)) {
@@ -115,8 +122,6 @@ public class SepayWebhookController {
                 callbackLogStore.findProcessed("SEPAY", txId, payloadHash, signatureHash);
         if (duplicate.isPresent()) {
             log.debug("sepay-webhook-duplicate txId={}", txId);
-            callbackLogStore.save(attempt(txId, payloadHash, signatureHash, bodyJson,
-                    duplicate.get().processingStatus(), true));
             return ApiResponse.ok("already_processed");
         }
 
@@ -154,14 +159,29 @@ public class SepayWebhookController {
             callbackLogStore.save(attempt(txId, payloadHash, signatureHash, bodyJson, "NON_PENDING", false));
             return ApiResponse.ok("already_processed");
         }
+        SepayTransactionValidator.Validation validation = transactionValidator.validate(
+                payment, txId, payload.transferAmount() == null ? null : payload.transferAmount().toPlainString(),
+                memo, payload.accountNumber(), payload.currency(), payload.transferType());
+        if (!validation.accepted()) {
+            log.warn("sepay-webhook-rejected txId={} paymentId={} reason={}", txId, paymentId, validation.reason());
+            String status = validation.held() ? "OVERPAYMENT_HOLD" : "REJECTED_" + validation.reason();
+            callbackLogStore.save(attempt(txId, payloadHash, signatureHash, bodyJson, status, false));
+            return ApiResponse.ok(validation.held() ? "held_for_reconciliation" : "rejected");
+        }
 
-        // --- 5. Promote via shared promotion service ---
-        PaymentCallbackAttempt savedAttempt = callbackLogStore.save(
-                attempt(txId, payloadHash, signatureHash, bodyJson, "PROCESSED", false));
-        promotionService.promote(PaymentPromotionService.PromotionCommand.fromCallback(
+        // --- 5. Record receipt, then promote via shared promotion service ---
+        PaymentCallbackAttempt receivedAttempt = attempt(txId, payloadHash, signatureHash, bodyJson, "RECEIVED", false);
+        if (!callbackLogStore.claim(receivedAttempt)) {
+            return ApiResponse.ok("already_processed");
+        }
+        PaymentPromotionService.PromotionResult promotion = promotionService.promote(
+                PaymentPromotionService.PromotionCommand.fromCallback(
                 paymentId, "SEPAY", "SEPAY:" + txId,
-                savedAttempt.callbackId(), savedAttempt.eventId(), savedAttempt.payloadHash()));
-
+                receivedAttempt.callbackId(), receivedAttempt.eventId(), receivedAttempt.payloadHash()));
+        if (!promotion.isSuccess()) {
+            log.warn("sepay-webhook-promotion-not-completed txId={} paymentId={} outcome={}", txId, paymentId, promotion.outcome());
+            return ApiResponse.ok("not_processed");
+        }
         log.info("sepay-webhook-promoted txId={} paymentId={}", txId, paymentId);
         return ApiResponse.ok("processed");
     }

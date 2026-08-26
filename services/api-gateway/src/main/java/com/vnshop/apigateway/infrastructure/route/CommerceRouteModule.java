@@ -1,0 +1,57 @@
+package com.vnshop.apigateway.infrastructure.route;
+
+final class CommerceRouteModule {
+    private CommerceRouteModule() {}
+
+    static void add(org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder.Builder routes,
+            RouteDependencies d) {
+        routes.route("seller-analytics", r -> r.path(RoutePaths.versioned("/sellers/me/revenue", "/sellers/me/analytics/**"))
+                .filters(f -> d.resilient(f, "order-service")).uri(d.order()))
+            .route("seller-finance-me", r -> r.path(RoutePaths.versioned("/sellers/me/finance/**"))
+                    .filters(f -> d.resilient(f, "seller-finance-service")).uri(d.sellerFinance()))
+            .route("users", r -> r.path(RoutePaths.versioned("/users/**", "/sellers/**"))
+                    .filters(f -> d.resilient(f, "user-service")).uri(d.user()))
+            .route("auth", r -> r.path(RoutePaths.versioned("/auth/**")).filters(f -> d.rateLimited(f, "user-service", d.authLimiter())).uri(d.user()))
+            .route("cart", r -> r.path(RoutePaths.versioned("/cart/**")).filters(f -> d.resilient(f, "cart-service")).uri(d.cart()))
+            .route("seller-orders", r -> r.path(RoutePaths.versioned("/seller/orders/**")).filters(f -> d.resilient(f, "order-service")).uri(d.order()))
+            .route("checkout-coupons", r -> r.path(RoutePaths.versioned("/checkout/validate-coupon", "/checkout/apply-coupon"))
+                    .filters(f -> d.resilient(f, "order-service")).uri(d.order()))
+            .route("checkout", r -> r.path(RoutePaths.versioned("/checkout/**")).filters(f -> d.resilient(f, "order-service")).uri(d.order()))
+            .route("returns", r -> r.path(RoutePaths.versioned("/returns/**")).filters(f -> d.resilient(f, "order-service")).uri(d.order()))
+            .route("invoices", r -> r.path(RoutePaths.versioned("/invoices/**")).filters(f -> d.resilient(f, "order-service")).uri(d.order()))
+            .route("orders", r -> r.path(RoutePaths.versioned("/orders/**")).filters(f -> d.rateLimited(f, "order-service", d.generalLimiter())).uri(d.order()))
+            .route("payment", r -> r.path(RoutePaths.versioned("/payment/**")).filters(f -> d.rateLimited(f, "payment-service", d.paymentLimiter())).uri(d.payment()))
+            .route("shipping", r -> r.path(RoutePaths.versioned("/shipping/**")).filters(f -> d.resilient(f, "shipping-service")).uri(d.shipping()))
+            .route("shipping-webhooks", r -> r.path("/webhooks/ghn", "/webhooks/ghtk")
+                    .filters(f -> d.rateLimited(f, "shipping-service", d.generalLimiter())).uri(d.shipping()))
+            .route("notifications", r -> r.path(RoutePaths.versioned("/notifications/**")).filters(f -> d.resilient(f, "notification-service")).uri(d.notification()))
+            .route("notifications-ws", r -> r.path("/ws/notifications/**").uri(d.notification()))
+            .route("messaging", r -> r.path(RoutePaths.versioned("/messaging/**")).filters(f -> d.resilient(f, "messaging-service")).uri(d.messaging()))
+            .route("messaging-ws", r -> r.path("/ws/messaging").uri(d.messaging()))
+            .route("coupons", r -> r.path(RoutePaths.versioned("/coupons/**")).filters(f -> d.resilient(f, "order-service")).uri(d.order()))
+            .route("seller-finance", r -> r.path(RoutePaths.versioned("/seller-finance/**")).filters(f -> d.resilient(f, "seller-finance-service")).uri(d.sellerFinance()))
+            .route("recommendations", r -> r.path(RoutePaths.versioned("/recommendations/**"))
+                    .filters(f -> d.rateLimited(f, "recommendations-service", d.recommendationsLimiter())).uri(d.recommendations()))
+            .route("actuator-user-service", r -> r.path("/user-service/actuator/**")
+                    .filters(f -> f.stripPrefix(1)).uri(d.user()))
+            .route("actuator-order-service", r -> r.path("/order-service/actuator/**")
+                    .filters(f -> f.stripPrefix(1)).uri(d.order()))
+            .route("actuator-payment-service", r -> r.path("/payment-service/actuator/**")
+                    .filters(f -> f.stripPrefix(1)).uri(d.payment()))
+            .route("actuator-product-service", r -> r.path("/product-service/actuator/**")
+                    .filters(f -> f.stripPrefix(1)).uri(d.product()))
+            .route("health-notification-service", r -> r.path("/notification-service/health")
+                    .filters(f -> f.stripPrefix(1)).uri(d.notification()))
+            .route("monitoring-ws", r -> r.path("/monitoring/socket.io/**").uri(d.monitoring()))
+            .route("monitoring", r -> r.path("/monitoring/**").filters(f -> d.resilient(f, "monitoring-service")).uri(d.monitoring()))
+            .route("admin-dashboard", r -> r.path(RoutePaths.versioned("/admin/dashboard/**")).filters(f -> d.resilient(f, "order-service")).uri(d.order()))
+            .route("admin-disputes", r -> r.path(RoutePaths.versioned("/admin/disputes/**")).filters(f -> d.resilient(f, "order-service")).uri(d.order()))
+            .route("admin-orders", r -> r.path(RoutePaths.versioned("/admin/orders/**")).filters(f -> d.resilient(f, "order-service")).uri(d.order()))
+            .route("admin-coupons", r -> r.path(RoutePaths.versioned("/admin/coupons/**")).filters(f -> d.resilient(f, "order-service")).uri(d.order()))
+            .route("admin-finance", r -> r.path(RoutePaths.versioned("/admin/finance/**")).filters(f -> d.resilient(f, "seller-finance-service")).uri(d.sellerFinance()))
+            .route("admin-reviews", r -> r.path(RoutePaths.versioned("/admin/reviews/**")).filters(f -> d.resilient(f, "product-service")).uri(d.product()))
+            .route("admin-vietqr", r -> r.path(RoutePaths.versioned("/admin/vietqr/**")).filters(f -> d.resilient(f, "payment-service")).uri(d.payment()))
+            .route("admin-videos", r -> r.path(RoutePaths.versioned("/admin/videos/**")).filters(f -> d.resilient(f, "product-service")).uri(d.product()))
+            .route("admin", r -> r.path(RoutePaths.versioned("/admin/**")).filters(f -> d.resilient(f, "user-service")).uri(d.user()));
+    }
+}

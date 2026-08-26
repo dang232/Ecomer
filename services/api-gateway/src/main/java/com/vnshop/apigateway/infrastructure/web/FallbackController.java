@@ -18,10 +18,8 @@ public class FallbackController {
     // "Success" in the UI. Use the error envelope so the body and the status
     // agree.
     @RequestMapping("/fallback/{service}")
-    ResponseEntity<ApiResponse<Map<String, Object>>> fallback(@PathVariable String service) {
+    ResponseEntity<ErrorResponse> fallback(@PathVariable String service) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-            .body(ApiResponse.error(
-                "Service temporarily unavailable",
-                "SERVICE_UNAVAILABLE"));
+            .body(ErrorResponse.of("SERVICE_UNAVAILABLE", "Service temporarily unavailable", 503, java.util.List.of(), null));
     }
 }

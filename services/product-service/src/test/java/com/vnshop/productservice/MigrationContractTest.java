@@ -8,24 +8,34 @@ import org.junit.jupiter.api.Test;
 
 class MigrationContractTest {
     @Test
-    void adminQueueIndexesAreConcurrentAndNonTransactional() throws Exception {
+    void adminQueueIndexesAreTransactional() throws Exception {
         String sql = Files.readString(Path.of("src/main/resources/db/migration/V18__admin_cursor_queue_indexes.sql"));
-        assertThat(sql).contains("-- flyway:executeInTransaction=false")
-                .contains("CREATE INDEX CONCURRENTLY")
+        assertThat(sql).doesNotContain("-- flyway:executeInTransaction=false")
+                .doesNotContain("CREATE INDEX CONCURRENTLY")
+                .contains("CREATE INDEX IF NOT EXISTS")
                 .contains("idx_reviews_admin_pending_created_id")
                 .contains("idx_videos_admin_queue_created_id");
     }
 
     @Test
-    void variantParcelColumnsAreNullableAndHaveNoSyntheticDefaults() throws Exception {
-        String sql = Files.readString(Path.of("src/main/resources/db/migration/V19__variant_parcel_dimensions.sql"));
+    void variantParcelColumnsAreBackfilledAndConstrained() throws Exception {
+        String sql = Files.readString(Path.of("src/main/resources/db/migration/V20__variant_parcel_metadata.sql"));
 
         assertThat(sql)
-                .contains("parcel_weight_grams INTEGER")
-                .contains("parcel_length_cm INTEGER")
-                .contains("parcel_width_cm INTEGER")
-                .contains("parcel_height_cm INTEGER")
-                .doesNotContain("NOT NULL")
-                .doesNotContain("DEFAULT");
+                .contains("weight_grams INTEGER")
+                .contains("length_mm INTEGER")
+                .contains("width_mm INTEGER")
+                .contains("height_mm INTEGER")
+                .contains("declared_value_minor BIGINT")
+                .contains("UPDATE product_svc.product_variants")
+                .contains("parcel_length_cm * 10")
+                .contains("price_amount")
+                .contains("SET NOT NULL")
+                .contains("weight_grams > 0")
+                .contains("length_mm BETWEEN 1 AND 2000")
+                .contains("width_mm BETWEEN 1 AND 2000")
+                .contains("height_mm BETWEEN 1 AND 2000")
+                .contains("declared_value_minor BETWEEN 0 AND 999999999")
+                .doesNotContain("product_svc.products");
     }
 }

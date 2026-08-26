@@ -65,6 +65,7 @@ public class ProductImageUploadService {
     private Map<String, String> uploadHeaders(ObjectMetadata metadata) {
         return Map.of(
                 "Content-Type", metadata.getContentType(),
+                "Cache-Control", "public, max-age=31536000, immutable",
                 "x-amz-meta-storage-class", metadata.getStorageClass().name(),
                 "x-amz-meta-sha256", metadata.getSha256Hex(),
                 "x-amz-meta-quarantine-state", metadata.getQuarantineState().name(),

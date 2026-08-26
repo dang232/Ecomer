@@ -2,12 +2,17 @@ package com.vnshop.orderservice.infrastructure.outbox;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface OutboxEventSpringDataRepository extends JpaRepository<OutboxEventJpaEntity, Long> {
+    @Query("select min(e.createdAt) from OutboxEventJpaEntity e where e.status = :status")
+    Optional<Instant> findOldestCreatedAtByStatus(@Param("status") OutboxEvent.Status status);
+
+    long countByStatus(OutboxEvent.Status status);
     List<OutboxEventJpaEntity> findByStatusAndNextAttemptAtLessThanEqualOrderByCreatedAt(
             OutboxEvent.Status status,
             Instant nextAttemptAt,

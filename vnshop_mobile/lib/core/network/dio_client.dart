@@ -31,7 +31,7 @@ class DioClient {
     _cookieJar = cookieJar ?? CookieJar();
     _dio = Dio(
       BaseOptions(
-        baseUrl: ApiConstants.baseUrl,
+        baseUrl: ApiConstants.baseUrlWithVersion,
         connectTimeout: ApiConstants.connectTimeout,
         receiveTimeout: ApiConstants.receiveTimeout,
         sendTimeout: ApiConstants.sendTimeout,
@@ -123,7 +123,7 @@ class DioClient {
     if (jar == null) return const {};
 
     final cookies = await jar.loadForRequest(
-      Uri.parse('${ApiConstants.baseUrl}/auth/refresh'),
+       Uri.parse('${ApiConstants.baseUrlWithVersion}/auth/refresh'),
     );
     for (final cookie in cookies) {
       if (cookie.name == 'vnshop_csrf' && cookie.value.isNotEmpty) {

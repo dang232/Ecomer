@@ -1,0 +1,26 @@
+[2026-08-26] Kafka canonical ACL repair
+command: node infra/scripts/generate-kafka-artifacts.mjs
+result: PASS - Generated infra/kafka/kafka-topics.sh and infra/kafka/kafka-acls.sh (85 topics, 228 ACLs).
+change: canonical-topics.json explicitly includes DLT read ACLs for svc-order (payment.completed.DLT, payment.refunded.DLT, inventory.released.DLT, shipping.cancelled.DLT, payment.chargeback.created.DLT, payment.chargeback.resolved.DLT) and svc-recommendations (order.created.DLT).
+command: node infra/scripts/generate-kafka-artifacts.mjs --check
+result: PASS - Kafka generated artifacts are current (85 topics, 228 ACLs).
+command: node infra/scripts/scan-kafka-usage.mjs
+result: PASS - Kafka usage scan passed (53 topics, 84 references).
+blocker: no live authenticated Kafka broker was used; this evidence covers canonical source, generated ACL parity, and static consumer-usage verification only.
+
+# Task 15 ENTRYPOINT REPAIR - 2026-08-26T01:35:15.8873694+07:00
+# Scope: restore exact plan paths without duplicating canonical logic
+
+IMPLEMENTED
+- scripts/generate-kafka-acls.mjs delegates to infra/scripts/generate-kafka-artifacts.mjs.
+- scripts/scan-kafka-usage.mjs delegates to infra/scripts/scan-kafka-usage.mjs.
+- Root wrappers resolve their repository path from import.meta.url, so documented commands work from any current directory only when invoked with the repository-relative script path; canonical child runs with repository cwd.
+- Canonical generator negative fixture remains fail-closed: --fixture missing-topic makes --check report stale artifacts and exit 1.
+
+VERIFICATION
+- node --test scripts/kafka-entrypoints.test.mjs -> PASS (3 tests).
+- node scripts/generate-kafka-acls.mjs --check -> PASS (85 topics, 228 ACLs current).
+- node scripts/scan-kafka-usage.mjs -> PASS (53 topics, 84 references).
+- node scripts/generate-kafka-acls.mjs --check --fixture missing-topic -> expected nonzero, asserted by test.
+- node infra/scripts/generate-kafka-artifacts.mjs --check and node infra/scripts/scan-kafka-usage.mjs -> PASS against canonical source.
+- No live authenticated Kafka broker was used; static canonical/ACL/usage evidence only.

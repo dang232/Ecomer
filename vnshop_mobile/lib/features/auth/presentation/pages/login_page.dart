@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
+
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
@@ -82,24 +84,23 @@ class _LoginPageState extends State<LoginPage> {
   /// Show forgot password dialog
   void _showForgotPasswordDialog() {
     final emailController = TextEditingController();
+    final l10n = AppLocalizations.of(context);
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Quên mật khẩu'),
+        title: Text(l10n.forgotPasswordTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'Nhập địa chỉ email của bạn để nhận hướng dẫn đặt lại mật khẩu.',
-            ),
+            Text(l10n.forgotPasswordHelp),
             const SizedBox(height: 16),
             TextField(
               controller: emailController,
               keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                hintText: 'Nhập email của bạn',
+                decoration: InputDecoration(
+                labelText: l10n.email,
+                hintText: l10n.emailHint,
               ),
             ),
           ],
@@ -107,7 +108,7 @@ class _LoginPageState extends State<LoginPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Hủy'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () {
@@ -116,12 +117,12 @@ class _LoginPageState extends State<LoginPage> {
                     AuthForgotPasswordRequested(email: emailController.text.trim()),
                   );
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Đã gửi email đặt lại mật khẩu'),
+                SnackBar(
+                  content: Text(l10n.resetEmailSent),
                 ),
               );
             },
-            child: const Text('Gửi'),
+            child: Text(l10n.send),
           ),
         ],
       ),
@@ -132,6 +133,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final size = MediaQuery.of(context).size;
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       body: BlocConsumer<AuthBloc, AuthState>(
@@ -178,7 +180,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Đăng nhập để tiếp tục',
+                      l10n.loginContinue,
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyLarge?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
@@ -191,7 +193,7 @@ class _LoginPageState extends State<LoginPage> {
                     TextInputField(
                       controller: _emailController,
                       labelText: 'Email',
-                      hintText: 'Nhập email của bạn',
+                       hintText: l10n.emailHint,
                       prefixIcon: const Icon(Icons.email_outlined),
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.next,
@@ -205,8 +207,8 @@ class _LoginPageState extends State<LoginPage> {
                     // Password field
                     PasswordInputField(
                       controller: _passwordController,
-                      labelText: 'Mật khẩu',
-                      hintText: 'Nhập mật khẩu của bạn',
+                       labelText: l10n.password,
+                       hintText: l10n.passwordHintLogin,
                       prefixIcon: const Icon(Icons.lock_outlined),
                       validator: _validatePassword,
                       enabled: !state.isLoading,
@@ -231,13 +233,13 @@ class _LoginPageState extends State<LoginPage> {
                                       });
                                     },
                             ),
-                            const Text('Ghi nhớ đăng nhập'),
+                            Text(l10n.rememberLogin),
                           ],
                         ),
                         TextButton(
                           onPressed:
                               state.isLoading ? null : _handleForgotPassword,
-                          child: const Text('Quên mật khẩu?'),
+                          child: Text(l10n.forgotPassword),
                         ),
                       ],
                     ),
@@ -247,7 +249,7 @@ class _LoginPageState extends State<LoginPage> {
                     // Login button
                     PrimaryButton(
                       onPressed: state.isLoading ? null : _handleLogin,
-                      label: 'Đăng nhập',
+                      label: l10n.login,
                       isLoading: state.isLoading,
                       icon: const Icon(Icons.login),
                     ),
@@ -259,14 +261,14 @@ class _LoginPageState extends State<LoginPage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          'Chưa có tài khoản? ',
+                          '${l10n.noAccount} ',
                           style: theme.textTheme.bodyMedium,
                         ),
                         TextButton(
                           onPressed: state.isLoading
                               ? null
                               : () => context.push('/register'),
-                          child: const Text('Đăng ký ngay'),
+                          child: Text(l10n.registerNow),
                         ),
                       ],
                     ),
@@ -280,7 +282,7 @@ class _LoginPageState extends State<LoginPage> {
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: Text(
-                            'Hoặc',
+                            l10n.or,
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
@@ -301,13 +303,13 @@ class _LoginPageState extends State<LoginPage> {
                                 ? null
                                 : () {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Đăng nhập bằng Google (sắp ra mắt)'),
+                                      SnackBar(
+                                        content: Text(l10n.socialLoginUnavailable('Google')),
                                       ),
                                     );
                                   },
                             icon: const Icon(Icons.g_mobiledata, size: 24),
-                            label: const Text('Google'),
+                            label: Text('Google'),
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
@@ -320,13 +322,13 @@ class _LoginPageState extends State<LoginPage> {
                                 ? null
                                 : () {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Đăng nhập bằng Facebook (sắp ra mắt)'),
+                                      SnackBar(
+                                        content: Text(l10n.socialLoginUnavailable('Facebook')),
                                       ),
                                     );
                                   },
                             icon: const Icon(Icons.facebook, size: 24),
-                            label: const Text('Facebook'),
+                            label: Text('Facebook'),
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 12),
                             ),

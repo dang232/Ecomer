@@ -43,7 +43,14 @@ describe('CartController (e2e)', () => {
       .useValue(new InMemoryRedis())
       .overrideGuard(JwtAuthGuard)
       .useValue({
-        canActivate: (context: { switchToHttp: () => { getRequest: () => { headers: { authorization?: string }; user: { sub: string } } } }) => {
+        canActivate: (context: {
+          switchToHttp: () => {
+            getRequest: () => {
+              headers: { authorization?: string };
+              user: { sub: string };
+            };
+          };
+        }) => {
           const request = context.switchToHttp().getRequest();
           if (!request.headers.authorization) {
             return false;
@@ -128,8 +135,6 @@ describe('CartController (e2e)', () => {
   });
 
   it('rejects requests without a validated principal', async () => {
-    await request(app.getHttpServer())
-      .get('/cart')
-      .expect(401);
+    await request(app.getHttpServer()).get('/cart').expect(401);
   });
 });

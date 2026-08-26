@@ -26,6 +26,7 @@ import '../widgets/checkout_bottom_bar.dart';
 import '../widgets/order_summary_sheet.dart';
 import '../widgets/payment_method_card.dart';
 import '../widgets/payment_method_selector.dart';
+import '../widgets/sepay_section.dart';
 import '../widgets/shipping_method_card.dart';
 
 class CheckoutPage extends StatefulWidget {
@@ -411,11 +412,16 @@ class _CheckoutContent extends StatelessWidget {
                 ),
                 if (state.status == CheckoutStatus.awaitingPayment &&
                     state.currentTransaction != null)
-                  _PendingPaymentPanel(
-                    transaction: state.currentTransaction!,
-                    onOpenPaymentUrl: onOpenPaymentUrl,
-                    onCheckPayment: onCheckPayment,
-                  ),
+                  state.currentTransaction!.method == PaymentMethod.sepay
+                      ? SepaySection(
+                          transaction: state.currentTransaction!,
+                          onCheckStatus: () => onCheckPayment(state.currentTransaction!.id),
+                        )
+                      : _PendingPaymentPanel(
+                          transaction: state.currentTransaction!,
+                          onOpenPaymentUrl: onOpenPaymentUrl,
+                          onCheckPayment: onCheckPayment,
+                        ),
                 if (state.status == CheckoutStatus.paymentFailed)
                   _PaymentFailedPanel(onRetry: onRetryPayment),
                 _CheckoutSection(

@@ -32,6 +32,7 @@ export const cartItemSchema = z
     image: z.string().optional(),
     price: z.number().optional(),
     parcel: parcelDimensionsSchema.nullable().optional(),
+    parcelSnapshot: parcelDimensionsSchema.nullable().optional(),
   })
   .passthrough()
   .transform((raw) => ({
@@ -43,7 +44,7 @@ export const cartItemSchema = z
     sellerId: raw.sellerId,
     ...(raw.sellerName !== undefined ? { sellerName: raw.sellerName } : {}),
     variantId: raw.variantId ?? raw.variantSku ?? undefined,
-    parcel: raw.parcel ?? null,
+    parcel: raw.parcelSnapshot ?? raw.parcel ?? null,
   }));
 
 export const cartSchema = z

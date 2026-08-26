@@ -8,18 +8,18 @@ import org.junit.jupiter.api.Test;
 class ApiExceptionHandlerCursorTest {
     @Test
     void invalidCursorUsesStableCursorErrorCodeInsteadOfGenericBadRequest() {
-        ApiResponse<Void> response = new ApiExceptionHandler().invalidCursor(
+        ProblemDetails response = new ApiExceptionHandler().invalidCursor(
                 new AdminCursorCodec.InvalidCursorException(AdminCursorCodec.RejectionReason.TAMPERED));
 
-        assertThat(response.errorCode()).isEqualTo("cursor_invalid");
-        assertThat(response.message()).isEqualTo("cursor_invalid");
+        assertThat(response.code()).isEqualTo("cursor_invalid");
+        assertThat(response.detail()).isEqualTo("cursor_invalid");
     }
 
     @Test
     void cursorScopeMismatchUsesDedicatedErrorCode() {
-        ApiResponse<Void> response = new ApiExceptionHandler().invalidCursor(
+        ProblemDetails response = new ApiExceptionHandler().invalidCursor(
                 new AdminCursorCodec.InvalidCursorException(AdminCursorCodec.RejectionReason.FILTER_MISMATCH));
 
-        assertThat(response.errorCode()).isEqualTo("cursor_scope_mismatch");
+        assertThat(response.code()).isEqualTo("cursor_scope_mismatch");
     }
 }

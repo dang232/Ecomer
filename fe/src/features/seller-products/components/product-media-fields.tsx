@@ -212,7 +212,13 @@ function MediaTile({
 }) {
   return (
     <div className="relative aspect-square overflow-hidden rounded-[var(--radius-md)] border border-border bg-muted">
-      <ImageWithFallback src={src} alt={alt} className="h-full w-full object-cover" />
+      <ImageWithFallback
+        src={src}
+        alt={alt}
+        className="h-full w-full object-cover"
+        imagePreset="card"
+        sizes="(min-width: 640px) 25vw, 50vw"
+      />
       <span className="absolute bottom-1 left-1 max-w-[calc(100%-2.5rem)] truncate rounded bg-black/65 px-1.5 py-0.5 text-[10px] font-medium text-white">
         {badge}
       </span>

@@ -4,6 +4,7 @@ import java.util.List;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
@@ -22,7 +23,8 @@ class SecurityConfigWebSocketAuthorizationTest {
         ServerHttpSecurity http = ServerHttpSecurity.http();
         http.oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwt -> jwt.jwtDecoder(token -> Mono.empty())));
-        SecurityWebFilterChain chain = new SecurityConfig(PublicBucketProperties.defaults()).securityWebFilterChain(http);
+        SecurityWebFilterChain chain = new SecurityConfig(PublicBucketProperties.defaults())
+                .securityWebFilterChain(http, new ObjectMapper());
 
         client = WebTestClient.bindToWebHandler(exchange -> {
                     exchange.getResponse().setStatusCode(HttpStatus.NO_CONTENT);
@@ -54,6 +56,19 @@ class SecurityConfigWebSocketAuthorizationTest {
     }
 
     @Test
+    void keepsCanonicalSellerReviewQueueAuthenticatedWhilePublicReviewsRemainOpen() {
+        client.get()
+                .uri("/api/v1/reviews/seller/me")
+                .exchange()
+                .expectStatus().isUnauthorized();
+
+        client.get()
+                .uri("/api/v1/reviews/product-1")
+                .exchange()
+                .expectStatus().isNoContent();
+    }
+
+    @Test
     void permitsOnlyThePublicVideoCollectionRead() {
         client.get()
                 .uri("/videos?entityId=product-1&context=PRODUCT")
@@ -82,7 +97,8 @@ class SecurityConfigWebSocketAuthorizationTest {
 
         Assertions.assertNotNull(cors);
         Assertions.assertTrue(cors.getExposedHeaders().containsAll(
-                List.of("Location", "Tus-Resumable", "Upload-Offset", "X-Correlation-Id")));
+                List.of("Location", "Tus-Resumable", "Upload-Offset", "X-Correlation-Id",
+                        "RateLimit-Limit", "RateLimit-Remaining", "RateLimit-Reset")));
     }
 
     @Test

@@ -129,7 +129,10 @@ describe('NotificationRestController', () => {
   it('GET /:id returns an owner-scoped notification', async () => {
     const result = await controller.getNotificationById(mockReq, 'notif-123');
     expect(result).toHaveProperty('id');
-    expect(mockGetNotification.execute).toHaveBeenCalledWith('notif-123', 'user-1');
+    expect(mockGetNotification.execute).toHaveBeenCalledWith(
+      'notif-123',
+      'user-1',
+    );
   });
 
   it('GET /threads returns paginated threads', async () => {

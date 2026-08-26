@@ -71,12 +71,12 @@ export function getUserFacingMessage(error: unknown): string {
  * Map a standard error code to a human-readable label for use in toasts,
  * inline messages, or error pages.
  *
- * Falls back to the raw message from parseApiError for codes not listed here.
+ * Falls back to a generic safe message for codes not listed here.
  */
 export function getErrorLabel(error: unknown): string {
   const parsed = parseApiError(error);
   const label = ERROR_CODE_LABELS[parsed.code];
-  return label ?? parsed.message;
+  return label ?? "Something went wrong. Please try again.";
 }
 
 /** Lookup table for well-known error codes → user-friendly labels. */
@@ -108,6 +108,7 @@ const ERROR_CODE_LABELS: Record<string, string> = {
   CART_ITEM_NOT_FOUND: "Item not found in cart.",
   INVALID_CART_OPERATION: "Invalid cart operation.",
   CART_VERSION_CONFLICT: "Your cart was updated elsewhere. Please refresh.",
+  stale_state: "Your cart changed while checkout was open. Please refresh and try again.",
   CART_UNAVAILABLE: "Cart service is temporarily unavailable. Please try again shortly.",
 
   // Validation / generic

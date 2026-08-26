@@ -110,6 +110,24 @@ fi
 echo "==> setting fullScopeAllowed=true"
 kcadm update "clients/${CLIENT_UUID}" -r "${KC_REALM}" -s fullScopeAllowed=true >/dev/null
 
+echo "==> enabling local password grants and API audience on vnshop-api"
+VNSHOP_API_UUID=$(kcadm get clients -r "${KC_REALM}" --query "clientId=vnshop-api" --fields id 2>/dev/null \
+  | grep -oE '"id" : "[^"]+"' | head -1 | sed 's/"id" : "//;s/"//')
+if [ -n "${VNSHOP_API_UUID}" ]; then
+  kcadm update "clients/${VNSHOP_API_UUID}" -r "${KC_REALM}" -s directAccessGrantsEnabled=true >/dev/null
+  EXISTING_API_AUDIENCE=$(kcadm get "clients/${VNSHOP_API_UUID}/protocol-mappers/models" -r "${KC_REALM}" --fields name 2>/dev/null \
+    | grep -c '"name" : "audience vnshop-api"' || true)
+  if [ "${EXISTING_API_AUDIENCE}" = "0" ]; then
+    kcadm create "clients/${VNSHOP_API_UUID}/protocol-mappers/models" -r "${KC_REALM}" \
+      -s name="audience vnshop-api" \
+      -s protocol=openid-connect \
+      -s protocolMapper=oidc-audience-mapper \
+      -s 'config.included.client.audience=vnshop-api' \
+      -s 'config.id.token.claim=false' \
+      -s 'config.access.token.claim=true' >/dev/null
+  fi
+fi
+
 echo "==> ensuring realm-management roles mapped to service account"
 kcadm add-roles -r "${KC_REALM}" \
   --uusername "service-account-${KC_CLIENT_ID}" \

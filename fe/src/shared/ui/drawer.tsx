@@ -3,6 +3,7 @@ import { type ReactNode, useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 
 import { IconButton } from "./icon-button";
+import { useBodyScrollLock } from "./use-body-scroll-lock";
 
 export interface DrawerProps {
   open: boolean;
@@ -38,6 +39,8 @@ export function Drawer({
   const panelRef = useRef<HTMLDivElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
 
+  useBodyScrollLock(open);
+
   useEffect(() => {
     if (!open) return;
     restoreFocusRef.current =
@@ -51,7 +54,7 @@ export function Drawer({
 
     return () => {
       cancelAnimationFrame(frame);
-      restoreFocusRef.current?.focus();
+      if (restoreFocusRef.current?.isConnected) restoreFocusRef.current.focus();
     };
   }, [open]);
 
@@ -87,7 +90,13 @@ export function Drawer({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-50 bg-[var(--color-overlay)]" role="presentation">
+    <div
+      className="fixed inset-0 z-50 bg-[var(--color-overlay)]"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onOpenChange(false);
+      }}
+    >
       <div
         ref={panelRef}
         role="dialog"

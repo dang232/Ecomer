@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
+
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -102,8 +104,8 @@ class _RegisterPageState extends State<RegisterPage> {
   void _handleRegister() {
     if (!_acceptTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vui lòng đồng ý với điều khoản sử dụng'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).agreeTermsRequired),
         ),
       );
       return;
@@ -126,10 +128,11 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Đăng ký'),
+        title: Text(l10n.register),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
@@ -152,8 +155,8 @@ class _RegisterPageState extends State<RegisterPage> {
 
           if (state.status == AuthStatus.needsVerification) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('ÄÄƒng kÃ½ thÃ nh cÃ´ng. HÃ£y xÃ¡c thá»±c email trÆ°á»›c khi Ä‘Äƒng nháº­p.'),
+              SnackBar(
+                content: Text(l10n.registrationSuccess),
               ),
             );
             context.go('/login');
@@ -169,14 +172,14 @@ class _RegisterPageState extends State<RegisterPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'Tạo tài khoản mới',
+                      l10n.registerTitle,
                       style: theme.textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Điền thông tin bên dưới để đăng ký',
+                      l10n.registerSubtitle,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -187,8 +190,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     // Full name
                     TextInputField(
                       controller: _fullNameController,
-                      labelText: 'Họ và tên',
-                      hintText: 'Nhập họ và tên của bạn',
+                       labelText: l10n.fullName,
+                       hintText: l10n.fullNameHint,
                       prefixIcon: const Icon(Icons.person_outlined),
                       textInputAction: TextInputAction.next,
                       validator: _validateFullName,
@@ -202,7 +205,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     TextInputField(
                       controller: _emailController,
                       labelText: 'Email',
-                      hintText: 'Nhập email của bạn',
+                       hintText: l10n.emailHint,
                       prefixIcon: const Icon(Icons.email_outlined),
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.next,
@@ -215,8 +218,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     // Phone (optional)
                     TextInputField(
                       controller: _phoneController,
-                      labelText: 'Số điện thoại (tùy chọn)',
-                      hintText: 'Nhập số điện thoại',
+                       labelText: l10n.phoneOptional,
+                       hintText: l10n.phoneHint,
                       prefixIcon: const Icon(Icons.phone_outlined),
                       keyboardType: TextInputType.phone,
                       textInputAction: TextInputAction.next,
@@ -230,7 +233,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     PasswordInputField(
                       controller: _passwordController,
                       labelText: 'Mật khẩu',
-                      hintText: 'Tạo mật khẩu',
+                       hintText: l10n.createPassword,
                       prefixIcon: const Icon(Icons.lock_outlined),
                       validator: _validatePassword,
                       enabled: !state.isLoading,
@@ -241,7 +244,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
                     // Password requirements hint
                     Text(
-                      'Tối thiểu 8 ký tự, gồm chữ hoa, chữ thường và số',
+                      l10n.passwordRequirements,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -252,8 +255,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     // Confirm password
                     PasswordInputField(
                       controller: _confirmPasswordController,
-                      labelText: 'Xác nhận mật khẩu',
-                      hintText: 'Nhập lại mật khẩu',
+                       labelText: l10n.confirmPassword,
+                       hintText: l10n.confirmPasswordHint,
                       prefixIcon: const Icon(Icons.lock_outlined),
                       validator: _validateConfirmPassword,
                       enabled: !state.isLoading,
@@ -292,17 +295,17 @@ class _RegisterPageState extends State<RegisterPage> {
                                 text: TextSpan(
                                   style: theme.textTheme.bodyMedium,
                                   children: [
-                                    const TextSpan(text: 'Tôi đồng ý với '),
+                                    TextSpan(text: l10n.agreeTermsPrefix),
                                     TextSpan(
-                                      text: 'Điều khoản sử dụng',
+                                       text: l10n.termsOfUse,
                                       style: TextStyle(
                                         color: theme.colorScheme.primary,
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
-                                    const TextSpan(text: ' và '),
+                                    TextSpan(text: l10n.privacyAnd),
                                     TextSpan(
-                                      text: 'Chính sách bảo mật',
+                                       text: l10n.privacyPolicy,
                                       style: TextStyle(
                                         color: theme.colorScheme.primary,
                                         fontWeight: FontWeight.w500,
@@ -322,7 +325,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     // Register button
                     PrimaryButton(
                       onPressed: state.isLoading ? null : _handleRegister,
-                      label: 'Đăng ký',
+                       label: l10n.register,
                       isLoading: state.isLoading,
                       icon: const Icon(Icons.person_add),
                     ),
@@ -334,14 +337,14 @@ class _RegisterPageState extends State<RegisterPage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          'Đã có tài khoản? ',
+                          '${l10n.noAccount} ',
                           style: theme.textTheme.bodyMedium,
                         ),
                         TextButton(
                           onPressed: state.isLoading
                               ? null
                               : () => context.pop(),
-                          child: const Text('Đăng nhập'),
+                          child: Text(l10n.login),
                         ),
                       ],
                     ),

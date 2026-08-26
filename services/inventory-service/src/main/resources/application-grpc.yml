@@ -1,3 +1,10 @@
 grpc:
   server:
     port: 9093
+    auth:
+      service-id: ${GRPC_SERVER_AUTH_SERVICE_ID:order-service}
+      token: ${GRPC_SERVER_AUTH_TOKEN:?GRPC_SERVER_AUTH_TOKEN is required}
+    tls:
+      cert-chain: ${GRPC_SERVER_TLS_CERT_CHAIN:?GRPC_SERVER_TLS_CERT_CHAIN is required}
+      private-key: ${GRPC_SERVER_TLS_PRIVATE_KEY:?GRPC_SERVER_TLS_PRIVATE_KEY is required}
+      client-ca: ${GRPC_SERVER_TLS_CLIENT_CA:?GRPC_SERVER_TLS_CLIENT_CA is required}

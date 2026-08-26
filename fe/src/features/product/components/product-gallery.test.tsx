@@ -1,8 +1,5 @@
 import { createEvent, fireEvent, render, screen, within } from "@testing-library/react";
-import type { MouseEventHandler } from "react";
 import { describe, expect, it, vi } from "vitest";
-
-import type * as SharedUi from "@/shared/ui";
 
 import { ProductGallery } from "./product-gallery";
 
@@ -15,33 +12,6 @@ vi.mock("react-i18next", () => ({
     },
   }),
 }));
-
-vi.mock("@/shared/ui", async () => {
-  const actual = await vi.importActual<typeof SharedUi>("@/shared/ui");
-
-  return {
-    ...actual,
-    ImageWithFallback: ({
-      src,
-      alt,
-      className,
-      onClick,
-    }: {
-      src: string;
-      alt: string;
-      className?: string;
-      onClick?: MouseEventHandler<HTMLImageElement>;
-    }) => (
-      <img
-        src={src}
-        alt={alt}
-        className={className}
-        onClick={onClick}
-        onKeyDown={() => undefined}
-      />
-    ),
-  };
-});
 
 describe("ProductGallery", () => {
   const media = [{ id: "1", url: "/camera-1.png", alt: "Camera front" }];

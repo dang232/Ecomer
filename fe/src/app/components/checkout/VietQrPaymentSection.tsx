@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { paymentStatus, vietqrCreate } from "@/shared/api/endpoints/payment";
+import { ImageWithFallback } from "@/shared/ui";
 
 interface Props {
   orderId: string;
@@ -89,10 +90,12 @@ export function VietQrPaymentSection({
       className="rounded-2xl border-2 border-border p-6 space-y-4 text-center"
       data-testid="vietqr-section"
     >
-      <img
+      <ImageWithFallback
         src={qr.qrImageUrl}
         alt={t("vietqr.altText")}
         className="mx-auto w-64 h-64 object-contain"
+        imagePreset="detail"
+        sizes="256px"
         data-testid="vietqr-image"
       />
       <div className="text-sm text-foreground space-y-1">

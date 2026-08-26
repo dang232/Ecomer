@@ -9,7 +9,7 @@ enum PaymentStatus {
   refunded,
 }
 
-enum PaymentMethod { vnpay, momo, vietqr, cod, bankTransfer }
+enum PaymentMethod { vnpay, momo, vietqr, cod, bankTransfer, sepay }
 
 class PaymentTransaction extends Equatable {
   final String id;
@@ -48,14 +48,16 @@ class PaymentTransaction extends Equatable {
 
   String get methodLabel {
     switch (method) {
-      case PaymentMethod.vnpay:
-        return 'VNPay';
-      case PaymentMethod.momo:
-        return 'MoMo';
       case PaymentMethod.vietqr:
         return 'VietQR';
       case PaymentMethod.cod:
         return 'Thanh toán khi nhận hàng';
+      case PaymentMethod.sepay:
+        return 'SePay';
+      case PaymentMethod.vnpay:
+        return 'VNPay';
+      case PaymentMethod.momo:
+        return 'MoMo';
       case PaymentMethod.bankTransfer:
         return 'Chuyển khoản ngân hàng';
     }
@@ -193,21 +195,23 @@ class PaymentTransaction extends Equatable {
 
   static PaymentMethod _parsePaymentMethod(String? method) {
     switch (method?.toLowerCase()) {
-      case 'vnpay':
-        return PaymentMethod.vnpay;
-      case 'momo':
-        return PaymentMethod.momo;
       case 'vietqr':
       case 'viet_qr':
         return PaymentMethod.vietqr;
       case 'cod':
       case 'cash_on_delivery':
         return PaymentMethod.cod;
+      case 'sepay':
+        return PaymentMethod.sepay;
+      case 'vnpay':
+        return PaymentMethod.vnpay;
+      case 'momo':
+        return PaymentMethod.momo;
       case 'bank_transfer':
       case 'banktransfer':
         return PaymentMethod.bankTransfer;
       default:
-        return PaymentMethod.vnpay;
+        return PaymentMethod.cod;
     }
   }
 

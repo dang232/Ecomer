@@ -50,6 +50,12 @@ data:
   GRPC_CLIENT_PAYMENT_PORT: "9094"
   GRPC_CLIENT_SHIPPING_HOST: shipping-service
   GRPC_CLIENT_SHIPPING_PORT: "9095"
+  GRPC_CLIENT_TLS_CA_CERT: /etc/grpc/tls/ca.crt
+  GRPC_CLIENT_TLS_CLIENT_CERT: /etc/grpc/tls/order-client.crt
+  GRPC_CLIENT_TLS_CLIENT_KEY: /etc/grpc/tls/order-client.key
+  GRPC_SERVER_TLS_CERT_CHAIN: /etc/grpc/tls/server.crt
+  GRPC_SERVER_TLS_PRIVATE_KEY: /etc/grpc/tls/server.key
+  GRPC_SERVER_TLS_CLIENT_CA: /etc/grpc/tls/ca.crt
   MANAGEMENT_OTLP_TRACING_ENDPOINT: http://otel-collector:4318/v1/traces
   OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://otel-collector:4318/v1/traces
   OTEL_TRACES_SAMPLER: parentbased_traceidratio

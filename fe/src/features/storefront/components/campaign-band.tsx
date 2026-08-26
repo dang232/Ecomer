@@ -32,6 +32,8 @@ export function CampaignBand({ campaign, secondaryProducts }: CampaignBandProps)
           alt={campaign.title}
           priority
           className="absolute inset-0 h-full w-full object-cover transition-transform duration-[var(--duration-base)] motion-reduce:transform-none group-hover:scale-105"
+          imagePreset="detail"
+          sizes="(min-width: 640px) 50vw, 100vw"
         />
         <div className="absolute inset-0 bg-black/45" aria-hidden="true" />
         <div className="relative flex min-h-60 max-w-xl flex-col justify-end p-5 text-white sm:p-7">

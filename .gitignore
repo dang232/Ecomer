@@ -215,6 +215,8 @@ local.properties
 
 # Coverage
 coverage/
+!/scripts/coverage/
+!/scripts/coverage/**
 
 # Symbols
 app.*.symbols

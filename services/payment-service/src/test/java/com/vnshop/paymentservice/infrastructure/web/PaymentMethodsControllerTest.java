@@ -100,16 +100,16 @@ class PaymentMethodsControllerTest {
     }
 
     @Test
-    void vnpay_includedOnlyWhenFullyConfigured() {
+    void deferred_gateway_a_neverIncludedByDefaultPolicy() {
         PaymentMethodsController configured = controller(
                 false, false, null, null,
                 true, vnpay(true, "TMN", "SECRET"), false,
                 stripe(false), paypal(false), momo(false), sepay(false));
-        assertThat(ids(configured)).contains("vnpay");
+        assertThat(ids(configured)).doesNotContain("vnpay");
     }
 
     @Test
-    void momo_includedOnlyWhenFullyConfigured() {
+    void deferred_gateway_b_neverIncludedByDefaultPolicy() {
         PaymentMethodsController missingAccess = controller(
                 false, false, null, null,
                 false, vnpay(false), true,
@@ -120,7 +120,7 @@ class PaymentMethodsControllerTest {
                 false, false, null, null,
                 false, vnpay(false), true,
                 stripe(false), paypal(false), momo(true, "PARTNER", "ACCESS", "SECRET"), sepay(false));
-        assertThat(ids(configured)).contains("momo");
+        assertThat(ids(configured)).doesNotContain("momo");
     }
 
     @Test
@@ -145,7 +145,7 @@ class PaymentMethodsControllerTest {
 
         List<PaymentMethodsController.PaymentMethodDto> methods = controller.listMethods().data();
 
-        assertThat(ids(controller)).containsExactly("cod", "vietqr", "sepay", "stripe", "paypal", "vnpay", "momo");
+        assertThat(ids(controller)).containsExactly("cod", "vietqr", "sepay", "stripe", "paypal");
     }
 
     private static List<String> ids(PaymentMethodsController controller) {
@@ -167,8 +167,9 @@ class PaymentMethodsControllerTest {
         ReflectionTestUtils.setField(c, "vietqrEnabled", vietqrEnabled);
         ReflectionTestUtils.setField(c, "vietqrAccountNo", vietqrAccountNo);
         ReflectionTestUtils.setField(c, "vietqrAccountName", vietqrAccountName);
-        ReflectionTestUtils.setField(c, "vnpayEnabled", vnpayEnabled);
-        ReflectionTestUtils.setField(c, "momoEnabled", momoEnabled);
+        ReflectionTestUtils.setField(c, "deferredGatewayAEnabled", vnpayEnabled);
+        ReflectionTestUtils.setField(c, "deferredGatewayBEnabled", momoEnabled);
+        ReflectionTestUtils.setField(c, "nonProductionGate", false);
         return c;
     }
 

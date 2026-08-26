@@ -40,7 +40,7 @@ export function CheckoutPaymentStep({
           ) : null}
         </div>
       ) : null}
-      <div role="radiogroup" aria-label="Payment method" className="space-y-3">
+      <div role="radiogroup" aria-label={t("checkout.payment.groupLabel")} className="space-y-3">
         {paymentOptions.map((method) => {
           const isSelected = selectedPaymentId === method.id;
           const inputId = `checkout-payment-${method.id}`;

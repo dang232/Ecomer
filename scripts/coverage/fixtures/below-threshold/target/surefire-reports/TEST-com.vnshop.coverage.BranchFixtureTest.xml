@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.vnshop.coverage.BranchFixtureTest" time="0.068" tests="2" errors="0" skipped="0" failures="0">
+  <properties>
+    <property name="java.specification.version" value="25"/>
+    <property name="sun.cpu.isalist" value="amd64"/>
+    <property name="sun.jnu.encoding" value="Cp1252"/>
+    <property name="java.class.path" value="C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\scripts\coverage\fixtures\below-threshold\target\test-classes;C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\scripts\coverage\fixtures\below-threshold\target\classes;C:\Users\dangq\.m2\repository\org\junit\jupiter\junit-jupiter\5.12.2\junit-jupiter-5.12.2.jar;C:\Users\dangq\.m2\repository\org\junit\jupiter\junit-jupiter-api\5.12.2\junit-jupiter-api-5.12.2.jar;C:\Users\dangq\.m2\repository\org\opentest4j\opentest4j\1.3.0\opentest4j-1.3.0.jar;C:\Users\dangq\.m2\repository\org\junit\platform\junit-platform-commons\1.12.2\junit-platform-commons-1.12.2.jar;C:\Users\dangq\.m2\repository\org\apiguardian\apiguardian-api\1.1.2\apiguardian-api-1.1.2.jar;C:\Users\dangq\.m2\repository\org\junit\jupiter\junit-jupiter-params\5.12.2\junit-jupiter-params-5.12.2.jar;C:\Users\dangq\.m2\repository\org\junit\jupiter\junit-jupiter-engine\5.12.2\junit-jupiter-engine-5.12.2.jar;C:\Users\dangq\.m2\repository\org\junit\platform\junit-platform-engine\1.12.2\junit-platform-engine-1.12.2.jar;"/>
+    <property name="java.vm.vendor" value="Eclipse Adoptium"/>
+    <property name="sun.arch.data.model" value="64"/>
+    <property name="user.variant" value=""/>
+    <property name="java.vendor.url" value="https://adoptium.net/"/>
+    <property name="user.timezone" value="Asia/Bangkok"/>
+    <property name="os.name" value="Windows 11"/>
+    <property name="java.vm.specification.version" value="25"/>
+    <property name="sun.java.launcher" value="SUN_STANDARD"/>
+    <property name="user.country" value="US"/>
+    <property name="sun.boot.library.path" value="C:\Users\dangq\AppData\Local\Programs\Temurin-25\jdk-25.0.3+9\bin"/>
+    <property name="sun.java.command" value="C:\Users\dangq\AppData\Local\Temp\surefire13485298381213467190\surefirebooter-20260825155901546_3.jar C:\Users\dangq\AppData\Local\Temp\surefire13485298381213467190 2026-08-25T15-59-01_299-jvmRun1 surefire-20260825155901546_1tmp surefire_0-20260825155901546_2tmp"/>
+    <property name="jdk.debug" value="release"/>
+    <property name="surefire.test.class.path" value="C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\scripts\coverage\fixtures\below-threshold\target\test-classes;C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\scripts\coverage\fixtures\below-threshold\target\classes;C:\Users\dangq\.m2\repository\org\junit\jupiter\junit-jupiter\5.12.2\junit-jupiter-5.12.2.jar;C:\Users\dangq\.m2\repository\org\junit\jupiter\junit-jupiter-api\5.12.2\junit-jupiter-api-5.12.2.jar;C:\Users\dangq\.m2\repository\org\opentest4j\opentest4j\1.3.0\opentest4j-1.3.0.jar;C:\Users\dangq\.m2\repository\org\junit\platform\junit-platform-commons\1.12.2\junit-platform-commons-1.12.2.jar;C:\Users\dangq\.m2\repository\org\apiguardian\apiguardian-api\1.1.2\apiguardian-api-1.1.2.jar;C:\Users\dangq\.m2\repository\org\junit\jupiter\junit-jupiter-params\5.12.2\junit-jupiter-params-5.12.2.jar;C:\Users\dangq\.m2\repository\org\junit\jupiter\junit-jupiter-engine\5.12.2\junit-jupiter-engine-5.12.2.jar;C:\Users\dangq\.m2\repository\org\junit\platform\junit-platform-engine\1.12.2\junit-platform-engine-1.12.2.jar;"/>
+    <property name="sun.cpu.endian" value="little"/>
+    <property name="user.home" value="C:\Users\dangq"/>
+    <property name="user.language" value="en"/>
+    <property name="java.specification.vendor" value="Oracle Corporation"/>
+    <property name="java.version.date" value="2026-04-21"/>
+    <property name="java.home" value="C:\Users\dangq\AppData\Local\Programs\Temurin-25\jdk-25.0.3+9"/>
+    <property name="jacoco.skip" value="false"/>
+    <property name="file.separator" value="\"/>
+    <property name="basedir" value="C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\scripts\coverage\fixtures\below-threshold"/>
+    <property name="java.vm.compressedOopsMode" value="Zero based"/>
+    <property name="line.separator" value="&#10;"/>
+    <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
+    <property name="java.specification.name" value="Java Platform API Specification"/>
+    <property name="surefire.real.class.path" value="C:\Users\dangq\AppData\Local\Temp\surefire13485298381213467190\surefirebooter-20260825155901546_3.jar"/>
+    <property name="user.script" value=""/>
+    <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
+    <property name="java.runtime.version" value="25.0.3+9-LTS"/>
+    <property name="user.name" value="dangq"/>
+    <property name="stdout.encoding" value="Cp1252"/>
+    <property name="path.separator" value=";"/>
+    <property name="os.version" value="10.0"/>
+    <property name="java.runtime.name" value="OpenJDK Runtime Environment"/>
+    <property name="file.encoding" value="UTF-8"/>
+    <property name="java.vm.name" value="OpenJDK 64-Bit Server VM"/>
+    <property name="skipTests" value="false"/>
+    <property name="java.vendor.version" value="Temurin-25.0.3+9"/>
+    <property name="localRepository" value="C:\Users\dangq\.m2\repository"/>
+    <property name="java.vendor.url.bug" value="https://github.com/adoptium/adoptium-support/issues"/>
+    <property name="java.io.tmpdir" value="C:\Users\dangq\AppData\Local\Temp\"/>
+    <property name="java.version" value="25.0.3"/>
+    <property name="user.dir" value="C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\scripts\coverage\fixtures\below-threshold"/>
+    <property name="os.arch" value="amd64"/>
+    <property name="fixture.coverAll" value="true"/>
+    <property name="java.vm.specification.name" value="Java Virtual Machine Specification"/>
+    <property name="sun.os.patch.level" value=""/>
+    <property name="native.encoding" value="Cp1252"/>
+    <property name="java.library.path" value="C:\Users\dangq\AppData\Local\Programs\Temurin-25\jdk-25.0.3+9\bin;C:\WINDOWS\Sun\Java\bin;C:\WINDOWS\system32;C:\WINDOWS;C:\Users\dangq\bin;C:\Program Files\Git\mingw64\bin;C:\Program Files\Git\usr\local\bin;C:\Program Files\Git\usr\bin;C:\Program Files\Git\usr\bin;C:\Program Files\Git\mingw64\bin;C:\Program Files\Git\usr\bin;C:\Users\dangq\bin;C:\Program Files (x86)\Common Files\Oracle\Java\javapath;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0;C:\WINDOWS\System32\OpenSSH;C:\Program Files\nodejs;C:\Program Files\Git\cmd;C:\Program Files\GitHub CLI;C:\ProgramData\chocolatey\bin;C:\Program Files\dotnet;C:\ProgramData\chocolatey\lib\maven\apache-maven-3.9.16\bin;C:\Program Files\Go\bin;C:\Program Files\Docker\Docker\resources\bin;C:\Users\dangq\scoop\shims;C:\Users\dangq\AppData\Local\hermes\hermes-agent\venv\Scripts;C:\Users\dangq\AppData\Local\hermes\bin;C:\Users\dangq\AppData\Local\Programs\Temurin-25\jdk-25.0.3+9\bin;C:\Users\dangq\AppData\Local\Microsoft\WindowsApps;C:\Users\dangq\AppData\Local\GitHubDesktop\bin;C:\Users\dangq\AppData\Roaming\npm;C:\Users\dangq\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\dangq\.local\bin;C:\Users\dangq\.bun\bin;C:\Users\dangq\AppData\Local\Programs\Temurin-21\bin;C:\Users\dangq\AppData\Local\Tools\bin;C:\Users\dangq\AppData\Local\Microsoft\WinGet\Packages\BurntSushi.ripgrep.MSVC_Microsoft.Winget.Source_8wekyb3d8bbwe\ripgrep-15.1.0-x86_64-pc-windows-msvc;C:\Users\dangq\AppData\Local\Microsoft\WinGet\Packages\marlocarlo.psmux_Microsoft.Winget.Source_8wekyb3d8bbwe;C:\Users\dangq\AppData\Local\Microsoft\WinGet\Links;C:\Users\dangq\AppData\Local\Programs\Open Design\resources\open-design\bin;C:\Program Files\JetBrains\PyCharm 2026.1.2\bin;C:\Users\dangq\go\bin;C:\Users\dangq\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-8.1.1-full_build\bin;C:\Users\dangq\AppData\Local\Programs\Cua\cua-driver\bin;C:\Users\dangq\AppData\Local\Microsoft\WinGet\Packages\ast-grep.ast-grep_Microsoft.Winget.Source_8wekyb3d8bbwe;C:\Users\dangq\Downloads\flutter_windows_3.44.5-stable\flutter\bin;C:\Program Files\Git\usr\bin\vendor_perl;C:\Program Files\Git\usr\bin\core_perl;."/>
+    <property name="java.vm.info" value="mixed mode, sharing"/>
+    <property name="stderr.encoding" value="Cp1252"/>
+    <property name="java.vendor" value="Eclipse Adoptium"/>
+    <property name="java.vm.version" value="25.0.3+9-LTS"/>
+    <property name="stdin.encoding" value="Cp1252"/>
+    <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
+    <property name="java.class.version" value="69.0"/>
+  </properties>
+  <testcase name="classifiesPositiveValue" classname="com.vnshop.coverage.BranchFixtureTest" time="0.03"/>
+  <testcase name="classifiesNonPositiveValueWhenFullCoverageIsRequested" classname="com.vnshop.coverage.BranchFixtureTest" time="0.001"/>
+</testsuite>

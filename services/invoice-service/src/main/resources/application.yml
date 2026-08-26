@@ -34,6 +34,7 @@ spring:
         jwt:
           issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:9090/realms/vnshop}
           jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs}
+          audiences: ${KEYCLOAK_JWT_AUDIENCE:vnshop-api}
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     properties:
@@ -64,7 +65,7 @@ config-service:
   url: ${CONFIG_SERVICE_URL:http://configuration-service:8097}
   enabled: ${CONFIG_SERVICE_ENABLED:true}
   timeout-ms: 3000
-  token: ${CONFIG_SERVICE_INTERNAL_TOKEN:}
+  token: ${CONFIG_SERVICE_INTERNAL_TOKEN:?CONFIG_SERVICE_INTERNAL_TOKEN is required}
 
 management:
   endpoints:

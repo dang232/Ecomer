@@ -7,6 +7,12 @@ import type { CartRepository, ParcelPatch } from '../domain/cart.repository';
 import { Money } from '../domain/money';
 import type { ParcelDimensions } from '../domain/parcel-dimensions';
 import { CartMikroOrmEntity } from './cart.mikro-orm-entity.js';
+import {
+  redisCacheHitsTotal,
+  redisCacheMissesTotal,
+  redisOperationDurationSeconds,
+  redisEvictionsTotal,
+} from '../../metrics';
 
 const THIRTY_DAYS_SECONDS = 30 * 24 * 60 * 60;
 
@@ -26,6 +32,7 @@ interface PersistedCartItem {
   sellerId?: string;
   sellerName?: string;
   parcel?: ParcelDimensions | null;
+  parcelSnapshot?: ParcelDimensions | null;
 }
 
 interface PersistedCart {
@@ -53,7 +60,13 @@ export class CartPersistenceService implements CartRepository {
   ) {}
 
   async findByUserId(userId: string): Promise<Cart | null> {
+    const started = process.hrtime.bigint();
     const cached = await this.getFromRedis(userId);
+    redisOperationDurationSeconds.observe(
+      { operation: 'get' },
+      Number(process.hrtime.bigint() - started) / 1e9,
+    );
+    (cached === null ? redisCacheMissesTotal : redisCacheHitsTotal).inc();
 
     let loaded: { cart: Cart; version: number } | null;
     try {
@@ -169,7 +182,8 @@ export class CartPersistenceService implements CartRepository {
     return loaded.cart;
   }
 
-  async save(cart: Cart, _ttlSeconds: number): Promise<void> {
+  async save(cart: Cart, ttlSeconds: number): Promise<void> {
+    void ttlSeconds;
     try {
       await this.em.transactional(async (em) => {
         await this.lockCart(em, cart.userId);
@@ -217,8 +231,20 @@ export class CartPersistenceService implements CartRepository {
     // Invalidate cache after successful Postgres write
     await this.redis
       .del(this.redisKey(cart.userId))
-      .catch((err: unknown) =>
-        this.logger.warn(`Redis del failed (non-fatal): ${String(err)}`),
+      .then(() =>
+        redisEvictionsTotal.inc({
+          operation: 'invalidate',
+          outcome: 'success',
+        }),
+      )
+      .catch(
+        (err: unknown) => (
+          redisEvictionsTotal.inc({
+            operation: 'invalidate',
+            outcome: 'failure',
+          }),
+          this.logger.warn(`Redis del failed (non-fatal): ${String(err)}`)
+        ),
       );
   }
 
@@ -340,7 +366,7 @@ export class CartPersistenceService implements CartRepository {
         );
         userEntity.updatedAt = userCart.updatedAt;
       } else {
-        await em.persist(
+        em.persist(
           em.create(CartMikroOrmEntity, {
             userId,
             items: this.itemsToJson(userCart, processedMergeKeys, 1),
@@ -405,6 +431,7 @@ export class CartPersistenceService implements CartRepository {
         sellerId: item.sellerId,
         sellerName: item.sellerName,
         parcel: item.parcel,
+        parcelSnapshot: item.parcel,
       })),
       updatedAt: cart.updatedAt.toISOString(),
       version: cart.version,
@@ -434,7 +461,7 @@ export class CartPersistenceService implements CartRepository {
         item.variantId,
         item.sellerId,
         item.sellerName,
-        item.parcel ?? null,
+        item.parcelSnapshot ?? item.parcel ?? null,
       ),
     );
     return Cart.fromPersistence(
@@ -458,7 +485,7 @@ export class CartPersistenceService implements CartRepository {
         item.variantId,
         item.sellerId,
         item.sellerName,
-        item.parcel ?? null,
+        item.parcelSnapshot ?? item.parcel ?? null,
       ),
     );
     return Cart.fromPersistence(
@@ -513,6 +540,7 @@ export class CartPersistenceService implements CartRepository {
         sellerId: item.sellerId,
         sellerName: item.sellerName,
         parcel: item.parcel,
+        parcelSnapshot: item.parcel,
       })),
       updatedAt: cart.updatedAt.toISOString(),
       version,

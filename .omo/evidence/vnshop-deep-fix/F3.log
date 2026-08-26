@@ -1,0 +1,52 @@
+VNShop deep-fix Final Verification Wave F3
+Date: 2026-08-26 (rerun)
+Worktree: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr
+Plan: C:\Users\dangq\OneDrive\Documents\GitHub\Full-Stack-E-commerce\.omo\plans\vnshop-deep-fix.md
+
+Evidence matrix
+- Docker/Compose: BLOCKED_RUNTIME, revalidated. Docker 29.7.2 and Compose v5.3.1 responded. With generated temporary `F3_TEST_*` values and a temporary webhook file, `docker compose --profile apps config --quiet` passed. `docker compose --profile apps up -d` created and started the infrastructure graph; PostgreSQL, Redis, Kafka, Elasticsearch, Prometheus, Alertmanager, MinIO, Loki, Grafana, and supporting services became healthy, but the bounded command exited nonzero because Keycloak exited 1. Compose teardown completed; no `vnshop-*` containers or temporary webhook file remain. No real credentials were used or persisted.
+- Playwright checkout: NOT_RUN/UNAVAILABLE, revalidated. The exact authoritative grep command returned `No tests found`: `fe/e2e/checkout-ui.spec.ts` contains only 3 tests (empty cart, missing address, checkout panel), with no COD/VietQR/SePay/interrupt/refresh/expired/network titles. This is a test-selection/evidence gap, not a claimed product pass or failure.
+- Playwright a11y: BLOCKED_RUNTIME, revalidated. Chromium ran all 3 tests, and each failed at navigation/login with `ERR_CONNECTION_REFUSED` because `http://localhost:3000` was unavailable after the failed Compose startup. No axe pass is claimed.
+- Flutter checkout: PASS, revalidated. `flutter test test/features/checkout` passed all 35 tests, including authenticated identity, provider parity, SePay/VietQR, retries, and checkout widgets.
+- Flutter analyze: PASS, revalidated. `No issues found!`.
+- Broker/DLT Maven: NOT_VERIFIABLE, revalidated. From `services/order-service`, Java 25/protobuf compilation completed, then Maven failed with `No tests matching pattern "BrokerFailureDltReplayTest" were executed`; the required class is absent. No broker-backed DLT proof and no implementation failure claim.
+- Kustomize render: PASS, revalidated. `kubectl kustomize infra/k8s/overlays/prod` rendered successfully.
+- Kubernetes server dry-run: BLOCKED_RUNTIME, revalidated. `kubectl apply --dry-run=server` reached the kind API and created the namespace in dry-run mode, but required CRDs/resources are absent: `acid.zalan.do/v1 PostgreSQL`, `bitnami.com/v1alpha1 SealedSecret`, and `security.istio.io/v1 PeerAuthentication`; later namespace errors are consequences of that missing API surface.
+- Production defaults: PASS, revalidated. `node scripts/check-prod-defaults.mjs --manifest task-12-prod-rendered.yaml` reported no `vnshop123` or `minioadmin` defaults.
+- Alertmanager config: PASS, revalidated. `node scripts/check-alertmanager-config.mjs infra/k8s/overlays/prod` and the 4-test config contract suite passed.
+- Prometheus/Alertmanager live probes: BLOCKED_RUNTIME, revalidated. After teardown, `localhost:9090/-/healthy` and `localhost:9093/-/healthy` were unavailable. `promtool` and `amtool` are not installed on the host, so no live/synthetic alert claim is made.
+
+Manual proof / cleanup
+- Docker daemon responded to `docker version`; Compose config succeeded only after all discovered required variables were supplied as generated `F3_TEST_*` placeholders.
+- Temporary webhook file was created under `%TEMP%` only for the bounded Compose attempt and removed; no `.env` or credentials were edited.
+- Final `docker ps` showed no `vnshop-*` containers; Playwright `test-results`, rendered Kustomize temp YAML, and temporary F3 webhook artifacts were removed.
+
+Overall F3: REJECT. Required browser checkout/payment QA, live observability probes, broker/DLT proof, and Kubernetes server-side apply could not be completed. The rerun separates environment/tool/test-selection blockers from implementation failures: no implementation failure was confirmed by these bounded attempts, but the authoritative required evidence is incomplete.
+
+F3 contract-repair wave: 2026-08-26
+- Added `services/order-service/src/test/java/com/vnshop/orderservice/infrastructure/dlt/BrokerFailureDltReplayTest.java`. It uses mocked `DurableDltRepository` and `KafkaTemplate` to exercise existing order-service `DurableDltService` store deduplication, `.DLT` to base-topic replay after acknowledgement, and claim release on failed publication. It does not claim a live broker result.
+- Added FE mocked contract titles in `fe/src/app/pages/checkout/CheckoutPaymentOptions.test.tsx` for enabled COD and intentional SePay exclusion; added `keeps one order when payment initialization fails and is retried` in `fe/src/features/checkout/model/submission-controller.test.ts`.
+- `fe/pnpm exec vitest run src/app/pages/checkout/CheckoutPaymentOptions.test.tsx src/features/checkout/model/submission-controller.test.ts`: PASS, 2 files / 15 tests.
+- `fe/pnpm exec playwright test e2e/checkout-ui.spec.ts --project=chromium --list`: PASS, 3 existing tests listed; no provider/failure titles are present in the browser file.
+- `fe/pnpm exec playwright test e2e/checkout-ui.spec.ts --project=chromium -g "COD|VietQR|SePay|interrupt|refresh|expired|network"`: NOT RUN, no tests matched. This is truthful selection evidence, not a browser pass.
+- `vnshop_mobile/flutter test test/features/checkout`: PASS, 35 tests.
+- `vnshop_mobile/flutter analyze`: BLOCKED by pre-existing `checkout_repository_impl.dart` diagnostics (`unused_import` and `Future.toSet` undefined method); no mobile production files were changed in this wave.
+- `services/order-service/./mvnw.cmd -q "-Dtest=BrokerFailureDltReplayTest" test`: selector now resolves to the new class but is BLOCKED during main-source compilation by pre-existing `UseCaseConfig.java:130-132` missing `Bulkhead` symbols. The initial test-source ambiguity was fixed; no broker-backed proof is claimed.
+- `git diff --check`: exit 0 with pre-existing CRLF normalization warnings; scoped changed files are the new Java test plus the two FE test files. TypeScript LSP is unavailable; Java LSP timed out.
+
+F3 Flutter analyzer repair: 2026-08-26
+- `vnshop_mobile/lib/features/checkout/data/repositories/checkout_repository_impl.dart`: retained the authenticated provider allowlist intersection and made the collection conversion explicit on the synchronous `List<PaymentMethod>` result via `Iterable.toSet()`; the payment catalog import is used by both mock and authenticated capability paths.
+- `cd vnshop_mobile && flutter analyze --no-fatal-infos --no-fatal-warnings`: PASS, exit 0; no analyzer errors/warnings. The full project emitted only two non-fatal `prefer_adjacent_string_concatenation` infos in the pre-existing repository test fixture at lines 32-33.
+- `cd vnshop_mobile && flutter test test/features/checkout/data/repositories/checkout_repository_impl_test.dart test/features/checkout/payment_provider_parity_test.dart test/features/checkout/configuration_client_test.dart`: PASS, 5 tests.
+- `cd vnshop_mobile && flutter test test/features/checkout`: PASS, 35 tests.
+- `git diff --check -- vnshop_mobile/lib/features/checkout/data/repositories/checkout_repository_impl.dart vnshop_mobile/test/features/checkout/data/repositories/checkout_repository_impl_test.dart`: PASS, exit 0.
+- Provider behavior remains fail-closed: authenticated backend capabilities are intersected with COD/VietQR/SePay, while VNPay, MoMo, bank transfer, and unknown IDs remain excluded; VietQR configuration absence still throws `StateError`.
+
+F3 ORDER-SERVICE DLT SELECTOR REPAIR: 2026-08-26
+- `cd services/order-service && .\mvnw.cmd clean compile -DskipTests` -> PASS. Java 25 production compilation completed; 373 source files compiled.
+- Initial exact selector `cd services/order-service && .\mvnw.cmd -Dtest=BrokerFailureDltReplayTest test` reached test compilation and exposed the existing ambiguous overloaded `KafkaTemplate.send` verification at `BrokerFailureDltReplayTest.java:57`.
+- Test-only repair changed the verification to the actual typed `send(String topic, K key, V data)` overload; no DLT assertion was weakened.
+- Exact rerun `cd services/order-service && .\mvnw.cmd -Dtest=BrokerFailureDltReplayTest test` -> PASS. 3 tests, 0 failures, 0 errors, 0 skipped.
+- Passing tests cover durable DLT offset/payload deduplication, replay to `order.created` only after Kafka future acknowledgement with `markReplayed`, and `release` after failed Kafka publication.
+- `git diff --check -- services/order-service/src/main/java/com/vnshop/orderservice/infrastructure/config/UseCaseConfig.java services/order-service/src/main/java/com/vnshop/orderservice/infrastructure/config/OrderBulkheadConfig.java services/order-service/src/test/java/com/vnshop/orderservice/infrastructure/dlt/BrokerFailureDltReplayTest.java services/order-service/pom.xml` -> PASS.
+- Java LSP diagnostics were attempted on the changed test file but timed out; Maven compiler and focused test execution are the source-level verification fallback.

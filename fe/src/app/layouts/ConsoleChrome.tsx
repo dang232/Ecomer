@@ -87,6 +87,8 @@ export function ConsoleChrome({ persona }: { persona: "admin" | "seller" }) {
                 src={user.avatar ?? ""}
                 alt={user.name ?? ""}
                 className="w-8 h-8 rounded-full object-cover"
+                imagePreset="avatar"
+                sizes="32px"
                 placeholder={
                   <div
                     className="w-full h-full rounded-full flex items-center justify-center text-xs font-bold text-white"

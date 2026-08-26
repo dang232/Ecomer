@@ -27,6 +27,8 @@ const RecentlyViewedCard = memo(function RecentlyViewedCard({
           src={item.image}
           alt={item.name}
           className="w-full h-full object-cover"
+          imagePreset="card"
+          sizes="(min-width: 1024px) 20vw, (min-width: 640px) 33vw, 50vw"
         />
       </div>
 

@@ -8,6 +8,7 @@ export const parcelDimensionsSchema = z
     lengthCm: z.number().int().positive(),
     widthCm: z.number().int().positive(),
     heightCm: z.number().int().positive(),
+    declaredValueMinor: z.number().int().nonnegative().default(0),
   })
   .strict();
 export type ParcelDimensions = z.infer<typeof parcelDimensionsSchema>;

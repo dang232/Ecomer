@@ -50,7 +50,7 @@ export function CheckoutShippingStep({
           {t("checkout.shipping.loadingRates")}
         </div>
       ) : (
-        <div role="radiogroup" aria-label="Shipping method" className="space-y-3">
+        <div role="radiogroup" aria-label={t("checkout.shipping.groupLabel")} className="space-y-3">
           {shippingOptions.map((method) => {
             const isSelected = selectedShippingId === method.id;
             const ShipIcon = getShippingIcon(method.id);

@@ -1,0 +1,42 @@
+Task 29 Flutter placeholder, checkout identity, and provider mapping evidence
+==========================================================================
+
+Worktree:
+- C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr
+
+Red-first proof:
+- Initial focused Flutter run failed because the requested route constants, SePay enum, configuration-backed VietQR constructor, and authenticated CheckoutBloc userId contract did not exist.
+- After implementation, focused tests passed.
+
+Implementation:
+- Replaced scoped PlaceholderPage route branches for categories, promotions, addresses, payment-methods, notifications, and help.
+- Added AppRoutes constants for categories, promotions, and help.
+- Checkout route passes AuthBloc.state.user.id into CheckoutBloc; CheckoutBloc fails closed with initialize failure when no authenticated ID exists.
+- Added SePay to payment model/metadata/selector flow. Live method list is exactly COD, VietQR, SePay; disabled MoMo/VNPay/bank-transfer initiation paths throw StateError.
+- Added `sepay_section.dart` with QR, instructions, pending status, and status-check action.
+- Added configuration-service public VietQR destination fields and mobile ConfigurationClient; VietQR generation rejects incomplete configuration and no longer contains placeholder bank/account values.
+
+Focused and full verification:
+- `flutter analyze --no-fatal-infos --no-fatal-warnings`: PASS, no issues found.
+- `flutter test test/features/checkout test/features/profile/account_destination_page_test.dart test/app/router/app_routes_test.dart`: PASS, 42 tests.
+- `flutter test`: PASS, 204 tests.
+- `pnpm exec vitest run src/app/pages/checkout/CheckoutPaymentOptions.test.tsx src/app/components/checkout/VietQrPaymentSection.test.tsx src/shared/contracts/api/payment.test.ts src/app/pages/PaymentReturnPage.test.tsx`: PASS, 18 tests across 4 files.
+- `pnpm run typecheck:app`: PASS.
+- `pnpm run typecheck:test`: PASS.
+- `services/payment-service`: `mvnw.cmd -DskipTests=false -Djacoco.skip=true -Dtest=PaymentMethodsControllerTest,SepayTransactionValidatorTest,SepayWebhookPollerParityTest,SepayPollerTest test`: PASS, 22 tests.
+- `git diff --check`: PASS; only repository-wide pre-existing CRLF normalization warnings were reported.
+- LSP diagnostics: PASS/no diagnostics on changed Flutter implementation and tests. TypeScript LSP unavailable because installation was previously declined.
+- Scoped searches: no production `PlaceholderPage`, `guestUserId`, `YOUR_BANK_ID`, or `YOUR_ACCOUNT` matches.
+
+Manual/visual QA:
+- Flutter widget tests exercised SePay QR/instruction/status/action rendering and account destination page rendering.
+- Browser Playwright navigation to `http://localhost:5173` was attempted and blocked by `ERR_CONNECTION_REFUSED`; no live browser claim is made.
+
+Cleanup receipt:
+- No commit, push, plan checkbox edit, reset, or unrelated-change revert performed.
+- Required notepad entries appended only.
+
+Risks/blockers:
+- Configuration-service Jest could not run because Jest dependencies/executable are unavailable in the worktree.
+- Docker-backed browser/runtime was unavailable; live route navigation and API configuration fetch were not exercised.
+- The worktree was already dirty with unrelated task changes; task-29 review remained scoped.

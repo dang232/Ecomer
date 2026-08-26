@@ -1,0 +1,35 @@
+VNShop deep-fix final FE/mobile verification continuation
+Date: 2026-08-26
+Worktree: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr
+
+Implementation scope
+- FE ImageWithFallback clears srcSet when rendering fallbackSrc; regression test added.
+- Checkout Playwright describe title identifies COD/VietQR/SePay provider coverage; import order repaired.
+- Legacy seller/admin accessibility tests install the CSRF patch before navigation.
+- Modernization accessibility tests resolve acceptance placeholders before navigation and install the CSRF patch for keyboard checks.
+- Flutter checkout fixture uses literal vnpay/momo identifiers so analyzer does not report adjacent-string infos.
+
+Repository-owned verification
+- `fe/pnpm run typecheck`: PASS.
+- `fe/pnpm test`: PASS.
+- `fe/pnpm run build`: PASS; Vite transformed 3551 modules.
+- Scoped ESLint on changed FE files: PASS, 0 errors and 0 warnings.
+- Prettier check on changed FE files: PASS.
+- ImageWithFallback regression test: PASS, 6/6 tests.
+- `vnshop_mobile/flutter analyze --no-fatal-infos --no-fatal-warnings`: PASS, `No issues found!`.
+- `vnshop_mobile/flutter test`: PASS; full suite completed successfully.
+- `fe/pnpm exec playwright test --list`: PASS; 1,903 tests across 72 files discovered.
+- Checkout provider grep selection: PASS; 3 checkout-ui tests are selected by the provider-bearing describe title.
+- `git diff --check`: PASS.
+
+Runtime verification boundary
+- Docker client/server respond, but no VNShop containers are running in the worktree environment.
+- `docker compose --profile apps ps`: no running containers.
+- `curl.exe -sS -I --max-time 10 http://localhost:3000`: connection refused.
+- `curl.exe -sS -I --max-time 10 http://localhost:8080/actuator/health`: connection refused.
+- Targeted Chromium run of smoke, checkout, and a11y suites attempted 10 tests; all stopped at navigation with `net::ERR_CONNECTION_REFUSED`.
+- No live browser, axe, checkout provider, or gateway pass is claimed. Re-run those tests after the Docker stack is healthy.
+
+Scope boundary
+- Existing unrelated changes in environment, compose, service, and alertmanager files were preserved.
+- TypeScript LSP diagnostics were unavailable because the server is not installed; compiler, tests, lint, formatting, and build checks are the fallbacks.

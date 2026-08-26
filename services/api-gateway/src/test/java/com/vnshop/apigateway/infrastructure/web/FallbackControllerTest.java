@@ -2,7 +2,6 @@ package com.vnshop.apigateway.infrastructure.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -14,15 +13,15 @@ class FallbackControllerTest {
 
     @Test
     void returns503WithErrorEnvelopeSoTheBodyAndStatusAgree() {
-        ResponseEntity<ApiResponse<Map<String, Object>>> response =
+        ResponseEntity<ErrorResponse> response =
             controller.fallback("user-service");
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(response.getBody()).isNotNull();
         // ponytail: the FE's response interceptor trusts the envelope — a
         // success:true body with a 503 status renders "Success" to the user.
-        assertThat(response.getBody().success()).isFalse();
-        assertThat(response.getBody().errorCode()).isEqualTo("SERVICE_UNAVAILABLE");
-        assertThat(response.getBody().message()).isEqualTo("Service temporarily unavailable");
+        assertThat(response.getBody().status()).isEqualTo(503);
+        assertThat(response.getBody().code()).isEqualTo("SERVICE_UNAVAILABLE");
+        assertThat(response.getBody().detail()).isEqualTo("Service temporarily unavailable");
     }
 }

@@ -6,6 +6,7 @@ import java.lang.reflect.Method;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.junit.jupiter.api.Test;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpCookie;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
@@ -50,13 +51,15 @@ class SecurityConfigMinioTest {
     }
 
     @Test
-    void customPublicBucketsAllowOnlyGetHeadAndPutWhileFifthBucketsStayProtected() {
+    void customPublicBucketsAllowOnlyGetAndHeadWhilePutRequiresPresigning() {
         PublicBucketProperties buckets = new PublicBucketProperties("avatars-custom", "products-custom", "reviews-custom", "videos-custom");
         WebTestClient client = client(new SecurityConfig(buckets));
         for (String bucket : List.of("avatars-custom", "products-custom", "reviews-custom", "videos-custom")) {
             client.get().uri("/" + bucket + "/object").exchange().expectStatus().isNoContent();
             client.head().uri("/" + bucket + "/object").exchange().expectStatus().isNoContent();
-            client.put().uri("/" + bucket + "/object").exchange().expectStatus().isNoContent();
+            client.put().uri("/" + bucket + "/object").exchange().expectStatus().isUnauthorized();
+            client.put().uri("/" + bucket + "/object?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=test&X-Amz-Date=20260825T000000Z&X-Amz-Expires=300&X-Amz-SignedHeaders=host&X-Amz-Signature=test")
+                    .exchange().expectStatus().isNoContent();
             client.post().uri("/" + bucket + "/object").exchange().expectStatus().isUnauthorized();
         }
         client.get().uri("/private-staging/object").exchange().expectStatus().isUnauthorized();
@@ -66,7 +69,7 @@ class SecurityConfigMinioTest {
     private static WebTestClient client(SecurityConfig config) {
         ServerHttpSecurity http = ServerHttpSecurity.http();
         http.oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtDecoder(token -> Mono.empty())));
-        SecurityWebFilterChain chain = config.securityWebFilterChain(http);
+        SecurityWebFilterChain chain = config.securityWebFilterChain(http, new ObjectMapper());
         return WebTestClient.bindToWebHandler(exchange -> {
                     exchange.getResponse().setStatusCode(HttpStatus.NO_CONTENT);
                     return exchange.getResponse().setComplete();

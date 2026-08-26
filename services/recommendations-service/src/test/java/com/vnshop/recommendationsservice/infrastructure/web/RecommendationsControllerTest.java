@@ -13,12 +13,14 @@ import com.vnshop.recommendationsservice.application.ProductServicePort;
 import com.vnshop.recommendationsservice.application.YouMayAlsoLikeUseCase;
 import com.vnshop.recommendationsservice.infrastructure.persistence.CoPurchaseRepository;
 import com.vnshop.recommendationsservice.infrastructure.persistence.ProcessedOrderRepository;
+import com.vnshop.recommendationsservice.infrastructure.dlt.DurableDltRepository;
 import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -61,6 +63,12 @@ class RecommendationsControllerTest {
 
     @MockitoBean
     private ProductServicePort productServicePort;
+
+    @MockitoBean
+    private DurableDltRepository durableDltRepository;
+
+    @MockitoBean
+    private KafkaTemplate<String, Object> kafkaTemplate;
 
     @Test
     void frequentlyBoughtTogetherReturnsItems() throws Exception {

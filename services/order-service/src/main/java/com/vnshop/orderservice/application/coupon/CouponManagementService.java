@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.cache.annotation.CacheEvict;
 
 public class CouponManagementService {
     private static final int DEFAULT_PER_USER_LIMIT = 1;
@@ -44,6 +45,7 @@ public class CouponManagementService {
     }
 
     @Transactional
+    @CacheEvict(value = "coupon", allEntries = true)
     public Coupon create(CouponTerms terms) {
         Objects.requireNonNull(terms, "terms is required");
         if (coupons.findByCode(terms.code()).isPresent()) {
@@ -57,6 +59,7 @@ public class CouponManagementService {
     }
 
     @Transactional
+    @CacheEvict(value = "coupon", allEntries = true)
     public Coupon update(String reference, CouponTerms terms) {
         Coupon current = find(reference);
         Coupon byCode = coupons.findByCode(terms.code()).orElse(null);
@@ -71,6 +74,7 @@ public class CouponManagementService {
     }
 
     @Transactional
+    @CacheEvict(value = "coupon", allEntries = true)
     public Coupon deactivate(String reference) {
         Coupon coupon = find(reference);
         coupon.deactivate();

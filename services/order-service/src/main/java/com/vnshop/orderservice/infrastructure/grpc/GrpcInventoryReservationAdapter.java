@@ -4,11 +4,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vnshop.orderservice.domain.OrderItem;
 import com.vnshop.orderservice.domain.port.out.InventoryReservationPort;
-import com.vnshop.proto.inventory.InventoryServiceGrpc;
-import com.vnshop.proto.inventory.ReleaseRequest;
-import com.vnshop.proto.inventory.ReleaseResponse;
-import com.vnshop.proto.inventory.ReserveRequest;
-import com.vnshop.proto.inventory.ReserveResponse;
+import com.vnshop.proto.v1.InventoryServiceGrpc;
+import com.vnshop.proto.v1.ReleaseRequest;
+import com.vnshop.proto.v1.ReleaseResponse;
+import com.vnshop.proto.v1.ReserveRequest;
+import com.vnshop.proto.v1.ReserveResponse;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.grpc.StatusRuntimeException;
@@ -57,8 +57,8 @@ public class GrpcInventoryReservationAdapter implements InventoryReservationPort
             throw new IllegalArgumentException("items must not be empty");
         }
 
-        List<com.vnshop.proto.inventory.OrderItem> protoItems = items.stream()
-                .map(item -> com.vnshop.proto.inventory.OrderItem.newBuilder()
+        List<com.vnshop.proto.v1.OrderItem> protoItems = items.stream()
+                .map(item -> com.vnshop.proto.v1.OrderItem.newBuilder()
                         .setProductId(item.productId())
                         .setVariant(item.variantSku())
                         .setQuantity(item.quantity())
@@ -67,6 +67,7 @@ public class GrpcInventoryReservationAdapter implements InventoryReservationPort
 
         ReserveRequest request = ReserveRequest.newBuilder()
                 .setOrderId(orderId)
+                .setOperationId(orderId)
                 .addAllItems(protoItems)
                 .build();
 
@@ -74,7 +75,7 @@ public class GrpcInventoryReservationAdapter implements InventoryReservationPort
         try {
             ReserveResponse response = circuitBreaker.executeSupplier(() ->
                     inventoryStub
-                            .withDeadlineAfter(5, TimeUnit.SECONDS)
+                            .withDeadlineAfter(2500, TimeUnit.MILLISECONDS)
                             .reserve(request));
             if (!response.getSuccess()) {
                 throw new RuntimeException("Inventory reservation failed for order " + orderId);
@@ -101,7 +102,7 @@ public class GrpcInventoryReservationAdapter implements InventoryReservationPort
         try {
             ReleaseResponse response = circuitBreaker.executeSupplier(() ->
                     inventoryStub
-                            .withDeadlineAfter(5, TimeUnit.SECONDS)
+                            .withDeadlineAfter(2500, TimeUnit.MILLISECONDS)
                             .release(request));
             if (!response.getSuccess()) {
                 throw new RuntimeException("Inventory release failed for order " + orderId);
@@ -120,6 +121,7 @@ public class GrpcInventoryReservationAdapter implements InventoryReservationPort
         try {
             String payload = objectMapper.writeValueAsString(Map.of(
                 "orderId", orderId,
+                "operationId", "inventory-release:" + orderId,
                 "timestamp", Instant.now().toString()
             ));
             kafkaTemplate.send(TOPIC_RELEASE_REQUESTED, orderId, payload).get(5, TimeUnit.SECONDS);

@@ -55,7 +55,7 @@ class SepayPollerTest {
     }
 
     @Test
-    void unmatchedMemoSkipsButCursorStillAdvances() {
+    void unmatchedMemoLeavesCursorUnchangedForRetry() {
         InMemoryPayments payments = new InMemoryPayments();
         InMemoryCursorRepo cursor = new InMemoryCursorRepo();
         StubClient client = new StubClient(List.of(
@@ -63,8 +63,9 @@ class SepayPollerTest {
 
         new SepayPoller(props(), client, cursor, payments, promotionService(payments)).poll();
 
-        assertThat(cursor.value).isEqualTo("TX-200");
+        assertThat(cursor.value).isNull();
     }
+
 
     @Test
     void emptyTransactionListIsNoOp() {
@@ -103,7 +104,7 @@ class SepayPollerTest {
         new SepayPoller(props(), client, cursor, payments, promotionService(payments)).poll();
 
         assertThat(payments.byId.get(paymentId).status()).isEqualTo(PaymentStatus.PENDING);
-        assertThat(cursor.value).isEqualTo("TX-300");
+        assertThat(cursor.value).isNull();
     }
 
     private static PaymentPromotionService promotionService(PaymentRepositoryPort payments) {

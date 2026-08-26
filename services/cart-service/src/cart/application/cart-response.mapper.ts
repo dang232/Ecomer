@@ -22,6 +22,7 @@ function toCartItemResponse(item: CartItem): CartItemResponse {
     quantity: item.quantity,
     subtotal: toMoneyResponse(item.subtotal),
     parcel: item.parcel,
+    parcelSnapshot: item.parcel,
     addedAt: item.addedAt.toISOString(),
     sellerId: item.sellerId,
     sellerName: item.sellerName,

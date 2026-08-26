@@ -1,0 +1,8 @@
+# MoMo and VNPay are disabled in production and remain available only behind a non-production gate.
+VNPAY_ENABLED: "false"
+MOMO_ENABLED: ${MOMO_ENABLED:-false}
+payment:
+  providers:
+    vnpay: false
+    momo: false
+  default: COD

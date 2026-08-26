@@ -1,7 +1,12 @@
-import { Controller, Get, Inject, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Inject,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
 import Redis from 'ioredis';
-import type { Connection } from 'mongoose';
+import { STATES, type Connection } from 'mongoose';
 import { REDIS_CLIENT } from './notification/infrastructure/cache/redis.module';
 
 @Controller()
@@ -18,7 +23,7 @@ export class AppController {
 
   @Get('ready')
   async ready(): Promise<{ status: string }> {
-    if (this.mongo.readyState !== 1) {
+    if (this.mongo.readyState !== STATES.connected) {
       throw new ServiceUnavailableException('mongodb unavailable');
     }
     try {

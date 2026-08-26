@@ -20,12 +20,9 @@ public class CorrelationIdFilter implements WebFilter {
     @Override
     public @NonNull Mono<Void> filter(ServerWebExchange exchange, @NonNull WebFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
-        String correlationId = request.getHeaders().getFirst(CORRELATION_ID_HEADER);
         String requestId = request.getHeaders().getFirst("X-Request-ID");
 
-        String effectiveId = valid(correlationId)
-                ? correlationId
-                : valid(requestId) ? requestId : UUID.randomUUID().toString();
+        String effectiveId = valid(requestId) ? requestId : UUID.randomUUID().toString();
 
         ServerHttpRequest normalizedRequest = request.mutate()
                 .header(CORRELATION_ID_HEADER, effectiveId)

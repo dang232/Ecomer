@@ -35,6 +35,13 @@ export const videoSchema = z.object({
 });
 export type Video = z.infer<typeof videoSchema>;
 
+export const videoUploadInitSchema = z.object({
+  tusEndpoint: z.string(),
+  videoId: z.string(),
+  maxSizeBytes: z.number(),
+});
+export type VideoUploadInit = z.infer<typeof videoUploadInitSchema>;
+
 export const videoStatusResponseSchema = z.object({
   id: z.string(),
   status: videoStatusSchema,

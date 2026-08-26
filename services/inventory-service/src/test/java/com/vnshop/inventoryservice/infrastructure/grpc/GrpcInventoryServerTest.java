@@ -7,7 +7,7 @@ import com.vnshop.inventoryservice.domain.StockReservation;
 import com.vnshop.inventoryservice.domain.port.out.InventoryEventPublisherPort;
 import com.vnshop.inventoryservice.domain.port.out.StockReservationPort;
 import com.vnshop.inventoryservice.domain.port.out.StockReservationPort.DecrementOutcome;
-import com.vnshop.proto.inventory.*;
+import com.vnshop.proto.v1.*;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Server;

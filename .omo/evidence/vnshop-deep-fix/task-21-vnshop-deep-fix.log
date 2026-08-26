@@ -1,0 +1,30 @@
+﻿Task 21 observability evidence
+
+PASS: node --test scripts/check-alertmanager-config.test.mjs (4/4)
+PASS: node scripts/check-alertmanager-config.mjs infra/k8s/overlays/prod
+PASS: node scripts/check-alertmanager-config.mjs infra/k8s/overlays/dev
+PASS: python -m pytest -q services/video-moderator/tests/test_moderator.py services/video-moderator/tests/test_consumer.py (21 passed)
+PASS: services/cart-service npm test -- --runInBand src/app.controller.spec.ts (3 passed)
+PASS: node --check scripts/check-alertmanager-config.mjs
+PASS: node --check scripts/check-alertmanager-config.test.mjs
+PASS: git diff --check
+BLOCKED: promtool/amtool binaries are not installed on this Windows runner. CI uses pinned prom/prometheus:v2.53.0 and prom/alertmanager:v0.28.1 containers for those checks.
+BLOCKED: docker compose topology tests cannot parse the current shared dirty worktree because docker-compose.yml has a pre-existing indentation error at line 1423 (GHN_WEBHOOK_SECRET/GHTK_WEBHOOK_SECRET edits outside task 21).
+NOT RUN: synthetic alert delivery and live scrape curl checks require Docker services; Docker Desktop Linux engine is unavailable in this environment.
+
+PASS: kubectl kustomize infra/k8s/base
+PASS: kubectl kustomize infra/k8s/overlays/dev
+PASS: kubectl kustomize infra/k8s/overlays/staging
+PASS: kubectl kustomize infra/k8s/overlays/prod
+PASS: PyYAML parse of changed Kubernetes and workflow YAML
+PASS: embedded OTel collector YAML parse and tail-sampling policy check (1% baseline, ERROR always-on)
+PASS: rendered prod manifest contains Prometheus, Alertmanager, and OTel collector services/ports
+PASS: production sampler is parentbased_traceidratio with OTEL_TRACES_SAMPLER_ARG=0.01
+BLOCKED: promtool/amtool container checks could not run because the Docker engine is unavailable on this Windows runner.
+
+Changed-file scan: no secret values printed; Alertmanager uses /etc/alertmanager/secrets/webhook-url via url_file; traceId is structured metadata, not a Loki stream label.
+PASS: services/cart-service npm test -- --runInBand src/app.controller.spec.ts (3 passed)
+PASS: services/cart-service npm run build
+PASS: python -m py_compile services/video-moderator/app/main.py
+PASS: node --check scripts/check-alertmanager-config.mjs
+PASS: git diff --check

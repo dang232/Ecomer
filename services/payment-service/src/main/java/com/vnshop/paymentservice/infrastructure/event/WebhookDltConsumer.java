@@ -3,6 +3,8 @@ package com.vnshop.paymentservice.infrastructure.event;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vnshop.paymentservice.application.webhook.WebhookAlertEvent;
 import com.vnshop.paymentservice.application.webhook.WebhookDltEvent;
+import com.vnshop.paymentservice.infrastructure.dlt.DurableDltService;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -25,16 +27,21 @@ public class WebhookDltConsumer {
 
     private final ObjectMapper objectMapper;
     private final ObjectProvider<KafkaTemplate<String, Object>> kafkaTemplateProvider;
+    private final DurableDltService durableDltService;
 
     public WebhookDltConsumer(
             ObjectMapper objectMapper,
-            ObjectProvider<KafkaTemplate<String, Object>> kafkaTemplateProvider) {
+            ObjectProvider<KafkaTemplate<String, Object>> kafkaTemplateProvider,
+            DurableDltService durableDltService) {
         this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper is required");
         this.kafkaTemplateProvider = Objects.requireNonNull(kafkaTemplateProvider, "kafkaTemplateProvider is required");
+        this.durableDltService = Objects.requireNonNull(durableDltService, "durableDltService is required");
     }
 
     @KafkaListener(topics = "payment.webhooks.dlt", groupId = "payment-dlt-alerter")
-    public void onDltMessage(String raw) {
+    public void onDltMessage(ConsumerRecord<String, String> record) {
+        String raw = record.value();
+        durableDltService.store(record, "DLT payload received", 3);
         WebhookDltEvent event;
         try {
             event = objectMapper.readValue(raw, WebhookDltEvent.class);
@@ -50,7 +57,6 @@ public class WebhookDltConsumer {
                 event.attempts(),
                 event.failureReason(),
                 event.timestamp());
-
         KafkaTemplate<String, Object> kafkaTemplate = kafkaTemplateProvider.getIfAvailable();
         if (kafkaTemplate != null) {
             kafkaTemplate.send(ALERT_TOPIC, event.webhookId(), WebhookAlertEvent.fromDlt(event));

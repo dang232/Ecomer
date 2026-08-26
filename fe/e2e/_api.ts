@@ -20,6 +20,7 @@ export interface ParcelDimensions {
   lengthCm: number;
   widthCm: number;
   heightCm: number;
+  declaredValueMinor: number;
 }
 
 export interface ProductSummary {

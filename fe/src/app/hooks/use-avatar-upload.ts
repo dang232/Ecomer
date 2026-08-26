@@ -65,6 +65,7 @@ export function useAvatarUpload(options: AvatarUploadOptions = {}) {
         body: file,
         signal: AbortSignal.timeout(30_000),
         headers: {
+          ...init.uploadHeaders,
           "Content-Type": file.type,
           "x-amz-meta-sha256": sha256Hex,
         },

@@ -33,6 +33,7 @@ scrape_configs:
       - labels:
           level:
           logger:
+      - structured_metadata:
           traceId:
       - timestamp:
           source: timestamp

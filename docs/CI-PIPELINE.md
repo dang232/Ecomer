@@ -39,7 +39,32 @@ A change to `.github/workflows/ci.yml` selects every stack so pipeline edits val
 
 The previous workflow labelled an echo-only job as a coverage gate while invoking Maven with `-Djacoco.skip=true`. That claim has been removed.
 
-Java CI currently runs isolated unit tests with integration, Pact, application-context, and selected gRPC suites excluded. JaCoCo remains skipped for this lane so it does not misrepresent partial-suite coverage. Restoring a real Java coverage gate requires a separate integration lane with its backing services and per-service baselines.
+Java CI currently runs isolated unit tests with integration, Pact, application-context, and selected gRPC suites excluded. JaCoCo remains skipped for this lane so it does not misrepresent partial-suite coverage. The dedicated `VNShop Java Coverage` workflow in `.github/workflows/ci-coverage.yml` is the separate reproducible lane: it runs every Java service with JaCoCo enabled, enforces 90% `LINE` and 90% `BRANCH` `COVEREDRATIO` checks, captures Maven output with `pipefail`/`tee`, and uploads each service's HTML/XML report.
+
+Reproduce a service gate locally with:
+
+```bash
+set -euo pipefail
+mvn --batch-mode --no-transfer-progress \
+  -f services/product-service/pom.xml \
+  -DskipTests=false -Djacoco.skip=false \
+  clean verify 2>&1 | tee product-service-coverage.log
+```
+
+Validate all Java POMs and workflow wiring with:
+
+```bash
+node --test scripts/coverage/validate-java-coverage-config.test.mjs
+```
+
+The checked-in below-threshold fixture proves the gate fails on real JaCoCo output:
+
+```bash
+set -o pipefail
+mvn --batch-mode --no-transfer-progress clean verify \
+  -DskipTests=false -Djacoco.skip=false \
+  2>&1 | tee scripts/coverage/fixtures/below-threshold/failure-coverage.log
+```
 
 Node services run Jest with `--coverage`, but existing per-package thresholds are not enforced yet because messaging-service is below its declared baseline despite all tests passing. Test failures remain blocking. Notification currently uses `--forceExit` after its suite because an open async handle otherwise prevents Jest from terminating; the job emits a notice so this debt stays visible. Flutter emits `coverage/lcov.info` during its test job.
 

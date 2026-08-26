@@ -1,0 +1,17 @@
+# Task 12: gRPC mTLS/service-token and network policy hardening
+# Provenance: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\task-12.log (uncommitted worktree artifact)
+
+STATUS: PASS_STATIC / BLOCKED_EXTERNAL
+
+Exact commands recorded:
+- `mvn -q -DskipTests compile` in inventory-service -> PASS.
+- `mvn -q -DskipTests compile` in shipping-service -> PASS.
+- `mvn -q -DskipTests compile` in payment-service -> PASS.
+- order-service gRPC client compile -> PASS; full compile blocked by pre-existing `IdempotencyConfig ContentCachingRequestWrapper` constructor error.
+- `docker compose config` -> reached existing required external `ALERTMANAGER_WEBHOOK_URL_FILE` gate.
+- `kubectl kustomize infra/k8s/overlays/prod --load-restrictor LoadRestrictionsNone` -> PASS.
+- YAML parse of workloads and NetworkPolicy manifests -> PASS.
+- `git diff --check` -> PASS with only pre-existing CRLF normalization warnings.
+- topology contract `k8s-topology-contract.v1` -> PASS.
+
+Blocker/non-claim: grpcurl and Docker runtime checks were not run because external secret files and mTLS certificate material were unavailable. No live authenticated reservation claim is made.

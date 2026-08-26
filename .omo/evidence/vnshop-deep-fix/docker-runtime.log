@@ -1,0 +1,69 @@
+VNShop deep-fix PR Docker runtime validation
+Date: 2026-08-26 (Windows PowerShell)
+Worktree: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr
+Secrets: no real secrets used; all values were temporary placeholders in C:\Users\dangq\AppData\Local\Temp\vnshop-runtime.env (deleted) and webhook file (deleted).
+
+1) Inspection
+Command: rg -o '\$\{...\}' docker-compose.yml docker-compose.dev.yml | Sort-Object -Unique
+Result: required interpolation included POSTGRES_PASSWORD, REDIS_PASSWORD, KAFKA_ADMIN/ORDER/PAYMENT/INVENTORY/PRODUCT/SHIPPING/FINANCE/SEARCH/RECOMMENDATIONS/INVOICE/MESSAGING/USER_PASSWORD, KAFKA_VIDEO_TRANSCODER_PASSWORD, KAFKA_VIDEO_MODERATOR_PASSWORD, KAFKA_SSL_TRUSTSTORE_PASSWORD, ALERTMANAGER_WEBHOOK_URL_FILE, ADMIN_CURSOR_SECRET, CONFIG_SERVICE_INTERNAL_TOKEN, ELASTIC_PASSWORD, GRPC_INVENTORY_SERVICE_TOKEN, GRPC_SHIPPING_SERVICE_TOKEN, invoice seller fields, MINIO_ROOT_USER/PASSWORD, Unleash tokens, USER_SERVICE_INTERNAL_TOKEN, VNSHOP_INTERNAL_ALLOWED_CLIENT_ID, payout key/version, product/search/seller-finance cursor secrets, plus optional/default provider/runtime values.
+
+2) Temporary inputs
+Command: create C:\Users\dangq\AppData\Local\Temp\vnshop-alertmanager-webhook.txt with dummy URL; create C:\Users\dangq\AppData\Local\Temp\vnshop-runtime.env with dummy values.
+Exit code: 0
+Result: created outside git; no worktree .env created or modified.
+
+3) Compose interpolation
+Command: docker compose --env-file C:\Users\dangq\AppData\Local\Temp\vnshop-runtime.env -f docker-compose.yml -f docker-compose.dev.yml --profile apps config --quiet
+Exit code: 0
+Result: PASS.
+
+4) First startup against pre-existing Docker volumes
+Command: docker compose --env-file C:\Users\dangq\AppData\Local\Temp\vnshop-runtime.env -f docker-compose.yml -f docker-compose.dev.yml --profile apps up -d --wait
+Exit code: 1
+Command on failure: docker compose ... logs --tail 100
+Exit code: 0
+Observed blocker: pre-existing named Postgres volumes had passwords different from the temporary placeholder; services logged FATAL: password authentication failed for user vnshop. Failure was captured; no secrets printed.
+
+5) Clean-volume startup retry
+Preparation: docker compose ... down -v
+Exit code: 0
+Command: docker compose --env-file C:\Users\dangq\AppData\Local\Temp\vnshop-runtime.env -f docker-compose.yml -f docker-compose.dev.yml --profile apps up -d --wait
+Exit code: 1
+Observed blocker: clean volumes removed the stale-password issue, but readiness still failed. Search service logged Elasticsearch status 401 (authentication mismatch), and user/product/order/seller-finance remained unhealthy or startup. Most infrastructure and several application services were healthy. Failure logs captured by the command wrapper.
+
+6) Endpoint poll (60-second bounded PowerShell loop)
+Command: poll curl-equivalent endpoints for up to 60 seconds: http://localhost:8080/actuator/health, http://localhost:3000, http://localhost:8080/api/v1/products
+Results:
+- Gateway health: HTTP 200; body {"groups":["liveness","readiness"],"status":"UP"}.
+- Frontend: HTTP 200; nginx served VNShop HTML/SPA bundle.
+- Products: HTTP 401 Unauthorized; WWW-Authenticate: Bearer; expected without auth token.
+- curl.exe confirmation: same statuses/bodies.
+
+7) Quick verification
+Command: node infra/scripts/generate-kafka-artifacts.mjs --check
+Exit code: 0; PASS (85 topics, 228 ACLs current).
+Command: node scripts/verify-plan.mjs
+Exit code: 2; usage error because script requires <plan-path>. No plan path was supplied to avoid modifying plan/checklists.
+Command: pnpm run typecheck (from fe)
+Exit code: 0; PASS (app, test, e2e, node TypeScript checks).
+Command: flutter analyze --no-pub (from vnshop_mobile)
+Exit code: 1; 2 info-level pre-existing adjacent-string-concatenation findings in test/features/checkout/data/repositories/checkout_repository_impl_test.dart lines 32-33.
+Command: node infra/scripts/e2e-day.mjs
+Result: not run; full E2E requires a fully ready/authenticated service topology, which the clean-volume startup did not provide.
+
+8) Runtime state capture
+Command: docker ps --format 'table {{.Names}}\\t{{.Status}}\\t{{.Ports}}'
+Result before teardown: frontend and api-gateway healthy; core services user/product/order/seller-finance unhealthy; supporting infra mostly healthy.
+Command: docker compose --env-file C:\Users\dangq\AppData\Local\Temp\vnshop-runtime.env -f docker-compose.yml -f docker-compose.dev.yml --profile apps ps
+Exit code: 0; same state captured.
+
+9) Teardown
+Command: docker compose --env-file C:\Users\dangq\AppData\Local\Temp\vnshop-runtime.env -f docker-compose.yml -f docker-compose.dev.yml --profile apps down -v
+Exit code: 0; all VNShop containers, network, and named volumes removed.
+Command: remove temporary webhook and env files.
+Result: webhook_exists_after=False; env_exists_after=False.
+Final cleanup check: docker ps --filter name=vnshop- -> 0 containers; docker volume ls --filter name=vnshop_ -> 0 volumes.
+
+VERDICT: FAIL for full runtime readiness.
+PASS components: compose interpolation, gateway health, frontend health, Kafka artifact check, FE typecheck, cleanup.
+FAIL/blockers: compose --wait failed in both first and clean-volume attempts; first due stale pre-existing Postgres passwords, retry due Elasticsearch 401 and unhealthy dependent/core application services. No real secrets were used. Recommended next step: align clean local Elasticsearch password/configuration and rerun compose startup, then execute e2e-day and authenticated product/browser smoke.

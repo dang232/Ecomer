@@ -1,6 +1,7 @@
 package com.vnshop.apigateway.infrastructure.config;
 
 import org.junit.jupiter.api.Test;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.security.web.server.csrf.ServerCsrfTokenRequestAttributeHandler;
@@ -16,7 +17,7 @@ class SecurityConfigCsrfTest {
         http.oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwt -> jwt.jwtDecoder(token -> Mono.empty())));
         SecurityWebFilterChain chain = new SecurityConfig(PublicBucketProperties.defaults())
-                .securityWebFilterChain(http);
+                .securityWebFilterChain(http, new ObjectMapper());
 
         assertThat(chain.getWebFilters().collectList().block())
                 .anyMatch(filter -> filter.getClass().getSimpleName().contains("Csrf"));

@@ -1,0 +1,2200 @@
+error while interpolating services.payment-service.environment.CONFIG_SERVICE_INTERNAL_TOKEN: required variable CONFIG_SERVICE_INTERNAL_TOKEN is missing a value: CONFIG_SERVICE_INTERNAL_TOKEN must be set
+name: vnshop
+services:
+  alertmanager:
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+    container_name: vnshop-alertmanager
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - -qO-
+        - http://localhost:9093/-/healthy
+      timeout: 5s
+      interval: 15s
+      retries: 10
+    image: prom/alertmanager:latest
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 9093
+        published: "9093"
+        protocol: tcp
+    volumes:
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\alertmanager\alertmanager.dev.yml
+        target: /etc/alertmanager/alertmanager.yml
+        read_only: true
+        bind: {}
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\alertmanager\rules.yml
+        target: /etc/alertmanager/rules.yml
+        read_only: true
+        bind: {}
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\alertmanager\alertmanager.yml
+        target: /etc/alertmanager/secrets/webhook-url
+        read_only: true
+        bind: {}
+  api-gateway:
+    build:
+      context: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\services\api-gateway
+      dockerfile: Dockerfile
+    container_name: vnshop-api-gateway
+    depends_on:
+      keycloak:
+        condition: service_healthy
+        restart: true
+        required: true
+      redis:
+        condition: service_healthy
+        restart: true
+        required: true
+    deploy:
+      resources:
+        limits:
+          memory: "805306368"
+    environment:
+      CONFIG_SERVICE_INTERNAL_TOKEN: task14-config
+      GATEWAY_CORS_ALLOWED_ORIGINS: https://*.vnshop.example
+      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5008
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
+      OTEL_TRACES_SAMPLER: parentbased_traceidratio
+      OTEL_TRACES_SAMPLER_ARG: "1.0"
+      REDIS_HOST: redis
+      REDIS_PASSWORD: task14-redis
+      SERVER_PORT: "8080"
+      VNSHOP_GATEWAY_PUBLIC_BUCKET_AVATAR: vnshop-avatars
+      VNSHOP_GATEWAY_PUBLIC_BUCKET_PRODUCT: vnshop-products
+      VNSHOP_GATEWAY_PUBLIC_BUCKET_REVIEW: vnshop-reviews
+      VNSHOP_GATEWAY_PUBLIC_BUCKET_VIDEO: vnshop-videos
+      VNSHOP_ROUTES_MINIO: http://minio:9000
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fs http://localhost:8080/actuator/health || exit 1
+      timeout: 10s
+      interval: 30s
+      retries: 5
+      start_period: 1m0s
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 8080
+        published: "8080"
+        protocol: tcp
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 5008
+        published: "5008"
+        protocol: tcp
+    restart: on-failure:5
+  cart-service:
+    build:
+      context: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\services\cart-service
+      dockerfile: Dockerfile
+    container_name: vnshop-cart-service
+    depends_on:
+      postgres-cart:
+        condition: service_healthy
+        required: true
+      redis:
+        condition: service_healthy
+        required: true
+    deploy:
+      resources:
+        limits:
+          memory: "268435456"
+    environment:
+      DATABASE_URL: postgresql://vnshop:task14-postgres@postgres-cart:5432/vnshop_cart
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
+      OPENAPI_ENABLED: "true"
+      OTEL_TRACES_SAMPLER: parentbased_traceidratio
+      OTEL_TRACES_SAMPLER_ARG: "1.0"
+      PRODUCT_SERVICE_URL: http://product-service:8082
+      REDIS_HOST: redis
+      REDIS_PASSWORD: task14-redis
+      SERVER_PORT: "8084"
+      USER_SERVICE_TIMEOUT_MS: "2000"
+      USER_SERVICE_URL: http://user-service:8081
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fs http://localhost:8084/health || curl -fs http://localhost:8084
+          || exit 1
+      timeout: 10s
+      interval: 30s
+      retries: 5
+      start_period: 1m0s
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 8084
+        published: "8084"
+        protocol: tcp
+  configuration-service:
+    build:
+      context: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\services\configuration-service
+      dockerfile: Dockerfile
+    container_name: vnshop-configuration-service
+    environment:
+      API_ORIGIN: http://localhost:8080
+      AUTH_ORIGIN: http://localhost:8080
+      BRAND_NAME: VNShop
+      BRAND_TAGLINE: MARKETPLACE
+      CONFIG_FILE_PATH: /app/config/services.yml
+      CONFIG_SERVICE_INTERNAL_TOKEN: task14-config
+      FACEBOOK_OAUTH_ENABLED: "false"
+      GOOGLE_OAUTH_ENABLED: "false"
+      OPENAPI_ENABLED: "true"
+      PAYMENT_DEFAULT: COD
+      PAYMENT_PROVIDERS: VNPay,MoMo,COD,Visa,Mastercard
+      RUNTIME_CONFIG_ALLOW_INSECURE: "true"
+      SERVER_PORT: "8097"
+      SOCIAL_FACEBOOK: https://facebook.com/vnshop
+      SOCIAL_INSTAGRAM: https://instagram.com/vnshop
+      SOCIAL_TWITTER: https://x.com/vnshop
+      SOCIAL_YOUTUBE: https://youtube.com/vnshop
+      SUPPORT_EMAIL: support@vnshop.vn
+      SUPPORT_PHONE: 1900-0000
+      WEB_ORIGIN: http://localhost:3000
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - -qO-
+        - http://localhost:8097/api/config
+      timeout: 5s
+      interval: 10s
+      retries: 3
+    networks:
+      default: null
+    volumes:
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\services\configuration-service\config
+        target: /app/config
+        read_only: true
+        bind: {}
+  coupon-service:
+    build:
+      context: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\services\coupon-service
+      dockerfile: Dockerfile
+    container_name: vnshop-coupon-service
+    depends_on:
+      configuration-service:
+        condition: service_healthy
+        required: true
+      kafka:
+        condition: service_healthy
+        required: true
+      postgres-legacy:
+        condition: service_healthy
+        required: true
+      redis:
+        condition: service_healthy
+        required: true
+    deploy:
+      resources:
+        limits:
+          memory: "805306368"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
+      OTEL_TRACES_SAMPLER: parentbased_traceidratio
+      OTEL_TRACES_SAMPLER_ARG: "1.0"
+      REDIS_HOST: redis
+      REDIS_PASSWORD: task14-redis
+      SERVER_PORT: "8088"
+      SPRING_DATASOURCE_PASSWORD: task14-postgres
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-legacy:5432/vnshop?currentSchema=coupon_svc
+      SPRING_DATASOURCE_USERNAME: vnshop
+      SWAGGER_ENABLED: "true"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fs http://localhost:8088/actuator/health || exit 1
+      timeout: 10s
+      interval: 30s
+      retries: 5
+      start_period: 1m0s
+    networks:
+      default: null
+  elasticsearch:
+    container_name: vnshop-elasticsearch
+    deploy:
+      resources:
+        limits:
+          memory: "1073741824"
+    environment:
+       ELASTIC_PASSWORD: $ELASTIC_PASSWORD
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+      discovery.type: single-node
+      xpack.security.enabled: "true"
+      xpack.security.http.ssl.enabled: "false"
+    healthcheck:
+      test:
+        - CMD-SHELL
+         - curl -fsS -u elastic:$ELASTIC_PASSWORD http://localhost:9200/_cluster/health
+          >/dev/null
+      timeout: 10s
+      interval: 15s
+      retries: 10
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.0
+    networks:
+      default: null
+    volumes:
+      - type: volume
+        source: elasticsearch-data
+        target: /usr/share/elasticsearch/data
+        volume: {}
+  frontend:
+    build:
+      context: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\fe
+      dockerfile: Dockerfile
+      args:
+        VITE_ALLOW_INSECURE_RUNTIME_CONFIG: "true"
+        VITE_API_URL: http://localhost:8080
+        VITE_PAYPAL_CLIENT_ID: ""
+        VITE_PAYPAL_ENABLED: "false"
+        VITE_STRIPE_ENABLED: "false"
+        VITE_STRIPE_PUBLISHABLE_KEY: ""
+    container_name: vnshop-frontend
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+        required: true
+      keycloak:
+        condition: service_healthy
+        required: true
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 8080
+        published: "3000"
+        protocol: tcp
+  grafana:
+    container_name: vnshop-grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+        required: true
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: task14-grafana
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SERVER_ROOT_URL: http://localhost:3001
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - -qO-
+        - http://localhost:3000/api/health
+      timeout: 5s
+      interval: 15s
+      retries: 10
+    image: grafana/grafana:11.1.0
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 3000
+        published: "3001"
+        protocol: tcp
+    volumes:
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\grafana\provisioning
+        target: /etc/grafana/provisioning
+        read_only: true
+        bind: {}
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\grafana\dashboards
+        target: /var/lib/grafana/dashboards
+        read_only: true
+        bind: {}
+      - type: volume
+        source: grafana-data
+        target: /var/lib/grafana
+        volume: {}
+  init-kafka:
+    command:
+      - bash
+      - /opt/vnshop/init-kafka-topics-local.sh
+    container_name: vnshop-init-kafka
+    depends_on:
+      kafka:
+        condition: service_healthy
+        required: true
+    environment:
+      KAFKA_ADMIN_PASSWORD: task14-kafka-admin
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      VNSHOP_KAFKA_TARGET: local
+    image: confluentinc/cp-kafka:8.2.0
+    networks:
+      default: null
+    restart: 'no'
+    volumes:
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\scripts\init-kafka-topics-local.sh
+        target: /opt/vnshop/init-kafka-topics-local.sh
+        read_only: true
+        bind: {}
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\kafka\topic-inventory.yaml
+        target: /opt/vnshop/infra/kafka/topic-inventory.yaml
+        read_only: true
+        bind: {}
+    working_dir: /opt/vnshop
+  inventory-service:
+    build:
+      context: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\services\inventory-service
+      dockerfile: Dockerfile
+    container_name: vnshop-inventory-service
+    depends_on:
+      configuration-service:
+        condition: service_healthy
+        required: true
+      kafka:
+        condition: service_healthy
+        required: true
+      postgres-inventory:
+        condition: service_healthy
+        required: true
+      redis:
+        condition: service_healthy
+        required: true
+    deploy:
+      resources:
+        limits:
+          memory: "805306368"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_SASL_PASSWORD: kafka-inventory
+      KAFKA_SASL_USERNAME: svc-inventory
+      KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      KAFKA_SSL_TRUSTSTORE_PASSWORD: task14-truststore
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
+      OTEL_TRACES_SAMPLER: parentbased_traceidratio
+      OTEL_TRACES_SAMPLER_ARG: "1.0"
+      REDIS_HOST: redis
+      SERVER_PORT: "8083"
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PASSWORD: task14-redis
+      SPRING_DATA_REDIS_PORT: "6379"
+      SPRING_DATASOURCE_PASSWORD: task14-postgres
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-inventory:5432/vnshop_inventory?currentSchema=inventory_svc
+      SPRING_DATASOURCE_USERNAME: vnshop
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SWAGGER_ENABLED: "true"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fs http://localhost:8083/actuator/health || exit 1
+      timeout: 10s
+      interval: 30s
+      retries: 5
+      start_period: 1m0s
+    networks:
+      default: null
+    volumes:
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\kafka\certs\kafka.truststore.jks
+        target: /etc/kafka/secrets/kafka.truststore.jks
+        read_only: true
+        bind: {}
+  invoice-service:
+    build:
+      context: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\services\invoice-service
+      dockerfile: Dockerfile
+    container_name: vnshop-invoice-service
+    depends_on:
+      configuration-service:
+        condition: service_healthy
+        required: true
+      kafka:
+        condition: service_healthy
+        required: true
+      postgres-invoice:
+        condition: service_healthy
+        required: true
+    deploy:
+      resources:
+        limits:
+          memory: "536870912"
+    environment:
+      CONFIG_SERVICE_INTERNAL_TOKEN: task14-config
+      INVOICE_SELLER_ADDRESS: task14-address
+      INVOICE_SELLER_EMAIL: task14@example.com
+      INVOICE_SELLER_NAME: VNShop
+      INVOICE_SELLER_PHONE: ""
+      INVOICE_SELLER_TAX_CODE: task14-tax
+      INVOICE_SYMBOL: INV
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_SASL_PASSWORD: kafka-invoice
+      KAFKA_SASL_USERNAME: svc-invoice
+      KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
+      OTEL_TRACES_SAMPLER: parentbased_traceidratio
+      OTEL_TRACES_SAMPLER_ARG: "1.0"
+      SERVER_PORT: "8098"
+      SPRING_DATASOURCE_PASSWORD: task14-postgres
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-invoice:5432/vnshop_invoice?currentSchema=invoice_svc
+      SPRING_DATASOURCE_USERNAME: vnshop
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    networks:
+      default: null
+  jaeger:
+    container_name: vnshop-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - -qO-
+        - http://localhost:16686
+      timeout: 5s
+      interval: 15s
+      retries: 10
+    image: jaegertracing/all-in-one:1.71.0
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 16686
+        published: "16686"
+        protocol: tcp
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 14250
+        published: "14250"
+        protocol: tcp
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 4318
+        published: "4318"
+        protocol: tcp
+  kafka:
+    container_name: vnshop-kafka
+    deploy:
+      resources:
+        limits:
+          memory: "1610612736"
+    entrypoint:
+      - /bin/sh
+      - -c
+      - sed -e "s/\$${KAFKA_ADMIN_PASSWORD}/task14-kafka-admin/g" -e "s/\$${KAFKA_ORDER_PASSWORD}/task14-kafka-order/g"
+        -e "s/\$${KAFKA_PAYMENT_PASSWORD}/task14-kafka-payment/g" -e "s/\$${KAFKA_INVENTORY_PASSWORD}/task14-kafka-inventory/g"
+        -e "s/\$${KAFKA_PRODUCT_PASSWORD}/task14-kafka-product/g" -e "s/\$${KAFKA_SHIPPING_PASSWORD}/task14-kafka-shipping/g"
+        -e "s/\$${KAFKA_FINANCE_PASSWORD}/task14-kafka-finance/g" -e "s/\$${KAFKA_SEARCH_PASSWORD}/task14-kafka-search/g"
+        -e "s/\$${KAFKA_RECOMMENDATIONS_PASSWORD}/task14-kafka-recommendations/g" -e
+        "s/\$${KAFKA_INVOICE_PASSWORD}/task14-kafka-invoice/g" -e "s/\$${KAFKA_MESSAGING_PASSWORD}/task14-kafka-messaging/g"
+        -e "s/\$${KAFKA_NOTIFICATION_PASSWORD}/$${KAFKA_NOTIFICATION_PASSWORD}/g" -e
+        "s/\$${KAFKA_USER_PASSWORD}/task14-kafka-user/g" -e "s/\$${KAFKA_VIDEO_TRANSCODER_PASSWORD}/task14-kafka-video-transcoder/g"
+        -e "s/\$${KAFKA_VIDEO_MODERATOR_PASSWORD}/task14-kafka-video-moderator/g" /etc/kafka/kafka_server_jaas.conf.template
+        > /etc/kafka/kafka_server_jaas.conf && exec /etc/confluent/docker/run
+    environment:
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+      KAFKA_ADMIN_PASSWORD: task14-kafka-admin
+      KAFKA_ADVERTISED_LISTENERS: SASL_PLAINTEXT://kafka:9092,SASL_PLAINTEXT_HOST://localhost:29092
+      KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: "true"
+      KAFKA_AUTHORIZER_CLASS_NAME: org.apache.kafka.metadata.authorizer.StandardAuthorizer
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_FINANCE_PASSWORD: task14-kafka-finance
+      KAFKA_INTER_BROKER_LISTENER_NAME: SASL_PLAINTEXT
+      KAFKA_INVENTORY_PASSWORD: task14-kafka-inventory
+      KAFKA_INVOICE_PASSWORD: task14-kafka-invoice
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: SASL_PLAINTEXT:SASL_PLAINTEXT,SASL_PLAINTEXT_HOST:SASL_PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_LISTENERS: SASL_PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,SASL_PLAINTEXT_HOST://0.0.0.0:29092
+      KAFKA_MESSAGING_PASSWORD: task14-kafka-messaging
+      KAFKA_NODE_ID: "1"
+      KAFKA_NOTIFICATION_PASSWORD: task14-kafka-notification
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_OPTS: -Djava.security.auth.login.config=/etc/kafka/kafka_server_jaas.conf
+      KAFKA_ORDER_PASSWORD: task14-kafka-order
+      KAFKA_PAYMENT_PASSWORD: task14-kafka-payment
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_PRODUCT_PASSWORD: task14-kafka-product
+      KAFKA_RECOMMENDATIONS_PASSWORD: task14-kafka-recommendations
+      KAFKA_SASL_ENABLED_MECHANISMS: PLAIN
+      KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: PLAIN
+      KAFKA_SEARCH_PASSWORD: task14-kafka-search
+      KAFKA_SHIPPING_PASSWORD: task14-kafka-shipping
+      KAFKA_SSL_CLIENT_AUTH: none
+      KAFKA_SUPER_USERS: User:admin;User:ANONYMOUS
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_USER_PASSWORD: task14-kafka-user
+      KAFKA_VIDEO_MODERATOR_PASSWORD: task14-kafka-video-moderator
+      KAFKA_VIDEO_TRANSCODER_PASSWORD: task14-kafka-video-transcoder
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - bash -c '</dev/tcp/localhost/9092' 2>/dev/null && echo OK
+      timeout: 10s
+      interval: 15s
+      retries: 10
+      start_period: 30s
+    image: confluentinc/cp-kafka:8.2.0
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 9092
+        published: "9092"
+        protocol: tcp
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 29092
+        published: "29092"
+        protocol: tcp
+    volumes:
+      - type: volume
+        source: kafka-data
+        target: /var/lib/kafka/data
+        volume: {}
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\kafka\kafka_server_jaas.conf.template
+        target: /etc/kafka/kafka_server_jaas.conf.template
+        read_only: true
+        bind: {}
+  keycloak:
+    command:
+      - start-dev
+      - --import-realm
+    container_name: vnshop-keycloak
+    depends_on:
+      postgres-keycloak:
+        condition: service_healthy
+        required: true
+    deploy:
+      resources:
+        limits:
+          memory: "805306368"
+    environment:
+      FACEBOOK_OAUTH_CLIENT_ID: ""
+      FACEBOOK_OAUTH_CLIENT_SECRET: ""
+      FACEBOOK_OAUTH_ENABLED: "false"
+      GOOGLE_OAUTH_CLIENT_ID: ""
+      GOOGLE_OAUTH_CLIENT_SECRET: ""
+      GOOGLE_OAUTH_ENABLED: "false"
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_DB: postgres
+      KC_DB_PASSWORD: task14-postgres
+      KC_DB_SCHEMA: keycloak
+      KC_DB_URL: jdbc:postgresql://postgres-keycloak:5432/vnshop_keycloak
+      KC_DB_USERNAME: vnshop
+      KC_HEALTH_ENABLED: "true"
+      KC_HOSTNAME: http://localhost:8080
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "false"
+      KC_HOSTNAME_STRICT: "false"
+      KEYCLOAK_ADMIN_API_CLIENT_SECRET: vnshop-admin-api-secret-dev
+      KEYCLOAK_GATEWAY_CLIENT_SECRET: vnshop-gateway-secret-dev
+    expose:
+      - "8080"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'exec 3<>/dev/tcp/127.0.0.1/9000; printf ''GET /health/ready HTTP/1.1\r\nHost:
+          localhost\r\nConnection: close\r\n\r\n'' >&3; head -1 <&3 | grep -q ''200'''
+      timeout: 5s
+      interval: 15s
+      retries: 20
+      start_period: 1m0s
+    image: quay.io/keycloak/keycloak:26.6
+    networks:
+      default: null
+    volumes:
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\keycloak\vnshop-realm.json
+        target: /opt/keycloak/data/import/vnshop-realm.json
+        read_only: true
+        bind: {}
+  loki:
+    command:
+      - -config.file=/etc/loki/local-config.yaml
+    container_name: vnshop-loki
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - -qO-
+        - http://localhost:3100/ready
+      timeout: 5s
+      interval: 15s
+      retries: 10
+    image: grafana/loki:3.1.0
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 3100
+        published: "3100"
+        protocol: tcp
+    volumes:
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\loki\loki-config.yml
+        target: /etc/loki/local-config.yaml
+        read_only: true
+        bind: {}
+      - type: volume
+        source: loki-data
+        target: /loki
+        volume: {}
+  messaging-service:
+    build:
+      context: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\services\messaging-service
+      dockerfile: Dockerfile
+    container_name: vnshop-messaging-service
+    depends_on:
+      kafka:
+        condition: service_healthy
+        required: true
+      postgres-legacy:
+        condition: service_healthy
+        required: true
+    environment:
+      DATABASE_URL: postgresql://vnshop:task14-postgres@postgres-legacy:5432/vnshop?currentSchema=messaging_svc
+      DB_DATABASE: vnshop
+      DB_HOST: postgres-legacy
+      DB_PASSWORD: task14-postgres
+      DB_PORT: "5432"
+      DB_USERNAME: vnshop
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_LOCAL_MODE: plaintext
+      KAFKA_SASL_PASSWORD: kafka-messaging
+      KAFKA_SASL_USERNAME: svc-messaging
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
+      OPENAPI_ENABLED: "true"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://jaeger:4318/v1/traces
+      OTEL_TRACES_SAMPLER: parentbased_traceidratio
+      OTEL_TRACES_SAMPLER_ARG: "1.0"
+      PORT: "8095"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fs http://localhost:8095/health || curl -fs http://localhost:8095
+          || exit 1
+      timeout: 10s
+      interval: 30s
+      retries: 5
+      start_period: 1m0s
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 8095
+        published: "8095"
+        protocol: tcp
+  minio:
+    command:
+      - server
+      - /data
+      - --console-address
+      - :9001
+    container_name: vnshop-minio
+    environment:
+      MINIO_API_CORS_ALLOW_ORIGIN: http://localhost:3000,http://localhost:5173
+      MINIO_ROOT_PASSWORD: task14-minio
+      MINIO_ROOT_USER: task14-minio-user
+    healthcheck:
+      test:
+        - CMD
+        - mc
+        - ready
+        - local
+      timeout: 5s
+      interval: 15s
+      retries: 10
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 9000
+        published: "9000"
+        protocol: tcp
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 9001
+        published: "9001"
+        protocol: tcp
+    volumes:
+      - type: volume
+        source: minio-data
+        target: /data
+        volume: {}
+  minio-bootstrap:
+    container_name: vnshop-minio-bootstrap
+    depends_on:
+      minio:
+        condition: service_healthy
+        required: true
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        mc alias set local http://minio:9000 task14-minio-user task14-minio &&
+        mc mb --ignore-existing local/vnshop-products local/vnshop-reviews local/vnshop-invoices local/vnshop-avatars &&
+        mc mb --ignore-existing local/vnshop-video-uploads-tmp local/vnshop-videos-staging local/vnshop-videos &&
+        printf '%s' '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetObject"],"Resource":["arn:aws:s3:::vnshop-products/*"]}]}' > /tmp/vnshop-products-public.json &&
+        mc anonymous set-json /tmp/vnshop-products-public.json local/vnshop-products &&
+        printf '%s' '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetObject"],"Resource":["arn:aws:s3:::vnshop-reviews/*"]}]}' > /tmp/vnshop-reviews-public.json &&
+        mc anonymous set-json /tmp/vnshop-reviews-public.json local/vnshop-reviews &&
+        printf '%s' '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetObject"],"Resource":["arn:aws:s3:::vnshop-avatars/*"]}]}' > /tmp/vnshop-avatars-public.json &&
+        mc anonymous set-json /tmp/vnshop-avatars-public.json local/vnshop-avatars &&
+        printf '%s' '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetObject"],"Resource":["arn:aws:s3:::vnshop-videos/*"]}]}' > /tmp/vnshop-videos-public.json &&
+        mc anonymous set-json /tmp/vnshop-videos-public.json local/vnshop-videos &&
+        # Auto-expire raw uploads after 24 h
+        mc ilm rule add --expire-days 1 local/vnshop-video-uploads-tmp &&
+        echo "minio buckets ready"
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
+    networks:
+      default: null
+  mongo:
+    container_name: vnshop-mongo
+    environment:
+      MONGO_INITDB_DATABASE: notification_db
+      MONGO_INITDB_ROOT_PASSWORD: task14-mongo
+      MONGO_INITDB_ROOT_USERNAME: vnshop
+    healthcheck:
+      test:
+        - CMD
+        - mongosh
+        - --eval
+        - db.adminCommand('ping')
+      timeout: 5s
+      interval: 10s
+      retries: 5
+    image: mongo:7.0
+    networks:
+      default: null
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: mongo-data
+        target: /data/db
+        volume: {}
+  monitoring-service-v2:
+    build:
+      context: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\services\monitoring-service-v2
+      dockerfile: Dockerfile
+    container_name: vnshop-monitoring
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+        required: true
+    environment:
+      CORS_ORIGINS: http://localhost:3000,http://localhost:5173
+      DISCOVERY_MODE: static
+      GATEWAY_ACTUATOR_URL: http://api-gateway:8080/actuator/gateway/routes
+      GATEWAY_URL: http://api-gateway:8080
+      KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/vnshop
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
+      OPENAPI_DOCUMENT_VERSION: 1.0.0
+      OPENAPI_ENABLED: "true"
+      OPENAPI_FETCH_TIMEOUT_MS: "3000"
+      OPENAPI_GATEWAY_SERVER_URL: http://localhost:8080
+      OPENAPI_REFRESH_INTERVAL_MS: "300000"
+      PORT: "8096"
+      TIMESCALE_DB: monitoring
+      TIMESCALE_HOST: timescaledb
+      TIMESCALE_PASSWORD: monitoring
+      TIMESCALE_PORT: "5432"
+      TIMESCALE_USER: monitoring
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - nc -z localhost 8096 || exit 1
+      timeout: 10s
+      interval: 30s
+      retries: 3
+    networks:
+      default: null
+  notification-service:
+    build:
+      context: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\services\notification-service
+      dockerfile: Dockerfile
+    container_name: vnshop-notification-service
+    depends_on:
+      kafka:
+        condition: service_healthy
+        required: true
+      mongo:
+        condition: service_healthy
+        required: true
+      redis:
+        condition: service_healthy
+        required: true
+    deploy:
+      resources:
+        limits:
+          memory: "268435456"
+    environment:
+      AWS_ACCESS_KEY_ID: ""
+      AWS_REGION: ap-southeast-1
+      AWS_SECRET_ACCESS_KEY: ""
+      EMAIL_ENABLED: "false"
+      EMAIL_FROM_ADDRESS: noreply@vnshop.vn
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_LOCAL_MODE: plaintext
+      KAFKA_SASL_PASSWORD: task14-kafka-notification
+      KAFKA_SASL_USERNAME: svc-notification
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
+      MONGO_URI: mongodb://vnshop:task14-mongo@mongo:27017/notification_db?authSource=admin
+      ONESIGNAL_APP_ID: ""
+      ONESIGNAL_REST_API_KEY: ""
+      OPENAPI_ENABLED: "true"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://jaeger:4318/v1/traces
+      OTEL_TRACES_SAMPLER: parentbased_traceidratio
+      OTEL_TRACES_SAMPLER_ARG: "1.0"
+      PORT: "8087"
+      REDIS_URL: redis://:task14-redis@redis:6379
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fs http://localhost:8087/health || curl -fs http://localhost:8087
+          || exit 1
+      timeout: 10s
+      interval: 30s
+      retries: 5
+      start_period: 1m0s
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 8087
+        published: "8087"
+        protocol: tcp
+  order-service:
+    build:
+      context: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\services\order-service
+      dockerfile: Dockerfile
+    container_name: vnshop-order-service
+    depends_on:
+      configuration-service:
+        condition: service_healthy
+        required: true
+      kafka:
+        condition: service_healthy
+        required: true
+      postgres-order:
+        condition: service_healthy
+        required: true
+      redis:
+        condition: service_healthy
+        required: true
+    deploy:
+      resources:
+        limits:
+          memory: "805306368"
+    environment:
+      ADMIN_CURSOR_SECRET: task14-admin-cursor
+      CONFIG_SERVICE_INTERNAL_TOKEN: task14-config
+      GRPC_CLIENT_INVENTORY_HOST: inventory-service
+      GRPC_CLIENT_INVENTORY_PORT: "9093"
+      GRPC_CLIENT_INVENTORY_SERVICE_TOKEN: task14-inventory-token
+      GRPC_CLIENT_PAYMENT_HOST: payment-service
+      GRPC_CLIENT_PAYMENT_PORT: "9094"
+      GRPC_CLIENT_PAYMENT_SERVICE_TOKEN: task14-payment-token
+      GRPC_CLIENT_SHIPPING_HOST: shipping-service
+      GRPC_CLIENT_SHIPPING_PORT: "9095"
+      GRPC_CLIENT_SHIPPING_SERVICE_TOKEN: task14-shipping-token
+      GRPC_CLIENT_TLS_CA_CERT: /etc/grpc/tls/ca.crt
+      GRPC_CLIENT_TLS_CLIENT_CERT: /etc/grpc/tls/order-client.crt
+      GRPC_CLIENT_TLS_CLIENT_KEY: /etc/grpc/tls/order-client.key
+      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_SASL_PASSWORD: kafka-order
+      KAFKA_SASL_USERNAME: svc-order
+      KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      KAFKA_SSL_TRUSTSTORE_PASSWORD: task14-truststore
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
+      OTEL_TRACES_SAMPLER: parentbased_traceidratio
+      OTEL_TRACES_SAMPLER_ARG: "1.0"
+      REDIS_HOST: redis
+      REDIS_PASSWORD: task14-redis
+      SERVER_PORT: "8091"
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PASSWORD: task14-redis
+      SPRING_DATA_REDIS_PORT: "6379"
+      SPRING_DATASOURCE_PASSWORD: task14-postgres
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-order:5432/vnshop_order?currentSchema=order_svc
+      SPRING_DATASOURCE_USERNAME: vnshop
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SWAGGER_ENABLED: "true"
+      VNSHOP_INVOICE_STORAGE_ACCESS_KEY: vnshop
+      VNSHOP_INVOICE_STORAGE_BUCKET: vnshop-invoices
+      VNSHOP_INVOICE_STORAGE_ENABLED: "true"
+      VNSHOP_INVOICE_STORAGE_ENDPOINT: http://minio:9000
+      VNSHOP_INVOICE_STORAGE_PATH_STYLE_ACCESS: "true"
+      VNSHOP_INVOICE_STORAGE_PROFILE: MINIO
+      VNSHOP_INVOICE_STORAGE_REGION: auto
+      VNSHOP_INVOICE_STORAGE_SECRET_KEY: task14-invoice
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fs http://localhost:8091/actuator/health || exit 1
+      timeout: 10s
+      interval: 30s
+      retries: 5
+      start_period: 1m0s
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 5005
+        published: "5005"
+        protocol: tcp
+    volumes:
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\kafka\certs\kafka.truststore.jks
+        target: /etc/kafka/secrets/kafka.truststore.jks
+        read_only: true
+        bind: {}
+  payment-service:
+    build:
+      context: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\services\payment-service
+      dockerfile: Dockerfile
+    container_name: vnshop-payment-service
+    depends_on:
+      configuration-service:
+        condition: service_healthy
+        required: true
+      kafka:
+        condition: service_healthy
+        required: true
+      postgres-payment:
+        condition: service_healthy
+        required: true
+      redis:
+        condition: service_healthy
+        required: true
+    deploy:
+      resources:
+        limits:
+          memory: "805306368"
+    environment:
+      COD_ENABLED: "true"
+      CONFIG_SERVICE_INTERNAL_TOKEN: task14-config
+      FX_FALLBACK_RATE: "25500"
+      GRPC_SERVER_AUTH_TOKEN: task14-payment-token
+      GRPC_SERVER_TLS_CERT_CHAIN: /etc/grpc/tls/payment-server.crt
+      GRPC_SERVER_TLS_CLIENT_CA: /etc/grpc/tls/ca.crt
+      GRPC_SERVER_TLS_PRIVATE_KEY: /etc/grpc/tls/payment-server.key
+      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5006
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_SASL_PASSWORD: kafka-payment
+      KAFKA_SASL_USERNAME: svc-payment
+      KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      KAFKA_SSL_TRUSTSTORE_PASSWORD: task14-truststore
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
+      MOMO_ACCESS_KEY: ""
+      MOMO_ENABLED: "false"
+      MOMO_IPN_URL: ""
+      MOMO_PARTNER_CODE: ""
+      MOMO_REDIRECT_URL: ""
+      MOMO_SECRET_KEY: ""
+      OTEL_TRACES_SAMPLER: parentbased_traceidratio
+      OTEL_TRACES_SAMPLER_ARG: "1.0"
+      PAYPAL_CLIENT_ID: ""
+      PAYPAL_CLIENT_SECRET: ""
+      PAYPAL_ENABLED: "false"
+      PAYPAL_MODE: sandbox
+      PAYPAL_WEBHOOK_ID: ""
+      REDIS_HOST: redis
+      SEPAY_ACCOUNT_ID: ""
+      SEPAY_API_KEY: ""
+      SEPAY_ENABLED: "false"
+      SERVER_PORT: "8092"
+      SPRING_DATASOURCE_PASSWORD: task14-postgres
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-payment:5432/vnshop_payment?currentSchema=payment_svc
+      SPRING_DATASOURCE_USERNAME: vnshop
+      STRIPE_ENABLED: "false"
+      STRIPE_PUBLISHABLE_KEY: ""
+      STRIPE_SECRET_KEY: ""
+      STRIPE_WEBHOOK_SECRET: ""
+      SWAGGER_ENABLED: "true"
+      VIETQR_ACCOUNT_NAME: ""
+      VIETQR_ACCOUNT_NO: ""
+      VIETQR_BANK_BIN: "970436"
+      VIETQR_ENABLED: "false"
+      VNPAY_ENABLED: "false"
+      VNPAY_HASH_SECRET: ""
+      VNPAY_IPN_URL: ""
+      VNPAY_RETURN_URL: ""
+      VNPAY_TMN_CODE: ""
+      VNSHOP_FRONTEND_URL: http://localhost:3000
+      VNSHOP_PUBLIC_API_URL: ""
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fs http://localhost:8092/actuator/health || exit 1
+      timeout: 10s
+      interval: 30s
+      retries: 5
+      start_period: 1m0s
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 5006
+        published: "5006"
+        protocol: tcp
+    volumes:
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\grpc\tls
+        target: /etc/grpc/tls
+        read_only: true
+        bind: {}
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\kafka\certs\kafka.truststore.jks
+        target: /etc/kafka/secrets/kafka.truststore.jks
+        read_only: true
+        bind: {}
+  postgres-cart:
+    container_name: vnshop-postgres-cart
+    deploy:
+      resources:
+        limits:
+          memory: "536870912"
+    environment:
+      POSTGRES_DB: vnshop_cart
+      POSTGRES_PASSWORD: task14-postgres
+      POSTGRES_USER: vnshop
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U vnshop -d vnshop_cart
+      timeout: 5s
+      interval: 10s
+      retries: 5
+    image: postgres:17.9
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 5432
+        published: "5442"
+        protocol: tcp
+    volumes:
+      - type: volume
+        source: postgres-cart-data
+        target: /var/lib/postgresql/data
+        volume: {}
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\postgres\init
+        target: /docker-entrypoint-initdb.d
+        read_only: true
+        bind: {}
+  postgres-inventory:
+    container_name: vnshop-postgres-inventory
+    deploy:
+      resources:
+        limits:
+          memory: "536870912"
+    environment:
+      POSTGRES_DB: vnshop_inventory
+      POSTGRES_PASSWORD: task14-postgres
+      POSTGRES_USER: vnshop
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U vnshop -d vnshop_inventory
+      timeout: 5s
+      interval: 10s
+      retries: 5
+    image: postgres:17.9
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 5432
+        published: "5437"
+        protocol: tcp
+    volumes:
+      - type: volume
+        source: postgres-inventory-data
+        target: /var/lib/postgresql/data
+        volume: {}
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\postgres\init
+        target: /docker-entrypoint-initdb.d
+        read_only: true
+        bind: {}
+  postgres-invoice:
+    container_name: vnshop-postgres-invoice
+    deploy:
+      resources:
+        limits:
+          memory: "536870912"
+    environment:
+      POSTGRES_DB: vnshop_invoice
+      POSTGRES_PASSWORD: task14-postgres
+      POSTGRES_USER: vnshop
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U vnshop -d vnshop_invoice
+      timeout: 5s
+      interval: 10s
+      retries: 5
+    image: postgres:17.9
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 5432
+        published: "5441"
+        protocol: tcp
+    volumes:
+      - type: volume
+        source: postgres-invoice-data
+        target: /var/lib/postgresql/data
+        volume: {}
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\postgres\init
+        target: /docker-entrypoint-initdb.d
+        read_only: true
+        bind: {}
+  postgres-keycloak:
+    container_name: vnshop-postgres-keycloak
+    deploy:
+      resources:
+        limits:
+          memory: "536870912"
+    environment:
+      POSTGRES_DB: vnshop_keycloak
+      POSTGRES_PASSWORD: task14-postgres
+      POSTGRES_USER: vnshop
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U vnshop -d vnshop_keycloak
+      timeout: 5s
+      interval: 10s
+      retries: 5
+    image: postgres:17.9
+    networks:
+      default: null
+    volumes:
+      - type: volume
+        source: postgres-keycloak-data
+        target: /var/lib/postgresql/data
+        volume: {}
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\postgres\init
+        target: /docker-entrypoint-initdb.d
+        read_only: true
+        bind: {}
+  postgres-legacy:
+    container_name: vnshop-postgres-legacy
+    deploy:
+      resources:
+        limits:
+          memory: "536870912"
+    environment:
+      POSTGRES_DB: vnshop
+      POSTGRES_PASSWORD: task14-postgres
+      POSTGRES_USER: vnshop
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U vnshop -d vnshop
+      timeout: 5s
+      interval: 10s
+      retries: 5
+    image: postgres:17.9
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 5432
+        published: "5432"
+        protocol: tcp
+    volumes:
+      - type: volume
+        source: postgres-legacy-data
+        target: /var/lib/postgresql/data
+        volume: {}
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\postgres\init
+        target: /docker-entrypoint-initdb.d
+        read_only: true
+        bind: {}
+  postgres-order:
+    container_name: vnshop-postgres-order
+    deploy:
+      resources:
+        limits:
+          memory: "536870912"
+    environment:
+      POSTGRES_DB: vnshop_order
+      POSTGRES_PASSWORD: task14-postgres
+      POSTGRES_USER: vnshop
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U vnshop -d vnshop_order
+      timeout: 5s
+      interval: 10s
+      retries: 5
+    image: postgres:17.9
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 5432
+        published: "5435"
+        protocol: tcp
+    volumes:
+      - type: volume
+        source: postgres-order-data
+        target: /var/lib/postgresql/data
+        volume: {}
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\postgres\init
+        target: /docker-entrypoint-initdb.d
+        read_only: true
+        bind: {}
+  postgres-payment:
+    container_name: vnshop-postgres-payment
+    deploy:
+      resources:
+        limits:
+          memory: "536870912"
+    environment:
+      POSTGRES_DB: vnshop_payment
+      POSTGRES_PASSWORD: task14-postgres
+      POSTGRES_USER: vnshop
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U vnshop -d vnshop_payment
+      timeout: 5s
+      interval: 10s
+      retries: 5
+    image: postgres:17.9
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 5432
+        published: "5436"
+        protocol: tcp
+    volumes:
+      - type: volume
+        source: postgres-payment-data
+        target: /var/lib/postgresql/data
+        volume: {}
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\postgres\init
+        target: /docker-entrypoint-initdb.d
+        read_only: true
+        bind: {}
+  postgres-product:
+    container_name: vnshop-postgres-product
+    deploy:
+      resources:
+        limits:
+          memory: "536870912"
+    environment:
+      POSTGRES_DB: vnshop_product
+      POSTGRES_PASSWORD: task14-postgres
+      POSTGRES_USER: vnshop
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U vnshop -d vnshop_product
+      timeout: 5s
+      interval: 10s
+      retries: 5
+    image: postgres:17.9
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 5432
+        published: "5434"
+        protocol: tcp
+    volumes:
+      - type: volume
+        source: postgres-product-data
+        target: /var/lib/postgresql/data
+        volume: {}
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\postgres\init
+        target: /docker-entrypoint-initdb.d
+        read_only: true
+        bind: {}
+  postgres-search:
+    container_name: vnshop-postgres-search
+    deploy:
+      resources:
+        limits:
+          memory: "536870912"
+    environment:
+      POSTGRES_DB: vnshop_search
+      POSTGRES_PASSWORD: task14-postgres
+      POSTGRES_USER: vnshop
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U vnshop -d vnshop_search
+      timeout: 5s
+      interval: 10s
+      retries: 5
+    image: postgres:17.9
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 5432
+        published: "5438"
+        protocol: tcp
+    volumes:
+      - type: volume
+        source: postgres-search-data
+        target: /var/lib/postgresql/data
+        volume: {}
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\postgres\init
+        target: /docker-entrypoint-initdb.d
+        read_only: true
+        bind: {}
+  postgres-shipping:
+    container_name: vnshop-postgres-shipping
+    deploy:
+      resources:
+        limits:
+          memory: "536870912"
+    environment:
+      POSTGRES_DB: vnshop_shipping
+      POSTGRES_PASSWORD: task14-postgres
+      POSTGRES_USER: vnshop
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U vnshop -d vnshop_shipping
+      timeout: 5s
+      interval: 10s
+      retries: 5
+    image: postgres:17.9
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 5432
+        published: "5439"
+        protocol: tcp
+    volumes:
+      - type: volume
+        source: postgres-shipping-data
+        target: /var/lib/postgresql/data
+        volume: {}
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\postgres\init
+        target: /docker-entrypoint-initdb.d
+        read_only: true
+        bind: {}
+  postgres-unleash:
+    container_name: vnshop-postgres-unleash
+    environment:
+      POSTGRES_DB: unleash
+      POSTGRES_PASSWORD: unleash123
+      POSTGRES_USER: unleash
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U unleash
+      timeout: 3s
+      interval: 5s
+      retries: 10
+    image: postgres:16-alpine
+    networks:
+      default: null
+    volumes:
+      - type: volume
+        source: unleash-db-data
+        target: /var/lib/postgresql/data
+        volume: {}
+  postgres-user:
+    container_name: vnshop-postgres-user
+    deploy:
+      resources:
+        limits:
+          memory: "536870912"
+    environment:
+      POSTGRES_DB: vnshop_user
+      POSTGRES_PASSWORD: task14-postgres
+      POSTGRES_USER: vnshop
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U vnshop -d vnshop_user
+      timeout: 5s
+      interval: 10s
+      retries: 5
+    image: postgres:17.9
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 5432
+        published: "5433"
+        protocol: tcp
+    volumes:
+      - type: volume
+        source: postgres-user-data
+        target: /var/lib/postgresql/data
+        volume: {}
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\postgres\init
+        target: /docker-entrypoint-initdb.d
+        read_only: true
+        bind: {}
+  product-service:
+    build:
+      context: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\services\product-service
+      dockerfile: Dockerfile
+    container_name: vnshop-product-service
+    depends_on:
+      configuration-service:
+        condition: service_healthy
+        required: true
+      kafka:
+        condition: service_healthy
+        required: true
+      postgres-product:
+        condition: service_healthy
+        required: true
+      redis:
+        condition: service_healthy
+        required: true
+    deploy:
+      resources:
+        limits:
+          memory: "805306368"
+    environment:
+      GRPC_SERVER_AUTH_TOKEN: task14-inventory-token
+      GRPC_SERVER_TLS_CERT_CHAIN: /etc/grpc/tls/inventory-server.crt
+      GRPC_SERVER_TLS_CLIENT_CA: /etc/grpc/tls/ca.crt
+      GRPC_SERVER_TLS_PRIVATE_KEY: /etc/grpc/tls/inventory-server.key
+      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5007
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_SASL_PASSWORD: task14-kafka-product
+      KAFKA_SASL_USERNAME: svc-product
+      KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      KAFKA_SSL_TRUSTSTORE_PASSWORD: task14-truststore
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
+      OTEL_TRACES_SAMPLER: parentbased_traceidratio
+      OTEL_TRACES_SAMPLER_ARG: "1.0"
+      REDIS_HOST: redis
+      S3_BUCKET_PUBLIC: vnshop-videos
+      S3_BUCKET_VIDEO_INPUT: vnshop-video-uploads-tmp
+      S3_BUCKET_VIDEO_STAGING: vnshop-videos-staging
+      SERVER_PORT: "8082"
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PASSWORD: task14-redis
+      SPRING_DATA_REDIS_PORT: "6379"
+      SPRING_DATASOURCE_PASSWORD: task14-postgres
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-product:5432/vnshop_product?currentSchema=product_svc
+      SPRING_DATASOURCE_USERNAME: vnshop
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SWAGGER_ENABLED: "true"
+      VIDEO_UPLOAD_LOCAL_STAGING_DIR: /tmp/video-uploads
+      VNSHOP_OBJECT_STORAGE_ACCESS_KEY: vnshop
+      VNSHOP_OBJECT_STORAGE_BUCKET: vnshop-products
+      VNSHOP_OBJECT_STORAGE_ENABLED: "true"
+      VNSHOP_OBJECT_STORAGE_ENDPOINT: http://minio:9000
+      VNSHOP_OBJECT_STORAGE_PATH_STYLE_ACCESS: "true"
+      VNSHOP_OBJECT_STORAGE_PROFILE: MINIO
+      VNSHOP_OBJECT_STORAGE_PUBLIC_ENDPOINT: http://localhost:8080
+      VNSHOP_OBJECT_STORAGE_REGION: auto
+      VNSHOP_OBJECT_STORAGE_REVIEW_BUCKET: vnshop-reviews
+      VNSHOP_OBJECT_STORAGE_SECRET_KEY: task14-object
+      VNSHOP_PRODUCT_CURSOR_SECRET: task14-product-cursor
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fs http://localhost:8082/actuator/health || exit 1
+      timeout: 10s
+      interval: 30s
+      retries: 5
+      start_period: 1m0s
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 5007
+        published: "5007"
+        protocol: tcp
+    tmpfs:
+      - /tmp/video-uploads:size=6G,uid=1000,gid=1000,mode=700,noexec
+    volumes:
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\grpc\tls
+        target: /etc/grpc/tls
+        read_only: true
+        bind: {}
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\kafka\certs\kafka.truststore.jks
+        target: /etc/kafka/secrets/kafka.truststore.jks
+        read_only: true
+        bind: {}
+  prometheus:
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --web.enable-lifecycle
+    container_name: vnshop-prometheus
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - -qO-
+        - http://localhost:9090/-/healthy
+      timeout: 5s
+      interval: 15s
+      retries: 10
+    image: prom/prometheus:v2.53.0
+    networks:
+      default: null
+    volumes:
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\prometheus\prometheus.yml
+        target: /etc/prometheus/prometheus.yml
+        read_only: true
+        bind: {}
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\prometheus\rules.yml
+        target: /etc/prometheus/rules.yml
+        read_only: true
+        bind: {}
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\prometheus\slo-rules.yml
+        target: /etc/prometheus/slo-rules.yml
+        read_only: true
+        bind: {}
+      - type: volume
+        source: prometheus-data
+        target: /prometheus
+        volume: {}
+  promtail:
+    command:
+      - -config.file=/etc/promtail/config.yml
+    container_name: vnshop-promtail
+    depends_on:
+      loki:
+        condition: service_healthy
+        required: true
+    image: grafana/promtail:3.1.0
+    networks:
+      default: null
+    volumes:
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\promtail\promtail-config.yml
+        target: /etc/promtail/config.yml
+        read_only: true
+        bind: {}
+      - type: bind
+        source: /var/lib/docker/containers
+        target: /var/lib/docker/containers
+        read_only: true
+        bind: {}
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+        read_only: true
+        bind: {}
+  recommendations-service:
+    build:
+      context: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\services\recommendations-service
+      dockerfile: Dockerfile
+    container_name: vnshop-recommendations-service
+    depends_on:
+      configuration-service:
+        condition: service_healthy
+        required: true
+      kafka:
+        condition: service_healthy
+        required: true
+      postgres-legacy:
+        condition: service_healthy
+        required: true
+    deploy:
+      resources:
+        limits:
+          memory: "805306368"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_SASL_PASSWORD: kafka-recommendations
+      KAFKA_SASL_USERNAME: svc-recommendations
+      KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      PRODUCT_SERVICE_URL: http://product-service:8082
+      SERVER_PORT: "8094"
+      SPRING_DATASOURCE_PASSWORD: task14-postgres
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-legacy:5432/vnshop?currentSchema=recommendations_svc
+      SPRING_DATASOURCE_USERNAME: vnshop
+      SWAGGER_ENABLED: "true"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fs http://localhost:8094/actuator/health || exit 1
+      timeout: 10s
+      interval: 30s
+      retries: 5
+      start_period: 1m0s
+    networks:
+      default: null
+    volumes:
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\kafka\certs\kafka.truststore.jks
+        target: /etc/kafka/secrets/kafka.truststore.jks
+        read_only: true
+        bind: {}
+  redis:
+    command:
+      - redis-server
+      - --appendonly
+      - 'yes'
+      - --maxmemory
+      - 512mb
+      - --maxmemory-policy
+      - volatile-lru
+      - --requirepass
+      - task14-redis
+    container_name: vnshop-redis
+    deploy:
+      resources:
+        limits:
+          memory: "268435456"
+    healthcheck:
+      test:
+        - CMD
+        - redis-cli
+        - -a
+        - task14-redis
+        - ping
+      timeout: 5s
+      interval: 10s
+      retries: 5
+    image: redis:8.6-alpine
+    networks:
+      default: null
+    volumes:
+      - type: volume
+        source: redis-data
+        target: /data
+        volume: {}
+  search-service:
+    build:
+      context: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\services\search-service
+      dockerfile: Dockerfile
+    container_name: vnshop-search-service
+    depends_on:
+      configuration-service:
+        condition: service_healthy
+        required: true
+      elasticsearch:
+        condition: service_healthy
+        required: true
+      kafka:
+        condition: service_healthy
+        required: true
+      postgres-search:
+        condition: service_healthy
+        required: true
+      redis:
+        condition: service_healthy
+        required: true
+    deploy:
+      resources:
+        limits:
+          memory: "805306368"
+    environment:
+       ELASTICSEARCH_PASSWORD: $ELASTIC_PASSWORD
+      ELASTICSEARCH_SSL_BUNDLE: ""
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      ELASTICSEARCH_USERNAME: elastic
+      GEOIP_DATABASE_PATH: ""
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_SASL_PASSWORD: kafka-search
+      KAFKA_SASL_USERNAME: svc-search
+      KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
+      OTEL_TRACES_SAMPLER: parentbased_traceidratio
+      OTEL_TRACES_SAMPLER_ARG: "1.0"
+      REDIS_HOST: redis
+      REDIS_PASSWORD: task14-redis
+      SERVER_PORT: "8086"
+      SPRING_DATASOURCE_PASSWORD: task14-postgres
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-search:5432/vnshop_search?currentSchema=search_svc
+      SPRING_DATASOURCE_USERNAME: vnshop
+      SPRING_PROFILES_ACTIVE: local
+      SWAGGER_ENABLED: "true"
+      VNSHOP_SEARCH_CURSOR_SECRET: task14-search-cursor
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fs http://localhost:8086/actuator/health || exit 1
+      timeout: 10s
+      interval: 30s
+      retries: 5
+      start_period: 1m0s
+    networks:
+      default: null
+    volumes:
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\kafka\certs\kafka.truststore.jks
+        target: /etc/kafka/secrets/kafka.truststore.jks
+        read_only: true
+        bind: {}
+  seller-finance-service:
+    build:
+      context: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\services\seller-finance-service
+      dockerfile: Dockerfile
+    container_name: vnshop-seller-finance-service
+    depends_on:
+      configuration-service:
+        condition: service_healthy
+        required: true
+      kafka:
+        condition: service_healthy
+        required: true
+      postgres-legacy:
+        condition: service_healthy
+        required: true
+      redis:
+        condition: service_healthy
+        required: true
+    deploy:
+      resources:
+        limits:
+          memory: "805306368"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_SASL_PASSWORD: task14-kafka-finance
+      KAFKA_SASL_USERNAME: svc-finance
+      KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      KAFKA_SSL_TRUSTSTORE_PASSWORD: task14-truststore
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
+      OTEL_TRACES_SAMPLER: parentbased_traceidratio
+      OTEL_TRACES_SAMPLER_ARG: "1.0"
+      REDIS_HOST: redis
+      SERVER_PORT: "8090"
+      SPRING_DATASOURCE_PASSWORD: task14-postgres
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-legacy:5432/vnshop?currentSchema=seller_finance_svc
+      SPRING_DATASOURCE_USERNAME: vnshop
+      SWAGGER_ENABLED: "true"
+      USER_SERVICE_CONNECT_TIMEOUT_MS: "1000"
+      USER_SERVICE_INTERNAL_TOKEN: task14-user-token
+      USER_SERVICE_READ_TIMEOUT_MS: "2000"
+      USER_SERVICE_URL: http://user-service:8081
+      VNSHOP_PAYOUT_DESTINATION_KEY_V1: task14-payout-key
+      VNSHOP_SELLER_FINANCE_ADMIN_CURSOR_SECRET: task14-finance-cursor
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fs http://localhost:8090/actuator/health || exit 1
+      timeout: 10s
+      interval: 30s
+      retries: 5
+      start_period: 1m0s
+    networks:
+      default: null
+    volumes:
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\kafka\certs\kafka.truststore.jks
+        target: /etc/kafka/secrets/kafka.truststore.jks
+        read_only: true
+        bind: {}
+  shipping-service:
+    build:
+      context: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\services\shipping-service
+      dockerfile: Dockerfile
+    container_name: vnshop-shipping-service
+    depends_on:
+      configuration-service:
+        condition: service_healthy
+        required: true
+      kafka:
+        condition: service_healthy
+        required: true
+      postgres-shipping:
+        condition: service_healthy
+        required: true
+      redis:
+        condition: service_healthy
+        required: true
+    deploy:
+      resources:
+        limits:
+          memory: "805306368"
+    environment:
+      CARRIER_MODE: stub
+      CONFIG_SERVICE_INTERNAL_TOKEN: task14-config
+      GHN_BASE_URL: https://dev-online-gateway.ghn.vn
+      GHN_SERVICE_TYPE_ID: "2"
+      GHN_SHOP_ID: ""
+      GHN_TOKEN: ""
+      GHN_WEBHOOK_SECRET: ""
+      GHTK_BASE_URL: https://services.giaohangtietkiem.vn
+      GHTK_PARTNER_CODE: ""
+      GHTK_TOKEN: ""
+      GHTK_WEBHOOK_SECRET: ""
+      GRPC_SERVER_AUTH_TOKEN: task14-shipping-token
+      GRPC_SERVER_TLS_CERT_CHAIN: /etc/grpc/tls/shipping-server.crt
+      GRPC_SERVER_TLS_CLIENT_CA: /etc/grpc/tls/ca.crt
+      GRPC_SERVER_TLS_PRIVATE_KEY: /etc/grpc/tls/shipping-server.key
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_SASL_PASSWORD: kafka-shipping
+      KAFKA_SASL_USERNAME: svc-shipping
+      KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      KAFKA_SSL_TRUSTSTORE_PASSWORD: task14-truststore
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
+      OTEL_TRACES_SAMPLER: parentbased_traceidratio
+      OTEL_TRACES_SAMPLER_ARG: "1.0"
+      REDIS_HOST: redis
+      SERVER_PORT: "8093"
+      SPRING_DATASOURCE_PASSWORD: task14-postgres
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-shipping:5432/vnshop_shipping?currentSchema=shipping_svc
+      SPRING_DATASOURCE_USERNAME: vnshop
+      SWAGGER_ENABLED: "true"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fs http://localhost:8093/actuator/health || exit 1
+      timeout: 10s
+      interval: 30s
+      retries: 5
+      start_period: 1m0s
+    networks:
+      default: null
+    volumes:
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\grpc\tls
+        target: /etc/grpc/tls
+        read_only: true
+        bind: {}
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\kafka\certs\kafka.truststore.jks
+        target: /etc/kafka/secrets/kafka.truststore.jks
+        read_only: true
+        bind: {}
+  timescaledb:
+    container_name: vnshop-timescaledb
+    environment:
+      POSTGRES_DB: monitoring
+      POSTGRES_PASSWORD: monitoring
+      POSTGRES_USER: monitoring
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U monitoring -d monitoring
+      timeout: 5s
+      interval: 10s
+      retries: 5
+    image: timescale/timescaledb:latest-pg16
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 5432
+        published: "5440"
+        protocol: tcp
+    volumes:
+      - type: volume
+        source: timescaledb-data
+        target: /var/lib/postgresql/data
+        volume: {}
+      - type: bind
+        source: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\infra\timescaledb\init.sql
+        target: /docker-entrypoint-initdb.d/init.sql
+        read_only: true
+        bind: {}
+  unleash:
+    container_name: vnshop-unleash
+    depends_on:
+      postgres-unleash:
+        condition: service_healthy
+        required: true
+    environment:
+      DATABASE_SSL: "false"
+      DATABASE_URL: postgres://unleash:unleash123@postgres-unleash:5432/unleash
+      INIT_ADMIN_API_TOKENS: task14-admin-token
+      INIT_CLIENT_API_TOKENS: task14-client-token
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - -qO-
+        - http://localhost:4242/health
+      timeout: 5s
+      interval: 15s
+      retries: 10
+    image: unleashorg/unleash-server:6.1
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 4242
+        published: "4242"
+        protocol: tcp
+  user-service:
+    build:
+      context: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\services\user-service
+      dockerfile: Dockerfile
+    container_name: vnshop-user-service
+    depends_on:
+      kafka:
+        condition: service_healthy
+        required: true
+      postgres-user:
+        condition: service_healthy
+        required: true
+      redis:
+        condition: service_healthy
+        required: true
+    deploy:
+      resources:
+        limits:
+          memory: "805306368"
+    environment:
+      ADMIN_CURSOR_SECRET: task14-admin-cursor
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_SASL_PASSWORD: task14-kafka-user
+      KAFKA_SASL_USERNAME: svc-user
+      KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      KEYCLOAK_ADMIN_CLIENT_SECRET: vnshop-admin-api-secret-dev
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/vnshop
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs
+      KEYCLOAK_PUBLIC_BASE_URL: http://localhost:8080
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
+      OTEL_TRACES_SAMPLER: parentbased_traceidratio
+      OTEL_TRACES_SAMPLER_ARG: "1.0"
+      REDIS_HOST: redis
+      REDIS_PASSWORD: task14-redis
+      SERVER_PORT: "8081"
+      SPRING_DATASOURCE_PASSWORD: task14-postgres
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-user:5432/vnshop_user?currentSchema=user_svc
+      SPRING_DATASOURCE_USERNAME: vnshop
+      SWAGGER_ENABLED: "true"
+      UNLEASH_API_URL: http://unleash:4242/api
+      UNLEASH_APP_NAME: user-service
+      UNLEASH_CLIENT_API_TOKEN: task14-client-token
+      VNSHOP_AUTH_CALLBACK_BASE_URL: http://localhost:8080/auth/oauth/callback
+      VNSHOP_FRONTEND_URL: http://localhost:3000
+      VNSHOP_INTERNAL_ALLOWED_CLIENT_ID: task14-client
+      VNSHOP_PAYOUT_DESTINATION_DEFAULT_KEY_VERSION: "1"
+      VNSHOP_PAYOUT_DESTINATION_KEY_V1: task14-payout-key
+      VNSHOP_USER_STORAGE_ACCESS_KEY: task14-minio-user
+      VNSHOP_USER_STORAGE_BUCKET: vnshop-avatars
+      VNSHOP_USER_STORAGE_ENABLED: "true"
+      VNSHOP_USER_STORAGE_ENDPOINT: http://minio:9000
+      VNSHOP_USER_STORAGE_PATH_STYLE_ACCESS: "true"
+      VNSHOP_USER_STORAGE_PROFILE: MINIO
+      VNSHOP_USER_STORAGE_PUBLIC_ENDPOINT: http://localhost:8080
+      VNSHOP_USER_STORAGE_REGION: auto
+      VNSHOP_USER_STORAGE_SECRET_KEY: task14-minio
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fs http://localhost:8081/actuator/health || exit 1
+      timeout: 10s
+      interval: 30s
+      retries: 5
+      start_period: 1m0s
+    networks:
+      default: null
+  video-moderator:
+    build:
+      context: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\services\video-moderator
+      dockerfile: Dockerfile
+    cap_drop:
+      - ALL
+    depends_on:
+      kafka:
+        condition: service_healthy
+        required: true
+      minio:
+        condition: service_healthy
+        required: true
+      postgres-product:
+        condition: service_healthy
+        required: true
+    deploy:
+      resources:
+        limits:
+          cpus: 2
+          memory: "3221225472"
+        reservations:
+          memory: "2147483648"
+    environment:
+      MODERATOR_DATABASE_URL: postgresql://vnshop:task14-postgres@postgres-product:5432/vnshop_product
+      MODERATOR_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      MODERATOR_KAFKA_SASL_PASSWORD: task14-kafka-video-moderator
+      MODERATOR_KAFKA_SASL_USERNAME: svc-video-moderator
+      MODERATOR_KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      MODERATOR_STORAGE_ACCESS_KEY: task14-minio-user
+      MODERATOR_STORAGE_ENDPOINT: http://minio:9000
+      MODERATOR_STORAGE_SECRET_KEY: task14-minio
+    image: vnshop/video-moderator:latest
+    networks:
+      default: null
+    read_only: true
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp/video-moderator:size=2G,noexec,uid=65532,gid=65532,mode=1770
+  video-transcoder:
+    build:
+      context: C:\Users\dangq\AppData\Local\Temp\opencode\vnshop-deep-fix-pr\services\video-transcoder
+      dockerfile: Dockerfile
+    cap_drop:
+      - ALL
+    depends_on:
+      kafka:
+        condition: service_healthy
+        required: true
+      minio:
+        condition: service_healthy
+        required: true
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          cpus: 3
+          memory: "2147483648"
+        reservations:
+          cpus: 2
+          memory: "1073741824"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_SASL_PASSWORD: task14-kafka-video-transcoder
+      KAFKA_SASL_USERNAME: svc-video-transcoder
+      KAFKA_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      KAFKA_SSL_TRUSTSTORE_PASSWORD: task14-truststore
+      S3_ACCESS_KEY: task14-minio-user
+      S3_BUCKET_INPUT: vnshop-video-uploads-tmp
+      S3_BUCKET_STAGING: vnshop-videos-staging
+      S3_ENDPOINT: http://minio:9000
+      S3_SECRET_KEY: task14-minio
+      SPRING_PROFILES_ACTIVE: docker
+    image: vnshop/video-transcoder:latest
+    networks:
+      default: null
+    read_only: true
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=512M
+      - /tmp/transcode:size=4G,noexec
+networks:
+  default:
+    name: vnshop_default
+volumes:
+  elasticsearch-data:
+    name: vnshop_elasticsearch-data
+  grafana-data:
+    name: vnshop_grafana-data
+  kafka-data:
+    name: vnshop_kafka-data
+  loki-data:
+    name: vnshop_loki-data
+  minio-data:
+    name: vnshop_minio-data
+  mongo-data:
+    name: vnshop_mongo-data
+  postgres-cart-data:
+    name: vnshop_postgres-cart-data
+  postgres-inventory-data:
+    name: vnshop_postgres-inventory-data
+  postgres-invoice-data:
+    name: vnshop_postgres-invoice-data
+  postgres-keycloak-data:
+    name: vnshop_postgres-keycloak-data
+  postgres-legacy-data:
+    name: vnshop_postgres-legacy-data
+  postgres-order-data:
+    name: vnshop_postgres-order-data
+  postgres-payment-data:
+    name: vnshop_postgres-payment-data
+  postgres-product-data:
+    name: vnshop_postgres-product-data
+  postgres-search-data:
+    name: vnshop_postgres-search-data
+  postgres-shipping-data:
+    name: vnshop_postgres-shipping-data
+  postgres-user-data:
+    name: vnshop_postgres-user-data
+  prometheus-data:
+    name: vnshop_prometheus-data
+  redis-data:
+    name: vnshop_redis-data
+  timescaledb-data:
+    name: vnshop_timescaledb-data
+  unleash-db-data:
+    name: vnshop_unleash-db-data
+error while interpolating services.inventory-service.environment.SPRING_DATASOURCE_PASSWORD: required variable POSTGRES_PASSWORD is missing a value: must be set
+[checker-prod] node scripts/check-prod-defaults.mjs exit=0; no vnshop123 or minioadmin defaults
+[checker-negative] temporary manifest with vnshop123 exit=1
+[cleanup] temporary checker fixture and compose render removed; no secrets committed

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy, StrategyOptions } from 'passport-jwt';
 import { passportJwtSecret } from 'jwks-rsa';
@@ -19,11 +19,13 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     const jwksUri =
       process.env.KEYCLOAK_JWK_SET_URI ??
       'http://keycloak:8080/realms/vnshop/protocol/openid-connect/certs';
+    const audience = process.env.KEYCLOAK_JWT_AUDIENCE ?? 'vnshop-api';
 
     const options: StrategyOptions = {
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
       issuer: issuerUri,
+      audience,
       algorithms: ['RS256'],
       secretOrKeyProvider: passportJwtSecret({
         cache: true,
@@ -40,6 +42,9 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   validate(payload: JwtPayload): JwtPayload {
+    if (typeof payload.sub !== 'string' || payload.sub.trim() === '') {
+      throw new UnauthorizedException('Invalid token subject');
+    }
     return payload;
   }
 }

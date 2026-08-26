@@ -1,6 +1,6 @@
 # VNShop Architecture and Service Guide
 
-> Status snapshot: 2026-07-22. This document describes the repository after the production-readiness closure pass.
+> Status snapshot: 2026-08-26. This document describes the repository after PR #320's 32-task deep-fix pass.
 > It is an engineering reference, not a production-readiness approval. The readiness review is
 > recorded in [`docs/PRODUCTION-READINESS-REVIEW.md`](docs/PRODUCTION-READINESS-REVIEW.md).
 
@@ -227,11 +227,13 @@ ACLs in the main stack. Important event families include:
 
 Money-path events use outbox persistence and idempotent consumers. A producer acknowledgment, outbox
 claim timeout, retry policy, and dead-letter policy are part of the contract, not incidental implementation
-details.
+details. The canonical manifest currently covers 85 topics and 228 ACLs, including seven durable DLT
+read topics. DLT replay claims a database lease, publishes only after a valid claim, marks replayed only
+after broker acknowledgement, and exposes duplicate/concurrent replay as a conflict.
 
 ### gRPC
 
-The generated contracts in [`proto/`](proto/) cover:
+The generated typed contracts in [`proto/`](proto/) use the `vnshop.v1` package and cover:
 
 - Inventory reserve/release.
 - Payment request/status.

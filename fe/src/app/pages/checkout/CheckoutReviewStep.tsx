@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import type { Address, CartItem } from "@/shared/contracts/api";
 import { formatPrice } from "@/shared/lib";
+import { ImageWithFallback } from "@/shared/ui";
 
 import { formatAddressLine } from "./format";
 import type { PaymentOption, ShippingOption } from "./types";
@@ -122,11 +123,13 @@ export function CheckoutReviewStep({
             return (
               <div key={item.productId} className="flex items-center gap-3">
                 {item.image ? (
-                  <img
+                  <ImageWithFallback
                     src={item.image}
                     alt={item.name ?? ""}
                     className="w-14 h-14 rounded-lg object-cover shrink-0"
                     loading="lazy"
+                    imagePreset="thumbnail"
+                    sizes="56px"
                   />
                 ) : (
                   <div className="w-14 h-14 rounded-lg bg-muted shrink-0" />

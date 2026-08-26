@@ -56,7 +56,9 @@ describe('RetryFailedDeliveriesUseCase', () => {
     expect(mockRepo.findDueRetries).toHaveBeenCalledWith(now, 100);
     expect(mockChannel.sendToUser).toHaveBeenCalledWith('user-1', notification);
     expect(notification.retryCount).toBe(1);
-    expect(notification.deliveryStatus.getValue()).toBe(DeliveryStatusValue.SENT);
+    expect(notification.deliveryStatus.getValue()).toBe(
+      DeliveryStatusValue.SENT,
+    );
     expect(mockRepo.save).toHaveBeenCalledTimes(2);
   });
 
@@ -70,7 +72,9 @@ describe('RetryFailedDeliveriesUseCase', () => {
       movedToDlq: 1,
     });
 
-    expect(notification.deliveryStatus.getValue()).toBe(DeliveryStatusValue.DLQ);
+    expect(notification.deliveryStatus.getValue()).toBe(
+      DeliveryStatusValue.DLQ,
+    );
     expect(mockChannel.sendToUser).not.toHaveBeenCalled();
     expect(mockRepo.save).toHaveBeenCalledWith(notification);
   });
@@ -86,7 +90,9 @@ describe('RetryFailedDeliveriesUseCase', () => {
       movedToDlq: 1,
     });
 
-    expect(notification.deliveryStatus.getValue()).toBe(DeliveryStatusValue.DLQ);
+    expect(notification.deliveryStatus.getValue()).toBe(
+      DeliveryStatusValue.DLQ,
+    );
     expect(notification.nextRetryAt).toBeNull();
   });
 
