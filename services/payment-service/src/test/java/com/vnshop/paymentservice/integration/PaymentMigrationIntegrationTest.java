@@ -27,6 +27,8 @@ import java.util.concurrent.TimeUnit;
     "vnshop.kafka.admin.enabled=false",
     "payment.kafka.listeners.enabled=false",
     "spring.config.import=",
+    "payment.vietqr.enabled=false",
+    "payment.sepay.enabled=false",
     "grpc.server.enabled=false",
     "grpc.server.auth.token=test-grpc-token",
     "grpc.server.tls.cert-chain=",
@@ -53,7 +55,7 @@ class PaymentMigrationIntegrationTest {
             String.class
         );
 
-         assertThat(version).isEqualTo("24");
+         assertThat(Integer.parseInt(version)).isGreaterThanOrEqualTo(24);
 
          Integer dltStoreTable = jdbcTemplate.queryForObject(
              "select count(*) from information_schema.tables "

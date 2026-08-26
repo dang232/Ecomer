@@ -336,7 +336,8 @@ function main(argv) {
         ['run', 'view', requireValue(runId, 'grep requires <run-id>'), '--log'],
         { capture: true },
       );
-      const matcher = new RegExp(String(pattern), 'i');
+       const escapedPattern = String(pattern).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+       const matcher = new RegExp(escapedPattern, 'i');
       const matches = logs.split(/\r?\n/).filter((line) => matcher.test(line));
       console.log(matches.join('\n'));
       if (!matches.length) {
