@@ -123,7 +123,7 @@ jobs:
           done
 
       - name: Install fixture dependencies
-        run: python -m pip install --disable-pip-version-check kafka-python==3.0.9
+        run: python -m pip install --disable-pip-version-check -r services/video-moderator/requirements.txt
 
       - name: Verify authenticated PostgreSQL and Redis
         shell: bash
