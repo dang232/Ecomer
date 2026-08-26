@@ -18,7 +18,9 @@ import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
 import java.util.Collection;
 import java.util.List;
@@ -29,6 +31,8 @@ import java.util.stream.Collectors;
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
+    private static final String REFRESH_TOKEN_COOKIE = "vnshop_rt";
+
     @Bean
     JwtDecoder jwtDecoder(
             @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}") String jwkSetUri,
@@ -58,9 +62,9 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
-                .csrf(csrf -> csrf.ignoringRequestMatchers(request ->
-                        request.getHeader("Authorization") != null
-                                || request.getRequestURI().startsWith("/webhooks/")))
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(csrfTokenRepository())
+                        .requireCsrfProtectionMatcher(cookieAuthenticatedRequestMatcher()))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api-docs", "/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/prometheus", "/actuator/info").permitAll()
@@ -70,6 +74,25 @@ public class SecurityConfig {
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
                 .build();
+    }
+
+    private CookieCsrfTokenRepository csrfTokenRepository() {
+        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        repository.setCookieName("vnshop_csrf");
+        repository.setHeaderName("X-CSRF-Token");
+        repository.setCookiePath("/");
+        return repository;
+    }
+
+    private RequestMatcher cookieAuthenticatedRequestMatcher() {
+        return request -> {
+            if (List.of("GET", "HEAD", "OPTIONS", "TRACE").contains(request.getMethod())) {
+                return false;
+            }
+            return request.getCookies() != null
+                    && List.of(request.getCookies()).stream()
+                    .anyMatch(cookie -> REFRESH_TOKEN_COOKIE.equals(cookie.getName()));
+        };
     }
 
     private JwtAuthenticationConverter jwtAuthenticationConverter() {
