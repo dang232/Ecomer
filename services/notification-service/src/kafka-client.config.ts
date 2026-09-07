@@ -16,10 +16,18 @@ export function createKafkaClientConfig(clientId: string): KafkaConfig {
   const ssl = !localPlaintext
     ? { ca: [readFileSync(required('KAFKA_SSL_CA_FILE'))], cert: readFileSync(required('KAFKA_SSL_CERT_FILE')), key: readFileSync(required('KAFKA_SSL_KEY_FILE')), rejectUnauthorized: true }
     : false;
+  // Local broker is SASL_PLAINTEXT: no TLS, but SASL PLAIN credentials still required.
+  const saslUsername = process.env.KAFKA_SASL_USERNAME?.trim();
+  const saslPassword = process.env.KAFKA_SASL_PASSWORD?.trim();
+  const sasl = saslUsername && saslPassword
+    ? { mechanism: 'plain' as const, username: saslUsername, password: saslPassword }
+    : localPlaintext
+      ? undefined
+      : { mechanism: 'plain' as const, username: required('KAFKA_SASL_USERNAME'), password: required('KAFKA_SASL_PASSWORD') };
   return {
     clientId,
     brokers,
     ssl,
-    sasl: localPlaintext ? undefined : { mechanism: 'plain', username: required('KAFKA_SASL_USERNAME'), password: required('KAFKA_SASL_PASSWORD') },
+    sasl,
   };
 }

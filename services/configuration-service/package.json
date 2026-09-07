@@ -42,7 +42,9 @@
   },
   "overrides": {
     "brace-expansion": "5.0.9",
-    "js-yaml": "5.2.2"
+    "js-yaml": "5.2.2",
+    "fast-uri": "3.1.6",
+    "browserslist": "4.28.7"
   },
   "jest": {
     "moduleFileExtensions": [
