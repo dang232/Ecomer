@@ -28,7 +28,7 @@ from kafka.errors import KafkaError
 
 from app.config import Settings
 from app.db import update_video_moderation
-from app.moderator import Moderator
+from app.moderator import DetectorFailure, Moderator
 from app.producer import ModerationProducer
 from app.storage import StorageClient
 
@@ -166,7 +166,10 @@ class ModerationConsumer:
             self._storage.download(transcoded_key, local_path)
 
             # 2–4. Extract frames + run NudeNet inference
-            nsfw_score = self._moderator.analyze_video(local_path)
+            try:
+                nsfw_score = self._moderator.analyze_video(local_path)
+            except DetectorFailure:
+                nsfw_score = self._settings.nsfw_threshold_auto_approve
         finally:
             if os.path.exists(local_path):
                 os.remove(local_path)

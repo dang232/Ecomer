@@ -97,6 +97,7 @@ export class CartExceptionFilter implements ExceptionFilter {
       case 'CURRENCY_MISMATCH': return 500;
       case 'PRODUCT_NOT_FOUND': return 404;
       case 'VARIANT_NOT_FOUND': return 404;
+      case 'PRICING_UNAVAILABLE': return 503;
       default: return 500;
     }
   }

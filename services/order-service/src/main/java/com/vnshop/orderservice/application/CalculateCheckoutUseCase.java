@@ -99,6 +99,7 @@ public class CalculateCheckoutUseCase {
         CatalogProduct.Variant variant = product.findVariant(line.variantSku())
                 .orElseThrow(() -> new CheckoutOrderUseCase.ProductNotFoundException(
                         "variant not found for productId=" + line.productId() + " sku=" + line.variantSku()));
+        ProductPrices.requirePositive(variant.unitPrice(), line.productId());
         return new OrderItem(
                 product.productId(),
                 variant.sku(),
@@ -111,34 +112,23 @@ public class CalculateCheckoutUseCase {
     }
 
     private OrderItem resolveCartItem(CartItemSnapshot item) {
-        Optional<CatalogProduct> product = productCatalogPort.findByProductId(item.productId());
-        if (product.isPresent()) {
-            Optional<CatalogProduct.Variant> variant = product.get().findVariant(item.variantSku());
-            if (variant.isPresent()) {
-                CatalogProduct catalogProduct = product.get();
-                CatalogProduct.Variant catalogVariant = variant.get();
-                return new OrderItem(
-                        catalogProduct.productId(),
-                        catalogVariant.sku(),
-                        catalogProduct.sellerId(),
-                        catalogProduct.name(),
-                        item.quantity(),
-                        catalogVariant.unitPrice(),
-                        catalogProduct.imageUrl(),
-                        catalogVariant.parcel());
-            }
-        }
-
-        // Preserve the cart-preview fallback for stale catalog snapshots while
-        // still applying the same tax rules to the preview amount.
+        CatalogProduct catalogProduct = productCatalogPort.findByProductId(item.productId())
+                .orElseThrow(() -> new InvalidProductPriceException(
+                        "authoritative price unavailable for productId=" + item.productId()));
+        CatalogProduct.Variant catalogVariant = catalogProduct.findVariant(item.variantSku())
+                .orElseThrow(() -> new InvalidProductPriceException(
+                        "authoritative price unavailable for productId=" + item.productId()
+                                + " sku=" + item.variantSku()));
+        ProductPrices.requirePositive(catalogVariant.unitPrice(), item.productId());
         return new OrderItem(
-                item.productId(),
-                nonBlankOrDefault(item.variantSku(), "cart-snapshot"),
-                "cart-preview",
-                nonBlankOrDefault(item.name(), item.productId()),
+                catalogProduct.productId(),
+                catalogVariant.sku(),
+                catalogProduct.sellerId(),
+                catalogProduct.name(),
                 item.quantity(),
-                new Money(item.unitPrice(), "VND"),
-                null);
+                catalogVariant.unitPrice(),
+                catalogProduct.imageUrl(),
+                catalogVariant.parcel());
     }
 
     private CheckoutBreakdown summarize(List<OrderItem> items, BigDecimal discount) {
@@ -155,10 +145,6 @@ public class CalculateCheckoutUseCase {
 
     private static TaxCalculationService defaultTaxCalculationService() {
         return new TaxCalculationService((categoryCode, asOf) -> Optional.empty());
-    }
-
-    private static String nonBlankOrDefault(String value, String fallback) {
-        return value == null || value.isBlank() ? fallback : value;
     }
 
     public BigDecimal standardShippingCost() {

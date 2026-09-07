@@ -10,8 +10,11 @@ import com.vnshop.paymentservice.domain.port.out.PaymentRepositoryPort;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
+import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -19,6 +22,7 @@ import java.util.UUID;
 @Service
 @ConditionalOnProperty(name = "payment.momo.enabled", havingValue = "true")
 public class MomoCallbackService {
+    private static final Logger log = LoggerFactory.getLogger(MomoCallbackService.class);
     private final PaymentRepositoryPort paymentRepositoryPort;
     private final MomoGateway momoGateway;
     private final PaymentCallbackLogStore callbackLogStore;
@@ -87,11 +91,17 @@ public class MomoCallbackService {
             return MomoIpnResult.success();
         }
 
+        if (payment.amount().compareTo(BigDecimal.valueOf(request.amount())) != 0) {
+            log.warn("momo-callback-amount-mismatch txId={} paymentId={}", verification.transactionNo(), payment.paymentId());
+            callbackLogStore.save(attempt(request, headers, payloadHash, signatureHash, "AMOUNT_MISMATCH", false));
+            return MomoIpnResult.success();
+        }
+
         PaymentCallbackAttempt savedAttempt = callbackLogStore.save(
                 attempt(request, headers, payloadHash, signatureHash, "PROCESSED", false));
         promotionService.promote(PaymentPromotionService.PromotionCommand.fromCallback(
                 payment.paymentId(), "MOMO", verification.transactionNo(),
-                savedAttempt.callbackId(), savedAttempt.eventId(), savedAttempt.payloadHash()));
+                savedAttempt.callbackId(), savedAttempt.eventId(), savedAttempt.payloadHash(), BigDecimal.valueOf(request.amount())));
         return MomoIpnResult.success();
     }
 

@@ -45,13 +45,27 @@ class SepayPollerTest {
         payments.save(pendingVietQr(paymentId));
         InMemoryCursorRepo cursor = new InMemoryCursorRepo();
         StubClient client = new StubClient(List.of(
-                tx("TX-100", "100000", "Chuyen khoan " + paymentId)));
+                tx("TX-100", "15000000", "Chuyen khoan " + paymentId)));
 
         new SepayPoller(props(), client, cursor, payments, promotionService(payments)).poll();
 
         assertThat(payments.byId.get(paymentId).status()).isEqualTo(PaymentStatus.COMPLETED);
         assertThat(payments.byId.get(paymentId).transactionRef()).isEqualTo("TX-100");
         assertThat(cursor.value).isEqualTo("TX-100");
+    }
+
+    @Test
+    void underpaidTransferIsSkippedAndCursorAdvances() {
+        UUID paymentId = UUID.fromString("00000000-0000-0000-0000-000000000112");
+        InMemoryPayments payments = new InMemoryPayments();
+        payments.save(pendingVietQr(paymentId));
+        InMemoryCursorRepo cursor = new InMemoryCursorRepo();
+
+        new SepayPoller(props(), new StubClient(List.of(
+                tx("TX-101", "1000", "Chuyen khoan " + paymentId))), cursor, payments, promotionService(payments)).poll();
+
+        assertThat(payments.byId.get(paymentId).status()).isEqualTo(PaymentStatus.PENDING);
+        assertThat(cursor.value).isEqualTo("TX-101");
     }
 
     @Test
@@ -124,7 +138,7 @@ class SepayPollerTest {
 
     private static Payment pendingVietQr(UUID paymentId) {
         return new Payment(paymentId, "ORDER-" + paymentId, "BUYER-1",
-                new BigDecimal("100000"), PaymentMethod.VIETQR, PaymentStatus.PENDING, null,
+                new BigDecimal("15000000"), PaymentMethod.VIETQR, PaymentStatus.PENDING, null,
                 Instant.parse("2026-05-19T00:00:00Z"));
     }
 

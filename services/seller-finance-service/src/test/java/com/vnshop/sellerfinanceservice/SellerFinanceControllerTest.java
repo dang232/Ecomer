@@ -10,6 +10,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vnshop.sellerfinanceservice.domain.Payout;
 import com.vnshop.sellerfinanceservice.domain.PayoutStatus;
 import com.vnshop.sellerfinanceservice.domain.SellerWallet;
+import com.vnshop.sellerfinanceservice.application.CapturePayoutDestinationSnapshotUseCase;
+import com.vnshop.sellerfinanceservice.application.SealPayoutDestinationSnapshotUseCase;
+import com.vnshop.sellerfinanceservice.domain.port.out.LedgerRepositoryPort;
+import com.vnshop.sellerfinanceservice.domain.port.out.PayoutDestinationClient;
+import com.vnshop.sellerfinanceservice.domain.port.out.PayoutEligibilityPort;
 import com.vnshop.sellerfinanceservice.domain.port.out.PayoutRepositoryPort;
 import com.vnshop.sellerfinanceservice.domain.port.out.SellerWalletRepositoryPort;
 import com.vnshop.sellerfinanceservice.domain.port.out.SellerDirectoryPort;
@@ -55,6 +60,18 @@ class SellerFinanceControllerTest {
 
     @MockitoBean
     private PayoutRepositoryPort payoutRepositoryPort;
+
+    @MockitoBean
+    private LedgerRepositoryPort ledgerRepositoryPort;
+
+    @MockitoBean
+    private PayoutEligibilityPort payoutEligibilityPort;
+
+    @MockitoBean
+    private CapturePayoutDestinationSnapshotUseCase captureDestination;
+
+    @MockitoBean
+    private SealPayoutDestinationSnapshotUseCase sealDestination;
 
     @MockitoBean
     private SellerDirectoryPort sellerDirectoryPort;
@@ -129,11 +146,15 @@ class SellerFinanceControllerTest {
     void requestPayoutReturnsValidResponse() throws Exception {
         SellerWallet wallet = new SellerWallet(SELLER_ID, new BigDecimal("200.00"), BigDecimal.ZERO, new BigDecimal("200.00"), null);
         Payout savedPayout = new Payout(UUID.randomUUID(), SELLER_ID, new BigDecimal("125.50"), PayoutStatus.PENDING, Instant.parse("2026-05-14T00:00:00Z"));
-        when(sellerWalletRepositoryPort.findBySellerId(SELLER_ID)).thenReturn(Optional.of(wallet));
+        when(sellerWalletRepositoryPort.findBySellerIdForUpdate(SELLER_ID)).thenReturn(Optional.of(wallet));
+        when(payoutEligibilityPort.check(SELLER_ID, new BigDecimal("125.50")))
+                .thenReturn(new PayoutEligibilityPort.Eligibility(
+                        PayoutEligibilityPort.Outcome.ELIGIBLE, SELLER_ID, wallet.availableBalance(), List.of()));
         when(payoutRepositoryPort.save(any(Payout.class))).thenReturn(savedPayout);
 
         HttpRequest request = authorizedRequest("/sellers/me/finance/payouts")
                 .header("Content-Type", "application/json")
+                .header("Idempotency-Key", "request-1")
                 .POST(HttpRequest.BodyPublishers.ofString("{\"amount\":125.50}"))
                 .build();
 
@@ -147,6 +168,29 @@ class SellerFinanceControllerTest {
         assertThat(data.get("sellerId").asText()).isEqualTo(SELLER_ID);
         assertThat(data.get("amount").decimalValue()).isEqualByComparingTo("125.50");
         assertThat(data.get("status").asText()).isEqualTo("PENDING");
+    }
+
+    @Test
+    void requestPayoutWithoutIdempotencyKeyIsRejected() throws Exception {
+        SellerWallet wallet = new SellerWallet(SELLER_ID, new BigDecimal("200.00"), BigDecimal.ZERO,
+                new BigDecimal("200.00"), null);
+        Payout savedPayout = new Payout(UUID.randomUUID(), SELLER_ID, new BigDecimal("125.50"),
+                PayoutStatus.PENDING, Instant.parse("2026-05-14T00:00:00Z"));
+        when(sellerWalletRepositoryPort.findBySellerId(SELLER_ID)).thenReturn(Optional.of(wallet));
+        when(payoutRepositoryPort.save(any(Payout.class))).thenReturn(savedPayout);
+
+        HttpRequest request = authorizedRequest("/sellers/me/finance/payouts")
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString("{\"amount\":125.50}"))
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        JsonNode body = objectMapper.readTree(response.body());
+
+        assertThat(response.statusCode()).isEqualTo(400);
+        assertThat(body.get("success").asBoolean()).isFalse();
+        assertThat(body.get("errorCode").asText()).isEqualTo("bad_request");
+        assertThat(body.get("message").asText()).contains("Idempotency-Key");
     }
 
     @Test

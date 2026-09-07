@@ -29,6 +29,11 @@ public class RequestReturnUseCase {
 
     @Transactional
     public Return request(String buyerId, Long subOrderId, String reason) {
+        return request(buyerId, subOrderId, reason, null);
+    }
+
+    @Transactional
+    public Return request(String buyerId, Long subOrderId, String reason, Integer returnedQuantity) {
         requireNonBlank(buyerId, "buyerId");
         Objects.requireNonNull(subOrderId, "subOrderId is required");
         requireNonBlank(reason, "reason");
@@ -51,13 +56,20 @@ public class RequestReturnUseCase {
         if (subOrder.carrier() == null || subOrder.trackingNumber() == null) {
             throw new IllegalStateException("return can be requested after shipment");
         }
+        if (returnedQuantity != null && returnedQuantity > subOrder.items().stream()
+                .mapToInt(item -> item.quantity()).sum()) {
+            throw new IllegalArgumentException("returnedQuantity exceeds ordered quantity");
+        }
 
         // BIZ-09: Prevent duplicate return requests for the same sub-order.
         returnRepository.findBySubOrderId(subOrderId).ifPresent(existing -> {
             throw new IllegalStateException("a return already exists for sub-order " + subOrderId);
         });
 
-        Return saved = returnRepository.save(new Return(UUID.randomUUID(), order.id().toString(), subOrderId, buyerId, reason));
+        Return saved = returnRepository.save(returnedQuantity == null
+                ? new Return(UUID.randomUUID(), order.id().toString(), subOrderId, buyerId, reason)
+                : new Return(UUID.randomUUID(), order.id().toString(), subOrderId, buyerId, reason,
+                        returnedQuantity, com.vnshop.orderservice.domain.ReturnStatus.REQUESTED, java.time.Instant.now(), null));
         if (settlementHoldPublisher != null) {
             settlementHoldPublisher.publish(order.id(), subOrderId, "RETURN", true);
         }

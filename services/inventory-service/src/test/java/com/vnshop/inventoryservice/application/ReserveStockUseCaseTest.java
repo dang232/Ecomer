@@ -53,6 +53,22 @@ class ReserveStockUseCaseTest {
     }
 
     @Test
+    void repeatedReservationForOrderAndProductReturnsExistingReservationWithoutDecrementingAgain() {
+        InMemoryStockReservationPort port = new InMemoryStockReservationPort();
+        port.seed("prod-1", 5);
+        ReserveStockUseCase useCase = new ReserveStockUseCase(port, fixedClock);
+        List<ReserveItem> items = List.of(new ReserveItem("prod-1", "default", 2));
+
+        ReserveStockResult first = useCase.reserve("ord-retry", items);
+        ReserveStockResult second = useCase.reserve("ord-retry", items);
+
+        assertThat(first).isEqualTo(ReserveStockResult.success(1));
+        assertThat(second).isEqualTo(ReserveStockResult.success(1));
+        assertThat(port.stockOf("prod-1")).isEqualTo(3);
+        assertThat(port.findActiveReservationsByOrderId("ord-retry")).hasSize(1);
+    }
+
+    @Test
     void reserveRejectsWhenProductHasNoProjectedStockRow() {
         InMemoryStockReservationPort port = new InMemoryStockReservationPort();
         ReserveStockUseCase useCase = new ReserveStockUseCase(port, fixedClock);
@@ -153,6 +169,16 @@ class ReserveStockUseCaseTest {
         @Override
         public synchronized void saveReservation(StockReservation reservation) {
             reservations.add(reservation);
+        }
+
+        @Override
+        public synchronized java.util.Optional<StockReservation> findReservationByOrderAndProduct(
+                String orderId, String productId) {
+            return reservations.stream()
+                    .filter(r -> orderId.equals(r.orderId()))
+                    .filter(r -> productId.equals(r.productId()))
+                    .filter(r -> r.status() == StockReservation.Status.RESERVED)
+                    .findFirst();
         }
 
         @Override

@@ -153,8 +153,26 @@ class VnpayCallbackServiceTest {
         return URLDecoder.decode(value, StandardCharsets.UTF_8);
     }
 
+    @Test
+    void underpaidIpnIsAcknowledgedWithoutPromotingPayment() {
+        CapturingPaymentRepository repository = new CapturingPaymentRepository(payment(PaymentStatus.PENDING, null));
+        CapturingLedgerRepository ledgerRepository = new CapturingLedgerRepository();
+        CapturingCallbackLogStore callbackLogStore = new CapturingCallbackLogStore();
+        VnpayCallbackService service = service(repository, ledgerRepository, callbackLogStore, new CapturingPaymentCallbackOutbox());
+        Map<String, String> parameters = completedIpn(paymentId().toString(), "14123456");
+        parameters.put("vnp_Amount", "100000");
+        parameters.put("vnp_SecureHash", new VnpaySigner(PROPERTIES.hashSecret()).sign(parameters));
+
+        service.handleIpn(parameters);
+
+        assertThat(repository.payment.status()).isEqualTo(PaymentStatus.PENDING);
+        assertThat(repository.savedPayments).isEmpty();
+        assertThat(ledgerRepository.savedEntries).isEmpty();
+        assertThat(callbackLogStore.savedAttempts.get(0).processingStatus()).isEqualTo("AMOUNT_MISMATCH");
+    }
+
     private static Payment payment(PaymentStatus status, String transactionRef) {
-        return new Payment(paymentId(), "ORDER-1", "BUYER-1", new BigDecimal("120000.00"), PaymentMethod.VNPAY, status, transactionRef, Instant.parse("2026-05-10T09:00:00Z"));
+        return new Payment(paymentId(), "ORDER-1", "BUYER-1", new BigDecimal("15000000.00"), PaymentMethod.VNPAY, status, transactionRef, Instant.parse("2026-05-10T09:00:00Z"));
     }
 
     private static UUID paymentId() {

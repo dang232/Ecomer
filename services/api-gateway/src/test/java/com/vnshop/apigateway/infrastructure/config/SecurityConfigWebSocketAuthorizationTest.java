@@ -5,7 +5,12 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.core.context.SecurityContextImpl;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.security.web.server.WebFilterChainProxy;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
@@ -16,6 +21,7 @@ import reactor.core.publisher.Mono;
 class SecurityConfigWebSocketAuthorizationTest {
 
     private WebTestClient client;
+    private WebTestClient buyerClient;
 
     @BeforeEach
     void setUp() {
@@ -28,6 +34,19 @@ class SecurityConfigWebSocketAuthorizationTest {
                     exchange.getResponse().setStatusCode(HttpStatus.NO_CONTENT);
                     return exchange.getResponse().setComplete();
                 })
+                .webFilter(new WebFilterChainProxy(List.of(chain)))
+                .build();
+
+        var buyer = new JwtAuthenticationToken(
+                Jwt.withTokenValue("buyer-token").header("alg", "none").subject("buyer-1").build(),
+                List.of(new SimpleGrantedAuthority("ROLE_BUYER")));
+        var buyerContext = new SecurityContextImpl(buyer);
+        buyerClient = WebTestClient.bindToWebHandler(exchange -> {
+                    exchange.getResponse().setStatusCode(HttpStatus.NO_CONTENT);
+                    return exchange.getResponse().setComplete();
+                })
+                .webFilter((exchange, filterChain) -> filterChain.filter(exchange)
+                        .contextWrite(ReactiveSecurityContextHolder.withSecurityContext(Mono.just(buyerContext))))
                 .webFilter(new WebFilterChainProxy(List.of(chain)))
                 .build();
     }
@@ -90,6 +109,19 @@ class SecurityConfigWebSocketAuthorizationTest {
         client.post()
                 .uri("/auth/login")
                 .cookie("vnshop_rt", "stale-refresh-token")
+                .exchange()
+                .expectStatus().isNoContent();
+    }
+
+    @Test
+    void deniesBuyerAccessToActuatorProxyButKeepsHealthPublic() {
+        buyerClient.get()
+                .uri("/order-service/actuator/prometheus")
+                .exchange()
+                .expectStatus().isForbidden();
+
+        client.get()
+                .uri("/order-service/actuator/health")
                 .exchange()
                 .expectStatus().isNoContent();
     }

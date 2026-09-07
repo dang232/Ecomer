@@ -18,6 +18,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.math.BigDecimal;
 
 /**
  * SePay polling worker. Reads new bank credits since the last cursor, matches
@@ -119,9 +120,21 @@ public class SepayPoller {
             return;
         }
 
+        BigDecimal transferAmount;
+        try {
+            transferAmount = new BigDecimal(tx.amount_in());
+        } catch (RuntimeException ex) {
+            log.warn("sepay-skip-invalid-amount txId={} paymentId={}", tx.id(), paymentId);
+            return;
+        }
+        if (payment.amount().compareTo(transferAmount) != 0) {
+            log.warn("sepay-poller-amount-mismatch txId={} paymentId={}", tx.id(), paymentId);
+            return;
+        }
+
         promotionService.promote(PaymentPromotionService.PromotionCommand.fromCallback(
                 paymentId, "SEPAY", tx.id(),
                 UUID.randomUUID(), "SEPAY:" + tx.id(),
-                PaymentCallbackHasher.sha256(tx.id())));
+                PaymentCallbackHasher.sha256(tx.id()), transferAmount));
     }
 }

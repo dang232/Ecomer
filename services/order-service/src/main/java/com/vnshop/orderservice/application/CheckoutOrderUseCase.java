@@ -67,6 +67,7 @@ public class CheckoutOrderUseCase {
             CatalogProduct.Variant variant = product.findVariant(line.variantSku())
                     .orElseThrow(() -> new ProductNotFoundException(
                             "variant not found for productId=" + line.productId() + " sku=" + line.variantSku()));
+            ProductPrices.requirePositive(variant.unitPrice(), line.productId());
             resolved.add(new OrderItem(
                     product.productId(),
                     variant.sku(),

@@ -59,7 +59,19 @@ public class VnpayGateway {
         PaymentStatus status = validSignature && "00".equals(responseCode) && "00".equals(transactionStatus)
                 ? PaymentStatus.COMPLETED
                 : PaymentStatus.FAILED;
-        return new VnpayVerification(validSignature, status, parameters.get("vnp_TxnRef"), parameters.get("vnp_TransactionNo"), responseCode, transactionStatus);
+        BigDecimal amount = parseAmount(parameters.get("vnp_Amount"));
+        return new VnpayVerification(validSignature, status, parameters.get("vnp_TxnRef"), parameters.get("vnp_TransactionNo"), responseCode, transactionStatus, amount);
+    }
+
+    private BigDecimal parseAmount(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            return new BigDecimal(raw).movePointLeft(2);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 
     private Map<String, String> basePaymentParameters(Payment payment, String clientIp) {
@@ -99,7 +111,8 @@ public class VnpayGateway {
             String paymentId,
             String transactionNo,
             String responseCode,
-            String transactionStatus
+            String transactionStatus,
+            BigDecimal amount
     ) {
     }
 }

@@ -357,6 +357,7 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
         },
         'items': session.lineItems.map((item) => item.toJson()).toList(),
         'paymentMethod': paymentMethodString,
+        'couponCode': session.couponCode,
       },
     );
 

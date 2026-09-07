@@ -12,6 +12,10 @@ from app.config import Settings
 
 logger = logging.getLogger(__name__)
 
+
+class DetectorFailure(RuntimeError):
+    """Raised when NudeNet cannot score a video frame."""
+
 # NudeNet label that carries the highest risk weight.
 # We take the MAX score across all labels and all frames.
 _NSFW_LABELS = {
@@ -104,9 +108,9 @@ def _score_frame(detector, frame_path: str) -> float:
     """
     try:
         detections = detector.detect(frame_path)
-    except Exception:
-        logger.warning("NudeNet failed on frame %s — scoring 0.0", frame_path, exc_info=True)
-        return 0.0
+    except Exception as exc:
+        logger.warning("NudeNet failed on frame %s — sending for review", frame_path, exc_info=True)
+        raise DetectorFailure(f"NudeNet failed on frame {frame_path}") from exc
 
     if not detections:
         return 0.0

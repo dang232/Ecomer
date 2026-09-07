@@ -1,5 +1,12 @@
-import { Inject, Injectable, Logger, forwardRef } from "@nestjs/common";
 import {
+  Inject,
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  forwardRef,
+} from "@nestjs/common";
+import {
+  OnGatewayInit,
   OnGatewayConnection,
   OnGatewayDisconnect,
   WebSocketGateway,
@@ -26,11 +33,14 @@ import { TokenExpiredError, WsJwtVerifier } from "./auth/ws-jwt.verifier";
 @WebSocketGateway({ path: "/ws/messaging" })
 @Injectable()
 export class MessagingWsGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect, OnModuleDestroy
 {
+  private static readonly KEEPALIVE_INTERVAL_MS = 30_000;
   private readonly logger = new Logger(MessagingWsGateway.name);
   private readonly socketsByUser = new Map<string, Set<WebSocket>>();
   private readonly userBySocket = new WeakMap<WebSocket, string>();
+  private readonly socketAlive = new WeakMap<WebSocket, boolean>();
+  private keepaliveTimer?: ReturnType<typeof setInterval>;
 
   @WebSocketServer()
   server!: WsServer;
@@ -39,6 +49,25 @@ export class MessagingWsGateway
     @Inject(forwardRef(() => WsJwtVerifier))
     private readonly verifier: WsJwtVerifier,
   ) {}
+
+  afterInit(server: WsServer): void {
+    this.server = server;
+    this.keepaliveTimer = setInterval(
+      () => this.checkSocketLiveness(),
+      MessagingWsGateway.KEEPALIVE_INTERVAL_MS,
+    );
+  }
+
+  onModuleDestroy(): void {
+    if (this.keepaliveTimer) clearInterval(this.keepaliveTimer);
+    this.keepaliveTimer = undefined;
+    for (const sockets of this.socketsByUser.values()) {
+      for (const socket of sockets) {
+        socket.terminate();
+      }
+    }
+    this.socketsByUser.clear();
+  }
 
   async handleConnection(
     client: WebSocket,
@@ -137,6 +166,27 @@ export class MessagingWsGateway
     }
     set.add(client);
     this.userBySocket.set(client, userId);
+    this.socketAlive.set(client, true);
+    client.on("pong", () => this.socketAlive.set(client, true));
+  }
+
+  private checkSocketLiveness(): void {
+    for (const sockets of this.socketsByUser.values()) {
+      for (const socket of sockets) {
+        if (!this.socketAlive.get(socket)) {
+          socket.terminate();
+          this.handleDisconnect(socket);
+          continue;
+        }
+        this.socketAlive.set(socket, false);
+        try {
+          socket.ping();
+        } catch {
+          socket.terminate();
+          this.handleDisconnect(socket);
+        }
+      }
+    }
   }
 
   private refuse(client: WebSocket, code: number, reason: string): void {

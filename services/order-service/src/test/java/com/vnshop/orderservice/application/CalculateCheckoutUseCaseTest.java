@@ -14,6 +14,7 @@ import com.vnshop.orderservice.domain.port.out.CouponValidationPort;
 import com.vnshop.orderservice.domain.port.out.ProductCatalogPort;
 import com.vnshop.orderservice.application.tax.TaxCalculationService;
 import com.vnshop.orderservice.application.tax.TaxResult;
+import com.vnshop.orderservice.application.InvalidProductPriceException;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -81,6 +82,26 @@ class CalculateCheckoutUseCaseTest {
         assertThat(breakdown.shippingEstimate()).isEqualByComparingTo("0");
         assertThat(breakdown.taxTotal()).isEqualByComparingTo("30000");
         assertThat(breakdown.finalAmount()).isEqualByComparingTo("330000");
+    }
+
+    @Test
+    void cartSnapshotPathRejectsSnapshotPriceWhenCatalogResolutionFails() {
+        cart.set("cart-degraded", new CartSnapshot("cart-degraded", List.of(
+                new CartItemSnapshot("p1", "sku1", "Item 1", 1, BigDecimal.ZERO))));
+
+        assertThatThrownBy(() -> useCase.calculate("cart-degraded"))
+                .isInstanceOf(InvalidProductPriceException.class)
+                .hasMessageContaining("p1");
+    }
+
+    @Test
+    void lineItemPathRejectsZeroCatalogPrice() {
+        catalog.add(new CatalogProduct("p1", "seller-A", "Free-looking item",
+                List.of(new CatalogProduct.Variant("sku1", new Money(BigDecimal.ZERO))), ""));
+
+        assertThatThrownBy(() -> useCase.calculate(List.of(new CheckoutLineItem("p1", "sku1", 1))))
+                .isInstanceOf(InvalidProductPriceException.class)
+                .hasMessageContaining("p1");
     }
 
     @Test

@@ -132,6 +132,7 @@ public class SecurityConfig {
                 .pathMatchers("/actuator/health", "/actuator/info", "/actuator/prometheus").permitAll()
                 // ponytail: glob permits /<any>/actuator/health for downstream services — FE admin health checks carry no token
                 .pathMatchers("/" + "*/actuator/health", "/" + "*/actuator/info").permitAll()
+                .pathMatchers("/" + "*/actuator/**").hasRole("ADMIN")
                 .pathMatchers("/notification-service/health").permitAll()
                 .pathMatchers("/monitoring/", "/monitoring/css/**", "/monitoring/js/**").permitAll()
                 .pathMatchers("/monitoring/socket.io/**").permitAll()

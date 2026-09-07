@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.MissingRequestHeaderException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -23,6 +24,12 @@ public class ApiExceptionHandler {
         if ("invalid_page_size".equals(exception.getMessage())) {
             return ApiResponse.error("invalid_page_size", "invalid_page_size");
         }
+        return ApiResponse.error(exception.getMessage(), "bad_request");
+    }
+
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiResponse<Void> missingRequestHeader(MissingRequestHeaderException exception) {
         return ApiResponse.error(exception.getMessage(), "bad_request");
     }
 

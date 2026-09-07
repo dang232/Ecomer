@@ -7,6 +7,7 @@ import pytest
 
 from app.config import Settings
 from app.consumer import ModerationConsumer, _VERDICT_AUTO_APPROVED, _VERDICT_PENDING_REVIEW, _VERDICT_AUTO_REJECTED
+from app.moderator import DetectorFailure
 
 
 # ---------------------------------------------------------------------------
@@ -111,6 +112,21 @@ class TestProcessMessage:
         call_kwargs = consumer._producer.send_pending_review.call_args.kwargs
         assert call_kwargs["object_key"] == "products/product-123/videos/vid-123_720p.mp4"
         assert call_kwargs["nsfw_score"] == pytest.approx(0.5)
+
+    def test_detector_failure_routes_to_pending_review(self, consumer):
+        payload = self._make_payload()
+        consumer._moderator.analyze_video.side_effect = DetectorFailure("model error")
+        consumer._storage.download = MagicMock()
+
+        with patch("app.consumer.update_video_moderation") as mock_db, \
+             patch("os.path.exists", return_value=False):
+            consumer._process_message(payload)
+
+        consumer._storage.promote_many_to_public.assert_not_called()
+        consumer._producer.send_pending_review.assert_called_once()
+        assert mock_db.call_args.kwargs["verdict"] == _VERDICT_PENDING_REVIEW
+        assert mock_db.call_args.kwargs["status"] == "PENDING_REVIEW"
+        assert mock_db.call_args.kwargs["verdict"] != _VERDICT_AUTO_APPROVED
 
     def test_auto_rejected_emits_rejected_event_no_promotion(self, consumer):
         payload = self._make_payload()

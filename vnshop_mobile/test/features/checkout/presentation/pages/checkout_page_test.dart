@@ -226,7 +226,7 @@ void main() {
     await tester.pump();
 
     verify(
-      () => checkoutBloc.add(const CheckoutPaymentStatusChecked('payment-1')),
+      () => checkoutBloc.add(const CheckoutPaymentStatusChecked('order-1')),
     ).called(1);
     expect(tester.takeException(), isNull);
   });

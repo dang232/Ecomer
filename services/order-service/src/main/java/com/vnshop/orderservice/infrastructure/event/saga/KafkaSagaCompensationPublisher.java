@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vnshop.orderservice.domain.port.out.SagaCompensationPublisherPort;
 import java.time.Instant;
+import java.math.BigDecimal;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,12 +50,17 @@ public class KafkaSagaCompensationPublisher implements SagaCompensationPublisher
     }
 
     @Override
-    public void publishPaymentRefundRequested(String orderId, String sagaId) {
-        String payload = toJson(Map.of(
-                "orderId", orderId,
-                "sagaId", sagaId,
-                "timestamp", Instant.now().toString()
-        ));
+    public void publishPaymentRefundRequested(String orderId, String sagaId, String reversalId,
+                                              String returnId, BigDecimal amount, String currency) {
+        Map<String, String> data = new java.util.HashMap<>();
+        data.put("orderId", orderId);
+        data.put("sagaId", sagaId);
+        data.put("reversalId", reversalId);
+        data.put("returnId", returnId);
+        data.put("amount", amount == null ? null : amount.toPlainString());
+        data.put("currency", currency);
+        data.put("timestamp", Instant.now().toString());
+        String payload = toJson(data);
         kafkaTemplate.send(TOPIC_PAYMENT_REFUND_REQUESTED, orderId, payload);
         LOG.info("Published payment.refund.requested for saga {} order {}", sagaId, orderId);
     }
