@@ -31,11 +31,6 @@ public class RequestPayoutUseCase {
     private final SealPayoutDestinationSnapshotUseCase sealDestination;
     private final Clock clock;
 
-    /** Compatibility constructor for the pre-V10 payout endpoint. */
-    public RequestPayoutUseCase(SellerWalletRepositoryPort walletRepository, PayoutRepositoryPort payoutRepository) {
-        this(walletRepository, payoutRepository, null, null, null, null, Clock.systemUTC());
-    }
-
     public RequestPayoutUseCase(
             SellerWalletRepositoryPort walletRepository,
             PayoutRepositoryPort payoutRepository,
@@ -51,16 +46,6 @@ public class RequestPayoutUseCase {
         this.captureDestination = captureDestination;
         this.sealDestination = sealDestination;
         this.clock = Objects.requireNonNull(clock, "clock is required");
-    }
-
-    @Transactional
-    public Payout request(String sellerId, BigDecimal amount) {
-        requireNonBlank(sellerId, "sellerId");
-        SellerWallet wallet = walletRepository.findBySellerId(sellerId)
-                .orElseThrow(() -> new IllegalArgumentException("wallet not found"));
-        wallet.reservePayout(amount);
-        walletRepository.save(wallet);
-        return payoutRepository.save(Payout.pending(sellerId, amount, clock.instant()));
     }
 
     /** Reserves funds, captures the destination, and writes one idempotent journal. */
