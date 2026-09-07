@@ -772,7 +772,7 @@ class _PendingPaymentPanel extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
           ],
           VnPrimaryButton(
-            onPressed: () => onCheckPayment(transaction.id),
+            onPressed: () => onCheckPayment(transaction.orderId),
             label: localizations.checkPaymentStatus,
             icon: const Icon(Icons.refresh),
           ),
