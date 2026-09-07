@@ -133,6 +133,7 @@ class GrpcPaymentServerTest {
                         .setCurrency("VND")
                         .build())
                 .setPaymentMethod("COD")
+                .setIdempotencyKey("checkout-key-1")
                 .build());
 
         assertEquals(mockId.toString(), response.getPaymentId());
@@ -144,7 +145,8 @@ class GrpcPaymentServerTest {
         verify(processPaymentUseCase).processInternal(argThat(cmd ->
                 cmd.orderId().equals("ord-1")
                         && cmd.buyerId().equals("buyer-1")
-                        && cmd.method().name().equals("COD")), eq(new BigDecimal("100000")));
+                        && cmd.method().name().equals("COD")
+                        && cmd.idempotencyKey().equals("checkout-key-1")), eq(new BigDecimal("100000")));
     }
 
     @Test
