@@ -6,6 +6,7 @@ import com.vnshop.orderservice.domain.port.out.SagaStateRepository;
 import com.vnshop.orderservice.domain.saga.SagaState;
 import com.vnshop.orderservice.domain.saga.SagaStatus;
 import java.time.Instant;
+import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -14,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 
 @Service
 public class SagaOrchestrator {
@@ -106,8 +108,13 @@ public class SagaOrchestrator {
         LOG.info("Saga {} completed for order {}", sagaId, current.orderId());
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void compensate(String sagaId, String failedStep) {
+        compensate(sagaId, failedStep, null, "VND", UUID.randomUUID().toString());
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void compensate(String sagaId, String failedStep, BigDecimal amount, String currency, String reversalId) {
         Optional<SagaState> opt = sagaStateRepository.findBySagaId(sagaId);
         if (opt.isEmpty()) {
             LOG.warn("Saga {} not found for compensation", sagaId);
@@ -125,7 +132,8 @@ public class SagaOrchestrator {
         switch (failedStep) {
             case "SHIPPING":
                 // Payment was charged, inventory was reserved — reverse both
-                compensationPublisher.publishPaymentRefundRequested(orderId, sagaId);
+                compensationPublisher.publishPaymentRefundRequested(orderId, sagaId, reversalId, reversalId,
+                        amount, currency);
                 compensationPublisher.publishInventoryReleaseRequested(orderId, sagaId);
                 compensationPublisher.publishShippingCancellationRequested(
                         orderId, sagaId, "shipping-step-failed");
@@ -154,6 +162,7 @@ public class SagaOrchestrator {
         markFailed(sagaId);
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void start(String sagaId, String orderId) {
         sagaStateRepository.save(new SagaState(sagaId, orderId, SagaStatus.STARTED, Instant.now(), null));
     }
@@ -162,7 +171,7 @@ public class SagaOrchestrator {
      * Records the last successfully completed saga step so that {@link #getLastCompletedStep}
      * can return the correct failed-step name when compensation is needed.
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void stepCompleted(String sagaId, String step) {
         sagaStateRepository.findBySagaId(sagaId).ifPresent(current -> {
             SagaStatus newStatus = switch (step) {
@@ -179,7 +188,7 @@ public class SagaOrchestrator {
         LOG.debug("Saga {} step completed: {}", sagaId, step);
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void complete(String sagaId) {
         sagaStateRepository.findBySagaId(sagaId).ifPresent(s -> {
             sagaStateRepository.save(new SagaState(s.sagaId(), s.orderId(),

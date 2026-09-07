@@ -1,5 +1,7 @@
 package com.vnshop.orderservice.domain.port.out;
 
+import java.math.BigDecimal;
+
 /**
  * Publishes saga compensation request events to downstream services.
  *
@@ -20,7 +22,8 @@ public interface SagaCompensationPublisherPort {
      * Publishes {@code payment.refund.requested} so the payment-service refunds the
      * charge taken for the given order.
      */
-    void publishPaymentRefundRequested(String orderId, String sagaId);
+    void publishPaymentRefundRequested(String orderId, String sagaId, String reversalId,
+                                      String returnId, BigDecimal amount, String currency);
 
     /**
      * Publishes {@code shipping.cancel-requested} so shipping-service can cancel
