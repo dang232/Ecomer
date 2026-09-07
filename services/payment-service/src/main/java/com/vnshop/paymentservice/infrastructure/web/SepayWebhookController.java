@@ -155,12 +155,18 @@ public class SepayWebhookController {
             return ApiResponse.ok("already_processed");
         }
 
+        if (payload.transferAmount() == null || payment.amount().compareTo(payload.transferAmount()) != 0) {
+            log.warn("sepay-webhook-amount-mismatch txId={} paymentId={}", txId, paymentId);
+            callbackLogStore.save(attempt(txId, payloadHash, signatureHash, bodyJson, "AMOUNT_MISMATCH", false));
+            return ApiResponse.ok("amount_mismatch");
+        }
+
         // --- 5. Promote via shared promotion service ---
         PaymentCallbackAttempt savedAttempt = callbackLogStore.save(
                 attempt(txId, payloadHash, signatureHash, bodyJson, "PROCESSED", false));
         promotionService.promote(PaymentPromotionService.PromotionCommand.fromCallback(
                 paymentId, "SEPAY", "SEPAY:" + txId,
-                savedAttempt.callbackId(), savedAttempt.eventId(), savedAttempt.payloadHash()));
+                savedAttempt.callbackId(), savedAttempt.eventId(), savedAttempt.payloadHash(), payload.transferAmount()));
 
         log.info("sepay-webhook-promoted txId={} paymentId={}", txId, paymentId);
         return ApiResponse.ok("processed");
