@@ -20,8 +20,8 @@ import {
   type ResponseContext,
   type ResponseInterceptor,
 } from "@/shared/api/interceptors";
-import { apiUrl } from "@/shared/config";
 import { getAccessToken } from "@/shared/auth";
+import { apiUrl } from "@/shared/config";
 
 // ---------------------------------------------------------------------------
 // Cross-tab token-refresh coordination via BroadcastChannel
@@ -59,6 +59,40 @@ function requestUsedStaleAccessToken(ctx: RequestContext): boolean {
   const currentAccessToken = getAccessToken();
   if (!currentAccessToken) return false;
   return new Headers(ctx.init.headers).get("Authorization") !== `Bearer ${currentAccessToken}`;
+}
+
+/**
+ * Replays the original request so the auth interceptor attaches the current
+ * (fresh) access token. With failOn401, a still-401 response ends the session;
+ * without it the response falls through to normal processing (cross-tab path).
+ */
+async function replayWithFreshTokens(args: {
+  url: string;
+  init: RequestInit;
+  correlationId: string;
+  requestCtx: RequestContext;
+  auth: boolean;
+  idempotencyKey: string | undefined;
+  hasBody: boolean;
+  failOn401: boolean;
+}): Promise<Response> {
+  const retryCtx = await runRequestChain({
+    url: args.url,
+    init: { ...args.init, headers: {} },
+    correlationId: args.correlationId,
+    meta: {
+      ...args.requestCtx.meta,
+      auth: args.auth,
+      idempotencyKey: args.idempotencyKey,
+      hasBody: args.hasBody,
+    },
+  });
+  const response = await fetch(retryCtx.url, retryCtx.init);
+  if (args.failOn401 && response.status === 401) {
+    window.dispatchEvent(new Event("auth:unauthorized"));
+    throw new ApiError(401, "UNAUTHORIZED", "Authentication required", args.correlationId);
+  }
+  return response;
 }
 
 if (REFRESH_CHANNEL) {
@@ -280,17 +314,16 @@ async function executeRequest<TSchema extends z.ZodType>(
           window.dispatchEvent(new Event("auth:unauthorized"));
           throw new ApiError(401, "UNAUTHORIZED", "Authentication required", correlationId);
         }
-        const retryCtx = await runRequestChain({
+        response = await replayWithFreshTokens({
           url,
-          init: { ...init, headers: {} },
+          init,
           correlationId,
-          meta: { ...requestCtx.meta, auth, idempotencyKey: opts.idempotencyKey, hasBody },
+          requestCtx,
+          auth,
+          idempotencyKey: opts.idempotencyKey,
+          hasBody,
+          failOn401: true,
         });
-        response = await fetch(retryCtx.url, retryCtx.init);
-        if (response.status === 401) {
-          window.dispatchEvent(new Event("auth:unauthorized"));
-          throw new ApiError(401, "UNAUTHORIZED", "Authentication required", correlationId);
-        }
       } else if (crossTabRefreshPromise) {
         // Another tab owns the refresh — wait for its outcome.
         const succeeded = await crossTabRefreshPromise;
@@ -299,30 +332,27 @@ async function executeRequest<TSchema extends z.ZodType>(
           throw new ApiError(401, "UNAUTHORIZED", "Authentication required", correlationId);
         }
         // Retry the original request with the new token. Preserve telemetry meta.
-        const retryCtx = await runRequestChain({
+        response = await replayWithFreshTokens({
           url,
-          init: { ...init, headers: {} },
+          init,
           correlationId,
-          meta: {
-            ...requestCtx.meta,
-            auth,
-            idempotencyKey: opts.idempotencyKey,
-            hasBody,
-          },
+          requestCtx,
+          auth,
+          idempotencyKey: opts.idempotencyKey,
+          hasBody,
+          failOn401: false,
         });
-        response = await fetch(retryCtx.url, retryCtx.init);
       } else if (requestUsedStaleAccessToken(requestCtx)) {
-        const retryCtx = await runRequestChain({
+        response = await replayWithFreshTokens({
           url,
-          init: { ...init, headers: {} },
+          init,
           correlationId,
-          meta: { ...requestCtx.meta, auth, idempotencyKey: opts.idempotencyKey, hasBody },
+          requestCtx,
+          auth,
+          idempotencyKey: opts.idempotencyKey,
+          hasBody,
+          failOn401: true,
         });
-        response = await fetch(retryCtx.url, retryCtx.init);
-        if (response.status === 401) {
-          window.dispatchEvent(new Event("auth:unauthorized"));
-          throw new ApiError(401, "UNAUTHORIZED", "Authentication required", correlationId);
-        }
       } else {
         // This tab owns the refresh. Guard with !thisTabRefreshing so a second
         // 401 arriving while we already hold the lock doesn't start a duplicate.
