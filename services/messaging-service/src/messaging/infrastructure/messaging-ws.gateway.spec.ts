@@ -1,4 +1,5 @@
 import type { IncomingMessage } from "node:http";
+import type { WebSocket, WebSocketServer } from "ws";
 
 import { MessagingWsGateway } from "./messaging-ws.gateway";
 import type { WsJwtVerifier } from "./auth/ws-jwt.verifier";
@@ -49,5 +50,45 @@ describe("MessagingWsGateway WebSocket authentication", () => {
 
   it("returns null when no token is provided", () => {
     expect(extractToken(gateway, request({}))).toBeNull();
+  });
+});
+
+describe("MessagingWsGateway keepalive", () => {
+  const socketsByUser = (gateway: MessagingWsGateway) =>
+    (gateway as unknown as { socketsByUser: Map<string, Set<WebSocket>> })
+      .socketsByUser;
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it("terminates and evicts a socket that does not pong", async () => {
+    jest.useFakeTimers();
+    const verifier = { verify: jest.fn().mockResolvedValue({ sub: "user-1" }) } as unknown as WsJwtVerifier;
+    const gateway = new MessagingWsGateway(verifier);
+    const socket = {
+      OPEN: 1,
+      readyState: 1,
+      on: jest.fn(),
+      ping: jest.fn(),
+      send: jest.fn(),
+      terminate: jest.fn(),
+    } as unknown as WebSocket;
+
+    await gateway.handleConnection(
+      socket,
+      { ...request({ authorization: "Bearer token" }), socket: {} } as IncomingMessage,
+    );
+    gateway.afterInit({} as WebSocketServer);
+
+    jest.advanceTimersByTime(30_000);
+    expect(socket.ping).toHaveBeenCalledTimes(1);
+    expect(socket.terminate).not.toHaveBeenCalled();
+
+    jest.advanceTimersByTime(30_000);
+    expect(socket.terminate).toHaveBeenCalledTimes(1);
+    expect(socketsByUser(gateway).has("user-1")).toBe(false);
+
+    gateway.onModuleDestroy();
   });
 });
