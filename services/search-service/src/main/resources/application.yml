@@ -112,6 +112,19 @@ management:
     tracing:
       endpoint: http://localhost:4318/v1/traces
 
+kafka:
+  health:
+    consumer:
+      enabled: false
+      lag-threshold: 1000
+      group-id: search-service
+
+search:
+  cursor:
+    secret: ${VNSHOP_SEARCH_CURSOR_SECRET}
+  facets:
+    max-buckets: ${SEARCH_FACETS_MAX_BUCKETS:100}
+
 otel:
   traces:
     exporter: jaeger
@@ -129,18 +142,6 @@ spring:
   exporter:
     jaeger:
       endpoint: http://localhost:14250
-kafka:
-  health:
-    consumer:
-      enabled: false
-      lag-threshold: 1000
-      group-id: search-service
-
-search:
-  cursor:
-    secret: ${VNSHOP_SEARCH_CURSOR_SECRET}
-  facets:
-    max-buckets: ${SEARCH_FACETS_MAX_BUCKETS:100}
 
 logging:
   level:
