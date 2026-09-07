@@ -78,3 +78,17 @@ it("permits explicit non-production plaintext mode", () => {
   const config = loadConfig().createKafkaClientConfig("notification-local");
   expect(config).toMatchObject({ brokers: ["localhost:9092"], ssl: false, sasl: undefined });
 });
+
+it("keeps SASL credentials in plaintext mode for SASL_PLAINTEXT brokers", () => {
+  process.env.NODE_ENV = "test";
+  process.env.KAFKA_LOCAL_MODE = "plaintext";
+  process.env.KAFKA_BOOTSTRAP_SERVERS = "kafka:9092";
+  process.env.KAFKA_SASL_USERNAME = "svc-notification";
+  process.env.KAFKA_SASL_PASSWORD = "password";
+  const config = loadConfig().createKafkaClientConfig("notification-local");
+  expect(config).toMatchObject({
+    brokers: ["kafka:9092"],
+    ssl: false,
+    sasl: { mechanism: "plain", username: "svc-notification", password: "password" },
+  });
+});

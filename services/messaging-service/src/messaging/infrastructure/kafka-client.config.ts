@@ -27,15 +27,23 @@ function tlsOptions(): KafkaConfig["ssl"] {
 
 export function createKafkaClientConfig(clientId: string): KafkaConfig {
   const localPlaintext = !production && process.env.KAFKA_LOCAL_MODE === "plaintext";
+  // Local broker is SASL_PLAINTEXT: no TLS, but SASL PLAIN credentials still required.
+  const saslUsername = process.env.KAFKA_SASL_USERNAME?.trim();
+  const saslPassword = process.env.KAFKA_SASL_PASSWORD?.trim();
+  const sasl = saslUsername && saslPassword
+    ? { mechanism: "plain" as const, username: saslUsername, password: saslPassword }
+    : localPlaintext
+      ? undefined
+      : {
+        mechanism: "plain" as const,
+        username: required("KAFKA_SASL_USERNAME"),
+        password: required("KAFKA_SASL_PASSWORD"),
+      };
   const config: KafkaConfig = {
     clientId,
     brokers: brokers(),
     ssl: localPlaintext ? false : tlsOptions(),
-    sasl: localPlaintext ? undefined : {
-      mechanism: "plain",
-      username: required("KAFKA_SASL_USERNAME"),
-      password: required("KAFKA_SASL_PASSWORD"),
-    },
+    sasl,
   };
   return config;
 }
