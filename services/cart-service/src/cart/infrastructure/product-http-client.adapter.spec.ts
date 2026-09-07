@@ -1,5 +1,6 @@
 import { ProductHttpClientAdapter } from './product-http-client.adapter';
 import { ProductNotFoundException } from '../domain/product-not-found.exception';
+import { PricingUnavailableException } from '../domain/pricing-unavailable.exception';
 
 describe('ProductHttpClientAdapter', () => {
   const URL = 'http://product-service:8082';
@@ -17,24 +18,21 @@ describe('ProductHttpClientAdapter', () => {
     delete (global as { fetch?: typeof fetch }).fetch;
   });
 
-  it('returns offline-mode snapshot when productServiceUrl is missing', async () => {
+  it('rejects offline-mode pricing when productServiceUrl is missing', async () => {
     const adapter = new ProductHttpClientAdapter(undefined);
-    const snap = await adapter.getSnapshot('p-1');
-    expect(snap.productId).toBe('p-1');
-    expect(snap.productName).toBe('p-1');
-    expect(snap.productImage).toBe('');
-    expect(snap.unitPrice.amount).toBe(0);
-    expect(snap.degraded).toBe(true);
+    await expect(adapter.getSnapshot('p-1')).rejects.toMatchObject({
+      errorCode: 'PRICING_UNAVAILABLE',
+      message: 'Product pricing is unavailable for p-1',
+    });
   });
 
-  it('marks a transient fallback snapshot as degraded', async () => {
+  it('rejects transient fallback pricing', async () => {
     (global as { fetch: typeof fetch }).fetch = jest.fn().mockRejectedValue(
       new Error('product service unavailable'),
     ) as typeof fetch;
 
-    const snap = await new ProductHttpClientAdapter(URL).getSnapshot('p-1');
-
-    expect(snap.degraded).toBe(true);
+    await expect(new ProductHttpClientAdapter(URL).getSnapshot('p-1'))
+      .rejects.toBeInstanceOf(PricingUnavailableException);
   });
 
   it('throws ProductNotFoundException on 404', async () => {
@@ -181,11 +179,11 @@ describe('ProductHttpClientAdapter', () => {
     expect(snap.unitPrice.amount).toBe(50000);
   });
 
-  it('returns 0 VND with productId-as-name when product has neither variants nor flat price', async () => {
+  it('rejects a product with neither variants nor flat price', async () => {
     mockFetch({ id: 'p-7' });
     const adapter = new ProductHttpClientAdapter(URL);
-    const snap = await adapter.getSnapshot('p-7');
-    expect(snap.productName).toBe('p-7');
-    expect(snap.unitPrice.amount).toBe(0);
+    await expect(adapter.getSnapshot('p-7')).rejects.toMatchObject({
+      errorCode: 'PRICING_UNAVAILABLE',
+    });
   });
 });

@@ -1,5 +1,6 @@
 import { ProductNotFoundException } from '../domain/product-not-found.exception';
 import { VariantNotFoundException } from '../domain/variant-not-found.exception';
+import { PricingUnavailableException } from '../domain/pricing-unavailable.exception';
 import { Money } from '../domain/money';
 import type { ProductClientPort } from '../application/product-client.port';
 import type { ProductSnapshot } from '../application/product-snapshot';
@@ -197,19 +198,15 @@ export class ProductHttpClientAdapter implements ProductClientPort {
 
   async getSnapshot(productId: string, variantId?: string | null): Promise<ProductSnapshot> {
     if (!this.productServiceUrl) {
-      return {
-        productId,
-        productName: productId,
-        productImage: '',
-        unitPrice: Money.zero('VND'),
-        parcel: null,
-        degraded: true,
-      };
+      throw new PricingUnavailableException(productId);
     }
 
     try {
       const product = (await this.circuitBreaker.fire(productId)) as ProductServiceResponse;
       const { amount, currency } = pickPrice(product, variantId);
+      if (amount <= 0) {
+        throw new PricingUnavailableException(productId);
+      }
 
       return {
         productId: product.productId ?? product.id ?? productId,
@@ -225,20 +222,12 @@ export class ProductHttpClientAdapter implements ProductClientPort {
       // not an infrastructure outage. Let callers handle them explicitly.
       if (
         error instanceof VariantNotFoundException ||
-        error instanceof ProductNotFoundException
+        error instanceof ProductNotFoundException ||
+        error instanceof PricingUnavailableException
       ) {
         throw error;
       }
-      // Circuit breaker open or other infrastructure failure — return degraded
-      // fallback so the cart stays accessible even when product-service is down.
-      return {
-        productId,
-        productName: productId,
-        productImage: '',
-        unitPrice: Money.zero('VND'),
-        parcel: null,
-        degraded: true,
-      };
+      throw new PricingUnavailableException(productId);
     }
   }
 
