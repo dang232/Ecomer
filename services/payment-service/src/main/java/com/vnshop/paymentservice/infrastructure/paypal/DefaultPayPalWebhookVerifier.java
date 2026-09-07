@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
@@ -31,6 +32,7 @@ public class DefaultPayPalWebhookVerifier implements PayPalWebhookVerifier {
     private final Clock clock;
     private volatile CachedToken cachedToken;
 
+    @Autowired
     public DefaultPayPalWebhookVerifier(PayPalProperties properties, RestClient.Builder restClientBuilder,
                                         ObjectMapper objectMapper) {
         this(properties, restClientBuilder, objectMapper, Clock.systemUTC());
