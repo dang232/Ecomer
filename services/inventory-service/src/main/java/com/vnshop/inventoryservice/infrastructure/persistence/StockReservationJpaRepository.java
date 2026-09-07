@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.Optional;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -46,6 +47,12 @@ public class StockReservationJpaRepository implements StockReservationPort {
     @Override
     public void saveReservation(StockReservation reservation) {
         reservationRepository.save(StockReservationJpaEntity.fromDomain(reservation));
+    }
+
+    @Override
+    public Optional<StockReservation> findReservationByOrderAndProduct(String orderId, String productId) {
+        return reservationRepository.findByOrderIdAndProductId(orderId, productId)
+                .map(StockReservationJpaEntity::toDomain);
     }
 
     @Override

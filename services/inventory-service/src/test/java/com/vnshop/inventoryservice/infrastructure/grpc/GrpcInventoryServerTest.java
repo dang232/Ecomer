@@ -167,6 +167,16 @@ class GrpcInventoryServerTest {
         }
 
         @Override
+        public synchronized java.util.Optional<StockReservation> findReservationByOrderAndProduct(
+                String orderId, String productId) {
+            return reservations.stream()
+                    .filter(r -> orderId.equals(r.orderId()))
+                    .filter(r -> productId.equals(r.productId()))
+                    .filter(r -> r.status() == StockReservation.Status.RESERVED)
+                    .findFirst();
+        }
+
+        @Override
         public synchronized List<StockReservation> findActiveReservationsByOrderId(String orderId) {
             return reservations.stream()
                     .filter(r -> orderId.equals(r.orderId()))
