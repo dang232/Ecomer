@@ -67,7 +67,7 @@ public class CheckoutOrderUseCase {
             CatalogProduct.Variant variant = product.findVariant(line.variantSku())
                     .orElseThrow(() -> new ProductNotFoundException(
                             "variant not found for productId=" + line.productId() + " sku=" + line.variantSku()));
-            requirePositivePrice(variant.unitPrice(), line.productId());
+            ProductPrices.requirePositive(variant.unitPrice(), line.productId());
             resolved.add(new OrderItem(
                     product.productId(),
                     variant.sku(),
@@ -79,12 +79,6 @@ public class CheckoutOrderUseCase {
                     variant.parcel()));
         }
         return resolved;
-    }
-
-    private static void requirePositivePrice(com.vnshop.orderservice.domain.Money unitPrice, String productId) {
-        if (unitPrice == null || unitPrice.amount() == null || unitPrice.amount().signum() <= 0) {
-            throw new InvalidProductPriceException("authoritative price unavailable for productId=" + productId);
-        }
     }
 
     /**

@@ -99,7 +99,7 @@ public class CalculateCheckoutUseCase {
         CatalogProduct.Variant variant = product.findVariant(line.variantSku())
                 .orElseThrow(() -> new CheckoutOrderUseCase.ProductNotFoundException(
                         "variant not found for productId=" + line.productId() + " sku=" + line.variantSku()));
-        requirePositivePrice(variant.unitPrice(), line.productId());
+        ProductPrices.requirePositive(variant.unitPrice(), line.productId());
         return new OrderItem(
                 product.productId(),
                 variant.sku(),
@@ -119,7 +119,7 @@ public class CalculateCheckoutUseCase {
                 .orElseThrow(() -> new InvalidProductPriceException(
                         "authoritative price unavailable for productId=" + item.productId()
                                 + " sku=" + item.variantSku()));
-        requirePositivePrice(catalogVariant.unitPrice(), item.productId());
+        ProductPrices.requirePositive(catalogVariant.unitPrice(), item.productId());
         return new OrderItem(
                 catalogProduct.productId(),
                 catalogVariant.sku(),
@@ -129,12 +129,6 @@ public class CalculateCheckoutUseCase {
                 catalogVariant.unitPrice(),
                 catalogProduct.imageUrl(),
                 catalogVariant.parcel());
-    }
-
-    private static void requirePositivePrice(Money unitPrice, String productId) {
-        if (unitPrice == null || unitPrice.amount() == null || unitPrice.amount().signum() <= 0) {
-            throw new InvalidProductPriceException("authoritative price unavailable for productId=" + productId);
-        }
     }
 
     private CheckoutBreakdown summarize(List<OrderItem> items, BigDecimal discount) {
