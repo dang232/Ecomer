@@ -14,6 +14,8 @@ import com.vnshop.orderservice.domain.finance.FinancialReversal;
 import com.vnshop.orderservice.domain.port.out.FinancialReversalRepositoryPort;
 
 import java.time.Instant;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Objects;
 import java.util.UUID;
 import org.springframework.transaction.annotation.Transactional;
@@ -69,7 +71,7 @@ public class CompleteReturnUseCase {
                 .filter(subOrder -> orderReturn.subOrderId().equals(subOrder.id()))
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("return points at missing subOrder"));
-        Money refundAmount = targetSubOrder.itemsTotal();
+        Money refundAmount = refundAmount(targetSubOrder, order, orderReturn);
         FinancialComponentsForReversal reversal = reserveReversal(targetSubOrder, order, orderReturn, refundAmount);
         orderReturn.complete();
         Return savedReturn = returnRepository.save(orderReturn);
@@ -78,6 +80,22 @@ public class CompleteReturnUseCase {
         }
         refundRequestPort.requestRefund(savedReturn, targetSubOrder.sellerId(), refundAmount, targetSubOrder.commissionTier());
         return savedReturn;
+    }
+
+    private Money refundAmount(SubOrder targetSubOrder, Order order, Return orderReturn) {
+        BigDecimal quantityShare = orderReturn.returnedQuantity() == null
+                ? BigDecimal.ONE
+                : BigDecimal.valueOf(orderReturn.returnedQuantity())
+                        .divide(BigDecimal.valueOf(targetSubOrder.items().stream()
+                                .mapToInt(item -> item.quantity()).sum()), 12, RoundingMode.HALF_UP);
+        BigDecimal buyerPaid = allocationRepository == null
+                ? order.payableFor(targetSubOrder).amount()
+                : allocationRepository.findByOrderId(order.id()).stream()
+                        .filter(allocation -> targetSubOrder.id().equals(allocation.subOrderId()))
+                        .findFirst()
+                        .map(allocation -> allocation.components().buyerPaidAmount())
+                        .orElseThrow(() -> new IllegalStateException("return points at missing financial allocation"));
+        return new Money(buyerPaid.multiply(quantityShare).setScale(0, RoundingMode.HALF_UP), "VND");
     }
 
     private FinancialComponentsForReversal reserveReversal(SubOrder targetSubOrder, Order order, Return orderReturn,

@@ -36,6 +36,9 @@ public class ReturnJpaEntity extends BaseJpaEntity {
     @Column(name = "reason", nullable = false, length = 2048)
     private String reason;
 
+    @Column(name = "returned_quantity")
+    private Integer returnedQuantity;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private ReturnStatus status;
@@ -56,6 +59,7 @@ public class ReturnJpaEntity extends BaseJpaEntity {
         entity.subOrderId = orderReturn.subOrderId();
         entity.buyerId = orderReturn.buyerId();
         entity.reason = orderReturn.reason();
+        entity.returnedQuantity = orderReturn.returnedQuantity();
         entity.status = orderReturn.status();
         entity.requestedAt = orderReturn.requestedAt();
         entity.resolvedAt = orderReturn.resolvedAt();
@@ -63,6 +67,7 @@ public class ReturnJpaEntity extends BaseJpaEntity {
     }
 
     Return toDomain() {
-        return new Return(returnId, orderId.toString(), subOrderId, buyerId, reason, status, requestedAt, resolvedAt);
+        return new Return(returnId, orderId.toString(), subOrderId, buyerId, reason, returnedQuantity, status,
+                requestedAt, resolvedAt);
     }
 }

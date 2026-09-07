@@ -49,7 +49,8 @@ public class ReturnController {
     @PreAuthorize("isAuthenticated()")
     @PostMapping
     public ApiResponse<ReturnResponse> request(@Valid @RequestBody RequestReturnRequest request) {
-        return ApiResponse.ok(ReturnResponse.fromDomain(requestReturnUseCase.request(JwtPrincipalUtil.currentUserId(), request.subOrderId(), request.reason())));
+        return ApiResponse.ok(ReturnResponse.fromDomain(requestReturnUseCase.request(JwtPrincipalUtil.currentUserId(),
+                request.subOrderId(), request.reason(), request.returnedQuantity())));
     }
 
     @PreAuthorize("isAuthenticated()")
