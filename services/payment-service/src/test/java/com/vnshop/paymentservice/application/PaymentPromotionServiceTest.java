@@ -104,6 +104,38 @@ class PaymentPromotionServiceTest {
     }
 
     @Test
+    void rejectsNonStripeCallbackWhenExpectedAmountDiffers() {
+        UUID paymentId = UUID.randomUUID();
+        InMemoryPayments payments = new InMemoryPayments();
+        payments.save(new Payment(paymentId, "ORDER-1", "BUYER-1", new BigDecimal("15000000"),
+                PaymentMethod.VNPAY, PaymentStatus.PENDING, null, Instant.parse("2026-05-19T00:00:00Z")));
+        PaymentPromotionService service = new PaymentPromotionService(
+                payments, new LedgerService(new CapturingLedger()), new CapturingOutbox());
+
+        assertThatThrownBy(() -> service.promote(PaymentPromotionService.PromotionCommand.fromCallback(
+                paymentId, "VNPAY", "txn", UUID.randomUUID(), "event", "hash", new BigDecimal("1000"))))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("expected amount");
+        assertThat(payments.byId.get(paymentId).status()).isEqualTo(PaymentStatus.PENDING);
+    }
+
+    @Test
+    void promotesNonStripeCallbackWhenExpectedAmountMatches() {
+        UUID paymentId = UUID.randomUUID();
+        InMemoryPayments payments = new InMemoryPayments();
+        payments.save(new Payment(paymentId, "ORDER-1", "BUYER-1", new BigDecimal("15000000"),
+                PaymentMethod.VNPAY, PaymentStatus.PENDING, null, Instant.parse("2026-05-19T00:00:00Z")));
+        PaymentPromotionService service = new PaymentPromotionService(
+                payments, new LedgerService(new CapturingLedger()), new CapturingOutbox());
+
+        PaymentPromotionService.PromotionResult result = service.promote(PaymentPromotionService.PromotionCommand.fromCallback(
+                paymentId, "VNPAY", "txn", UUID.randomUUID(), "event", "hash", new BigDecimal("15000000.00")));
+
+        assertThat(result.outcome()).isEqualTo(PaymentPromotionService.PromotionResult.Outcome.PROMOTED);
+        assertThat(payments.byId.get(paymentId).status()).isEqualTo(PaymentStatus.COMPLETED);
+    }
+
+    @Test
     void rejectsStripeEvidenceThatDoesNotMatchTheLockedPayment() {
         UUID paymentId = UUID.randomUUID();
         InMemoryPayments payments = new InMemoryPayments();
