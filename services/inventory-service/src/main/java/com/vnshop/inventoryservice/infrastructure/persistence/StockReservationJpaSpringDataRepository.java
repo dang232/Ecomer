@@ -8,11 +8,14 @@ import org.springframework.data.repository.query.Param;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.Optional;
 
 public interface StockReservationJpaSpringDataRepository
         extends JpaRepository<StockReservationJpaEntity, UUID> {
 
     List<StockReservationJpaEntity> findByOrderIdAndStatus(String orderId, StockReservation.Status status);
+
+    Optional<StockReservationJpaEntity> findByOrderIdAndProductId(String orderId, String productId);
 
     @Modifying
     @Query("update StockReservationJpaEntity r set r.status = :status, r.releasedAt = :releasedAt where r.reservationId = :id")

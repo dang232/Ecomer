@@ -10,12 +10,19 @@ public class Return {
     private final Long subOrderId;
     private final String buyerId;
     private final String reason;
+    private final Integer returnedQuantity;
     private ReturnStatus status;
     private final Instant requestedAt;
     private Instant resolvedAt;
 
     public Return(UUID returnId, String orderId, Long subOrderId, String buyerId, String reason) {
-        this(returnId, orderId, subOrderId, buyerId, reason, ReturnStatus.REQUESTED, Instant.now(), null);
+        this(returnId, orderId, subOrderId, buyerId, reason, null, ReturnStatus.REQUESTED, Instant.now(), null);
+    }
+
+    public Return(UUID returnId, String orderId, Long subOrderId, String buyerId, String reason,
+                  int returnedQuantity, ReturnStatus status, Instant requestedAt, Instant resolvedAt) {
+        this(returnId, orderId, subOrderId, buyerId, reason, Integer.valueOf(returnedQuantity), status,
+                requestedAt, resolvedAt);
     }
 
     public Return(
@@ -28,15 +35,33 @@ public class Return {
             Instant requestedAt,
             Instant resolvedAt
     ) {
+        this(returnId, orderId, subOrderId, buyerId, reason, null, status, requestedAt, resolvedAt);
+    }
+
+    public Return(
+            UUID returnId,
+            String orderId,
+            Long subOrderId,
+            String buyerId,
+            String reason,
+            Integer returnedQuantity,
+            ReturnStatus status,
+            Instant requestedAt,
+            Instant resolvedAt
+    ) {
         Objects.requireNonNull(returnId, "returnId is required");
         requireNonBlank(orderId, "orderId");
         requireNonBlank(buyerId, "buyerId");
         requireNonBlank(reason, "reason");
+        if (returnedQuantity != null && returnedQuantity <= 0) {
+            throw new IllegalArgumentException("returnedQuantity must be positive");
+        }
         this.returnId = returnId;
         this.orderId = orderId;
         this.subOrderId = Objects.requireNonNull(subOrderId, "subOrderId is required");
         this.buyerId = buyerId;
         this.reason = reason;
+        this.returnedQuantity = returnedQuantity;
         this.status = Objects.requireNonNull(status, "status is required");
         this.requestedAt = Objects.requireNonNull(requestedAt, "requestedAt is required");
         this.resolvedAt = resolvedAt;
@@ -60,6 +85,10 @@ public class Return {
 
     public String reason() {
         return reason;
+    }
+
+    public Integer returnedQuantity() {
+        return returnedQuantity;
     }
 
     public ReturnStatus status() {

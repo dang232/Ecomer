@@ -98,7 +98,12 @@ public class PaymentPromotionService {
             String provider,
             String providerRef,
             OutboxAttempt outboxAttempt,
-            StripeEvidence stripeEvidence) {
+            StripeEvidence stripeEvidence,
+            ExpectedAmountEvidence expectedAmountEvidence) {
+        public PromotionCommand(UUID paymentId, String provider, String providerRef,
+                                OutboxAttempt outboxAttempt, StripeEvidence stripeEvidence) {
+            this(paymentId, provider, providerRef, outboxAttempt, stripeEvidence, null);
+        }
         public PromotionCommand {
             Objects.requireNonNull(paymentId, "paymentId is required");
             requireNonBlank(provider, "provider");
@@ -113,6 +118,14 @@ public class PaymentPromotionService {
                                                      UUID callbackId, String eventId, String payloadHash) {
             return new PromotionCommand(paymentId, provider, providerRef,
                     new OutboxAttempt(callbackId, eventId, payloadHash), null);
+        }
+
+        public static PromotionCommand fromCallback(UUID paymentId, String provider, String providerRef,
+                                                     UUID callbackId, String eventId, String payloadHash,
+                                                     BigDecimal amount) {
+            return new PromotionCommand(paymentId, provider, providerRef,
+                    new OutboxAttempt(callbackId, eventId, payloadHash), null,
+                    new ExpectedAmountEvidence(amount, "VND"));
         }
 
         public static PromotionCommand fromStripeCallback(
@@ -134,6 +147,10 @@ public class PaymentPromotionService {
         }
 
         private void validate(Payment payment) {
+            if (expectedAmountEvidence != null
+                    && payment.amount().compareTo(expectedAmountEvidence.amount()) != 0) {
+                throw new IllegalArgumentException("payment evidence does not match expected amount");
+            }
             if (stripeEvidence == null) {
                 return;
             }
@@ -170,6 +187,16 @@ public class PaymentPromotionService {
         private boolean legacyStripePlaceholder(Payment payment) {
             return ("STRIPE-" + payment.paymentId()).equals(payment.transactionRef())
                     && providerRef.startsWith("pi_");
+        }
+    }
+
+    public record ExpectedAmountEvidence(BigDecimal amount, String currency) {
+        public ExpectedAmountEvidence {
+            Objects.requireNonNull(amount, "amount is required");
+            requireNonBlank(currency, "currency");
+            if (amount.signum() <= 0 || !"VND".equalsIgnoreCase(currency)) {
+                throw new IllegalArgumentException("expected amount evidence must be positive VND");
+            }
         }
     }
 

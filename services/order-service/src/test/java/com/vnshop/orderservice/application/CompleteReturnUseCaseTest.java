@@ -59,6 +59,32 @@ class CompleteReturnUseCaseTest {
     }
 
     @Test
+    void completeFullReturnOnDiscountedOrderRefundsDiscountedBuyerPaidAmount() {
+        UUID orderId = UUID.randomUUID();
+        UUID returnId = UUID.randomUUID();
+        Long subOrderId = 100L;
+        orders.save(discountedOrderWith(orderId, subOrderId, 2));
+        returns.save(approvedReturn(returnId, orderId, subOrderId, "buyer-1", 2));
+
+        useCase.complete(returnId, SELLER_OWNER, "SELLER");
+
+        assertThat(refunds.calls.get(0).amount()).isEqualTo(new Money(new BigDecimal("18000"), "VND"));
+    }
+
+    @Test
+    void completePartialReturnOnDiscountedOrderRefundsProRatedBuyerPaidAmount() {
+        UUID orderId = UUID.randomUUID();
+        UUID returnId = UUID.randomUUID();
+        Long subOrderId = 100L;
+        orders.save(discountedOrderWith(orderId, subOrderId, 2));
+        returns.save(approvedReturn(returnId, orderId, subOrderId, "buyer-1", 1));
+
+        useCase.complete(returnId, SELLER_OWNER, "SELLER");
+
+        assertThat(refunds.calls.get(0).amount()).isEqualTo(new Money(new BigDecimal("9000"), "VND"));
+    }
+
+    @Test
     void completeByWrongSellerDoesNotTriggerRefund() {
         // Highest-stakes assertion in the suite. Pre-pt15 a wrong-seller call
         // would issue a real refund on someone else's return. This test asserts
@@ -133,6 +159,12 @@ class CompleteReturnUseCaseTest {
                 ReturnStatus.APPROVED, Instant.now(), null);
     }
 
+    private static Return approvedReturn(UUID returnId, UUID orderId, Long subOrderId, String buyerId,
+                                         int returnedQuantity) {
+        return new Return(returnId, orderId.toString(), subOrderId, buyerId, "broken",
+                returnedQuantity, ReturnStatus.APPROVED, Instant.now(), null);
+    }
+
     private static Order orderWith(UUID orderId, Long subOrderId, String sellerId) {
         OrderItem item = new OrderItem("product-1", "P-1", sellerId, "Phone", 1, TEN_THOUSAND, null);
         SubOrder subOrder = new SubOrder(subOrderId, sellerId, List.of(item),
@@ -141,6 +173,19 @@ class CompleteReturnUseCaseTest {
         return new Order(orderId, "ORD-1", "buyer-1", shippingAddress, List.of(subOrder),
                 TEN_THOUSAND, Money.ZERO, Money.ZERO,
                 "COD", PaymentStatus.COMPLETED, "idem-1");
+    }
+
+    private static Order discountedOrderWith(UUID orderId, Long subOrderId, int quantity) {
+        OrderItem item = new OrderItem("product-1", "P-1", SELLER_OWNER, "Phone", quantity,
+                TEN_THOUSAND, null);
+        SubOrder subOrder = new SubOrder(subOrderId, SELLER_OWNER, List.of(item),
+                FulfillmentStatus.SHIPPED, new ShippingInfo(Money.ZERO, "STANDARD", "GHN", "TRK-1"),
+                CommissionTier.PREFERRED);
+        Address shippingAddress = new Address("123 Day Street", "Ward 1", "District 1", "HCMC");
+        Order order = new Order(orderId, "ORD-1", "buyer-1", shippingAddress, List.of(subOrder),
+                Money.ZERO, Money.ZERO, Money.ZERO, "COD", PaymentStatus.COMPLETED, "idem-1");
+        order.applyDiscount(new Money(new BigDecimal("2000"), "VND"));
+        return order;
     }
 
     private static final class RecordingRefundPort implements RefundRequestPort {

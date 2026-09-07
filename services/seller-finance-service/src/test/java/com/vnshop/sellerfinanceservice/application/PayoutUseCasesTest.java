@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.vnshop.sellerfinanceservice.domain.LedgerJournal;
+import com.vnshop.sellerfinanceservice.domain.LedgerJournalType;
 import com.vnshop.sellerfinanceservice.domain.Payout;
 import com.vnshop.sellerfinanceservice.domain.PayoutStatus;
 import com.vnshop.sellerfinanceservice.domain.SellerWallet;
@@ -47,7 +48,15 @@ class PayoutUseCasesTest {
         assertThat(first.status()).isEqualTo(PayoutStatus.REQUESTED);
         assertThat(retry.payoutId()).isEqualTo(first.payoutId());
         assertThat(fixtures.payouts.values.values()).hasSize(1);
-        assertThat(fixtures.ledger.journals).hasSize(1);
+        assertThat(fixtures.ledger.journals)
+                .hasSize(1)
+                .extracting(LedgerJournal::journalType)
+                .containsExactly(LedgerJournalType.PAYOUT_RESERVATION);
+        assertThat(fixtures.ledger.journals)
+                .extracting(LedgerJournal::operationType)
+                .containsExactly("PAYOUT_RESERVATION");
+        assertThat(fixtures.ledger.journals.get(0).sourceType()).isEqualTo("PAYOUT");
+        assertThat(fixtures.ledger.journals.get(0).sourceId()).isEqualTo(first.payoutId());
         assertThat(fixtures.wallet.availableBalance()).isEqualByComparingTo("75.00");
         assertThat(fixtures.wallet.payoutPendingBalance()).isEqualByComparingTo("25.00");
         assertThat(fixtures.wallets.lockedLookups).isEqualTo(2);

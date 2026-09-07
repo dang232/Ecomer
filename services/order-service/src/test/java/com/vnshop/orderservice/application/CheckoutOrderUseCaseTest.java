@@ -363,6 +363,26 @@ class CheckoutOrderUseCaseTest {
     }
 
     @Test
+    void rejectsZeroCatalogPriceBeforeOrderSideEffects() {
+        catalog.add(new CatalogProduct(
+                "p1", "seller-A", "Zero-priced Product",
+                List.of(new CatalogProduct.Variant("sku-1", new Money(BigDecimal.ZERO))), ""));
+
+        assertThatThrownBy(() -> newUseCase().checkout(new CheckoutOrderCommand(
+                "buyer-1",
+                new Address("street", "ward", "district", "city"),
+                List.of(new CheckoutLineItem("p1", "sku-1", 1)),
+                "idem-zero-price")))
+                .isInstanceOf(InvalidProductPriceException.class)
+                .hasMessageContaining("p1");
+
+        assertThat(inventory.reserveCalls).isZero();
+        assertThat(payment.requestCalls).isZero();
+        assertThat(repository.saveCalls).isZero();
+        assertThat(shipping.requestCalls).isZero();
+    }
+
+    @Test
     void rejectsMissingVariantSkuWhenClientNamesOneThatDoesNotExist() {
         catalog.add(new CatalogProduct(
                 "p1",
@@ -470,7 +490,7 @@ class CheckoutOrderUseCaseTest {
 
     private static final class RecordingPayment implements PaymentRequestPort {
         private int requestCalls;
-        @Override public void requestPayment(String orderId, String buyerId, String paymentMethod, Money amount) { requestCalls++; }
+        @Override public void requestPayment(String orderId, String buyerId, String paymentMethod, Money amount, String idempotencyKey) { requestCalls++; }
     }
 
     private static final class RecordingShipping implements ShippingRequestPort {
@@ -507,6 +527,7 @@ class CheckoutOrderUseCaseTest {
 
     private static final class NoopCompensationPublisher implements SagaCompensationPublisherPort {
         @Override public void publishInventoryReleaseRequested(String orderId, String sagaId) {}
-        @Override public void publishPaymentRefundRequested(String orderId, String sagaId) {}
+        @Override public void publishPaymentRefundRequested(String orderId, String sagaId, String reversalId,
+                                                           String returnId, BigDecimal amount, String currency) {}
     }
 }

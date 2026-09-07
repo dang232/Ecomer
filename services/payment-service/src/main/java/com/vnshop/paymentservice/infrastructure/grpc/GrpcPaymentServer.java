@@ -90,7 +90,8 @@ public class GrpcPaymentServer extends PaymentServiceGrpc.PaymentServiceImplBase
                     PaymentMethodInput.valueOf(request.getPaymentMethod().toUpperCase());
 
             ProcessPaymentCommand cmd = new ProcessPaymentCommand(
-                    request.getOrderId(), request.getBuyerId(), method);
+                    request.getOrderId(), request.getBuyerId(), method,
+                    request.hasIdempotencyKey() ? request.getIdempotencyKey() : null);
 
             // Trusted service-to-service path: order-service initiates this
             // call from CreateOrderUseCase BEFORE the order row is persisted,

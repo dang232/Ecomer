@@ -179,6 +179,14 @@ class ReleaseStockUseCaseTest {
         }
 
         @Override
+        public java.util.Optional<StockReservation> findReservationByOrderAndProduct(String orderId, String productId) {
+            return reservations.stream()
+                    .filter(r -> r.orderId().equals(orderId) && r.productId().equals(productId)
+                            && r.status() == StockReservation.Status.RESERVED)
+                    .findFirst();
+        }
+
+        @Override
         public List<StockReservation> findActiveReservationsByOrderId(String orderId) {
             return reservations.stream()
                     .filter(r -> r.orderId().equals(orderId)

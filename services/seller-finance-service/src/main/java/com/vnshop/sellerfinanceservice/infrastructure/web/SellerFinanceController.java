@@ -58,16 +58,12 @@ public class SellerFinanceController {
     @PostMapping("/payouts")
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<PayoutResponse> requestPayout(
-            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody PayoutRequest request) {
         String sellerId = JwtPrincipalUtil.currentSellerId();
-        // Keep the legacy route callable during the client migration. New clients must
-        // send Idempotency-Key and use the canonical reservation path.
-        var payout = idempotencyKey == null || idempotencyKey.isBlank()
-                ? requestPayoutUseCase.request(sellerId, request.amount())
-                : requestPayoutUseCase.request(sellerId, request.amount(),
-                        request.currency() == null || request.currency().isBlank() ? "VND" : request.currency(),
-                        idempotencyKey);
+        var payout = requestPayoutUseCase.request(sellerId, request.amount(),
+                request.currency() == null || request.currency().isBlank() ? "VND" : request.currency(),
+                idempotencyKey);
         return ApiResponse.ok(PayoutResponse.fromDomain(payout));
     }
 }

@@ -7,8 +7,11 @@ import com.vnshop.paymentservice.domain.port.out.PaymentRepositoryPort;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
+import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -16,6 +19,7 @@ import java.util.UUID;
 @Service
 @ConditionalOnProperty(name = "payment.vnpay.enabled", havingValue = "true")
 public class VnpayCallbackService {
+    private static final Logger log = LoggerFactory.getLogger(VnpayCallbackService.class);
     private final PaymentRepositoryPort paymentRepositoryPort;
     private final VnpayGateway vnpayGateway;
     private final PaymentCallbackLogStore callbackLogStore;
@@ -71,11 +75,17 @@ public class VnpayCallbackService {
             return VnpayIpnResult.success();
         }
 
+        if (verification.amount() == null || payment.amount().compareTo(verification.amount()) != 0) {
+            log.warn("vnpay-callback-amount-mismatch txId={} paymentId={}", transactionRef, payment.paymentId());
+            callbackLogStore.save(attempt(parameters, headers, payloadHash, signatureHash, "AMOUNT_MISMATCH", false));
+            return VnpayIpnResult.success();
+        }
+
         PaymentCallbackAttempt savedAttempt = callbackLogStore.save(
                 attempt(parameters, headers, payloadHash, signatureHash, "PROCESSED", false));
         promotionService.promote(PaymentPromotionService.PromotionCommand.fromCallback(
                 payment.paymentId(), "VNPAY", transactionRef,
-                savedAttempt.callbackId(), savedAttempt.eventId(), savedAttempt.payloadHash()));
+                savedAttempt.callbackId(), savedAttempt.eventId(), savedAttempt.payloadHash(), verification.amount()));
         return VnpayIpnResult.success();
     }
 
@@ -112,4 +122,3 @@ public class VnpayCallbackService {
         }
     }
 }
-

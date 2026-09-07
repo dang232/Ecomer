@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,6 +50,12 @@ public class ReserveStockUseCase {
         List<StockReservation> created = new ArrayList<>(items.size());
 
         for (ReserveItem item : items) {
+            Optional<StockReservation> existing = port.findReservationByOrderAndProduct(orderId, item.productId());
+            if (existing.isPresent()) {
+                created.add(existing.get());
+                continue;
+            }
+
             DecrementOutcome outcome = port.tryDecrement(item.productId(), item.quantity());
             if (outcome == DecrementOutcome.INSUFFICIENT || outcome == DecrementOutcome.NOT_PROJECTED) {
                 log.warn("Reserve denied: {} stock orderId={} productId={} qty={}",

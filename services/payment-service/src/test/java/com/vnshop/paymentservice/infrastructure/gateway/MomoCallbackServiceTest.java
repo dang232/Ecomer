@@ -43,7 +43,7 @@ class MomoCallbackServiceTest {
         CapturingPaymentCallbackOutbox outbox = new CapturingPaymentCallbackOutbox();
         MomoCallbackService service = service(repository, ledgerRepository, callbackLogStore, outbox);
 
-        MomoCallbackService.MomoIpnResult result = service.handleIpn(MomoGatewayTest.ipn(paymentId().toString(), 2812345678L, 0, 120000L));
+        MomoCallbackService.MomoIpnResult result = service.handleIpn(MomoGatewayTest.ipn(paymentId().toString(), 2812345678L, 0, 15000000L));
 
         assertThat(result.resultCode()).isEqualTo(0);
         assertThat(repository.payment.status()).isEqualTo(PaymentStatus.COMPLETED);
@@ -55,13 +55,28 @@ class MomoCallbackServiceTest {
     }
 
     @Test
+    void underpaidIpnIsAcknowledgedWithoutPromotingPayment() {
+        CapturingPaymentRepository repository = new CapturingPaymentRepository(payment(PaymentStatus.PENDING, null));
+        CapturingLedgerRepository ledgerRepository = new CapturingLedgerRepository();
+        CapturingCallbackLogStore callbackLogStore = new CapturingCallbackLogStore();
+        MomoCallbackService service = service(repository, ledgerRepository, callbackLogStore, new CapturingPaymentCallbackOutbox());
+
+        service.handleIpn(MomoGatewayTest.ipn(paymentId().toString(), 2812345678L, 0, 1000L));
+
+        assertThat(repository.payment.status()).isEqualTo(PaymentStatus.PENDING);
+        assertThat(repository.savedPayments).isEmpty();
+        assertThat(ledgerRepository.savedEntries).isEmpty();
+        assertThat(callbackLogStore.savedAttempts.get(0).processingStatus()).isEqualTo("AMOUNT_MISMATCH");
+    }
+
+    @Test
     void duplicateSignedIpnsAcknowledgeWithoutRepeatingStateChangeOrLedgerWrites() {
         CapturingPaymentRepository repository = new CapturingPaymentRepository(payment(PaymentStatus.PENDING, null));
         CapturingLedgerRepository ledgerRepository = new CapturingLedgerRepository();
         CapturingCallbackLogStore callbackLogStore = new CapturingCallbackLogStore();
         CapturingPaymentCallbackOutbox outbox = new CapturingPaymentCallbackOutbox();
         MomoCallbackService service = service(repository, ledgerRepository, callbackLogStore, outbox);
-        MomoIpnRequest request = MomoGatewayTest.ipn(paymentId().toString(), 2812345678L, 0, 120000L);
+        MomoIpnRequest request = MomoGatewayTest.ipn(paymentId().toString(), 2812345678L, 0, 15000000L);
 
         for (int attempt = 0; attempt < 100; attempt++) {
             MomoCallbackService.MomoIpnResult result = service.handleIpn(request);
@@ -82,7 +97,7 @@ class MomoCallbackServiceTest {
         CapturingCallbackLogStore callbackLogStore = new CapturingCallbackLogStore();
         CapturingPaymentCallbackOutbox outbox = new CapturingPaymentCallbackOutbox();
         MomoCallbackService service = service(repository, ledgerRepository, callbackLogStore, outbox);
-        MomoIpnRequest signed = MomoGatewayTest.ipn(paymentId().toString(), 2812345678L, 0, 120000L);
+        MomoIpnRequest signed = MomoGatewayTest.ipn(paymentId().toString(), 2812345678L, 0, 15000000L);
         MomoIpnRequest tampered = new MomoIpnRequest(signed.partnerCode(), signed.accessKey(), signed.requestId(), 1L, signed.orderId(), signed.orderInfo(), signed.orderType(), signed.transId(), signed.resultCode(), signed.message(), signed.payType(), signed.responseTime(), signed.extraData(), signed.signature());
 
         MomoCallbackService.MomoIpnResult result = service.handleIpn(tampered);
@@ -105,7 +120,7 @@ class MomoCallbackServiceTest {
         MomoCallbackService service = service(repository, ledgerRepository, callbackLogStore, outbox);
 
         // resultCode != 0 → MomoGateway.verifyIpn returns FAILED
-        MomoCallbackService.MomoIpnResult result = service.handleIpn(MomoGatewayTest.ipn(paymentId().toString(), 2812345678L, 1006, 120000L));
+        MomoCallbackService.MomoIpnResult result = service.handleIpn(MomoGatewayTest.ipn(paymentId().toString(), 2812345678L, 1006, 15000000L));
 
         assertThat(result.resultCode()).isEqualTo(0);
         assertThat(repository.payment.status()).isEqualTo(PaymentStatus.FAILED);
@@ -127,7 +142,7 @@ class MomoCallbackServiceTest {
         CapturingPaymentCallbackOutbox outbox = new CapturingPaymentCallbackOutbox();
         MomoCallbackService service = service(repository, ledgerRepository, callbackLogStore, outbox);
 
-        MomoIpnRequest request = MomoGatewayTest.ipn(paymentId().toString(), 2812345678L, 0, 120000L);
+        MomoIpnRequest request = MomoGatewayTest.ipn(paymentId().toString(), 2812345678L, 0, 15000000L);
         MomoCallbackService.MomoIpnResult result = service.handleIpn(request);
 
         assertThat(result.resultCode()).isEqualTo(0);
@@ -143,7 +158,7 @@ class MomoCallbackServiceTest {
         CapturingPaymentRepository repository = new CapturingPaymentRepository(payment(PaymentStatus.PENDING, null));
         MomoGateway gateway = new MomoGateway(PROPERTIES, new CapturingMomoClient());
 
-        MomoGateway.MomoVerification verification = gateway.verifyIpn(MomoGatewayTest.ipn(paymentId().toString(), 2812345678L, 0, 120000L));
+        MomoGateway.MomoVerification verification = gateway.verifyIpn(MomoGatewayTest.ipn(paymentId().toString(), 2812345678L, 0, 15000000L));
 
         assertThat(verification.validSignature()).isTrue();
         assertThat(verification.status()).isEqualTo(PaymentStatus.COMPLETED);
@@ -162,7 +177,7 @@ class MomoCallbackServiceTest {
     }
 
     private static Payment payment(PaymentStatus status, String transactionRef) {
-        return new Payment(paymentId(), "ORDER-1", "BUYER-1", new BigDecimal("120000.00"), PaymentMethod.MOMO, status, transactionRef, Instant.parse("2026-05-10T09:00:00Z"));
+        return new Payment(paymentId(), "ORDER-1", "BUYER-1", new BigDecimal("15000000.00"), PaymentMethod.MOMO, status, transactionRef, Instant.parse("2026-05-10T09:00:00Z"));
     }
 
     private static UUID paymentId() {

@@ -130,7 +130,7 @@ class CreateOrderUseCaseFinancialAllocationTest {
 
         org.assertj.core.api.Assertions.assertThat(retry).isSameAs(existing);
         verify(inventory, never()).reserve(any(), any());
-        verify(payment, never()).requestPayment(any(), any(), any(), any());
+                verify(payment, never()).requestPayment(any(), any(), any(), any(), any());
         verify(shipping, never()).requestShipping(any(), any(), any(), any(), any(), any());
         verify(orders, never()).save(any());
         verify(events, never()).publishOrderCreated(any());
@@ -166,7 +166,8 @@ class CreateOrderUseCaseFinancialAllocationTest {
             @Override public void publish(String aggregateType, String aggregateId, String eventType, String payload) { }
         }, new SagaCompensationPublisherPort() {
             @Override public void publishInventoryReleaseRequested(String orderId, String sagaId) { }
-            @Override public void publishPaymentRefundRequested(String orderId, String sagaId) { }
+            @Override public void publishPaymentRefundRequested(String orderId, String sagaId, String reversalId,
+                                                               String returnId, BigDecimal amount, String currency) { }
             @Override public void publishShippingCancellationRequested(String orderId, String sagaId, String reason) { }
         }, 1_000);
     }

@@ -6,10 +6,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -25,11 +29,20 @@ public class DefaultPayPalWebhookVerifier implements PayPalWebhookVerifier {
     private final PayPalProperties properties;
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
+    private final Clock clock;
+    private volatile CachedToken cachedToken;
 
+    @Autowired
     public DefaultPayPalWebhookVerifier(PayPalProperties properties, RestClient.Builder restClientBuilder,
-                                       ObjectMapper objectMapper) {
+                                        ObjectMapper objectMapper) {
+        this(properties, restClientBuilder, objectMapper, Clock.systemUTC());
+    }
+
+    DefaultPayPalWebhookVerifier(PayPalProperties properties, RestClient.Builder restClientBuilder,
+                                 ObjectMapper objectMapper, Clock clock) {
         this.properties = Objects.requireNonNull(properties, "properties is required");
         this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper is required");
+        this.clock = Objects.requireNonNull(clock, "clock is required");
         this.restClient = Objects.requireNonNull(restClientBuilder, "restClientBuilder is required")
                 .build();
     }
@@ -88,7 +101,12 @@ public class DefaultPayPalWebhookVerifier implements PayPalWebhookVerifier {
         }
     }
 
-    private String bearer() {
+    private synchronized String bearer() {
+        Instant now = Instant.now(clock);
+        if (cachedToken != null && now.isBefore(cachedToken.expiresAt())) {
+            return cachedToken.value();
+        }
+
         String credentials = Base64.getEncoder().encodeToString(
                 (properties.clientId() + ":" + properties.clientSecret()).getBytes(StandardCharsets.UTF_8));
         Map<?, ?> response = restClient.post()
@@ -101,6 +119,16 @@ public class DefaultPayPalWebhookVerifier implements PayPalWebhookVerifier {
         if (response == null || response.get("access_token") == null) {
             throw new IllegalStateException("PayPal oauth token endpoint returned no access_token");
         }
-        return "Bearer " + response.get("access_token");
+        String value = "Bearer " + response.get("access_token");
+        if (response.get("expires_in") instanceof Number expiresIn && expiresIn.longValue() > 0) {
+            long safetyMarginSeconds = Math.min(30, Math.max(1, expiresIn.longValue() / 10));
+            cachedToken = new CachedToken(value,
+                    now.plus(Duration.ofSeconds(expiresIn.longValue() - safetyMarginSeconds)));
+        } else {
+            cachedToken = null;
+        }
+        return value;
     }
+
+    private record CachedToken(String value, Instant expiresAt) {}
 }

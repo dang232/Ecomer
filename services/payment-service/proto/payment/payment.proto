@@ -15,6 +15,7 @@ message PaymentRequest {
   string buyer_id = 2;
   vnshop.common.Money amount = 3;
   string payment_method = 4; // "COD", "VNPAY", "MOMO"
+  optional string idempotency_key = 5;
 }
 
 message PaymentResponse {

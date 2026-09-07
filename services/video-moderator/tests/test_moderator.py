@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.config import Settings
-from app.moderator import Moderator, _extract_frames, _score_frame
+from app.moderator import DetectorFailure, Moderator, _extract_frames, _score_frame
 
 
 # ---------------------------------------------------------------------------
@@ -92,10 +92,10 @@ class TestExtractFrames:
         # FACE_F is in _NSFW_LABELS, EXPOSED_PENIS also — max is 0.95
         assert score == pytest.approx(0.95)
 
-    def test_returns_zero_on_detector_exception(self, mock_detector):
+    def test_raises_detector_failure_on_detector_exception(self, mock_detector):
         mock_detector.detect.side_effect = RuntimeError("model error")
-        score = _score_frame(mock_detector, "frame.jpg")
-        assert score == 0.0
+        with pytest.raises(DetectorFailure):
+            _score_frame(mock_detector, "frame.jpg")
 
 
 # ---------------------------------------------------------------------------

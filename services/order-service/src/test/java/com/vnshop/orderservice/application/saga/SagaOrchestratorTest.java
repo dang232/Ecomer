@@ -6,6 +6,7 @@ import com.vnshop.orderservice.domain.port.out.SagaStateRepository;
 import com.vnshop.orderservice.domain.saga.SagaState;
 import com.vnshop.orderservice.domain.saga.SagaStatus;
 import java.time.Instant;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -138,11 +139,31 @@ class SagaOrchestratorTest {
         SagaState started = orchestrator.startOrderSaga("order-1");
         String sagaId = started.sagaId();
 
-        orchestrator.compensate(sagaId, "SHIPPING");
+        orchestrator.compensate(sagaId, "SHIPPING", new BigDecimal("125000"), "VND",
+                "3d1b7f9d-9b2c-4f9a-9d7d-4b3b24f6cf79");
 
         assertThat(compensationPublisher.paymentRefundCount).isEqualTo(1);
         assertThat(compensationPublisher.inventoryReleaseCount).isEqualTo(1);
         assertThat(compensationPublisher.shippingCancellationCount).isEqualTo(1);
+        assertThat(compensationPublisher.reversalId).isNotBlank();
+        assertThat(compensationPublisher.returnId).isEqualTo(compensationPublisher.reversalId);
+        assertThat(compensationPublisher.amount).isEqualByComparingTo("125000");
+        assertThat(compensationPublisher.currency).isEqualTo("VND");
+        assertThat(outboxPort.events).anySatisfy(event -> {
+            assertThat(event.eventType()).isEqualTo("SAGA_COMPENSATING");
+            assertThat(event.payload()).contains("\"failedStep\":\"SHIPPING\"");
+        });
+    }
+
+    @Test
+    void compensate_shippingFailed_passesRefundAmountAndCurrency() {
+        SagaState started = orchestrator.startOrderSaga("order-1");
+
+        orchestrator.compensate(started.sagaId(), "SHIPPING", new BigDecimal("125000"), "VND",
+                "3d1b7f9d-9b2c-4f9a-9d7d-4b3b24f6cf79");
+
+        assertThat(compensationPublisher.amount).isEqualByComparingTo("125000");
+        assertThat(compensationPublisher.currency).isEqualTo("VND");
     }
 
     @Test
@@ -220,6 +241,10 @@ class SagaOrchestratorTest {
         int inventoryReleaseCount = 0;
         int paymentRefundCount = 0;
         int shippingCancellationCount = 0;
+        String reversalId;
+        String returnId;
+        BigDecimal amount;
+        String currency;
 
         @Override
         public void publishInventoryReleaseRequested(String orderId, String sagaId) {
@@ -227,8 +252,13 @@ class SagaOrchestratorTest {
         }
 
         @Override
-        public void publishPaymentRefundRequested(String orderId, String sagaId) {
+        public void publishPaymentRefundRequested(String orderId, String sagaId, String reversalId,
+                                                  String returnId, BigDecimal amount, String currency) {
             paymentRefundCount++;
+            this.reversalId = reversalId;
+            this.returnId = returnId;
+            this.amount = amount;
+            this.currency = currency;
         }
 
         @Override

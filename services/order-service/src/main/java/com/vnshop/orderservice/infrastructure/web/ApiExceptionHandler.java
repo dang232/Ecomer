@@ -3,6 +3,7 @@ package com.vnshop.orderservice.infrastructure.web;
 import com.vnshop.orderservice.application.CheckoutOrderUseCase;
 import com.vnshop.orderservice.application.FindOrderByIdempotencyKeyUseCase.OrderByIdempotencyKeyNotFoundException;
 import com.vnshop.orderservice.application.OrderAccessDeniedException;
+import com.vnshop.orderservice.application.InvalidProductPriceException;
 import com.vnshop.orderservice.application.ListReturnsUseCase.ReturnNotFoundException;
 import com.vnshop.orderservice.domain.InvoiceAccessDeniedException;
 import com.vnshop.orderservice.domain.coupon.CouponException;
@@ -67,6 +68,13 @@ public class ApiExceptionHandler {
     public ApiResponse<Void> productCatalogDown(ProductCatalogUnavailableException exception) {
         log.warn("product-catalog-unavailable: {}", exception.getMessage());
         return ApiResponse.error("Product catalog is temporarily unavailable", "PRODUCT_CATALOG_UNAVAILABLE");
+    }
+
+    @ExceptionHandler(InvalidProductPriceException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public ApiResponse<Void> invalidProductPrice(InvalidProductPriceException exception) {
+        log.warn("invalid-product-price: {}", exception.getMessage());
+        return ApiResponse.error("Product pricing is temporarily unavailable", "PRODUCT_PRICING_UNAVAILABLE");
     }
 
     @ExceptionHandler(CartUnavailableException.class)

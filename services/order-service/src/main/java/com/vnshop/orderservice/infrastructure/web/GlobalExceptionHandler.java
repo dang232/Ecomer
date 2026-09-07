@@ -2,6 +2,7 @@ package com.vnshop.orderservice.infrastructure.web;
 
 import com.vnshop.orderservice.application.OrderAccessDeniedException;
 import com.vnshop.orderservice.application.CheckoutOrderUseCase;
+import com.vnshop.orderservice.application.InvalidProductPriceException;
 import com.vnshop.orderservice.domain.InvoiceAccessDeniedException;
 import com.vnshop.orderservice.infrastructure.cart.CartUnavailableException;
 import com.vnshop.orderservice.infrastructure.product.ProductCatalogUnavailableException;
@@ -97,6 +98,13 @@ public class GlobalExceptionHandler {
         log.warn("product-catalog-unavailable: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
             .body(ErrorResponse.of("PRODUCT_CATALOG_UNAVAILABLE", "Product catalog is temporarily unavailable", traceId()));
+    }
+
+    @ExceptionHandler(InvalidProductPriceException.class)
+    public ResponseEntity<ErrorResponse> invalidProductPrice(InvalidProductPriceException ex) {
+        log.warn("invalid-product-price: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ErrorResponse.of("PRODUCT_PRICING_UNAVAILABLE", "Product pricing is temporarily unavailable", traceId()));
     }
 
     @ExceptionHandler(CartUnavailableException.class)

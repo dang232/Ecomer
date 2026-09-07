@@ -165,7 +165,8 @@ public class CreateOrderUseCase {
                     order.id().toString(),
                     order.buyerId(),
                     order.paymentMethod(),
-                    order.finalAmount());
+                    order.finalAmount(),
+                    idempotencyKey);
             sagaOrchestrator.stepCompleted(sagaId, "PAYMENT");
 
             Order savedOrder = orderRepository.save(order);
@@ -193,7 +194,7 @@ public class CreateOrderUseCase {
             metricsPort.recordOrderCreationFailed();
             metricsPort.stopTimer(timerSample);
             String failedStep = determineFailedStep(sagaId);
-            sagaOrchestrator.compensate(sagaId, failedStep);
+            sagaOrchestrator.compensate(sagaId, failedStep, order.finalAmount().amount(), "VND", UUID.randomUUID().toString());
             throw failure;
         }
     }
