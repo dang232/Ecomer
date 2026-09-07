@@ -48,61 +48,61 @@ replicas:
 images:
 - name: ghcr.io/dang232/vnshop-frontend
   newName: ghcr.io/dang232/vnshop-frontend
-  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  digest: sha256:97fd7d3787c92d3b117b084edb3a005657717603d73f2d1db46704d38d516508
 - name: ghcr.io/dang232/vnshop-api-gateway
   newName: ghcr.io/dang232/vnshop-api-gateway
-  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  digest: sha256:d20d11529ff8ed1c43c0ae93c798046bdafd8aa46caa28f1769bdfebdd49f294
 - name: ghcr.io/dang232/vnshop-cart
   newName: ghcr.io/dang232/vnshop-cart
-  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  digest: sha256:0ccc58927dff3104167bc9a279e054badd4ba64f25de39b0a37c34c90013b992
 - name: ghcr.io/dang232/vnshop-configuration
   newName: ghcr.io/dang232/vnshop-configuration
-  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  digest: sha256:874c53bfcf8c36ae631477945c36d44541620fef277c801dbfdc1a47caf5ed95
 - name: ghcr.io/dang232/vnshop-inventory
   newName: ghcr.io/dang232/vnshop-inventory
-  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  digest: sha256:da958967af47aa877801939a0a3b7c8fcc93f699145d2194dac1b7be236dd98d
 - name: ghcr.io/dang232/vnshop-invoice
   newName: ghcr.io/dang232/vnshop-invoice
-  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  digest: sha256:4563044ebd700c4b768435d48a669b20f5623736f3025af1a8fd5302b1c2dbe3
 - name: ghcr.io/dang232/vnshop-messaging
   newName: ghcr.io/dang232/vnshop-messaging
-  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  digest: sha256:8101a052cf1125687da866f2fade61c3135e4b78e1d8f1278ae77708923f6f2c
 - name: ghcr.io/dang232/vnshop-monitoring
   newName: ghcr.io/dang232/vnshop-monitoring
-  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  digest: sha256:0444a57a03f4631c06e5bf68a5e143d6249b4fd0faa00194fecb04fbd13f813f
 - name: ghcr.io/dang232/vnshop-notification
   newName: ghcr.io/dang232/vnshop-notification
-  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  digest: sha256:968a9bd626269d9044833bdc461851f5e382b4f7c4937fe91fd4b9ab3326ad1a
 - name: ghcr.io/dang232/vnshop-order
   newName: ghcr.io/dang232/vnshop-order
-  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  digest: sha256:0323fcda7257e0ef0eb2d2a4861302a354d96cb29d183245138d5f670a95cb7e
 - name: ghcr.io/dang232/vnshop-payment
   newName: ghcr.io/dang232/vnshop-payment
-  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  digest: sha256:d52bef4faeeb39624015c9a5ceaab3a350c55c12210b0f3811e0880713f19501
 - name: ghcr.io/dang232/vnshop-product
   newName: ghcr.io/dang232/vnshop-product
-  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  digest: sha256:ed934f65504c60432c59d1594ceed291cbd9463d8a545ae184a4b66a4abf9277
 - name: ghcr.io/dang232/vnshop-recommendations
   newName: ghcr.io/dang232/vnshop-recommendations
-  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  digest: sha256:2f642e1fcd6836b76c7bed9ec9c3d607368495609e017aeedd42cefb5fa3d7cc
 - name: ghcr.io/dang232/vnshop-search
   newName: ghcr.io/dang232/vnshop-search
-  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  digest: sha256:3e1b025a289c7830983356eff02f299057cff7dda8652fda197949964ee44c72
 - name: ghcr.io/dang232/vnshop-seller-finance
   newName: ghcr.io/dang232/vnshop-seller-finance
-  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  digest: sha256:950bec567f9e2dea9c76365d4ff795866b11d08e064cda11c6fdb39ce51fbdc9
 - name: ghcr.io/dang232/vnshop-shipping
   newName: ghcr.io/dang232/vnshop-shipping
-  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  digest: sha256:7ce69d79a419e7960d4434914c656e483b6fab16bd0619ca333c89511cf5bf2e
 - name: ghcr.io/dang232/vnshop-user
   newName: ghcr.io/dang232/vnshop-user
-  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  digest: sha256:8bf328639cd1290a8df11b795feec6bc70cabdc5ff51a171b1e27ade8a3ae55a
 - name: ghcr.io/dang232/vnshop-video-moderator
   newName: ghcr.io/dang232/vnshop-video-moderator
-  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  digest: sha256:e0a8fd58836e625812c8b85762ee95fc49486be379900c92fd3bb7a065552f2d
 - name: ghcr.io/dang232/vnshop-video-transcoder
   newName: ghcr.io/dang232/vnshop-video-transcoder
-  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  digest: sha256:3f2b603ac1d254db50398d195e7ab2addc25f1822b4d6d45c3cba510007da373
 configMapGenerator:
 - name: vnshop-keycloak-realm
   files:
