@@ -44,6 +44,7 @@ public class ProductProjectionRepairJob {
             } else {
                 ProductReadModelJpaEntity model = readModelRepository.findById(repair.getProductId()).orElse(null);
                 if (model == null) {
+                    repairRepository.delete(repair);
                     continue;
                 }
                 elasticsearchRepository.save(ProductDocument.fromEvent(repair.getProductId(), payload(model.toDomain())));
