@@ -1,6 +1,6 @@
 # Core framework
 fastapi==0.139.2
-uvicorn[standard]==0.51.0
+uvicorn[standard]==0.52.1
 pydantic-settings==2.14.2
 
 # Kafka
