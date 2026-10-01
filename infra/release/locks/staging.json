@@ -1,0 +1,273 @@
+{
+  "schemaVersion": "1.0",
+  "sourceCommit": "37fed0ac0afa458de4ea0eb6e1747e5491905046",
+  "createdAt": "2026-08-24T10:34:40Z",
+  "artifacts": [
+    {
+      "id": "api-gateway",
+      "image": "ghcr.io/dang232/vnshop-api-gateway",
+      "digest": "sha256:005b707e032fb2ab221c1a0aabae537af99113cd9bdcd2e697b026feab397891",
+      "sbom": "oci://ghcr.io/dang232/vnshop-api-gateway@sha256:005b707e032fb2ab221c1a0aabae537af99113cd9bdcd2e697b026feab397891#sbom",
+      "provenance": "https://github.com/dang232/Ecomer/attestations/42550713",
+      "provenanceVerified": true,
+      "provenanceRecord": {
+        "producer": "github-actions",
+        "sourceCommit": "37fed0ac0afa458de4ea0eb6e1747e5491905046",
+        "artifactDigest": "sha256:005b707e032fb2ab221c1a0aabae537af99113cd9bdcd2e697b026feab397891",
+        "attestationId": "https://github.com/dang232/Ecomer/attestations/42550713"
+      }
+    },
+    {
+      "id": "cart-service",
+      "image": "ghcr.io/dang232/vnshop-cart",
+      "digest": "sha256:6e64076cfca8128c3a309e4eacfe02890a1adc7696480ce4c8bff213c12df21f",
+      "sbom": "oci://ghcr.io/dang232/vnshop-cart@sha256:6e64076cfca8128c3a309e4eacfe02890a1adc7696480ce4c8bff213c12df21f#sbom",
+      "provenance": "https://github.com/dang232/Ecomer/attestations/42550734",
+      "provenanceVerified": true,
+      "provenanceRecord": {
+        "producer": "github-actions",
+        "sourceCommit": "37fed0ac0afa458de4ea0eb6e1747e5491905046",
+        "artifactDigest": "sha256:6e64076cfca8128c3a309e4eacfe02890a1adc7696480ce4c8bff213c12df21f",
+        "attestationId": "https://github.com/dang232/Ecomer/attestations/42550734"
+      }
+    },
+    {
+      "id": "configuration-service",
+      "image": "ghcr.io/dang232/vnshop-configuration",
+      "digest": "sha256:e7b67073438675af218109d893c5526400678317a80484b2f8b912376ade9692",
+      "sbom": "oci://ghcr.io/dang232/vnshop-configuration@sha256:e7b67073438675af218109d893c5526400678317a80484b2f8b912376ade9692#sbom",
+      "provenance": "https://github.com/dang232/Ecomer/attestations/42550686",
+      "provenanceVerified": true,
+      "provenanceRecord": {
+        "producer": "github-actions",
+        "sourceCommit": "37fed0ac0afa458de4ea0eb6e1747e5491905046",
+        "artifactDigest": "sha256:e7b67073438675af218109d893c5526400678317a80484b2f8b912376ade9692",
+        "attestationId": "https://github.com/dang232/Ecomer/attestations/42550686"
+      }
+    },
+    {
+      "id": "frontend",
+      "image": "ghcr.io/dang232/vnshop-frontend",
+      "digest": "sha256:84c39dcd73b1b5c3ec15e46b968f609889cf4e395d610482e3d0e7d5a8f6f84c",
+      "sbom": "oci://ghcr.io/dang232/vnshop-frontend@sha256:84c39dcd73b1b5c3ec15e46b968f609889cf4e395d610482e3d0e7d5a8f6f84c#sbom",
+      "provenance": "https://github.com/dang232/Ecomer/attestations/42550678",
+      "provenanceVerified": true,
+      "provenanceRecord": {
+        "producer": "github-actions",
+        "sourceCommit": "37fed0ac0afa458de4ea0eb6e1747e5491905046",
+        "artifactDigest": "sha256:84c39dcd73b1b5c3ec15e46b968f609889cf4e395d610482e3d0e7d5a8f6f84c",
+        "attestationId": "https://github.com/dang232/Ecomer/attestations/42550678"
+      }
+    },
+    {
+      "id": "inventory-service",
+      "image": "ghcr.io/dang232/vnshop-inventory",
+      "digest": "sha256:2c8319b775213c778c25ecbb0c2ea9ed55ea75a3860ce5e02166e49f946352ba",
+      "sbom": "oci://ghcr.io/dang232/vnshop-inventory@sha256:2c8319b775213c778c25ecbb0c2ea9ed55ea75a3860ce5e02166e49f946352ba#sbom",
+      "provenance": "https://github.com/dang232/Ecomer/attestations/42550663",
+      "provenanceVerified": true,
+      "provenanceRecord": {
+        "producer": "github-actions",
+        "sourceCommit": "37fed0ac0afa458de4ea0eb6e1747e5491905046",
+        "artifactDigest": "sha256:2c8319b775213c778c25ecbb0c2ea9ed55ea75a3860ce5e02166e49f946352ba",
+        "attestationId": "https://github.com/dang232/Ecomer/attestations/42550663"
+      }
+    },
+    {
+      "id": "invoice-service",
+      "image": "ghcr.io/dang232/vnshop-invoice",
+      "digest": "sha256:f7e0abe57f631aaf434a669ca41980dfce2c625fa3d397e05be03bd2d7491013",
+      "sbom": "oci://ghcr.io/dang232/vnshop-invoice@sha256:f7e0abe57f631aaf434a669ca41980dfce2c625fa3d397e05be03bd2d7491013#sbom",
+      "provenance": "https://github.com/dang232/Ecomer/attestations/42550654",
+      "provenanceVerified": true,
+      "provenanceRecord": {
+        "producer": "github-actions",
+        "sourceCommit": "37fed0ac0afa458de4ea0eb6e1747e5491905046",
+        "artifactDigest": "sha256:f7e0abe57f631aaf434a669ca41980dfce2c625fa3d397e05be03bd2d7491013",
+        "attestationId": "https://github.com/dang232/Ecomer/attestations/42550654"
+      }
+    },
+    {
+      "id": "messaging-service",
+      "image": "ghcr.io/dang232/vnshop-messaging",
+      "digest": "sha256:44d74486041cbaa3928de1a8b3835b58d7f3ba7f0097e94a2ae1999cb71621eb",
+      "sbom": "oci://ghcr.io/dang232/vnshop-messaging@sha256:44d74486041cbaa3928de1a8b3835b58d7f3ba7f0097e94a2ae1999cb71621eb#sbom",
+      "provenance": "https://github.com/dang232/Ecomer/attestations/42550840",
+      "provenanceVerified": true,
+      "provenanceRecord": {
+        "producer": "github-actions",
+        "sourceCommit": "37fed0ac0afa458de4ea0eb6e1747e5491905046",
+        "artifactDigest": "sha256:44d74486041cbaa3928de1a8b3835b58d7f3ba7f0097e94a2ae1999cb71621eb",
+        "attestationId": "https://github.com/dang232/Ecomer/attestations/42550840"
+      }
+    },
+    {
+      "id": "monitoring-service-v2",
+      "image": "ghcr.io/dang232/vnshop-monitoring",
+      "digest": "sha256:f1ee32b6f5fa72c2f4865f9c3f4bd2e1390fe0d57af98d3dc242a82039aa37af",
+      "sbom": "oci://ghcr.io/dang232/vnshop-monitoring@sha256:f1ee32b6f5fa72c2f4865f9c3f4bd2e1390fe0d57af98d3dc242a82039aa37af#sbom",
+      "provenance": "https://github.com/dang232/Ecomer/attestations/42550877",
+      "provenanceVerified": true,
+      "provenanceRecord": {
+        "producer": "github-actions",
+        "sourceCommit": "37fed0ac0afa458de4ea0eb6e1747e5491905046",
+        "artifactDigest": "sha256:f1ee32b6f5fa72c2f4865f9c3f4bd2e1390fe0d57af98d3dc242a82039aa37af",
+        "attestationId": "https://github.com/dang232/Ecomer/attestations/42550877"
+      }
+    },
+    {
+      "id": "notification-service",
+      "image": "ghcr.io/dang232/vnshop-notification",
+      "digest": "sha256:8a4843fcb29671df3106312111f2c0205362e9ec8f27fde2db3ce09aa1fa576a",
+      "sbom": "oci://ghcr.io/dang232/vnshop-notification@sha256:8a4843fcb29671df3106312111f2c0205362e9ec8f27fde2db3ce09aa1fa576a#sbom",
+      "provenance": "https://github.com/dang232/Ecomer/attestations/42550981",
+      "provenanceVerified": true,
+      "provenanceRecord": {
+        "producer": "github-actions",
+        "sourceCommit": "37fed0ac0afa458de4ea0eb6e1747e5491905046",
+        "artifactDigest": "sha256:8a4843fcb29671df3106312111f2c0205362e9ec8f27fde2db3ce09aa1fa576a",
+        "attestationId": "https://github.com/dang232/Ecomer/attestations/42550981"
+      }
+    },
+    {
+      "id": "order-service",
+      "image": "ghcr.io/dang232/vnshop-order",
+      "digest": "sha256:7acc035ccc661e777c3c2d6e8e5d1b8ee2a5c1e6e8749d619e09320c9ef75a63",
+      "sbom": "oci://ghcr.io/dang232/vnshop-order@sha256:7acc035ccc661e777c3c2d6e8e5d1b8ee2a5c1e6e8749d619e09320c9ef75a63#sbom",
+      "provenance": "https://github.com/dang232/Ecomer/attestations/42550846",
+      "provenanceVerified": true,
+      "provenanceRecord": {
+        "producer": "github-actions",
+        "sourceCommit": "37fed0ac0afa458de4ea0eb6e1747e5491905046",
+        "artifactDigest": "sha256:7acc035ccc661e777c3c2d6e8e5d1b8ee2a5c1e6e8749d619e09320c9ef75a63",
+        "attestationId": "https://github.com/dang232/Ecomer/attestations/42550846"
+      }
+    },
+    {
+      "id": "payment-service",
+      "image": "ghcr.io/dang232/vnshop-payment",
+      "digest": "sha256:8f87a433eb71927211a2994cab17da956ec82b977f746580bed72fc746660d40",
+      "sbom": "oci://ghcr.io/dang232/vnshop-payment@sha256:8f87a433eb71927211a2994cab17da956ec82b977f746580bed72fc746660d40#sbom",
+      "provenance": "https://github.com/dang232/Ecomer/attestations/42550906",
+      "provenanceVerified": true,
+      "provenanceRecord": {
+        "producer": "github-actions",
+        "sourceCommit": "37fed0ac0afa458de4ea0eb6e1747e5491905046",
+        "artifactDigest": "sha256:8f87a433eb71927211a2994cab17da956ec82b977f746580bed72fc746660d40",
+        "attestationId": "https://github.com/dang232/Ecomer/attestations/42550906"
+      }
+    },
+    {
+      "id": "product-service",
+      "image": "ghcr.io/dang232/vnshop-product",
+      "digest": "sha256:59993e77053e655401dc9285228d252cb59aefbc59cd7bd6ecd9d578a299d586",
+      "sbom": "oci://ghcr.io/dang232/vnshop-product@sha256:59993e77053e655401dc9285228d252cb59aefbc59cd7bd6ecd9d578a299d586#sbom",
+      "provenance": "https://github.com/dang232/Ecomer/attestations/42550958",
+      "provenanceVerified": true,
+      "provenanceRecord": {
+        "producer": "github-actions",
+        "sourceCommit": "37fed0ac0afa458de4ea0eb6e1747e5491905046",
+        "artifactDigest": "sha256:59993e77053e655401dc9285228d252cb59aefbc59cd7bd6ecd9d578a299d586",
+        "attestationId": "https://github.com/dang232/Ecomer/attestations/42550958"
+      }
+    },
+    {
+      "id": "recommendations-service",
+      "image": "ghcr.io/dang232/vnshop-recommendations",
+      "digest": "sha256:53247cd3fc72c071493c53f24cdf67bd244e8ca62ddf3f021e51da61f32405a2",
+      "sbom": "oci://ghcr.io/dang232/vnshop-recommendations@sha256:53247cd3fc72c071493c53f24cdf67bd244e8ca62ddf3f021e51da61f32405a2#sbom",
+      "provenance": "https://github.com/dang232/Ecomer/attestations/42551079",
+      "provenanceVerified": true,
+      "provenanceRecord": {
+        "producer": "github-actions",
+        "sourceCommit": "37fed0ac0afa458de4ea0eb6e1747e5491905046",
+        "artifactDigest": "sha256:53247cd3fc72c071493c53f24cdf67bd244e8ca62ddf3f021e51da61f32405a2",
+        "attestationId": "https://github.com/dang232/Ecomer/attestations/42551079"
+      }
+    },
+    {
+      "id": "search-service",
+      "image": "ghcr.io/dang232/vnshop-search",
+      "digest": "sha256:2e9e975a15837397ced4a72ceb31d19fe0589d91b7a34d9add7fe548f20b816b",
+      "sbom": "oci://ghcr.io/dang232/vnshop-search@sha256:2e9e975a15837397ced4a72ceb31d19fe0589d91b7a34d9add7fe548f20b816b#sbom",
+      "provenance": "https://github.com/dang232/Ecomer/attestations/42551025",
+      "provenanceVerified": true,
+      "provenanceRecord": {
+        "producer": "github-actions",
+        "sourceCommit": "37fed0ac0afa458de4ea0eb6e1747e5491905046",
+        "artifactDigest": "sha256:2e9e975a15837397ced4a72ceb31d19fe0589d91b7a34d9add7fe548f20b816b",
+        "attestationId": "https://github.com/dang232/Ecomer/attestations/42551025"
+      }
+    },
+    {
+      "id": "seller-finance-service",
+      "image": "ghcr.io/dang232/vnshop-seller-finance",
+      "digest": "sha256:9defa5cbff8e25a2954ae6b244d658d8fe95083930ed97458e9a2a596523a982",
+      "sbom": "oci://ghcr.io/dang232/vnshop-seller-finance@sha256:9defa5cbff8e25a2954ae6b244d658d8fe95083930ed97458e9a2a596523a982#sbom",
+      "provenance": "https://github.com/dang232/Ecomer/attestations/42551089",
+      "provenanceVerified": true,
+      "provenanceRecord": {
+        "producer": "github-actions",
+        "sourceCommit": "37fed0ac0afa458de4ea0eb6e1747e5491905046",
+        "artifactDigest": "sha256:9defa5cbff8e25a2954ae6b244d658d8fe95083930ed97458e9a2a596523a982",
+        "attestationId": "https://github.com/dang232/Ecomer/attestations/42551089"
+      }
+    },
+    {
+      "id": "shipping-service",
+      "image": "ghcr.io/dang232/vnshop-shipping",
+      "digest": "sha256:9cb7d22ae8fd6c6db91f4d84731463f46bb5e3b5579f8348519fa06e7cb976eb",
+      "sbom": "oci://ghcr.io/dang232/vnshop-shipping@sha256:9cb7d22ae8fd6c6db91f4d84731463f46bb5e3b5579f8348519fa06e7cb976eb#sbom",
+      "provenance": "https://github.com/dang232/Ecomer/attestations/42551125",
+      "provenanceVerified": true,
+      "provenanceRecord": {
+        "producer": "github-actions",
+        "sourceCommit": "37fed0ac0afa458de4ea0eb6e1747e5491905046",
+        "artifactDigest": "sha256:9cb7d22ae8fd6c6db91f4d84731463f46bb5e3b5579f8348519fa06e7cb976eb",
+        "attestationId": "https://github.com/dang232/Ecomer/attestations/42551125"
+      }
+    },
+    {
+      "id": "user-service",
+      "image": "ghcr.io/dang232/vnshop-user",
+      "digest": "sha256:b84532d8e091f6c8f5eb52773e25cf247c00ea77457a78f4e78a4d6d21fdca7d",
+      "sbom": "oci://ghcr.io/dang232/vnshop-user@sha256:b84532d8e091f6c8f5eb52773e25cf247c00ea77457a78f4e78a4d6d21fdca7d#sbom",
+      "provenance": "https://github.com/dang232/Ecomer/attestations/42551241",
+      "provenanceVerified": true,
+      "provenanceRecord": {
+        "producer": "github-actions",
+        "sourceCommit": "37fed0ac0afa458de4ea0eb6e1747e5491905046",
+        "artifactDigest": "sha256:b84532d8e091f6c8f5eb52773e25cf247c00ea77457a78f4e78a4d6d21fdca7d",
+        "attestationId": "https://github.com/dang232/Ecomer/attestations/42551241"
+      }
+    },
+    {
+      "id": "video-moderator",
+      "image": "ghcr.io/dang232/vnshop-video-moderator",
+      "digest": "sha256:99d03ec759a260f97eb48a065ae34e854b902f5f0010f73c17079f06be9d7e1d",
+      "sbom": "oci://ghcr.io/dang232/vnshop-video-moderator@sha256:99d03ec759a260f97eb48a065ae34e854b902f5f0010f73c17079f06be9d7e1d#sbom",
+      "provenance": "https://github.com/dang232/Ecomer/attestations/42551337",
+      "provenanceVerified": true,
+      "provenanceRecord": {
+        "producer": "github-actions",
+        "sourceCommit": "37fed0ac0afa458de4ea0eb6e1747e5491905046",
+        "artifactDigest": "sha256:99d03ec759a260f97eb48a065ae34e854b902f5f0010f73c17079f06be9d7e1d",
+        "attestationId": "https://github.com/dang232/Ecomer/attestations/42551337"
+      }
+    },
+    {
+      "id": "video-transcoder",
+      "image": "ghcr.io/dang232/vnshop-video-transcoder",
+      "digest": "sha256:4c3e1375381c09b958b71ec9bab123320468bd83011656b196b2789d0f13d65e",
+      "sbom": "oci://ghcr.io/dang232/vnshop-video-transcoder@sha256:4c3e1375381c09b958b71ec9bab123320468bd83011656b196b2789d0f13d65e#sbom",
+      "provenance": "https://github.com/dang232/Ecomer/attestations/42551262",
+      "provenanceVerified": true,
+      "provenanceRecord": {
+        "producer": "github-actions",
+        "sourceCommit": "37fed0ac0afa458de4ea0eb6e1747e5491905046",
+        "artifactDigest": "sha256:4c3e1375381c09b958b71ec9bab123320468bd83011656b196b2789d0f13d65e",
+        "attestationId": "https://github.com/dang232/Ecomer/attestations/42551262"
+      }
+    }
+  ]
+}
